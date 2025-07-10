@@ -65,8 +65,88 @@
         </div>
       </div>
 
-      <!-- Variants Card View -->
-      <div class="row" id="variantsContainer">
+      <!-- Product Summary Cards -->
+      {% set ns_product = namespace(total_qty=0, total_cost=0, total_value=0, total_bulk=0, total_packaged=0, variant_count=0) %}
+      {% for variant_name, variant_data in variants.items() %}
+        {% set ns_product.variant_count = ns_product.variant_count + 1 %}
+        {% for sku in variant_data.skus %}
+          {% if sku.inventory_item %}
+            {% set ns_product.total_qty = ns_product.total_qty + sku.inventory_item.quantity %}
+            {% if sku.inventory_item.cost_per_unit %}
+              {% set ns_product.total_cost = ns_product.total_cost + (sku.inventory_item.cost_per_unit * sku.inventory_item.quantity) %}
+            {% endif %}
+            {% if sku.retail_price %}
+              {% set ns_product.total_value = ns_product.total_value + (sku.retail_price * sku.inventory_item.quantity) %}
+            {% endif %}
+            {% set size_label = sku.size_label if sku.size_label else 'Bulk' %}
+            {% if size_label == 'Bulk' or not sku.size_label %}
+              {% set ns_product.total_bulk = ns_product.total_bulk + sku.inventory_item.quantity %}
+            {% else %}
+              {% set ns_product.total_packaged = ns_product.total_packaged + sku.inventory_item.quantity %}
+            {% endif %}
+          {% endif %}
+        {% endfor %}
+      {% endfor %}
+
+      <!-- Product Summary Card -->
+      <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h5 class="mb-0">Product Summary</h5>
+          <span class="text-muted small">{{ ns_product.variant_count }} Variants</span>
+        </div>
+        <div class="card-body">
+          <div class="row g-3 mt-2">
+            <div class="col-md-6 col-lg-3">
+              <div class="card bg-light h-100">
+                <div class="card-body text-center">
+                  <div class="fs-4 fw-bold text-primary">{{ "%.2f"|format(ns_product.total_bulk) }}</div>
+                  <div class="text-muted small">Total Bulk</div>
+                  <div class="text-muted small">{{ product.base_unit }}</div>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6 col-lg-3">
+              <div class="card bg-light h-100">
+                <div class="card-body text-center">
+                  <div class="fs-4 fw-bold text-success">{{ ns_product.total_packaged|int }}</div>
+                  <div class="text-muted small">Total Packaged</div>
+                  <div class="text-muted small">Items</div>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6 col-lg-3">
+              <div class="card bg-light h-100">
+                <div class="card-body text-center">
+                  <div class="fs-4 fw-bold text-warning">${{ "%.2f"|format(ns_product.total_cost) }}</div>
+                  <div class="text-muted small">Total Cost</div>
+                  <div class="text-muted small">Inventory</div>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6 col-lg-3">
+              <div class="card bg-light h-100">
+                <div class="card-body text-center">
+                  <div class="fs-4 fw-bold text-info">${{ "%.2f"|format(ns_product.total_value) }}</div>
+                  <div class="text-muted small">Total Value</div>
+                  <div class="text-muted small">Retail Price</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Variants -->
+      <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h5 class="mb-0">Product Variants</h5>
+        </div>
+        <div class="card-body">
+          <div class="variants-carousel-wrapper position-relative">
+            <button class="carousel-nav carousel-nav-left" id="scrollLeft" onclick="scrollVariants('left')">
+              <i class="fas fa-chevron-left"></i>
+            </button>
+            <div class="variants-carousel" id="variantsContainer">
         {% set all_variants = [] %}
         {% for variation in product.variations %}
           {% if variation.name not in all_variants %}
@@ -87,50 +167,42 @@
         {% for variant_name in all_variants %}
         {% set variation = product.variations|selectattr('name', 'equalto', variant_name)|first %}
         {% set variant_skus = variants.get(variant_name, {}).get('skus', []) %}
-        {% set var_total_qty = 0 %}
-        {% set total_cost = 0 %}
-        {% set total_value = 0 %}
+        {% set ns_variant = namespace(total_qty=0, total_cost=0, total_value=0, total_bulk=0, total_packaged=0) %}
         {% set unique_size_labels = [] %}
-        {% set total_bulk = 0 %}
-        {% set total_packaged = 0 %}
 
         {% for sku in variant_skus %}
           {% if sku.inventory_item %}
-            {% set var_total_qty = var_total_qty + sku.inventory_item.quantity %}
+            {% set ns_variant.total_qty = ns_variant.total_qty + sku.inventory_item.quantity %}
             {% if sku.inventory_item.cost_per_unit %}
-              {% set total_cost = total_cost + (sku.inventory_item.cost_per_unit * sku.inventory_item.quantity) %}
+              {% set ns_variant.total_cost = ns_variant.total_cost + (sku.inventory_item.cost_per_unit * sku.inventory_item.quantity) %}
             {% endif %}
             {% if sku.retail_price %}
-              {% set total_value = total_value + (sku.retail_price * sku.inventory_item.quantity) %}
+              {% set ns_variant.total_value = ns_variant.total_value + (sku.retail_price * sku.inventory_item.quantity) %}
             {% endif %}
             {% set size_label = sku.size_label if sku.size_label else 'Bulk' %}
             {% if size_label not in unique_size_labels %}
               {% set _ = unique_size_labels.append(size_label) %}
             {% endif %}
             {% if size_label == 'Bulk' or not sku.size_label %}
-              {% set total_bulk = total_bulk + sku.inventory_item.quantity %}
+              {% set ns_variant.total_bulk = ns_variant.total_bulk + sku.inventory_item.quantity %}
             {% else %}
-              {% set total_packaged = total_packaged + sku.inventory_item.quantity %}
+              {% set ns_variant.total_packaged = ns_variant.total_packaged + sku.inventory_item.quantity %}
             {% endif %}
           {% endif %}
         {% endfor %}
         {% set var_size_count = unique_size_labels|length %}
-        {% set var_avg_cost = (total_cost / var_total_qty) if var_total_qty > 0 else 0 %}
+        {% set var_avg_cost = (ns_variant.total_cost / ns_variant.total_qty) if ns_variant.total_qty > 0 else 0 %}
 
-        <div class="col-xl-4 col-lg-6 col-md-12 mb-4 variant-card" data-variant-name="{{ variant_name|lower }}" data-quantity="{{ var_total_qty }}" data-sizes="{{ var_size_count }}">
+        <div class="variant-card-item" data-variant-name="{{ variant_name|lower }}" data-quantity="{{ ns_variant.total_qty }}" data-sizes="{{ var_size_count }}">
           <div class="card h-100 shadow-sm">
             <div class="card-header d-flex justify-content-between align-items-center">
               <h5 class="card-title mb-0">{{ variant_name }}</h5>
-              <span class="badge {% if var_total_qty <= 0 %}bg-danger{% elif var_total_qty < product.low_stock_threshold %}bg-warning{% else %}bg-success{% endif %}">
-                {% if var_total_qty <= 0 %}Out of Stock{% elif var_total_qty < product.low_stock_threshold %}Low Stock{% else %}In Stock{% endif %}
+              <span class="badge {% if ns_variant.total_qty <= 0 %}bg-danger{% elif ns_variant.total_qty < product.low_stock_threshold %}bg-warning{% else %}bg-success{% endif %}">
+                {% if ns_variant.total_qty <= 0 %}Out of Stock{% elif ns_variant.total_qty < product.low_stock_threshold %}Low Stock{% else %}In Stock{% endif %}
               </span>
             </div>
             <div class="card-body d-flex flex-column">
               <div class="variant-details mb-3">
-                <p class="card-text text-muted mb-2">
-
-                  </small>
-                </p>
                 {% if variation and variation.description %}
                 <p class="card-text">{{ variation.description[:100] }}{% if variation.description|length > 100 %}...{% endif %}</p>
                 {% endif %}
@@ -140,12 +212,12 @@
                 <div class="row text-center">
                   <div class="col-4">
                     <small class="text-muted">Total Bulk</small><br>
-                    <strong>{{ "%.2f"|format(total_bulk) }}</strong><br>
+                    <strong>{{ "%.2f"|format(ns_variant.total_bulk) }}</strong><br>
                     <small>{{ product.base_unit }}</small>
                   </div>
                   <div class="col-4">
                     <small class="text-muted">Total Packaged</small><br>
-                    <strong>{{ total_packaged|int }}</strong><br>
+                    <strong>{{ ns_variant.total_packaged|int }}</strong><br>
                     <small>items</small>
                   </div>
                   <div class="col-4">
@@ -158,11 +230,11 @@
                 <div class="row text-center mt-2">
                   <div class="col-6">
                     <small class="text-muted">Total Cost</small><br>
-                    <strong>${{ "%.2f"|format(total_cost) }}</strong>
+                    <strong>${{ "%.2f"|format(ns_variant.total_cost) }}</strong>
                   </div>
                   <div class="col-6">
                     <small class="text-muted">Total Value</small><br>
-                    <strong>${{ "%.2f"|format(total_value) }}</strong>
+                    <strong>${{ "%.2f"|format(ns_variant.total_value) }}</strong>
                   </div>
                 </div>
               </div>
@@ -178,16 +250,20 @@
           </div>
         </div>
         {% endfor %}
+            </div>
+            <button class="carousel-nav carousel-nav-right" id="scrollRight" onclick="scrollVariants('right')">
+              <i class="fas fa-chevron-right"></i>
+            </button>
+          </div>
+        </div>
       </div>
 
       <!-- No Results Message -->
-      <div id="noResults" class="text-center py-5" style="display: none;">
-        <div class="card">
-          <div class="card-body">
-            <i class="fas fa-search fa-3x text-muted mb-3"></i>
-            <h5>No variants found</h5>
-            <p class="text-muted">Try adjusting your search criteria</p>
-          </div>
+      <div id="noResults" class="card" style="display: none;">
+        <div class="card-body text-center py-5">
+          <i class="fas fa-search fa-3x text-muted mb-3"></i>
+          <h5>No variants found</h5>
+          <p class="text-muted">Try adjusting your search criteria</p>
         </div>
       </div>
     </div>
@@ -277,6 +353,88 @@
     border-radius: 0.25rem;
     background-color: #f8f9fa;
 }
+
+/* Carousel Styles */
+.variants-carousel-wrapper {
+    position: relative;
+    overflow: hidden;
+    padding: 0 40px;
+}
+
+.variants-carousel {
+    display: flex;
+    gap: 1rem;
+    overflow-x: auto;
+    scroll-behavior: smooth;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    padding: 10px 0;
+}
+
+.variants-carousel::-webkit-scrollbar {
+    display: none;
+}
+
+.variant-card-item {
+    flex: 0 0 auto;
+    width: 300px;
+    transition: transform 0.2s ease-in-out;
+}
+
+.variant-card-item:hover {
+    transform: translateY(-2px);
+}
+
+.carousel-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 10;
+    transition: background-color 0.3s ease;
+}
+
+.carousel-nav:hover {
+    background: rgba(0, 0, 0, 0.9);
+}
+
+.carousel-nav-left {
+    left: 0;
+}
+
+.carousel-nav-right {
+    right: 0;
+}
+
+.carousel-nav:disabled {
+    background: rgba(0, 0, 0, 0.3);
+    cursor: not-allowed;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .variant-card-item {
+        width: 280px;
+    }
+    
+    .variants-carousel-wrapper {
+        padding: 0 30px;
+    }
+    
+    .carousel-nav {
+        width: 35px;
+        height: 35px;
+    }
+}
 </style>
 
 <script>
@@ -291,7 +449,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const searchTerm = variantFilter.value.toLowerCase();
         let visibleCount = 0;
 
-        const cards = variantsContainer.querySelectorAll('.variant-card');
+        const cards = variantsContainer.querySelectorAll('.variant-card-item');
         cards.forEach(card => {
             const variantName = card.dataset.variantName;
             const isVisible = variantName.includes(searchTerm);
@@ -300,12 +458,15 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         noResults.style.display = visibleCount === 0 ? 'block' : 'none';
+        
+        // Update navigation buttons after filtering
+        setTimeout(updateNavigationButtons, 100);
     }
 
     // Sort functionality
     function sortVariants() {
         const sortBy = sortFilter.value;
-        const cards = Array.from(variantsContainer.querySelectorAll('.variant-card'));
+        const cards = Array.from(variantsContainer.querySelectorAll('.variant-card-item'));
 
         cards.sort((a, b) => {
             switch(sortBy) {
@@ -325,11 +486,17 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         cards.forEach(card => variantsContainer.appendChild(card));
+        
+        // Update navigation buttons after sorting
+        setTimeout(updateNavigationButtons, 100);
     }
 
     // Event listeners
     if (variantFilter) variantFilter.addEventListener('input', filterVariants);
     if (sortFilter) sortFilter.addEventListener('change', sortVariants);
+    
+    // Initialize carousel
+    initializeCarousel();
 
     window.addVariant = function() {
         const form = document.getElementById('addVariantForm');
@@ -385,6 +552,99 @@ document.addEventListener('DOMContentLoaded', function() {
             form.submit();
         }
     };
+
+    window.scrollVariants = function(direction) {
+        const container = document.getElementById('variantsContainer');
+        if (!container) return;
+
+        const scrollAmount = 320; // Width of card + gap
+        const currentScroll = container.scrollLeft;
+
+        if (direction === 'left') {
+            container.scrollTo({
+                left: currentScroll - scrollAmount,
+                behavior: 'smooth'
+            });
+        } else {
+            container.scrollTo({
+                left: currentScroll + scrollAmount,
+                behavior: 'smooth'
+            });
+        }
+
+        // Update button states after scroll
+        setTimeout(updateNavigationButtons, 300);
+    };
+
+    function initializeCarousel() {
+        const container = document.getElementById('variantsContainer');
+        const leftBtn = document.getElementById('scrollLeft');
+        const rightBtn = document.getElementById('scrollRight');
+
+        if (!container || !leftBtn || !rightBtn) return;
+
+        // Initial button state
+        updateNavigationButtons();
+
+        // Update buttons on scroll
+        container.addEventListener('scroll', updateNavigationButtons);
+
+        // Handle touch/swipe for mobile
+        let isDown = false;
+        let startX;
+        let scrollLeft;
+
+        container.addEventListener('mousedown', (e) => {
+            isDown = true;
+            container.style.cursor = 'grabbing';
+            startX = e.pageX - container.offsetLeft;
+            scrollLeft = container.scrollLeft;
+        });
+
+        container.addEventListener('mouseleave', () => {
+            isDown = false;
+            container.style.cursor = 'grab';
+        });
+
+        container.addEventListener('mouseup', () => {
+            isDown = false;
+            container.style.cursor = 'grab';
+        });
+
+        container.addEventListener('mousemove', (e) => {
+            if (!isDown) return;
+            e.preventDefault();
+            const x = e.pageX - container.offsetLeft;
+            const walk = (x - startX) * 2;
+            container.scrollLeft = scrollLeft - walk;
+        });
+    }
+
+    function updateNavigationButtons() {
+        const container = document.getElementById('variantsContainer');
+        const leftBtn = document.getElementById('scrollLeft');
+        const rightBtn = document.getElementById('scrollRight');
+
+        if (!container || !leftBtn || !rightBtn) return;
+
+        const isAtStart = container.scrollLeft <= 10;
+        const isAtEnd = container.scrollLeft >= (container.scrollWidth - container.clientWidth - 10);
+
+        leftBtn.disabled = isAtStart;
+        rightBtn.disabled = isAtEnd;
+
+        // Also hide buttons if all cards fit in view
+        const totalWidth = container.scrollWidth;
+        const visibleWidth = container.clientWidth;
+        
+        if (totalWidth <= visibleWidth) {
+            leftBtn.style.display = 'none';
+            rightBtn.style.display = 'none';
+        } else {
+            leftBtn.style.display = 'flex';
+            rightBtn.style.display = 'flex';
+        }
+    }
 });
 </script>
 {% endblock %}
