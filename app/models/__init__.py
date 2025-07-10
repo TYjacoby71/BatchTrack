@@ -11,6 +11,7 @@ from .product import Product, ProductVariant, ProductSKU, ProductSKUHistory
 from .reservation import Reservation
 from .role import Role
 from .permission import Permission, role_permission
+from .user_preferences import *
 
 # Re-export everything for convenience
 __all__ = [
@@ -18,5 +19,6 @@ __all__ = [
     'ConversionLog', 'RecipeIngredient', 'Recipe', 'Batch', 'BatchIngredient', 
     'BatchContainer', 'ExtraBatchContainer', 'InventoryHistory', 'BatchTimer', 
     'ExtraBatchIngredient', 'InventoryItem', 'BatchInventoryLog', 'Tag',
-    'Product', 'ProductVariant', 'ProductSKU', 'ProductSKUHistory', 'Reservation', 'Role', 'Permission', 'role_permission'
+    'Product', 'ProductVariant', 'ProductSKU', 'ProductSKUHistory', 'Reservation', 'Role', 'Permission', 'role_permission',
+    '*'
 ]

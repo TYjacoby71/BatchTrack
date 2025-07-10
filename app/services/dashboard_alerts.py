@@ -1,7 +1,8 @@
 
 from typing import Dict, List, Optional
 from datetime import datetime, timedelta
-from ..models import db, InventoryItem, Batch, ProductSKU
+from flask_login import current_user
+from ..models import db, InventoryItem, Batch, ProductSKU, UserPreferences
 from ..services.combined_inventory_alerts import CombinedInventoryAlertService
 from ..blueprints.expiration.services import ExpirationService
 import json
@@ -18,8 +19,18 @@ class DashboardAlertService:
     }
     
     @staticmethod
-    def get_dashboard_alerts(max_alerts: int = 3, dismissed_alerts: list = None) -> Dict:
+    def get_dashboard_alerts(max_alerts: int = None, dismissed_alerts: list = None) -> Dict:
         """Get prioritized alerts for dashboard with cognitive load management"""
+        # Get user preferences
+        user_prefs = None
+        if current_user and current_user.is_authenticated:
+            user_prefs = UserPreferences.get_for_user(current_user.id)
+            if max_alerts is None:
+                max_alerts = user_prefs.max_dashboard_alerts
+        
+        if max_alerts is None:
+            max_alerts = 3  # Default fallback
+            
         alerts = []
         
         # Get expiration summary once
@@ -37,8 +48,8 @@ class DashboardAlertService:
                 'dismissible': False
             })
         
-        # CRITICAL: Stuck batches (in progress > 24 hours) - only if enabled in settings
-        if DashboardAlertService._is_alert_enabled('show_batch_alerts'):
+        # CRITICAL: Stuck batches (in progress > 24 hours) - only if enabled in user preferences
+        if user_prefs and user_prefs.show_batch_alerts:
             stuck_batches = DashboardAlertService._get_stuck_batches()
             if stuck_batches:
                 alerts.append({
@@ -52,7 +63,7 @@ class DashboardAlertService:
                 })
         
         # CRITICAL: Recent fault log errors - only if enabled
-        if DashboardAlertService._is_alert_enabled('show_fault_alerts'):
+        if user_prefs and user_prefs.show_fault_alerts:
             recent_faults = DashboardAlertService._get_recent_faults()
             if recent_faults > 0:
                 alerts.append({
@@ -65,20 +76,20 @@ class DashboardAlertService:
                     'dismissible': False
                 })
         
-        # HIGH: Items expiring soon (within 3 days) - only if enabled
-        if DashboardAlertService._is_alert_enabled('show_expiration_alerts') and expiration_summary['expiring_soon_total'] > 0:
+        # HIGH: Items expiring soon (within expiration_warning_days) - only if enabled
+        if user_prefs and user_prefs.show_expiration_alerts and expiration_summary['expiring_soon_total'] > 0:
             alerts.append({
                 'priority': 'HIGH',
                 'type': 'expiring_soon',
                 'title': 'Expiring Soon',
-                'message': f"{expiration_summary['expiring_soon_total']} items expire within 3 days",
+                'message': f"{expiration_summary['expiring_soon_total']} items expire within {user_prefs.expiration_warning_days} days",
                 'action_url': '/expiration/alerts',
                 'action_text': 'Plan Usage',
                 'dismissible': True
             })
         
         # HIGH: Low stock items - only if enabled
-        if DashboardAlertService._is_alert_enabled('show_low_stock_alerts'):
+        if user_prefs and user_prefs.show_low_stock_alerts:
             stock_summary = CombinedInventoryAlertService.get_unified_stock_summary()
             
             if stock_summary['low_stock_ingredients_count'] > 0:
@@ -115,7 +126,7 @@ class DashboardAlertService:
                 })
         
         # HIGH: Expired timers - only if enabled
-        if DashboardAlertService._is_alert_enabled('show_timer_alerts'):
+        if user_prefs and user_prefs.show_timer_alerts:
             timer_alerts = DashboardAlertService._get_timer_alerts()
             if timer_alerts['expired_count'] > 0:
                 # Get the first expired timer's batch for redirection
@@ -264,15 +275,7 @@ class DashboardAlertService:
         except:
             return 0
     
-    @staticmethod
-    def _is_alert_enabled(alert_type: str) -> bool:
-        """Check if a specific alert type is enabled in settings"""
-        try:
-            with open('settings.json', 'r') as f:
-                settings = json.load(f)
-                return settings.get('alerts', {}).get(alert_type, True)  # Default to True if not set
-        except (FileNotFoundError, json.JSONDecodeError):
-            return True  # Default to enabled if settings can't be read
+    
     
     @staticmethod
     def _get_incomplete_batches() -> int:

@@ -3,7 +3,7 @@ from ..models import Recipe, InventoryItem, Batch
 from ..services.stock_check import universal_stock_check
 from flask_login import login_required, current_user
 from ..utils.permissions import require_permission, user_scoped_query
-from ..services.inventory_alerts import get_low_stock_ingredients
+from ..services.combined_inventory_alerts import CombinedInventoryAlertService
 from ..blueprints.expiration.services import ExpirationService
 from ..services.dashboard_alerts import DashboardAlertService
 
