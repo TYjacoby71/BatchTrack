@@ -680,8 +680,7 @@ function initTablePagination(tableType) {
 
   // Event listeners
   document.getElementById(nameFilterId).addEventListener('input', filterAndSort);
-  document.getElementById(sortFilterId).addEventListener('change', filterAndSort);
-  document.getElementById(perPageId).addEventListener('change', function() {
+  document.getElementById(sortFilterId).addEventListener('change', filterAndSort);document.getElementById(perPageId).addEventListener('change', function() {
     itemsPerPage = parseInt(this.value);
     currentPage = 1;
     updateTable();
