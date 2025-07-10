@@ -236,3 +236,49 @@ def quick_add_product():
 
 # Inventory adjustments are handled by product_inventory_routes.py
 # This API file only provides data retrieval and simple operations
+from flask import Blueprint, request, jsonify
+from flask_login import login_required, current_user
+from ...models.product import Product, ProductVariant
+
+products_api_bp = Blueprint('products_api', __name__)
+
+@products_api_bp.route('/api/products/<int:product_id>/variants', methods=['GET'])
+@login_required
+def get_product_variants(product_id):
+    """Get variants for a specific product"""
+    try:
+        # Get the product and verify it belongs to the user's organization
+        product = Product.query.filter_by(
+            id=product_id,
+            organization_id=current_user.organization_id,
+            is_active=True
+        ).first()
+        
+        if not product:
+            return jsonify({'error': 'Product not found'}), 404
+        
+        # Get active variants for this product
+        variants = ProductVariant.query.filter_by(
+            product_id=product_id,
+            organization_id=current_user.organization_id,
+            is_active=True
+        ).all()
+        
+        variants_data = []
+        for variant in variants:
+            variants_data.append({
+                'id': variant.id,
+                'name': variant.name,
+                'description': variant.description,
+                'color': variant.color,
+                'material': variant.material,
+                'scent': variant.scent
+            })
+        
+        return jsonify({
+            'success': True,
+            'variants': variants_data
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500

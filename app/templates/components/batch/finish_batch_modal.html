@@ -10,20 +10,197 @@
         <form id="finishBatchModalForm" method="post" action="{{ url_for('finish_batch.complete_batch', batch_id=batch.id) }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-          <!-- Always show basic info -->
-          {% include 'components/batch/finish_batch_basic_info.html' %}
+          <!-- Basic Batch Information Section -->
+          <div class="basic-info-section">
+            <!-- For intermediate ingredients, show ingredient title -->
+            {% if batch.batch_type == 'ingredient' %}
+            <div class="alert alert-info mb-3">
+              <h6 class="mb-0">
+                <i class="fas fa-flask me-2"></i>
+                Creating Intermediate Ingredient: {{ batch.recipe.name }}
+              </h6>
+            </div>
+            <input type="hidden" name="output_type" value="ingredient">
+            {% endif %}
 
-          <!-- Only show product fields if batch type is 'product' -->
+            <div class="form-group mb-3">
+              <label for="final_quantity">Final Quantity</label>
+              <input type="number" 
+                     id="final_quantity"
+                     name="final_quantity"
+                     class="form-control"
+                     min="0.01"
+                     step="any"
+                     value="{{ batch.projected_yield }}"
+                     required
+                     onchange="validateYield()">
+              <div class="form-text">
+                Projected yield: {{ batch.projected_yield }} {{ batch.projected_yield_unit }}
+              </div>
+              <div id="yield-validation-alerts" class="mt-2"></div>
+              <input type="hidden" name="output_unit" value="{{ batch.projected_yield_unit }}">
+            </div>
+
+            <!-- Ensure output_type is set -->
+            {% if not batch.batch_type or batch.batch_type == 'ingredient' %}
+            <input type="hidden" name="output_type" value="ingredient">
+            {% else %}
+            <input type="hidden" name="output_type" value="{{ batch.batch_type }}">
+            {% endif %}
+          </div>
+
+          <!-- Product Selection Fields - Only show if batch type is 'product' -->
           {% if batch.batch_type == 'product' %}
-          {% include 'components/batch/finish_batch_product_fields.html' %}
+          <div id="productFields">
+            <div class="mb-3">
+              <label for="product_id">Product</label>
+              <select id="product_id" name="product_id" class="form-select" required onchange="loadVariants()">
+                <option value="">Select Product</option>
+                {% for product in products %}
+                  <option value="{{ product.id }}" data-product-name="{{ product.name }}">
+                    {{ product.name }}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="mb-3">
+              <label for="variant_id">Variant</label>
+              <select name="variant_id" id="variant_id" class="form-select" disabled>
+                <option value="">Select product first...</option>
+              </select>
+            </div>
+
+            <!-- Size is automatically determined from containers used in batch -->
+            <input type="hidden" name="size_label" value="Bulk">
+          </div>
           {% endif %}
 
-          <!-- Always show perishable section -->
-          {% include 'components/batch/finish_batch_perishable.html' %}
+          <!-- Perishable Item Fields -->
+          <div class="perishable-section">
+            <div class="form-group mb-3">
+              <div class="form-check">
+                <input type="checkbox" id="is_perishable" name="is_perishable" class="form-check-input" onchange="toggleShelfLife()">
+                <label for="is_perishable" class="form-check-label">Perishable Item</label>
+              </div>
+            </div>
 
-          <!-- Only show containers if batch has containers -->
+            <div id="shelfLifeField" class="form-group mb-3" style="display: none;">
+              <label for="shelf_life_days">Shelf Life (days)</label>
+              <input type="number" id="shelf_life_days" name="shelf_life_days" class="form-control" min="1" onchange="updateExpirationDate()">
+              <div class="mt-2">
+                <label for="expiration_date_display">Expiration Date</label>
+                <input type="date" id="expiration_date_display" class="form-control" readonly>
+                <input type="hidden" id="expiration_date" name="expiration_date">
+              </div>
+            </div>
+          </div>
+
+          <!-- Container Management Section - Only show if batch has containers -->
           {% if batch.containers or batch.extra_containers %}
-          {% include 'components/batch/finish_batch_containers.html' %}
+          <div class="card mb-3">
+            <div class="card-header">
+              <h6 class="mb-0">Container Distribution</h6>
+            </div>
+            <div class="card-body">
+              <!-- Yield Validation Alerts -->
+              <div id="yield-validation-alerts"></div>
+
+              <!-- Container Table -->
+              <div class="table-responsive">
+                <table class="table table-sm">
+                  <thead>
+                    <tr>
+                      <th>Container</th>
+                      <th>Size</th>
+                      <th>Used in Batch</th>
+                      <th>Pass to Product</th>
+                      <th>Total Capacity</th>
+                    </tr>
+                  </thead>
+                  <tbody id="containerTableBody">
+                    <!-- Regular containers -->
+                    {% for container in batch.containers %}
+                    <tr>
+                      <td>{{ container.container.name }}</td>
+                      <td>{{ container.container.storage_amount or 0 }} {{ container.container.storage_unit or 'count' }}</td>
+                      <td>{{ container.quantity_used or container.container_quantity }}</td>
+                      <td>
+                        <input type="number" 
+                               name="container_final_{{ container.container_id }}" 
+                               class="form-control form-control-sm container-final-input"
+                               value="{{ container.quantity_used or container.container_quantity }}" 
+                               min="0" 
+                               max="{{ container.quantity_used or container.container_quantity }}"
+                               data-container-id="{{ container.container_id }}"
+                               data-container-size="{{ container.container.storage_amount or 0 }}"
+                               data-used-quantity="{{ container.quantity_used or container.container_quantity }}"
+                               onchange="updateContainerSummary()">
+                        <input type="hidden" name="container_type_{{ container.container_id }}" value="regular">
+                      </td>
+                      <td class="container-capacity">
+                        {{ (container.container.storage_amount or 0) * (container.quantity_used or container.container_quantity) }} {{ container.container.storage_unit or 'count' }}
+                      </td>
+                    </tr>
+                    {% endfor %}
+
+                    <!-- Extra containers (if they exist in the model) -->
+                    {% if batch.extra_containers %}
+                    {% for extra_container in batch.extra_containers %}
+                    <tr class="table-warning">
+                      <td>{{ extra_container.container.name }}</td>
+                      <td>{{ extra_container.container.storage_amount or 0 }} {{ extra_container.container.storage_unit or 'count' }}</td>
+                      <td>{{ extra_container.quantity_used or extra_container.container_quantity }}</td>
+                      <td>
+                        <input type="number" 
+                               name="container_final_{{ extra_container.container_id }}" 
+                               class="form-control form-control-sm container-final-input"
+                               value="{{ extra_container.quantity_used or extra_container.container_quantity }}" 
+                               min="0" 
+                               max="{{ extra_container.quantity_used or extra_container.container_quantity }}"
+                               data-container-id="{{ extra_container.container_id }}"
+                               data-container-size="{{ extra_container.container.storage_amount or 0 }}"
+                               data-used-quantity="{{ extra_container.quantity_used or extra_container.container_quantity }}"
+                               onchange="updateContainerSummary()">
+                        <input type="hidden" name="container_type_{{ extra_container.container_id }}" value="extra">
+                        {% if extra_container.reason %}
+                        <input type="hidden" name="container_reason_{{ extra_container.container_id }}" value="{{ extra_container.reason }}">
+                        {% endif %}
+                      </td>
+                      <td class="container-capacity">
+                        {{ (extra_container.container.storage_amount or 0) * (extra_container.quantity_used or extra_container.container_quantity) }} {{ extra_container.container.storage_unit or 'count' }}
+                      </td>
+                    </tr>
+                    {% endfor %}
+                    {% endif %}
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Summary Row -->
+              <div class="row mt-3">
+                <div class="col-sm-4">
+                  <strong>Total Container Capacity:</strong>
+                  <span id="totalCapacity">{{ batch.total_container_capacity or 0 }}</span> {{ batch.yield_unit or 'floz' }}
+                </div>
+                <div class="col-sm-4">
+                  <strong>Final Yield:</strong>
+                  <span id="finalYieldDisplay">{{ batch.projected_yield or 0 }}</span> {{ batch.yield_unit or 'floz' }}
+                </div>
+                <div class="col-sm-4">
+                  <strong>Bulk (Uncontained):</strong>
+                  <span id="uncontainedYield">0</span> {{ batch.yield_unit or 'floz' }}
+                </div>
+              </div>
+
+              <div class="mt-2">
+                <small class="text-muted">
+                  Pass to Product: Number of containers that will become individual SKUs with size labels.
+                  Remaining yield goes to bulk product.
+                </small>
+              </div>
+            </div>
+          </div>
           {% endif %}
 
           <div class="modal-footer">
@@ -36,6 +213,240 @@
   </div>
 </div>
 
-<!-- JavaScript Functions Component -->
-{% include 'components/batch/finish_batch_scripts.html' %}
+<!-- JavaScript Functions -->
+<script>
+function toggleShelfLife() {
+  const isPerishable = document.getElementById('is_perishable');
+  const shelfLifeField = document.getElementById('shelfLifeField');
+
+  if (isPerishable && shelfLifeField) {
+    const showShelfLife = isPerishable.checked;
+    shelfLifeField.style.display = showShelfLife ? 'block' : 'none';
+
+    const shelfLifeInput = document.getElementById('shelf_life_days');
+    if (shelfLifeInput) {
+      shelfLifeInput.required = showShelfLife;
+      if (!showShelfLife) {
+        shelfLifeInput.value = '';
+        const expDateInput = document.getElementById('expiration_date');
+        const expDateDisplay = document.getElementById('expiration_date_display');
+        if (expDateInput) expDateInput.value = '';
+        if (expDateDisplay) expDateDisplay.value = '';
+      }
+    }
+  }
+}
+
+function updateExpirationDate() {
+  const shelfLifeElement = document.getElementById('shelf_life_days');
+  if (!shelfLifeElement) return;
+
+  const shelfLife = shelfLifeElement.value;
+  if (shelfLife && parseInt(shelfLife) > 0) {
+    const expirationDate = new Date();
+    expirationDate.setDate(expirationDate.getDate() + parseInt(shelfLife));
+    const dateString = expirationDate.toISOString().split('T')[0];
+
+    const expDateElement = document.getElementById('expiration_date');
+    const expDateDisplayElement = document.getElementById('expiration_date_display');
+
+    if (expDateElement) expDateElement.value = dateString;
+    if (expDateDisplayElement) expDateDisplayElement.value = dateString;
+  }
+}
+
+function loadVariants() {
+  const productSelect = document.getElementById('product_id');
+  const variantSelect = document.getElementById('variant_id');
+  
+  if (!productSelect || !variantSelect) {
+    console.error('Product or variant select not found');
+    return;
+  }
+
+  const productId = productSelect.value;
+  
+  // Reset variant dropdown
+  variantSelect.innerHTML = '<option value="">Loading variants...</option>';
+  variantSelect.disabled = true;
+
+  if (!productId) {
+    variantSelect.innerHTML = '<option value="">Select product first...</option>';
+    return;
+  }
+
+  // Fetch variants for the selected product
+  fetch(`/api/products/${productId}/variants`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': getCSRFToken()
+    }
+  })
+  .then(response => {
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return response.json();
+  })
+  .then(data => {
+    variantSelect.innerHTML = '<option value="">Select Variant</option>';
+    
+    if (data.variants && data.variants.length > 0) {
+      data.variants.forEach(variant => {
+        const option = document.createElement('option');
+        option.value = variant.id;
+        option.textContent = variant.name;
+        variantSelect.appendChild(option);
+      });
+      variantSelect.disabled = false;
+    } else {
+      variantSelect.innerHTML = '<option value="">No variants available</option>';
+    }
+  })
+  .catch(error => {
+    console.error('Error loading variants:', error);
+    variantSelect.innerHTML = '<option value="">Error loading variants</option>';
+  });
+}
+
+function validateYield() {
+  const finalQuantityInput = document.getElementById('final_quantity');
+  const alertsContainer = document.getElementById('yield-validation-alerts');
+  const hasContainers = {{ 'true' if batch.containers or batch.extra_containers else 'false' }};
+
+  if (!finalQuantityInput) {
+    return;
+  }
+
+  const finalQuantity = parseFloat(finalQuantityInput.value);
+
+  if (!finalQuantity || finalQuantity <= 0) {
+    if (alertsContainer) {
+      alertsContainer.innerHTML = '';
+    }
+    updateContainerSummary();
+    return;
+  }
+
+  // Update display with current yield
+  const finalYieldDisplay = document.getElementById('finalYieldDisplay');
+  if (finalYieldDisplay) {
+    finalYieldDisplay.textContent = finalQuantity.toFixed(2);
+  }
+
+  if (!hasContainers) {
+    console.log('No containers in batch - all yield goes to bulk');
+    updateUncontainedYield(finalQuantity);
+    return;
+  }
+
+  // Update container summary
+  updateContainerSummary();
+}
+
+function updateContainerSummary() {
+  const finalQuantityInput = document.getElementById('final_quantity');
+  const finalQuantity = parseFloat(finalQuantityInput?.value || 0);
+
+  if (finalQuantity <= 0) {
+    return;
+  }
+
+  // Calculate total container capacity being used for products
+  let totalContainerCapacity = 0;
+  const containerInputs = document.querySelectorAll('.container-final-input');
+
+  containerInputs.forEach(input => {
+    const quantity = parseInt(input.value || 0);
+    const containerSize = parseFloat(input.dataset.containerSize || 0);
+    totalContainerCapacity += quantity * containerSize;
+  });
+
+  // Update displays
+  const totalCapacitySpan = document.getElementById('totalCapacity');
+  const uncontainedYieldSpan = document.getElementById('uncontainedYield');
+
+  if (totalCapacitySpan) {
+    totalCapacitySpan.textContent = totalContainerCapacity.toFixed(2);
+  }
+
+  const uncontainedYield = Math.max(0, finalQuantity - totalContainerCapacity);
+  if (uncontainedYieldSpan) {
+    uncontainedYieldSpan.textContent = uncontainedYield.toFixed(2);
+  }
+
+  // Validate and show alerts
+  validateContainerAllocation(finalQuantity, totalContainerCapacity);
+}
+
+function updateUncontainedYield(finalQuantity) {
+  const uncontainedYieldSpan = document.getElementById('uncontainedYield');
+  if (uncontainedYieldSpan) {
+    uncontainedYieldSpan.textContent = finalQuantity.toFixed(2);
+  }
+}
+
+function validateContainerAllocation(finalQuantity, totalContainerCapacity) {
+  const alertsContainer = document.getElementById('yield-validation-alerts');
+  if (!alertsContainer) return;
+
+  let alertHtml = '';
+
+  if (totalContainerCapacity > finalQuantity) {
+    const excess = totalContainerCapacity - finalQuantity;
+    alertHtml += `
+      <div class="alert alert-warning alert-sm mb-1">
+        <i class="fas fa-exclamation-triangle me-1"></i>
+        <strong>Overfill Warning:</strong> Container allocation (${totalContainerCapacity.toFixed(2)}) exceeds final yield (${finalQuantity.toFixed(2)}) by ${excess.toFixed(2)} units.
+      </div>`;
+  }
+
+  if (finalQuantity > totalContainerCapacity) {
+    const bulk = finalQuantity - totalContainerCapacity;
+    alertHtml += `
+      <div class="alert alert-info alert-sm mb-1">
+        <i class="fas fa-info-circle me-1"></i>
+        <strong>Bulk Product:</strong> ${bulk.toFixed(2)} units will be stored as bulk product.
+      </div>`;
+  }
+
+  alertsContainer.innerHTML = alertHtml;
+}
+
+function getCSRFToken() {
+  const token = document.querySelector('input[name="csrf_token"]')?.value ||
+                document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+  return token || '';
+}
+
+// Initialize on modal show
+document.addEventListener('DOMContentLoaded', function() {
+  const modal = document.getElementById('finishBatchModal');
+  if (modal) {
+    modal.addEventListener('shown.bs.modal', function () {
+      console.log('Modal opened, initializing...');
+
+      // Initialize shelf life toggle (safe for all batch types)
+      toggleShelfLife();
+
+      // Only validate yield if the input exists and batch has containers
+      const finalQuantityInput = document.getElementById('final_quantity');
+      if (finalQuantityInput) {
+        finalQuantityInput.addEventListener('input', validateYield);
+        validateYield();
+      }
+
+      // Add event listeners to container inputs
+      const containerInputs = document.querySelectorAll('.container-final-input');
+      containerInputs.forEach(input => {
+        input.addEventListener('input', updateContainerSummary);
+      });
+
+      // Initial container summary update
+      updateContainerSummary();
+    });
+  }
+});
+</script>
 </div>
