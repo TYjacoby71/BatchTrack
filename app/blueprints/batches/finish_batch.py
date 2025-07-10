@@ -137,15 +137,28 @@ def _create_product_output(batch, product_id, variant_id, final_quantity, output
         # Process container allocations
         container_skus = _process_container_allocations(batch, product, variant, form_data, expiration_date)
 
+        # Calculate total product volume used in containers
+        total_container_volume = 0
+        for sku_info in container_skus:
+            # Each container holds storage_amount * number of containers
+            container_capacity = sku_info.get('container_capacity', 1)
+            container_count = sku_info.get('quantity', 0)
+            total_container_volume += container_capacity * container_count
+
         # Calculate bulk quantity (remaining after containers)
-        total_container_quantity = sum(sku['quantity'] for sku in container_skus)
-        bulk_quantity = max(0, final_quantity - total_container_quantity)
+        bulk_quantity = max(0, final_quantity - total_container_volume)
 
         # Create bulk SKU if there's remaining quantity
         if bulk_quantity > 0:
-            _create_bulk_sku(product, variant, bulk_quantity, output_unit, expiration_date, batch)
+            # For bulk, use the batch output unit (may need conversion to product base unit)
+            bulk_unit = output_unit
+            if bulk_unit != product.base_unit:
+                # Convert if needed - for now, use output_unit as-is
+                logger.warning(f"Bulk unit {bulk_unit} differs from product base unit {product.base_unit}")
+            
+            _create_bulk_sku(product, variant, bulk_quantity, bulk_unit, expiration_date, batch)
 
-        logger.info(f"Created product output for batch {batch.label_code}: {len(container_skus)} container SKUs, {bulk_quantity} bulk")
+        logger.info(f"Created product output for batch {batch.label_code}: {len(container_skus)} container SKUs, {bulk_quantity} {bulk_unit if bulk_quantity > 0 else ''} bulk")
 
     except Exception as e:
         logger.error(f"Error creating product output: {str(e)}")
@@ -176,25 +189,31 @@ def _process_container_allocations(batch, product, variant, form_data, expiratio
                     continue
 
                 # Debug logging
-                logger.info(f"Processing container: {container_item.name} (ID: {container_item.id})")
+                logger.info(f"Processing container: {container_item.name} (ID: {container_item.id}), {final_quantity} containers")
 
-                # Pass the container object and quantity separately
+                # Create container SKU - final_quantity is number of containers
                 container_sku = _create_container_sku(
                     product=product,
                     variant=variant,
-                    container_item=container_item,  # This is the InventoryItem object
-                    quantity=final_quantity,
+                    container_item=container_item,
+                    quantity=final_quantity,  # Number of containers
                     batch=batch,
                     expiration_date=expiration_date
                 )
 
+                # Track container info for volume calculation
                 container_skus.append({
                     'sku': container_sku,
-                    'quantity': final_quantity,
-                    'container_capacity': container_item.storage_amount or 1
+                    'quantity': final_quantity,  # Number of containers
+                    'container_capacity': container_item.storage_amount or 1  # Volume per container
                 })
+                
+                logger.info(f"Created container SKU for {final_quantity} x {container_item.name} containers")
+                
             except Exception as e:
                 logger.error(f"Error processing container {container_id}: {e}")
+                import traceback
+                logger.error(f"Container processing traceback: {traceback.format_exc()}")
                 continue
 
     return container_skus
@@ -205,19 +224,22 @@ def _create_container_sku(product, variant, container_item, quantity, batch, exp
     try:
         logger.info(f"Creating container SKU with container: {container_item.name}, quantity: {quantity}")
         
-        # Create size label: quantity + unit + container name
+        # Create size label format: "[storage_amount] [storage_unit] [container_name]"
+        # Example: "4 floz Admin 4oz Glass Jars"
         if container_item.storage_amount and container_item.storage_unit:
             size_label = f"{container_item.storage_amount} {container_item.storage_unit} {container_item.name}"
         else:
             size_label = f"1 unit {container_item.name}"
 
-        # Generate SKU code
+        # Generate SKU code: Product-Variant-Container-timestamp
         sku_code = f"{product.name[:3].upper()}-{variant.name[:3].upper()}-{container_item.name[:3].upper()}-{datetime.now().strftime('%m%d%H%M')}"
 
-        # Create inventory item for this SKU - unit should be 'count' for containers
+        # Create inventory item for this containerized SKU
+        # Name format: "Product Name - Variant Name (size_label)"
+        # Example: "Admin Apple Sauce - Base (4 floz Admin 4oz Glass Jars)"
         inventory_item = InventoryItem(
             name=f"{product.name} - {variant.name} ({size_label})",
-            unit='count',  # Containers are counted as individual units
+            unit='count',  # Containers are always counted as individual units
             category='Product',
             organization_id=current_user.organization_id,
             created_by=current_user.id,
@@ -226,28 +248,29 @@ def _create_container_sku(product, variant, container_item, quantity, batch, exp
         db.session.add(inventory_item)
         db.session.flush()
 
-        # Create ProductSKU
+        # Create ProductSKU linking to the inventory item
         product_sku = ProductSKU(
             product_id=product.id,
             variant_id=variant.id,
             sku_code=sku_code,
             size_label=size_label,
-            unit_quantity=container_item.storage_amount or 1,
-            unit_type=container_item.storage_unit or product.base_unit,
+            unit_quantity=container_item.storage_amount or 1,  # Volume per container
+            unit_type=container_item.storage_unit or product.base_unit,  # Unit of the volume
             inventory_item_id=inventory_item.id,
+            unit='count',  # SKU unit is count (number of containers)
             organization_id=current_user.organization_id,
             created_by=current_user.id
         )
         db.session.add(product_sku)
         db.session.flush()
 
-        # Add to inventory - quantity is number of containers
+        # Add containers to inventory - quantity is number of containers
         process_inventory_adjustment(
             item_id=inventory_item.id,
             quantity=quantity,  # Number of containers
             change_type='finished_batch',
             unit='count',  # Unit is count for containers
-            notes=f'Batch {batch.label_code} completed - {quantity} containers',
+            notes=f'Batch {batch.label_code} completed - {quantity} containers of {size_label}',
             created_by=current_user.id,
             custom_expiration_date=expiration_date
         )
@@ -275,12 +298,15 @@ def _create_bulk_sku(product, variant, quantity, unit, expiration_date, batch):
 
         if not bulk_sku:
             # Create inventory item for bulk
+            # Name format: "Product Name - Variant Name (Bulk)"
+            # Example: "Admin Apple Sauce - Base (Bulk)"
             inventory_item = InventoryItem(
                 name=f"{product.name} - {variant.name} (Bulk)",
-                unit=unit,
+                unit=unit,  # Use the batch output unit (should be converted to product base unit if needed)
                 category='Product',
                 organization_id=current_user.organization_id,
-                created_by=current_user.id
+                created_by=current_user.id,
+                type='product'
             )
             db.session.add(inventory_item)
             db.session.flush()
@@ -295,6 +321,7 @@ def _create_bulk_sku(product, variant, quantity, unit, expiration_date, batch):
                 unit_quantity=1,
                 unit_type=unit,
                 inventory_item_id=inventory_item.id,
+                unit=unit,  # Bulk SKU uses the product's base unit
                 organization_id=current_user.organization_id,
                 created_by=current_user.id
             )
@@ -307,11 +334,12 @@ def _create_bulk_sku(product, variant, quantity, unit, expiration_date, batch):
             quantity=quantity,
             change_type='finished_batch',
             unit=unit,
-            notes=f'Batch {batch.label_code} completed - bulk quantity',
+            notes=f'Batch {batch.label_code} completed - bulk remainder',
             created_by=current_user.id,
             custom_expiration_date=expiration_date
         )
 
+        logger.info(f"Created bulk SKU: {bulk_sku.sku_code} with {quantity} {unit}")
         return bulk_sku
 
     except Exception as e:
