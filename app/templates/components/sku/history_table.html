@@ -42,13 +42,20 @@
                         </td>
                         <td>
                             {% if entry.fifo_reference_id %}
-                                <a href="#entry-{{ entry.fifo_reference_id }}" class="text-primary">
-                                    {% if entry.fifo_source %}
+                                {% set ref_entry = history|selectattr('id', 'equalto', entry.fifo_reference_id)|first %}
+                                {% if ref_entry and ref_entry.fifo_code %}
+                                    <a href="#entry-{{ entry.fifo_reference_id }}" class="text-primary">
+                                        <small class="font-monospace">{{ ref_entry.fifo_code }}</small>
+                                    </a>
+                                {% elif entry.fifo_source %}
+                                    <a href="#entry-{{ entry.fifo_reference_id }}" class="text-primary">
                                         {{ entry.fifo_source }}
-                                    {% else %}
+                                    </a>
+                                {% else %}
+                                    <a href="#entry-{{ entry.fifo_reference_id }}" class="text-primary">
                                         Ref #{{ entry.fifo_reference_id }}
-                                    {% endif %}
-                                </a>
+                                    </a>
+                                {% endif %}
                             {% elif entry.batch_id %}
                                 <span class="text-info">
                                     {% if entry.batch and entry.batch.label_code %}
@@ -59,7 +66,7 @@
                                 </span>
                             {% elif entry.change_type in ['restock', 'manual_addition', 'finished_batch'] %}
                                 <span class="text-success">
-                                    New Stock
+                                    New Lot
                                 </span>
                             {% else %}
                                 <span class="text-muted">-</span>
