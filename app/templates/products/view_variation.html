@@ -139,15 +139,17 @@
                           <li>
                             {% if group.skus %}
                             <a class="dropdown-item" href="{{ url_for('sku.view_sku', inventory_item_id=group.skus[0].inventory_item_id) }}">
-                              <i class="fas fa-eye"></i> View SKU
+                              <i class="fas fa-edit"></i> Manage Stock
                             </a>
                             {% endif %}
                           </li>
                           <li><hr class="dropdown-divider"></li>
                           <li>
-                            <a class="dropdown-item" href="{{ url_for('sku_merge.select_skus_to_merge') }}">
-                              <i class="fas fa-compress-arrows-alt"></i> Merge SKUs
+                            {% if group.skus %}
+                            <a class="dropdown-item" href="{{ url_for('sku.view_sku', inventory_item_id=group.skus[0].inventory_item_id) }}">
+                              <i class="fas fa-eye"></i> View SKU
                             </a>
+                            {% endif %}
                           </li>
                         </ul>
                       </div>
