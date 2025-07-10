@@ -53,7 +53,7 @@ class BatchService:
 
             for container_usage in batch.containers:
                 container = container_usage.container
-                final_qty = container_overrides.get(container.id, container_usage.quantity_used or 0)
+                final_qty = container_overrides.get(container.container_id, container_usage.quantity_used or 0)
 
                 if final_qty > 0:
                     # Calculate container capacity in output units
@@ -100,9 +100,9 @@ class BatchService:
                 if not container_sku:
                     continue
 
-                # Credit the total volume for this container type using inventory_item_id
+                # Credit the total volume for this container type
                 success = process_inventory_adjustment(
-                    item_id=container_sku.inventory_item_id,
+                    item_id=container_sku.id,
                     quantity=allocation['total_volume'],
                     change_type='finished_batch',
                     unit='count',
@@ -138,7 +138,7 @@ class BatchService:
 
                 if bulk_sku:
                     success = process_inventory_adjustment(
-                        item_id=bulk_sku.inventory_item_id,
+                        item_id=bulk_sku.id,
                         quantity=bulk_remainder,
                         change_type='finished_batch',
                         unit=batch.output_unit,
