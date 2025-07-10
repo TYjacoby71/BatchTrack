@@ -88,43 +88,61 @@
         {% endfor %}
       {% endfor %}
 
-      <div class="row mb-4">
-        <div class="col-lg-3 col-md-6 mb-3">
-          <div class="card bg-primary text-white">
-            <div class="card-body text-center">
-              <h4 class="mb-1">{{ "%.2f"|format(ns_product.total_bulk) }}</h4>
-              <small>Total Bulk ({{ product.base_unit }})</small>
-            </div>
-          </div>
+      <!-- Product Summary Card -->
+      <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h5 class="mb-0">Product Summary</h5>
+          <span class="text-muted small">{{ ns_product.variant_count }} Variants</span>
         </div>
-        <div class="col-lg-3 col-md-6 mb-3">
-          <div class="card bg-success text-white">
-            <div class="card-body text-center">
-              <h4 class="mb-1">{{ ns_product.total_packaged|int }}</h4>
-              <small>Total Packaged Items</small>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-6 col-lg-3">
+              <div class="card bg-light h-100">
+                <div class="card-body text-center">
+                  <div class="fs-4 fw-bold text-primary">{{ "%.2f"|format(ns_product.total_bulk) }}</div>
+                  <div class="text-muted small">Total Bulk</div>
+                  <div class="text-muted small">{{ product.base_unit }}</div>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-        <div class="col-lg-3 col-md-6 mb-3">
-          <div class="card bg-info text-white">
-            <div class="card-body text-center">
-              <h4 class="mb-1">${{ "%.2f"|format(ns_product.total_cost) }}</h4>
-              <small>Total Inventory Cost</small>
+            <div class="col-md-6 col-lg-3">
+              <div class="card bg-light h-100">
+                <div class="card-body text-center">
+                  <div class="fs-4 fw-bold text-success">{{ ns_product.total_packaged|int }}</div>
+                  <div class="text-muted small">Total Packaged</div>
+                  <div class="text-muted small">Items</div>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-        <div class="col-lg-3 col-md-6 mb-3">
-          <div class="card bg-warning text-white">
-            <div class="card-body text-center">
-              <h4 class="mb-1">${{ "%.2f"|format(ns_product.total_value) }}</h4>
-              <small>Total Retail Value</small>
+            <div class="col-md-6 col-lg-3">
+              <div class="card bg-light h-100">
+                <div class="card-body text-center">
+                  <div class="fs-4 fw-bold text-warning">${{ "%.2f"|format(ns_product.total_cost) }}</div>
+                  <div class="text-muted small">Total Cost</div>
+                  <div class="text-muted small">Inventory</div>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6 col-lg-3">
+              <div class="card bg-light h-100">
+                <div class="card-body text-center">
+                  <div class="fs-4 fw-bold text-info">${{ "%.2f"|format(ns_product.total_value) }}</div>
+                  <div class="text-muted small">Total Value</div>
+                  <div class="text-muted small">Retail Price</div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Variants Card View -->
-      <div class="row" id="variantsContainer">
+      <!-- Variants -->
+      <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h5 class="mb-0">Product Variants</h5>
+        </div>
+        <div class="card-body">
+          <div class="row" id="variantsContainer">
         {% set all_variants = [] %}
         {% for variation in product.variations %}
           {% if variation.name not in all_variants %}
@@ -228,16 +246,16 @@
           </div>
         </div>
         {% endfor %}
+          </div>
+        </div>
       </div>
 
       <!-- No Results Message -->
-      <div id="noResults" class="text-center py-5" style="display: none;">
-        <div class="card">
-          <div class="card-body">
-            <i class="fas fa-search fa-3x text-muted mb-3"></i>
-            <h5>No variants found</h5>
-            <p class="text-muted">Try adjusting your search criteria</p>
-          </div>
+      <div id="noResults" class="card" style="display: none;">
+        <div class="card-body text-center py-5">
+          <i class="fas fa-search fa-3x text-muted mb-3"></i>
+          <h5>No variants found</h5>
+          <p class="text-muted">Try adjusting your search criteria</p>
         </div>
       </div>
     </div>
