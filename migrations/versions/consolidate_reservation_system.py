@@ -1,6 +1,6 @@
 """Consolidate reservation system and role/permission changes
 
-Revision ID: consolidate_reservation_system
+Revision ID: 6e0c5e2e1c48
 Revises: aa271449bf33
 Create Date: 2025-01-09 19:55:00
 
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import sqlite
 
 # revision identifiers, used by Alembic.
-revision = 'consolidate_reservation_system'
+revision = '6e0c5e2e1c48'
 down_revision = 'aa271449bf33'
 branch_labels = None
 depends_on = None
