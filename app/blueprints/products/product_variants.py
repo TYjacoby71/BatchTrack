@@ -138,11 +138,8 @@ def view_variant(product_id, variant_name):
         flash('Variant not found', 'error')
         return redirect(url_for('products.view_product', product_id=product_id))
     
-    # Get all SKUs for this product/variant combination with proper organization scoping
-    from sqlalchemy.orm import joinedload
-    skus = ProductSKU.query.options(
-        joinedload(ProductSKU.inventory_item)
-    ).filter_by(
+    # Get all SKUs for this product/variant combination
+    skus = ProductSKU.query.filter_by(
         product_id=product.id,
         variant_id=variant.id,
         is_active=True,
@@ -151,9 +148,9 @@ def view_variant(product_id, variant_name):
 
     if not skus:
         flash('Variant not found', 'error')
-        return redirect(url_for('products.view_product', product_id=product_id))
+        return redirect(url_for('products.list_products'))
 
-    # Group SKUs by size_label - derive totals from authoritative inventory data
+    # Group SKUs by size_label
     size_groups = {}
     for sku in skus:
         display_size_label = sku.size_label or "Bulk"
@@ -163,17 +160,24 @@ def view_variant(product_id, variant_name):
             size_groups[key] = {
                 'size_label': display_size_label,
                 'unit': sku.unit,
-                'total_quantity': 0.0,
-                'skus': []
+                'total_quantity': 0,
+                'skus': [],
+                'batches': []  # Add batches for cost calculations
             }
 
-        # Always derive from inventory_item.quantity as the single source of truth
-        current_quantity = 0.0
-        if sku.inventory_item and sku.inventory_item.quantity is not None:
-            current_quantity = float(sku.inventory_item.quantity)
-        
-        size_groups[key]['total_quantity'] += current_quantity
+        # Use inventory_item.quantity if available, otherwise use a calculated quantity
+        if hasattr(sku, 'inventory_item') and sku.inventory_item:
+            size_groups[key]['total_quantity'] += sku.inventory_item.quantity
+        elif hasattr(sku, 'quantity'):
+            size_groups[key]['total_quantity'] += sku.quantity
+        else:
+            size_groups[key]['total_quantity'] += 0
         size_groups[key]['skus'].append(sku)
+
+        # Add batch information for cost calculations
+        for batch in sku.batches:
+            if batch.quantity > 0:
+                size_groups[key]['batches'].append(batch)
 
     # Get available containers for manual stock addition
     available_containers = InventoryItem.query.filter_by(
