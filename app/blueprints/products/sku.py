@@ -40,7 +40,8 @@ def view_sku(inventory_item_id):
                          get_global_unit_list=get_global_unit_list,
                          fifo_filter=request.args.get('fifo', 'false').lower() == 'true',
                          now=TimezoneUtils.now_naive(),
-                         timedelta=timedelta)
+                         timedelta=timedelta,
+                         TimezoneUtils=TimezoneUtils)
 
 @sku_bp.route('/sku/<int:inventory_item_id>/edit', methods=['POST'])
 @login_required
