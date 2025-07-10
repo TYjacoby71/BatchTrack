@@ -58,6 +58,9 @@ def complete_batch(batch_id):
             flash("This batch has active timers. Complete timers or force finish.", "warning")
             return redirect(url_for('batches.confirm_finish_with_timers', batch_id=batch.id))
 
+    # Start a savepoint to ensure atomic operations
+    savepoint = db.session.begin_nested()
+    
     try:
         # Basic required fields
         output_type = request.form.get('output_type')
@@ -92,7 +95,7 @@ def complete_batch(batch_id):
                     datetime.utcnow(), shelf_life_days
                 )
 
-        # Output-type specific logic
+        # Output-type specific logic - MUST NOT fail after this point
         if output_type == 'product':
             batch.product_id = request.form.get('product_id')
             batch.variant_id = request.form.get('variant_id')
@@ -126,16 +129,25 @@ def complete_batch(batch_id):
             if not success:
                 raise Exception(error_msg or "Failed to finalize intermediate output")
 
-        # Finalize
+        # Only finalize batch status if ALL inventory operations succeeded
         batch.status = 'completed'
         batch.completed_at = datetime.utcnow()
         batch.inventory_credited = True
 
+        # Commit the savepoint and main transaction
+        savepoint.commit()
         db.session.commit()
+        
         flash("✅ Batch completed successfully!", "success")
         return redirect(url_for('batches.list_batches'))
 
     except Exception as e:
+        # Rollback everything including batch status changes
+        savepoint.rollback()
         db.session.rollback()
-        flash(f"Error completing batch: {str(e)}", "error")
+        
+        # Log the error for debugging
+        print(f"ERROR: Batch {batch.id} completion failed: {str(e)}")
+        
+        flash(f"❌ Error completing batch: {str(e)}. No changes were made.", "error")
         return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch.id))
