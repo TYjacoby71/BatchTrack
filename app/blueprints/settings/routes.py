@@ -412,3 +412,25 @@ def update_user_preferences():
         current_app.logger.error(f"Error updating user preferences: {str(e)}")
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
+
+@settings_bp.route('/alerts')
+@login_required
+def alerts():
+    """Alert configuration settings"""
+    # Get current settings or use defaults
+    from ...utils.settings import get_user_settings
+    settings = get_user_settings(current_user.id)
+
+    # Ensure alerts section exists
+    if 'alerts' not in settings:
+        settings['alerts'] = {
+            'max_dashboard_alerts': 10,
+            'show_expiration_alerts': True,
+            'show_timer_alerts': True,
+            'show_low_stock_alerts': True,
+            'show_batch_alerts': True,
+            'show_fault_alerts': True,
+            'show_alert_badges': True
+        }
+
+    return render_template('settings/alerts.html', settings=settings)
