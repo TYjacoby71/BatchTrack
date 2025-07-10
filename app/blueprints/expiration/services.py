@@ -101,18 +101,21 @@ class ExpirationService:
         ).all()
 
         # Get expired product SKUs with batch-aware calculation
-        from ...models import ProductSKU, ProductSKUHistory
+        from ...models import ProductSKU, ProductSKUHistory, Product, ProductVariant
 
         # Get SKUs with remaining quantity from FIFO entries
         expired_skus = db.session.query(
             ProductSKUHistory.inventory_item_id,
-            ProductSKU.product_name,
-            ProductSKU.variant_name,
+            Product.name.label('product_name'),
+            ProductVariant.name.label('variant_name'),
             ProductSKU.size_label,
             ProductSKUHistory.remaining_quantity,
             ProductSKUHistory.unit,
-            ProductSKUHistory.id.label('history_id')
-        ).join(ProductSKU, ProductSKUHistory.inventory_item_id == ProductSKU.inventory_item_id).filter(
+            ProductSKUHistory.id.label('history_id'),
+            ProductSKUHistory.batch_id
+        ).join(ProductSKU, ProductSKUHistory.inventory_item_id == ProductSKU.inventory_item_id
+        ).join(Product, ProductSKU.product_id == Product.id
+        ).join(ProductVariant, ProductSKU.variant_id == ProductVariant.id).filter(
             and_(
                 ProductSKUHistory.remaining_quantity > 0,
                 ProductSKUHistory.quantity_change > 0  # Only addition entries
@@ -122,7 +125,7 @@ class ExpirationService:
         expired_products = []
         for sku_entry in expired_skus:
             # Check if this SKU entry is from an expired batch
-            if hasattr(sku_entry, 'batch_id') and sku_entry.batch_id:
+            if sku_entry.batch_id:
                 batch_expiration = ExpirationService.get_batch_expiration_date(sku_entry.batch_id)
                 if batch_expiration and batch_expiration.date() < today:
                     expired_products.append({
@@ -164,18 +167,21 @@ class ExpirationService:
         ).all()
 
         # Product SKUs expiring soon with batch-aware calculation
-        from ...models import ProductSKU, ProductSKUHistory
+        from ...models import ProductSKU, ProductSKUHistory, Product, ProductVariant
 
         # Get SKUs with remaining quantity from FIFO entries
         expiring_skus = db.session.query(
             ProductSKUHistory.inventory_item_id,
-            ProductSKU.product_name,
-            ProductSKU.variant_name,
+            Product.name.label('product_name'),
+            ProductVariant.name.label('variant_name'),
             ProductSKU.size_label,
             ProductSKUHistory.remaining_quantity,
             ProductSKUHistory.unit,
-            ProductSKUHistory.id.label('history_id')
-        ).join(ProductSKU, ProductSKUHistory.inventory_item_id == ProductSKU.inventory_item_id).filter(
+            ProductSKUHistory.id.label('history_id'),
+            ProductSKUHistory.batch_id
+        ).join(ProductSKU, ProductSKUHistory.inventory_item_id == ProductSKU.inventory_item_id
+        ).join(Product, ProductSKU.product_id == Product.id
+        ).join(ProductVariant, ProductSKU.variant_id == ProductVariant.id).filter(
             and_(
                 ProductSKUHistory.remaining_quantity > 0,
                 ProductSKUHistory.quantity_change > 0  # Only addition entries
@@ -185,7 +191,7 @@ class ExpirationService:
         expiring_products = []
         for sku_entry in expiring_skus:
             # Check if this SKU entry is from a batch expiring soon
-            if hasattr(sku_entry, 'batch_id') and sku_entry.batch_id:
+            if sku_entry.batch_id:
                 batch_expiration = ExpirationService.get_batch_expiration_date(sku_entry.batch_id)
                 if batch_expiration and today <= batch_expiration.date() <= future_date:
                     expiring_products.append({
