@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
-from ...models import db, ProductSKU, Product, ProductVariant
+from ...models import db, ProductSKU
 from ...services.product_service import ProductService
 from sqlalchemy import func
 
@@ -60,24 +60,34 @@ def get_products():
 @products_api_bp.route('/<int:product_id>/variants')
 @login_required
 def get_product_variants(product_id):
-    """Get all variants for a specific product"""
+    """Get variants for a specific product by ID"""
     try:
-        # Get all variants for this product that belong to current user's organization
-        variants = ProductVariant.query.join(Product).filter(
-            ProductVariant.product_id == product_id,
-            Product.organization_id == current_user.organization_id,
-            ProductVariant.is_active == True
+        from ...models.product import Product, ProductVariant
+
+        # Get the product with org scoping - no legacy support
+        product = Product.query.filter_by(
+            id=product_id,
+            organization_id=current_user.organization_id
+        ).first()
+
+        if not product:
+            return jsonify({'error': 'Product not found'}), 404
+
+        # Get active variants for this product
+        variants = ProductVariant.query.filter_by(
+            product_id=product.id,
+            is_active=True
         ).all()
 
         variant_list = []
         for variant in variants:
             variant_list.append({
                 'id': variant.id,
-                'name': variant.name,
-                'description': variant.description
+                'name': variant.name
             })
 
-        return jsonify({'variants': variant_list})
+        return jsonify(variant_list)
+
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -88,7 +98,7 @@ def search_products():
     search_term = request.args.get('q', '').strip()
     if not search_term:
         return jsonify([])
-
+    
     try:
         skus = ProductService.search_skus(search_term)
         results = []
@@ -111,7 +121,7 @@ def search_products():
 def get_low_stock():
     """Get SKUs that are low on stock"""
     threshold_multiplier = float(request.args.get('threshold', 1.0))
-
+    
     try:
         low_stock_skus = ProductService.get_low_stock_skus(threshold_multiplier)
         results = []
@@ -225,27 +235,4 @@ def quick_add_product():
 # Batch inventory additions are handled by product_inventory_routes.py
 
 # Inventory adjustments are handled by product_inventory_routes.py
-
-@products_api_bp.route('/products/variants/<int:variant_id>/sizes')
-@login_required
-def get_variant_sizes(variant_id):
-    """Get all size labels for a specific variant"""
-    try:
-        # Get all SKUs for this variant that belong to current user's organization
-        skus = ProductSKU.query.join(Product).filter(
-            ProductSKU.variant_id == variant_id,
-            Product.organization_id == current_user.organization_id,
-            ProductSKU.is_active == True
-        ).all()
-
-        sizes = []
-        for sku in skus:
-            sizes.append({
-                'size_label': sku.size_label,
-                'sku_id': sku.id
-            })
-
-        return jsonify(sizes)
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
 # This API file only provides data retrieval and simple operations
