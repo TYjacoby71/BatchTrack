@@ -64,6 +64,34 @@ def upgrade():
         print(f"original_quantity column might not exist: {e}")
         pass
 
+    # Create user_preferences table
+    try:
+        op.create_table('user_preferences',
+            sa.Column('id', sa.Integer(), nullable=False),
+            sa.Column('user_id', sa.Integer(), nullable=False),
+            sa.Column('organization_id', sa.Integer(), nullable=False),
+            sa.Column('max_dashboard_alerts', sa.Integer(), nullable=True),
+            sa.Column('show_expiration_alerts', sa.Boolean(), nullable=True),
+            sa.Column('show_timer_alerts', sa.Boolean(), nullable=True),
+            sa.Column('show_low_stock_alerts', sa.Boolean(), nullable=True),
+            sa.Column('show_batch_alerts', sa.Boolean(), nullable=True),
+            sa.Column('show_fault_alerts', sa.Boolean(), nullable=True),
+            sa.Column('expiration_warning_days', sa.Integer(), nullable=True),
+            sa.Column('show_alert_badges', sa.Boolean(), nullable=True),
+            sa.Column('dashboard_layout', sa.String(length=32), nullable=True),
+            sa.Column('compact_view', sa.Boolean(), nullable=True),
+            sa.Column('show_quick_actions', sa.Boolean(), nullable=True),
+            sa.Column('created_at', sa.DateTime(), nullable=True),
+            sa.Column('updated_at', sa.DateTime(), nullable=True),
+            sa.ForeignKeyConstraint(['organization_id'], ['organization.id'], ),
+            sa.ForeignKeyConstraint(['user_id'], ['user.id'], ),
+            sa.PrimaryKeyConstraint('id'),
+            sa.UniqueConstraint('user_id')
+        )
+    except Exception as e:
+        print(f"User preferences table might already exist: {e}")
+        pass
+
 def downgrade():
     # Drop reservation table and indexes
     try:
@@ -79,5 +107,11 @@ def downgrade():
     try:
         with op.batch_alter_table('product_sku_history', schema=None) as batch_op:
             batch_op.add_column(sa.Column('original_quantity', sa.Float(), nullable=True))
+    except:
+        pass
+
+    # Drop user_preferences table
+    try:
+        op.drop_table('user_preferences')
     except:
         pass
