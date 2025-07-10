@@ -100,8 +100,12 @@ class BatchService:
                 container_capacity = (container.container.storage_amount or 1) * final_quantity
                 total_containerized += container_capacity
 
-                # Size label is the full container description (e.g., "4oz Glass Jar")
-                container_size_label = f"{container.container.storage_amount or 1}{container.container.storage_unit or 'oz'} {container.container.name}"
+                # Generate size label: "[storage_amount] [storage_unit] [container_name]"
+                # e.g., "4 floz Admin 4oz Glass Jars"
+                if container.container.storage_amount and container.container.storage_unit:
+                    container_size_label = f"{container.container.storage_amount} {container.container.storage_unit} {container.container.name}"
+                else:
+                    container_size_label = f"1 unit {container.container.name}"
 
                 # Get or create SKU for this container type - stored as count units
                 container_sku = ProductService.get_or_create_sku(
