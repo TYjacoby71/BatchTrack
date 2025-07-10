@@ -60,7 +60,7 @@ def safe_float(value, default=0.0):
     try:
         return float(value)
     except (ValueError, TypeError):
-        return defaultta
+        return default
 
 def register_filters(app):
     """Register all template filters"""
