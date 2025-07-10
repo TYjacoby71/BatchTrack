@@ -19,7 +19,8 @@ class ExpirationService:
         """Get days until expiration (negative if expired)"""
         if not expiration_date:
             return None
-        now = datetime.now()
+        from ...utils.timezone_utils import TimezoneUtils
+        now = TimezoneUtils.now()
         # Use full datetime comparison for more precision
         time_diff = expiration_date - now
         return int(time_diff.total_seconds() / 86400)  # Convert seconds to days
@@ -30,7 +31,8 @@ class ExpirationService:
         if not entry_date or not expiration_date:
             return None
 
-        now = datetime.now()
+        from ...utils.timezone_utils import TimezoneUtils
+        now = TimezoneUtils.now()
         total_life = (expiration_date - entry_date).total_seconds()
         if total_life <= 0:
             return 0.0

@@ -2,12 +2,13 @@ from datetime import datetime, date
 from flask_login import current_user, UserMixin
 from ..extensions import db
 from .mixins import ScopedModelMixin
+from . import TimezoneUtils
 
 class Organization(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(128), nullable=False)
     subscription_tier = db.Column(db.String(32), default='free')
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
     is_active = db.Column(db.Boolean, default=True)
     users = db.relationship('User', backref='organization')
 
@@ -41,7 +42,7 @@ class User(UserMixin, db.Model):
     subscription_class = db.Column(db.String(32), default='free')
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=False)
     is_owner = db.Column(db.Boolean, default=False)  # Explicit owner flag
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
     last_login = db.Column(db.DateTime, nullable=True)
 
     # Relationship to role
@@ -91,7 +92,7 @@ class Unit(db.Model):
     is_mapped = db.Column(db.Boolean, default=True)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)  # Only for custom units
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
 
     @classmethod
     def scoped(cls):
@@ -119,7 +120,7 @@ class CustomUnitMapping(ScopedModelMixin, db.Model):
     multiplier = db.Column(db.Float, nullable=False)
     notes = db.Column(db.Text)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
 
 class IngredientCategory(ScopedModelMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -129,13 +130,13 @@ class IngredientCategory(ScopedModelMixin, db.Model):
     default_density = db.Column(db.Float, nullable=True)  # Default density for category in g/ml
     is_active = db.Column(db.Boolean, default=True)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
 
 class ConversionLog(ScopedModelMixin, db.Model):
     __tablename__ = 'conversion_log'
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    timestamp = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
     amount = db.Column(db.Float, nullable=False)
     from_unit = db.Column(db.String(32), nullable=False)
     to_unit = db.Column(db.String(32), nullable=False)
@@ -193,7 +194,7 @@ class Batch(ScopedModelMixin, db.Model):
     total_cost = db.Column(db.Float)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)
-    started_at = db.Column(db.DateTime, default=datetime.utcnow)
+    started_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
     completed_at = db.Column(db.DateTime)
     failed_at = db.Column(db.DateTime)
     cancelled_at = db.Column(db.DateTime)
@@ -253,7 +254,7 @@ class InventoryHistory(ScopedModelMixin, db.Model):
     __tablename__ = 'inventory_history'
     id = db.Column(db.Integer, primary_key=True)
     inventory_item_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'), nullable=False)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    timestamp = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
     change_type = db.Column(db.String(32), nullable=False)  # manual_addition, batch_usage, spoil, trash, tester, damaged, recount
     quantity_change = db.Column(db.Float, nullable=False)
     unit = db.Column(db.String(32), nullable=False)
@@ -325,7 +326,7 @@ class InventoryItem(ScopedModelMixin, db.Model):
     storage_amount = db.Column(db.Float, nullable=True)
     storage_unit = db.Column(db.String(32), nullable=True)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
     # Density for unit conversion (g/mL)
     density = db.Column(db.Float, nullable=True)
 
@@ -386,7 +387,7 @@ class BatchInventoryLog(ScopedModelMixin, db.Model):
     unit = db.Column(db.String(32), nullable=False)
     old_stock = db.Column(db.Float, nullable=False)
     new_stock = db.Column(db.Float, nullable=False)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    timestamp = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
 
     batch = db.relationship('Batch')
     inventory_item = db.relationship('InventoryItem')

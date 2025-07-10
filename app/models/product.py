@@ -3,6 +3,7 @@ from datetime import datetime
 from flask_login import current_user
 from ..extensions import db
 from .mixins import ScopedModelMixin
+from ..utils.timezone_utils import TimezoneUtils
 
 class Product(ScopedModelMixin, db.Model):
     """Main Product model - represents the parent product"""

@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from ...models import db, ProductSKU, ProductSKUHistory, InventoryItem, Reservation
 from ...services.inventory_adjustment import process_inventory_adjustment
 from ...utils.unit_utils import get_global_unit_list
+from ...utils.timezone_utils import TimezoneUtils
 import logging
 
 logger = logging.getLogger(__name__)
@@ -38,7 +39,7 @@ def view_sku(inventory_item_id):
                          total_quantity=total_quantity,
                          get_global_unit_list=get_global_unit_list,
                          fifo_filter=request.args.get('fifo', 'false').lower() == 'true',
-                         now=datetime.utcnow(),
+                         now=TimezoneUtils.now(),
                          timedelta=timedelta)
 
 @sku_bp.route('/sku/<int:inventory_item_id>/edit', methods=['POST'])
