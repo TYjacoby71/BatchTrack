@@ -93,7 +93,7 @@
         {% set unique_size_labels = [] %}
         {% set total_bulk = 0 %}
         {% set total_packaged = 0 %}
-        
+
         {% for sku in variant_skus %}
           {% if sku.inventory_item %}
             {% set var_total_qty = var_total_qty + sku.inventory_item.quantity %}
@@ -162,7 +162,7 @@
                     <small>sizes</small>
                   </div>
                 </div>
-                
+
                 <div class="row text-center mt-2">
                   <div class="col-6">
                     <small class="text-muted">Total Cost</small><br>
@@ -171,23 +171,6 @@
                   <div class="col-6">
                     <small class="text-muted">Total Value</small><br>
                     <strong>${{ "%.2f"|format(total_value) }}</strong>
-                  </div>
-                    <div class="stat-box">
-                      <strong>{{ "%.1f"|format(var_total_qty) }}</strong>
-                      <br><small class="text-muted">Quantity</small>
-                    </div>
-                  </div>
-                  <div class="col-4">
-                    <div class="stat-box">
-                      <strong>{{ var_size_count }}</strong>
-                      <br><small class="text-muted">Sizes</small>
-                    </div>
-                  </div>
-                  <div class="col-4">
-                    <div class="stat-box">
-                      <strong>${{ "%.2f"|format(var_avg_cost) }}</strong>
-                      <br><small class="text-muted">Avg Cost</small>
-                    </div>
                   </div>
                 </div>
               </div>
