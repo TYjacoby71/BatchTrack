@@ -39,6 +39,8 @@ def create_app():
 
     # Register blueprints
     from .blueprints.auth import auth_bp
+    from .blueprints.products import products_bp
+    from .blueprints.products.api import products_api_bp
     from .blueprints.recipes import recipes_bp
     from .blueprints.inventory import inventory_bp
     from .blueprints.batches import batches_bp
@@ -65,7 +67,7 @@ def create_app():
     # Register admin blueprints
     from .blueprints.admin.admin_routes import admin_bp
     app.register_blueprint(admin_bp)
-    
+
     # Register reservation blueprints (now under products)
     from .blueprints.products.reservation_routes import reservation_bp
     from .blueprints.api.reservation_routes import reservation_api_bp
