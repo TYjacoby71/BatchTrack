@@ -1,4 +1,3 @@
-
 from flask_login import current_user
 from app.models import db
 from app.services.product_service import ProductService
@@ -7,16 +6,18 @@ from app.blueprints.expiration.services import ExpirationService
 from datetime import datetime
 
 class BatchService:
-    
+
     @staticmethod
     def finalize_product_output(batch, container_overrides, final_quantity):
         """
-        Handle product output finalization for batches
-        Returns: (success, inventory_entries, error_message)
+        Finalize a batch that creates a product output.
+        Uses final_quantity as the source of truth for total product creation.
+        Uses container_overrides to determine how much goes into containers vs bulk.
+        Creates SKUs and credits inventory for each container type + bulk remainder.
         """
         try:
             from app.models import Product, ProductVariant
-            
+
             # Get the product and variant
             product = Product.query.filter_by(
                 id=batch.product_id,
@@ -31,35 +32,81 @@ class BatchService:
             if not product or not variant:
                 return False, [], "Selected product or variant not found"
 
-            total_containerized = 0
+            print(f"DEBUG: Starting finalize_product_output for batch {batch.id}")
+            print(f"DEBUG: Container overrides: {container_overrides}")
+            print(f"DEBUG: Final quantity (SOURCE OF TRUTH): {final_quantity}")
+
+            # Validate container overrides don't exceed original usage
+            for container_usage in batch.containers:
+                container_id = container_usage.container.id
+                original_used = container_usage.quantity_used or 0
+                final_qty = container_overrides.get(container_id, original_used)
+
+                if final_qty > original_used:
+                    return False, [], f"Cannot use more {container_usage.container.name} containers ({final_qty}) than were originally allocated ({original_used})"
+
             inventory_entries = []
 
-            # Process regular containers
-            total_containerized += BatchService._process_batch_containers(
-                batch.containers, container_overrides, batch, product, variant, inventory_entries
-            )
+            # Process containers first - calculate how much volume they will contain
+            total_container_volume = 0
+            container_allocations = []
 
-            # Process extra containers  
-            total_containerized += BatchService._process_batch_containers(
-                batch.extra_containers, container_overrides, batch, product, variant, inventory_entries, is_extra=True
-            )
+            for container_usage in batch.containers:
+                container = container_usage.container
+                final_qty = container_overrides.get(container.container_id, container_usage.quantity_used or 0)
 
-            # Handle remaining bulk quantity (excess product)
-            bulk_quantity = final_quantity - total_containerized
-            if bulk_quantity > 0:
-                bulk_sku = ProductService.get_or_create_sku(
+                if final_qty > 0:
+                    # Calculate container capacity in output units
+                    container_capacity = container.container.storage_amount or 1
+                    container_unit = container.container.storage_unit or batch.output_unit
+
+                    # Convert if needed
+                    from app.services.unit_conversion import ConversionEngine
+                    if container_unit != batch.output_unit:
+                        conversion = ConversionEngine.convert_units(
+                            container_capacity, container_unit, batch.output_unit, product_id=batch.product_id
+                        )
+                        if conversion['success']:
+                            container_capacity = conversion['converted_value']
+
+                    # Total volume this container type will hold
+                    container_volume = final_qty * container_capacity
+                    total_container_volume += container_volume
+
+                    container_allocations.append({
+                        'container': container,
+                        'final_qty': final_qty,
+                        'container_capacity': container_capacity,
+                        'total_volume': container_volume
+                    })
+
+            # Validate that containers don't exceed final quantity
+            if total_container_volume > final_quantity:
+                return False, [], f"Container allocations ({total_container_volume} {batch.output_unit}) exceed final quantity ({final_quantity} {batch.output_unit})"
+
+            # Create SKUs and credit inventory for containers
+            for allocation in container_allocations:
+                container = allocation['container']
+                container_size_label = f"{container.container.storage_amount or 1}{container.container.storage_unit or 'oz'} {container.container.name}"
+                
+                # Get or create SKU for this product/variant/size combination
+                container_sku = ProductService.get_or_create_sku(
                     product_name=product.name,
                     variant_name=variant.name,
-                    size_label='Bulk',
-                    unit=batch.output_unit or product.base_unit
+                    size_label=container_size_label,
+                    unit='count'
                 )
 
+                if not container_sku:
+                    continue
+
+                # Credit the total volume for this container type
                 success = process_inventory_adjustment(
-                    item_id=bulk_sku.id,
-                    quantity=bulk_quantity,
+                    item_id=container_sku.id,
+                    quantity=allocation['total_volume'],
                     change_type='finished_batch',
-                    unit=bulk_sku.unit,
-                    notes=f"From batch {batch.label_code} - Bulk remainder (excess)",
+                    unit='count',
+                    notes=f"From batch {batch.label_code} - {allocation['final_qty']} {container.container.name} containers",
                     batch_id=batch.id,
                     created_by=current_user.id,
                     item_type='product',
@@ -69,19 +116,55 @@ class BatchService:
 
                 if success:
                     inventory_entries.append({
-                        'sku_id': bulk_sku.id,
-                        'quantity': bulk_quantity,
-                        'type': 'bulk'
+                        'sku_id': container_sku.id,
+                        'size_label': container_size_label,
+                        'quantity': allocation['total_volume'],
+                        'unit': 'count',
+                        'container_name': container.container.name,
+                        'container_count': allocation['final_qty'],
+                        'type': 'container'
                     })
-                    # Store the bulk SKU reference in the batch for backwards compatibility
-                    batch.sku_id = bulk_sku.id
+                    print(f"DEBUG: Created {allocation['total_volume']} {batch.output_unit} of {container_size_label}")
 
-            if not inventory_entries:
-                return False, [], "No inventory was added - check container quantities"
+            # Handle bulk remainder - FINAL QUANTITY IS SOURCE OF TRUTH
+            bulk_remainder = final_quantity - total_container_volume
+            if bulk_remainder > 0:
+                bulk_sku = ProductService.get_or_create_sku(
+                    product_name=product.name,
+                    variant_name=variant.name,
+                    size_label="Bulk",
+                    unit=batch.output_unit or product.base_unit
+                )
 
+                if bulk_sku:
+                    success = process_inventory_adjustment(
+                        item_id=bulk_sku.id,
+                        quantity=bulk_remainder,
+                        change_type='finished_batch',
+                        unit=batch.output_unit,
+                        notes=f"From batch {batch.label_code} - Bulk remainder",
+                        batch_id=batch.id,
+                        created_by=current_user.id,
+                        item_type='product',
+                        custom_expiration_date=batch.expiration_date,
+                        custom_shelf_life_days=batch.shelf_life_days
+                    )
+
+                    if success:
+                        inventory_entries.append({
+                            'sku_id': bulk_sku.id,
+                            'size_label': 'Bulk',
+                            'quantity': bulk_remainder,
+                            'unit': batch.output_unit
+                        })
+                        print(f"DEBUG: Created {bulk_remainder} {batch.output_unit} of Bulk")
+
+            print(f"DEBUG: Product finalization complete. Total created: {final_quantity} {batch.output_unit}")
+            print(f"DEBUG: Breakdown - Containers: {total_container_volume}, Bulk: {bulk_remainder}")
             return True, inventory_entries, None
 
         except Exception as e:
+            print(f"DEBUG: Error in finalize_product_output: {str(e)}")
             return False, [], str(e)
 
     @staticmethod
@@ -144,7 +227,7 @@ class BatchService:
         """
         try:
             from app.models import InventoryItem
-            
+
             # Calculate total cost including all inputs
             total_cost = sum(
                 (ing.quantity_used or 0) * (ing.cost_per_unit or 0) for ing in batch.batch_ingredients
