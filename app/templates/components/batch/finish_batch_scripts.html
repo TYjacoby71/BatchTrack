@@ -1,278 +1,4 @@
 <script>
-function toggleShelfLife() {
-  const isPerishable = document.getElementById('is_perishable');
-  const shelfLifeField = document.getElementById('shelfLifeField');
-
-  if (isPerishable && shelfLifeField) {
-    const showShelfLife = isPerishable.checked;
-    shelfLifeField.style.display = showShelfLife ? 'block' : 'none';
-
-    const shelfLifeInput = document.getElementById('shelf_life_days');
-    if (shelfLifeInput) {
-      shelfLifeInput.required = showShelfLife;
-      if (!showShelfLife) {
-        shelfLifeInput.value = '';
-        const expDateInput = document.getElementById('expiration_date');
-        const expDateDisplay = document.getElementById('expiration_date_display');
-        if (expDateInput) expDateInput.value = '';
-        if (expDateDisplay) expDateDisplay.value = '';
-      }
-    }
-  }
-}
-
-function validateYield() {
-  const finalQuantityInput = document.getElementById('final_quantity');
-  const alertsContainer = document.getElementById('yield-validation-alerts');
-  const hasContainers = {{ 'true' if batch.containers or batch.extra_containers else 'false' }};
-
-  if (!finalQuantityInput) {
-    return;
-  }
-
-  const finalQuantity = parseFloat(finalQuantityInput.value);
-
-  if (!finalQuantity || finalQuantity <= 0) {
-    if (alertsContainer) {
-      alertsContainer.innerHTML = '';
-    }
-    updateContainerSummary();
-    return;
-  }
-
-  // Update display with current yield
-  const finalYieldDisplay = document.getElementById('finalYieldDisplay');
-  if (finalYieldDisplay) {
-    finalYieldDisplay.textContent = finalQuantity.toFixed(2);
-  }
-
-  if (!hasContainers) {
-    console.log('No containers in batch - all yield goes to bulk');
-    updateUncontainedYield(finalQuantity);
-    return;
-  }
-
-  // Update container summary
-  updateContainerSummary();
-}
-
-function updateContainerTable(containers, finalQuantity) {
-  const tbody = document.getElementById('containerTableBody');
-  const totalUsed = document.getElementById('totalUsed');
-  const totalPassed = document.getElementById('totalPassed');
-  const totalCapacity = document.getElementById('totalCapacity');
-  const containerDistribution = document.getElementById('containerDistribution');
-
-  // If no containers or elements don't exist, hide the section
-  if (!containers || containers.length === 0 || !tbody || !containerDistribution) {
-    if (containerDistribution) {
-      containerDistribution.style.display = 'none';
-    }
-    return;
-  }
-
-  // Show container section since we have containers
-  containerDistribution.style.display = 'block';
-
-  window.containerData = containers;
-
-  let html = '';
-  let usedSum = 0;
-  let capacitySum = 0;
-
-  containers.forEach((container, index) => {
-    usedSum += container.quantity_used;
-    capacitySum += container.total_capacity;
-
-    // Create a display label for the container
-    let containerLabel = `${container.container_name} (${container.container_size} units)`;
-    if (container.container_type === 'extra' && container.reason) {
-      containerLabel += ` - ${container.reason.replace('_', ' ')}`;
-    }
-
-    html += `
-      <tr>
-        <td>${containerLabel}</td>
-        <td>${container.quantity_used}</td>
-        <td>
-          <input type="number" 
-                 class="form-control form-control-sm container-final-input" 
-                 id="pass_${index}"
-                 name="container_pass_${index}" 
-                 min="0" 
-                 max="${container.quantity_used}"
-                 value="${container.quantity_used}"
-                 onchange="updateTotals()"
-                 data-container-id="${index}"
-                 data-container-size="${container.container_size}">
-          <input type="hidden" name="container_name_${index}" value="${container.container_name}">
-          <input type="hidden" name="container_size_${index}" value="${container.container_size}">
-          <input type="hidden" name="container_type_${index}" value="${container.container_type}">
-          ${container.reason ? `<input type="hidden" name="container_reason_${index}" value="${container.reason}">` : ''}
-        </td>
-        <td>${container.total_capacity.toFixed(2)}</td>
-      </tr>
-    `;
-  });
-
-  tbody.innerHTML = html;
-  if (totalUsed) totalUsed.textContent = usedSum;
-  if (totalCapacity) totalCapacity.textContent = capacitySum.toFixed(2);
-
-  updateTotals();
-}
-
-function updateTotals() {
-  const containerInputs = document.querySelectorAll('.container-final-input');
-  const totalPassedElement = document.getElementById('totalPassed');
-  const submitBtn = document.getElementById('completeBatchBtn');
-
-  if (!totalPassedElement || !submitBtn) {
-    return; // Elements don't exist, skip validation
-  }
-
-  let passedSum = 0;
-
-  containerInputs.forEach(input => {
-    passedSum += parseInt(input.value) || 0;
-  });
-
-  totalPassedElement.textContent = passedSum;
-
-  // Validate that passed doesn't exceed used
-  let valid = true;
-  containerInputs.forEach(input => {
-    const max = parseInt(input.getAttribute('max'));
-    const value = parseInt(input.value) || 0;
-
-    if (value > max) {
-      input.classList.add('is-invalid');
-      valid = false;
-    } else {
-      input.classList.remove('is-invalid');
-    }
-  });
-
-  submitBtn.disabled = !valid;
-
-  if (!valid) {
-    submitBtn.textContent = 'Cannot pass more containers than used';
-  } else {
-    submitBtn.textContent = 'Complete Batch';
-  }
-}
-
-
-
-function updateContainerSummary() {
-  const finalQuantityInput = document.getElementById('final_quantity');
-  const finalQuantity = parseFloat(finalQuantityInput?.value || 0);
-
-  if (finalQuantity <= 0) {
-    return;
-  }
-
-  // Calculate total container capacity being used for products
-  let totalContainerCapacity = 0;
-  const containerInputs = document.querySelectorAll('.container-final-input');
-
-  containerInputs.forEach(input => {
-    const quantity = parseInt(input.value || 0);
-    const containerSize = parseFloat(input.dataset.containerSize || 0);
-    totalContainerCapacity += quantity * containerSize;
-  });
-
-  // Update displays
-  const totalCapacitySpan = document.getElementById('totalCapacity');
-  const uncontainedYieldSpan = document.getElementById('uncontainedYield');
-
-  if (totalCapacitySpan) {
-    totalCapacitySpan.textContent = totalContainerCapacity.toFixed(2);
-  }
-
-  const uncontainedYield = Math.max(0, finalQuantity - totalContainerCapacity);
-  if (uncontainedYieldSpan) {
-    uncontainedYieldSpan.textContent = uncontainedYield.toFixed(2);
-  }
-
-  // Validate and show alerts
-  validateContainerAllocation(finalQuantity, totalContainerCapacity);
-}
-
-function updateUncontainedYield(finalQuantity) {
-  const uncontainedYieldSpan = document.getElementById('uncontainedYield');
-  if (uncontainedYieldSpan) {
-    uncontainedYieldSpan.textContent = finalQuantity.toFixed(2);
-  }
-}
-
-function validateContainerAllocation(finalQuantity, totalContainerCapacity) {
-  const alertsContainer = document.getElementById('yield-validation-alerts');
-  if (!alertsContainer) return;
-
-  let alertHtml = '';
-
-  if (totalContainerCapacity > finalQuantity) {
-    const excess = totalContainerCapacity - finalQuantity;
-    alertHtml += `
-      <div class="alert alert-warning alert-sm mb-1">
-        <i class="fas fa-exclamation-triangle me-1"></i>
-        <strong>Overfill Warning:</strong> Container allocation (${totalContainerCapacity.toFixed(2)}) exceeds final yield (${finalQuantity.toFixed(2)}) by ${excess.toFixed(2)} units.
-      </div>`;
-  }
-
-  if (finalQuantity > totalContainerCapacity) {
-    const bulk = finalQuantity - totalContainerCapacity;
-    alertHtml += `
-      <div class="alert alert-info alert-sm mb-1">
-        <i class="fas fa-info-circle me-1"></i>
-        <strong>Bulk Product:</strong> ${bulk.toFixed(2)} units will be stored as bulk product.
-      </div>`;
-  }
-
-  alertsContainer.innerHTML = alertHtml;
-}
-
-
-
-function getCSRFToken() {
-  const token = document.querySelector('input[name="csrf_token"]')?.value ||
-                document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-  return token || '';
-}
-
-// Initialize on modal show
-document.addEventListener('DOMContentLoaded', function() {
-  const modal = document.getElementById('finishBatchModal');
-  if (modal) {
-    modal.addEventListener('shown.bs.modal', function () {
-      console.log('Modal opened, initializing...');
-
-      // Initialize shelf life toggle (safe for all batch types)
-      toggleShelfLife();
-
-
-
-      // Only validate yield if the input exists and batch has containers
-      const finalQuantityInput = document.getElementById('final_quantity');
-      if (finalQuantityInput) {
-        finalQuantityInput.addEventListener('input', validateYield);
-        validateYield();
-      }
-
-      // Add event listeners to container inputs
-      const containerInputs = document.querySelectorAll('.container-final-input');
-      containerInputs.forEach(input => {
-        input.addEventListener('input', updateContainerSummary);
-      });
-
-      // Initial container summary update
-      updateContainerSummary();
-    });
-  }
-});
-</script>
-<script>
 // Finish Batch Modal JavaScript Functions
 
 function updateExpirationDate() {
@@ -294,7 +20,10 @@ function updateExpirationDate() {
 }
 
 function toggleShelfLife() {
-  const isPerishable = document.getElementById('is_perishable').checked;
+  const isPerishableElement = document.getElementById('is_perishable');
+  if (!isPerishableElement) return;
+
+  const isPerishable = isPerishableElement.checked;
   const shelfLifeField = document.getElementById('shelfLifeField');
 
   if (shelfLifeField) {
@@ -304,8 +33,10 @@ function toggleShelfLife() {
       shelfLifeInput.required = isPerishable;
       if (!isPerishable) {
         shelfLifeInput.value = '';
-        document.getElementById('expiration_date').value = '';
-        document.getElementById('expiration_date_display').value = '';
+        const expDateElement = document.getElementById('expiration_date');
+        const expDateDisplayElement = document.getElementById('expiration_date_display');
+        if (expDateElement) expDateElement.value = '';
+        if (expDateDisplayElement) expDateDisplayElement.value = '';
       }
     }
   }
@@ -319,21 +50,18 @@ function loadVariants() {
 
   const productId = productSelect.value;
 
-  // Reset variant dropdown
-  variantSelect.innerHTML = '<option value="">Loading variants...</option>';
-  variantSelect.disabled = true;
+  // Clear existing variants
+  variantSelect.innerHTML = '<option value="">Select a variant...</option>';
 
   if (!productId) {
-    variantSelect.innerHTML = '<option value="">Select product first...</option>';
+    variantSelect.disabled = true;
     return;
   }
 
-  // Fetch variants for the selected product
+  // Fetch variants for selected product
   fetch(`/api/products/${productId}/variants`)
     .then(response => response.json())
     .then(data => {
-      variantSelect.innerHTML = '<option value="">Select Variant</option>';
-
       if (data.variants && data.variants.length > 0) {
         data.variants.forEach(variant => {
           const option = document.createElement('option');
@@ -343,69 +71,195 @@ function loadVariants() {
         });
         variantSelect.disabled = false;
       } else {
-        variantSelect.innerHTML = '<option value="">No variants available</option>';
+        variantSelect.disabled = true;
       }
     })
     .catch(error => {
       console.error('Error loading variants:', error);
-      variantSelect.innerHTML = '<option value="">Error loading variants</option>';
+      variantSelect.disabled = true;
     });
 }
 
-function validateContainerInput(input) {
-  const originalUsed = parseInt(input.dataset.originalUsed) || 0;
-  const currentValue = parseInt(input.value) || 0;
+function validateContainerInput(inputElement) {
+  const row = inputElement.closest('tr');
+  if (!row) return true;
 
-  if (currentValue > originalUsed) {
-    alert(`Cannot use more containers than were originally allocated in this batch (${originalUsed})`);
-    input.value = originalUsed;
-    input.focus();
-    return false;
-  }
+  const originalUsed = parseFloat(row.dataset.originalUsed || 0);
+  const currentValue = parseFloat(inputElement.value || 0);
 
   if (currentValue < 0) {
     alert('Container quantity cannot be negative');
-    input.value = 0;
-    input.focus();
+    inputElement.value = originalUsed;
+    return false;
+  }
+
+  if (currentValue > originalUsed * 1.5) {
+    if (!confirm(`Using ${currentValue} containers is significantly more than originally used (${originalUsed}). Continue?`)) {
+      inputElement.value = originalUsed;
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function validateYield() {
+  const finalQuantityElement = document.getElementById('final_quantity');
+  if (!finalQuantityElement) return;
+
+  const finalQuantity = parseFloat(finalQuantityElement.value);
+  const alertsContainer = document.getElementById('yield-validation-alerts');
+
+  if (alertsContainer) {
+    alertsContainer.innerHTML = '';
+  }
+
+  if (finalQuantity <= 0) {
+    if (alertsContainer) {
+      alertsContainer.innerHTML = '<div class="alert alert-danger">Final quantity must be greater than 0</div>';
+    }
     return false;
   }
 
   return true;
 }
 
-// Validate form before submission
+function updateTotals() {
+  const containerInputs = document.querySelectorAll('input[name^="container_"]');
+  let totalContainerCapacity = 0;
+
+  containerInputs.forEach(input => {
+    const row = input.closest('tr');
+    if (row) {
+      const capacity = parseFloat(row.dataset.capacity || 0);
+      const quantity = parseFloat(input.value || 0);
+      totalContainerCapacity += capacity * quantity;
+    }
+  });
+
+  const finalQuantityElement = document.getElementById('final_quantity');
+  const finalQuantity = finalQuantityElement ? parseFloat(finalQuantityElement.value || 0) : 0;
+
+  validateContainerAllocation(finalQuantity, totalContainerCapacity);
+  updateUncontainedYield(finalQuantity, totalContainerCapacity);
+}
+
+function validateContainerAllocation(finalQuantity, totalContainerCapacity) {
+  const alertsContainer = document.getElementById('yield-validation-alerts');
+  if (!alertsContainer) return;
+
+  let alertHtml = '';
+
+  if (totalContainerCapacity > 0) {
+    const fillPercentage = (finalQuantity / totalContainerCapacity) * 100;
+
+    if (fillPercentage > 100) {
+      alertHtml += '<div class="alert alert-warning">⚠️ Product quantity exceeds container capacity. Consider bulk storage.</div>';
+    } else if (fillPercentage < 50) {
+      alertHtml += '<div class="alert alert-info">ℹ️ Containers are less than 50% full. Consider using fewer or smaller containers.</div>';
+    }
+  }
+
+  alertsContainer.innerHTML = alertHtml;
+}
+
+function updateContainerTable() {
+  const containerInputs = document.querySelectorAll('input[name^="container_"]');
+  containerInputs.forEach(input => {
+    input.addEventListener('input', function() {
+      if (validateContainerInput(this)) {
+        updateTotals();
+      }
+    });
+  });
+}
+
+function updateContainerSummary() {
+  // Update container summary display if needed
+  updateTotals();
+}
+
+function updateUncontainedYield(finalQuantity, totalContainerCapacity) {
+  const uncontainedElement = document.getElementById('uncontained_yield');
+  if (uncontainedElement && totalContainerCapacity > 0) {
+    const uncontained = Math.max(0, finalQuantity - totalContainerCapacity);
+    uncontainedElement.textContent = uncontained.toFixed(2);
+  }
+}
+
+function getCSRFToken() {
+  const csrfElement = document.querySelector('input[name="csrf_token"]');
+  return csrfElement ? csrfElement.value : '';
+}
+
+// Initialize when modal is shown
 document.addEventListener('DOMContentLoaded', function() {
-  const finishForm = document.getElementById('finishBatchModalForm');
-  if (finishForm) {
-    finishForm.addEventListener('submit', function(e) {
-      // Validate all container inputs
-      const containerInputs = document.querySelectorAll('.container-input');
-      let isValid = true;
+  const modal = document.getElementById('finishBatchModal');
+  const form = document.getElementById('finishBatchModalForm');
 
-      containerInputs.forEach(input => {
-        if (!validateContainerInput(input)) {
-          isValid = false;
-        }
-      });
+  if (modal) {
+    modal.addEventListener('shown.bs.modal', function() {
+      updateContainerTable();
 
-      if (!isValid) {
+      // Set up product change listener
+      const productSelect = document.getElementById('product_id');
+      if (productSelect) {
+        productSelect.addEventListener('change', loadVariants);
+      }
+
+      // Set up shelf life listeners
+      const shelfLifeInput = document.getElementById('shelf_life_days');
+      if (shelfLifeInput) {
+        shelfLifeInput.addEventListener('input', updateExpirationDate);
+      }
+
+      const isPerishableCheckbox = document.getElementById('is_perishable');
+      if (isPerishableCheckbox) {
+        isPerishableCheckbox.addEventListener('change', toggleShelfLife);
+      }
+
+      // Set up final quantity listener
+      const finalQuantityInput = document.getElementById('final_quantity');
+      if (finalQuantityInput) {
+        finalQuantityInput.addEventListener('input', function() {
+          validateYield();
+          updateTotals();
+        });
+      }
+    });
+  }
+
+  if (form) {
+    form.addEventListener('submit', function(e) {
+      // Validate final quantity
+      if (!validateYield()) {
         e.preventDefault();
         return false;
       }
 
-      // Validate that final_quantity is the source of truth for product creation
-      const finalQuantity = document.getElementById('final_quantity');
-      const outputType = document.querySelector('input[name="output_type"]:checked');
-
-      if (outputType && outputType.value === 'product' && finalQuantity) {
-        const qty = parseFloat(finalQuantity.value);
-        if (!qty || qty <= 0) {
-          alert('Final quantity must be greater than 0 for product creation');
-          finalQuantity.focus();
+      // Validate container inputs
+      const containerInputs = document.querySelectorAll('input[name^="container_"]');
+      for (let input of containerInputs) {
+        if (!validateContainerInput(input)) {
           e.preventDefault();
           return false;
         }
       }
+
+      // Check if product is selected and final quantity is valid
+      const productSelect = document.getElementById('product_id');
+      const finalQuantityInput = document.getElementById('final_quantity');
+
+      if (productSelect && productSelect.value) {
+        const finalQuantity = parseFloat(finalQuantityInput.value || 0);
+        if (finalQuantity <= 0) {
+          alert('Final quantity must be greater than 0 when creating a product');
+          e.preventDefault();
+          return false;
+        }
+      }
+
+      return true;
     });
   }
 });
