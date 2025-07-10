@@ -18,6 +18,12 @@ class TimezoneUtils:
         return datetime.now(TimezoneUtils.get_user_timezone())
     
     @staticmethod
+    def now_naive():
+        """Get current time as timezone-naive datetime for template comparisons"""
+        user_tz = TimezoneUtils.get_user_timezone()
+        return datetime.now(user_tz).replace(tzinfo=None)
+    
+    @staticmethod
     def utc_now():
         """Get current UTC time (for database storage)"""
         return datetime.now(timezone.utc)
