@@ -131,14 +131,14 @@ class ExpirationService:
         expired_products = []
         for sku_entry in expired_skus:
             expiration_date = None
-            
+
             # First check for FIFO-level expiration (direct expiration on the history entry)
             if sku_entry.is_perishable and sku_entry.expiration_date:
                 expiration_date = sku_entry.expiration_date
             # Fall back to batch-level expiration if no FIFO expiration
             elif sku_entry.batch_id:
                 expiration_date = ExpirationService.get_batch_expiration_date(sku_entry.batch_id)
-            
+
             # Check if expired
             if expiration_date and expiration_date.date() < today:
                 expired_products.append({
@@ -210,14 +210,14 @@ class ExpirationService:
         expiring_products = []
         for sku_entry in expiring_skus:
             expiration_date = None
-            
+
             # First check for FIFO-level expiration (direct expiration on the history entry)
             if sku_entry.is_perishable and sku_entry.expiration_date:
                 expiration_date = sku_entry.expiration_date
             # Fall back to batch-level expiration if no FIFO expiration
             elif sku_entry.batch_id:
                 expiration_date = ExpirationService.get_batch_expiration_date(sku_entry.batch_id)
-            
+
             # Check if expiring soon
             if expiration_date and today <= expiration_date.date() <= future_date:
                 expiring_products.append({
@@ -342,7 +342,7 @@ class ExpirationService:
     def get_weighted_average_freshness(inventory_item_id: int) -> Optional[float]:
         """Calculate weighted average freshness for an inventory item based on FIFO entries"""
         from flask_login import current_user
-        
+
         # Get all FIFO entries with remaining quantity
         entries = db.session.query(InventoryHistory).join(InventoryItem).filter(
             and_(
@@ -445,3 +445,17 @@ class ExpirationService:
             raise ValueError("Invalid item type. Must be 'fifo' or 'product'")
 
         return 0
+
+    @staticmethod
+    def get_expiration_summary():
+        """Get summary of expiration data for dashboard"""
+        from flask_login import current_user
+
+        expired_items = ExpirationService.get_expired_inventory_items()
+        expiring_soon = ExpirationService.get_expiring_soon_items(7)
+
+        return {
+            'expired_count': len(expired_items['fifo_entries']) + len(expired_items['product_inventory']),
+            'expiring_soon_count': len(expiring_soon['fifo_entries']) + len(expiring_soon['product_inventory']),
+            'total_expiration_issues': len(expired_items['fifo_entries']) + len(expired_items['product_inventory']) + len(expiring_soon['fifo_entries']) + len(expiring_soon['product_inventory'])
+        }
