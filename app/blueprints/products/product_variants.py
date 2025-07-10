@@ -139,7 +139,10 @@ def view_variant(product_id, variant_name):
         return redirect(url_for('products.view_product', product_id=product_id))
     
     # Get all SKUs for this product/variant combination with proper organization scoping
-    skus = ProductSKU.query.filter_by(
+    from sqlalchemy.orm import joinedload
+    skus = ProductSKU.query.options(
+        joinedload(ProductSKU.inventory_item)
+    ).filter_by(
         product_id=product.id,
         variant_id=variant.id,
         is_active=True,
