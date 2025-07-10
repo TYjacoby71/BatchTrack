@@ -33,16 +33,18 @@ class DashboardAlertService:
             
         alerts = []
         
-        # Get expiration summary once
-        expiration_summary = ExpirationService.get_expiration_summary()
+        # Get expiration data from combined service
+        expiration_data = CombinedInventoryAlertService.get_expiration_alerts(
+            days_ahead=user_prefs.expiration_warning_days if user_prefs else 7
+        )
         
         # CRITICAL: Expired items with remaining quantity
-        if expiration_summary['expired_total'] > 0:
+        if expiration_data['expired_total'] > 0:
             alerts.append({
                 'priority': 'CRITICAL',
                 'type': 'expired_inventory',
                 'title': 'Expired Inventory',
-                'message': f"{expiration_summary['expired_total']} items have expired and need attention",
+                'message': f"{expiration_data['expired_total']} items have expired and need attention",
                 'action_url': '/expiration/alerts',
                 'action_text': 'Review Expired Items',
                 'dismissible': False
@@ -77,12 +79,12 @@ class DashboardAlertService:
                 })
         
         # HIGH: Items expiring soon (within expiration_warning_days) - only if enabled
-        if user_prefs and user_prefs.show_expiration_alerts and expiration_summary['expiring_soon_total'] > 0:
+        if user_prefs and user_prefs.show_expiration_alerts and expiration_data['expiring_soon_total'] > 0:
             alerts.append({
                 'priority': 'HIGH',
                 'type': 'expiring_soon',
                 'title': 'Expiring Soon',
-                'message': f"{expiration_summary['expiring_soon_total']} items expire within {user_prefs.expiration_warning_days} days",
+                'message': f"{expiration_data['expiring_soon_total']} items expire within {user_prefs.expiration_warning_days} days",
                 'action_url': '/expiration/alerts',
                 'action_text': 'Plan Usage',
                 'dismissible': True
@@ -187,16 +189,27 @@ class DashboardAlertService:
     @staticmethod
     def get_alert_summary() -> Dict:
         """Get summary counts for navigation badge"""
-        summary = ExpirationService.get_expiration_summary()
+        from flask_login import current_user
+        from ..models.user_preferences import UserPreferences
+        
+        # Get user preferences for expiration days
+        user_prefs = None
+        days_ahead = 7
+        if current_user and current_user.is_authenticated:
+            user_prefs = UserPreferences.get_for_user(current_user.id)
+            if user_prefs:
+                days_ahead = user_prefs.expiration_warning_days
+                
+        expiration_data = CombinedInventoryAlertService.get_expiration_alerts(days_ahead)
         stock_summary = CombinedInventoryAlertService.get_unified_stock_summary()
         stuck_batches = len(DashboardAlertService._get_stuck_batches())
         recent_faults = DashboardAlertService._get_recent_faults()
         timer_alerts = DashboardAlertService._get_timer_alerts()
         
-        critical_count = (summary['expired_total'] + stuck_batches + 
+        critical_count = (expiration_data['expired_total'] + stuck_batches + 
                          (1 if recent_faults > 0 else 0) + 
                          stock_summary['out_of_stock_count'])
-        high_count = (summary['expiring_soon_total'] + stock_summary['low_stock_ingredients_count'] + 
+        high_count = (expiration_data['expiring_soon_total'] + stock_summary['low_stock_ingredients_count'] + 
                      timer_alerts['expired_count'] + 
                      stock_summary['low_stock_count'])
         

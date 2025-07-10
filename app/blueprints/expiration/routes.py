@@ -163,8 +163,16 @@ def expiration_alerts():
         if user_prefs:
             days_ahead = user_prefs.expiration_warning_days
 
-    # Get expired items
-    expired_items = ExpirationService.get_expired_inventory_items()
-
-    # Get items expiring soon (using user preference)
-    expiring_soon = ExpirationService.get_expiring_soon_items(days_ahead)
+    # Get comprehensive expiration data
+    from ...services.combined_inventory_alerts import CombinedInventoryAlertService
+    expiration_data = CombinedInventoryAlertService.get_expiration_alerts(days_ahead)
+    
+    # For template compatibility, structure the data
+    expired_items = {
+        'fifo_entries': expiration_data['expired_fifo_entries'],
+        'product_inventory': expiration_data['expired_products']
+    }
+    expiring_soon = {
+        'fifo_entries': expiration_data['expiring_fifo_entries'], 
+        'product_inventory': expiration_data['expiring_products']
+    }

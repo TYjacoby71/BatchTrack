@@ -288,58 +288,23 @@ class ExpirationService:
         return len(expired_fifo) + len(expired_sku_history)
 
     @staticmethod
-    def get_expiration_summary():
-        """Get summary counts for dashboard integration"""
-        from flask_login import current_user
-        from ...models.user_preferences import UserPreferences
-        
+    def is_item_expired(expiration_date: datetime) -> bool:
+        """Check if an item is expired based on expiration date"""
+        if not expiration_date:
+            return False
         today = datetime.now().date()
-        
-        # Get user's expiration warning preference
-        days_ahead = 7  # Default
-        if current_user and current_user.is_authenticated:
-            user_prefs = UserPreferences.get_for_user(current_user.id)
-            if user_prefs:
-                days_ahead = user_prefs.expiration_warning_days
-                
+        exp_date = expiration_date.date() if isinstance(expiration_date, datetime) else expiration_date
+        return exp_date < today
+
+    @staticmethod
+    def is_item_expiring_soon(expiration_date: datetime, days_ahead: int = 7) -> bool:
+        """Check if an item is expiring within specified days"""
+        if not expiration_date:
+            return False
+        today = datetime.now().date()
         future_date = today + timedelta(days=days_ahead)
-
-        # Count expired items with remaining quantity
-        expired_fifo_count = db.session.query(InventoryHistory).join(InventoryItem).filter(
-            and_(
-                InventoryHistory.expiration_date != None,
-                InventoryHistory.expiration_date < today,
-                InventoryHistory.remaining_quantity > 0,
-                InventoryItem.organization_id == current_user.organization_id if current_user.is_authenticated and current_user.organization_id else True
-            )
-        ).count()
-
-        # Count expired products
-        expired_items = ExpirationService.get_expired_inventory_items()
-        expired_products_count = len(expired_items.get('product_inventory', []))
-
-        # Count items expiring soon
-        expiring_fifo_count = db.session.query(InventoryHistory).join(InventoryItem).filter(
-            and_(
-                InventoryHistory.expiration_date != None,
-                InventoryHistory.expiration_date.between(today, future_date),
-                InventoryHistory.remaining_quantity > 0,
-                InventoryItem.organization_id == current_user.organization_id if current_user.is_authenticated and current_user.organization_id else True
-            )
-        ).count()
-
-        # Count products expiring soon
-        expiring_items = ExpirationService.get_expiring_soon_items(days_ahead)
-        expiring_products_count = len(expiring_items.get('product_inventory', []))
-
-        return {
-            'expired_total': expired_fifo_count + expired_products_count,
-            'expired_fifo': expired_fifo_count,
-            'expired_products': expired_products_count,
-            'expiring_soon_total': expiring_fifo_count + expiring_products_count,
-            'expiring_soon_fifo': expiring_fifo_count,
-            'expiring_soon_products': expiring_products_count
-        }
+        exp_date = expiration_date.date() if isinstance(expiration_date, datetime) else expiration_date
+        return today <= exp_date <= future_date
 
     @staticmethod
     def get_inventory_item_expiration_status(inventory_item_id: int):

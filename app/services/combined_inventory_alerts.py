@@ -8,6 +8,25 @@ class CombinedInventoryAlertService:
     """Unified service for all inventory alerts - raw materials and products"""
 
     @staticmethod
+    def get_expiration_alerts(days_ahead: int = 7) -> Dict:
+        """Get comprehensive expiration alerts for both raw materials and products"""
+        from flask_login import current_user
+        from ..blueprints.expiration.services import ExpirationService
+        
+        # Get expired and expiring items
+        expired_items = ExpirationService.get_expired_inventory_items()
+        expiring_items = ExpirationService.get_expiring_soon_items(days_ahead)
+        
+        return {
+            'expired_fifo_entries': expired_items.get('fifo_entries', []),
+            'expired_products': expired_items.get('product_inventory', []),
+            'expiring_fifo_entries': expiring_items.get('fifo_entries', []),
+            'expiring_products': expiring_items.get('product_inventory', []),
+            'expired_total': len(expired_items.get('fifo_entries', [])) + len(expired_items.get('product_inventory', [])),
+            'expiring_soon_total': len(expiring_items.get('fifo_entries', [])) + len(expiring_items.get('product_inventory', []))
+        }
+
+    @staticmethod
     def get_low_stock_ingredients():
         """Get all raw ingredients/containers that are below their low stock threshold"""
         from flask_login import current_user
