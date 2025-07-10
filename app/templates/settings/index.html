@@ -172,10 +172,6 @@
                         <div class="col-md-6">
                             <h6>Account Information</h6>
                             <div class="mb-3">
-                                <label class="form-label">Role</label>
-                                <input type="text" class="form-control" value="{{ current_user.role }}" readonly>
-                            </div>
-                            <div class="mb-3">
                                 <label class="form-label">Subscription Class</label>
                                 <div class="input-group">
                                     <input type="text" class="form-control" value="{{ current_user.subscription_class or 'free' }}" readonly>
