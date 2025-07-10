@@ -35,6 +35,33 @@ def register_product_filters(app):
 
         return data
 
+def product_variant_name(sku):
+    """Get display name for product variant"""
+    if not sku:
+        return ""
+    
+    if hasattr(sku, 'variant') and sku.variant:
+        return f"{sku.product.name} - {sku.variant.name}"
+    elif hasattr(sku, 'variant_name') and sku.variant_name:
+        return f"{sku.product_name} - {sku.variant_name}"
+    else:
+        return sku.product_name if hasattr(sku, 'product_name') else str(sku)
+
+def ingredient_cost_currency(cost):
+    """Format ingredient cost as currency"""
+    if cost is None or cost == 0:
+        return "$0.00"
+    return f"${float(cost):.2f}"
+
+def safe_float(value, default=0.0):
+    """Safely convert value to float"""
+    if value is None:
+        return default
+    try:
+        return float(value)
+    except (ValueError, TypeError):
+        return default
+
 def register_filters(app):
     """Register all template filters"""
     register_product_filters(app)

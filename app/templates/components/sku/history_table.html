@@ -28,7 +28,14 @@
                 <tbody>
                     {% for entry in history %}
                     <tr>
-                        <td>{{ entry.timestamp.strftime('%m/%d %H:%M') if entry.timestamp else 'N/A' }}</td>
+                        <td>
+                            {% if entry.timestamp %}
+                                {% set user_time = TimezoneUtils.to_user_timezone(entry.timestamp) %}
+                                {{ user_time.strftime('%m/%d %H:%M') if user_time else entry.timestamp.strftime('%m/%d %H:%M') }}
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </td>
                         <td>
                             <span class="badge badge-sm
                                 {% if entry.change_type == 'batch_production' or entry.change_type == 'batch_addition' %}bg-success
@@ -163,34 +170,23 @@
                         </td>
                         <td>
                             {% if entry.expiration_date %}
-                                {% set exp_date = entry.expiration_date.date() if entry.expiration_date else None %}
-                                {% if exp_date %}
-                                    {% set days_until = (exp_date - now.date()).days %}
-                                    <small class="
-                                        {% if days_until < 0 %}text-danger
-                                        {% elif days_until <= 7 %}text-warning
-                                        {% else %}text-success{% endif %}">
-                                        {{ exp_date.strftime('%m/%d/%y') }}
-                                        {% if entry.is_perishable %}
-                                            <br><span class="badge badge-sm 
-                                                {% if days_until < 0 %}bg-danger
-                                                {% elif days_until <= 7 %}bg-warning
-                                                {% else %}bg-success{% endif %}">
-                                                {% if days_until < 0 %}
-                                                    Expired
-                                                {% elif days_until == 0 %}
-                                                    Today
-                                                {% elif days_until <= 7 %}
-                                                    {{ days_until }}d
-                                                {% else %}
-                                                    OK
-                                                {% endif %}
-                                            </span>
-                                        {% endif %}
-                                    </small>
-                                {% else %}
-                                    <span class="text-muted">-</span>
-                                {% endif %}
+                                {% set exp_date = entry.expiration_date.strftime('%m/%d/%y') %}
+                                {% set exp_time = entry.expiration_date.strftime('%H:%M') %}
+                                <span class="badge 
+                                    {% if entry.expiration_date < now %}
+                                        bg-danger
+                                    {% elif entry.expiration_date <= (now + timedelta(days=7)) %}
+                                        bg-warning
+                                    {% else %}
+                                        bg-success
+                                    {% endif %}
+                                " title="Expires: {{ entry.expiration_date.strftime('%Y-%m-%d %H:%M') }}">
+                                    {% if exp_time != '00:00' %}
+                                        {{ exp_date }} {{ exp_time }}
+                                    {% else %}
+                                        {{ exp_date }}
+                                    {% endif %}
+                                </span>
                             {% else %}
                                 <span class="text-muted">-</span>
                             {% endif %}

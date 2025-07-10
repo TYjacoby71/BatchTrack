@@ -229,6 +229,17 @@ def create_app():
             except:
                 return dict(global_units=[])
 
+    # Register Jinja2 filters
+    from .filters.product_filters import product_variant_name, ingredient_cost_currency, safe_float
+    app.jinja_env.filters['product_variant_name'] = product_variant_name
+    app.jinja_env.filters['ingredient_cost_currency'] = ingredient_cost_currency
+    app.jinja_env.filters['safe_float'] = safe_float
+
+    # Add timezone utilities to template context
+    from .utils.timezone_utils import TimezoneUtils
+    app.jinja_env.globals['TimezoneUtils'] = TimezoneUtils
+    app.jinja_env.globals['current_time'] = TimezoneUtils.now
+
     from .management import register_commands
     register_commands(app)
 

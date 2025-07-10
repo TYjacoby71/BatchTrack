@@ -3,6 +3,7 @@ from datetime import datetime
 from flask_login import current_user
 from ..extensions import db
 from .mixins import ScopedModelMixin
+from ..utils.timezone_utils import TimezoneUtils
 
 class Product(ScopedModelMixin, db.Model):
     """Main Product model - represents the parent product"""
@@ -202,6 +203,31 @@ class ProductSKU(ScopedModelMixin, db.Model):
     def cost_per_unit(self):
         """Get cost per unit from unified inventory"""
         return self.inventory_item.cost_per_unit if self.inventory_item else 0.0
+    
+    @property
+    def weighted_average_cost(self):
+        """Calculate weighted average cost based on FIFO history like raw ingredients"""
+        from ..models import ProductSKUHistory
+        
+        # Get all remaining FIFO entries for this SKU
+        fifo_entries = ProductSKUHistory.query.filter_by(
+            inventory_item_id=self.inventory_item_id
+        ).filter(
+            ProductSKUHistory.remaining_quantity > 0
+        ).order_by(ProductSKUHistory.timestamp.asc()).all()
+        
+        if not fifo_entries:
+            return self.cost_per_unit
+        
+        total_cost = 0
+        total_quantity = 0
+        
+        for entry in fifo_entries:
+            if entry.cost_per_unit and entry.remaining_quantity > 0:
+                total_cost += entry.cost_per_unit * entry.remaining_quantity
+                total_quantity += entry.remaining_quantity
+        
+        return total_cost / total_quantity if total_quantity > 0 else self.cost_per_unit
     
     @property
     def reserved_quantity(self):

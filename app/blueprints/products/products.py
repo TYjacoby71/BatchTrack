@@ -215,6 +215,9 @@ def view_product(product_id):
         'sku': variant_data['skus'][0].sku_code if variant_data['skus'] else None
     })() for variant_name, variant_data in variants.items()]
 
+    # Also add skus to product for template compatibility
+    product.skus = skus
+
     return render_template('products/view_product.html',
                          product=product,
                          variants=variants,
