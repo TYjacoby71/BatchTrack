@@ -6,9 +6,8 @@
         <h5 class="modal-title">Finish Batch</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
-      
-      <form id="finishBatchModalForm" method="post" action="{{ url_for('finish_batch.complete_batch', batch_id=batch.id) }}">
-        <div class="modal-body">
+      <div class="modal-body">
+        <form id="finishBatchModalForm" method="post" action="{{ url_for('finish_batch.complete_batch', batch_id=batch.id) }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
           <!-- Always show basic info -->
@@ -26,16 +25,17 @@
           {% if batch.containers or batch.extra_containers %}
           {% include 'components/batch/finish_batch_containers.html' %}
           {% endif %}
-        </div>
-        
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="submit" class="btn btn-success" id="completeBatchBtn">Complete Batch</button>
-        </div>
-      </form>
+
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-success" id="completeBatchBtn">Complete Batch</button>
+          </div>
+        </form>
+      </div>
     </div>
   </div>
 </div>
 
 <!-- JavaScript Functions Component -->
 {% include 'components/batch/finish_batch_scripts.html' %}
+</div>
