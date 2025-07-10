@@ -14,7 +14,6 @@ product_variants_bp = Blueprint('product_variants', __name__)
 def add_variant(product_id):
     """Quick add new product variant via AJAX"""
     try:
-        from ...models.product import Product, ProductVariant, ProductSKU
 
         # First try to get the Product record
         product = Product.query.filter_by(
