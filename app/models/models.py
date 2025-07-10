@@ -2,7 +2,7 @@ from datetime import datetime, date
 from flask_login import current_user, UserMixin
 from ..extensions import db
 from .mixins import ScopedModelMixin
-from . import TimezoneUtils
+from ..utils.timezone_utils import TimezoneUtils
 
 class Organization(db.Model):
     id = db.Column(db.Integer, primary_key=True)
