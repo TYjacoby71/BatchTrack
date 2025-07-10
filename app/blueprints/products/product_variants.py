@@ -138,7 +138,7 @@ def view_variant(product_id, variant_name):
         flash('Variant not found', 'error')
         return redirect(url_for('products.view_product', product_id=product_id))
     
-    # Get all SKUs for this product/variant combination
+    # Get all SKUs for this product/variant combination with proper organization scoping
     skus = ProductSKU.query.filter_by(
         product_id=product.id,
         variant_id=variant.id,
@@ -148,7 +148,7 @@ def view_variant(product_id, variant_name):
 
     if not skus:
         flash('Variant not found', 'error')
-        return redirect(url_for('products.list_products'))
+        return redirect(url_for('products.view_product', product_id=product_id))
 
     # Group SKUs by size_label
     size_groups = {}
@@ -161,23 +161,16 @@ def view_variant(product_id, variant_name):
                 'size_label': display_size_label,
                 'unit': sku.unit,
                 'total_quantity': 0,
-                'skus': [],
-                'batches': []  # Add batches for cost calculations
+                'skus': []
             }
 
-        # Use inventory_item.quantity if available, otherwise use a calculated quantity
-        if hasattr(sku, 'inventory_item') and sku.inventory_item:
+        # Use inventory_item.quantity if available - this should be the authoritative source
+        if sku.inventory_item and sku.inventory_item.quantity is not None:
             size_groups[key]['total_quantity'] += sku.inventory_item.quantity
-        elif hasattr(sku, 'quantity'):
-            size_groups[key]['total_quantity'] += sku.quantity
         else:
             size_groups[key]['total_quantity'] += 0
+        
         size_groups[key]['skus'].append(sku)
-
-        # Add batch information for cost calculations
-        for batch in sku.batches:
-            if batch.quantity > 0:
-                size_groups[key]['batches'].append(batch)
 
     # Get available containers for manual stock addition
     available_containers = InventoryItem.query.filter_by(
