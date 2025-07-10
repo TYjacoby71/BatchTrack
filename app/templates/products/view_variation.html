@@ -106,18 +106,22 @@
                   {% set size_display = group.size_label if group.size_label else 'Bulk' %}
                   {% set group_total_cost = 0 %}
                   {% set group_total_value = 0 %}
+                  {% set group_total_quantity = 0 %}
                   {% for sku in group.skus %}
-                    {% if sku.inventory_item and sku.inventory_item.quantity and sku.inventory_item.quantity > 0 %}
-                      {% set cost_per_unit = sku.inventory_item.cost_per_unit or 0 %}
-                      {% set line_cost = cost_per_unit * sku.inventory_item.quantity %}
-                      {% set group_total_cost = group_total_cost + line_cost %}
-                      {% if sku.retail_price %}
-                        {% set line_value = sku.retail_price * sku.inventory_item.quantity %}
-                        {% set group_total_value = group_total_value + line_value %}
+                    {% if sku.inventory_item and sku.inventory_item.quantity %}
+                      {% set group_total_quantity = group_total_quantity + sku.inventory_item.quantity %}
+                      {% if sku.inventory_item.quantity > 0 %}
+                        {% set cost_per_unit = sku.inventory_item.cost_per_unit or 0 %}
+                        {% set line_cost = cost_per_unit * sku.inventory_item.quantity %}
+                        {% set group_total_cost = group_total_cost + line_cost %}
+                        {% if sku.retail_price %}
+                          {% set line_value = sku.retail_price * sku.inventory_item.quantity %}
+                          {% set group_total_value = group_total_value + line_value %}
+                        {% endif %}
                       {% endif %}
                     {% endif %}
                   {% endfor %}
-                  <tr class="{% if group.total_quantity <= 0 %}table-secondary text-muted{% endif %}">
+                  <tr class="{% if group_total_quantity <= 0 %}table-secondary text-muted{% endif %}">
                     <td>
                       {% if group.skus %}
                       <a href="{{ url_for('sku.view_sku', inventory_item_id=group.skus[0].inventory_item_id) }}">
@@ -126,23 +130,23 @@
                       {% else %}
                         {{ size_display }}
                       {% endif %}
-                      {% if group.total_quantity <= 0 and has_history %}
+                      {% if group_total_quantity <= 0 and has_history %}
                         <small class="badge bg-secondary ms-1">No Stock</small>
                       {% endif %}
                     </td>
                     <td>{{ group.unit }}</td>
                     <td>
-                      <span class="{% if group.total_quantity <= 0 %}text-muted{% endif %}">
-                        {{ "%.2f"|format(group.total_quantity) }}
+                      <span class="{% if group_total_quantity <= 0 %}text-muted{% endif %}">
+                        {{ "%.2f"|format(group_total_quantity) }}
                       </span>
                     </td>
                     <td>
-                      <span class="{% if group.total_quantity <= 0 %}text-muted{% endif %}">
+                      <span class="{% if group_total_quantity <= 0 %}text-muted{% endif %}">
                         ${{ "%.2f"|format(group_total_cost) }}
                       </span>
                     </td>
                     <td>
-                      <span class="{% if group.total_quantity <= 0 %}text-muted{% endif %}">
+                      <span class="{% if group_total_quantity <= 0 %}text-muted{% endif %}">
                         ${{ "%.2f"|format(group_total_value) }}
                       </span>
                     </td>
