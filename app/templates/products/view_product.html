@@ -85,21 +85,36 @@
         {% endif %}
 
         {% for variant_name in all_variants %}
-        {% set var_inventory = inventory_groups.values()|selectattr('variant', 'equalto', variant_name)|list %}
-        {% set var_total_qty = var_inventory|sum(attribute='total_quantity')|default(0) %}
-        {% set unique_size_labels = [] %}
-        {% set cost_values = [] %}
+        {% set variation = product.variations|selectattr('name', 'equalto', variant_name)|first %}
+        {% set variant_skus = product.skus|selectattr('variant.name', 'equalto', variant_name)|list %}
+        {% set var_total_qty = 0 %}
         {% set total_cost = 0 %}
-        {% for group in var_inventory %}
-          {% if group.batches %}
-            {% for batch in group.batches %}
-              {% if batch.remaining_quantity > 0 %}
-                {% set size_label = batch.size_label if batch.size_label else 'Bulk' %}
-                {% if size_label not in unique_size_labels %}
-                  {% set _ = unique_size_labels.append(size_label) %}
-                {% endif %}
-                {% if batch.batch_cost_per_unit %}
-                  {% set batch_total_cost = batch.remaining_quantity * batch.batch_cost_per_unit %}
+        {% set total_value = 0 %}
+        {% set unique_size_labels = [] %}
+        {% set total_bulk = 0 %}
+        {% set total_packaged = 0 %}
+        
+        {% for sku in variant_skus %}
+          {% if sku.inventory_item %}
+            {% set var_total_qty = var_total_qty + sku.inventory_item.quantity %}
+            {% if sku.inventory_item.cost_per_unit %}
+              {% set total_cost = total_cost + (sku.inventory_item.cost_per_unit * sku.inventory_item.quantity) %}
+            {% endif %}
+            {% if sku.retail_price %}
+              {% set total_value = total_value + (sku.retail_price * sku.inventory_item.quantity) %}
+            {% endif %}
+            {% set size_label = sku.size_label if sku.size_label else 'Bulk' %}
+            {% if size_label not in unique_size_labels %}
+              {% set _ = unique_size_labels.append(size_label) %}
+            {% endif %}
+            {% if size_label == 'Bulk' or not sku.size_label %}
+              {% set total_bulk = total_bulk + sku.inventory_item.quantity %}
+            {% else %}
+              {% set total_packaged = total_packaged + sku.inventory_item.quantity %}
+            {% endif %}
+          {% endif %}
+        {% endfor %}
+        {% set var_size_count = unique_size_labels|length %}_unit %}
                   {% set total_cost = total_cost + batch_total_cost %}
                 {% endif %}
               {% endif %}
@@ -132,6 +147,31 @@
               <div class="variant-stats mb-3">
                 <div class="row text-center">
                   <div class="col-4">
+                    <small class="text-muted">Total Bulk</small><br>
+                    <strong>{{ "%.2f"|format(total_bulk) }}</strong><br>
+                    <small>{{ product.base_unit }}</small>
+                  </div>
+                  <div class="col-4">
+                    <small class="text-muted">Total Packaged</small><br>
+                    <strong>{{ total_packaged|int }}</strong><br>
+                    <small>items</small>
+                  </div>
+                  <div class="col-4">
+                    <small class="text-muted">Size Count</small><br>
+                    <strong>{{ var_size_count }}</strong><br>
+                    <small>sizes</small>
+                  </div>
+                </div>
+                
+                <div class="row text-center mt-2">
+                  <div class="col-6">
+                    <small class="text-muted">Total Cost</small><br>
+                    <strong>${{ "%.2f"|format(total_cost) }}</strong>
+                  </div>
+                  <div class="col-6">
+                    <small class="text-muted">Total Value</small><br>
+                    <strong>${{ "%.2f"|format(total_value) }}</strong>
+                  </div>
                     <div class="stat-box">
                       <strong>{{ "%.1f"|format(var_total_qty) }}</strong>
                       <br><small class="text-muted">Quantity</small>
