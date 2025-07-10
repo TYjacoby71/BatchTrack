@@ -151,7 +151,7 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
                 # Only products can be reserved
                 if item.type != 'product':
                     raise ValueError("Only products can be reserved, not raw inventory")
-                
+
                 # Create reservation tracking with FIFO lot details BEFORE executing deductions
                 from app.services.reservation_service import ReservationService
                 reservations_created = []
@@ -190,7 +190,7 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
                 FIFOService.handle_refund_credits(
                     item_id, qty_change, batch_id, notes, created_by, cost_per_unit
                 )
-            
+
             else:
                 # Use FIFO service for all additions - it routes to the correct history table
                 FIFOService.add_fifo_entry(
