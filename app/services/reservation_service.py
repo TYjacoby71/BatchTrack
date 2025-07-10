@@ -94,7 +94,7 @@ class ReservationService:
                 created_by=current_user.id if current_user.is_authenticated else None,
                 order_id=order_id,
                 fifo_reference_id=reservation.source_fifo_id,
-                fifo_code=generate_fifo_code(),
+                fifo_code=generate_fifo_code('unreserved'),
                 organization_id=current_user.organization_id if current_user.is_authenticated else None
             )
             db.session.add(credit_entry)
