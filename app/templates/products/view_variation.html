@@ -22,56 +22,79 @@
           </div>
         </div>
         <div class="card-body">
-          <div class="row">
-            <div class="col-md-2">
-              {% set total_bulk = 0 %}
-              {% set total_packaged = 0 %}
-              {% for group_key, group in size_groups.items() %}
-                {% if group.size_label and group.size_label != 'Bulk' %}
-                  {% set total_packaged = total_packaged + group.total_quantity %}
-                {% elif group.size_label == 'Bulk' or not group.size_label %}
-                  {% set total_bulk = total_bulk + group.total_quantity %}
-                {% endif %}
-              {% endfor %}
-              <strong>Total Bulk:</strong> {{ "%.2f"|format(total_bulk) }} {{ product.base_unit }}
-            </div>
-            <div class="col-md-2">
-              <strong>Total Packaged:</strong> {{ total_packaged|int }} items
-            </div>
-            <div class="col-md-2">
-              <strong>Size Count:</strong> {{ size_groups|length }}
-            </div>
-            <div class="col-md-3">
-              {% set variant_total_cost = 0 %}
-              {% for group_key, group in size_groups.items() %}
-                {% for sku in group.skus %}
-                  {% if sku.inventory_item and sku.inventory_item.quantity > 0 %}
-                    {% set cost_per_unit = sku.inventory_item.cost_per_unit or 0 %}
-                    {% set variant_total_cost = variant_total_cost + (cost_per_unit * sku.inventory_item.quantity) %}
-                  {% endif %}
-                {% endfor %}
-              {% endfor %}
-              <strong>Total Cost:</strong> ${{ "%.2f"|format(variant_total_cost) }}
-            </div>
-            <div class="col-md-3">
-              {% set variant_total_value = 0 %}
-              {% for group_key, group in size_groups.items() %}
-                {% for sku in group.skus %}
-                  {% if sku.inventory_item and sku.inventory_item.quantity > 0 and sku.retail_price %}
-                    {% set variant_total_value = variant_total_value + (sku.retail_price * sku.inventory_item.quantity) %}
-                  {% endif %}
-                {% endfor %}
-              {% endfor %}
-              <strong>Total Value:</strong> ${{ "%.2f"|format(variant_total_value) }}
-            </div>
-          </div>
           {% if variation.description %}
-          <div class="row mt-2">
+          <div class="row mb-3">
             <div class="col-12">
-              <strong>Description:</strong> {{ variation.description }}
+              <p class="text-muted mb-0">{{ variation.description }}</p>
             </div>
           </div>
           {% endif %}
+          
+          <!-- Calculate totals from size groups -->
+          {% set bulk_quantity = 0 %}
+          {% set packaged_quantity = 0 %}
+          {% set total_cost = 0 %}
+          {% set total_value = 0 %}
+          {% set size_count = size_groups|length %}
+          
+          {% for group_key, group in size_groups.items() %}
+            {% if group.size_label == 'Bulk' %}
+              {% set bulk_quantity = bulk_quantity + group.total_quantity %}
+            {% else %}
+              {% set packaged_quantity = packaged_quantity + group.total_quantity %}
+            {% endif %}
+            
+            {% for sku in group.skus %}
+              {% if sku.inventory_item and sku.inventory_item.quantity > 0 %}
+                {% if sku.inventory_item.cost_per_unit %}
+                  {% set total_cost = total_cost + (sku.inventory_item.cost_per_unit * sku.inventory_item.quantity) %}
+                {% endif %}
+                {% if sku.retail_price %}
+                  {% set total_value = total_value + (sku.retail_price * sku.inventory_item.quantity) %}
+                {% endif %}
+              {% endif %}
+            {% endfor %}
+          {% endfor %}
+          
+          <!-- Display metrics -->
+          <div class="row g-3">
+            <div class="col-md-6 col-lg-3">
+              <div class="card bg-light h-100">
+                <div class="card-body text-center">
+                  <div class="fs-4 fw-bold text-primary">{{ "%.2f"|format(bulk_quantity) }}</div>
+                  <div class="text-muted small">Total Bulk</div>
+                  <div class="text-muted small">{{ product.base_unit }}</div>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6 col-lg-3">
+              <div class="card bg-light h-100">
+                <div class="card-body text-center">
+                  <div class="fs-4 fw-bold text-success">{{ packaged_quantity|int }}</div>
+                  <div class="text-muted small">Total Packaged</div>
+                  <div class="text-muted small">Items</div>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6 col-lg-3">
+              <div class="card bg-light h-100">
+                <div class="card-body text-center">
+                  <div class="fs-4 fw-bold text-warning">${{ "%.2f"|format(total_cost) }}</div>
+                  <div class="text-muted small">Total Cost</div>
+                  <div class="text-muted small">{{ size_count }} Sizes</div>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6 col-lg-3">
+              <div class="card bg-light h-100">
+                <div class="card-body text-center">
+                  <div class="fs-4 fw-bold text-info">${{ "%.2f"|format(total_value) }}</div>
+                  <div class="text-muted small">Total Value</div>
+                  <div class="text-muted small">Retail Price</div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
