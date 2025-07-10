@@ -193,3 +193,31 @@ document.addEventListener('DOMContentLoaded', function() {
         </p>
     </div>
 </div>
+</original>
+```
+
+```html
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">SKU Details</h5>
+                        <div>
+                            <a href="{{ url_for('sku_merge.select_skus_to_merge') }}" class="btn btn-warning btn-sm me-2">
+                                <i class="fas fa-compress-arrows-alt"></i> Merge SKUs
+                            </a>
+                            <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#editSkuModal">
+                                <i class="fas fa-edit"></i> Edit
+                            </button>
+                        </div>
+                    </div>
+    <div class="card-body">
+        <h5 class="card-title">{{ sku.product_name }} - {{ sku.variant_name }} - {{ sku.size_label }}</h5>
+        <p class="card-text">
+            <strong>SKU:</strong> {{ sku.sku }}<br>
+            <strong>Retail Price:</strong> ${{ "%.2f"|format(sku.retail_price or 0) }}<br>
+            <strong>Unit Cost:</strong> ${{ "%.2f"|format(sku.unit_cost or 0) }}<br>
+            <strong>Quantity:</strong>
+            <strong>{{ "%.1f"|format(sku.quantity or 0) }}</strong>
+        </p>
+    </div>
+</div>
+</original>
