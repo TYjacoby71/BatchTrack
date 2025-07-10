@@ -36,7 +36,13 @@ class UserPreferences(ScopedModelMixin, db.Model):
         """Get or create preferences for a user"""
         prefs = cls.query.filter_by(user_id=user_id).first()
         if not prefs:
-            prefs = cls(user_id=user_id)
+            # Get the user to access their organization_id
+            from .models import User
+            user = User.query.get(user_id)
+            if not user:
+                raise ValueError(f"User {user_id} not found")
+            
+            prefs = cls(user_id=user_id, organization_id=user.organization_id)
             db.session.add(prefs)
             db.session.commit()
         return prefs
