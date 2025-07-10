@@ -158,19 +158,30 @@ def _process_container_allocations(batch, product, variant, form_data, expiratio
 
     # Process containers by container_final_X keys from the combined form
     container_final_keys = [k for k in form_data.keys() if k.startswith('container_final_')]
-    
+
     for key in container_final_keys:
         container_id = key.replace('container_final_', '')
         final_quantity = int(form_data.get(key, 0))
 
         if final_quantity > 0:
-            container_item = InventoryItem.query.get(int(container_id))
-            
-            if container_item:
+            try:
+                # Get container with simple query
+                container_item = InventoryItem.query.filter_by(
+                    id=int(container_id),
+                    organization_id=current_user.organization_id
+                ).first()
+
+                if not container_item:
+                    logger.error(f"Container with ID {container_id} not found for organization {current_user.organization_id}")
+                    continue
+
+                # Debug logging
+                logger.info(f"Processing container: {container_item.name} (ID: {container_item.id})")
+
                 # Pass the container object and quantity separately
                 container_sku = _create_container_sku(
-                    product=product, 
-                    variant=variant, 
+                    product=product,
+                    variant=variant,
                     container_item=container_item,  # This is the InventoryItem object
                     quantity=final_quantity,
                     batch=batch,
@@ -182,6 +193,9 @@ def _process_container_allocations(batch, product, variant, form_data, expiratio
                     'quantity': final_quantity,
                     'container_capacity': container_item.storage_amount or 1
                 })
+            except Exception as e:
+                logger.error(f"Error processing container {container_id}: {e}")
+                continue
 
     return container_skus
 
