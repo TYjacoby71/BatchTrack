@@ -153,48 +153,69 @@ def _create_product_output(batch, product_id, variant_id, final_quantity, output
 
 
 def _process_container_allocations(batch, product, variant, form_data, expiration_date):
-    """Process container allocations and create individual SKUs"""
+    """Process container allocations and create SKUs"""
     container_skus = []
 
-    if not batch.containers:
-        return container_skus
+    # Process containers by container_final_X keys from the combined form
+    container_final_keys = [k for k in form_data.keys() if k.startswith('container_final_')]
 
-    # Process each container type
-    for container_usage in batch.containers:
-        container = container_usage.container
-        container_id = container.id
-
-        # Get the final quantity for this container from form
-        final_key = f'container_final_{container_id}'
-        final_quantity = int(form_data.get(final_key, 0))
+    for key in container_final_keys:
+        container_id = key.replace('container_final_', '')
+        final_quantity = int(form_data.get(key, 0))
 
         if final_quantity > 0:
-            # Create individual SKUs for each container
-            for _ in range(final_quantity):
-                sku = _create_container_sku(
-                    product, variant, container, expiration_date, batch
+            try:
+                # Get container with simple query
+                container_item = InventoryItem.query.filter_by(
+                    id=int(container_id),
+                    organization_id=current_user.organization_id
+                ).first()
+
+                if not container_item:
+                    logger.error(f"Container with ID {container_id} not found for organization {current_user.organization_id}")
+                    continue
+
+                # Debug logging
+                logger.info(f"Processing container: {container_item.name} (ID: {container_item.id})")
+
+                # Pass the container object and quantity separately
+                container_sku = _create_container_sku(
+                    product=product,
+                    variant=variant,
+                    container_item=container_item,  # This is the InventoryItem object
+                    quantity=final_quantity,
+                    batch=batch,
+                    expiration_date=expiration_date
                 )
+
                 container_skus.append({
-                    'sku': sku,
-                    'quantity': container.storage_amount or 1
+                    'sku': container_sku,
+                    'quantity': final_quantity,
+                    'container_capacity': container_item.storage_amount or 1
                 })
+            except Exception as e:
+                logger.error(f"Error processing container {container_id}: {e}")
+                continue
 
     return container_skus
 
 
-def _create_container_sku(product, variant, container, expiration_date, batch):
+def _create_container_sku(product, variant, container_item, quantity, batch, expiration_date):
     """Create a single container SKU"""
     try:
-        # Create size label from container
-        size_label = f"{container.storage_amount} {container.storage_unit}" if container.storage_amount else "1 unit"
+        # Create size label: quantity + unit + container name
+        if container_item.storage_amount and container_item.storage_unit:
+            size_label = f"{container_item.storage_amount} {container_item.storage_unit} {container_item.name}"
+        else:
+            size_label = f"1 unit {container_item.name}"
 
         # Generate SKU code
-        sku_code = f"{product.name[:3].upper()}-{variant.name[:3].upper()}-{container.name[:3].upper()}-{datetime.now().strftime('%m%d%H%M')}"
+        sku_code = f"{product.name[:3].upper()}-{variant.name[:3].upper()}-{container_item.name[:3].upper()}-{datetime.now().strftime('%m%d%H%M')}"
 
         # Create inventory item for this SKU
         inventory_item = InventoryItem(
             name=f"{product.name} - {variant.name} ({size_label})",
-            unit=container.storage_unit or product.base_unit,
+            unit=container_item.storage_unit or product.base_unit,
             category='Product',
             organization_id=current_user.organization_id,
             created_by=current_user.id
@@ -208,8 +229,8 @@ def _create_container_sku(product, variant, container, expiration_date, batch):
             variant_id=variant.id,
             sku_code=sku_code,
             size_label=size_label,
-            unit_quantity=container.storage_amount or 1,
-            unit_type=container.storage_unit or product.base_unit,
+            unit_quantity=container_item.storage_amount or 1,
+            unit_type=container_item.storage_unit or product.base_unit,
             inventory_item_id=inventory_item.id,
             organization_id=current_user.organization_id,
             created_by=current_user.id
@@ -220,7 +241,7 @@ def _create_container_sku(product, variant, container, expiration_date, batch):
         # Add to inventory
         process_inventory_adjustment(
             item_id=inventory_item.id,
-            quantity=1,  # One container
+            quantity=quantity,  # Use the quantity passed to the function
             change_type='finished_batch',
             unit=inventory_item.unit,
             notes=f'Batch {batch.label_code} completed',
