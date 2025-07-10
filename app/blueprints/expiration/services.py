@@ -105,14 +105,14 @@ class ExpirationService:
 
         # Get SKUs with remaining quantity from FIFO entries
         expired_skus = db.session.query(
-            ProductSKUHistory.sku_id,
+            ProductSKUHistory.inventory_item_id,
             ProductSKU.product_name,
             ProductSKU.variant_name,
             ProductSKU.size_label,
             ProductSKUHistory.remaining_quantity,
             ProductSKUHistory.unit,
             ProductSKUHistory.id.label('history_id')
-        ).join(ProductSKU).filter(
+        ).join(ProductSKU, ProductSKUHistory.inventory_item_id == ProductSKU.inventory_item_id).filter(
             and_(
                 ProductSKUHistory.remaining_quantity > 0,
                 ProductSKUHistory.quantity_change > 0  # Only addition entries
@@ -126,7 +126,7 @@ class ExpirationService:
                 batch_expiration = ExpirationService.get_batch_expiration_date(sku_entry.batch_id)
                 if batch_expiration and batch_expiration.date() < today:
                     expired_products.append({
-                        'sku_id': sku_entry.sku_id,
+                        'inventory_item_id': sku_entry.inventory_item_id,
                         'product_name': sku_entry.product_name,
                         'variant_name': sku_entry.variant_name,
                         'size_label': sku_entry.size_label,
@@ -168,14 +168,14 @@ class ExpirationService:
 
         # Get SKUs with remaining quantity from FIFO entries
         expiring_skus = db.session.query(
-            ProductSKUHistory.sku_id,
+            ProductSKUHistory.inventory_item_id,
             ProductSKU.product_name,
             ProductSKU.variant_name,
             ProductSKU.size_label,
             ProductSKUHistory.remaining_quantity,
             ProductSKUHistory.unit,
             ProductSKUHistory.id.label('history_id')
-        ).join(ProductSKU).filter(
+        ).join(ProductSKU, ProductSKUHistory.inventory_item_id == ProductSKU.inventory_item_id).filter(
             and_(
                 ProductSKUHistory.remaining_quantity > 0,
                 ProductSKUHistory.quantity_change > 0  # Only addition entries
@@ -189,7 +189,7 @@ class ExpirationService:
                 batch_expiration = ExpirationService.get_batch_expiration_date(sku_entry.batch_id)
                 if batch_expiration and today <= batch_expiration.date() <= future_date:
                     expiring_products.append({
-                        'sku_id': sku_entry.sku_id,
+                        'inventory_item_id': sku_entry.inventory_item_id,
                         'product_name': sku_entry.product_name,
                         'variant_name': sku_entry.variant_name,
                         'size_label': sku_entry.size_label,
@@ -416,7 +416,7 @@ class ExpirationService:
 
             # Use product inventory service to deduct the spoiled quantity
             success = ProductInventoryService.deduct_stock(
-                sku_id=history_entry.sku_id,
+                inventory_item_id=history_entry.inventory_item_id,
                 quantity=float(history_entry.remaining_quantity),
                 change_type='spoil',
                 notes=f"Marked as spoiled - expired batch"
