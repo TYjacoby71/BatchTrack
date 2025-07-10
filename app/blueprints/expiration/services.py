@@ -11,6 +11,7 @@ class ExpirationService:
         """Calculate expiration date from entry date and shelf life"""
         if not entry_date or not shelf_life_days:
             return None
+        # Preserve the exact timestamp to maintain precision
         return entry_date + timedelta(days=shelf_life_days)
 
     @staticmethod
@@ -18,9 +19,10 @@ class ExpirationService:
         """Get days until expiration (negative if expired)"""
         if not expiration_date:
             return None
-        today = datetime.now().date()
-        exp_date = expiration_date.date() if isinstance(expiration_date, datetime) else expiration_date
-        return (exp_date - today).days
+        now = datetime.now()
+        # Use full datetime comparison for more precision
+        time_diff = expiration_date - now
+        return int(time_diff.total_seconds() / 86400)  # Convert seconds to days
 
     @staticmethod
     def get_life_remaining_percent(entry_date: datetime, expiration_date: datetime) -> Optional[float]:
@@ -83,7 +85,7 @@ class ExpirationService:
     def get_expired_inventory_items() -> List[Dict]:
         """Get all expired inventory items across the system"""
         from flask_login import current_user
-        today = datetime.now().date()
+        now = datetime.now()
 
         # Get expired FIFO entries
         expired_fifo = db.session.query(
@@ -96,7 +98,7 @@ class ExpirationService:
         ).join(InventoryItem).filter(
             and_(
                 InventoryHistory.expiration_date != None,
-                InventoryHistory.expiration_date < today,
+                InventoryHistory.expiration_date < now,
                 InventoryHistory.remaining_quantity > 0,
                 InventoryItem.organization_id == current_user.organization_id if current_user.is_authenticated and current_user.organization_id else True
             )
@@ -140,7 +142,7 @@ class ExpirationService:
                 expiration_date = ExpirationService.get_batch_expiration_date(sku_entry.batch_id)
 
             # Check if expired
-            if expiration_date and expiration_date.date() < today:
+            if expiration_date and expiration_date < now:
                 expired_products.append({
                     'inventory_item_id': sku_entry.inventory_item_id,
                     'product_name': sku_entry.product_name,
@@ -161,8 +163,8 @@ class ExpirationService:
     def get_expiring_soon_items(days_ahead: int = 7) -> List[Dict]:
         """Get items expiring within specified days"""
         from flask_login import current_user
-        future_date = datetime.now().date() + timedelta(days=days_ahead)
-        today = datetime.now().date()
+        now = datetime.now()
+        future_date = now + timedelta(days=days_ahead)
 
         # FIFO entries expiring soon
         expiring_fifo = db.session.query(
@@ -175,7 +177,7 @@ class ExpirationService:
         ).join(InventoryItem).filter(
             and_(
                 InventoryHistory.expiration_date != None,
-                InventoryHistory.expiration_date.between(today, future_date),
+                InventoryHistory.expiration_date.between(now, future_date),
                 InventoryHistory.remaining_quantity > 0,
                 InventoryItem.organization_id == current_user.organization_id if current_user.is_authenticated and current_user.organization_id else True
             )
@@ -219,7 +221,7 @@ class ExpirationService:
                 expiration_date = ExpirationService.get_batch_expiration_date(sku_entry.batch_id)
 
             # Check if expiring soon
-            if expiration_date and today <= expiration_date.date() <= future_date:
+            if expiration_date and now <= expiration_date <= future_date:
                 expiring_products.append({
                     'inventory_item_id': sku_entry.inventory_item_id,
                     'product_name': sku_entry.product_name,
@@ -310,8 +312,8 @@ class ExpirationService:
     def get_inventory_item_expiration_status(inventory_item_id: int):
         """Get expiration status for a specific inventory item"""
         from flask_login import current_user
-        today = datetime.now().date()
-        future_date = today + timedelta(days=7)
+        now = datetime.now()
+        future_date = now + timedelta(days=7)
 
         # Get all FIFO entries for this item with organization scoping
         entries = db.session.query(InventoryHistory).join(InventoryItem).filter(
@@ -327,7 +329,7 @@ class ExpirationService:
         expiring_soon_entries = []
 
         for entry in entries:
-            if entry.expiration_date < today:
+            if entry.expiration_date < now:
                 expired_entries.append(entry)
             elif entry.expiration_date <= future_date:
                 expiring_soon_entries.append(entry)

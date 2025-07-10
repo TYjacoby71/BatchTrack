@@ -109,7 +109,13 @@
                     </td>
                     <td>
                       {% if entry.expiration_date %}
-                        {{ entry.expiration_date.strftime('%Y-%m-%d') }}
+                        {% set exp_date = entry.expiration_date.strftime('%Y-%m-%d') %}
+                        {% set exp_time = entry.expiration_date.strftime('%H:%M') %}
+                        {% if exp_time != '00:00' %}
+                          {{ exp_date }} {{ exp_time }}
+                        {% else %}
+                          {{ exp_date }}
+                        {% endif %}
                         {% if is_expired %}
                           <span class="badge bg-danger ms-1">EXPIRED</span>
                         {% elif is_expiring_soon %}
