@@ -55,7 +55,13 @@
                                 </span>
                             {% elif entry.change_type in ['restock', 'manual_addition', 'finished_batch'] %}
                                 <span class="text-success">
-                                    New Lot
+                                    {% if entry.fifo_code %}
+                                        {{ entry.fifo_code }}
+                                    {% elif entry.batch and entry.batch.label_code %}
+                                        {{ entry.batch.label_code }}
+                                    {% else %}
+                                        New Lot
+                                    {% endif %}
                                 </span>
                             {% else %}
                                 <span class="text-muted">-</span>
