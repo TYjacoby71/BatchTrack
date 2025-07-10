@@ -2,7 +2,7 @@
 """Add user preferences table
 
 Revision ID: add_user_preferences
-Revises: consolidate_reservation_system
+Revises: aa271449bf33
 Create Date: 2025-01-10 19:44:00.000000
 
 """
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = 'add_user_preferences'
-down_revision = 'consolidate_reservation_system'
+down_revision = 'aa271449bf33'
 branch_labels = None
 depends_on = None
 
