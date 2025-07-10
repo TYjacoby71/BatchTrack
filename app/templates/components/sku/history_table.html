@@ -41,19 +41,7 @@
                             </span>
                         </td>
                         <td>
-                            {% if entry.fifo_reference_id %}
-                                <a href="#entry-{{ entry.fifo_reference_id }}" class="text-primary">
-                                    {% if entry.fifo_source %}
-                                        {{ entry.fifo_source }}
-                                    {% else %}
-                                        Lot #{{ entry.fifo_reference_id }}
-                                    {% endif %}
-                                </a>
-                            {% elif entry.batch_id %}
-                                <span class="text-info">
-                                    Batch #{{ entry.batch_id }}
-                                </span>
-                            {% elif entry.change_type in ['restock', 'manual_addition', 'finished_batch'] %}
+                            {% if entry.change_type in ['restock', 'manual_addition', 'finished_batch'] %}
                                 <span class="text-success">
                                     {% if entry.fifo_code %}
                                         {{ entry.fifo_code }}
@@ -62,6 +50,18 @@
                                     {% else %}
                                         New Lot
                                     {% endif %}
+                                </span>
+                            {% elif entry.batch_id %}
+                                <span class="text-info">
+                                    {% if entry.batch and entry.batch.label_code %}
+                                        {{ entry.batch.label_code }}
+                                    {% else %}
+                                        Batch #{{ entry.batch_id }}
+                                    {% endif %}
+                                </span>
+                            {% elif entry.fifo_source %}
+                                <span class="text-primary">
+                                    {{ entry.fifo_source }}
                                 </span>
                             {% else %}
                                 <span class="text-muted">-</span>
