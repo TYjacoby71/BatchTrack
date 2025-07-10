@@ -203,6 +203,8 @@ def _process_container_allocations(batch, product, variant, form_data, expiratio
 def _create_container_sku(product, variant, container_item, quantity, batch, expiration_date):
     """Create a single container SKU"""
     try:
+        logger.info(f"Creating container SKU with container: {container_item.name}, quantity: {quantity}")
+        
         # Create size label: quantity + unit + container name
         if container_item.storage_amount and container_item.storage_unit:
             size_label = f"{container_item.storage_amount} {container_item.storage_unit} {container_item.name}"
@@ -212,13 +214,14 @@ def _create_container_sku(product, variant, container_item, quantity, batch, exp
         # Generate SKU code
         sku_code = f"{product.name[:3].upper()}-{variant.name[:3].upper()}-{container_item.name[:3].upper()}-{datetime.now().strftime('%m%d%H%M')}"
 
-        # Create inventory item for this SKU
+        # Create inventory item for this SKU - unit should be 'count' for containers
         inventory_item = InventoryItem(
             name=f"{product.name} - {variant.name} ({size_label})",
-            unit=container_item.storage_unit or product.base_unit,
+            unit='count',  # Containers are counted as individual units
             category='Product',
             organization_id=current_user.organization_id,
-            created_by=current_user.id
+            created_by=current_user.id,
+            type='product'
         )
         db.session.add(inventory_item)
         db.session.flush()
@@ -238,21 +241,24 @@ def _create_container_sku(product, variant, container_item, quantity, batch, exp
         db.session.add(product_sku)
         db.session.flush()
 
-        # Add to inventory
+        # Add to inventory - quantity is number of containers
         process_inventory_adjustment(
             item_id=inventory_item.id,
-            quantity=quantity,  # Use the quantity passed to the function
+            quantity=quantity,  # Number of containers
             change_type='finished_batch',
-            unit=inventory_item.unit,
-            notes=f'Batch {batch.label_code} completed',
+            unit='count',  # Unit is count for containers
+            notes=f'Batch {batch.label_code} completed - {quantity} containers',
             created_by=current_user.id,
             custom_expiration_date=expiration_date
         )
 
+        logger.info(f"Successfully created container SKU: {sku_code} with {quantity} containers")
         return product_sku
 
     except Exception as e:
         logger.error(f"Error creating container SKU: {str(e)}")
+        import traceback
+        logger.error(f"Full traceback: {traceback.format_exc()}")
         raise
 
 
