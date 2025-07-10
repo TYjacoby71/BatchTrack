@@ -10,14 +10,13 @@
                     <tr>
                         <th>Date</th>
                         <th>Type</th>
-                        <th>FIFO Code</th>
+                        <th>Source</th>
                         <th>Qty Change</th>
                         <th>Remaining</th>
                         <th>Unit Cost</th>
                         <th>Sale Price</th>
                         <th>Customer</th>
-                        <th>FIFO Code</th>
-                        <th>Batch/Lot</th>
+                        <th>Lot Number</th>
                         <th>Location</th>
                         <th>Quality</th>
                         <th>Order ID</th>
@@ -99,22 +98,6 @@
                             {% if entry.fifo_code %}
                                 <small class="font-monospace">{{ entry.fifo_code[:8] }}</small>
                             {% else %}
-                                <span class="text-muted">-</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if entry.batch_id %}
-                                <a href="{{ url_for('batches.view_batch', batch_id=entry.batch_id) }}" class="text-decoration-none">
-                                    <small>B{{ entry.batch_id }}</small>
-                                </a>
-                            {% endif %}
-                            {% if entry.batch_number %}
-                                <br><small class="text-muted">{{ entry.batch_number[:8] }}</small>
-                            {% endif %}
-                            {% if entry.lot_number %}
-                                <br><small class="text-info">L{{ entry.lot_number[:8] }}</small>
-                            {% endif %}
-                            {% if not entry.batch_id and not entry.batch_number and not entry.lot_number %}
                                 <span class="text-muted">-</span>
                             {% endif %}
                         </td>
