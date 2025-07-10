@@ -98,7 +98,9 @@ def edit_sku(inventory_item_id):
 @login_required
 def select_skus_to_merge():
     """Select SKUs to merge - show all active SKUs"""
-    skus = ProductSKU.query.join(InventoryItem).filter(
+    skus = ProductSKU.query.join(
+        InventoryItem, ProductSKU.inventory_item_id == InventoryItem.id
+    ).filter(
         ProductSKU.organization_id == current_user.organization_id,
         ProductSKU.is_active == True
     ).order_by(ProductSKU.product_id, ProductSKU.variant_id, ProductSKU.size_label).all()
