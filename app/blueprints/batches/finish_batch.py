@@ -164,15 +164,14 @@ def _process_container_allocations(batch, product, variant, form_data, expiratio
         final_quantity = int(form_data.get(key, 0))
 
         if final_quantity > 0:
-            from ...models import InventoryItem
-            container = InventoryItem.query.get(int(container_id))
+            container_item = InventoryItem.query.get(int(container_id))
             
-            if container:
+            if container_item:
                 # Pass the container object and quantity separately
                 container_sku = _create_container_sku(
                     product=product, 
                     variant=variant, 
-                    container_item=container,  # This is the InventoryItem object
+                    container_item=container_item,  # This is the InventoryItem object
                     quantity=final_quantity,
                     batch=batch,
                     expiration_date=expiration_date
@@ -181,7 +180,7 @@ def _process_container_allocations(batch, product, variant, form_data, expiratio
                 container_skus.append({
                     'sku': container_sku,
                     'quantity': final_quantity,
-                    'container_capacity': container.storage_amount or 1
+                    'container_capacity': container_item.storage_amount or 1
                 })
 
     return container_skus
@@ -190,8 +189,11 @@ def _process_container_allocations(batch, product, variant, form_data, expiratio
 def _create_container_sku(product, variant, container_item, quantity, batch, expiration_date):
     """Create a single container SKU"""
     try:
-        # Create size label from container
-        size_label = f"{container_item.storage_amount} {container_item.storage_unit}" if container_item.storage_amount else "1 unit"
+        # Create size label: quantity + unit + container name
+        if container_item.storage_amount and container_item.storage_unit:
+            size_label = f"{container_item.storage_amount} {container_item.storage_unit} {container_item.name}"
+        else:
+            size_label = f"1 unit {container_item.name}"
 
         # Generate SKU code
         sku_code = f"{product.name[:3].upper()}-{variant.name[:3].upper()}-{container_item.name[:3].upper()}-{datetime.now().strftime('%m%d%H%M')}"
