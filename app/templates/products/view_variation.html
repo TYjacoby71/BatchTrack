@@ -27,13 +27,13 @@
               {% set total_bulk = 0 %}
               {% set total_packaged = 0 %}
               {% for group_key, group in size_groups.items() %}
-                {% if group.size_label == 'Bulk' or not group.size_label %}
-                  {% set total_bulk = total_bulk + (group.total_quantity or 0) %}
+                {% if group.size_label == 'Bulk' %}
+                  {% set total_bulk = total_bulk + group.total_quantity %}
                 {% else %}
-                  {% set total_packaged = total_packaged + (group.total_quantity or 0) %}
+                  {% set total_packaged = total_packaged + group.total_quantity %}
                 {% endif %}
               {% endfor %}
-              <strong>Total Bulk:</strong> {{ "%.2f"|format(total_bulk) }} {{ product.base_unit }}
+              <strong>Total Bulk:</strong> {{ "%.2f"|format(total_bulk) }} {{ group.unit if total_bulk > 0 else product.base_unit }}
             </div>
             <div class="col-md-2">
               <strong>Total Packaged:</strong> {{ total_packaged|int }} items
