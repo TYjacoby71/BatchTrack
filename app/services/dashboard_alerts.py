@@ -2,8 +2,7 @@
 from typing import Dict, List, Optional
 from datetime import datetime, timedelta
 from ..models import db, InventoryItem, Batch, ProductSKU
-from ..services.inventory_alerts import get_low_stock_ingredients
-from ..services.product_alerts import ProductAlertService
+from ..services.combined_inventory_alerts import CombinedInventoryAlertService
 from ..blueprints.expiration.services import ExpirationService
 import json
 import os
@@ -80,37 +79,36 @@ class DashboardAlertService:
         
         # HIGH: Low stock items - only if enabled
         if DashboardAlertService._is_alert_enabled('show_low_stock_alerts'):
-            low_stock_ingredients = get_low_stock_ingredients()
-            product_stock_summary = ProductAlertService.get_product_stock_summary()
+            stock_summary = CombinedInventoryAlertService.get_unified_stock_summary()
             
-            if low_stock_ingredients:
+            if stock_summary['low_stock_ingredients_count'] > 0:
                 alerts.append({
                     'priority': 'HIGH',
                     'type': 'low_stock_ingredients',
                     'title': 'Low Stock Ingredients',
-                    'message': f"{len(low_stock_ingredients)} ingredients are running low",
+                    'message': f"{stock_summary['low_stock_ingredients_count']} ingredients are running low",
                     'action_url': '/inventory/',
                     'action_text': 'View Inventory',
                     'dismissible': True
                 })
             
-            if product_stock_summary['low_stock_count'] > 0:
+            if stock_summary['low_stock_count'] > 0:
                 alerts.append({
                     'priority': 'HIGH',
                     'type': 'low_stock_products',
                     'title': 'Low Stock Products',
-                    'message': f"{product_stock_summary['affected_products_count']} products have low stock SKUs",
+                    'message': f"{stock_summary['affected_products_count']} products have low stock SKUs",
                     'action_url': '/products/',
                     'action_text': 'View Products',
                     'dismissible': True
                 })
             
-            if product_stock_summary['out_of_stock_count'] > 0:
+            if stock_summary['out_of_stock_count'] > 0:
                 alerts.append({
                     'priority': 'CRITICAL',
                     'type': 'out_of_stock_products',
                     'title': 'Out of Stock Products',
-                    'message': f"{product_stock_summary['out_of_stock_count']} product SKUs are out of stock",
+                    'message': f"{stock_summary['out_of_stock_count']} product SKUs are out of stock",
                     'action_url': '/products/',
                     'action_text': 'View Products',
                     'dismissible': False
@@ -179,18 +177,17 @@ class DashboardAlertService:
     def get_alert_summary() -> Dict:
         """Get summary counts for navigation badge"""
         summary = ExpirationService.get_expiration_summary()
-        low_stock_ingredients = len(get_low_stock_ingredients())
-        product_stock_summary = ProductAlertService.get_product_stock_summary()
+        stock_summary = CombinedInventoryAlertService.get_unified_stock_summary()
         stuck_batches = len(DashboardAlertService._get_stuck_batches())
         recent_faults = DashboardAlertService._get_recent_faults()
         timer_alerts = DashboardAlertService._get_timer_alerts()
         
         critical_count = (summary['expired_total'] + stuck_batches + 
                          (1 if recent_faults > 0 else 0) + 
-                         product_stock_summary['out_of_stock_count'])
-        high_count = (summary['expiring_soon_total'] + low_stock_ingredients + 
+                         stock_summary['out_of_stock_count'])
+        high_count = (summary['expiring_soon_total'] + stock_summary['low_stock_ingredients_count'] + 
                      timer_alerts['expired_count'] + 
-                     product_stock_summary['low_stock_count'])
+                     stock_summary['low_stock_count'])
         
         return {
             'critical_count': critical_count,

@@ -1,11 +1,7 @@
-from ..models import InventoryItem
-from sqlalchemy import and_
+
+# Backward compatibility - redirect to unified service
+from .combined_inventory_alerts import CombinedInventoryAlertService
 
 def get_low_stock_ingredients():
-    return InventoryItem.query.filter(
-        and_(
-            InventoryItem.low_stock_threshold > 0,
-            InventoryItem.quantity <= InventoryItem.low_stock_threshold,
-            ~InventoryItem.type.in_(['product', 'product-reserved'])
-        )
-    ).all()
+    """Backward compatibility function"""
+    return CombinedInventoryAlertService.get_low_stock_ingredients()
