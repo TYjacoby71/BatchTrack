@@ -142,7 +142,11 @@
           <h5 class="mb-0">Product Variants</h5>
         </div>
         <div class="card-body">
-          <div class="row" id="variantsContainer">
+          <div class="variants-carousel-wrapper position-relative">
+            <button class="carousel-nav carousel-nav-left" id="scrollLeft" onclick="scrollVariants('left')">
+              <i class="fas fa-chevron-left"></i>
+            </button>
+            <div class="variants-carousel" id="variantsContainer">
         {% set all_variants = [] %}
         {% for variation in product.variations %}
           {% if variation.name not in all_variants %}
@@ -189,7 +193,7 @@
         {% set var_size_count = unique_size_labels|length %}
         {% set var_avg_cost = (ns_variant.total_cost / ns_variant.total_qty) if ns_variant.total_qty > 0 else 0 %}
 
-        <div class="col-xl-4 col-lg-6 col-md-12 mb-4 variant-card" data-variant-name="{{ variant_name|lower }}" data-quantity="{{ ns_variant.total_qty }}" data-sizes="{{ var_size_count }}">
+        <div class="variant-card-item" data-variant-name="{{ variant_name|lower }}" data-quantity="{{ ns_variant.total_qty }}" data-sizes="{{ var_size_count }}">
           <div class="card h-100 shadow-sm">
             <div class="card-header d-flex justify-content-between align-items-center">
               <h5 class="card-title mb-0">{{ variant_name }}</h5>
@@ -246,6 +250,10 @@
           </div>
         </div>
         {% endfor %}
+            </div>
+            <button class="carousel-nav carousel-nav-right" id="scrollRight" onclick="scrollVariants('right')">
+              <i class="fas fa-chevron-right"></i>
+            </button>
           </div>
         </div>
       </div>
@@ -345,6 +353,88 @@
     border-radius: 0.25rem;
     background-color: #f8f9fa;
 }
+
+/* Carousel Styles */
+.variants-carousel-wrapper {
+    position: relative;
+    overflow: hidden;
+    padding: 0 40px;
+}
+
+.variants-carousel {
+    display: flex;
+    gap: 1rem;
+    overflow-x: auto;
+    scroll-behavior: smooth;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    padding: 10px 0;
+}
+
+.variants-carousel::-webkit-scrollbar {
+    display: none;
+}
+
+.variant-card-item {
+    flex: 0 0 auto;
+    width: 300px;
+    transition: transform 0.2s ease-in-out;
+}
+
+.variant-card-item:hover {
+    transform: translateY(-2px);
+}
+
+.carousel-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 10;
+    transition: background-color 0.3s ease;
+}
+
+.carousel-nav:hover {
+    background: rgba(0, 0, 0, 0.9);
+}
+
+.carousel-nav-left {
+    left: 0;
+}
+
+.carousel-nav-right {
+    right: 0;
+}
+
+.carousel-nav:disabled {
+    background: rgba(0, 0, 0, 0.3);
+    cursor: not-allowed;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .variant-card-item {
+        width: 280px;
+    }
+    
+    .variants-carousel-wrapper {
+        padding: 0 30px;
+    }
+    
+    .carousel-nav {
+        width: 35px;
+        height: 35px;
+    }
+}
 </style>
 
 <script>
@@ -359,7 +449,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const searchTerm = variantFilter.value.toLowerCase();
         let visibleCount = 0;
 
-        const cards = variantsContainer.querySelectorAll('.variant-card');
+        const cards = variantsContainer.querySelectorAll('.variant-card-item');
         cards.forEach(card => {
             const variantName = card.dataset.variantName;
             const isVisible = variantName.includes(searchTerm);
@@ -368,12 +458,15 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         noResults.style.display = visibleCount === 0 ? 'block' : 'none';
+        
+        // Update navigation buttons after filtering
+        setTimeout(updateNavigationButtons, 100);
     }
 
     // Sort functionality
     function sortVariants() {
         const sortBy = sortFilter.value;
-        const cards = Array.from(variantsContainer.querySelectorAll('.variant-card'));
+        const cards = Array.from(variantsContainer.querySelectorAll('.variant-card-item'));
 
         cards.sort((a, b) => {
             switch(sortBy) {
@@ -393,11 +486,17 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         cards.forEach(card => variantsContainer.appendChild(card));
+        
+        // Update navigation buttons after sorting
+        setTimeout(updateNavigationButtons, 100);
     }
 
     // Event listeners
     if (variantFilter) variantFilter.addEventListener('input', filterVariants);
     if (sortFilter) sortFilter.addEventListener('change', sortVariants);
+    
+    // Initialize carousel
+    initializeCarousel();
 
     window.addVariant = function() {
         const form = document.getElementById('addVariantForm');
@@ -453,6 +552,99 @@ document.addEventListener('DOMContentLoaded', function() {
             form.submit();
         }
     };
+
+    window.scrollVariants = function(direction) {
+        const container = document.getElementById('variantsContainer');
+        if (!container) return;
+
+        const scrollAmount = 320; // Width of card + gap
+        const currentScroll = container.scrollLeft;
+
+        if (direction === 'left') {
+            container.scrollTo({
+                left: currentScroll - scrollAmount,
+                behavior: 'smooth'
+            });
+        } else {
+            container.scrollTo({
+                left: currentScroll + scrollAmount,
+                behavior: 'smooth'
+            });
+        }
+
+        // Update button states after scroll
+        setTimeout(updateNavigationButtons, 300);
+    };
+
+    function initializeCarousel() {
+        const container = document.getElementById('variantsContainer');
+        const leftBtn = document.getElementById('scrollLeft');
+        const rightBtn = document.getElementById('scrollRight');
+
+        if (!container || !leftBtn || !rightBtn) return;
+
+        // Initial button state
+        updateNavigationButtons();
+
+        // Update buttons on scroll
+        container.addEventListener('scroll', updateNavigationButtons);
+
+        // Handle touch/swipe for mobile
+        let isDown = false;
+        let startX;
+        let scrollLeft;
+
+        container.addEventListener('mousedown', (e) => {
+            isDown = true;
+            container.style.cursor = 'grabbing';
+            startX = e.pageX - container.offsetLeft;
+            scrollLeft = container.scrollLeft;
+        });
+
+        container.addEventListener('mouseleave', () => {
+            isDown = false;
+            container.style.cursor = 'grab';
+        });
+
+        container.addEventListener('mouseup', () => {
+            isDown = false;
+            container.style.cursor = 'grab';
+        });
+
+        container.addEventListener('mousemove', (e) => {
+            if (!isDown) return;
+            e.preventDefault();
+            const x = e.pageX - container.offsetLeft;
+            const walk = (x - startX) * 2;
+            container.scrollLeft = scrollLeft - walk;
+        });
+    }
+
+    function updateNavigationButtons() {
+        const container = document.getElementById('variantsContainer');
+        const leftBtn = document.getElementById('scrollLeft');
+        const rightBtn = document.getElementById('scrollRight');
+
+        if (!container || !leftBtn || !rightBtn) return;
+
+        const isAtStart = container.scrollLeft <= 10;
+        const isAtEnd = container.scrollLeft >= (container.scrollWidth - container.clientWidth - 10);
+
+        leftBtn.disabled = isAtStart;
+        rightBtn.disabled = isAtEnd;
+
+        // Also hide buttons if all cards fit in view
+        const totalWidth = container.scrollWidth;
+        const visibleWidth = container.clientWidth;
+        
+        if (totalWidth <= visibleWidth) {
+            leftBtn.style.display = 'none';
+            rightBtn.style.display = 'none';
+        } else {
+            leftBtn.style.display = 'flex';
+            rightBtn.style.display = 'flex';
+        }
+    }
 });
 </script>
 {% endblock %}
