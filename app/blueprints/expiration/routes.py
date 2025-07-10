@@ -1,4 +1,3 @@
-
 from flask import render_template, jsonify, request
 from flask_login import login_required
 from .services import ExpirationService
@@ -88,10 +87,10 @@ def api_mark_spoiled():
     data = request.get_json()
     item_type = data.get('type')  # 'fifo' or 'product'
     item_id = data.get('id')
-    
+
     if not item_type or not item_id:
         return jsonify({'error': 'Missing type or id'}), 400
-    
+
     try:
         count = ExpirationService.mark_as_spoiled(item_type, item_id)
         return jsonify({'spoiled_count': count})
@@ -132,7 +131,7 @@ def api_product_status(product_id):
 def api_product_inventory_expiration(inventory_id):
     """Get calculated expiration date for specific product inventory"""
     expiration_date = ExpirationService.get_product_inventory_expiration_date(inventory_id)
-    
+
     if not expiration_date:
         return jsonify({
             'expiration_date': None,
@@ -140,12 +139,32 @@ def api_product_inventory_expiration(inventory_id):
             'is_expired': False,
             'is_perishable': False
         })
-    
+
     days_until = ExpirationService.get_days_until_expiration(expiration_date)
-    
+
     return jsonify({
         'expiration_date': expiration_date.isoformat(),
         'days_until_expiration': days_until,
         'is_expired': days_until < 0 if days_until is not None else False,
         'is_perishable': True
     })
+
+@expiration_bp.route('/alerts')
+@login_required
+def expiration_alerts():
+    """Display expiration alerts and management"""
+    from ...models.user_preferences import UserPreferences
+    from flask_login import current_user
+
+    # Get user's expiration warning preference
+    days_ahead = 7  # Default
+    if current_user and current_user.is_authenticated:
+        user_prefs = UserPreferences.get_for_user(current_user.id)
+        if user_prefs:
+            days_ahead = user_prefs.expiration_warning_days
+
+    # Get expired items
+    expired_items = ExpirationService.get_expired_inventory_items()
+
+    # Get items expiring soon (using user preference)
+    expiring_soon = ExpirationService.get_expiring_soon_items(days_ahead)

@@ -291,8 +291,18 @@ class ExpirationService:
     def get_expiration_summary():
         """Get summary counts for dashboard integration"""
         from flask_login import current_user
+        from ...models.user_preferences import UserPreferences
+        
         today = datetime.now().date()
-        future_date = today + timedelta(days=7)
+        
+        # Get user's expiration warning preference
+        days_ahead = 7  # Default
+        if current_user and current_user.is_authenticated:
+            user_prefs = UserPreferences.get_for_user(current_user.id)
+            if user_prefs:
+                days_ahead = user_prefs.expiration_warning_days
+                
+        future_date = today + timedelta(days=days_ahead)
 
         # Count expired items with remaining quantity
         expired_fifo_count = db.session.query(InventoryHistory).join(InventoryItem).filter(
@@ -319,7 +329,7 @@ class ExpirationService:
         ).count()
 
         # Count products expiring soon
-        expiring_items = ExpirationService.get_expiring_soon_items(7)
+        expiring_items = ExpirationService.get_expiring_soon_items(days_ahead)
         expiring_products_count = len(expiring_items.get('product_inventory', []))
 
         return {
