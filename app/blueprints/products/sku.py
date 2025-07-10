@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
 from sqlalchemy import and_, or_
-from datetime import datetime
+from datetime import datetime, timedelta
 from ...models import db, ProductSKU, ProductSKUHistory, InventoryItem, Reservation
 from ...services.inventory_adjustment import process_inventory_adjustment
 from ...utils.unit_utils import get_global_unit_list
@@ -38,7 +38,8 @@ def view_sku(inventory_item_id):
                          total_quantity=total_quantity,
                          get_global_unit_list=get_global_unit_list,
                          fifo_filter=request.args.get('fifo', 'false').lower() == 'true',
-                         now=datetime.utcnow())
+                         now=datetime.utcnow(),
+                         timedelta=timedelta)
 
 @sku_bp.route('/sku/<int:inventory_item_id>/edit', methods=['POST'])
 @login_required
