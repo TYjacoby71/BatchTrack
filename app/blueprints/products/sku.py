@@ -1,6 +1,7 @@
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
+from datetime import datetime
 from ...models import db, ProductSKU, ProductSKUHistory
 from ...utils.unit_utils import get_global_unit_list
 
@@ -32,7 +33,8 @@ def view_sku(inventory_item_id):
                          history=history,
                          total_quantity=total_quantity,
                          get_global_unit_list=get_global_unit_list,
-                         fifo_filter=request.args.get('fifo', 'false').lower() == 'true')
+                         fifo_filter=request.args.get('fifo', 'false').lower() == 'true',
+                         now=datetime.utcnow())
 
 @sku_bp.route('/sku/<int:inventory_item_id>/edit', methods=['POST'])
 @login_required
