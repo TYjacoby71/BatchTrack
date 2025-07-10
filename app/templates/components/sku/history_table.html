@@ -166,9 +166,9 @@
                                 {% set exp_date = entry.expiration_date.strftime('%m/%d/%y') %}
                                 {% set exp_time = entry.expiration_date.strftime('%H:%M') %}
                                 <span class="badge 
-                                    {% if entry.expiration_date < current_date %}
+                                    {% if entry.expiration_date < now %}
                                         bg-danger
-                                    {% elif entry.expiration_date <= (current_date + timedelta(days=7)) %}
+                                    {% elif entry.expiration_date <= (now + timedelta(days=7)) %}
                                         bg-warning
                                     {% else %}
                                         bg-success
