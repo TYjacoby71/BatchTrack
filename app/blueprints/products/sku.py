@@ -79,10 +79,46 @@ def edit_sku(inventory_item_id):
             shelf_life_days = request.form.get('shelf_life_days')
             if shelf_life_days:
                 sku.shelf_life_days = int(shelf_life_days)
+                
+                # Update FIFO entries with expiration data using ExpirationService
+                from ...blueprints.expiration.services import ExpirationService
+                from ...models.product import ProductSKUHistory
+                
+                # Get all FIFO entries with remaining quantity for this SKU
+                fifo_entries = ProductSKUHistory.query.filter(
+                    and_(
+                        ProductSKUHistory.inventory_item_id == sku.inventory_item_id,
+                        ProductSKUHistory.remaining_quantity > 0
+                    )
+                ).all()
+                
+                # Update each FIFO entry with expiration data
+                for entry in fifo_entries:
+                    entry.is_perishable = True
+                    entry.shelf_life_days = int(shelf_life_days)
+                    if entry.timestamp:
+                        entry.expiration_date = ExpirationService.calculate_expiration_date(
+                            entry.timestamp, int(shelf_life_days)
+                        )
         else:
             sku.shelf_life_days = None
+            
+            # Clear expiration data from FIFO entries when marking as non-perishable
+            from ...models.product import ProductSKUHistory
+            
+            fifo_entries = ProductSKUHistory.query.filter(
+                and_(
+                    ProductSKUHistory.inventory_item_id == sku.inventory_item_id,
+                    ProductSKUHistory.remaining_quantity > 0
+                )
+            ).all()
+            
+            for entry in fifo_entries:
+                entry.is_perishable = False
+                entry.shelf_life_days = None
+                entry.expiration_date = None
         
-        flash('SKU updated successfully', 'success')
+        flash('SKU updated successfully. Expiration data updated for all FIFO entries.', 'success')
         
         db.session.commit()
         
