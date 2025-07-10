@@ -1,0 +1,109 @@
+Great comparison — here’s a clear summary of the key differences between the two script blocks you posted:
+
+✅ ADDITIONS in the second version (NEW SCRIPT):
+🔁 1. updateExpirationDate()
+A new function was added to auto-calculate and populate the expiration date based on shelf_life_days.
+
+js
+Copy
+Edit
+function updateExpirationDate() {
+  ...
+}
+It updates both:
+
+html
+Copy
+Edit
+#expiration_date
+#expiration_date_display
+🧠 2. Modified toggleShelfLife()
+The second version has two definitions of toggleShelfLife() — which can cause issues.
+
+The second definition overrides the first, and slightly changes behavior:
+
+Uses:
+
+js
+Copy
+Edit
+const isPerishable = document.getElementById('is_perishable').checked;
+Whereas the first version uses:
+
+js
+Copy
+Edit
+const isPerishable = document.getElementById('is_perishable');
+const showShelfLife = isPerishable.checked;
+🟡 Issue: You have two versions of toggleShelfLife() — the last one declared will overwrite the previous. You should consolidate or rename to avoid bugs.
+
+📦 3. loadVariants()
+New function that dynamically loads product variants via API when a product is selected.
+
+js
+Copy
+Edit
+fetch(`/api/products/${productId}/variants`)
+This is useful for the finish batch modal when selecting products → variants.
+
+⚠️ 4. validateContainerInput()
+Basic validation for manual entry:
+
+Prevents using more containers than were originally used.
+
+Prevents negative entries.
+
+🧪 5. Full Form Validation on Submit
+The submit event on finishBatchModalForm now checks:
+
+Container inputs are valid
+
+final_quantity > 0 if product is selected
+
+❌ REMOVED in the second script:
+These were present in the first script only:
+
+updateTotals()
+
+validateContainerAllocation()
+
+These functions validated the relationship between container quantity and final product yield, including overfill/bulk warnings:
+
+js
+Copy
+Edit
+validateContainerAllocation(finalQuantity, totalContainerCapacity);
+These also visually alerted users in #yield-validation-alerts.
+
+⚠️ Warning: Removing this removes valuable yield validation UI.
+
+🔁 SHARED BETWEEN BOTH:
+toggleShelfLife() (though defined differently)
+
+validateYield()
+
+updateContainerTable()
+
+updateContainerSummary()
+
+updateUncontainedYield()
+
+getCSRFToken()
+
+DOMContentLoaded setup logic
+
+✅ Recommendation
+Consolidate and fix these immediately:
+
+🔄 Only define toggleShelfLife() once. Merge the two versions:
+
+js
+Copy
+Edit
+const isPerishable = document.getElementById('is_perishable');
+const showShelfLife = isPerishable && isPerishable.checked;
+🧠 Restore and keep validateContainerAllocation() unless you've replaced its UI function elsewhere — it's critical for UX and error prevention.
+
+🛠️ Keep the added loadVariants() and validateContainerInput() — they’re valuable, especially for product inventory and Shopify prep.
+
+🧼 Split vendor logic if needed: If this page is trying to serve both general and advanced users, consider loading only needed logic behind feature flags.
