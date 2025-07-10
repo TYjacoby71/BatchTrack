@@ -120,14 +120,13 @@
                 <tbody>
                   {% for group_key, group in size_groups.items() %}
                   {% set size_display = group.size_label if group.size_label else 'Bulk' %}
-                  {% set total_cost = 0 %}
-                  {% set total_value = 0 %}
+                  {% set ns_row = namespace(total_cost=0, total_value=0) %}
                   {% for sku in group.skus %}
                     {% if sku.inventory_item and sku.inventory_item.quantity > 0 %}
                       {% set cost_per_unit = sku.inventory_item.cost_per_unit or 0 %}
-                      {% set total_cost = total_cost + (cost_per_unit * sku.inventory_item.quantity) %}
+                      {% set ns_row.total_cost = ns_row.total_cost + (cost_per_unit * sku.inventory_item.quantity) %}
                       {% if sku.retail_price %}
-                        {% set total_value = total_value + (sku.retail_price * sku.inventory_item.quantity) %}
+                        {% set ns_row.total_value = ns_row.total_value + (sku.retail_price * sku.inventory_item.quantity) %}
                       {% endif %}
                     {% endif %}
                   {% endfor %}
@@ -152,12 +151,12 @@
                     </td>
                     <td>
                       <span class="{% if group.total_quantity <= 0 %}text-muted{% endif %}">
-                        ${{ "%.2f"|format(total_cost) }}
+                        ${{ "%.2f"|format(ns_row.total_cost) }}
                       </span>
                     </td>
                     <td>
                       <span class="{% if group.total_quantity <= 0 %}text-muted{% endif %}">
-                        ${{ "%.2f"|format(total_value) }}
+                        ${{ "%.2f"|format(ns_row.total_value) }}
                       </span>
                     </td>
                     <td>
