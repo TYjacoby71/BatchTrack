@@ -100,9 +100,9 @@ class BatchService:
                 if not container_sku:
                     continue
 
-                # Credit the total volume for this container type
+                # Credit the total volume for this container type using inventory_item_id
                 success = process_inventory_adjustment(
-                    item_id=container_sku.id,
+                    item_id=container_sku.inventory_item_id,
                     quantity=allocation['total_volume'],
                     change_type='finished_batch',
                     unit='count',
@@ -138,7 +138,7 @@ class BatchService:
 
                 if bulk_sku:
                     success = process_inventory_adjustment(
-                        item_id=bulk_sku.id,
+                        item_id=bulk_sku.inventory_item_id,
                         quantity=bulk_remainder,
                         change_type='finished_batch',
                         unit=batch.output_unit,
