@@ -1,10 +1,3 @@
-from ..models import InventoryItem
-from sqlalchemy import and_
 
-def get_low_stock_ingredients():
-    return InventoryItem.query.filter(
-        and_(
-            InventoryItem.low_stock_threshold > 0,
-            InventoryItem.quantity <= InventoryItem.low_stock_threshold
-        )
-    ).all()
+# This file is deprecated - all functionality moved to combined_inventory_alerts.py  
+# Import directly from CombinedInventoryAlertService instead of this file

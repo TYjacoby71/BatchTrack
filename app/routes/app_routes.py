@@ -3,7 +3,7 @@ from ..models import Recipe, InventoryItem, Batch
 from ..services.stock_check import universal_stock_check
 from flask_login import login_required, current_user
 from ..utils.permissions import require_permission, user_scoped_query
-from ..services.inventory_alerts import get_low_stock_ingredients
+from ..services.combined_inventory_alerts import CombinedInventoryAlertService
 from ..blueprints.expiration.services import ExpirationService
 from ..services.dashboard_alerts import DashboardAlertService
 
@@ -132,17 +132,17 @@ def dismiss_alert():
     try:
         data = request.get_json()
         alert_type = data.get('alert_type')
-        
+
         if not alert_type:
             return jsonify({'error': 'Alert type is required'}), 400
-        
+
         # Store dismissed alerts in session
         dismissed_alerts = session.get('dismissed_alerts', [])
         if alert_type not in dismissed_alerts:
             dismissed_alerts.append(alert_type)
             session['dismissed_alerts'] = dismissed_alerts
             session.permanent = True
-        
+
         return jsonify({'success': True}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -165,7 +165,7 @@ def api_dashboard_alerts():
 @login_required
 def user_dashboard():
     # Get low stock and expiration alerts
-    low_stock_ingredients = get_low_stock_ingredients()
+    low_stock_ingredients = CombinedInventoryAlertService.get_low_stock_ingredients()
     expiration_summary = ExpirationService.get_expiration_summary()
 
     # Get dismissed alerts from session

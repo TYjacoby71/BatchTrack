@@ -14,6 +14,10 @@ from . import inventory_bp
 def list_inventory():
     inventory_type = request.args.get('type')
     query = InventoryItem.query
+    
+    # Exclude product and product-reserved items from inventory management
+    query = query.filter(~InventoryItem.type.in_(['product', 'product-reserved']))
+    
     if inventory_type:
         query = query.filter_by(type=inventory_type)
     inventory_items = query.all()

@@ -10,14 +10,13 @@
                     <tr>
                         <th>Date</th>
                         <th>Type</th>
-                        <th>FIFO Code</th>
+                        <th>Source</th>
                         <th>Qty Change</th>
                         <th>Remaining</th>
                         <th>Unit Cost</th>
                         <th>Sale Price</th>
                         <th>Customer</th>
-                        <th>FIFO Code</th>
-                        <th>Batch/Lot</th>
+                        <th>Lot Number</th>
                         <th>Location</th>
                         <th>Quality</th>
                         <th>Order ID</th>
@@ -43,16 +42,27 @@
                         </td>
                         <td>
                             {% if entry.fifo_reference_id %}
-                                <a href="#entry-{{ entry.fifo_reference_id }}" class="text-primary">
-                                    {% if entry.fifo_source %}
+                                {% set ref_entry = history|selectattr('id', 'equalto', entry.fifo_reference_id)|first %}
+                                {% if ref_entry and ref_entry.fifo_code %}
+                                    <a href="#entry-{{ entry.fifo_reference_id }}" class="text-primary">
+                                        <small class="font-monospace">{{ ref_entry.fifo_code }}</small>
+                                    </a>
+                                {% elif entry.fifo_source %}
+                                    <a href="#entry-{{ entry.fifo_reference_id }}" class="text-primary">
                                         {{ entry.fifo_source }}
-                                    {% else %}
-                                        Lot #{{ entry.fifo_reference_id }}
-                                    {% endif %}
-                                </a>
+                                    </a>
+                                {% else %}
+                                    <a href="#entry-{{ entry.fifo_reference_id }}" class="text-primary">
+                                        Ref #{{ entry.fifo_reference_id }}
+                                    </a>
+                                {% endif %}
                             {% elif entry.batch_id %}
                                 <span class="text-info">
-                                    Batch #{{ entry.batch_id }}
+                                    {% if entry.batch and entry.batch.label_code %}
+                                        {{ entry.batch.label_code }}
+                                    {% else %}
+                                        Batch #{{ entry.batch_id }}
+                                    {% endif %}
                                 </span>
                             {% elif entry.change_type in ['restock', 'manual_addition', 'finished_batch'] %}
                                 <span class="text-success">
@@ -97,24 +107,8 @@
                         </td>
                         <td>
                             {% if entry.fifo_code %}
-                                <small class="font-monospace">{{ entry.fifo_code[:8] }}</small>
+                                <small class="font-monospace">{{ entry.fifo_code }}</small>
                             {% else %}
-                                <span class="text-muted">-</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if entry.batch_id %}
-                                <a href="{{ url_for('batches.view_batch', batch_id=entry.batch_id) }}" class="text-decoration-none">
-                                    <small>B{{ entry.batch_id }}</small>
-                                </a>
-                            {% endif %}
-                            {% if entry.batch_number %}
-                                <br><small class="text-muted">{{ entry.batch_number[:8] }}</small>
-                            {% endif %}
-                            {% if entry.lot_number %}
-                                <br><small class="text-info">L{{ entry.lot_number[:8] }}</small>
-                            {% endif %}
-                            {% if not entry.batch_id and not entry.batch_number and not entry.lot_number %}
                                 <span class="text-muted">-</span>
                             {% endif %}
                         </td>
