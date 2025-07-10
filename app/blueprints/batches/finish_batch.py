@@ -220,7 +220,7 @@ def _process_container_allocations(batch, product, variant, form_data, expiratio
 
 
 def _create_container_sku(product, variant, container_item, quantity, batch, expiration_date):
-    """Create a single container SKU"""
+    """Create or get existing container SKU using ProductService"""
     try:
         logger.info(f"Creating container SKU with container: {container_item.name}, quantity: {quantity}")
         
@@ -231,42 +231,18 @@ def _create_container_sku(product, variant, container_item, quantity, batch, exp
         else:
             size_label = f"1 unit {container_item.name}"
 
-        # Generate SKU code: Product-Variant-Container-timestamp
-        sku_code = f"{product.name[:3].upper()}-{variant.name[:3].upper()}-{container_item.name[:3].upper()}-{datetime.now().strftime('%m%d%H%M')}"
-
-        # Create inventory item for this containerized SKU
-        # Name format: "Product Name - Variant Name (size_label)"
-        # Example: "Admin Apple Sauce - Base (4 floz Admin 4oz Glass Jars)"
-        inventory_item = InventoryItem(
-            name=f"{product.name} - {variant.name} ({size_label})",
-            unit='count',  # Containers are always counted as individual units
-            category='Product',
-            organization_id=current_user.organization_id,
-            created_by=current_user.id,
-            type='product'
-        )
-        db.session.add(inventory_item)
-        db.session.flush()
-
-        # Create ProductSKU linking to the inventory item
-        product_sku = ProductSKU(
-            product_id=product.id,
-            variant_id=variant.id,
-            sku_code=sku_code,
+        # Use ProductService to get or create the SKU - this handles existing SKUs properly
+        from ...services.product_service import ProductService
+        product_sku = ProductService.get_or_create_sku(
+            product_name=product.name,
+            variant_name=variant.name,
             size_label=size_label,
-            unit_quantity=container_item.storage_amount or 1,  # Volume per container
-            unit_type=container_item.storage_unit or product.base_unit,  # Unit of the volume
-            inventory_item_id=inventory_item.id,
-            unit='count',  # SKU unit is count (number of containers)
-            organization_id=current_user.organization_id,
-            created_by=current_user.id
+            unit='count'  # Containers are always counted as individual units
         )
-        db.session.add(product_sku)
-        db.session.flush()
 
         # Add containers to inventory - quantity is number of containers
         process_inventory_adjustment(
-            item_id=inventory_item.id,
+            item_id=product_sku.inventory_item_id,
             quantity=quantity,  # Number of containers
             change_type='finished_batch',
             unit='count',  # Unit is count for containers
@@ -275,7 +251,7 @@ def _create_container_sku(product, variant, container_item, quantity, batch, exp
             custom_expiration_date=expiration_date
         )
 
-        logger.info(f"Successfully created container SKU: {sku_code} with {quantity} containers")
+        logger.info(f"Successfully created/updated container SKU: {product_sku.sku_code} with {quantity} containers")
         return product_sku
 
     except Exception as e:
@@ -286,51 +262,20 @@ def _create_container_sku(product, variant, container_item, quantity, batch, exp
 
 
 def _create_bulk_sku(product, variant, quantity, unit, expiration_date, batch):
-    """Create or update bulk SKU for remaining quantity"""
+    """Create or update bulk SKU for remaining quantity using ProductService"""
     try:
-        # Find or create bulk SKU
-        bulk_sku = ProductSKU.query.filter_by(
-            product_id=product.id,
-            variant_id=variant.id,
+        # Use ProductService to get or create the bulk SKU
+        from ...services.product_service import ProductService
+        bulk_sku = ProductService.get_or_create_sku(
+            product_name=product.name,
+            variant_name=variant.name,
             size_label='Bulk',
-            organization_id=current_user.organization_id
-        ).first()
-
-        if not bulk_sku:
-            # Create inventory item for bulk
-            # Name format: "Product Name - Variant Name (Bulk)"
-            # Example: "Admin Apple Sauce - Base (Bulk)"
-            inventory_item = InventoryItem(
-                name=f"{product.name} - {variant.name} (Bulk)",
-                unit=unit,  # Use the batch output unit (should be converted to product base unit if needed)
-                category='Product',
-                organization_id=current_user.organization_id,
-                created_by=current_user.id,
-                type='product'
-            )
-            db.session.add(inventory_item)
-            db.session.flush()
-
-            # Create bulk SKU
-            sku_code = f"{product.name[:3].upper()}-{variant.name[:3].upper()}-BULK-{datetime.now().strftime('%m%d%H%M')}"
-            bulk_sku = ProductSKU(
-                product_id=product.id,
-                variant_id=variant.id,
-                sku_code=sku_code,
-                size_label='Bulk',
-                unit_quantity=1,
-                unit_type=unit,
-                inventory_item_id=inventory_item.id,
-                unit=unit,  # Bulk SKU uses the product's base unit
-                organization_id=current_user.organization_id,
-                created_by=current_user.id
-            )
-            db.session.add(bulk_sku)
-            db.session.flush()
+            unit=unit  # Use the batch output unit
+        )
 
         # Add bulk quantity to inventory
         process_inventory_adjustment(
-            item_id=bulk_sku.inventory_item.id,
+            item_id=bulk_sku.inventory_item_id,
             quantity=quantity,
             change_type='finished_batch',
             unit=unit,
@@ -339,7 +284,7 @@ def _create_bulk_sku(product, variant, quantity, unit, expiration_date, batch):
             custom_expiration_date=expiration_date
         )
 
-        logger.info(f"Created bulk SKU: {bulk_sku.sku_code} with {quantity} {unit}")
+        logger.info(f"Created/updated bulk SKU: {bulk_sku.sku_code} with {quantity} {unit}")
         return bulk_sku
 
     except Exception as e:
