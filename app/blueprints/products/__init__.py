@@ -10,5 +10,5 @@ from .reservation_routes import reservation_bp
 def register_product_blueprints(app):
     app.register_blueprint(products_bp)
     app.register_blueprint(sku_bp, url_prefix='/products')
-    app.register_blueprint(sku_merge_bp, url_prefix='/products')
+    app.register_blueprint(sku_merge_bp, url_prefix='/products/sku_merge')
     app.register_blueprint(reservation_bp, url_prefix='/products')
