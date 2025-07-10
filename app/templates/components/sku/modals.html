@@ -59,7 +59,7 @@
                         <div class="col-md-6" id="shelfLifeGroup" style="{{ 'display: none;' if not sku.is_perishable else '' }}">
                             <label class="form-label">Shelf Life (days)</label>
                             <input type="number" name="shelf_life_days" id="shelf_life_days" class="form-control" value="{{ sku.shelf_life_days or '' }}" min="1" placeholder="Number of days">
-                            <small class="text-muted">Will update all active FIFO entries</small>
+                            <small class="text-muted">Will update expiration dates for all FIFO entries with remaining quantity</small>
                         </div>
                     </div>
 
