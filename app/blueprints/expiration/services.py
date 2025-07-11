@@ -7,12 +7,19 @@ class ExpirationService:
     """Centralized service for all expiration-related operations"""
 
     @staticmethod
-    def calculate_expiration_date(entry_date: datetime, shelf_life_days: int) -> datetime:
-        """Calculate expiration date from entry date and shelf life"""
-        if not entry_date or not shelf_life_days:
+    def calculate_expiration_date(start_date: datetime, shelf_life_days: int) -> datetime:
+        """Calculate expiration date from start date and shelf life"""
+        if not start_date or not shelf_life_days:
             return None
-        # Preserve the exact timestamp to maintain precision
-        return entry_date + timedelta(days=shelf_life_days)
+
+        # Ensure we have a proper datetime object
+        if isinstance(start_date, str):
+            start_date = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+
+        # Calculate expiration date maintaining the time component
+        expiration_date = start_date + timedelta(days=shelf_life_days)
+
+        return expiration_date
 
     @staticmethod
     def get_days_until_expiration(expiration_date: datetime) -> int:
