@@ -147,6 +147,15 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
   }
+
+  // Fetch server time every 30 seconds to reduce server load
+    setInterval(function() {
+        fetch('/api/server-time')
+            .then(response => response.json())
+            .then(data => {
+                // Update time display
+            });
+    }, 30000);
 });
 </script>
 

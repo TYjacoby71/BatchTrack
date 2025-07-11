@@ -1,23 +1,21 @@
 {% extends "layout.html" %}
 
 {% block content %}
-<!-- Success/Error Message -->
-<div x-show="showMessage" 
-     x-transition.opacity.duration.150ms
-     :class="messageType === 'success' ? 'alert-success' : 'alert-danger'"
-     class="alert alert-dismissible fade show position-fixed"
-     style="top: 20px; right: 20px; z-index: 1050;"
-     x-data="settingsData()">
-    <span x-text="message"></span>
-    <button type="button" class="btn-close" @click="showMessage = false"></button>
-</div>
-
 <div class="container-fluid" x-data="settingsData()">
+    <!-- Flash Messages -->
+    <div x-show="showMessage" x-transition class="alert" :class="messageType === 'success' ? 'alert-success' : 'alert-danger'">
+        <span x-text="message"></span>
+        <button type="button" class="btn-close" @click="showMessage = false"></button>
+    </div>
     <h2><i class="fas fa-cog"></i> System Settings</h2>
     <p class="text-muted">Configure BatchTrack to match your workflow and preferences</p>
 
     <!-- Success/Error Messages -->
-    <div x-show="showMessage" x-transition class="alert" :class="messageType === 'success' ? 'alert-success' : 'alert-danger'" style="display: none;">
+    <div x-show="showMessage" 
+         x-transition.opacity.duration.300ms
+         :class="messageType === 'success' ? 'alert alert-success' : 'alert alert-danger'"
+         class="alert alert-dismissible fade show position-fixed"
+         style="top: 20px; right: 20px; z-index: 1050; display: none;">
         <span x-text="message"></span>
         <button type="button" class="btn-close" @click="showMessage = false"></button>
     </div>
@@ -78,6 +76,7 @@
 
                             <!-- Timezone Settings -->
                             <form method="POST" action="{{ url_for('settings.update_timezone') }}" class="mb-3">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <div class="mb-3">
                                     <label for="timezone" class="form-label">Timezone</label>
                                     <select name="timezone" id="timezone" class="form-select">
@@ -90,7 +89,8 @@
                                     <div class="form-text">All timestamps will be displayed in your selected timezone</div>
                                 </div>
                                 <button type="submit" class="btn btn-primary btn-sm">Update Timezone</button>
-                            </form></div_col>
+                            </form>
+                        </div>
 
                         <div class="col-md-6">
                             <h6>Profile Actions</h6>
@@ -695,19 +695,139 @@
 <script>
 function settingsData() {
     return {
-        // Message handling
+        userPrefs: {{ user_prefs | tojson if user_prefs else '{}' }},
+        systemSettings: {{ system_settings | tojson if system_settings else '{}' }},
+        showPasswordModal: false,
         showMessage: false,
         message: '',
         messageType: 'success',
-
-        // Password modal
-        showPasswordModal: false,
-
-        // Settings data
-        userPrefs: {{ user_prefs | tojson }},
-        systemSettings: {{ system_settings | tojson }},
+        settings: {
+            // User Preferences with defaults
+            max_dashboard_alerts: {{ current_user_prefs.max_dashboard_alerts if current_user_prefs else 3 }},
+            expiration_warning_days: {{ current_user_prefs.expiration_warning_days if current_user_prefs else 7 }},
+            show_expiration_alerts: {{ 'true' if current_user_prefs and current_user_prefs.show_expiration_prefs else 'false' }},
+            show_timer_alerts: {{ 'true' if current_user_prefs and current_user_prefs.show_timer_alerts else 'false' }},
+            show_low_stock_alerts: {{ 'true' if current_user_prefs and current_user_prefs.show_low_stock_alerts else 'false' }},
+            show_batch_alerts: {{ 'true' if current_user_prefs and current_user_prefs.show_batch_alerts else 'false' }},
+            show_fault_alerts: {{ 'true' if current_user_prefs and current_user_prefs.show_fault_alerts else 'false' }},
+            show_alert_badges: {{ 'true' if current_user_prefs and current_user_prefs.show_alert_badges else 'false' }},
+            dashboard_layout: '{{ current_user_prefs.dashboard_layout if current_user_prefs else "standard" }}',
+            show_quick_actions: {{ 'true' if current_user_prefs and current_user_prefs.show_quick_actions else 'false' }},
+            compact_view: {{ 'true' if current_user_prefs and current_user_prefs.compact_view else 'false' }}
+        },
 
         // Methods
+        updateProfile(field, value) {
+            fetch('/settings/update-profile', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('meta[name=csrf-token]')?.getAttribute('content')
+                },
+                body: JSON.stringify({ [field]: value })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    this.showSuccessMessage('Profile updated successfully');
+                } else {
+                    this.showErrorMessage(data.message || 'Failed to update profile');
+                }
+            })
+            .catch(() => {
+                this.showErrorMessage('Error updating profile');
+            });
+        },
+
+        updateUserPreference(key, value) {
+            this.userPrefs[key] = value;
+            this.saveUserPreferences();
+        },
+
+        updateSystemSetting(group, key, value) {
+            this.systemSettings[group][key] = value;
+            this.saveSystemSettings();
+        },
+
+        changePassword() {
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            if (newPassword !== confirmPassword) {
+                this.showErrorMessage('New passwords do not match.');
+                return;
+            }
+
+            fetch('/settings/change-password', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('meta[name=csrf-token]')?.getAttribute('content')
+                },
+                body: JSON.stringify({
+                    current_password: currentPassword,
+                    new_password: newPassword
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    this.showSuccessMessage('Password changed successfully');
+                    this.showPasswordModal = false;
+                } else {
+                    this.showErrorMessage(data.message || 'Failed to change password');
+                }
+            })
+            .catch(() => {
+                this.showErrorMessage('Error changing password');
+            });
+        },
+
+        saveUserPreferences() {
+            fetch('/settings/update-user-preferences', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('meta[name=csrf-token]')?.getAttribute('content')
+                },
+                body: JSON.stringify(this.userPrefs)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    this.showSuccessMessage('User preferences updated successfully');
+                } else {
+                    this.showErrorMessage(data.message || 'Failed to update preferences');
+                }
+            })
+            .catch(() => {
+                this.showErrorMessage('Error updating preferences');
+            });
+        },
+
+        saveSystemSettings() {
+            fetch('/settings/update-system-settings', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('meta[name=csrf-token]')?.getAttribute('content')
+                },
+                body: JSON.stringify(this.systemSettings)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    this.showSuccessMessage('System settings updated successfully');
+                } else {
+                    this.showErrorMessage(data.message || 'Failed to update settings');
+                }
+            })
+            .catch(() => {
+                this.showErrorMessage('Error updating settings');
+            });
+        },
+
         showSuccessMessage(msg) {
             this.message = msg;
             this.messageType = 'success';
@@ -717,66 +837,12 @@ function settingsData() {
 
         showErrorMessage(msg) {
             this.message = msg;
-            this.messageType = 'error';
+            this.messageType = 'danger';
             this.showMessage = true;
             setTimeout(() => { this.showMessage = false; }, 5000);
-        },
-
-        updateUserPreference(key, value) {
-            this.userPrefs[key] = value;
-            fetch('/settings/api/user-preferences', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({[key]: value})
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    this.showSuccessMessage('Preference updated successfully');
-                } else {
-                    this.showErrorMessage(data.error || 'Failed to update preference');
-                }
-            })
-            .catch(error => {
-                this.showErrorMessage('Error updating preference');
-            });
-        },
-
-        updateSystemSetting(section, key, value) {
-            this.systemSettings[section][key] = value;
-            const updateData = {};
-            updateData[section] = {};
-            updateData[section][key] = value;
-
-            fetch('/settings/api/system-settings', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(updateData)
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    this.showSuccessMessage('System setting updated successfully');
-                } else {
-                    this.showErrorMessage(data.error || 'Failed to update system setting');
-                }
-            })
-            .catch(error => {
-                this.showErrorMessage('Error updating system setting');
-            });
         }
-    };
+    }
 }
-
-document.addEventListener('DOMContentLoaded', function() {
-});
 </script>
-{% endblock %}
-
-{% block scripts %}
-<script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+<script src="{{ url_for('static', filename='js/settings.js') }}"></script>
 {% endblock %}

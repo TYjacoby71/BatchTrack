@@ -17,7 +17,7 @@ def index():
     """Settings dashboard with organized sections"""
     # Get or create user preferences
     user_prefs_obj = UserPreferences.get_for_user(current_user.id)
-    
+
     # Convert to dictionary for JSON serialization
     user_prefs = {
         'max_dashboard_alerts': user_prefs_obj.max_dashboard_alerts,
@@ -96,7 +96,7 @@ def index():
             for key, value in section_settings.items():
                 if key not in system_settings[section]:
                     system_settings[section][key] = value
-                    
+
     available_timezones = TimezoneUtils.get_available_timezones()
     return render_template('settings/index.html', 
                          user_prefs=user_prefs,
@@ -333,10 +333,57 @@ def bulk_update_containers():
 @login_required
 def update_timezone():
     timezone = request.form.get('timezone')
-    if timezone in TimezoneUtils.get_available_timezones():
+    if timezone and timezone in TimezoneUtils.get_available_timezones():
         current_user.timezone = timezone
         db.session.commit()
         flash('Timezone updated successfully', 'success')
     else:
         flash('Invalid timezone selected', 'error')
     return redirect(url_for('settings.index'))
+
+@settings_bp.route('/update-user-preference', methods=['POST'])
+@login_required
+def update_user_preference():
+    """Update user preference via AJAX"""
+    try:
+        data = request.get_json()
+        key = data.get('key')
+        value = data.get('value')
+
+        if not key:
+            return jsonify({'error': 'Preference key is required'}), 400
+
+        # Get or create user preferences
+        user_prefs = UserPreferences.get_for_user(current_user.id)
+
+        # Update the preference
+        if hasattr(user_prefs, key):
+            setattr(user_prefs, key, value)
+            db.session.commit()
+            return jsonify({'success': True})
+        else:
+            return jsonify({'error': 'Invalid preference key'}), 400
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@settings_bp.route('/update-system-setting', methods=['POST'])
+@login_required
+def update_system_setting():
+    """Update system setting via AJAX"""
+    try:
+        data = request.get_json()
+        section = data.get('section')
+        key = data.get('key')
+        value = data.get('value')
+
+        if not all([section, key]):
+            return jsonify({'error': 'Section and key are required'}), 400
+
+        # For now, just return success - implement actual system settings storage later
+        # This could be stored in a SystemSettings model or configuration file
+        return jsonify({'success': True})
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500

@@ -74,7 +74,7 @@ async function updateClock() {
 document.addEventListener('DOMContentLoaded', function() {
   // Initialize clock
   updateClock();
-  setInterval(updateClock, 1000);
+  setInterval(updateClock, 30000);
   // Initialize all Select2 dropdowns
   const select2Config = {
     placeholder: 'Select...',

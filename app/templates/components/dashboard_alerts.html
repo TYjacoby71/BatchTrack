@@ -1,4 +1,3 @@
-
 <!-- Unified Alert System -->
 {% if alert_data.alerts %}
 <div class="alert-container mb-4" id="alertContainer">
@@ -7,7 +6,7 @@
                 alert-dismissible fade show" 
          data-alert-type="{{ alert.type }}"
          id="alert-{{ alert.type }}">
-      
+
       <div class="d-flex justify-content-between align-items-start">
         <div class="flex-grow-1">
           <h6 class="alert-heading mb-1">
@@ -15,21 +14,22 @@
             {{ alert.title }}
           </h6>
           <p class="mb-2">{{ alert.message }}</p>
-          
+
           {% if alert.action_url %}
           <a href="{{ alert.action_url }}" class="btn btn-sm btn-outline-{{ 'danger' if alert.priority == 'CRITICAL' else 'warning' if alert.priority == 'HIGH' else 'info' }}">
             {{ alert.action_text }}
           </a>
           {% endif %}
         </div>
-        
+
         {% if alert.dismissible %}
-        <button type="button" class="btn-close" onclick="dismissAlert('{{ alert.type }}')" aria-label="Close"></button>
+        <button type="button" class="btn-close" aria-label="Close"
+                                onclick="dismissAlert('{{ alert.type }}', this.closest('.alert'))"></button>
         {% endif %}
       </div>
     </div>
   {% endfor %}
-  
+
   {% if alert_data.hidden_count > 0 %}
   <div class="alert alert-light text-center">
     <small class="text-muted">
@@ -53,16 +53,26 @@ async function dismissAlert(alertType) {
             },
             body: JSON.stringify({ alert_type: alertType })
         });
-        
+
         if (response.ok) {
-            // Remove the alert from the DOM
+            // Remove the alert from the DOM with fade effect
             const alertElement = document.getElementById(`alert-${alertType}`);
             if (alertElement) {
-                alertElement.remove();
+                alertElement.style.transition = 'opacity 0.3s ease';
+                alertElement.style.opacity = '0';
+                setTimeout(() => {
+                    alertElement.remove();
+                    // Check if there are any alerts left, and if not, hide the container
+                    const container = document.getElementById('alertContainer');
+                    if (container && container.children.length === 0) {
+                        container.style.display = 'none';
+                    }
+                    // Refresh to show any new alerts that were hidden
+                    refreshDashboardAlerts();
+                }, 300);
             }
-            
-            // Refresh alerts to show any new ones
-            refreshDashboardAlerts();
+        } else {
+            console.error('Failed to dismiss alert - response not ok');
         }
     } catch (error) {
         console.error('Error dismissing alert:', error);
@@ -84,14 +94,14 @@ async function refreshDashboardAlerts() {
 function updateAlertContainer(alertData) {
     const container = document.getElementById('alertContainer');
     if (!container) return;
-    
+
     // Only update if there are new alerts to show
     if (alertData.alerts && alertData.alerts.length > 0) {
         // Check if any alerts are already shown
         const currentAlerts = container.querySelectorAll('.alert[data-alert-type]');
         const currentTypes = Array.from(currentAlerts).map(el => el.dataset.alertType);
         const newTypes = alertData.alerts.map(alert => alert.type);
-        
+
         // Add new alerts that aren't currently displayed
         alertData.alerts.forEach(alert => {
             if (!currentTypes.includes(alert.type)) {
@@ -106,7 +116,7 @@ function addAlertToContainer(alert, container) {
                          alert.priority === 'HIGH' ? 'warning' : 'info';
     const emoji = alert.priority === 'CRITICAL' ? '🚨' : 
                   alert.priority === 'HIGH' ? '⚠️' : 'ℹ️';
-    
+
     const alertHTML = `
         <div class="alert alert-${priorityClass} alert-dismissible fade show" 
              data-alert-type="${alert.type}" id="alert-${alert.type}">
@@ -123,12 +133,13 @@ function addAlertToContainer(alert, container) {
                     ` : ''}
                 </div>
                 ${alert.dismissible ? `
-                <button type="button" class="btn-close" onclick="dismissAlert('${alert.type}')" aria-label="Close"></button>
+                <button type="button" class="btn-close" aria-label="Close"
+                                onclick="dismissAlert('${alert.type}')" aria-label="Close"></button>
                 ` : ''}
             </div>
         </div>
     `;
-    
+
     container.insertAdjacentHTML('beforeend', alertHTML);
 }
 
