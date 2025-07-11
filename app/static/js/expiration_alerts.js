@@ -7,20 +7,16 @@ document.addEventListener('DOMContentLoaded', function() {
     setInterval(loadExpirationSummary, 5 * 60 * 1000);
 });
 
-function loadExpirationSummary() {
-    fetch('/expiration/api/summary')
-        .then(response => {
-            if (response.ok) {
-                return response.json();
-            }
-            throw new Error('Network response was not ok');
-        })
-        .then(data => {
-            updateExpirationBadge(data.expired_total || data.expired_count);
-        })
-        .catch(error => {
-            console.error('Failed to load expiration summary:', error);
-        });
+async function loadExpirationSummary() {
+    try {
+        const response = await fetch('/expiration/api/summary');
+        if (response.ok) {
+            const data = await response.json();
+            updateExpirationBadge(data.expired_total);
+        }
+    } catch (error) {
+        console.error('Failed to load expiration summary:', error);
+    }
 }
 
 function updateExpirationBadge(count) {
@@ -36,35 +32,27 @@ function updateExpirationBadge(count) {
 }
 
 // Function to check expiration status for inventory items
-function checkInventoryExpiration(inventoryItemId, callback) {
-    fetch(`/expiration/api/inventory-status/${inventoryItemId}`)
-        .then(response => {
-            if (response.ok) {
-                return response.json();
-            }
-            throw new Error('Network response was not ok');
-        })
-        .then(data => {
+async function checkInventoryExpiration(inventoryItemId, callback) {
+    try {
+        const response = await fetch(`/expiration/api/inventory-status/${inventoryItemId}`);
+        if (response.ok) {
+            const data = await response.json();
             if (callback) callback(data);
-        })
-        .catch(error => {
-            console.error('Failed to check inventory expiration:', error);
-        });
+        }
+    } catch (error) {
+        console.error('Failed to check inventory expiration:', error);
+    }
 }
 
 // Function to check expiration status for products
-function checkProductExpiration(productId, callback) {
-    fetch(`/expiration/api/product-status/${productId}`)
-        .then(response => {
-            if (response.ok) {
-                return response.json();
-            }
-            throw new Error('Network response was not ok');
-        })
-        .then(data => {
+async function checkProductExpiration(productId, callback) {
+    try {
+        const response = await fetch(`/expiration/api/product-status/${productId}`);
+        if (response.ok) {
+            const data = await response.json();
             if (callback) callback(data);
-        })
-        .catch(error => {
-            console.error('Failed to check product expiration:', error);
-        });
+        }
+    } catch (error) {
+        console.error('Failed to check product expiration:', error);
+    }
 }

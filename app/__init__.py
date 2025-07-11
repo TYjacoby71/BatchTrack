@@ -49,81 +49,80 @@ def create_app():
 
     # Register blueprints
     from .blueprints.auth import auth_bp
-    from .blueprints.admin import admin_bp
-    from .blueprints.settings import settings_bp
-    from .routes.app_routes import app_routes_bp
-    from .blueprints.batches import batches_bp
-    from .blueprints.inventory import inventory_bp
+    from .blueprints.products import products_bp
+    from .blueprints.products.api import products_api_bp
     from .blueprints.recipes import recipes_bp
-    from .blueprints.bulk_stock import bulk_stock_bp
-    from .blueprints.faults import faults_bp
-    from .blueprints.tag_manager import tag_bp
-    from .blueprints.timers import timers_bp
-    from .blueprints.quick_add import quick_add_bp
+    from .blueprints.inventory import inventory_bp
+    from .blueprints.batches import batches_bp
+    from .blueprints.batches.finish_batch import finish_batch_bp
+    from .blueprints.batches.cancel_batch import cancel_batch_bp
+    from .blueprints.batches.start_batch import start_batch_bp
+    from .blueprints.products import products_bp
+    from .blueprints.products.api import products_api_bp
+
+    from .blueprints.api.stock_routes import stock_api_bp
+    from .blueprints.api.ingredient_routes import ingredient_api_bp
     from .blueprints.conversion import conversion_bp
     from .blueprints.expiration import expiration_bp
-    from .routes.bulk_stock_routes import bulk_stock_bp as bulk_stock_routes_bp
-    from .routes.fault_log_routes import product_log_bp
-    from .routes.tag_manager_routes import tag_manager_bp
-
-    # Register core blueprints
-    app.register_blueprint(auth_bp, url_prefix='/auth')
+    from .blueprints.settings import settings_bp
+    from .blueprints.timers import timers_bp
+    from .blueprints.quick_add import quick_add_bp
+    from .blueprints.admin import admin_bp
+    from .routes import app_routes
+    from .blueprints.fifo import fifo_bp
+    from .blueprints.batches.add_extra import add_extra_bp
+    from .routes import bulk_stock_routes
+    from .routes import fault_log_routes
+    from .routes import tag_manager_routes
+    # Register admin blueprints
+    from .blueprints.admin.admin_routes import admin_bp
     app.register_blueprint(admin_bp)
-    app.register_blueprint(settings_bp)
-    app.register_blueprint(app_routes_bp)
-    app.register_blueprint(batches_bp)
-    app.register_blueprint(inventory_bp)
-    app.register_blueprint(recipes_bp)
-    app.register_blueprint(bulk_stock_bp)
-    app.register_blueprint(bulk_stock_routes_bp)
-    app.register_blueprint(faults_bp)
-    app.register_blueprint(product_log_bp)
-    app.register_blueprint(tag_bp)
-    app.register_blueprint(tag_manager_bp)
+
+    # Register reservation blueprints (now under products)
+    from .blueprints.products.reservation_routes import reservation_bp
+    from .blueprints.api.reservation_routes import reservation_api_bp
+    app.register_blueprint(reservation_bp, url_prefix='/reservations')
+    app.register_blueprint(reservation_api_bp)
+
+    # Register all blueprints
+    app.register_blueprint(auth_bp, url_prefix='/auth')
+    app.register_blueprint(recipes_bp, url_prefix='/recipes')
+    app.register_blueprint(inventory_bp, url_prefix='/inventory')
+    app.register_blueprint(batches_bp, url_prefix='/batches')
+    app.register_blueprint(finish_batch_bp, url_prefix='/batches')
+    app.register_blueprint(cancel_batch_bp, url_prefix='/batches')
+    app.register_blueprint(start_batch_bp, url_prefix='/start-batch')
+    # Import and register blueprints
+    try:
+        from .blueprints.products.products import products_bp
+        from .blueprints.products.api import products_api_bp
+        from .blueprints.products.product_inventory_routes import product_inventory_bp
+        from .blueprints.products.product_variants import product_variants_bp
+        from .blueprints.products.sku import sku_bp
+        app.register_blueprint(products_bp, url_prefix='/products')
+        app.register_blueprint(products_api_bp)
+        app.register_blueprint(product_inventory_bp, url_prefix='/products')
+        app.register_blueprint(product_variants_bp, url_prefix='/products')
+        app.register_blueprint(sku_bp, url_prefix='/products')
+    except ImportError:
+        print("Could not register any product blueprints")
+        pass
+
+    app.register_blueprint(conversion_bp, url_prefix='/conversion')
+    app.register_blueprint(expiration_bp, url_prefix='/expiration')
+    app.register_blueprint(settings_bp, url_prefix='/settings')
     app.register_blueprint(timers_bp, url_prefix='/timers')
     app.register_blueprint(quick_add_bp, url_prefix='/quick_add')
-    app.register_blueprint(conversion_bp)
-    app.register_blueprint(expiration_bp)
+    app.register_blueprint(app_routes.app_routes_bp)
+    app.register_blueprint(fifo_bp)
+    app.register_blueprint(add_extra_bp, url_prefix='/add-extra')
+    app.register_blueprint(bulk_stock_routes.bulk_stock_bp, url_prefix='/bulk_stock')
+    app.register_blueprint(fault_log_routes.fault_log_bp, url_prefix='/fault_log')
+    app.register_blueprint(tag_manager_routes.tag_manager_bp, url_prefix='/tag_manager')
 
-    # Register product blueprints
-    try:
-        from .blueprints.products import register_product_blueprints
-        register_product_blueprints(app)
-    except ImportError:
-        # Fallback to individual product blueprint registration
-        try:
-            from .blueprints.products import products_bp
-            from .blueprints.products.api import products_api_bp
-            from .blueprints.products.product_inventory_routes import product_inventory_bp
-            from .blueprints.products.product_variants import product_variants_bp
-            from .blueprints.products.sku import sku_bp
-            app.register_blueprint(products_bp, url_prefix='/products')
-            app.register_blueprint(products_api_bp)
-            app.register_blueprint(product_inventory_bp, url_prefix='/products')
-            app.register_blueprint(product_variants_bp, url_prefix='/products')
-            app.register_blueprint(sku_bp, url_prefix='/products')
-        except ImportError:
-            print("Warning: Could not register product blueprints")
     # Register API blueprints
-    try:
-        from .blueprints.api.routes import api_bp
-        app.register_blueprint(api_bp)
-    except ImportError:
-        pass
-
-    # Register FIFO blueprint if available
-    try:
-        from .blueprints.fifo import fifo_bp
-        app.register_blueprint(fifo_bp)
-    except ImportError:
-        pass
-
-    # Register additional batch blueprints if available
-    try:
-        from .blueprints.batches.add_extra import add_extra_bp
-        app.register_blueprint(add_extra_bp, url_prefix='/add-extra')
-    except ImportError:
-        pass
+    from .blueprints.api.routes import api_bp
+    app.register_blueprint(api_bp)
 
     # Load additional config if provided
     #if config_filename:

@@ -56,7 +56,6 @@ class SettingsService:
 
 # Alias for backward compatibility
 SettingsManager = SettingsService
-SystemSettings = SettingsService()
 
 def get_setting(key, default=None):
     """Get a setting from settings.json file"""
