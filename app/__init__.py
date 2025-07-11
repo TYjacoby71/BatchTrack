@@ -121,8 +121,8 @@ def create_app():
     app.register_blueprint(tag_manager_routes.tag_manager_bp, url_prefix='/tag_manager')
 
     # Register API blueprints
-    from .blueprints.api.routes import api_bp
-    app.register_blueprint(api_bp)
+    from .blueprints.api import register_api_blueprints
+    register_api_blueprints(app)
 
     # Load additional config if provided
     #if config_filename:
