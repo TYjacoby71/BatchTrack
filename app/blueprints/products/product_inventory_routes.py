@@ -132,96 +132,48 @@ def adjust_sku_inventory(inventory_item_id):
             except (ValueError, TypeError) as e:
                 logger.warning(f"Error parsing expiration data: {e}")
 
-        # Handle recount separately like raw inventory system
-        if change_type == 'recount':
-            logger.info("=== USING DIRECT FIFO RECOUNT (like raw inventory) ===")
-            logger.info(f"Recounting inventory item {inventory_item_id} to {quantity}")
+        # Use centralized inventory adjustment service for ALL operations including recount
+        try:
+            logger.info("=== CALLING CENTRALIZED INVENTORY ADJUSTMENT ===")
+            logger.info("Parameters:")
+            logger.info(f"  - item_id (inventory_item_id): {inventory_item_id}")
+            logger.info(f"  - quantity: {quantity}")
+            logger.info(f"  - change_type: {change_type}")
+            logger.info(f"  - unit: {unit}")
+            logger.info(f"  - notes: {notes}")
+            logger.info(f"  - created_by: {current_user.id}")
+            logger.info(f"  - item_type: product")
+            logger.info(f"  - customer: {customer}")
+            logger.info(f"  - sale_price: {sale_price}")
+            logger.info(f"  - order_id: {order_id}")
+            logger.info(f"  - cost_override: {cost_override}")
+            logger.info(f"  - custom_expiration_date: {custom_expiration_date}")
+            logger.info(f"  - custom_shelf_life_days: {custom_shelf_life_days}")
 
-            # Store original quantity for history calculation
-            original_quantity = sku.inventory_item.quantity or 0
-
-            # Use the same recount logic as raw inventory - absolute adjustment
-            success = FIFOService.recount_fifo(inventory_item_id, quantity, notes or "Product recount", current_user.id)
+            success = process_inventory_adjustment(
+                item_id=inventory_item_id,
+                quantity=quantity,
+                change_type=change_type,
+                unit=unit,
+                notes=notes,
+                created_by=current_user.id,
+                item_type='product',
+                customer=customer,
+                sale_price=sale_price,
+                order_id=order_id,
+                cost_override=cost_override,
+                custom_expiration_date=custom_expiration_date,
+                custom_shelf_life_days=custom_shelf_life_days
+            )
 
             if success:
-                # Update the inventory item quantity directly
-                sku.inventory_item.quantity = quantity
-
-                # Calculate the actual change for summary entry
-                qty_change = quantity - original_quantity
-
-                # Only create summary entry if there was an actual change
-                if qty_change != 0:
-                    # Use the proper FIFO service instead of manual generation
-                    if qty_change > 0:
-                        # For positive changes, create a proper FIFO entry
-                        FIFOService.add_fifo_entry(
-                            inventory_item_id=inventory_item_id,
-                            quantity=qty_change,
-                            change_type='recount',
-                            unit=unit or sku.unit or 'count',
-                            notes=f"Product recount: {original_quantity} → {quantity}",
-                            cost_per_unit=sku.inventory_item.cost_per_unit if sku.inventory_item else None,
-                            created_by=current_user.id
-                        )
-                    else:
-                        # For negative changes, create summary history using FIFO service
-                        # This ensures consistent FIFO code generation
-                        FIFOService.create_deduction_history(
-                            inventory_item_id=inventory_item_id,
-                            deduction_plan=[(0, abs(qty_change), sku.inventory_item.cost_per_unit if sku.inventory_item else None)],
-                            change_type='recount',
-                            notes=f"Product recount: {original_quantity} → {quantity}",
-                            created_by=current_user.id
-                        )
-
-                db.session.commit()
-                flash('Product inventory recounted successfully', 'success')
+                flash('Product inventory adjusted successfully', 'success')
             else:
-                flash('Error performing recount', 'error')
-        else:
-            # Use centralized adjustment service for non-recount operations
-            try:
-                logger.info("=== CALLING CENTRALIZED INVENTORY ADJUSTMENT ===")
-                logger.info("Parameters:")
-                logger.info(f"  - item_id (inventory_item_id): {inventory_item_id}")
-                logger.info(f"  - quantity: {quantity}")
-                logger.info(f"  - change_type: {change_type}")
-                logger.info(f"  - unit: {unit}")
-                logger.info(f"  - notes: {notes}")
-                logger.info(f"  - created_by: {current_user.id}")
-                logger.info(f"  - item_type: product")
-                logger.info(f"  - customer: {customer}")
-                logger.info(f"  - sale_price: {sale_price}")
-                logger.info(f"  - order_id: {order_id}")
-                logger.info(f"  - cost_override: {cost_override}")
-                logger.info(f"  - custom_expiration_date: {custom_expiration_date}")
-                logger.info(f"  - custom_shelf_life_days: {custom_shelf_life_days}")
+                flash('Error adjusting product inventory', 'error')
 
-                success = process_inventory_adjustment(
-                    item_id=inventory_item_id,
-                    quantity=quantity,
-                    change_type=change_type,
-                    unit=unit,
-                    notes=notes,
-                    created_by=current_user.id,
-                    item_type='product',
-                    customer=customer,
-                    sale_price=sale_price,
-                    order_id=order_id,
-                    cost_override=cost_override,
-                    custom_expiration_date=custom_expiration_date,
-                    custom_shelf_life_days=custom_shelf_life_days
-                )
-
-                if success:
-                    flash('Product inventory adjusted successfully', 'success')
-                else:
-                    flash('Error adjusting product inventory', 'error')
-
-            except ValueError as e:
-                logger.error(f"ValueError in SKU inventory adjustment: {str(e)}")
-                flash(f'Error: {str(e)}', 'error')
+        except ValueError as e:
+            logger.error(f"ValueError in SKU inventory adjustment: {str(e)}")
+            flash(f'Error: {str(e)}', 'error')
     except Exception as e:
         db.session.rollback()
         error_msg = f'Error adjusting inventory: {str(e)}'
