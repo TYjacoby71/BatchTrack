@@ -131,7 +131,7 @@
                                 </thead>
                                 <tbody>
                                     {% for item in expiring_soon.fifo_entries %}
-                                    {% set days_left = (item.expiration_date - today).days %}
+                                    {% set days_left = (item.expiration_date.date() - today).days if item.expiration_date.date else (item.expiration_date - today).days %}
                                     <tr>
                                         <td>{{ item.name }}</td>
                                         <td>{{ item.remaining_quantity }} {{ item.unit }}</td>
@@ -264,7 +264,7 @@
                                 </thead>
                                 <tbody>
                                     {% for item in expiring_soon.product_inventory %}
-                                    {% set days_left = (item.expiration_date - today).days %}
+                                    {% set days_left = (item.expiration_date.date() - today).days if item.expiration_date.date else (item.expiration_date - today).days %}
                                     <tr>
                                         <td>Product #{{ item.product_id }}</td>
                                         <td>{{ item.variant or 'N/A' }}</td>

@@ -123,6 +123,9 @@ class ExpirationService:
                 # Handle both date and datetime objects
                 exp_date = entry.expiration_date.date() if hasattr(entry.expiration_date, 'date') else entry.expiration_date
                 if exp_date < today:
+                    # Ensure expiration_date is a date object for template compatibility
+                    if hasattr(entry.expiration_date, 'date'):
+                        entry.expiration_date = entry.expiration_date.date()
                     expired_items['fifo_entries'].append(entry)
 
         # Check product SKUs via their inventory items
@@ -139,6 +142,9 @@ class ExpirationService:
                 # Handle both date and datetime objects
                 exp_date = sku.expiration_date.date() if hasattr(sku.expiration_date, 'date') else sku.expiration_date
                 if exp_date < today:
+                    # Ensure expiration_date is a date object for template compatibility
+                    if hasattr(sku.expiration_date, 'date'):
+                        sku.expiration_date = sku.expiration_date.date()
                     expired_items['product_inventory'].append(sku)
 
         return expired_items
@@ -167,6 +173,9 @@ class ExpirationService:
                 # Handle both date and datetime objects
                 exp_date = entry.expiration_date.date() if hasattr(entry.expiration_date, 'date') else entry.expiration_date
                 if today <= exp_date <= warning_threshold:
+                    # Ensure expiration_date is a date object for template compatibility
+                    if hasattr(entry.expiration_date, 'date'):
+                        entry.expiration_date = entry.expiration_date.date()
                     expiring_items['fifo_entries'].append(entry)
 
         # Check product SKUs - get all SKUs with expiration dates and check their inventory
@@ -180,8 +189,15 @@ class ExpirationService:
                 exp_date = sku.expiration_date
                 if isinstance(exp_date, str):
                     exp_date = datetime.strptime(exp_date, '%Y-%m-%d').date()
+                elif hasattr(exp_date, 'date'):
+                    exp_date = exp_date.date()
 
                 if today <= exp_date <= warning_threshold:
+                    # Ensure expiration_date is a date object for template compatibility
+                    if hasattr(sku.expiration_date, 'date'):
+                        sku.expiration_date = sku.expiration_date.date()
+                    elif isinstance(sku.expiration_date, str):
+                        sku.expiration_date = datetime.strptime(sku.expiration_date, '%Y-%m-%d').date()
                     expiring_items['product_inventory'].append(sku)
 
         return expiring_items
