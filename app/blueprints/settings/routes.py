@@ -16,7 +16,22 @@ from . import settings_bp
 def index():
     """Settings dashboard with organized sections"""
     # Get or create user preferences
-    user_prefs = UserPreferences.get_for_user(current_user.id)
+    user_prefs_obj = UserPreferences.get_for_user(current_user.id)
+    
+    # Convert to dictionary for JSON serialization
+    user_prefs = {
+        'max_dashboard_alerts': user_prefs_obj.max_dashboard_alerts,
+        'show_expiration_alerts': user_prefs_obj.show_expiration_alerts,
+        'show_timer_alerts': user_prefs_obj.show_timer_alerts,
+        'show_low_stock_alerts': user_prefs_obj.show_low_stock_alerts,
+        'show_batch_alerts': user_prefs_obj.show_batch_alerts,
+        'show_fault_alerts': user_prefs_obj.show_fault_alerts,
+        'expiration_warning_days': user_prefs_obj.expiration_warning_days,
+        'show_alert_badges': user_prefs_obj.show_alert_badges,
+        'dashboard_layout': user_prefs_obj.dashboard_layout,
+        'compact_view': user_prefs_obj.compact_view,
+        'show_quick_actions': user_prefs_obj.show_quick_actions
+    }
 
     # Get organization info for org owners
     is_org_owner = current_user.organization and current_user.organization.owner and current_user.organization.owner.id == current_user.id
