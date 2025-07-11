@@ -326,7 +326,7 @@ def view_batch_in_progress(batch_identifier):
                          prev_batch=prev_batch,
                          next_batch=next_batch)
 
-batches_bp.register_blueprint(start_batch_bp)
-batches_bp.register_blueprint(cancel_batch_bp)
+batches_bp.register_blueprint(start_batch_bp, url_prefix='/batches')
+batches_bp.register_blueprint(cancel_batch_bp, url_prefix='/batches')
 batches_bp.register_blueprint(add_extra_bp, url_prefix='/add-extra')
 batches_bp.register_blueprint(finish_batch_bp, url_prefix='/finish-batch')
