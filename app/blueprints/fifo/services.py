@@ -478,6 +478,7 @@ class FIFOService:
             # This includes expired entries since the user physically counted them
             if item.type == 'product':
                 # Get ALL ProductSKUHistory entries with available capacity (including expired)
+                # Must scope to specific inventory_item_id AND organization
                 query = ProductSKUHistory.query.filter(
                     and_(
                         ProductSKUHistory.inventory_item_id == inventory_item_id,
@@ -491,8 +492,14 @@ class FIFOService:
                     query = query.filter(ProductSKUHistory.organization_id == current_user.organization_id)
                 
                 entries_with_capacity = query.order_by(ProductSKUHistory.timestamp.asc()).all()  # Fill oldest first (FIFO order)
+                
+                print(f"Product recount: Found {len(entries_with_capacity)} entries with capacity for item {inventory_item_id}")
+                for entry in entries_with_capacity:
+                    capacity = entry.quantity_change - entry.remaining_quantity
+                    print(f"  Entry {entry.id}: {entry.remaining_quantity}/{entry.quantity_change}, capacity: {capacity}")
             else:
                 # Get ALL InventoryHistory entries with available capacity (including expired)
+                # Must scope to specific inventory_item_id AND organization
                 query = InventoryHistory.query.filter(
                     and_(
                         InventoryHistory.inventory_item_id == inventory_item_id,
@@ -506,9 +513,16 @@ class FIFOService:
                     query = query.filter(InventoryHistory.organization_id == current_user.organization_id)
                 
                 entries_with_capacity = query.order_by(InventoryHistory.timestamp.asc()).all()  # Fill oldest first (FIFO order)
+                
+                print(f"Raw recount: Found {len(entries_with_capacity)} entries with capacity for item {inventory_item_id}")
+                for entry in entries_with_capacity:
+                    capacity = entry.quantity_change - entry.remaining_quantity
+                    print(f"  Entry {entry.id}: {entry.remaining_quantity}/{entry.quantity_change}, capacity: {capacity}")
 
             remaining_to_add = difference
 
+            print(f"Recount: Starting to fill {len(entries_with_capacity)} entries, need to add {remaining_to_add}")
+            
             # First try to fill existing FIFO entries with capacity
             for entry in entries_with_capacity:
                 if remaining_to_add <= 0:
@@ -518,12 +532,15 @@ class FIFOService:
                 available_capacity = entry.quantity_change - entry.remaining_quantity
                 fill_amount = min(available_capacity, remaining_to_add)
 
+                print(f"Recount: Entry {entry.id} - original: {entry.quantity_change}, current: {entry.remaining_quantity}, capacity: {available_capacity}, will fill: {fill_amount}")
+
                 if fill_amount > 0:
                     # Update the original FIFO entry's remaining quantity
+                    old_remaining = entry.remaining_quantity
                     entry.remaining_quantity += fill_amount
                     remaining_to_add -= fill_amount
 
-                    print(f"Recount: Filled entry {entry.id} with {fill_amount}, now has {entry.remaining_quantity} remaining")
+                    print(f"Recount: Filled entry {entry.id} with {fill_amount}, changed from {old_remaining} to {entry.remaining_quantity} remaining")
 
                     # For products, don't create individual restoration entries during recount
                     # The calling code will create a single recount summary entry
@@ -542,6 +559,8 @@ class FIFOService:
                             organization_id=current_user.organization_id if current_user else item.organization_id
                         )
                         db.session.add(history)
+                else:
+                    print(f"Recount: Skipping entry {entry.id} - no capacity available")
 
             # Only create new FIFO entry if we couldn't fill existing ones
             if remaining_to_add > 0:
