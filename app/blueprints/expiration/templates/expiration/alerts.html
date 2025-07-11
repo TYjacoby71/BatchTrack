@@ -104,7 +104,7 @@
                                         <td><small class="text-muted">#{{ item.fifo_id }}</small></td>
                                         <td>
                                             <button class="btn btn-outline-danger btn-sm" 
-                                                    onclick="markAsSpoiled('fifo', {{ item.fifo_id }})">
+                                                    onclick="markAsSpoiled('fifo', '{{ item.fifo_id }}')">
                                                 <i class="fas fa-trash"></i> Spoiled
                                             </button>
                                         </td>
@@ -267,7 +267,7 @@
                                         </td>
                                         <td>
                                             <button class="btn btn-outline-danger btn-sm" 
-                                                    onclick="markAsSpoiled('product', {{ item.product_inv_id }})">
+                                                    onclick="markAsSpoiled('product', '{{ item.product_inv_id }}')">
                                                 <i class="fas fa-trash"></i> Spoiled
                                             </button>
                                         </td>

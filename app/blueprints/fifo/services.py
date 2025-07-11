@@ -491,7 +491,7 @@ class FIFOService:
                 if current_user and current_user.is_authenticated:
                     query = query.filter(ProductSKUHistory.organization_id == current_user.organization_id)
                 
-                entries_with_capacity = query.order_by(ProductSKUHistory.timestamp.asc()).all()  # Fill oldest first (FIFO order)
+                entries_with_capacity = query.order_by(ProductSKUHistory.timestamp.desc()).all()  # Fill newest first for recounts
                 
                 print(f"Product recount: Found {len(entries_with_capacity)} entries with capacity for item {inventory_item_id}")
                 for entry in entries_with_capacity:
@@ -512,7 +512,7 @@ class FIFOService:
                 if current_user and current_user.is_authenticated:
                     query = query.filter(InventoryHistory.organization_id == current_user.organization_id)
                 
-                entries_with_capacity = query.order_by(InventoryHistory.timestamp.asc()).all()  # Fill oldest first (FIFO order)
+                entries_with_capacity = query.order_by(InventoryHistory.timestamp.desc()).all()  # Fill newest first for recounts
                 
                 print(f"Raw recount: Found {len(entries_with_capacity)} entries with capacity for item {inventory_item_id}")
                 for entry in entries_with_capacity:
