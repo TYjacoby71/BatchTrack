@@ -2,6 +2,10 @@ from datetime import datetime, timedelta, date
 from ...models import db, InventoryItem, InventoryHistory, ProductSKU, ProductSKUHistory, Batch
 from sqlalchemy import and_, or_
 from typing import List, Dict, Optional, Tuple
+from flask_login import current_user
+import logging
+
+logger = logging.getLogger(__name__)
 
 class ExpirationService:
     """Centralized service for all expiration-related operations"""
