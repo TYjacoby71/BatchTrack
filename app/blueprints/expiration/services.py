@@ -103,8 +103,8 @@ class ExpirationService:
         from ...models import InventoryItem, ProductSKU
         from ...utils.timezone_utils import TimezoneUtils
         
-        # Get current time in user's timezone
-        now = TimezoneUtils.now_naive()
+        # Get current date in user's timezone
+        today = TimezoneUtils.now_naive().date()
 
         expired_items = {
             'fifo_entries': [],
@@ -118,8 +118,11 @@ class ExpirationService:
         ).all()
 
         for item in inventory_items:
-            if item.expiration_date and item.expiration_date.date() < now.date():
-                expired_items['fifo_entries'].append(item)
+            if item.expiration_date:
+                # Handle both date and datetime objects
+                exp_date = item.expiration_date.date() if hasattr(item.expiration_date, 'date') else item.expiration_date
+                if exp_date < today:
+                    expired_items['fifo_entries'].append(item)
 
         # Check product SKUs
         product_skus = ProductSKU.query.filter(
@@ -128,8 +131,11 @@ class ExpirationService:
         ).all()
 
         for sku in product_skus:
-            if sku.expiration_date and sku.expiration_date.date() < now.date():
-                expired_items['product_inventory'].append(sku)
+            if sku.expiration_date:
+                # Handle both date and datetime objects
+                exp_date = sku.expiration_date.date() if hasattr(sku.expiration_date, 'date') else sku.expiration_date
+                if exp_date < today:
+                    expired_items['product_inventory'].append(sku)
 
         return expired_items
 
@@ -140,9 +146,9 @@ class ExpirationService:
         from ...utils.timezone_utils import TimezoneUtils
         from datetime import timedelta
 
-        # Get current time and warning threshold in user's timezone
-        now = TimezoneUtils.now_naive()
-        warning_threshold = now + timedelta(days=warning_days)
+        # Get current date and warning threshold in user's timezone
+        today = TimezoneUtils.now_naive().date()
+        warning_threshold = today + timedelta(days=warning_days)
 
         expiring_items = {
             'fifo_entries': [],
@@ -156,8 +162,11 @@ class ExpirationService:
         ).all()
 
         for item in inventory_items:
-            if item.expiration_date and now.date() <= item.expiration_date.date() <= warning_threshold.date():
-                expiring_items['fifo_entries'].append(item)
+            if item.expiration_date:
+                # Handle both date and datetime objects
+                exp_date = item.expiration_date.date() if hasattr(item.expiration_date, 'date') else item.expiration_date
+                if today <= exp_date <= warning_threshold:
+                    expiring_items['fifo_entries'].append(item)
 
         # Check product SKUs
         product_skus = ProductSKU.query.filter(
@@ -166,8 +175,11 @@ class ExpirationService:
         ).all()
 
         for sku in product_skus:
-            if sku.expiration_date and now.date() <= sku.expiration_date.date() <= warning_threshold.date():
-                expiring_items['product_inventory'].append(sku)
+            if sku.expiration_date:
+                # Handle both date and datetime objects
+                exp_date = sku.expiration_date.date() if hasattr(sku.expiration_date, 'date') else sku.expiration_date
+                if today <= exp_date <= warning_threshold:
+                    expiring_items['product_inventory'].append(sku)
 
         return expiring_items
 
