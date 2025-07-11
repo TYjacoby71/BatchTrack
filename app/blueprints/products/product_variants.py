@@ -200,6 +200,18 @@ def view_variant(product_id, variant_name):
         is_archived=False
     ).filter(InventoryItem.quantity > 0).all()
 
+    # Get the base SKU inventory item ID for breadcrumb navigation
+    base_sku = ProductSKU.query.filter_by(
+        product_id=product.id,
+        variant_id=product.base_variant.id if product.base_variant else variant.id,
+        size_label='Bulk',
+        organization_id=current_user.organization_id
+    ).first()
+    
+    product_breadcrumb_id = base_sku.inventory_item_id if base_sku else (
+        size_groups[list(size_groups.keys())[0]]['skus'][0].inventory_item_id if size_groups else None
+    )
+
     return render_template('products/view_variation.html',
                          product=product,
                          product_name=product.name,
@@ -208,7 +220,8 @@ def view_variant(product_id, variant_name):
                          variant_description=variant.description,
                          size_groups=size_groups,
                          available_containers=available_containers,
-                         get_global_unit_list=get_global_unit_list)
+                         get_global_unit_list=get_global_unit_list,
+                         product_breadcrumb_id=product_breadcrumb_id)
 
 @product_variants_bp.route('/<int:product_id>/variant/<variant_name>/edit', methods=['POST'])
 @login_required
