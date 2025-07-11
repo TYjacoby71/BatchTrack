@@ -36,12 +36,26 @@ def upgrade():
         else:
             print("is_active column already exists, skipping...")
 
-    with op.batch_alter_table('user_preferences', schema=None) as batch_op:
-        batch_op.alter_column('id',
-               existing_type=sa.INTEGER(),
-               nullable=False,
-               autoincrement=True)
-        batch_op.create_index(batch_op.f('ix_user_preferences_organization_id'), ['organization_id'], unique=False)
+    # Check if user_preferences table and indexes exist
+    user_prefs_tables = [table['name'] for table in inspector.get_table_names()]
+    
+    if 'user_preferences' in user_prefs_tables:
+        # Get existing indexes for user_preferences table
+        existing_indexes = [idx['name'] for idx in inspector.get_indexes('user_preferences')]
+        
+        with op.batch_alter_table('user_preferences', schema=None) as batch_op:
+            batch_op.alter_column('id',
+                   existing_type=sa.INTEGER(),
+                   nullable=False,
+                   autoincrement=True)
+            
+            # Only create index if it doesn't exist
+            if 'ix_user_preferences_organization_id' not in existing_indexes:
+                batch_op.create_index(batch_op.f('ix_user_preferences_organization_id'), ['organization_id'], unique=False)
+            else:
+                print("ix_user_preferences_organization_id index already exists, skipping...")
+    else:
+        print("user_preferences table doesn't exist, skipping index creation...")
 
 
 def downgrade():
