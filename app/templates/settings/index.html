@@ -1,84 +1,6 @@
 {% extends "layout.html" %}
 {% block content %}
-<div x-data="{
-        settings: {{ system_settings | tojson }},
-        userPrefs: {{ user_prefs | tojson }},
-        saving: false,
-        showMessage: false,
-        message: '',
-        messageType: 'success',
-
-        updateSystemSetting(section, key, value) {
-            this.settings[section] = this.settings[section] || {};
-            this.settings[section][key] = value;
-            this.saveSystemSettings();
-        },
-
-        updateUserPreference(key, value) {
-            this.userPrefs[key] = value;
-            this.saveUserPreferences();
-        },
-
-        async saveSystemSettings() {
-            this.saving = true;
-            try {
-                const response = await fetch('/settings/api/system-settings', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': '{{ csrf_token() }}'
-                    },
-                    body: JSON.stringify(this.settings)
-                });
-
-                if (response.ok) {
-                    this.showSuccessMessage('Settings saved successfully');
-                } else {
-                    this.showErrorMessage('Failed to save settings');
-                }
-            } catch (error) {
-                this.showErrorMessage('Error saving settings');
-            }
-            this.saving = false;
-        },
-
-        async saveUserPreferences() {
-            this.saving = true;
-            try {
-                const response = await fetch('/settings/api/user-preferences', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': '{{ csrf_token() }}'
-                    },
-                    body: JSON.stringify(this.userPrefs)
-                });
-
-                if (response.ok) {
-                    this.showSuccessMessage('Preferences saved successfully');
-                } else {
-                    this.showErrorMessage('Failed to save preferences');
-                }
-            } catch (error) {
-                this.showErrorMessage('Error saving preferences');
-            }
-            this.saving = false;
-        },
-
-        showSuccessMessage(msg) {
-            this.message = msg;
-            this.messageType = 'success';
-            this.showMessage = true;
-            setTimeout(() => this.showMessage = false, 3000);
-        },
-
-        showErrorMessage(msg) {
-            this.message = msg;
-            this.messageType = 'danger';
-            this.showMessage = true;
-            setTimeout(() => this.showMessage = false, 5000);
-        }
-    }" class="container-fluid mt-4">
+<div x-data="settingsManager" class="container-fluid mt-4">
     <h2><i class="fas fa-cog"></i> System Settings</h2>
     <p class="text-muted">Configure BatchTrack to match your workflow and preferences</p>
 
@@ -211,7 +133,7 @@
                                     Maximum alerts on dashboard
                                 </label>
                                 <select class="form-select" id="max-dashboard-alerts" 
-                                        x-model="userPrefs.max_dashboard_alerts" 
+                                        x-model="systemSettings.alerts.max_dashboard_alerts" 
                                         @change="updateUserPreference('max_dashboard_alerts', $event.target.value)">
                                     <option value="1">1 alert (minimal)</option>
                                     <option value="2">2 alerts (focused)</option>
@@ -223,7 +145,7 @@
                             <div class="mb-3">
                                 <label for="expiration-warning-days" class="form-label">Expiration warning (days ahead)</label>
                                 <input type="number" class="form-control" id="expiration-warning-days" 
-                                       x-model="userPrefs.expiration_warning_days"
+                                       x-model="systemSettings.alerts.expiration_warning_days"
                                        @change="updateUserPreference('expiration_warning_days', $event.target.value)"
                                        min="1" max="30">
                             </div>
@@ -232,8 +154,8 @@
                             <h6>Alert Types</h6>
                             <div class="form-check form-switch mb-2">
                                 <input class="form-check-input" type="checkbox" id="show-expiration-alerts" 
-                                       x-model="userPrefs.show_expiration_alerts"
-                                       @change="updateUserPreference('show_expiration_alerts', $event.target.checked)">
+                                       x-model="systemSettings.alerts.show_expiration_alerts"
+                                       @change="updateSystemSetting('alerts', 'show_expiration_alerts', $event.target.checked)">
                                 <label class="form-check-label" for="show-expiration-alerts">
                                     Expiration alerts
                                 </label>
@@ -241,8 +163,8 @@
 
                             <div class="form-check form-switch mb-2">
                                 <input class="form-check-input" type="checkbox" id="show-timer-alerts" 
-                                       x-model="userPrefs.show_timer_alerts"
-                                       @change="updateUserPreference('show_timer_alerts', $event.target.checked)">
+                                       x-model="systemSettings.alerts.show_timer_alerts"
+                                       @change="updateSystemSetting('alerts', 'show_timer_alerts', $event.target.checked)">
                                 <label class="form-check-label" for="show-timer-alerts">
                                     Timer alerts
                                 </label>
@@ -250,8 +172,8 @@
 
                             <div class="form-check form-switch mb-2">
                                 <input class="form-check-input" type="checkbox" id="show-low-stock-alerts" 
-                                       x-model="userPrefs.show_low_stock_alerts"
-                                       @change="updateUserPreference('show_low_stock_alerts', $event.target.checked)">
+                                       x-model="systemSettings.alerts.show_low_stock_alerts"
+                                       @change="updateSystemSetting('alerts', 'show_low_stock_alerts', $event.target.checked)">
                                 <label class="form-check-label" for="show-low-stock-alerts">
                                     Low stock alerts
                                 </label>
@@ -259,8 +181,8 @@
 
                             <div class="form-check form-switch mb-2">
                                 <input class="form-check-input" type="checkbox" id="show-batch-alerts"
-                                       x-model="userPrefs.show_batch_alerts"
-                                       @change="updateUserPreference('show_batch_alerts', $event.target.checked)">
+                                       x-model="systemSettings.alerts.show_batch_alerts"
+                                       @change="updateSystemSetting('alerts', 'show_batch_alerts', $event.target.checked)">
                                 <label class="form-check-label" for="show-batch-alerts">
                                     Batch alerts
                                 </label>
@@ -268,8 +190,8 @@
 
                             <div class="form-check form-switch mb-2">
                                 <input class="form-check-input" type="checkbox" id="show-fault-alerts" 
-                                       x-model="userPrefs.show_fault_alerts"
-                                       @change="updateUserPreference('show_fault_alerts', $event.target.checked)">
+                                       x-model="systemSettings.alerts.show_fault_alerts"
+                                       @change="updateSystemSetting('alerts', 'show_fault_alerts', $event.target.checked)">
                                 <label class="form-check-label" for="show-fault-alerts">
                                     System fault alerts
                                 </label>
@@ -277,7 +199,7 @@
 
                             <div class="form-check form-switch mb-2">
                                 <input class="form-check-input" type="checkbox" id="show-alert-badges" 
-                                       x-model="userPrefs.show_alert_badges"
+                                       x-model="systemSettings.alerts.show_alert_badges"
                                        @change="updateUserPreference('show_alert_badges', $event.target.checked)">
                                 <label class="form-check-label" for="show-alert-badges">
                                     Show alert badges in navigation
@@ -778,9 +700,10 @@ function settingsManager() {
                 const result = await response.json();
 
                 if (response.ok) {
+                    this.userPrefs[key] = value;
                     this.showSuccessMessage('Preference updated successfully');
                 } else {
-                    this.showErrorMessage(result.error || 'Failed to update preference');
+                    throw new Error('Failed to update preference');
                 }
             } catch (error) {
                 console.error('Error updating preference:', error);
@@ -788,10 +711,13 @@ function settingsManager() {
             }
         },
 
-        async updateSystemSetting(section, key, value) {
-            try {const settings = {};
-                settings[section] = {};
-                settings[section][key] = value;
+                async updateSystemSetting(category, key, value) {
+            try {
+                const settings = {};
+                if (!settings[category]) {
+                    settings[category] = {};
+                }
+                settings[category][key] = value;
 
                 const response = await fetch('/settings/api/system-settings', {
                     method: 'POST',
@@ -801,12 +727,14 @@ function settingsManager() {
                     body: JSON.stringify(settings)
                 });
 
-                const result = await response.json();
-
                 if (response.ok) {
+                    if (!this.systemSettings[category]) {
+                        this.systemSettings[category] = {};
+                    }
+                    this.systemSettings[category][key] = value;
                     this.showSuccessMessage('System setting updated successfully');
                 } else {
-                    this.showErrorMessage(result.error || 'Failed to update system setting');
+                    throw new Error('Failed to update system setting');
                 }
             } catch (error) {
                 console.error('Error updating system setting:', error);
@@ -819,7 +747,7 @@ function settingsManager() {
                 const data = {};
                 data[field] = value;
 
-                const response = await fetch('/settings/profile/save', {
+                const response = await fetch('/settings/api/profile', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -827,41 +755,25 @@ function settingsManager() {
                     body: JSON.stringify(data)
                 });
 
-                const result = await response.json();
-
-                if (result.success) {
+                if (response.ok) {
                     this.showSuccessMessage('Profile updated successfully');
                 } else {
-                    this.showErrorMessage(result.error || 'Failed to update profile');
+                    throw new Error('Failed to update profile');
                 }
             } catch (error) {
-                console.error('Profile update error:', error);
+                console.error('Error updating profile:', error);
                 this.showErrorMessage('Failed to update profile');
             }
         },
 
         async changePassword() {
             try {
-                const currentPassword = document.getElementById('currentPassword').value;
-                const newPassword = document.getElementById('newPassword').value;
-                const confirmPassword = document.getElementById('confirmPassword').value;
+                this.saving = true;
+                const currentPassword = document.getElementById('current-password').value;
+                const newPassword = document.getElementById('new-password').value;
+                const confirmPassword = document.getElementById('confirm-password').value;
 
-                if (!currentPassword || !newPassword || !confirmPassword) {
-                    this.showErrorMessage('All password fields are required');
-                    return;
-                }
-
-                if (newPassword !== confirmPassword) {
-                    this.showErrorMessage('New passwords do not match');
-                    return;
-                }
-
-                if (newPassword.length < 6) {
-                    this.showErrorMessage('Password must be at least 6 characters');
-                    return;
-                }
-
-                const response = await fetch('/settings/password/change', {
+                const response = await fetch('/settings/api/change-password', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -875,19 +787,56 @@ function settingsManager() {
 
                 const result = await response.json();
 
-                if (result.success) {
+                if (response.ok) {
                     this.showSuccessMessage('Password changed successfully');
                     this.showPasswordModal = false;
                     // Clear form
-                    document.getElementById('currentPassword').value = '';
-                    document.getElementById('newPassword').value = '';
-                    document.getElementById('confirmPassword').value = '';
+                    document.getElementById('current-password').value = '';
+                    document.getElementById('new-password').value = '';
+                    document.getElementById('confirm-password').value = '';
                 } else {
                     this.showErrorMessage(result.error || 'Failed to change password');
                 }
             } catch (error) {
-                console.error('Password change error:', error);
+                console.error('Error changing password:', error);
                 this.showErrorMessage('Failed to change password');
+            } finally {
+                this.saving = false;
+            }
+        },
+
+        async saveAllSettings() {
+            try {
+                this.saving = true;
+
+                // Save user preferences
+                const prefResponse = await fetch('/settings/api/user-preferences', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(this.userPrefs)
+                });
+
+                // Save system settings
+                const sysResponse = await fetch('/settings/api/system-settings', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(this.systemSettings)
+                });
+
+                if (prefResponse.ok && sysResponse.ok) {
+                    this.showSuccessMessage('All settings saved successfully');
+                } else {
+                    throw new Error('Failed to save some settings');
+                }
+            } catch (error) {
+                console.error('Error saving settings:', error);
+                this.showErrorMessage('Failed to save settings');
+            } finally {
+                this.saving = false;
             }
         },
 
@@ -895,17 +844,21 @@ function settingsManager() {
             this.message = msg;
             this.messageType = 'success';
             this.showMessage = true;
-            setTimeout(() => this.showMessage = false, 3000);
+            setTimeout(() => {
+                this.showMessage = false;
+            }, 3000);
         },
 
         showErrorMessage(msg) {
             this.message = msg;
             this.messageType = 'error';
             this.showMessage = true;
-            setTimeout(() => this.showMessage = false, 5000);
+            setTimeout(() => {
+                this.showMessage = false;
+            }, 5000);
         }
-    }
-}
+    }))
+});
 </script>
 {% endblock %}
 
