@@ -30,8 +30,16 @@ def dashboard(scope_context=None):
     recipes = Recipe.scoped().all()
     active_batch = Batch.query.filter_by(status='in_progress').first()
 
-    # Get unified dashboard alerts
-    alert_data = DashboardAlertService.get_dashboard_alerts()
+    # Get unified dashboard alerts with dismissed alerts from session
+    dismissed_alerts = session.get('dismissed_alerts', [])
+    alert_data = DashboardAlertService.get_dashboard_alerts(
+        max_alerts=3, 
+        dismissed_alerts=dismissed_alerts
+    )
+
+    # Get additional alert data for compatibility
+    low_stock_ingredients = CombinedInventoryAlertService.get_low_stock_ingredients()
+    expiration_summary = ExpirationService.get_expiration_summary()
 
     stock_check = None
     selected_recipe = None
@@ -61,7 +69,9 @@ def dashboard(scope_context=None):
                          status=status,
                          active_batch=active_batch,
                          current_user=current_user,
-                         alert_data=alert_data)
+                         alert_data=alert_data,
+                         low_stock_ingredients=low_stock_ingredients,
+                         expiration_summary=expiration_summary)
 
 @app_routes_bp.route('/stock/check', methods=['POST'])
 @login_required
@@ -162,19 +172,3 @@ def api_dashboard_alerts():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app_routes_bp.route('/user_dashboard')
-@login_required
-def user_dashboard():
-    # Get low stock and expiration alerts
-    low_stock_ingredients = CombinedInventoryAlertService.get_low_stock_ingredients()
-    expiration_summary = ExpirationService.get_expiration_summary()
-
-    # Get dismissed alerts from session
-    dismissed_alerts = session.get('dismissed_alerts', [])
-
-    # Get comprehensive dashboard alerts filtered by dismissed alerts
-    alert_data = DashboardAlertService.get_dashboard_alerts(
-        max_alerts=3, 
-        dismissed_alerts=dismissed_alerts
-    )
-    return render_template('user_dashboard.html', low_stock_ingredients=low_stock_ingredients, expiration_summary=expiration_summary, alert_data=alert_data)
