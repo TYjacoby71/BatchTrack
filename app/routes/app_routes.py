@@ -26,7 +26,7 @@ def check_container_availability(container_ids, scale=1):
 @app_routes_bp.route('/dashboard')
 @app_routes_bp.route('/user_dashboard')
 @login_required
-def dashboard(scope_context=None):
+def dashboard():
     recipes = Recipe.scoped().all()
     active_batch = Batch.query.filter_by(status='in_progress').first()
 

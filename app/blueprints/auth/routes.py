@@ -69,7 +69,10 @@ def login():
             if user and user.check_password(password):
                 login_user(user)
                 flash('Login successful!', 'success')
-                # Always redirect to dashboard after successful login
+                # Check for next parameter or redirect to dashboard
+                next_page = request.args.get('next')
+                if next_page:
+                    return redirect(next_page)
                 return redirect(url_for('app_routes.dashboard'))
             else:
                 flash('Invalid username or password')
