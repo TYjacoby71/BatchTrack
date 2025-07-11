@@ -1,6 +1,8 @@
-
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash
 from flask_login import login_required, current_user
+from . import settings_bp
+from ...extensions import db
+from ...utils.timezone_utils import TimezoneUtils
 from ...models import db, Unit, User, InventoryItem, UserPreferences, Organization
 from ...utils.permissions import has_permission, require_permission
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -15,10 +17,10 @@ def index():
     """Settings dashboard with organized sections"""
     # Get or create user preferences
     user_prefs = UserPreferences.get_for_user(current_user.id)
-    
+
     # Get organization info for org owners
     is_org_owner = current_user.organization and current_user.organization.owner and current_user.organization.owner.id == current_user.id
-    
+
     # Get system settings from file or use defaults
     try:
         with open("settings.json", "r") as f:
@@ -70,7 +72,7 @@ def index():
             'quiet_hours_end': '08:00'
         }
     }
-    
+
     # Merge defaults with existing settings
     for section, section_settings in system_defaults.items():
         if section not in system_settings:
@@ -79,11 +81,13 @@ def index():
             for key, value in section_settings.items():
                 if key not in system_settings[section]:
                     system_settings[section][key] = value
-
+                    
+    available_timezones = TimezoneUtils.get_available_timezones()
     return render_template('settings/index.html', 
                          user_prefs=user_prefs,
                          system_settings=system_settings,
-                         is_org_owner=is_org_owner)
+                         is_org_owner=is_org_owner,
+                         available_timezones=available_timezones)
 
 @settings_bp.route('/api/user-preferences')
 @login_required
@@ -114,15 +118,15 @@ def update_user_preferences():
     try:
         data = request.get_json()
         user_prefs = UserPreferences.get_for_user(current_user.id)
-        
+
         # Update fields that are provided
         for key, value in data.items():
             if hasattr(user_prefs, key):
                 setattr(user_prefs, key, value)
-        
+
         user_prefs.updated_at = datetime.utcnow()
         db.session.commit()
-        
+
         return jsonify({'success': True, 'message': 'Preferences updated successfully'})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -134,7 +138,7 @@ def update_system_settings():
     """Update system settings (requires permission)"""
     try:
         data = request.get_json()
-        
+
         # Load existing settings
         try:
             with open("settings.json", "r") as f:
@@ -161,10 +165,10 @@ def organization_management():
     if not current_user.organization:
         flash('No organization found', 'error')
         return redirect(url_for('settings.index'))
-    
+
     organization = current_user.organization
     users = User.query.filter_by(organization_id=organization.id).all()
-    
+
     return render_template('settings/organization.html', 
                          organization=organization,
                          users=users)
@@ -180,17 +184,17 @@ def add_user_to_organization():
         email = data.get('email')
         password = data.get('password')
         role_id = data.get('role_id')
-        
+
         if not all([username, email, password]):
             return jsonify({'error': 'All fields are required'}), 400
-        
+
         # Check if user already exists
         if User.query.filter_by(username=username).first():
             return jsonify({'error': 'Username already exists'}), 400
-        
+
         if User.query.filter_by(email=email).first():
             return jsonify({'error': 'Email already exists'}), 400
-        
+
         # Create new user
         new_user = User(
             username=username,
@@ -200,10 +204,10 @@ def add_user_to_organization():
             role_id=role_id,
             is_active=True
         )
-        
+
         db.session.add(new_user)
         db.session.commit()
-        
+
         return jsonify({'success': True, 'message': 'User added successfully'})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -309,3 +313,15 @@ def bulk_update_containers():
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 400
+
+@settings_bp.route('/update-timezone', methods=['POST'])
+@login_required
+def update_timezone():
+    timezone = request.form.get('timezone')
+    if timezone in TimezoneUtils.get_available_timezones():
+        current_user.timezone = timezone
+        db.session.commit()
+        flash('Timezone updated successfully', 'success')
+    else:
+        flash('Invalid timezone selected', 'error')
+    return redirect(url_for('settings.index'))

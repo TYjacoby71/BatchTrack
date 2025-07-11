@@ -66,6 +66,7 @@ class User(UserMixin, db.Model):
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
     last_login = db.Column(db.DateTime, nullable=True)
+    timezone = db.Column(db.String(64), default='America/New_York')  # User's preferred timezone
 
     # Relationship to role
     user_role = db.relationship('Role', backref='assigned_users')

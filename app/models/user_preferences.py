@@ -25,6 +25,9 @@ class UserPreferences(ScopedModelMixin, db.Model):
     compact_view = db.Column(db.Boolean, default=False)
     show_quick_actions = db.Column(db.Boolean, default=True)
     
+    # Timezone preferences (mirrors user.timezone for easy access)
+    timezone = db.Column(db.String(64), default='America/New_York')
+    
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     

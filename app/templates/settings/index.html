@@ -141,6 +141,25 @@
                     <div class="row">
                         <div class="col-md-6">
                             <h6>Profile Information</h6>
+                            
+                            <!-- Timezone Settings -->
+                            <form method="POST" action="{{ url_for('settings.update_timezone') }}" class="mb-3">
+                                <div class="mb-3">
+                                    <label for="timezone" class="form-label">Timezone</label>
+                                    <select name="timezone" id="timezone" class="form-select">
+                                        {% for tz in available_timezones %}
+                                        <option value="{{ tz }}" {% if tz == current_user.timezone %}selected{% endif %}>
+                                            {{ tz }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                    <div class="form-text">All timestamps will be displayed in your selected timezone</div>
+                                </div>
+                                <button type="submit" class="btn btn-primary btn-sm">Update Timezone</button>
+                            </form></div_col>
+                            
+                        <div class="col-md-6">
+                            <h6>Profile Actions</h6>
                             <div class="mb-3">
                                 <label class="form-label">Username</label>
                                 <input type="text" class="form-control" value="{{ current_user.username }}" readonly>

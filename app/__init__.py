@@ -149,6 +149,10 @@ def create_app():
     except ImportError:
         pass
 
+    # Register template filters
+    from .utils.template_filters import register_filters
+    register_filters(app)
+
     # Register filters
     from .filters.product_filters import register_filters
     register_filters(app)
