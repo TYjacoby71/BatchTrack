@@ -1,97 +1,89 @@
 {% extends "layout.html" %}
 {% block content %}
 <div x-data="{
-    systemSettings: {
+        settings: {{ system_settings | tojson }},
+        userPrefs: {{ user_prefs | tojson }},
+        saving: false,
         showMessage: false,
         message: '',
         messageType: 'success',
-        saving: false,
-        alerts: {
-            max_dashboard_alerts: 5,
-            low_stock_threshold: 10,
-            expiration_warning_days: 7,
-            show_expiration_alerts: true,
-            show_timer_alerts: true,
-            show_low_stock_alerts: true,
-            show_batch_alerts: true,
-            show_fault_alerts: true,
-            show_alert_badges: true
+
+        updateSystemSetting(section, key, value) {
+            this.settings[section] = this.settings[section] || {};
+            this.settings[section][key] = value;
+            this.saveSystemSettings();
         },
-        batch_rules: {
-            require_timer_completion: false,
-            allow_intermediate_tags: true,
-            require_finish_confirmation: true,
-            stuck_batch_hours: 24
+
+        updateUserPreference(key, value) {
+            this.userPrefs[key] = value;
+            this.saveUserPreferences();
         },
-        recipe_builder: {
-            enable_variations: true,
-            enable_containers: true,
-            auto_scale_recipes: false,
-            show_cost_breakdown: true
+
+        async saveSystemSettings() {
+            this.saving = true;
+            try {
+                const response = await fetch('/settings/api/system-settings', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify(this.settings)
+                });
+
+                if (response.ok) {
+                    this.showSuccessMessage('Settings saved successfully');
+                } else {
+                    this.showErrorMessage('Failed to save settings');
+                }
+            } catch (error) {
+                this.showErrorMessage('Error saving settings');
+            }
+            this.saving = false;
         },
-        inventory: {
-            enable_fifo_tracking: true,
-            show_expiration_dates: true,
-            auto_calculate_costs: true,
-            show_supplier_info: false,
-            enable_barcode_scanning: false,
-            enable_bulk_operations: true
+
+        async saveUserPreferences() {
+            this.saving = true;
+            try {
+                const response = await fetch('/settings/api/user-preferences', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify(this.userPrefs)
+                });
+
+                if (response.ok) {
+                    this.showSuccessMessage('Preferences saved successfully');
+                } else {
+                    this.showErrorMessage('Failed to save preferences');
+                }
+            } catch (error) {
+                this.showErrorMessage('Error saving preferences');
+            }
+            this.saving = false;
         },
-        products: {
-            enable_variants: true,
-            show_profit_margins: true,
-            track_production_costs: true,
-            enable_product_images: true,
-            auto_generate_skus: false
+
+        showSuccessMessage(msg) {
+            this.message = msg;
+            this.messageType = 'success';
+            this.showMessage = true;
+            setTimeout(() => this.showMessage = false, 3000);
         },
-        system: {
-            auto_backup: false,
-            per_page: 25,
-            enable_csv_export: true,
-            auto_save_forms: true
-        },
-        notifications: {
-            browser_notifications: false,
-            email_alerts: false,
-            alert_frequency: 'immediate',
-            quiet_hours_start: '22:00',
-            quiet_hours_end: '06:00'
+
+        showErrorMessage(msg) {
+            this.message = msg;
+            this.messageType = 'danger';
+            this.showMessage = true;
+            setTimeout(() => this.showMessage = false, 5000);
         }
-    },
-    updateSystemSetting(category, key, value) {
-        this.systemSettings[category][key] = value;
-    },
-    async saveAllSettings() {
-        this.systemSettings.saving = true;
-        try {
-            // Add save logic here when backend is ready
-            this.systemSettings.messageType = 'success';
-            this.systemSettings.message = 'Settings saved successfully';
-            this.systemSettings.showMessage = true;
-            setTimeout(() => { this.systemSettings.showMessage = false; }, 3000);
-        } catch (error) {
-            this.systemSettings.messageType = 'danger';
-            this.systemSettings.message = 'Error saving settings';
-            this.systemSettings.showMessage = true;
-            setTimeout(() => { this.systemSettings.showMessage = false; }, 3000);
-        } finally {
-            this.systemSettings.saving = false;
-        }
-    }
-}" class="container-fluid py-4">
+    }" class="container-fluid mt-4">
     <h2><i class="fas fa-cog"></i> System Settings</h2>
     <p class="text-muted">Configure BatchTrack to match your workflow and preferences</p>
 
     <!-- Success/Error Messages -->
-    <div x-show="showMessage" 
-         x-transition:enter="transition ease-out duration-150"
-         x-transition:enter-start="opacity-0 transform scale-95"
-         x-transition:enter-end="opacity-1 transform scale-100"
-         x-transition:leave="transition ease-in duration-75"
-         x-transition:leave-start="opacity-1 transform scale-100"
-         x-transition:leave-end="opacity-0 transform scale-95"
-         :class="messageType === 'success' ? 'alert alert-success' : 'alert alert-danger'"
-         class="alert alert-dismissible">
+    <div x-show="showMessage" x-transition class="alert" :class="messageType === 'success' ? 'alert-success' : 'alert-danger'" style="display: none;">
         <span x-text="message"></span>
         <button type="button" class="btn-close" @click="showMessage = false"></button>
     </div>
@@ -149,6 +141,25 @@
                     <div class="row">
                         <div class="col-md-6">
                             <h6>Profile Information</h6>
+                            
+                            <!-- Timezone Settings -->
+                            <form method="POST" action="{{ url_for('settings.update_timezone') }}" class="mb-3">
+                                <div class="mb-3">
+                                    <label for="timezone" class="form-label">Timezone</label>
+                                    <select name="timezone" id="timezone" class="form-select">
+                                        {% for tz in available_timezones %}
+                                        <option value="{{ tz }}" {% if tz == current_user.timezone %}selected{% endif %}>
+                                            {{ tz }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                    <div class="form-text">All timestamps will be displayed in your selected timezone</div>
+                                </div>
+                                <button type="submit" class="btn btn-primary btn-sm">Update Timezone</button>
+                            </form></div_col>
+                            
+                        <div class="col-md-6">
+                            <h6>Profile Actions</h6>
                             <div class="mb-3">
                                 <label class="form-label">Username</label>
                                 <input type="text" class="form-control" value="{{ current_user.username }}" readonly>
@@ -726,7 +737,8 @@
                 <form @submit.prevent="changePassword()">
                     <div class="mb-3">
                         <label for="currentPassword" class="form-label">Current Password</label>
-                        <input type="password" class="form-control" id="currentPassword" required                    </div>
+                        <input type="password" class="form-control" id="currentPassword" required>
+                    </div>
                     <div class="mb-3">
                         <label for="newPassword" class="form-label">New Password</label>
                         <input type="password" class="form-control" id="newPassword" required minlength="6">
@@ -738,7 +750,7 @@
                                         </div>
                 </form>
             </div>
-                        <div class="modal-footer">
+            <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" @click="showPasswordModal = false">Cancel</button>
                 <button type="button" class="btn btn-primary" @click="changePassword()">Change Password</button>
             </div>
@@ -747,12 +759,171 @@
 </div>
 
 <script>
-function getCSRFToken() {
-    const csrfToken = document.cookie
-        .split('; ')
-        .find(row => row.startsWith('csrftoken='))
-        ?.split('=')[1];
-    return csrfToken;
+function settingsManager() {
+    return {
+        userPrefs: {
+            max_dashboard_alerts: {{ user_prefs.max_dashboard_alerts }},
+            show_expiration_alerts: {{ user_prefs.show_expiration_alerts|tojson }},
+            show_timer_alerts: {{ user_prefs.show_timer_alerts|tojson }},
+            show_low_stock_alerts: {{ user_prefs.show_low_stock_alerts|tojson }},
+            show_batch_alerts: {{ user_prefs.show_batch_alerts|tojson }},
+            show_fault_alerts: {{ user_prefs.show_fault_alerts|tojson }},
+            expiration_warning_days: {{ user_prefs.expiration_warning_days }},
+            show_alert_badges: {{ user_prefs.show_alert_badges|tojson }},
+            dashboard_layout: '{{ user_prefs.dashboard_layout }}',
+            compact_view: {{ user_prefs.compact_view|tojson }},
+            show_quick_actions: {{ user_prefs.show_quick_actions|tojson }}
+        },
+        systemSettings: {{ system_settings|tojson }},
+        showMessage: false,
+        message: '',
+        messageType: 'success',
+        showPasswordModal: false,
+        saving: false,
+
+        async updateUserPreference(key, value) {
+            try {
+                const preferences = {};
+                preferences[key] = value;
+
+                const response = await fetch('/settings/api/user-preferences', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(preferences)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    this.showSuccessMessage('Preference updated successfully');
+                } else {
+                    this.showErrorMessage(result.error || 'Failed to update preference');
+                }
+            } catch (error) {
+                console.error('Error updating preference:', error);
+                this.showErrorMessage('Failed to update preference');
+            }
+        },
+
+        async updateSystemSetting(section, key, value) {
+            try {const settings = {};
+                settings[section] = {};
+                settings[section][key] = value;
+
+                const response = await fetch('/settings/api/system-settings', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(settings)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    this.showSuccessMessage('System setting updated successfully');
+                } else {
+                    this.showErrorMessage(result.error || 'Failed to update system setting');
+                }
+            } catch (error) {
+                console.error('Error updating system setting:', error);
+                this.showErrorMessage('Failed to update system setting');
+            }
+        },
+
+        async updateProfile(field, value) {
+            try {
+                const data = {};
+                data[field] = value;
+
+                const response = await fetch('/settings/profile/save', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    this.showSuccessMessage('Profile updated successfully');
+                } else {
+                    this.showErrorMessage(result.error || 'Failed to update profile');
+                }
+            } catch (error) {
+                console.error('Profile update error:', error);
+                this.showErrorMessage('Failed to update profile');
+            }
+        },
+
+        async changePassword() {
+            try {
+                const currentPassword = document.getElementById('currentPassword').value;
+                const newPassword = document.getElementById('newPassword').value;
+                const confirmPassword = document.getElementById('confirmPassword').value;
+
+                if (!currentPassword || !newPassword || !confirmPassword) {
+                    this.showErrorMessage('All password fields are required');
+                    return;
+                }
+
+                if (newPassword !== confirmPassword) {
+                    this.showErrorMessage('New passwords do not match');
+                    return;
+                }
+
+                if (newPassword.length < 6) {
+                    this.showErrorMessage('Password must be at least 6 characters');
+                    return;
+                }
+
+                const response = await fetch('/settings/password/change', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        current_password: currentPassword,
+                        new_password: newPassword,
+                        confirm_password: confirmPassword
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    this.showSuccessMessage('Password changed successfully');
+                    this.showPasswordModal = false;
+                    // Clear form
+                    document.getElementById('currentPassword').value = '';
+                    document.getElementById('newPassword').value = '';
+                    document.getElementById('confirmPassword').value = '';
+                } else {
+                    this.showErrorMessage(result.error || 'Failed to change password');
+                }
+            } catch (error) {
+                console.error('Password change error:', error);
+                this.showErrorMessage('Failed to change password');
+            }
+        },
+
+        showSuccessMessage(msg) {
+            this.message = msg;
+            this.messageType = 'success';
+            this.showMessage = true;
+            setTimeout(() => this.showMessage = false, 3000);
+        },
+
+        showErrorMessage(msg) {
+            this.message = msg;
+            this.messageType = 'error';
+            this.showMessage = true;
+            setTimeout(() => this.showMessage = false, 5000);
+        }
+    }
 }
 </script>
 {% endblock %}

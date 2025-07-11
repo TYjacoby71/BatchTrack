@@ -1,9 +1,8 @@
-from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for
+from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash
 from flask_login import login_required, current_user
 from . import settings_bp
-from ...models.user_preferences import UserPreferences
-from ...models import db
-from ...utils.settings import SettingsService
+from ...extensions import db
+from ...utils.timezone_utils import TimezoneUtils
 from ...models import db, Unit, User, InventoryItem, UserPreferences, Organization
 from ...utils.permissions import has_permission, require_permission
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -15,125 +14,80 @@ from . import settings_bp
 @settings_bp.route('/')
 @login_required
 def index():
-    """Main settings page"""
+    """Settings dashboard with organized sections"""
+    # Get or create user preferences
     user_prefs = UserPreferences.get_for_user(current_user.id)
 
+    # Get organization info for org owners
+    is_org_owner = current_user.organization and current_user.organization.owner and current_user.organization.owner.id == current_user.id
+
+    # Get system settings from file or use defaults
+    try:
+        with open("settings.json", "r") as f:
+            system_settings = json.load(f)
+    except FileNotFoundError:
+        system_settings = {}
+
+    # Ensure all required sections exist with defaults
+    system_defaults = {
+        'batch_rules': {
+            'require_timer_completion': False,
+            'allow_intermediate_tags': True,
+            'require_finish_confirmation': True,
+            'stuck_batch_hours': 24
+        },
+        'recipe_builder': {
+            'enable_variations': True,
+            'enable_containers': True,
+            'auto_scale_recipes': False,
+            'show_cost_breakdown': True
+        },
+        'inventory': {
+            'enable_fifo_tracking': True,
+            'show_expiration_dates': True,
+            'auto_calculate_costs': True,
+            'enable_barcode_scanning': False,
+            'show_supplier_info': True,
+            'enable_bulk_operations': True
+        },
+        'products': {
+            'enable_variants': True,
+            'show_profit_margins': True,
+            'auto_generate_skus': False,
+            'enable_product_images': True,
+            'track_production_costs': True
+        },
+        'system': {
+            'auto_backup': False,
+            'log_level': 'INFO',
+            'per_page': 25,
+            'enable_csv_export': True,
+            'auto_save_forms': False
+        },
+        'notifications': {
+            'browser_notifications': True,
+            'email_alerts': False,
+            'alert_frequency': 'real_time',
+            'quiet_hours_start': '22:00',
+            'quiet_hours_end': '08:00'
+        }
+    }
+
+    # Merge defaults with existing settings
+    for section, section_settings in system_defaults.items():
+        if section not in system_settings:
+            system_settings[section] = section_settings
+        else:
+            for key, value in section_settings.items():
+                if key not in system_settings[section]:
+                    system_settings[section][key] = value
+                    
+    available_timezones = TimezoneUtils.get_available_timezones()
     return render_template('settings/index.html', 
-                         user_prefs=user_prefs)
-
-@settings_bp.route('/api/all')
-@login_required
-def api_get_all_settings():
-    """Get all settings for the settings page"""
-    try:
-        # Get user preferences
-        user_prefs = UserPreferences.get_for_user(current_user.id)
-        user_prefs_dict = {
-            'expiration_warning_days': user_prefs.expiration_warning_days if user_prefs else 7,
-            'show_expiration_alerts': user_prefs.show_expiration_alerts if user_prefs else True,
-            'show_low_stock_alerts': user_prefs.show_low_stock_alerts if user_prefs else True,
-            'show_batch_alerts': user_prefs.show_batch_alerts if user_prefs else True,
-            'show_timer_alerts': user_prefs.show_timer_alerts if user_prefs else True,
-            'show_fault_alerts': user_prefs.show_fault_alerts if user_prefs else True,
-            'show_alert_badges': user_prefs.show_alert_badges if user_prefs else True,
-            'timezone': user_prefs.timezone if user_prefs else 'UTC'
-        }
-
-        # Get system settings (default empty structure for now)
-        system_settings = {
-            'alerts': {
-                'max_dashboard_alerts': 10,
-                'low_stock_threshold': 5,
-                'expiration_warning_days': 7,
-                'show_expiration_alerts': True,
-                'show_timer_alerts': True,
-                'show_low_stock_alerts': True,
-                'show_batch_alerts': True,
-                'show_fault_alerts': True,
-                'show_alert_badges': True
-            },
-            'batch_rules': {
-                'require_timer_completion': False,
-                'allow_intermediate_tags': True,
-                'require_finish_confirmation': True,
-                'stuck_batch_hours': 24
-            },
-            'recipe_builder': {
-                'enable_variations': True,
-                'enable_containers': True,
-                'auto_scale_recipes': True,
-                'show_cost_breakdown': True
-            },
-            'inventory': {
-                'enable_fifo_tracking': True,
-                'show_expiration_dates': True,
-                'auto_calculate_costs': True,
-                'show_supplier_info': False,
-                'enable_barcode_scanning': False,
-                'enable_bulk_operations': True
-            },
-            'products': {
-                'enable_variants': True,
-                'show_profit_margins': True,
-                'track_production_costs': True,
-                'enable_product_images': True,
-                'auto_generate_skus': False
-            },
-            'system': {
-                'auto_backup': False,
-                'per_page': 25,
-                'enable_csv_export': True,
-                'auto_save_forms': True
-            },
-            'notifications': {
-                'browser_notifications': False,
-                'email_alerts': False,
-                'alert_frequency': 'immediate',
-                'quiet_hours_start': '22:00',
-                'quiet_hours_end': '08:00'
-            }
-        }
-
-        return jsonify({
-            'user_preferences': user_prefs_dict,
-            'system_settings': system_settings
-        })
-
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@settings_bp.route('/api/save', methods=['POST'])
-@login_required
-def api_save_settings():
-    """Save all settings"""
-    try:
-        data = request.get_json()
-
-        # Save user preferences
-        if 'user_preferences' in data:
-            user_prefs = UserPreferences.get_for_user(current_user.id)
-            if not user_prefs:
-                user_prefs = UserPreferences(user_id=current_user.id)
-                db.session.add(user_prefs)
-
-            prefs_data = data['user_preferences']
-            user_prefs.expiration_warning_days = prefs_data.get('expiration_warning_days', 7)
-            user_prefs.show_expiration_alerts = prefs_data.get('show_expiration_alerts', True)
-            user_prefs.show_low_stock_alerts = prefs_data.get('show_low_stock_alerts', True)
-            user_prefs.show_batch_alerts = prefs_data.get('show_batch_alerts', True)
-            user_prefs.show_timer_alerts = prefs_data.get('show_timer_alerts', True)
-            user_prefs.show_fault_alerts = prefs_data.get('show_fault_alerts', True)
-            user_prefs.show_alert_badges = prefs_data.get('show_alert_badges', True)
-            user_prefs.timezone = prefs_data.get('timezone', 'UTC')
-
-        # System settings would be saved here (not implemented yet)
-
-        db.session.commit()
-        return jsonify({'success': True})
-
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+                         user_prefs=user_prefs,
+                         system_settings=system_settings,
+                         is_org_owner=is_org_owner,
+                         available_timezones=available_timezones)
 
 @settings_bp.route('/api/user-preferences')
 @login_required
@@ -152,8 +106,7 @@ def get_user_preferences():
             'show_alert_badges': user_prefs.show_alert_badges,
             'dashboard_layout': user_prefs.dashboard_layout,
             'compact_view': user_prefs.compact_view,
-            'show_quick_actions': user_prefs.show_quick_actions,
-            'timezone': user_prefs.timezone
+            'show_quick_actions': user_prefs.show_quick_actions
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -360,3 +313,15 @@ def bulk_update_containers():
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 400
+
+@settings_bp.route('/update-timezone', methods=['POST'])
+@login_required
+def update_timezone():
+    timezone = request.form.get('timezone')
+    if timezone in TimezoneUtils.get_available_timezones():
+        current_user.timezone = timezone
+        db.session.commit()
+        flash('Timezone updated successfully', 'success')
+    else:
+        flash('Invalid timezone selected', 'error')
+    return redirect(url_for('settings.index'))

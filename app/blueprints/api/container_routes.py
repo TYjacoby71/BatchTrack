@@ -39,10 +39,7 @@ def available_containers(recipe_id):
         scale = float(request.args.get('scale', '1.0'))
 
         # Scoped query to current user's organization
-        recipe = Recipe.query.filter_by(
-            id=recipe_id,
-            organization_id=current_user.organization_id
-        ).first()
+        recipe = Recipe.scoped().filter_by(id=recipe_id).first()
         if not recipe:
             return jsonify({"error": "Recipe not found"}), 404
 

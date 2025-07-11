@@ -1,11 +1,7 @@
 from datetime import datetime, timedelta, date
 from ...models import db, InventoryItem, InventoryHistory, ProductSKU, ProductSKUHistory, Batch
-from sqlalchemy import and_, or_, func
+from sqlalchemy import and_, or_
 from typing import List, Dict, Optional, Tuple
-from flask import current_app
-from flask_login import current_user
-from ...utils.timezone_utils import TimezoneUtils
-import pytz
 
 class ExpirationService:
     """Centralized service for all expiration-related operations"""
@@ -24,18 +20,8 @@ class ExpirationService:
         if not expiration_date:
             return None
         from ...utils.timezone_utils import TimezoneUtils
-        now = TimezoneUtils.utc_now()  # Use consistent UTC time
-
-        # Ensure both datetimes are timezone-aware or both are naive
-        if expiration_date.tzinfo is None:
-            # If expiration_date is naive, assume it's in UTC
-            import pytz
-            expiration_date = pytz.UTC.localize(expiration_date)
-
-        if now.tzinfo is None:
-            import pytz
-            now = pytz.UTC.localize(now)
-
+        now = TimezoneUtils.now_naive()  # Use naive datetime for comparison
+        # Use full datetime comparison for more precision
         time_diff = expiration_date - now
         return int(time_diff.total_seconds() / 86400)  # Convert seconds to days
 
@@ -98,155 +84,163 @@ class ExpirationService:
         return None
 
     @staticmethod
-    def get_expired_inventory_items():
-        """Get all expired inventory items across different models"""
-        from ...models import InventoryItem, ProductSKU
+    def get_expired_inventory_items() -> List[Dict]:
+        """Get all expired inventory items across the system"""
+        from flask_login import current_user
         from ...utils.timezone_utils import TimezoneUtils
+        now = TimezoneUtils.now_naive()
 
-        # Get current date in user's timezone
-        today = TimezoneUtils.now_naive().date()
+        # Get expired FIFO entries
+        expired_fifo = db.session.query(
+            InventoryHistory.inventory_item_id,
+            InventoryItem.name,
+            InventoryHistory.remaining_quantity,
+            InventoryHistory.unit,
+            InventoryHistory.expiration_date,
+            InventoryHistory.id.label('fifo_id')
+        ).join(InventoryItem).filter(
+            and_(
+                InventoryHistory.expiration_date != None,
+                InventoryHistory.expiration_date < now,
+                InventoryHistory.remaining_quantity > 0,
+                InventoryItem.organization_id == current_user.organization_id if current_user.is_authenticated and current_user.organization_id else True
+            )
+        ).all()
 
-        expired_items = {
-            'fifo_entries': [],
-            'product_inventory': []
+        # Get expired product SKUs with FIFO-based expiration and batch-aware calculation
+        from ...models import ProductSKU, ProductSKUHistory, Product, ProductVariant
+
+        # Get SKUs with remaining quantity from FIFO entries
+        expired_skus = db.session.query(
+            ProductSKUHistory.inventory_item_id,
+            Product.name.label('product_name'),
+            ProductVariant.name.label('variant_name'),
+            ProductSKU.size_label,
+            ProductSKUHistory.remaining_quantity,
+            ProductSKUHistory.unit,
+            ProductSKUHistory.id.label('history_id'),
+            ProductSKUHistory.batch_id,
+            ProductSKUHistory.expiration_date,
+            ProductSKUHistory.is_perishable
+        ).join(ProductSKU, ProductSKUHistory.inventory_item_id == ProductSKU.inventory_item_id
+        ).join(Product, ProductSKU.product_id == Product.id
+        ).join(ProductVariant, ProductSKU.variant_id == ProductVariant.id
+        ).join(InventoryItem, ProductSKU.inventory_item_id == InventoryItem.id).filter(
+            and_(
+                ProductSKUHistory.remaining_quantity > 0,
+                ProductSKUHistory.quantity_change > 0,  # Only addition entries
+                InventoryItem.organization_id == current_user.organization_id if current_user.is_authenticated and current_user.organization_id else True
+            )
+        ).all()
+
+        expired_products = []
+        for sku_entry in expired_skus:
+            expiration_date = None
+
+            # First check for FIFO-level expiration (direct expiration on the history entry)
+            if sku_entry.is_perishable and sku_entry.expiration_date:
+                expiration_date = sku_entry.expiration_date
+            # Fall back to batch-level expiration if no FIFO expiration
+            elif sku_entry.batch_id:
+                expiration_date = ExpirationService.get_batch_expiration_date(sku_entry.batch_id)
+
+            # Check if expired
+            if expiration_date and expiration_date < now:
+                expired_products.append({
+                    'inventory_item_id': sku_entry.inventory_item_id,
+                    'product_name': sku_entry.product_name,
+                    'variant_name': sku_entry.variant_name,
+                    'size_label': sku_entry.size_label,
+                    'quantity': sku_entry.remaining_quantity,
+                    'unit': sku_entry.unit,
+                    'expiration_date': expiration_date,
+                    'history_id': sku_entry.history_id
+                })
+
+        return {
+            'fifo_entries': expired_fifo,
+            'product_inventory': expired_products
         }
 
-        # Check expired FIFO entries from inventory history
-        from ...models import InventoryHistory
-        fifo_entries = InventoryHistory.query.filter(
-            InventoryHistory.remaining_quantity > 0,
-            InventoryHistory.expiration_date.isnot(None)
-        ).all()
-
-        for entry in fifo_entries:
-            if entry.expiration_date:
-                # Handle both date and datetime objects
-                exp_date = entry.expiration_date.date() if hasattr(entry.expiration_date, 'date') else entry.expiration_date
-                if exp_date < today:
-                    # Ensure expiration_date is a date object for template compatibility
-                    if hasattr(entry.expiration_date, 'date'):
-                        entry.expiration_date = entry.expiration_date.date()
-                    
-                    # Add fields needed by template
-                    entry.name = entry.inventory_item.name if entry.inventory_item else 'Unknown Item'
-                    entry.fifo_id = entry.id
-                    entry.unit = entry.unit
-                    
-                    expired_items['fifo_entries'].append(entry)
-
-        # Check product SKUs via their FIFO history entries
-        from ...models import InventoryItem
-        from ...models.product import ProductSKUHistory
-        
-        # Get expired SKU history entries (FIFO entries for products)
-        expired_sku_entries = db.session.query(ProductSKUHistory).join(
-            ProductSKU, ProductSKUHistory.inventory_item_id == ProductSKU.inventory_item_id
-        ).join(
-            InventoryItem, ProductSKU.inventory_item_id == InventoryItem.id
-        ).filter(
-            ProductSKUHistory.remaining_quantity > 0,
-            ProductSKUHistory.expiration_date.isnot(None),
-            InventoryItem.quantity > 0
-        ).all()
-
-        for entry in expired_sku_entries:
-            if entry.expiration_date:
-                # Handle both date and datetime objects
-                exp_date = entry.expiration_date.date() if hasattr(entry.expiration_date, 'date') else entry.expiration_date
-                if exp_date < today:
-                    # Ensure expiration_date is a date object for template compatibility
-                    if hasattr(entry.expiration_date, 'date'):
-                        entry.expiration_date = entry.expiration_date.date()
-                    
-                    # Get the SKU for display name
-                    sku = ProductSKU.query.filter_by(inventory_item_id=entry.inventory_item_id).first()
-                    
-                    # Add fields needed by template
-                    entry.product_id = sku.product_id if sku else 'Unknown'
-                    entry.variant = sku.variant.name if sku and sku.variant else 'N/A'
-                    entry.size_label = sku.size_label if sku else 'N/A'
-                    entry.quantity = entry.remaining_quantity
-                    entry.unit = entry.unit
-                    entry.product_inv_id = entry.id  # Use history entry ID for spoilage
-                    entry.sku_name = sku.display_name if sku else f'Product History #{entry.id}'
-                    entry.lot_number = entry.fifo_code if hasattr(entry, 'fifo_code') else f'LOT-{entry.id}'
-                    
-                    expired_items['product_inventory'].append(entry)
-
-        return expired_items
-
     @staticmethod
-    def get_expiring_soon_items(days_ahead=7):
+    def get_expiring_soon_items(days_ahead: int = 7) -> List[Dict]:
         """Get items expiring within specified days"""
-        from ...models import InventoryItem, ProductSKU
+        from flask_login import current_user
         from ...utils.timezone_utils import TimezoneUtils
+        now = TimezoneUtils.now_naive()
+        future_date = now + timedelta(days=days_ahead)
 
-        # Get current date and warning threshold in user's timezone
-        today = TimezoneUtils.now_naive().date()
-        warning_threshold = today + timedelta(days=days_ahead)
-
-        expiring_items = {'fifo_entries': [], 'product_inventory': []}
-
-        # Check FIFO entries from inventory history
-        from ...models import InventoryHistory
-        fifo_entries = InventoryHistory.query.filter(
-            InventoryHistory.remaining_quantity > 0,
-            InventoryHistory.expiration_date.isnot(None)
+        # FIFO entries expiring soon
+        expiring_fifo = db.session.query(
+            InventoryHistory.inventory_item_id,
+            InventoryItem.name,
+            InventoryHistory.remaining_quantity,
+            InventoryHistory.unit,
+            InventoryHistory.expiration_date,
+            InventoryHistory.id.label('fifo_id')
+        ).join(InventoryItem).filter(
+            and_(
+                InventoryHistory.expiration_date != None,
+                InventoryHistory.expiration_date.between(now, future_date),
+                InventoryHistory.remaining_quantity > 0,
+                InventoryItem.organization_id == current_user.organization_id if current_user.is_authenticated and current_user.organization_id else True
+            )
         ).all()
 
-        for entry in fifo_entries:
-            if entry.expiration_date:
-                # Handle both date and datetime objects
-                exp_date = entry.expiration_date.date() if hasattr(entry.expiration_date, 'date') else entry.expiration_date
-                if today <= exp_date <= warning_threshold:
-                    # Ensure expiration_date is a date object for template compatibility
-                    if hasattr(entry.expiration_date, 'date'):
-                        entry.expiration_date = entry.expiration_date.date()
-                    
-                    # Add fields needed by template
-                    entry.name = entry.inventory_item.name if entry.inventory_item else 'Unknown Item'
-                    entry.fifo_id = entry.id
-                    entry.unit = entry.unit
-                    
-                    expiring_items['fifo_entries'].append(entry)
+        # Product SKUs expiring soon with FIFO-based expiration and batch-aware calculation
+        from ...models import ProductSKU, ProductSKUHistory, Product, ProductVariant
 
-        # Check product SKU history entries that are expiring soon
-        from ...models.product import ProductSKUHistory
-        
-        expiring_sku_entries = db.session.query(ProductSKUHistory).join(
-            ProductSKU, ProductSKUHistory.inventory_item_id == ProductSKU.inventory_item_id
-        ).join(
-            InventoryItem, ProductSKU.inventory_item_id == InventoryItem.id
-        ).filter(
-            ProductSKUHistory.remaining_quantity > 0,
-            ProductSKUHistory.expiration_date.isnot(None),
-            InventoryItem.quantity > 0
+        # Get SKUs with remaining quantity from FIFO entries
+        expiring_skus = db.session.query(
+            ProductSKUHistory.inventory_item_id,
+            Product.name.label('product_name'),
+            ProductVariant.name.label('variant_name'),
+            ProductSKU.size_label,
+            ProductSKUHistory.remaining_quantity,
+            ProductSKUHistory.unit,
+            ProductSKUHistory.id.label('history_id'),
+            ProductSKUHistory.batch_id,
+            ProductSKUHistory.expiration_date,
+            ProductSKUHistory.is_perishable
+        ).join(ProductSKU, ProductSKUHistory.inventory_item_id == ProductSKU.inventory_item_id
+        ).join(Product, ProductSKU.product_id == Product.id
+        ).join(ProductVariant, ProductSKU.variant_id == ProductVariant.id
+        ).join(InventoryItem, ProductSKU.inventory_item_id == InventoryItem.id).filter(
+            and_(
+                ProductSKUHistory.remaining_quantity > 0,
+                ProductSKUHistory.quantity_change > 0,  # Only addition entries
+                InventoryItem.organization_id == current_user.organization_id if current_user.is_authenticated and current_user.organization_id else True
+            )
         ).all()
 
-        for entry in expiring_sku_entries:
-            if entry.expiration_date:
-                # Handle both date and datetime objects
-                exp_date = entry.expiration_date.date() if hasattr(entry.expiration_date, 'date') else entry.expiration_date
-                if today <= exp_date <= warning_threshold:
-                    # Ensure expiration_date is a date object for template compatibility
-                    if hasattr(entry.expiration_date, 'date'):
-                        entry.expiration_date = entry.expiration_date.date()
-                    
-                    # Get the SKU for display name
-                    sku = ProductSKU.query.filter_by(inventory_item_id=entry.inventory_item_id).first()
-                    
-                    # Add fields needed by template
-                    entry.product_id = sku.product_id if sku else 'Unknown'
-                    entry.variant = sku.variant.name if sku and sku.variant else 'N/A'
-                    entry.size_label = sku.size_label if sku else 'N/A'
-                    entry.quantity = entry.remaining_quantity
-                    entry.unit = entry.unit
-                    entry.sku_name = sku.display_name if sku else f'Product History #{entry.id}'
-                    entry.lot_number = entry.fifo_code if hasattr(entry, 'fifo_code') else f'LOT-{entry.id}'
-                    
-                    expiring_items['product_inventory'].append(entry)
+        expiring_products = []
+        for sku_entry in expiring_skus:
+            expiration_date = None
 
-        return expiring_items
+            # First check for FIFO-level expiration (direct expiration on the history entry)
+            if sku_entry.is_perishable and sku_entry.expiration_date:
+                expiration_date = sku_entry.expiration_date
+            # Fall back to batch-level expiration if no FIFO expiration
+            elif sku_entry.batch_id:
+                expiration_date = ExpirationService.get_batch_expiration_date(sku_entry.batch_id)
+
+            # Check if expiring soon
+            if expiration_date and now <= expiration_date <= future_date:
+                expiring_products.append({
+                    'inventory_item_id': sku_entry.inventory_item_id,
+                    'product_name': sku_entry.product_name,
+                    'variant_name': sku_entry.variant_name,
+                    'size_label': sku_entry.size_label,
+                    'quantity': sku_entry.remaining_quantity,
+                    'unit': sku_entry.unit,
+                    'expiration_date': expiration_date,
+                    'history_id': sku_entry.history_id
+                })
+
+        return {
+            'fifo_entries': expiring_fifo,
+            'product_inventory': expiring_products
+        }
 
     @staticmethod
     def set_batch_expiration(batch_id: int, is_perishable: bool, shelf_life_days: Optional[int] = None):
@@ -442,21 +436,18 @@ class ExpirationService:
 
         elif item_type == 'product':
             # Handle product SKU history spoilage
-            from ...models.product import ProductSKUHistory
+            from ...services.product_inventory_service import ProductInventoryService
 
             history_entry = ProductSKUHistory.query.get(item_id)
             if not history_entry or float(history_entry.remaining_quantity) <= 0:
                 raise ValueError("Product history entry not found or has no remaining quantity")
 
-            # Use centralized inventory adjustment service for products
-            success = process_inventory_adjustment(
-                item_id=history_entry.inventory_item_id,
+            # Use product inventory service to deduct the spoiled quantity
+            success = ProductInventoryService.deduct_stock(
+                inventory_item_id=history_entry.inventory_item_id,
                 quantity=float(history_entry.remaining_quantity),
                 change_type='spoil',
-                unit=history_entry.unit,
-                notes=f"Marked as spoiled - expired on {history_entry.expiration_date}",
-                created_by=current_user.id if current_user.is_authenticated else None,
-                item_type='product'
+                notes=f"Marked as spoiled - expired batch"
             )
 
             return 1 if success else 0
@@ -478,84 +469,4 @@ class ExpirationService:
             'expired_count': len(expired_items['fifo_entries']) + len(expired_items['product_inventory']),
             'expiring_soon_count': len(expiring_soon['fifo_entries']) + len(expiring_soon['product_inventory']),
             'total_expiration_issues': len(expired_items['fifo_entries']) + len(expired_items['product_inventory']) + len(expiring_soon['fifo_entries']) + len(expiring_soon['product_inventory'])
-        }
-
-    @staticmethod
-    def get_expiring_items(days_ahead=7, organization_id=None):
-        """Get items expiring within the specified number of days"""
-        if organization_id is None and current_user.is_authenticated:
-            organization_id = current_user.organization_id
-
-        if not organization_id:
-            return []
-
-        # Calculate cutoff date using user's timezone
-        now = TimezoneUtils.now_naive()  # Get current time in user's timezone
-        cutoff_date = now + timedelta(days=days_ahead)
-
-        # Query for expiring items
-        expiring_items = InventoryItem.query.filter(
-            InventoryItem.organization_id == organization_id,
-            InventoryItem.expiration_date <= cutoff_date
-        ).all()
-
-        return expiring_items
-
-    @staticmethod
-    def get_expired_items(organization_id=None):
-        """Get items that have already expired"""
-        if organization_id is None and current_user.is_authenticated:
-            organization_id = current_user.organization_id
-
-        if not organization_id:
-            return []
-
-        # Items expired as of today in user's timezone
-        today = TimezoneUtils.now_naive().date()
-
-        expired_items = InventoryItem.query.filter(
-            InventoryItem.organization_id == organization_id,
-            func.date(InventoryItem.expiration_date) < today
-        ).all()
-
-        return expired_items
-
-    @staticmethod
-    def get_expiration_summary(organization_id=None):
-        """Get a summary of expiring and expired items"""
-        if organization_id is None and current_user.is_authenticated:
-            organization_id = current_user.organization_id
-
-        if not organization_id:
-            return {
-                'expiring_soon': 0,
-                'expired': 0,
-                'total_items': 0,
-                'needs_attention': 0
-            }
-
-        today = TimezoneUtils.now_naive().date()
-
-        expiring_soon = InventoryItem.query.filter(
-            InventoryItem.organization_id == organization_id,
-            InventoryItem.expiration_date >= today,
-            InventoryItem.expiration_date <= (today + timedelta(days=7))
-        ).count()
-
-        expired = InventoryItem.query.filter(
-            InventoryItem.organization_id == organization_id,
-            func.date(InventoryItem.expiration_date) < today
-        ).count()
-
-        total_items = InventoryItem.query.filter(
-            InventoryItem.organization_id == organization_id
-        ).count()
-
-        needs_attention = expiring_soon + expired
-
-        return {
-            'expiring_soon': expiring_soon,
-            'expired': expired,
-            'total_items': total_items,
-            'needs_attention': needs_attention
         }
