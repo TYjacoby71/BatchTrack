@@ -57,13 +57,23 @@ async function updateClock() {
       if (response.ok) {
         const data = await response.json();
         const serverTime = new Date(data.current_time);
-        clock.textContent = '🕐 ' + serverTime.toLocaleTimeString();
+        
+        // Format time in user's locale with timezone info
+        const timeOptions = {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          timeZoneName: 'short'
+        };
+        
+        clock.textContent = '🕐 ' + serverTime.toLocaleTimeString(undefined, timeOptions);
       } else {
         // Fallback to local time if server endpoint unavailable
         const now = new Date();
         clock.textContent = '🕐 ' + now.toLocaleTimeString();
       }
     } catch (error) {
+      console.log('Clock update error:', error);
       // Fallback to local time on error
       const now = new Date();
       clock.textContent = '🕐 ' + now.toLocaleTimeString();
