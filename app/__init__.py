@@ -57,7 +57,7 @@ def create_app():
     from .blueprints.settings import settings_bp
     from .blueprints.quick_add import quick_add_bp
     from .blueprints.timers import timers_bp
-    from .blueprints.products import products_bp
+    from .blueprints.products import products_bp as main_products_bp
     from .blueprints.expiration import expiration_bp
     from .blueprints.api.container_routes import container_api_bp
 
@@ -70,7 +70,7 @@ def create_app():
     app.register_blueprint(settings_bp, url_prefix='/settings')
     app.register_blueprint(quick_add_bp, url_prefix='/quick_add')
     app.register_blueprint(timers_bp, url_prefix='/timers')
-    app.register_blueprint(products_bp, url_prefix='/products')
+    app.register_blueprint(main_products_bp, url_prefix='/products')
     app.register_blueprint(expiration_bp, url_prefix='/expiration')
     app.register_blueprint(container_api_bp)
 
