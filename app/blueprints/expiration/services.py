@@ -2,6 +2,9 @@ from datetime import datetime, timedelta, date
 from ...models import db, InventoryItem, InventoryHistory, ProductSKU, ProductSKUHistory, Batch
 from sqlalchemy import and_, or_
 from typing import List, Dict, Optional, Tuple
+from flask import current_app
+from flask_login import current_user
+from ...utils.timezone_utils import TimezoneUtils
 
 class ExpirationService:
     """Centralized service for all expiration-related operations"""
@@ -469,4 +472,84 @@ class ExpirationService:
             'expired_count': len(expired_items['fifo_entries']) + len(expired_items['product_inventory']),
             'expiring_soon_count': len(expiring_soon['fifo_entries']) + len(expiring_soon['product_inventory']),
             'total_expiration_issues': len(expired_items['fifo_entries']) + len(expired_items['product_inventory']) + len(expiring_soon['fifo_entries']) + len(expiring_soon['product_inventory'])
+        }
+
+    @staticmethod
+    def get_expiring_items(days_ahead=7, organization_id=None):
+        """Get items expiring within the specified number of days"""
+        if organization_id is None and current_user.is_authenticated:
+            organization_id = current_user.organization_id
+
+        if not organization_id:
+            return []
+
+        # Calculate cutoff date using user's timezone
+        now = TimezoneUtils.now_naive()  # Get current time in user's timezone
+        cutoff_date = now + timedelta(days=days_ahead)
+
+        # Query for expiring items
+        expiring_items = InventoryItem.query.filter(
+            InventoryItem.organization_id == organization_id,
+            InventoryItem.expiration_date <= cutoff_date
+        ).all()
+
+        return expiring_items
+
+    @staticmethod
+    def get_expired_items(organization_id=None):
+        """Get items that have already expired"""
+        if organization_id is None and current_user.is_authenticated:
+            organization_id = current_user.organization_id
+
+        if not organization_id:
+            return []
+
+        # Items expired as of today in user's timezone
+        today = TimezoneUtils.now_naive().date()
+
+        expired_items = InventoryItem.query.filter(
+            InventoryItem.organization_id == organization_id,
+            func.date(InventoryItem.expiration_date) < today
+        ).all()
+
+        return expired_items
+
+    @staticmethod
+    def get_expiration_summary(organization_id=None):
+        """Get a summary of expiring and expired items"""
+        if organization_id is None and current_user.is_authenticated:
+            organization_id = current_user.organization_id
+
+        if not organization_id:
+            return {
+                'expiring_soon': 0,
+                'expired': 0,
+                'total_items': 0,
+                'needs_attention': 0
+            }
+
+        today = TimezoneUtils.now_naive().date()
+
+        expiring_soon = InventoryItem.query.filter(
+            InventoryItem.organization_id == organization_id,
+            InventoryItem.expiration_date >= today,
+            InventoryItem.expiration_date <= (today + timedelta(days=7))
+        ).count()
+
+        expired = InventoryItem.query.filter(
+            InventoryItem.organization_id == organization_id,
+            func.date(InventoryItem.expiration_date) < today
+        ).count()
+
+        total_items = InventoryItem.query.filter(
+            InventoryItem.organization_id == organization_id
+        ).count()
+
+        needs_attention = expiring_soon + expired
+
+        return {
+            'expiring_soon': expiring_soon,
+            'expired': expired,
+            'total_items': total_items,
+            'needs_attention': needs_attention
         }

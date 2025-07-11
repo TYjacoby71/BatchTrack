@@ -1,8 +1,7 @@
-
 // Expiration alerts integration
 document.addEventListener('DOMContentLoaded', function() {
     loadExpirationSummary();
-    
+
     // Refresh every 5 minutes
     setInterval(loadExpirationSummary, 5 * 60 * 1000);
 });

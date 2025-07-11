@@ -9,9 +9,12 @@ class TimezoneUtils:
     @staticmethod
     def get_user_timezone():
         """Get user's configured timezone, default to Eastern Time"""
-        # You can extend this to get user's actual timezone from settings
         try:
-            return pytz.timezone('America/New_York')  # Eastern Time
+            from flask_login import current_user
+            if current_user.is_authenticated and hasattr(current_user, 'preferences') and current_user.preferences:
+                if current_user.preferences.timezone:
+                    return pytz.timezone(current_user.preferences.timezone)
+            return pytz.timezone('America/New_York')  # Eastern Time default
         except:
             return timezone.utc  # Fallback to UTC
     
