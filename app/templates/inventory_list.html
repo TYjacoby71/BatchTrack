@@ -282,7 +282,9 @@
 
         <!-- Pagination for Ingredients -->
         <div class="d-flex justify-content-between align-items-center p-3 border-top">
-          <div id="ingredientsInfo" class="text-muted"></div>
+          <div id="ingredientsInfo" class="text-muted">
+          <small class="text-muted">Last updated: {{ TimezoneUtils.format_for_user(item.last_updated, '%Y-%m-%d %H:%M') if item.last_updated else 'Never' }}</small>
+          </div>
           <nav>
             <ul class="pagination pagination-sm mb-0" id="ingredientsPagination">
             </ul>

@@ -70,11 +70,11 @@
                     <!-- User Dashboard -->
                     <li><a class="dropdown-item" href="{{ url_for('app_routes.dashboard') }}">User Dashboard</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('index') }}">Homepage</a></li>
-                    
+
                     {% if is_organization_owner() and has_subscription_feature('team_management') %}
                     <li><a class="dropdown-item" href="#"><i class="fas fa-users-cog"></i> Organization Dashboard</a></li>
                     {% endif %}
-                    
+
                     <li><hr class="dropdown-divider"></li>
 
                     <!-- Core Features -->
@@ -156,6 +156,7 @@
 
             {% endwith %}
 
+            {% set TimezoneUtils = TimezoneUtils_global() %}
             {% block content %}{% endblock %}
         </div>
     </main>

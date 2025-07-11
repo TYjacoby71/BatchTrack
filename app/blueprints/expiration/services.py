@@ -32,9 +32,14 @@ class ExpirationService:
             return None
         from ...utils.timezone_utils import TimezoneUtils
         now = TimezoneUtils.now_naive()  # Use naive datetime for comparison
-        # Use full datetime comparison for more precision
-        time_diff = expiration_date - now
-        return int(time_diff.total_seconds() / 86400)  # Convert seconds to days
+        
+        # Ensure expiration date is naive for consistent comparison
+        expiration_naive = expiration_date.replace(tzinfo=None) if expiration_date.tzinfo else expiration_date
+        
+        # Use exact time difference calculation
+        time_diff_seconds = (expiration_naive - now).total_seconds()
+        # Return fractional days rounded to nearest integer for precision
+        return round(time_diff_seconds / 86400)
 
     @staticmethod
     def get_life_remaining_percent(entry_date: datetime, expiration_date: datetime) -> Optional[float]:
@@ -44,13 +49,21 @@ class ExpirationService:
 
         from ...utils.timezone_utils import TimezoneUtils
         now = TimezoneUtils.now_naive()
-        total_life = (expiration_date - entry_date).total_seconds()
-        if total_life <= 0:
+        
+        # Ensure all timestamps are naive for consistent comparison
+        entry_naive = entry_date.replace(tzinfo=None) if entry_date.tzinfo else entry_date
+        expiration_naive = expiration_date.replace(tzinfo=None) if expiration_date.tzinfo else expiration_date
+        
+        # Calculate exact time progression
+        total_life_seconds = (expiration_naive - entry_naive).total_seconds()
+        time_remaining_seconds = (expiration_naive - now).total_seconds()
+        
+        if total_life_seconds <= 0:
             return 0.0
 
-        time_passed = (now - entry_date).total_seconds()
-        remaining = max(0, total_life - time_passed)
-        return (remaining / total_life) * 100
+        # Calculate percentage based on time remaining vs total life
+        life_remaining_percent = max(0.0, (time_remaining_seconds / total_life_seconds) * 100)
+        return min(100.0, life_remaining_percent)
 
     @staticmethod
     def update_fifo_expiration_data(inventory_item_id: int, shelf_life_days: int):
@@ -396,17 +409,23 @@ class ExpirationService:
         now = TimezoneUtils.now_naive()
 
         for entry in entries:
-            if entry.timestamp and entry.expiration_date:
-                # Calculate life remaining percentage based on timestamps
-                total_life_seconds = (entry.expiration_date - entry.timestamp).total_seconds()
+            if entry.expiration_date and entry.timestamp and entry.shelf_life_days:
+                # Ensure all timestamps are naive for consistent comparison
+                entry_timestamp = entry.timestamp.replace(tzinfo=None) if entry.timestamp.tzinfo else entry.timestamp
+                expiration_date = entry.expiration_date.replace(tzinfo=None) if entry.expiration_date.tzinfo else entry.expiration_date
+                
+                # Calculate exact time progression using centralized time system
+                total_life_seconds = (expiration_date - entry_timestamp).total_seconds()
+                time_elapsed_seconds = (now - entry_timestamp).total_seconds()
+                time_remaining_seconds = (expiration_date - now).total_seconds()
+                
+                # Calculate freshness percentage based on time remaining vs total life
                 if total_life_seconds <= 0:
                     life_remaining_percent = 0.0
                 else:
-                    time_passed_seconds = (now - entry.timestamp).total_seconds()
-                    remaining_seconds = max(0, total_life_seconds - time_passed_seconds)
-                    life_remaining_percent = (remaining_seconds / total_life_seconds) * 100
+                    life_remaining_percent = max(0.0, (time_remaining_seconds / total_life_seconds) * 100)
                 
-                # Ensure freshness percentage doesn't exceed 100%
+                # Ensure freshness percentage is between 0 and 100
                 life_remaining_percent = min(100.0, max(0.0, life_remaining_percent))
 
                 # Weight by quantity

@@ -3,7 +3,7 @@ from flask_login import login_required, current_user
 from ...models import Recipe, InventoryItem, db, Batch, BatchContainer, ExtraBatchContainer
 from app.services.unit_conversion import ConversionEngine
 
-container_api_bp = Blueprint('container_api', __name__, url_prefix='/api')
+container_api_bp = Blueprint('container_api', __name__)
 
 @container_api_bp.route('/debug-containers')
 @login_required
@@ -126,8 +126,12 @@ def get_available_containers():
 def get_batch_containers(batch_id):
     """Get all containers for a batch with summary"""
     try:
-        batch = Batch.query.get_or_404(batch_id)
-        containers = BatchContainer.query.filter_by(batch_id=batch_id).all()
+        # Use scoped query to ensure batch belongs to current user's organization
+        batch = Batch.scoped().filter_by(id=batch_id).first_or_404()
+        containers = BatchContainer.query.filter_by(
+            batch_id=batch_id,
+            organization_id=current_user.organization_id
+        ).all()
 
         container_data = []
         total_capacity = 0
@@ -181,7 +185,11 @@ def get_batch_containers(batch_id):
 def remove_batch_container(batch_id, container_id):
     """Remove a container from a batch"""
     try:
-        container = BatchContainer.query.filter_by(id=container_id, batch_id=batch_id).first_or_404()
+        container = BatchContainer.query.filter_by(
+            id=container_id, 
+            batch_id=batch_id,
+            organization_id=current_user.organization_id
+        ).first_or_404()
 
         # Restore inventory if not one-time use
         if not getattr(container, 'one_time_use', False) and container.container_item_id:
@@ -214,13 +222,21 @@ def adjust_batch_container(batch_id, container_id):
         adjustment_type = data.get('adjustment_type')
         notes = data.get('notes', '')
 
-        batch = Batch.query.get_or_404(batch_id)
+        batch = Batch.scoped().filter_by(id=batch_id).first_or_404()
 
         # Check if it's a regular container or extra container
-        container_record = BatchContainer.query.filter_by(id=container_id, batch_id=batch_id).first()
+        container_record = BatchContainer.query.filter_by(
+            id=container_id, 
+            batch_id=batch_id,
+            organization_id=current_user.organization_id
+        ).first()
         if not container_record:
             from ...models import ExtraBatchContainer
-            container_record = ExtraBatchContainer.query.filter_by(id=container_id, batch_id=batch_id).first_or_404()
+            container_record = ExtraBatchContainer.query.filter_by(
+                id=container_id, 
+                batch_id=batch_id,
+                organization_id=current_user.organization_id
+            ).first_or_404()
             is_extra_container = True
         else:
             is_extra_container = False
