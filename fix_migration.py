@@ -11,6 +11,7 @@ def fix_migration_manually():
     """Fix the migration by dropping temp table and updating version"""
     # Try common database locations
     possible_paths = [
+        "instance/batchtrack.db",
         "instance/database.db",
         "database.db",
         "app.db"
