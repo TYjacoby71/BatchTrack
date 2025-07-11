@@ -37,7 +37,7 @@ def upgrade():
             print("is_active column already exists, skipping...")
 
     # Check if user_preferences table and indexes exist
-    user_prefs_tables = [table['name'] for table in inspector.get_table_names()]
+    user_prefs_tables = inspector.get_table_names()
     
     if 'user_preferences' in user_prefs_tables:
         # Get existing indexes for user_preferences table
