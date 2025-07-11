@@ -1,11 +1,10 @@
-
 from ..models import User, Organization, Role
 from ..extensions import db
 from werkzeug.security import generate_password_hash
 
 def seed_users():
     """Seed default users into the database"""
-    
+
     # Get or create default organization
     org = Organization.query.first()
     if not org:
@@ -18,17 +17,17 @@ def seed_users():
         print(f"✅ Created organization: {org.name} (ID: {org.id})")
     else:
         print(f"ℹ️  Using existing organization: {org.name} (ID: {org.id})")
-    
+
     # Get roles from database - these should exist from role_permission_seeder
     developer_role = Role.query.filter_by(name='developer').first()
     org_owner_role = Role.query.filter_by(name='organization_owner').first()
     manager_role = Role.query.filter_by(name='manager').first()
     operator_role = Role.query.filter_by(name='operator').first()
-    
+
     if not developer_role or not org_owner_role:
         print("❌ Required roles not found. Please run 'flask seed-roles-permissions' first.")
         return
-    
+
     # Create developer user if it doesn't exist
     if not User.query.filter_by(username='dev').first():
         developer_user = User(
@@ -53,7 +52,7 @@ def seed_users():
             dev_user.user_type = 'developer'
             dev_user.role_id = developer_role.id
             print(f"✅ Updated developer user with user_type and role")
-    
+
     # Create organization owner (admin) user if it doesn't exist
     if not User.query.filter_by(username='admin').first():
         admin_user = User(
@@ -79,7 +78,7 @@ def seed_users():
             admin_user.role_id = org_owner_role.id
             admin_user.is_owner = True
             print(f"✅ Updated admin user with user_type and role")
-    
+
     # Create a sample manager user if it doesn't exist
     if not User.query.filter_by(username='manager').first() and manager_role:
         manager_user = User(
@@ -104,7 +103,7 @@ def seed_users():
                 manager_user.user_type = 'team_member'
                 manager_user.role_id = manager_role.id if manager_role else manager_user.role_id
                 print(f"✅ Updated manager user with user_type")
-    
+
     # Create sample operator user if it doesn't exist
     if not User.query.filter_by(username='operator').first() and operator_role:
         operator_user = User(
@@ -129,23 +128,23 @@ def seed_users():
                 operator_user.user_type = 'team_member'
                 operator_user.role_id = operator_role.id if operator_role else operator_user.role_id
                 print(f"✅ Updated operator user with user_type")
-    
+
     db.session.commit()
     print("✅ User seeding completed")
 
 def update_existing_users_with_roles():
     """Update existing users to have database role assignments and user_type"""
     users = User.query.all()
-    
+
     # Get roles
     developer_role = Role.query.filter_by(name='developer').first()
     org_owner_role = Role.query.filter_by(name='organization_owner').first()
     manager_role = Role.query.filter_by(name='manager').first()
     operator_role = Role.query.filter_by(name='operator').first()
-    
+
     for user in users:
         updated = False
-        
+
         # Set user_type if missing
         if not hasattr(user, 'user_type') or not user.user_type:
             if user.username == 'dev':
@@ -155,7 +154,7 @@ def update_existing_users_with_roles():
             else:
                 user.user_type = 'team_member'
             updated = True
-        
+
         # Set role_id if missing
         if not user.role_id:
             if user.user_type == 'developer' and developer_role:
@@ -166,14 +165,14 @@ def update_existing_users_with_roles():
                 # Assign manager role by default for team members
                 user.role_id = manager_role.id if manager_role else org_owner_role.id
             updated = True
-        
+
         # Ensure is_active is set
         if not hasattr(user, 'is_active') or user.is_active is None:
             user.is_active = True
             updated = True
-        
+
         if updated:
             print(f"✅ Updated user {user.username} with user_type: {user.user_type}")
-    
+
     db.session.commit()
     print("✅ Existing users updated with database roles and user_type")
