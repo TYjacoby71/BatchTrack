@@ -161,7 +161,8 @@ class ExpirationService:
                     'quantity': sku_entry.remaining_quantity,
                     'unit': sku_entry.unit,
                     'expiration_date': expiration_date,
-                    'history_id': sku_entry.history_id
+                    'history_id': sku_entry.history_id,
+                    'product_inv_id': sku_entry.history_id  # Add this for template compatibility
                 })
 
         return {
@@ -241,7 +242,8 @@ class ExpirationService:
                     'quantity': sku_entry.remaining_quantity,
                     'unit': sku_entry.unit,
                     'expiration_date': expiration_date,
-                    'history_id': sku_entry.history_id
+                    'history_id': sku_entry.history_id,
+                    'product_inv_id': sku_entry.history_id  # Add this for template compatibility
                 })
 
         return {
