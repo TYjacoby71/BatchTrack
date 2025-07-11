@@ -423,7 +423,8 @@ async function markAsSpoiled(type, id) {
 
         if (response.ok) {
             alert(`Marked ${data.spoiled_count} item as spoiled`);
-            location.reload();
+            // Stay on expiration page by reloading the current URL
+            window.location.href = '/expiration/alerts';
         } else {
             alert(`Error: ${data.error}`);
         }
