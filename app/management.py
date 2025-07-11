@@ -27,10 +27,10 @@ def seed_all_command():
         seed_roles_and_permissions()
 
         seed_units()
-        
+
         # Seed users first to create organization
         seed_users()
-        
+
         # Get the organization ID from the first organization
         from .models import Organization
         org = Organization.query.first()
@@ -88,6 +88,25 @@ def seed_units_only():
     seed_units()
     click.echo('✅ Units seeded!')
 
+@click.command()
+@with_appcontext
+def activate_users():
+    """Activate all inactive users"""
+    from .models import User
+    from .extensions import db
+
+    inactive_users = User.query.filter_by(is_active=False).all()
+    if not inactive_users:
+        click.echo("No inactive users found.")
+        return
+
+    for user in inactive_users:
+        user.is_active = True
+        click.echo(f"Activated user: {user.username}")
+
+    db.session.commit()
+    click.echo(f"Activated {len(inactive_users)} users.")
+
 def register_commands(app):
     """Register CLI commands with the app"""
     app.cli.add_command(init_db)
@@ -96,3 +115,4 @@ def register_commands(app):
     app.cli.add_command(seed_roles_permissions_command)
     app.cli.add_command(seed_users_command)
     app.cli.add_command(update_user_roles_command)
+    app.cli.add_command(activate_users)
