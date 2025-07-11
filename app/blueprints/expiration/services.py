@@ -102,7 +102,7 @@ class ExpirationService:
         """Get all expired inventory items across different models"""
         from ...models import InventoryItem, ProductSKU
         from ...utils.timezone_utils import TimezoneUtils
-        
+
         # Get current date in user's timezone
         today = TimezoneUtils.now_naive().date()
 
@@ -124,9 +124,10 @@ class ExpirationService:
                 if exp_date < today:
                     expired_items['fifo_entries'].append(item)
 
-        # Check product SKUs
-        product_skus = ProductSKU.query.filter(
-            ProductSKU.quantity > 0,
+        # Check product SKUs via their inventory items
+        from ...models import InventoryItem
+        product_skus = db.session.query(ProductSKU).join(InventoryItem).filter(
+            InventoryItem.quantity > 0,
             ProductSKU.expiration_date.isnot(None)
         ).all()
 
@@ -168,9 +169,10 @@ class ExpirationService:
                 if today <= exp_date <= warning_threshold:
                     expiring_items['fifo_entries'].append(item)
 
-        # Check product SKUs
-        product_skus = ProductSKU.query.filter(
-            ProductSKU.quantity > 0,
+        # Check product SKUs via their inventory items
+        from ...models import InventoryItem
+        product_skus = db.session.query(ProductSKU).join(InventoryItem).filter(
+            InventoryItem.quantity > 0,
             ProductSKU.expiration_date.isnot(None)
         ).all()
 
