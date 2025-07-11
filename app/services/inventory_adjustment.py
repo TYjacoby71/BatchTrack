@@ -323,7 +323,7 @@ def handle_recount_adjustment(item_id, target_quantity, notes=None, created_by=N
 
                 remaining_to_add = addition_needed
 
-                # Fill existing lots with remaining capacity
+                # Fill existing lots with remaining capacity and log as recount additions
                 for entry in fillable_entries:
                     if remaining_to_add <= 0:
                         break
@@ -337,6 +337,9 @@ def handle_recount_adjustment(item_id, target_quantity, notes=None, created_by=N
                         remaining_to_add -= fill_amount
 
                         print(f"RECOUNT: Filled entry {entry.id} with {fill_amount} (from {old_remaining} to {entry.remaining_quantity})")
+                        
+                        # Don't create new entries when filling existing lots - the update to remaining_quantity
+                        # is sufficient. Only log when we create completely new lots.
 
                 # Create new lot for any remaining quantity
                 if remaining_to_add > 0:
@@ -346,7 +349,7 @@ def handle_recount_adjustment(item_id, target_quantity, notes=None, created_by=N
                         quantity=remaining_to_add,
                         change_type='recount',
                         unit=history_unit,
-                        notes=f"New stock from recount: {notes or 'Physical count adjustment'}",
+                        notes=f"Recount addition - new lot: {notes or 'Physical count adjustment'}",
                         cost_per_unit=item.cost_per_unit,
                         created_by=created_by
                     )
