@@ -1,4 +1,3 @@
-
 from flask import Blueprint, redirect, url_for, flash
 from flask_login import login_required, current_user
 from ...models import db, Batch, BatchIngredient, BatchContainer, ExtraBatchIngredient, ExtraBatchContainer, InventoryItem
@@ -13,7 +12,7 @@ cancel_batch_bp = Blueprint('cancel_batch', __name__)
 def cancel_batch(batch_id):
     # Use scoped query to ensure user can only access their organization's batches
     batch = Batch.scoped().filter_by(id=batch_id).first_or_404()
-    
+
     # Validate ownership - only the creator or same organization can cancel
     if batch.created_by != current_user.id and batch.organization_id != current_user.organization_id:
         flash("You don't have permission to cancel this batch.", "error")
@@ -29,6 +28,23 @@ def cancel_batch(batch_id):
         batch_containers = BatchContainer.query.filter_by(batch_id=batch.id).all()
         extra_ingredients = ExtraBatchIngredient.query.filter_by(batch_id=batch.id).all()
         extra_containers = ExtraBatchContainer.query.filter_by(batch_id=batch.id).all()
+
+        # Pre-validate FIFO sync for all ingredients that will be credited back
+        from app.services.inventory_adjustment import validate_inventory_fifo_sync
+
+        # Check all batch ingredients
+        for batch_ingredient in batch_ingredients:
+            is_valid, error_msg, inv_qty, fifo_total = validate_inventory_fifo_sync(batch_ingredient.inventory_item_id)
+            if not is_valid:
+                flash(f'Cannot cancel batch - inventory sync error for {batch_ingredient.inventory_item.name}: {error_msg}', 'error')
+                return redirect(url_for('batches.view_batch', batch_identifier=batch_id))
+
+        # Check all extra ingredients
+        for extra_ingredient in extra_ingredients:
+            is_valid, error_msg, inv_qty, fifo_total = validate_inventory_fifo_sync(extra_ingredient.inventory_item_id)
+            if not is_valid:
+                flash(f'Cannot cancel batch - inventory sync error for {extra_ingredient.inventory_item.name}: {error_msg}', 'error')
+                return redirect(url_for('batches.view_batch', batch_identifier=batch_id))
 
         # Credit batch ingredients back to inventory using centralized service
         for batch_ing in batch_ingredients:

@@ -35,11 +35,15 @@ def debug_containers():
 @container_api_bp.route('/available-containers/<int:recipe_id>')
 @login_required
 def available_containers(recipe_id):
+    print(f"Container API route called with recipe_id: {recipe_id}")
     try:
         scale = float(request.args.get('scale', '1.0'))
 
         # Scoped query to current user's organization
-        recipe = Recipe.scoped().filter_by(id=recipe_id).first()
+        recipe = Recipe.query.filter_by(
+            id=recipe_id,
+            organization_id=current_user.organization_id
+        ).first()
         if not recipe:
             return jsonify({"error": "Recipe not found"}), 404
 
@@ -60,7 +64,7 @@ def available_containers(recipe_id):
         print(f"Found {containers_query.count()} containers for organization {current_user.organization_id}")
         print(f"Recipe allowed containers: {allowed_container_ids}")
 
-        for container in containers_query:
+        for container in containers_query.all():
             print(f"Processing container: {container.name}, storage_amount: {container.storage_amount}, storage_unit: {container.storage_unit}")
 
             # Only show containers that are in the allowed list if the recipe has allowed containers specified

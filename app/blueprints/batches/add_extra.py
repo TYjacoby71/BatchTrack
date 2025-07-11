@@ -1,4 +1,3 @@
-
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 from ...models import db, Batch, InventoryItem, ExtraBatchContainer, ExtraBatchIngredient, BatchContainer
@@ -26,7 +25,7 @@ def add_extra_to_batch(batch_id):
 
         needed_amount = float(container["quantity"])
         reason = container.get("reason", "batch")
-        
+
         # Validate reason - only damaged and extra_yield allowed
         valid_reasons = ["extra_yield", "damaged"]
         if reason not in valid_reasons:
@@ -55,7 +54,7 @@ def add_extra_to_batch(batch_id):
             batch_id=batch.id,
             created_by=current_user.id
         )
-        
+
         if not result:
             errors.append({
                 "item": container_item.name,

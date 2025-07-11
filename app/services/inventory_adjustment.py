@@ -71,7 +71,13 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
     Centralized inventory adjustment service that handles both ingredients and products
     with proper FIFO tracking and expiration management
     """
+    # Start a transaction with explicit rollback protection
     try:
+        # Pre-validate FIFO sync BEFORE starting any inventory changes
+        is_valid, error_msg, inv_qty, fifo_total = validate_inventory_fifo_sync(item_id, item_type)
+        if not is_valid:
+            raise ValueError(f"Pre-adjustment validation failed - FIFO sync error: {error_msg}")
+
         # Get the item - treat item_id as inventory_item_id for unified handling
         item = InventoryItem.query.get(item_id)
 
@@ -231,10 +237,24 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
             db.session.rollback()
             raise ValueError(f"Inventory adjustment failed validation: {error_msg}")
 
+        # Final validation after all changes are complete but before commit
+        final_is_valid, final_error_msg, final_inv_qty, final_fifo_total = validate_inventory_fifo_sync(item_id, item_type)
+        if not final_is_valid:
+            # Rollback the transaction
+            db.session.rollback()
+            raise ValueError(f"Post-adjustment validation failed - FIFO sync error: {final_error_msg}")
+
+        # Commit only if everything validates
+        db.session.commit()
         return True
 
     except Exception as e:
-        db.session.rollback()
+        # Ensure rollback on any error
+        try:
+            db.session.rollback()
+        except Exception as rollback_error:
+            # Log rollback error but don't mask original error
+            print(f"WARNING: Failed to rollback transaction: {rollback_error}")
         raise e
 
 def handle_recount_adjustment(item_id, target_quantity, notes=None, created_by=None, item_type='ingredient'):
