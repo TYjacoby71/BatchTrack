@@ -435,30 +435,38 @@ class ExpirationService:
     def mark_as_spoiled(item_type, item_id, quantity=None):
         """Mark inventory items as expired using centralized service"""
         try:
-            if item_type == 'raw':
-                # Raw inventory (InventoryItem)
-                from ...models import InventoryItem
-                item = InventoryItem.query.get(item_id)
-                if not item:
-                    return False, "Item not found"
+            if item_type == 'fifo':
+                # FIFO entry (InventoryHistory)
+                from ...models import InventoryHistory, InventoryItem
+                fifo_entry = InventoryHistory.query.get(item_id)
+                if not fifo_entry:
+                    return False, "FIFO entry not found"
 
-                # Use all remaining quantity if not specified
+                # Get the inventory item
+                item = InventoryItem.query.get(fifo_entry.inventory_item_id)
+                if not item:
+                    return False, "Inventory item not found"
+
+                # Use the remaining quantity from the FIFO entry if not specified
                 if quantity is None:
-                    quantity = item.quantity
+                    quantity = fifo_entry.remaining_quantity
 
                 # Use centralized inventory adjustment service
                 from ...services.inventory_adjustment import process_inventory_adjustment
                 success = process_inventory_adjustment(
-                    item_id=item_id,
+                    item_id=fifo_entry.inventory_item_id,
                     quantity=quantity,
                     change_type='expired',
                     unit=item.unit,
-                    notes='Marked as expired from expiration manager',
+                    notes=f'Marked as expired from expiration manager - FIFO entry {item_id}',
                     created_by=current_user.id,
                     item_type='ingredient'
                 )
 
-                return success, "Successfully marked as expired" if success else "Failed to mark as expired"
+                if success:
+                    return True, "Successfully marked as expired"
+                else:
+                    return False, "Failed to mark as expired - inventory sync error"
 
             elif item_type == 'product':
                 # Product inventory - item_id is the product_inv_id (history entry ID)
@@ -493,7 +501,10 @@ class ExpirationService:
                     item_type='product'
                 )
 
-                return success, "Successfully marked as expired" if success else "Failed to mark as expired"
+                if success:
+                    return True, "Successfully marked as expired"
+                else:
+                    return False, "Failed to mark as expired - inventory sync error"
 
             else:
                 return False, "Invalid item type"

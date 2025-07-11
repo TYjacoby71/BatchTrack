@@ -123,7 +123,11 @@ def api_mark_spoiled():
             return jsonify({'error': 'Invalid item type. Must be "fifo", "product", or "raw"'}), 400
 
         success, message = ExpirationService.mark_as_spoiled(item_type, item_id)
-        return jsonify({'success': success, 'message': message, 'spoiled_count': 1 if success else 0})
+        
+        if success:
+            return jsonify({'success': True, 'message': message, 'spoiled_count': 1})
+        else:
+            return jsonify({'success': False, 'error': message, 'spoiled_count': 0}), 400
     except Exception as e:
         print(f"Error marking item as spoiled: {str(e)}")
         return jsonify({'error': str(e)}), 500
