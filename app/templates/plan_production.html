@@ -1,3 +1,4 @@
+
 {% extends 'layout.html' %}
 {% block content %}
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -218,7 +219,7 @@ function planProduction() {
 
     init() {
       this.fetchContainerPlan();
-
+      
       // Watch for autoFill changes
       this.$watch('autoFill', (newValue) => {
         if (this.requiresContainers && this.allowedContainers.length > 0) {
@@ -230,7 +231,7 @@ function planProduction() {
           }
         }
       });
-
+      
       // Watch for scale changes
       this.$watch('scale', (newValue, oldValue) => {
         if (newValue !== oldValue && newValue > 0) {
@@ -292,21 +293,37 @@ function planProduction() {
       }
     },
 
-    async fetchContainerPlan() {
-      try {
-        const response = await fetch(`/api/available-containers/${this.recipeId}?scale=${this.scale}`);
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data = await response.json();
-
-        this.allowedContainers = data.available || [];
-        this.validateExistingSelections();
-        this.refreshContainmentStatus();
-      } catch (error) {
-        console.error('Error fetching container plan:', error);
+    fetchContainerPlan() {
+      if (!this.requiresContainers) {
         this.allowedContainers = [];
+        this.containersSelected = [];
+        this.updateProgress();
+        return;
       }
+
+      const scale = this.scale || 1.0;
+      fetch(`/api/available-containers/${this.recipeId}?scale=${scale}`)
+        .then(res => res.json())
+        .then(data => {
+          console.log('Container API response:', data);
+          this.allowedContainers = data.available || [];
+          console.log('Allowed containers:', this.allowedContainers);
+
+          if (this.autoFill && this.requiresContainers && this.allowedContainers.length > 0) {
+            this.performAutoFill();
+          } else if (!this.autoFill) {
+            // Keep existing selections but validate them
+            this.validateExistingSelections();
+          }
+
+          this.refreshContainmentStatus();
+        })
+        .catch(err => {
+          console.error('Error fetching container plan:', err);
+          this.allowedContainers = [];
+          this.containersSelected = [];
+          this.updateProgress();
+        });
     },
 
     performAutoFill() {
@@ -319,11 +336,11 @@ function planProduction() {
         .sort((a, b) => b.storage_amount - a.storage_amount);
 
       let selectedContainers = [];
-
+      
       // First pass: Try to fill with largest containers that fit perfectly or don't exceed target
       for (const container of availableContainers) {
         if (remainingVolume <= 0) break;
-
+        
         const capacity = container.storage_amount;
         const maxNeeded = Math.floor(remainingVolume / capacity);
         const qtyToUse = Math.min(maxNeeded, container.stock_qty);
@@ -345,7 +362,7 @@ function planProduction() {
         for (const container of availableContainers) {
           const alreadyUsed = selectedContainers.find(s => s.id === container.id);
           const remainingStock = container.stock_qty - (alreadyUsed ? alreadyUsed.quantity : 0);
-
+          
           if (remainingStock > 0) {
             if (alreadyUsed) {
               alreadyUsed.quantity += 1;
@@ -373,21 +390,21 @@ function planProduction() {
       this.containersSelected = this.containersSelected.filter(selected => {
         const container = this.allowedContainers.find(c => c.id === selected.id);
         if (!container) return false;
-
+        
         // Update container details in case they changed
         selected.name = container.name;
         selected.capacity = container.storage_amount;
         selected.unit = container.storage_unit;
-
+        
         // Ensure quantity doesn't exceed available stock
         const remainingStock = this.getRemainingStock(selected.id, -1);
         if (selected.quantity > remainingStock) {
           selected.quantity = Math.max(0, remainingStock);
         }
-
+        
         return selected.quantity > 0;
       });
-
+      
       this.updateProgress();
       this.evaluateContainment();
     },
@@ -419,11 +436,11 @@ function planProduction() {
       }
 
       const totalContained = this.totalContained;
-
+      
       // Check if containment is exactly 100% (within a small tolerance for floating point precision)
       const containmentRatio = totalContained / projected;
       const isExactMatch = Math.abs(containmentRatio - 1) < 0.001; // 0.1% tolerance
-
+      
       if (totalContained < projected) {
         this.containmentIssue = 'Warning: Need one more container for partial fill';
       } else if (totalContained > projected && !isExactMatch) {
@@ -474,12 +491,12 @@ function planProduction() {
         const remainingStock = this.getRemainingStock(c.id, -1);
         return remainingStock > 0;
       });
-
+      
       if (availableContainers.length === 0) {
         alert('No containers available in stock.');
         return;
       }
-
+      
       this.containersSelected.push({ 
         id: '', 
         name: '', 

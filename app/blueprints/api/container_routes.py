@@ -5,7 +5,7 @@ from app.services.unit_conversion import ConversionEngine
 
 container_api_bp = Blueprint('container_api', __name__)
 
-@container_api_bp.route('/debug-containers')
+@container_api_bp.route('/api/debug-containers')
 @login_required
 def debug_containers():
     try:
@@ -32,7 +32,7 @@ def debug_containers():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@container_api_bp.route('/available-containers/<int:recipe_id>')
+@container_api_bp.route('/api/available-containers/<int:recipe_id>')
 @login_required
 def available_containers(recipe_id):
     try:
@@ -95,7 +95,7 @@ def available_containers(recipe_id):
     except Exception as e:
         return jsonify({"error": f"Container API failed: {str(e)}"}), 500
 
-@container_api_bp.route('/containers/available')
+@container_api_bp.route('/api/containers/available')
 @login_required
 def get_available_containers():
     """Get all available containers with stock information"""
@@ -121,7 +121,7 @@ def get_available_containers():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@container_api_bp.route('/batches/<int:batch_id>/containers', methods=['GET'])
+@container_api_bp.route('/api/batches/<int:batch_id>/containers', methods=['GET'])
 @login_required
 def get_batch_containers(batch_id):
     """Get all containers for a batch with summary"""
@@ -180,7 +180,7 @@ def get_batch_containers(batch_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@container_api_bp.route('/batches/<int:batch_id>/containers/<int:container_id>', methods=['DELETE'])
+@container_api_bp.route('/api/batches/<int:batch_id>/containers/<int:container_id>', methods=['DELETE'])
 @login_required
 def remove_batch_container(batch_id, container_id):
     """Remove a container from a batch"""
@@ -213,7 +213,7 @@ def remove_batch_container(batch_id, container_id):
         db.session.rollback()
         return jsonify({'success': False, 'message': str(e)}), 500
 
-@container_api_bp.route('/batches/<int:batch_id>/containers/<int:container_id>/adjust', methods=['POST'])
+@container_api_bp.route('/api/batches/<int:batch_id>/containers/<int:container_id>/adjust', methods=['POST'])
 @login_required
 def adjust_batch_container(batch_id, container_id):
     """Adjust container quantity, replace container type, or mark as damaged"""
