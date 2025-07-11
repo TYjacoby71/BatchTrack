@@ -10,7 +10,7 @@ from ...utils.permissions import has_permission
 
 logger = logging.getLogger(__name__)
 
-reservation_api_bp = Blueprint('reservation_api', __name__, url_prefix='/api/reservations')
+reservation_api_bp = Blueprint('api_reservations', __name__, url_prefix='/api/reservations')
 
 @reservation_api_bp.route('/create', methods=['POST'])
 @login_required
