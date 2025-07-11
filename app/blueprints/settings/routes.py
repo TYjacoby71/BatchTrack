@@ -102,7 +102,8 @@ def get_user_preferences():
             'show_alert_badges': user_prefs.show_alert_badges,
             'dashboard_layout': user_prefs.dashboard_layout,
             'compact_view': user_prefs.compact_view,
-            'show_quick_actions': user_prefs.show_quick_actions
+            'show_quick_actions': user_prefs.show_quick_actions,
+            'timezone': user_prefs.timezone
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
