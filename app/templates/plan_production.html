@@ -198,10 +198,6 @@
 </div>
 
 <script>
-function getCSRFToken() {
-    return document.querySelector('input[name="csrf_token"]').value;
-}
-
 function planProduction() {
   return {
       recipeId: {{ recipe.id }},
