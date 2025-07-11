@@ -28,16 +28,24 @@ def create_app():
     from .extensions import csrf
     csrf.init_app(app)
 
-    # Login manager setup
+    # Configure Flask-Login
     login_manager = LoginManager()
     login_manager.init_app(app)
     login_manager.login_view = 'auth.login'
     login_manager.login_message = 'Please log in to access this page.'
-    login_manager.session_protection = 'strong'
+    login_manager.session_protection = "strong"
 
     @login_manager.user_loader
     def load_user(user_id):
-        return User.query.get(int(user_id))
+        """Load user by ID for Flask-Login"""
+        try:
+            user = User.query.get(int(user_id))
+            # Ensure user is active and belongs to an active organization
+            if user and user.is_active and user.organization and user.organization.is_active:
+                return user
+            return None
+        except (ValueError, TypeError):
+            return None
 
     # Register blueprints
     from .blueprints.auth import auth_bp

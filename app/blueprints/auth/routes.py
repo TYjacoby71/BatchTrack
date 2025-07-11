@@ -8,6 +8,7 @@ from werkzeug.security import generate_password_hash
 from . import auth_bp
 from ...extensions import db
 from ...models import User, Organization
+from ...utils.timezone_utils import TimezoneUtils
 
 class LoginForm(FlaskForm):
     username = StringField('Username', validators=[DataRequired()])
@@ -67,8 +68,18 @@ def login():
             user = User.query.filter_by(username=username).first()
             
             if user and user.check_password(password):
-                login_user(user)
+                # Ensure user is active
+                if not user.is_active:
+                    flash('Account is inactive. Please contact administrator.')
+                    return render_template('auth/login.html', form=form)
+                
+                # Update last login
+                user.last_login = TimezoneUtils.utc_now()
+                db.session.commit()
+                
+                login_user(user, remember=True)
                 flash('Login successful!', 'success')
+                
                 # Check for next parameter or redirect to dashboard
                 next_page = request.args.get('next')
                 if next_page:
