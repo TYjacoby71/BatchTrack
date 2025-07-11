@@ -106,17 +106,26 @@ def api_archive_expired():
 @login_required
 def api_mark_spoiled():
     """Mark expired items as spoiled and remove from inventory"""
-    data = request.get_json()
-    item_type = data.get('type')  # 'fifo' or 'product'
-    item_id = data.get('id')
-
-    if not item_type or not item_id:
-        return jsonify({'error': 'Missing type or id'}), 400
-
     try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No JSON data provided'}), 400
+            
+        item_type = data.get('type')  # 'fifo' or 'product'
+        item_id = data.get('id')
+
+        print(f"Mark spoiled request - type: {item_type}, id: {item_id}")
+
+        if not item_type or not item_id:
+            return jsonify({'error': 'Missing type or id'}), 400
+
+        if item_type not in ['fifo', 'product']:
+            return jsonify({'error': 'Invalid item type. Must be "fifo" or "product"'}), 400
+
         count = ExpirationService.mark_as_spoiled(item_type, item_id)
         return jsonify({'spoiled_count': count})
     except Exception as e:
+        print(f"Error marking item as spoiled: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @expiration_bp.route('/api/summary')
