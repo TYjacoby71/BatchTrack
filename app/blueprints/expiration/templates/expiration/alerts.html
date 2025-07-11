@@ -70,7 +70,8 @@
                                     <tr>
                                         <th>Ingredient</th>
                                         <th>Quantity</th>
-                                        <th>Expired</th>
+                                        <th>Expired Date</th>
+                                        <th>Expired Time</th>
                                         <th class="text-muted">ID</th>
                                         <th>Action</th>
                                     </tr>
@@ -83,6 +84,11 @@
                                         <td>
                                             <small class="text-danger">
                                                 {{ item.expiration_date.strftime('%Y-%m-%d') }}
+                                            </small>
+                                        </td>
+                                        <td>
+                                            <small class="text-danger">
+                                                {{ item.expiration_date.strftime('%H:%M:%S') }}
                                             </small>
                                         </td>
                                         <td><small class="text-muted">#{{ item.fifo_id }}</small></td>
@@ -125,7 +131,8 @@
                                     <tr>
                                         <th>Ingredient</th>
                                         <th>Quantity</th>
-                                        <th>Expires</th>
+                                        <th>Expires Date</th>
+                                        <th>Expires Time</th>
                                         <th>Days Left</th>
                                     </tr>
                                 </thead>
@@ -137,6 +144,9 @@
                                         <td>{{ item.remaining_quantity }} {{ item.unit }}</td>
                                         <td>
                                             <small>{{ item.expiration_date.strftime('%Y-%m-%d') }}</small>
+                                        </td>
+                                        <td>
+                                            <small>{{ item.expiration_date.strftime('%H:%M:%S') }}</small>
                                         </td>
                                         <td>
                                             <span class="badge {% if days_left <= 2 %}bg-danger{% elif days_left <= 5 %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
@@ -201,7 +211,8 @@
                                         <th>Variant</th>
                                         <th>Size</th>
                                         <th>Quantity</th>
-                                        <th>Expired</th>
+                                        <th>Expired Date</th>
+                                        <th>Expired Time</th>
                                         <th>Action</th>
                                     </tr>
                                 </thead>
@@ -215,6 +226,11 @@
                                         <td>
                                             <small class="text-danger">
                                                 {{ item.expiration_date.strftime('%Y-%m-%d') }}
+                                            </small>
+                                        </td>
+                                        <td>
+                                            <small class="text-danger">
+                                                {{ item.expiration_date.strftime('%H:%M:%S') }}
                                             </small>
                                         </td>
                                         <td>
@@ -258,7 +274,8 @@
                                         <th>Variant</th>
                                         <th>Size</th>
                                         <th>Quantity</th>
-                                        <th>Expires</th>
+                                        <th>Expires Date</th>
+                                        <th>Expires Time</th>
                                         <th>Days Left</th>
                                     </tr>
                                 </thead>
@@ -272,6 +289,9 @@
                                         <td>{{ item.quantity }} {{ item.unit }}</td>
                                         <td>
                                             <small>{{ item.expiration_date.strftime('%Y-%m-%d') }}</small>
+                                        </td>
+                                        <td>
+                                            <small>{{ item.expiration_date.strftime('%H:%M:%S') }}</small>
                                         </td>
                                         <td>
                                             <span class="badge {% if days_left <= 1 %}danger{% elif days_left <= 3 %}warning{% else %}secondary{% endif %}">
