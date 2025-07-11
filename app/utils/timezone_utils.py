@@ -8,10 +8,10 @@ class TimezoneUtils:
     
     @staticmethod
     def get_user_timezone():
-        """Get user's configured timezone, default to Eastern Time"""
+        """Get user's configured timezone, default to Pacific Time"""
         # You can extend this to get user's actual timezone from settings
         try:
-            return pytz.timezone('America/New_York')  # Eastern Time
+            return pytz.timezone('America/Los_Angeles')  # Pacific Time
         except:
             return timezone.utc  # Fallback to UTC
     
