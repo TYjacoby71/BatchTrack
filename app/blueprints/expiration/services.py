@@ -396,17 +396,28 @@ class ExpirationService:
         now = TimezoneUtils.now_naive()
 
         for entry in entries:
-            if entry.timestamp and entry.expiration_date:
-                # Calculate life remaining percentage based on timestamps
-                total_life_seconds = (entry.expiration_date - entry.timestamp).total_seconds()
-                if total_life_seconds <= 0:
-                    life_remaining_percent = 0.0
-                else:
-                    time_passed_seconds = (now - entry.timestamp).total_seconds()
-                    remaining_seconds = max(0, total_life_seconds - time_passed_seconds)
-                    life_remaining_percent = (remaining_seconds / total_life_seconds) * 100
+            if entry.expiration_date:
+                # Calculate time until expiration
+                time_until_expiration_seconds = (entry.expiration_date - now).total_seconds()
                 
-                # Ensure freshness percentage doesn't exceed 100%
+                # If we have both timestamp and shelf_life_days, calculate based on shelf life
+                if entry.timestamp and entry.shelf_life_days:
+                    total_life_seconds = entry.shelf_life_days * 24 * 3600  # Convert days to seconds
+                    life_remaining_percent = max(0, (time_until_expiration_seconds / total_life_seconds) * 100)
+                else:
+                    # Fallback: if expired, 0%, otherwise assume some freshness based on time remaining
+                    if time_until_expiration_seconds <= 0:
+                        life_remaining_percent = 0.0
+                    else:
+                        # Without shelf life info, we can't calculate perfect freshness
+                        # Just use a simple check: if not expired, assume reasonable freshness
+                        days_until_expiration = time_until_expiration_seconds / (24 * 3600)
+                        if days_until_expiration >= 1:
+                            life_remaining_percent = min(100.0, days_until_expiration * 20)  # Rough estimate
+                        else:
+                            life_remaining_percent = max(0.0, days_until_expiration * 100)
+                
+                # Ensure freshness percentage is between 0 and 100
                 life_remaining_percent = min(100.0, max(0.0, life_remaining_percent))
 
                 # Weight by quantity
