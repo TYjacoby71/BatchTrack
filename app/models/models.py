@@ -367,16 +367,16 @@ class InventoryItem(ScopedModelMixin, db.Model):
         if not self.is_perishable:
             return self.quantity
 
-        from datetime import datetime
+        from ..utils.timezone_utils import TimezoneUtils
         from sqlalchemy import and_
 
-        today = datetime.now().date()
+        now = TimezoneUtils.utc_now()  # Use consistent UTC time
         expired_total = db.session.query(db.func.sum(InventoryHistory.remaining_quantity))\
             .filter(and_(
                 InventoryHistory.inventory_item_id == self.id,
                 InventoryHistory.remaining_quantity > 0,
                 InventoryHistory.expiration_date != None,
-                InventoryHistory.expiration_date < today
+                InventoryHistory.expiration_date < now
             )).scalar() or 0
 
         return max(0, self.quantity - expired_total)
@@ -387,16 +387,16 @@ class InventoryItem(ScopedModelMixin, db.Model):
         if not self.is_perishable:
             return 0
 
-        from datetime import datetime
+        from ..utils.timezone_utils import TimezoneUtils
         from sqlalchemy import and_
 
-        today = datetime.now().date()
+        now = TimezoneUtils.utc_now()  # Use consistent UTC time
         return db.session.query(db.func.sum(InventoryHistory.remaining_quantity))\
             .filter(and_(
                 InventoryHistory.inventory_item_id == self.id,
                 InventoryHistory.remaining_quantity > 0,
                 InventoryHistory.expiration_date != None,
-                InventoryHistory.expiration_date < today
+                InventoryHistory.expiration_date < now
             )).scalar() or 0
 
 class BatchInventoryLog(ScopedModelMixin, db.Model):
