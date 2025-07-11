@@ -1,126 +1,38 @@
 {% extends "layout.html" %}
 {% block content %}
 <div x-data="{
-        systemSettings: {
-            alerts: {
-                max_dashboard_alerts: 10,
-                low_stock_threshold: 5,
-                expiration_warning_days: 7,
-                show_expiration_alerts: true,
-                show_timer_alerts: true,
-                show_low_stock_alerts: true,
-                show_batch_alerts: true,
-                show_fault_alerts: true,
-                show_alert_badges: true
-            },
-            batch_rules: {
-                require_timer_completion: false,
-                allow_intermediate_tags: true,
-                require_finish_confirmation: true,
-                stuck_batch_hours: 24
-            },
-            recipe_builder: {
-                enable_variations: true,
-                enable_containers: true,
-                auto_scale_recipes: true,
-                show_cost_breakdown: true
-            },
-            inventory: {
-                enable_fifo_tracking: true,
-                show_expiration_dates: true,
-                auto_calculate_costs: true,
-                show_supplier_info: false,
-                enable_barcode_scanning: false,
-                enable_bulk_operations: true
-            },
-            products: {
-                enable_variants: true,
-                show_profit_margins: true,
-                track_production_costs: true,
-                enable_product_images: true,
-                auto_generate_skus: false
-            },
-            system: {
-                auto_backup: false,
-                per_page: 25,
-                enable_csv_export: true,
-                auto_save_forms: true
-            },
-            notifications: {
-                browser_notifications: false,
-                email_alerts: false,
-                alert_frequency: 'immediate',
-                quiet_hours_start: '22:00',
-                quiet_hours_end: '08:00'
-            }
-        },
-        userPrefs: {
-            expiration_warning_days: 7,
-            show_expiration_alerts: true,
-            show_low_stock_alerts: true,
-            show_batch_alerts: true,
-            show_timer_alerts: true,
-            show_fault_alerts: true,
-            show_alert_badges: true,
-            timezone: 'UTC'
-        },
-        settings: {},
+        userPrefs: {{ user_prefs | tojson | safe }},
+        systemSettings: {{ system_settings | tojson | safe }},
+        settings: {{ system_settings | tojson | safe }},
         saving: false,
         showMessage: false,
         message: '',
         messageType: 'success',
 
-        async init() {
-            await this.loadSettings();
+        updateUserPreference(key, value) {
+            this.userPrefs[key] = value;
+            this.saveUserPreferences();
         },
 
-        async loadSettings() {
+        async saveUserPreferences() {
             try {
-                const response = await fetch('/settings/api/all');
-                if (response.ok) {
-                    const data = await response.json();
-                    this.systemSettings = data.system_settings || this.systemSettings;
-                    this.userPrefs = data.user_preferences || this.userPrefs;
-                    this.settings = this.systemSettings; // Alias for backward compatibility
-                }
-            } catch (error) {
-                console.error('Failed to load settings:', error);
-            }
-        },
-
-        async saveSettings() {
-            this.saving = true;
-            try {
-                const response = await fetch('/settings/api/save', {
+                const response = await fetch('/settings/api/user-preferences', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
+                        'X-CSRFToken': getCSRFToken()
                     },
-                    body: JSON.stringify({
-                        system_settings: this.systemSettings,
-                        user_preferences: this.userPrefs
-                    })
+                    body: JSON.stringify(this.userPrefs)
                 });
 
                 if (response.ok) {
-                    this.showNotification('Settings saved successfully!', 'success');
+                    this.showSuccessMessage('User preferences saved successfully');
                 } else {
-                    this.showNotification('Failed to save settings', 'error');
+                    this.showErrorMessage('Failed to save user preferences');
                 }
             } catch (error) {
-                this.showNotification('Error saving settings', 'error');
-            } finally {
-                this.saving = false;
+                this.showErrorMessage('Network error saving preferences');
             }
-        },
-
-        showNotification(msg, type) {
-            this.message = msg;
-            this.messageType = type;
-            this.showMessage = true;
-            setTimeout(() => {
-                this.showMessage = false;
-            }, 3000);
         },
 
         updateSystemSetting(section, key, value) {
@@ -128,41 +40,47 @@
                 this.systemSettings[section] = {};
             }
             this.systemSettings[section][key] = value;
+            this.settings[section][key] = value;
         },
 
-        updateUserPref(key, value) {
-            this.userPrefs[key] = value;
-        },
+        async saveAllSettings() {
+            this.saving = true;
+            try {
+                const response = await fetch('/settings/api/system-settings', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCSRFToken()
+                    },
+                    body: JSON.stringify(this.systemSettings)
+                });
 
-        settingsManager() {
-            return {
-                systemSettings: this.systemSettings,
-                userPrefs: this.userPrefs,
-                save: () => this.saveSettings()
-            };
-        }fication('Error saving settings', 'error');
+                if (response.ok) {
+                    this.showSuccessMessage('System settings saved successfully');
+                } else {
+                    this.showErrorMessage('Failed to save system settings');
+                }
+            } catch (error) {
+                this.showErrorMessage('Network error saving settings');
             } finally {
                 this.saving = false;
             }
         },
 
-        showNotification(msg, type) {
+        showSuccessMessage(msg) {
             this.message = msg;
-            this.messageType = type;
+            this.messageType = 'success';
             this.showMessage = true;
-            setTimeout(() => {
-                this.showMessage = false;
-            }, 3000);
+            setTimeout(() => { this.showMessage = false; }, 3000);
         },
 
-        resetToDefaults() {
-            if (confirm('Are you sure you want to reset all settings to defaults?')) {
-                this.systemSettings = {};
-                this.userPrefs = {};
-                this.saveSettings();
-            }
+        showErrorMessage(msg) {
+            this.message = msg;
+            this.messageType = 'error';
+            this.showMessage = true;
+            setTimeout(() => { this.showMessage = false; }, 3000);
         }
-    }" class="container-fluid mt-4">
+    }" class="container-fluid">
     <h2><i class="fas fa-cog"></i> System Settings</h2>
     <p class="text-muted">Configure BatchTrack to match your workflow and preferences</p>
 
@@ -810,8 +728,7 @@
                 <form @submit.prevent="changePassword()">
                     <div class="mb-3">
                         <label for="currentPassword" class="form-label">Current Password</label>
-                        <input type="password" class="form-control" id="currentPassword" required>
-                    </div>
+                        <input type="password" class="form-control" id="currentPassword" required                    </div>
                     <div class="mb-3">
                         <label for="newPassword" class="form-label">New Password</label>
                         <input type="password" class="form-control" id="newPassword" required minlength="6">
@@ -832,171 +749,12 @@
 </div>
 
 <script>
-function settingsManager() {
-    return {
-        userPrefs: {
-            max_dashboard_alerts: {{ user_prefs.max_dashboard_alerts }},
-            show_expiration_alerts: {{ user_prefs.show_expiration_alerts|tojson }},
-            show_timer_alerts: {{ user_prefs.show_timer_alerts|tojson }},
-            show_low_stock_alerts: {{ user_prefs.show_low_stock_alerts|tojson }},
-            show_batch_alerts: {{ user_prefs.show_batch_alerts|tojson }},
-            show_fault_alerts: {{ user_prefs.show_fault_alerts|tojson }},
-            expiration_warning_days: {{ user_prefs.expiration_warning_days }},
-            show_alert_badges: {{ user_prefs.show_alert_badges|tojson }},
-            dashboard_layout: '{{ user_prefs.dashboard_layout }}',
-            compact_view: {{ user_prefs.compact_view|tojson }},
-            show_quick_actions: {{ user_prefs.show_quick_actions|tojson }}
-        },
-        systemSettings: {{ system_settings|tojson }},
-        showMessage: false,
-        message: '',
-        messageType: 'success',
-        showPasswordModal: false,
-        saving: false,
-
-        async updateUserPreference(key, value) {
-            try {
-                const preferences = {};
-                preferences[key] = value;
-
-                const response = await fetch('/settings/api/user-preferences', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(preferences)
-                });
-
-                const result = await response.json();
-
-                if (response.ok) {
-                    this.showSuccessMessage('Preference updated successfully');
-                } else {
-                    this.showErrorMessage(result.error || 'Failed to update preference');
-                }
-            } catch (error) {
-                console.error('Error updating preference:', error);
-                this.showErrorMessage('Failed to update preference');
-            }
-        },
-
-        async updateSystemSetting(section, key, value) {
-            try {const settings = {};
-                settings[section] = {};
-                settings[section][key] = value;
-
-                const response = await fetch('/settings/api/system-settings', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(settings)
-                });
-
-                const result = await response.json();
-
-                if (response.ok) {
-                    this.showSuccessMessage('System setting updated successfully');
-                } else {
-                    this.showErrorMessage(result.error || 'Failed to update system setting');
-                }
-            } catch (error) {
-                console.error('Error updating system setting:', error);
-                this.showErrorMessage('Failed to update system setting');
-            }
-        },
-
-        async updateProfile(field, value) {
-            try {
-                const data = {};
-                data[field] = value;
-
-                const response = await fetch('/settings/profile/save', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(data)
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    this.showSuccessMessage('Profile updated successfully');
-                } else {
-                    this.showErrorMessage(result.error || 'Failed to update profile');
-                }
-            } catch (error) {
-                console.error('Profile update error:', error);
-                this.showErrorMessage('Failed to update profile');
-            }
-        },
-
-        async changePassword() {
-            try {
-                const currentPassword = document.getElementById('currentPassword').value;
-                const newPassword = document.getElementById('newPassword').value;
-                const confirmPassword = document.getElementById('confirmPassword').value;
-
-                if (!currentPassword || !newPassword || !confirmPassword) {
-                    this.showErrorMessage('All password fields are required');
-                    return;
-                }
-
-                if (newPassword !== confirmPassword) {
-                    this.showErrorMessage('New passwords do not match');
-                    return;
-                }
-
-                if (newPassword.length < 6) {
-                    this.showErrorMessage('Password must be at least 6 characters');
-                    return;
-                }
-
-                const response = await fetch('/settings/password/change', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        current_password: currentPassword,
-                        new_password: newPassword,
-                        confirm_password: confirmPassword
-                    })
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    this.showSuccessMessage('Password changed successfully');
-                    this.showPasswordModal = false;
-                    // Clear form
-                    document.getElementById('currentPassword').value = '';
-                    document.getElementById('newPassword').value = '';
-                    document.getElementById('confirmPassword').value = '';
-                } else {
-                    this.showErrorMessage(result.error || 'Failed to change password');
-                }
-            } catch (error) {
-                console.error('Password change error:', error);
-                this.showErrorMessage('Failed to change password');
-            }
-        },
-
-        showSuccessMessage(msg) {
-            this.message = msg;
-            this.messageType = 'success';
-            this.showMessage = true;
-            setTimeout(() => this.showMessage = false, 3000);
-        },
-
-        showErrorMessage(msg) {
-            this.message = msg;
-            this.messageType = 'error';
-            this.showMessage = true;
-            setTimeout(() => this.showMessage = false, 5000);
-        }
-    }
+function getCSRFToken() {
+    const csrfToken = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('csrftoken='))
+        ?.split('=')[1];
+    return csrfToken;
 }
 </script>
 {% endblock %}
