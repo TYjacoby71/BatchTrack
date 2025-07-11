@@ -74,23 +74,18 @@ def create_app():
     app.register_blueprint(expiration_bp, url_prefix='/expiration')
     app.register_blueprint(container_api_bp)
 
+    # Register additional API and route blueprints
     from .blueprints.api.stock_routes import stock_api_bp
     from .blueprints.api.ingredient_routes import ingredient_api_bp
-    from .conversion import conversion_bp
-    from .expiration import expiration_bp
-    from .settings import settings_bp
-    from .timers import timers_bp
-    from .quick_add import quick_add_bp
-    from .admin import admin_bp
     from .routes import app_routes
     from .blueprints.fifo import fifo_bp
     from .blueprints.batches.add_extra import add_extra_bp
     from .routes import bulk_stock_routes
     from .routes import fault_log_routes
     from .routes import tag_manager_routes
-    # Register admin blueprints
-    from .blueprints.admin.admin_routes import admin_bp
-    app.register_blueprint(admin_bp)
+
+    app.register_blueprint(stock_api_bp)
+    app.register_blueprint(ingredient_api_bp)
 
     # Register reservation blueprints (now under products)
     from .blueprints.products.reservation_routes import reservation_bp
@@ -98,27 +93,22 @@ def create_app():
     app.register_blueprint(reservation_bp, url_prefix='/reservations')
     app.register_blueprint(reservation_api_bp)
 
-    # Import and register blueprints
+    # Import and register product blueprints
     try:
-        from .blueprints.products.products import products_bp
+        from .blueprints.products.products import products_bp as products_routes_bp
         from .blueprints.products.api import products_api_bp
         from .blueprints.products.product_inventory_routes import product_inventory_bp
         from .blueprints.products.product_variants import product_variants_bp
         from .blueprints.products.sku import sku_bp
-        app.register_blueprint(products_bp, url_prefix='/products')
+        app.register_blueprint(products_routes_bp, url_prefix='/products')
         app.register_blueprint(products_api_bp)
         app.register_blueprint(product_inventory_bp, url_prefix='/products')
         app.register_blueprint(product_variants_bp, url_prefix='/products')
         app.register_blueprint(sku_bp, url_prefix='/products')
-    except ImportError:
-        print("Could not register any product blueprints")
+    except ImportError as e:
+        print(f"Could not register product blueprints: {e}")
         pass
 
-    app.register_blueprint(conversion_bp, url_prefix='/conversion')
-    app.register_blueprint(expiration_bp, url_prefix='/expiration')
-    app.register_blueprint(settings_bp, url_prefix='/settings')
-    app.register_blueprint(timers_bp, url_prefix='/timers')
-    app.register_blueprint(quick_add_bp, url_prefix='/quick_add')
     app.register_blueprint(app_routes.app_routes_bp)
     app.register_blueprint(fifo_bp)
     app.register_blueprint(add_extra_bp, url_prefix='/add-extra')
