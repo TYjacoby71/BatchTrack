@@ -1,7 +1,12 @@
 {% extends "layout.html" %}
 
 {% block content %}
-<div class="container-fluid" x-data="settingsData()"
+<div class="container-fluid" x-data="settingsData()">
+    <!-- Flash Messages -->
+    <div x-show="showMessage" x-transition class="alert" :class="messageType === 'success' ? 'alert-success' : 'alert-danger'">
+        <span x-text="message"></span>
+        <button type="button" class="btn-close" @click="showMessage = false"></button>
+    </div>
     <h2><i class="fas fa-cog"></i> System Settings</h2>
     <p class="text-muted">Configure BatchTrack to match your workflow and preferences</p>
 
@@ -690,19 +695,115 @@
 <script>
 function settingsData() {
     return {
-        // Message handling
         showMessage: false,
         message: '',
         messageType: 'success',
-
-        // Password modal
         showPasswordModal: false,
 
-        // Settings data
-        userPrefs: {{ user_prefs | tojson }},
-        systemSettings: {{ system_settings | tojson }},
+        // User Preferences with defaults
+        userPrefs: {
+            max_dashboard_alerts: {{ current_user_prefs.max_dashboard_alerts if current_user_prefs else 3 }},
+            expiration_warning_days: {{ current_user_prefs.expiration_warning_days if current_user_prefs else 7 }},
+            show_expiration_alerts: {{ 'true' if current_user_prefs and current_user_prefs.show_expiration_prefs else 'false' }},
+            show_timer_alerts: {{ 'true' if current_user_prefs and current_user_prefs.show_timer_alerts else 'false' }},
+            show_low_stock_alerts: {{ 'true' if current_user_prefs and current_user_prefs.show_low_stock_alerts else 'false' }},
+            show_batch_alerts: {{ 'true' if current_user_prefs and current_user_prefs.show_batch_alerts else 'false' }},
+            show_fault_alerts: {{ 'true' if current_user_prefs and current_user_prefs.show_fault_alerts else 'false' }},
+            show_alert_badges: {{ 'true' if current_user_prefs and current_user_prefs.show_alert_badges else 'false' }},
+            dashboard_layout: '{{ current_user_prefs.dashboard_layout if current_user_prefs else "standard" }}',
+            show_quick_actions: {{ 'true' if current_user_prefs and current_user_prefs.show_quick_actions else 'false' }},
+            compact_view: {{ 'true' if current_user_prefs and current_user_prefs.compact_view else 'false' }}
+        },
+
+        // System Settings with defaults
+        systemSettings: {
+            batch_rules: {
+                require_timer_completion: false,
+                allow_intermediate_tags: true,
+                require_finish_confirmation: true,
+                stuck_batch_hours: 24
+            },
+            recipe_builder: {
+                enable_variations: true,
+                enable_containers: true,
+                auto_scale_recipes: false,
+                show_cost_breakdown: true
+            },
+            inventory: {
+                enable_fifo_tracking: true,
+                show_expiration_dates: true,
+                auto_calculate_costs: true,
+                show_supplier_info: false,
+                enable_barcode_scanning: false,
+                enable_bulk_operations: true
+            },
+            products: {
+                enable_variants: true,
+                show_profit_margins: false,
+                track_production_costs: true,
+                enable_product_images: true,
+                auto_generate_skus: false
+            },
+            system: {
+                auto_backup: false,
+                per_page: 25,
+                enable_csv_export: true,
+                auto_save_forms: true
+            },
+            notifications: {
+                browser_notifications: false,
+                email_alerts: false,
+                alert_frequency: 'immediate',
+                quiet_hours_start: '22:00',
+                quiet_hours_end: '07:00'
+            }
+        },
 
         // Methods
+        saveUserPreferences() {
+            fetch('/settings/update-user-preferences', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('meta[name=csrf-token]')?.getAttribute('content')
+                },
+                body: JSON.stringify(this.userPrefs)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    this.showSuccessMessage('User preferences updated successfully');
+                } else {
+                    this.showErrorMessage(data.message || 'Failed to update preferences');
+                }
+            })
+            .catch(() => {
+                this.showErrorMessage('Error updating preferences');
+            });
+        },
+
+        saveSystemSettings() {
+            fetch('/settings/update-system-settings', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('meta[name=csrf-token]')?.getAttribute('content')
+                },
+                body: JSON.stringify(this.systemSettings)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    this.showSuccessMessage('System settings updated successfully');
+                } else {
+                    this.showErrorMessage(data.message || 'Failed to update settings');
+                }
+            })
+            .catch(() => {
+                this.showErrorMessage('Error updating settings');
+            });
+        },
+
         showSuccessMessage(msg) {
             this.message = msg;
             this.messageType = 'success';
@@ -712,130 +813,12 @@ function settingsData() {
 
         showErrorMessage(msg) {
             this.message = msg;
-            this.messageType = 'error';
+            this.messageType = 'danger';
             this.showMessage = true;
             setTimeout(() => { this.showMessage = false; }, 5000);
-        },
-
-        updateProfile(field, value) {
-            const data = {};
-            data[field] = value;
-            
-            fetch('/settings/profile/save', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(data)
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    this.showSuccessMessage('Profile updated successfully');
-                } else {
-                    this.showErrorMessage(data.error || 'Failed to update profile');
-                }
-            })
-            .catch(error => {
-                this.showErrorMessage('Error updating profile');
-            });
-        },
-
-        changePassword() {
-            const currentPassword = document.getElementById('currentPassword').value;
-            const newPassword = document.getElementById('newPassword').value;
-            const confirmPassword = document.getElementById('confirmPassword').value;
-
-            if (newPassword !== confirmPassword) {
-                this.showErrorMessage('New passwords do not match');
-                return;
-            }
-
-            fetch('/settings/password/change', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    current_password: currentPassword,
-                    new_password: newPassword,
-                    confirm_password: confirmPassword
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    this.showSuccessMessage('Password changed successfully');
-                    this.showPasswordModal = false;
-                    // Clear form
-                    document.getElementById('currentPassword').value = '';
-                    document.getElementById('newPassword').value = '';
-                    document.getElementById('confirmPassword').value = '';
-                } else {
-                    this.showErrorMessage(data.error || 'Failed to change password');
-                }
-            })
-            .catch(error => {
-                this.showErrorMessage('Error changing password');
-            });
-        },
-
-        updateUserPreference(key, value) {
-            this.userPrefs[key] = value;
-            fetch('/settings/api/user-preferences', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({[key]: value})
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    this.showSuccessMessage('Preference updated successfully');
-                } else {
-                    this.showErrorMessage(data.error || 'Failed to update preference');
-                }
-            })
-            .catch(error => {
-                this.showErrorMessage('Error updating preference');
-            });
-        },
-
-        updateSystemSetting(section, key, value) {
-            if (!this.systemSettings[section]) {
-                this.systemSettings[section] = {};
-            }
-            this.systemSettings[section][key] = value;
-            
-            const updateData = {};
-            updateData[section] = {};
-            updateData[section][key] = value;
-
-            fetch('/settings/api/system-settings', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(updateData)
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    this.showSuccessMessage('System setting updated successfully');
-                } else {
-                    this.showErrorMessage(data.error || 'Failed to update system setting');
-                }
-            })
-            .catch(error => {
-                this.showErrorMessage('Error updating system setting');
-            });
         }
-    };
+    }
 }
 </script>
-{% endblock %}
-
-{% block scripts %}
-<script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+<script src="{{ url_for('static', filename='js/settings.js') }}"></script>
 {% endblock %}

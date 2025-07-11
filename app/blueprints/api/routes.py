@@ -1,6 +1,7 @@
 from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
 from datetime import datetime
+from flask import session
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
@@ -8,9 +9,46 @@ api_bp = Blueprint('api', __name__, url_prefix='/api')
 def server_time():
     """Get current server time"""
     return jsonify({
+        'current_time': datetime.utcnow().isoformat(),
         'timestamp': datetime.utcnow().isoformat(),
         'timezone': 'UTC'
     })
+
+@api_bp.route('/dismiss-alert', methods=['POST'])
+def dismiss_alert():
+    """Dismiss an alert for the current session"""
+    from flask import request
+    data = request.get_json()
+    alert_type = data.get('alert_type')
+    
+    if not alert_type:
+        return jsonify({'error': 'Alert type required'}), 400
+    
+    # Initialize dismissed alerts in session if not exists
+    if 'dismissed_alerts' not in session:
+        session['dismissed_alerts'] = []
+    
+    # Add to dismissed alerts if not already there
+    if alert_type not in session['dismissed_alerts']:
+        session['dismissed_alerts'].append(alert_type)
+        session.permanent = True  # Make session persistent
+    
+    return jsonify({'success': True})
+
+@api_bp.route('/dashboard-alerts')
+def dashboard_alerts():
+    """Get dashboard alerts with session-based dismissals"""
+    from ...services.dashboard_alerts import DashboardAlertService
+    
+    # Get dismissed alerts from session
+    dismissed_alerts = session.get('dismissed_alerts', [])
+    
+    # Get alerts with dismissed ones filtered out
+    alert_data = DashboardAlertService.get_dashboard_alerts(
+        dismissed_alerts=dismissed_alerts
+    )
+    
+    return jsonify(alert_data)
 
 # Import sub-blueprints to register their routes
 from .stock_routes import stock_api_bp

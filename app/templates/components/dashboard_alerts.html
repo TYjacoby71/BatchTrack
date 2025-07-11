@@ -55,14 +55,19 @@ async function dismissAlert(alertType) {
         });
         
         if (response.ok) {
-            // Remove the alert from the DOM
+            // Remove the alert from the DOM with fade effect
             const alertElement = document.getElementById(`alert-${alertType}`);
             if (alertElement) {
-                alertElement.remove();
+                alertElement.style.transition = 'opacity 0.3s ease';
+                alertElement.style.opacity = '0';
+                setTimeout(() => {
+                    alertElement.remove();
+                    // Refresh to show any new alerts that were hidden
+                    refreshDashboardAlerts();
+                }, 300);
             }
-            
-            // Refresh alerts to show any new ones
-            refreshDashboardAlerts();
+        } else {
+            console.error('Failed to dismiss alert');
         }
     } catch (error) {
         console.error('Error dismissing alert:', error);
