@@ -14,10 +14,10 @@ from . import inventory_bp
 def list_inventory():
     inventory_type = request.args.get('type')
     query = InventoryItem.query
-    
+
     # Exclude product and product-reserved items from inventory management
     query = query.filter(~InventoryItem.type.in_(['product', 'product-reserved']))
-    
+
     if inventory_type:
         query = query.filter_by(type=inventory_type)
     inventory_items = query.all()
@@ -127,6 +127,8 @@ def view_inventory(id):
             )
         ).order_by(InventoryHistory.expiration_date.asc()).all()
         expired_total = sum(float(entry.remaining_quantity) for entry in expired_entries)
+    
+    from ...utils.timezone_utils import TimezoneUtils
     return render_template('inventory/view.html',
                          abs=abs,
                          item=item,
@@ -142,7 +144,8 @@ def view_inventory(id):
                          now=datetime.utcnow(),
                          get_change_type_prefix=get_change_type_prefix,
                          int_to_base36=int_to_base36,
-                         fifo_filter=fifo_filter)
+                         fifo_filter=fifo_filter,
+                         TimezoneUtils=TimezoneUtils)
 
 @inventory_bp.route('/add', methods=['POST'])
 @login_required
@@ -473,7 +476,7 @@ def edit_inventory(id):
     if new_quantity != item.quantity:
         notes = "Manual quantity update via inventory edit"
         from app.services.inventory_adjustment import process_inventory_adjustment
-        
+
         success = process_inventory_adjustment(
             item_id=item.id,
             quantity=new_quantity,
