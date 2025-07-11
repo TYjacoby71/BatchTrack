@@ -144,12 +144,12 @@ def release_reservation(order_id):
     """Release a reservation by order ID"""
     try:
         print(f"DEBUG: Attempting to release reservation for order_id: {order_id}")
-
+        
         # First check if reservations exist for this order
         from ...models import Reservation
         reservations = Reservation.query.filter_by(order_id=order_id, status='active').all()
         print(f"DEBUG: Found {len(reservations)} active reservations for order {order_id}")
-
+        
         for i, reservation in enumerate(reservations):
             print(f"DEBUG: Reservation {i+1}:")
             print(f"  - ID: {reservation.id}")
@@ -158,12 +158,12 @@ def release_reservation(order_id):
             print(f"  - Source FIFO ID: {reservation.source_fifo_id}")
             print(f"  - Source Batch ID: {reservation.source_batch_id}")
             print(f"  - Product Item: {reservation.product_item.name if reservation.product_item else 'None'}")
-
+            
             # Check if source FIFO entry exists
             if reservation.source_fifo_id:
                 from ...models import InventoryHistory
                 from ...models.product import ProductSKUHistory
-
+                
                 if reservation.product_item and reservation.product_item.type == 'product':
                     fifo_entry = ProductSKUHistory.query.get(reservation.source_fifo_id)
                     print(f"  - FIFO Entry (ProductSKUHistory): {fifo_entry}")
