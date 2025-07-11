@@ -78,7 +78,10 @@
                                 <tbody>
                                     {% for item in expired.fifo_entries %}
                                     <tr>
-                                        <td>{{ item.name }}</td>
+                                        <td>
+                                            <strong>{{ item.name }}</strong><br>
+                                            <small class="text-muted">Lot: {{ item.fifo_code if item.fifo_code else 'FIFO-' + item.fifo_id|string }}</small>
+                                        </td>
                                         <td>{{ item.remaining_quantity }} {{ item.unit }}</td>
                                         <td>
                                             <small class="text-danger">
@@ -133,7 +136,10 @@
                                     {% for item in expiring_soon.fifo_entries %}
                                     {% set days_left = (item.expiration_date.date() - today).days if item.expiration_date.date else (item.expiration_date - today).days %}
                                     <tr>
-                                        <td>{{ item.name }}</td>
+                                        <td>
+                                            <strong>{{ item.name }}</strong><br>
+                                            <small class="text-muted">Lot: {{ item.fifo_code if item.fifo_code else 'FIFO-' + item.fifo_id|string }}</small>
+                                        </td>
                                         <td>{{ item.remaining_quantity }} {{ item.unit }}</td>
                                         <td>
                                             <small>{{ item.expiration_date.strftime('%Y-%m-%d') }}</small>
@@ -208,7 +214,10 @@
                                 <tbody>
                                     {% for item in expired.product_inventory %}
                                     <tr>
-                                        <td>Product #{{ item.product_id }}</td>
+                                        <td>
+                                            <strong>{{ item.sku_name }}</strong><br>
+                                            <small class="text-muted">Lot: {{ item.lot_number }}</small>
+                                        </td>
                                         <td>{{ item.variant or 'N/A' }}</td>
                                         <td>{{ item.size_label or 'N/A' }}</td>
                                         <td>{{ item.quantity }} {{ item.unit }}</td>
@@ -266,7 +275,10 @@
                                     {% for item in expiring_soon.product_inventory %}
                                     {% set days_left = (item.expiration_date.date() - today).days if item.expiration_date.date else (item.expiration_date - today).days %}
                                     <tr>
-                                        <td>Product #{{ item.product_id }}</td>
+                                        <td>
+                                            <strong>{{ item.sku_name }}</strong><br>
+                                            <small class="text-muted">Lot: {{ item.lot_number }}</small>
+                                        </td>
                                         <td>{{ item.variant or 'N/A' }}</td>
                                         <td>{{ item.size_label or 'N/A' }}</td>
                                         <td>{{ item.quantity }} {{ item.unit }}</td>
@@ -274,7 +286,7 @@
                                             <small>{{ item.expiration_date.strftime('%Y-%m-%d') }}</small>
                                         </td>
                                         <td>
-                                            <span class="badge {% if days_left <= 1 %}danger{% elif days_left <= 3 %}warning{% else %}secondary{% endif %}">
+                                            <span class="badge {% if days_left <= 1 %}bg-danger{% elif days_left <= 3 %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
                                                 {{ days_left }} day{{ 's' if days_left != 1 else '' }}
                                             </span>
                                         </td>

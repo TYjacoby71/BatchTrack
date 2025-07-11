@@ -126,26 +126,52 @@ class ExpirationService:
                     # Ensure expiration_date is a date object for template compatibility
                     if hasattr(entry.expiration_date, 'date'):
                         entry.expiration_date = entry.expiration_date.date()
+                    
+                    # Add fields needed by template
+                    entry.name = entry.inventory_item.name if entry.inventory_item else 'Unknown Item'
+                    entry.fifo_id = entry.id
+                    entry.unit = entry.unit
+                    
                     expired_items['fifo_entries'].append(entry)
 
-        # Check product SKUs via their inventory items
+        # Check product SKUs via their FIFO history entries
         from ...models import InventoryItem
-        product_skus = db.session.query(ProductSKU).join(
+        from ...models.product import ProductSKUHistory
+        
+        # Get expired SKU history entries (FIFO entries for products)
+        expired_sku_entries = db.session.query(ProductSKUHistory).join(
+            ProductSKU, ProductSKUHistory.inventory_item_id == ProductSKU.inventory_item_id
+        ).join(
             InventoryItem, ProductSKU.inventory_item_id == InventoryItem.id
         ).filter(
-            InventoryItem.quantity > 0,
-            ProductSKU.expiration_date.isnot(None)
+            ProductSKUHistory.remaining_quantity > 0,
+            ProductSKUHistory.expiration_date.isnot(None),
+            InventoryItem.quantity > 0
         ).all()
 
-        for sku in product_skus:
-            if sku.expiration_date:
+        for entry in expired_sku_entries:
+            if entry.expiration_date:
                 # Handle both date and datetime objects
-                exp_date = sku.expiration_date.date() if hasattr(sku.expiration_date, 'date') else sku.expiration_date
+                exp_date = entry.expiration_date.date() if hasattr(entry.expiration_date, 'date') else entry.expiration_date
                 if exp_date < today:
                     # Ensure expiration_date is a date object for template compatibility
-                    if hasattr(sku.expiration_date, 'date'):
-                        sku.expiration_date = sku.expiration_date.date()
-                    expired_items['product_inventory'].append(sku)
+                    if hasattr(entry.expiration_date, 'date'):
+                        entry.expiration_date = entry.expiration_date.date()
+                    
+                    # Get the SKU for display name
+                    sku = ProductSKU.query.filter_by(inventory_item_id=entry.inventory_item_id).first()
+                    
+                    # Add fields needed by template
+                    entry.product_id = sku.product_id if sku else 'Unknown'
+                    entry.variant = sku.variant.name if sku and sku.variant else 'N/A'
+                    entry.size_label = sku.size_label if sku else 'N/A'
+                    entry.quantity = entry.remaining_quantity
+                    entry.unit = entry.unit
+                    entry.product_inv_id = entry.id  # Use history entry ID for spoilage
+                    entry.sku_name = sku.display_name if sku else f'Product History #{entry.id}'
+                    entry.lot_number = entry.fifo_code if hasattr(entry, 'fifo_code') else f'LOT-{entry.id}'
+                    
+                    expired_items['product_inventory'].append(entry)
 
         return expired_items
 
@@ -176,29 +202,49 @@ class ExpirationService:
                     # Ensure expiration_date is a date object for template compatibility
                     if hasattr(entry.expiration_date, 'date'):
                         entry.expiration_date = entry.expiration_date.date()
+                    
+                    # Add fields needed by template
+                    entry.name = entry.inventory_item.name if entry.inventory_item else 'Unknown Item'
+                    entry.fifo_id = entry.id
+                    entry.unit = entry.unit
+                    
                     expiring_items['fifo_entries'].append(entry)
 
-        # Check product SKUs - get all SKUs with expiration dates and check their inventory
-        all_product_skus = ProductSKU.query.filter(
-            ProductSKU.expiration_date.isnot(None)
+        # Check product SKU history entries that are expiring soon
+        from ...models.product import ProductSKUHistory
+        
+        expiring_sku_entries = db.session.query(ProductSKUHistory).join(
+            ProductSKU, ProductSKUHistory.inventory_item_id == ProductSKU.inventory_item_id
+        ).join(
+            InventoryItem, ProductSKU.inventory_item_id == InventoryItem.id
+        ).filter(
+            ProductSKUHistory.remaining_quantity > 0,
+            ProductSKUHistory.expiration_date.isnot(None),
+            InventoryItem.quantity > 0
         ).all()
 
-        for sku in all_product_skus:
-            # Check if this SKU has quantity available
-            if hasattr(sku, 'quantity') and sku.quantity > 0:
-                exp_date = sku.expiration_date
-                if isinstance(exp_date, str):
-                    exp_date = datetime.strptime(exp_date, '%Y-%m-%d').date()
-                elif hasattr(exp_date, 'date'):
-                    exp_date = exp_date.date()
-
+        for entry in expiring_sku_entries:
+            if entry.expiration_date:
+                # Handle both date and datetime objects
+                exp_date = entry.expiration_date.date() if hasattr(entry.expiration_date, 'date') else entry.expiration_date
                 if today <= exp_date <= warning_threshold:
                     # Ensure expiration_date is a date object for template compatibility
-                    if hasattr(sku.expiration_date, 'date'):
-                        sku.expiration_date = sku.expiration_date.date()
-                    elif isinstance(sku.expiration_date, str):
-                        sku.expiration_date = datetime.strptime(sku.expiration_date, '%Y-%m-%d').date()
-                    expiring_items['product_inventory'].append(sku)
+                    if hasattr(entry.expiration_date, 'date'):
+                        entry.expiration_date = entry.expiration_date.date()
+                    
+                    # Get the SKU for display name
+                    sku = ProductSKU.query.filter_by(inventory_item_id=entry.inventory_item_id).first()
+                    
+                    # Add fields needed by template
+                    entry.product_id = sku.product_id if sku else 'Unknown'
+                    entry.variant = sku.variant.name if sku and sku.variant else 'N/A'
+                    entry.size_label = sku.size_label if sku else 'N/A'
+                    entry.quantity = entry.remaining_quantity
+                    entry.unit = entry.unit
+                    entry.sku_name = sku.display_name if sku else f'Product History #{entry.id}'
+                    entry.lot_number = entry.fifo_code if hasattr(entry, 'fifo_code') else f'LOT-{entry.id}'
+                    
+                    expiring_items['product_inventory'].append(entry)
 
         return expiring_items
 
@@ -396,18 +442,21 @@ class ExpirationService:
 
         elif item_type == 'product':
             # Handle product SKU history spoilage
-            from ...services.product_inventory_service import ProductInventoryService
+            from ...models.product import ProductSKUHistory
 
             history_entry = ProductSKUHistory.query.get(item_id)
             if not history_entry or float(history_entry.remaining_quantity) <= 0:
                 raise ValueError("Product history entry not found or has no remaining quantity")
 
-            # Use product inventory service to deduct the spoiled quantity
-            success = ProductInventoryService.deduct_stock(
-                inventory_item_id=history_entry.inventory_item_id,
+            # Use centralized inventory adjustment service for products
+            success = process_inventory_adjustment(
+                item_id=history_entry.inventory_item_id,
                 quantity=float(history_entry.remaining_quantity),
                 change_type='spoil',
-                notes=f"Marked as spoiled - expired batch"
+                unit=history_entry.unit,
+                notes=f"Marked as spoiled - expired on {history_entry.expiration_date}",
+                created_by=current_user.id if current_user.is_authenticated else None,
+                item_type='product'
             )
 
             return 1 if success else 0
