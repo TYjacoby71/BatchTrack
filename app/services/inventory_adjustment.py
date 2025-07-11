@@ -42,8 +42,16 @@ def validate_inventory_fifo_sync(item_id, item_type=None):
         if not item:
             return False, "Item not found", 0, 0
 
-        # Use FIFO service to get all entries
-        all_fifo_entries = FIFOService.get_all_fifo_entries(item_id)
+        # Get ALL InventoryHistory entries with remaining quantity (including frozen expired ones)
+        from sqlalchemy import and_
+        all_fifo_entries = InventoryHistory.query.filter(
+            and_(
+                InventoryHistory.inventory_item_id == item_id,
+                InventoryHistory.remaining_quantity > 0,
+                InventoryHistory.organization_id == current_user.organization_id if current_user and current_user.is_authenticated else None
+            )
+        ).all()
+
         fifo_total = sum(entry.remaining_quantity for entry in all_fifo_entries)
         current_qty = item.quantity
         item_name = item.name
