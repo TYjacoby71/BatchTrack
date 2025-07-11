@@ -35,6 +35,7 @@ def debug_containers():
 @container_api_bp.route('/available-containers/<int:recipe_id>')
 @login_required
 def available_containers(recipe_id):
+    print(f"Container API route called with recipe_id: {recipe_id}")
     try:
         scale = float(request.args.get('scale', '1.0'))
 
