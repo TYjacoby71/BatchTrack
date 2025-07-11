@@ -1,48 +1,6 @@
 {% extends "layout.html" %}
 {% block content %}
-<div x-data="{
-            settings: {},
-            saving: false,
-            showMessage: false,
-            message: '',
-            messageType: 'success',
-            loadSettings() {
-                // Load settings from server
-                fetch('/api/settings')
-                    .then(response => response.json())
-                    .then(data => {
-                        this.settings = data;
-                    })
-                    .catch(error => {
-                        console.error('Error loading settings:', error);
-                    });
-            },
-            saveSettings() {
-                this.saving = true;
-                fetch('/api/settings', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(this.settings)
-                })
-                .then(response => response.json())
-                .then(data => {
-                    this.saving = false;
-                    this.showMessage = true;
-                    this.message = 'Settings saved successfully!';
-                    this.messageType = 'success';
-                    setTimeout(() => { this.showMessage = false; }, 3000);
-                })
-                .catch(error => {
-                    this.saving = false;
-                    this.showMessage = true;
-                    this.message = 'Error saving settings';
-                    this.messageType = 'danger';
-                    setTimeout(() => { this.showMessage = false; }, 3000);
-                });
-            }
-        }" x-init="loadSettings()" class="container-fluid mt-4">
+<div x-data="settingsManager()" x-init="loadSettings()" class="container-fluid mt-4">
     <h2><i class="fas fa-cog"></i> System Settings</h2>
     <p class="text-muted">Configure BatchTrack to match your workflow and preferences</p>
 
@@ -175,7 +133,7 @@
                                     Maximum alerts on dashboard
                                 </label>
                                 <select class="form-select" id="max-dashboard-alerts" 
-                                        x-model="systemSettings.alerts.max_dashboard_alerts" 
+                                        x-model="userPrefs.max_dashboard_alerts" 
                                         @change="updateUserPreference('max_dashboard_alerts', $event.target.value)">
                                     <option value="1">1 alert (minimal)</option>
                                     <option value="2">2 alerts (focused)</option>
@@ -187,7 +145,7 @@
                             <div class="mb-3">
                                 <label for="expiration-warning-days" class="form-label">Expiration warning (days ahead)</label>
                                 <input type="number" class="form-control" id="expiration-warning-days" 
-                                       x-model="systemSettings.alerts.expiration_warning_days"
+                                       x-model="userPrefs.expiration_warning_days"
                                        @change="updateUserPreference('expiration_warning_days', $event.target.value)"
                                        min="1" max="30">
                             </div>
@@ -241,7 +199,7 @@
 
                             <div class="form-check form-switch mb-2">
                                 <input class="form-check-input" type="checkbox" id="show-alert-badges" 
-                                       x-model="systemSettings.alerts.show_alert_badges"
+                                       x-model="userPrefs.show_alert_badges"
                                        @change="updateUserPreference('show_alert_badges', $event.target.checked)">
                                 <label class="form-check-label" for="show-alert-badges">
                                     Show alert badges in navigation
@@ -725,7 +683,17 @@ function settingsManager() {
         messageType: 'success',
         showPasswordModal: false,
         saving: false,
-
+        loadSettings() {
+                // Load settings from server
+                fetch('/api/settings')
+                    .then(response => response.json())
+                    .then(data => {
+                        this.systemSettings = data;
+                    })
+                    .catch(error => {
+                        console.error('Error loading settings:', error);
+                    });
+            },
         async updateUserPreference(key, value) {
             try {
                 const preferences = {};
@@ -811,9 +779,9 @@ function settingsManager() {
         async changePassword() {
             try {
                 this.saving = true;
-                const currentPassword = document.getElementById('current-password').value;
-                const newPassword = document.getElementById('new-password').value;
-                const confirmPassword = document.getElementById('confirm-password').value;
+                const currentPassword = document.getElementById('currentPassword').value;
+                const newPassword = document.getElementById('newPassword').value;
+                const confirmPassword = document.getElementById('confirmPassword').value;
 
                 const response = await fetch('/settings/api/change-password', {
                     method: 'POST',
@@ -833,9 +801,9 @@ function settingsManager() {
                     this.showSuccessMessage('Password changed successfully');
                     this.showPasswordModal = false;
                     // Clear form
-                    document.getElementById('current-password').value = '';
-                    document.getElementById('new-password').value = '';
-                    document.getElementById('confirm-password').value = '';
+                    document.getElementById('currentPassword').value = '';
+                    document.getElementById('newPassword').value = '';
+                    document.getElementById('confirmPassword').value = '';
                 } else {
                     this.showErrorMessage(result.error || 'Failed to change password');
                 }
