@@ -100,6 +100,9 @@ def create_app():
         from .blueprints.products.product_inventory_routes import product_inventory_bp
         from .blueprints.products.product_variants import product_variants_bp
         from .blueprints.products.sku import sku_bp
+        
+        # Register with unique name to avoid conflict with main products_bp
+        products_routes_bp.name = 'products_routes'
         app.register_blueprint(products_routes_bp, url_prefix='/products')
         app.register_blueprint(products_api_bp)
         app.register_blueprint(product_inventory_bp, url_prefix='/products')
