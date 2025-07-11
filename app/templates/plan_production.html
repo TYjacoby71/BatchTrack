@@ -586,7 +586,7 @@ function planProduction() {
 
       const csrfToken = document.querySelector('input[name=csrf_token]').value;
       try {
-        const response = await fetch('/start-batch/start_batch', {
+        const response = await fetch('/batches/start_batch', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
