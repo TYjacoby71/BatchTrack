@@ -71,6 +71,7 @@
 
                             <!-- Timezone Settings -->
                             <form method="POST" action="{{ url_for('settings.update_timezone') }}" class="mb-3">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <div class="mb-3">
                                     <label for="timezone" class="form-label">Timezone</label>
                                     <select name="timezone" id="timezone" class="form-select">
