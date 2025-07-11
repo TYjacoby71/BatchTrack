@@ -87,9 +87,19 @@
                                             </small>
                                         </td>
                                         <td>
-                                            <small class="text-danger">
-                                                {{ item.expiration_date.strftime('%H:%M:%S') }}
-                                            </small>
+                                            {% if item.expiration_date %}
+                                                {% set exp_date = item.expiration_date %}
+                                                {% if exp_date is string %}
+                                                  {% set exp_date = exp_date | parse_datetime %}
+                                                {% endif %}
+                                                {% if exp_date and exp_date.time() != exp_date.time().replace(hour=0, minute=0, second=0) %}
+                                                  {{ exp_date.strftime('%H:%M:%S') }}
+                                                {% else %}
+                                                  <span class="text-muted">--:--:--</span>
+                                                {% endif %}
+                                              {% else %}
+                                                <span class="text-muted">--:--:--</span>
+                                              {% endif %}
                                         </td>
                                         <td><small class="text-muted">#{{ item.fifo_id }}</small></td>
                                         <td>
@@ -146,7 +156,19 @@
                                             <small>{{ item.expiration_date.strftime('%Y-%m-%d') }}</small>
                                         </td>
                                         <td>
-                                            <small>{{ item.expiration_date.strftime('%H:%M:%S') }}</small>
+                                            {% if item.expiration_date %}
+                                                {% set exp_date = item.expiration_date %}
+                                                {% if exp_date is string %}
+                                                  {% set exp_date = exp_date | parse_datetime %}
+                                                {% endif %}
+                                                {% if exp_date and exp_date.time() != exp_date.time().replace(hour=0, minute=0, second=0) %}
+                                                  {{ exp_date.strftime('%H:%M:%S') }}
+                                                {% else %}
+                                                  <span class="text-muted">--:--:--</span>
+                                                {% endif %}
+                                              {% else %}
+                                                <span class="text-muted">--:--:--</span>
+                                              {% endif %}
                                         </td>
                                         <td>
                                             <span class="badge {% if days_left <= 2 %}bg-danger{% elif days_left <= 5 %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
@@ -229,9 +251,19 @@
                                             </small>
                                         </td>
                                         <td>
-                                            <small class="text-danger">
-                                                {{ item.expiration_date.strftime('%H:%M:%S') }}
-                                            </small>
+                                            {% if item.expiration_date %}
+                                                {% set exp_date = item.expiration_date %}
+                                                {% if exp_date is string %}
+                                                  {% set exp_date = exp_date | parse_datetime %}
+                                                {% endif %}
+                                                {% if exp_date and exp_date.time() != exp_date.time().replace(hour=0, minute=0, second=0) %}
+                                                  {{ exp_date.strftime('%H:%M:%S') }}
+                                                {% else %}
+                                                  <span class="text-muted">--:--:--</span>
+                                                {% endif %}
+                                              {% else %}
+                                                <span class="text-muted">--:--:--</span>
+                                              {% endif %}
                                         </td>
                                         <td>
                                             <button class="btn btn-outline-danger btn-sm" 
@@ -291,7 +323,19 @@
                                             <small>{{ item.expiration_date.strftime('%Y-%m-%d') }}</small>
                                         </td>
                                         <td>
-                                            <small>{{ item.expiration_date.strftime('%H:%M:%S') }}</small>
+                                            {% if item.expiration_date %}
+                                                {% set exp_date = item.expiration_date %}
+                                                {% if exp_date is string %}
+                                                  {% set exp_date = exp_date | parse_datetime %}
+                                                {% endif %}
+                                                {% if exp_date and exp_date.time() != exp_date.time().replace(hour=0, minute=0, second=0) %}
+                                                  {{ exp_date.strftime('%H:%M:%S') }}
+                                                {% else %}
+                                                  <span class="text-muted">--:--:--</span>
+                                                {% endif %}
+                                              {% else %}
+                                                <span class="text-muted">--:--:--</span>
+                                              {% endif %}
                                         </td>
                                         <td>
                                             <span class="badge {% if days_left <= 1 %}danger{% elif days_left <= 3 %}warning{% else %}secondary{% endif %}">
