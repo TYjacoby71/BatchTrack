@@ -23,8 +23,18 @@ class ExpirationService:
         if not expiration_date:
             return None
         from ...utils.timezone_utils import TimezoneUtils
-        now = TimezoneUtils.now_naive()  # Use naive datetime for comparison
-        # Use full datetime comparison for more precision
+        now = TimezoneUtils.utc_now()  # Use consistent UTC time
+        
+        # Ensure both datetimes are timezone-aware or both are naive
+        if expiration_date.tzinfo is None:
+            # If expiration_date is naive, assume it's in UTC
+            import pytz
+            expiration_date = pytz.UTC.localize(expiration_date)
+        
+        if now.tzinfo is None:
+            import pytz
+            now = pytz.UTC.localize(now)
+            
         time_diff = expiration_date - now
         return int(time_diff.total_seconds() / 86400)  # Convert seconds to days
 
@@ -91,7 +101,7 @@ class ExpirationService:
         """Get all expired inventory items across the system"""
         from flask_login import current_user
         from ...utils.timezone_utils import TimezoneUtils
-        now = TimezoneUtils.now_naive()
+        now = TimezoneUtils.utc_now()  # Use consistent UTC time
 
         # Get expired FIFO entries
         expired_fifo = db.session.query(
@@ -170,7 +180,7 @@ class ExpirationService:
         """Get items expiring within specified days"""
         from flask_login import current_user
         from ...utils.timezone_utils import TimezoneUtils
-        now = TimezoneUtils.now_naive()
+        now = TimezoneUtils.utc_now()  # Use consistent UTC time
         future_date = now + timedelta(days=days_ahead)
 
         # FIFO entries expiring soon
