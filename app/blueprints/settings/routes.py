@@ -3,7 +3,7 @@ from flask_login import login_required, current_user
 from . import settings_bp
 from ...models.user_preferences import UserPreferences
 from ...models import db
-from ...utils.settings import SystemSettings
+from ...utils.settings import SettingsService
 from ...models import db, Unit, User, InventoryItem, UserPreferences, Organization
 from ...utils.permissions import has_permission, require_permission
 from werkzeug.security import generate_password_hash, check_password_hash

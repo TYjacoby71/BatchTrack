@@ -1,8 +1,70 @@
 {% extends "layout.html" %}
 {% block content %}
 <div x-data="{
-        systemSettings: {},
-        userPrefs: {},
+        systemSettings: {
+            alerts: {
+                max_dashboard_alerts: 10,
+                low_stock_threshold: 5,
+                expiration_warning_days: 7,
+                show_expiration_alerts: true,
+                show_timer_alerts: true,
+                show_low_stock_alerts: true,
+                show_batch_alerts: true,
+                show_fault_alerts: true,
+                show_alert_badges: true
+            },
+            batch_rules: {
+                require_timer_completion: false,
+                allow_intermediate_tags: true,
+                require_finish_confirmation: true,
+                stuck_batch_hours: 24
+            },
+            recipe_builder: {
+                enable_variations: true,
+                enable_containers: true,
+                auto_scale_recipes: true,
+                show_cost_breakdown: true
+            },
+            inventory: {
+                enable_fifo_tracking: true,
+                show_expiration_dates: true,
+                auto_calculate_costs: true,
+                show_supplier_info: false,
+                enable_barcode_scanning: false,
+                enable_bulk_operations: true
+            },
+            products: {
+                enable_variants: true,
+                show_profit_margins: true,
+                track_production_costs: true,
+                enable_product_images: true,
+                auto_generate_skus: false
+            },
+            system: {
+                auto_backup: false,
+                per_page: 25,
+                enable_csv_export: true,
+                auto_save_forms: true
+            },
+            notifications: {
+                browser_notifications: false,
+                email_alerts: false,
+                alert_frequency: 'immediate',
+                quiet_hours_start: '22:00',
+                quiet_hours_end: '08:00'
+            }
+        },
+        userPrefs: {
+            expiration_warning_days: 7,
+            show_expiration_alerts: true,
+            show_low_stock_alerts: true,
+            show_batch_alerts: true,
+            show_timer_alerts: true,
+            show_fault_alerts: true,
+            show_alert_badges: true,
+            timezone: 'UTC'
+        },
+        settings: {},
         saving: false,
         showMessage: false,
         message: '',
@@ -17,8 +79,9 @@
                 const response = await fetch('/settings/api/all');
                 if (response.ok) {
                     const data = await response.json();
-                    this.systemSettings = data.system_settings || {};
-                    this.userPrefs = data.user_preferences || {};
+                    this.systemSettings = data.system_settings || this.systemSettings;
+                    this.userPrefs = data.user_preferences || this.userPrefs;
+                    this.settings = this.systemSettings; // Alias for backward compatibility
                 }
             } catch (error) {
                 console.error('Failed to load settings:', error);
@@ -46,6 +109,38 @@
                 }
             } catch (error) {
                 this.showNotification('Error saving settings', 'error');
+            } finally {
+                this.saving = false;
+            }
+        },
+
+        showNotification(msg, type) {
+            this.message = msg;
+            this.messageType = type;
+            this.showMessage = true;
+            setTimeout(() => {
+                this.showMessage = false;
+            }, 3000);
+        },
+
+        updateSystemSetting(section, key, value) {
+            if (!this.systemSettings[section]) {
+                this.systemSettings[section] = {};
+            }
+            this.systemSettings[section][key] = value;
+        },
+
+        updateUserPref(key, value) {
+            this.userPrefs[key] = value;
+        },
+
+        settingsManager() {
+            return {
+                systemSettings: this.systemSettings,
+                userPrefs: this.userPrefs,
+                save: () => this.saveSettings()
+            };
+        }fication('Error saving settings', 'error');
             } finally {
                 this.saving = false;
             }
