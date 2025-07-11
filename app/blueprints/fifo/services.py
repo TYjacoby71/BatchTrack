@@ -474,16 +474,17 @@ class FIFOService:
 
         # Handle increase in quantity    
         else:
-            # For recounts, we want to fill ALL existing entries with remaining capacity
+            # For recounts, we want to fill ALL existing FIFO entries with remaining capacity
             # This includes expired entries since the user physically counted them
+            # We also want to fill entries that were previously completely consumed
             if item.type == 'product':
-                # Get ALL ProductSKUHistory entries with available capacity (including expired)
+                # Get ALL ProductSKUHistory entries that can be filled (including expired and previously consumed)
                 # Must scope to specific inventory_item_id AND organization
                 query = ProductSKUHistory.query.filter(
                     and_(
                         ProductSKUHistory.inventory_item_id == inventory_item_id,
-                        ProductSKUHistory.quantity_change > 0,  # Only positive additions can be filled
-                        ProductSKUHistory.remaining_quantity < ProductSKUHistory.quantity_change  # Has unfilled capacity
+                        ProductSKUHistory.quantity_change > 0  # Only positive additions can be filled
+                        # Remove the remaining_quantity < quantity_change filter to allow filling consumed lots
                     )
                 )
                 
@@ -491,20 +492,20 @@ class FIFOService:
                 if current_user and current_user.is_authenticated:
                     query = query.filter(ProductSKUHistory.organization_id == current_user.organization_id)
                 
-                entries_with_capacity = query.order_by(ProductSKUHistory.timestamp.desc()).all()  # Fill newest first for recounts
+                entries_with_capacity = query.order_by(ProductSKUHistory.timestamp.asc()).all()  # Fill oldest first for recounts (FIFO order)
                 
-                print(f"Product recount: Found {len(entries_with_capacity)} entries with capacity for item {inventory_item_id}")
+                print(f"Product recount: Found {len(entries_with_capacity)} entries to fill for item {inventory_item_id}")
                 for entry in entries_with_capacity:
                     capacity = entry.quantity_change - entry.remaining_quantity
                     print(f"  Entry {entry.id}: {entry.remaining_quantity}/{entry.quantity_change}, capacity: {capacity}")
             else:
-                # Get ALL InventoryHistory entries with available capacity (including expired)
+                # Get ALL InventoryHistory entries that can be filled (including expired and previously consumed)
                 # Must scope to specific inventory_item_id AND organization
                 query = InventoryHistory.query.filter(
                     and_(
                         InventoryHistory.inventory_item_id == inventory_item_id,
-                        InventoryHistory.quantity_change > 0,  # Only positive additions can be filled
-                        InventoryHistory.remaining_quantity < InventoryHistory.quantity_change  # Has unfilled capacity
+                        InventoryHistory.quantity_change > 0  # Only positive additions can be filled
+                        # Remove the remaining_quantity < quantity_change filter to allow filling consumed lots
                     )
                 )
                 
@@ -512,9 +513,9 @@ class FIFOService:
                 if current_user and current_user.is_authenticated:
                     query = query.filter(InventoryHistory.organization_id == current_user.organization_id)
                 
-                entries_with_capacity = query.order_by(InventoryHistory.timestamp.desc()).all()  # Fill newest first for recounts
+                entries_with_capacity = query.order_by(InventoryHistory.timestamp.asc()).all()  # Fill oldest first for recounts (FIFO order)
                 
-                print(f"Raw recount: Found {len(entries_with_capacity)} entries with capacity for item {inventory_item_id}")
+                print(f"Raw recount: Found {len(entries_with_capacity)} entries to fill for item {inventory_item_id}")
                 for entry in entries_with_capacity:
                     capacity = entry.quantity_change - entry.remaining_quantity
                     print(f"  Entry {entry.id}: {entry.remaining_quantity}/{entry.quantity_change}, capacity: {capacity}")
@@ -523,12 +524,12 @@ class FIFOService:
 
             print(f"Recount: Starting to fill {len(entries_with_capacity)} entries, need to add {remaining_to_add}")
             
-            # First try to fill existing FIFO entries with capacity
+            # Fill ALL existing FIFO entries up to their original quantity first
             for entry in entries_with_capacity:
                 if remaining_to_add <= 0:
                     break
 
-                # Calculate how much capacity this entry has
+                # Calculate how much capacity this entry has (can be negative if overfilled previously)
                 available_capacity = entry.quantity_change - entry.remaining_quantity
                 fill_amount = min(available_capacity, remaining_to_add)
 
@@ -559,8 +560,10 @@ class FIFOService:
                             organization_id=current_user.organization_id if current_user else item.organization_id
                         )
                         db.session.add(history)
+                elif available_capacity <= 0:
+                    print(f"Recount: Entry {entry.id} is already at or above original quantity ({entry.remaining_quantity}/{entry.quantity_change})")
                 else:
-                    print(f"Recount: Skipping entry {entry.id} - no capacity available")
+                    print(f"Recount: Skipping entry {entry.id} - no remaining quantity to add")
 
             # Only create new FIFO entry if we couldn't fill existing ones
             if remaining_to_add > 0:
