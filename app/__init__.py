@@ -120,9 +120,13 @@ def create_app():
     app.register_blueprint(fault_log_routes.fault_log_bp, url_prefix='/fault_log')
     app.register_blueprint(tag_manager_routes.tag_manager_bp, url_prefix='/tag_manager')
 
-    # Register API blueprints
+    # Register blueprints
     from .blueprints.api.routes import api_bp
     app.register_blueprint(api_bp)
+
+    # Ensure all API routes are loaded
+    with app.app_context():
+        print(f"Registered API routes: {[rule.rule for rule in app.url_map.iter_rules() if rule.rule.startswith('/api/')]}")
 
     # Load additional config if provided
     #if config_filename:
