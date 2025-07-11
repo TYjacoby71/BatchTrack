@@ -36,8 +36,13 @@ def has_subscription_feature(feature):
     """Check if current user's organization has subscription feature"""
     if not current_user.is_authenticated:
         return False
-    # Placeholder - always return True for now
-    return True
+    
+    # Developers can access everything
+    if current_user.user_type == 'developer':
+        return True
+    
+    org_features = current_user.organization.get_subscription_features()
+    return feature in org_features or 'all_features' in org_features
 
 def is_organization_owner():
     """Check if current user is organization owner"""

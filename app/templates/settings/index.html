@@ -1,6 +1,84 @@
 {% extends "layout.html" %}
 {% block content %}
-<div class="container" x-data="settingsManager()">
+<div x-data="{
+        settings: {{ system_settings | tojson }},
+        userPrefs: {{ user_prefs | tojson }},
+        saving: false,
+        showMessage: false,
+        message: '',
+        messageType: 'success',
+
+        updateSystemSetting(section, key, value) {
+            this.settings[section] = this.settings[section] || {};
+            this.settings[section][key] = value;
+            this.saveSystemSettings();
+        },
+
+        updateUserPreference(key, value) {
+            this.userPrefs[key] = value;
+            this.saveUserPreferences();
+        },
+
+        async saveSystemSettings() {
+            this.saving = true;
+            try {
+                const response = await fetch('/settings/api/system-settings', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify(this.settings)
+                });
+
+                if (response.ok) {
+                    this.showSuccessMessage('Settings saved successfully');
+                } else {
+                    this.showErrorMessage('Failed to save settings');
+                }
+            } catch (error) {
+                this.showErrorMessage('Error saving settings');
+            }
+            this.saving = false;
+        },
+
+        async saveUserPreferences() {
+            this.saving = true;
+            try {
+                const response = await fetch('/settings/api/user-preferences', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify(this.userPrefs)
+                });
+
+                if (response.ok) {
+                    this.showSuccessMessage('Preferences saved successfully');
+                } else {
+                    this.showErrorMessage('Failed to save preferences');
+                }
+            } catch (error) {
+                this.showErrorMessage('Error saving preferences');
+            }
+            this.saving = false;
+        },
+
+        showSuccessMessage(msg) {
+            this.message = msg;
+            this.messageType = 'success';
+            this.showMessage = true;
+            setTimeout(() => this.showMessage = false, 3000);
+        },
+
+        showErrorMessage(msg) {
+            this.message = msg;
+            this.messageType = 'danger';
+            this.showMessage = true;
+            setTimeout(() => this.showMessage = false, 5000);
+        }
+    }" class="container-fluid mt-4">
     <h2><i class="fas fa-cog"></i> System Settings</h2>
     <p class="text-muted">Configure BatchTrack to match your workflow and preferences</p>
 
@@ -650,7 +728,7 @@
                     <div class="mb-3">
                         <label for="confirmPassword" class="form-label">Confirm New Password</label>
                         <input type="password" class="form-control" id="confirmPassword" required>
-                    </div>
+                                        </div>
                 </form>
             </div>
             <div class="modal-footer">

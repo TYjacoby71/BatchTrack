@@ -23,12 +23,32 @@ class Organization(db.Model):
 
     def can_add_users(self):
         """Check if organization can add more users based on subscription"""
-        if self.subscription_tier == 'free':
+        if self.subscription_tier == 'solo':
             return self.active_users_count < 1  # Solo only
         elif self.subscription_tier == 'team':
             return self.active_users_count < 10  # Up to 10 users
-        else:
+        elif self.subscription_tier == 'enterprise':
             return True  # Unlimited for enterprise
+        else:
+            return self.active_users_count < 1  # Default to solo limits
+    
+    def get_max_users(self):
+        """Get maximum users allowed for subscription tier"""
+        tier_limits = {
+            'solo': 1,
+            'team': 10,
+            'enterprise': float('inf')
+        }
+        return tier_limits.get(self.subscription_tier, 1)
+    
+    def get_subscription_features(self):
+        """Get features available for subscription tier"""
+        features = {
+            'solo': ['basic_production', 'inventory_tracking', 'recipe_management'],
+            'team': ['basic_production', 'inventory_tracking', 'recipe_management', 'user_management', 'advanced_alerts', 'batch_tracking'],
+            'enterprise': ['all_features', 'api_access', 'custom_integrations', 'priority_support']
+        }
+        return features.get(self.subscription_tier, features['solo'])
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -39,9 +59,11 @@ class User(UserMixin, db.Model):
     last_name = db.Column(db.String(64), nullable=True)
     email = db.Column(db.String(120), nullable=True)
     phone = db.Column(db.String(20), nullable=True)
-    subscription_class = db.Column(db.String(32), default='free')
+    subscription_class = db.Column(db.String(32), default='free')  # Deprecated - use organization.subscription_tier
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=False)
     is_owner = db.Column(db.Boolean, default=False)  # Explicit owner flag
+    user_type = db.Column(db.String(32), default='team_member')  # 'developer', 'organization_owner', 'team_member'
+    is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
     last_login = db.Column(db.DateTime, nullable=True)
 
