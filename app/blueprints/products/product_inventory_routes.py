@@ -262,25 +262,12 @@ def get_sku_fifo_status(sku_id):
     today = datetime.now().date()
     inventory_item_id = sku.inventory_item_id
 
-    # Get fresh FIFO entries (not expired, with remaining quantity)
-    fresh_entries = InventoryHistory.query.filter(
-        InventoryHistory.inventory_item_id == inventory_item_id,
-        InventoryHistory.remaining_quantity > 0,
-        InventoryHistory.organization_id == current_user.organization_id,
-        db.or_(
-            InventoryHistory.expiration_date.is_(None),  # Non-perishable
-            InventoryHistory.expiration_date >= today    # Not expired yet
-        )
-    ).order_by(InventoryHistory.timestamp.asc()).all()
+    # Get fresh FIFO entries using the centralized FIFO service
+    from ...blueprints.fifo.services import FIFOService
+    fresh_entries = FIFOService.get_fifo_entries(inventory_item_id)
 
-    # Get expired FIFO entries (frozen, with remaining quantity)
-    expired_entries = InventoryHistory.query.filter(
-        InventoryHistory.inventory_item_id == inventory_item_id,
-        InventoryHistory.remaining_quantity > 0,
-        InventoryHistory.organization_id == current_user.organization_id,
-        InventoryHistory.expiration_date.isnot(None),
-        InventoryHistory.expiration_date < today
-    ).order_by(InventoryHistory.timestamp.asc()).all()
+    # Get expired FIFO entries using the centralized FIFO service
+    expired_entries = FIFOService.get_expired_fifo_entries(inventory_item_id)
 
     fresh_total = sum(entry.remaining_quantity for entry in fresh_entries)
     expired_total = sum(entry.remaining_quantity for entry in expired_entries)
@@ -331,14 +318,12 @@ def dispose_expired_sku(sku_id):
     today = datetime.now().date()
     inventory_item_id = sku.inventory_item_id
 
-    # Get all expired entries with remaining quantity
-    expired_entries = InventoryHistory.query.filter(
-        InventoryHistory.inventory_item_id == inventory_item_id,
-        InventoryHistory.remaining_quantity > 0,
-        InventoryHistory.organization_id == current_user.organization_id,
-        InventoryHistory.expiration_date.isnot(None),
-        InventoryHistory.expiration_date < today
-    ).all()
+    # Get fresh FIFO entries using the centralized FIFO service
+    from ...blueprints.fifo.services import FIFOService
+    fresh_entries = FIFOService.get_fifo_entries(inventory_item_id)
+
+    # Get expired FIFO entries using the centralized FIFO service
+    expired_entries = FIFOService.get_expired_fifo_entries(inventory_item_id)
 
     if not expired_entries:
         return jsonify({'error': 'No expired inventory found'}), 400
