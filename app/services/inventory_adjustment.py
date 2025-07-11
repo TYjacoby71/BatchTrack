@@ -94,7 +94,8 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
         current_quantity = item.quantity
 
         if change_type == 'recount':
-            qty_change = quantity - current_quantity
+            # Recount is special - handle independently from FIFO sync validation
+            return handle_recount_adjustment(item_id, quantity, notes, created_by, item_type)
         elif change_type in ['spoil', 'trash', 'sold', 'sale', 'gift', 'sample', 'tester', 'quality_fail', 'expired_disposal', 'damaged', 'expired']:
             qty_change = -abs(quantity)
         elif change_type == 'reserved':
@@ -234,4 +235,175 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
 
     except Exception as e:
         db.session.rollback()
+        raise e
+
+def handle_recount_adjustment(item_id, target_quantity, notes=None, created_by=None, item_type='ingredient'):
+    """
+    Comprehensive recount handler that implements all recount business rules:
+    1. Positive changes fill existing lots with capacity first, then create new lots
+    2. Deductions take from available lots but never go negative
+    3. Handles sync discrepancies by reconciling inventory vs FIFO totals
+    4. Creates appropriate history entries for audit trail
+    """
+    try:
+        # Get the item
+        item = InventoryItem.query.get(item_id)
+        if not item:
+            raise ValueError(f"Inventory item not found for ID: {item_id}")
+
+        # Organization scoping check
+        if current_user and current_user.is_authenticated:
+            if item.organization_id != current_user.organization_id:
+                raise ValueError("Access denied: Item does not belong to your organization")
+
+        # Get ALL FIFO entries (including expired) since recount counts physical inventory
+        all_fifo_entries = FIFOService.get_all_fifo_entries(item_id)
+        current_fifo_total = sum(entry.remaining_quantity for entry in all_fifo_entries)
+        current_inventory_qty = item.quantity
+
+        # Calculate what changes are needed
+        inventory_change = target_quantity - current_inventory_qty
+        fifo_change = target_quantity - current_fifo_total
+
+        print(f"RECOUNT ANALYSIS:")
+        print(f"  Target: {target_quantity}")
+        print(f"  Current Inventory: {current_inventory_qty} (change: {inventory_change})")
+        print(f"  Current FIFO Total: {current_fifo_total} (change: {fifo_change})")
+
+        # Use same unit logic as other adjustments
+        history_unit = 'count' if item.type == 'container' else item.unit
+
+        # Handle FIFO adjustments first
+        if fifo_change != 0:
+            if fifo_change < 0:
+                # Need to reduce FIFO - deduct from existing lots
+                deduction_needed = abs(fifo_change)
+                
+                # Protect against going negative - can't deduct more than we have
+                if deduction_needed > current_fifo_total:
+                    print(f"RECOUNT: Capping deduction at available FIFO total ({current_fifo_total})")
+                    deduction_needed = current_fifo_total
+
+                if deduction_needed > 0:
+                    # Calculate deduction plan using oldest first (standard FIFO)
+                    success, deduction_plan, _ = FIFOService.calculate_deduction_plan(
+                        item_id, deduction_needed, 'recount'
+                    )
+                    
+                    if success:
+                        # Execute deductions
+                        FIFOService.execute_deduction_plan(deduction_plan, item_id)
+                        
+                        # Create deduction history entries
+                        FIFOService.create_deduction_history(
+                            item_id, deduction_plan, 'recount', notes or "Recount deduction",
+                            created_by=created_by
+                        )
+                        print(f"RECOUNT: Deducted {deduction_needed} from FIFO lots")
+                    else:
+                        print(f"RECOUNT: Could not calculate deduction plan")
+            else:
+                # Need to increase FIFO - fill existing lots first, then create new ones
+                addition_needed = fifo_change
+                
+                # Get entries that can be filled (have remaining capacity)
+                if item.type == 'product':
+                    from app.models.product import ProductSKUHistory
+                    fillable_entries = ProductSKUHistory.query.filter(
+                        ProductSKUHistory.inventory_item_id == item_id,
+                        ProductSKUHistory.quantity_change > 0,  # Only positive additions can be filled
+                        ProductSKUHistory.organization_id == current_user.organization_id if current_user and current_user.is_authenticated else item.organization_id
+                    ).order_by(ProductSKUHistory.timestamp.desc()).all()  # Fill newest first
+                else:
+                    fillable_entries = InventoryHistory.query.filter(
+                        InventoryHistory.inventory_item_id == item_id,
+                        InventoryHistory.quantity_change > 0,  # Only positive additions can be filled
+                        InventoryHistory.organization_id == current_user.organization_id if current_user and current_user.is_authenticated else item.organization_id
+                    ).order_by(InventoryHistory.timestamp.desc()).all()  # Fill newest first
+
+                remaining_to_add = addition_needed
+                
+                # Fill existing lots with remaining capacity
+                for entry in fillable_entries:
+                    if remaining_to_add <= 0:
+                        break
+                        
+                    available_capacity = entry.quantity_change - entry.remaining_quantity
+                    fill_amount = min(available_capacity, remaining_to_add)
+                    
+                    if fill_amount > 0:
+                        old_remaining = entry.remaining_quantity
+                        entry.remaining_quantity += fill_amount
+                        remaining_to_add -= fill_amount
+                        
+                        print(f"RECOUNT: Filled entry {entry.id} with {fill_amount} (from {old_remaining} to {entry.remaining_quantity})")
+
+                # Create new lot for any remaining quantity
+                if remaining_to_add > 0:
+                    print(f"RECOUNT: Creating new lot for remaining {remaining_to_add}")
+                    FIFOService.add_fifo_entry(
+                        inventory_item_id=item_id,
+                        quantity=remaining_to_add,
+                        change_type='recount',
+                        unit=history_unit,
+                        notes=f"New stock from recount: {notes or 'Physical count adjustment'}",
+                        cost_per_unit=item.cost_per_unit,
+                        created_by=created_by
+                    )
+
+        # Update inventory quantity to match target
+        item.quantity = target_quantity
+
+        # Create summary recount entry for audit trail
+        if inventory_change != 0:
+            if item.type == 'product':
+                # For products, create summary in ProductSKUHistory
+                from app.models.product import ProductSKUHistory
+                from app.utils.fifo_generator import generate_fifo_code
+                
+                summary_history = ProductSKUHistory(
+                    inventory_item_id=item_id,
+                    change_type='recount',
+                    quantity_change=inventory_change,
+                    unit=history_unit,
+                    remaining_quantity=0,  # Summary entries don't create new FIFO capacity
+                    unit_cost=item.cost_per_unit,
+                    notes=f"Recount summary: {current_inventory_qty} → {target_quantity} ({notes or 'Physical count'})",
+                    created_by=created_by,
+                    fifo_code=generate_fifo_code('recount', inventory_change, None),
+                    organization_id=current_user.organization_id if current_user and current_user.is_authenticated else item.organization_id
+                )
+            else:
+                # For raw inventory, create summary in InventoryHistory
+                summary_history = InventoryHistory(
+                    inventory_item_id=item_id,
+                    change_type='recount',
+                    quantity_change=inventory_change,
+                    unit=history_unit,
+                    remaining_quantity=0,  # Summary entries don't create new FIFO capacity
+                    unit_cost=item.cost_per_unit,
+                    note=f"Recount summary: {current_inventory_qty} → {target_quantity} ({notes or 'Physical count'})",
+                    created_by=created_by,
+                    quantity_used=0.0,
+                    organization_id=current_user.organization_id if current_user and current_user.is_authenticated else item.organization_id
+                )
+            
+            db.session.add(summary_history)
+
+        db.session.commit()
+        
+        # Validate final state
+        final_fifo_entries = FIFOService.get_all_fifo_entries(item_id)
+        final_fifo_total = sum(entry.remaining_quantity for entry in final_fifo_entries)
+        
+        print(f"RECOUNT FINAL STATE:")
+        print(f"  Inventory: {item.quantity}")
+        print(f"  FIFO Total: {final_fifo_total}")
+        print(f"  Sync Status: {'✓' if abs(item.quantity - final_fifo_total) < 0.001 else '✗'}")
+        
+        return True
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"RECOUNT ERROR: {str(e)}")
         raise e
