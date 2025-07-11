@@ -442,26 +442,34 @@ class ExpirationService:
                 return success, "Successfully marked as expired" if success else "Failed to mark as expired"
 
             elif item_type == 'product':
-                # Product inventory (ProductSKU)
-                from ...models import ProductSKU
-
+                # Product inventory - item_id is the product_inv_id (history entry ID)
+                from ...models import ProductSKUHistory, ProductSKU
+                
+                # Get the history entry first
+                history_entry = ProductSKUHistory.query.get(item_id)
+                if not history_entry:
+                    return False, "Product history entry not found"
+                
+                # Get the actual inventory item ID
+                inventory_item_id = history_entry.inventory_item_id
+                
                 # Find the SKU by inventory_item_id
-                sku = ProductSKU.query.filter_by(inventory_item_id=item_id).first()
+                sku = ProductSKU.query.filter_by(inventory_item_id=inventory_item_id).first()
                 if not sku:
                     return False, "Product SKU not found"
 
-                # Use all remaining quantity if not specified
+                # Use the remaining quantity from the history entry if not specified
                 if quantity is None:
-                    quantity = sku.quantity
+                    quantity = history_entry.remaining_quantity
 
                 # Use centralized inventory adjustment service for products
                 from ...services.inventory_adjustment import process_inventory_adjustment
                 success = process_inventory_adjustment(
-                    item_id=item_id,
+                    item_id=inventory_item_id,
                     quantity=quantity,
                     change_type='expired',
                     unit=sku.unit,
-                    notes='Marked as expired from expiration manager',
+                    notes=f'Marked as expired from expiration manager - History entry {item_id}',
                     created_by=current_user.id,
                     item_type='product'
                 )
