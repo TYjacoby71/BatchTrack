@@ -48,11 +48,26 @@ function toggleUpdateForm() {
 
 
 
-function updateClock() {
+async function updateClock() {
   const clock = document.getElementById('clock');
   if (clock) {
-    const now = new Date();
-    clock.textContent = '🕐 ' + now.toLocaleTimeString();
+    try {
+      // Get server time to stay in sync with timezone utilities
+      const response = await fetch('/api/server-time');
+      if (response.ok) {
+        const data = await response.json();
+        const serverTime = new Date(data.current_time);
+        clock.textContent = '🕐 ' + serverTime.toLocaleTimeString();
+      } else {
+        // Fallback to local time if server endpoint unavailable
+        const now = new Date();
+        clock.textContent = '🕐 ' + now.toLocaleTimeString();
+      }
+    } catch (error) {
+      // Fallback to local time on error
+      const now = new Date();
+      clock.textContent = '🕐 ' + now.toLocaleTimeString();
+    }
   }
 }
 
