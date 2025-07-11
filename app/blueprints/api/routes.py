@@ -8,7 +8,7 @@ api_bp = Blueprint('api', __name__, url_prefix='/api')
 @api_bp.route('/server-time')
 def server_time():
     """Get current server time in user's timezone"""
-    from ..utils.timezone_utils import TimezoneUtils
+    from ...utils.timezone_utils import TimezoneUtils
 
     # Get current time in user's timezone
     user_time = TimezoneUtils.now()
