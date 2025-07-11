@@ -75,6 +75,15 @@ document.addEventListener('DOMContentLoaded', function() {
   // Initialize clock
   updateClock();
   setInterval(updateClock, 30000);
+  
+  // Update clock immediately when timezone changes
+  const timezoneForm = document.querySelector('form[action*="timezone"]');
+  if (timezoneForm) {
+    timezoneForm.addEventListener('submit', function() {
+      // Update clock immediately after form submission
+      setTimeout(updateClock, 1000);
+    });
+  }
   // Initialize all Select2 dropdowns
   const select2Config = {
     placeholder: 'Select...',
