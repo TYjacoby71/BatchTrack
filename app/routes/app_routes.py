@@ -23,7 +23,8 @@ def check_container_availability(container_ids, scale=1):
     # This function needs to be implemented based on your container model
     return [], True
 
-@app_routes_bp.route("/user_dashboard", methods=["GET", "POST"])
+@app_routes_bp.route('/dashboard')
+@app_routes_bp.route('/user_dashboard')
 @login_required
 def dashboard(scope_context=None):
     recipes = Recipe.scoped().all()
