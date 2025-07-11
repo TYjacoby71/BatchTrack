@@ -1,109 +1,88 @@
-2025-07-10 02:17:51,054 INFO: Created product output for batch AAS-2025-008: 0 container SKUs, 4.0 bulk [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:148]
-2025-07-10 02:18:22,465 INFO: Processing container: Admin 4oz Glass Jars (ID: 2) [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:179]
-2025-07-10 02:18:22,465 ERROR: Error creating container SKU: 'str' object has no attribute '_sa_instance_state' [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:255]
-2025-07-10 02:18:22,466 ERROR: Error processing container 2: 'str' object has no attribute '_sa_instance_state' [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:197]
-2025-07-10 02:18:22,501 INFO: Created product output for batch AAS-2025-009: 0 container SKUs, 4.0 bulk [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:148]
-2025-07-10 02:20:05,319 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-10 02:20:08,639 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-10 02:20:09,487 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-10 02:20:53,860 INFO: Processing container: Admin 4oz Glass Jars (ID: 2) [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:179]
-2025-07-10 02:20:53,860 INFO: Creating container SKU with container: Admin 4oz Glass Jars, quantity: 1 [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:206]
-2025-07-10 02:20:53,861 ERROR: Error creating container SKU: 'str' object has no attribute '_sa_instance_state' [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:259]
-2025-07-10 02:20:53,888 ERROR: Full traceback: Traceback (most recent call last):
-  File "/home/runner/workspace/app/blueprints/batches/finish_batch.py", line 218, in _create_container_sku
-    inventory_item = InventoryItem(
-                     ^^^^^^^^^^^^^^
-  File "<string>", line 4, in __init__
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py", line 571, in _initialize_instance
-    with util.safe_reraise():
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py", line 146, in __exit__
-    raise exc_value.with_traceback(exc_tb)
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py", line 569, in _initialize_instance
-    manager.original_init(*mixed[1:], **kwargs)
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py", line 2178, in _declarative_constructor
-    setattr(self, k, kwargs[k])
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/attributes.py", line 537, in __set__
-    self.impl.set(
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/attributes.py", line 1467, in set
-    value = self.fire_replace_event(state, dict_, value, old, initiator)
-            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/attributes.py", line 1506, in fire_replace_event
-    value = fn(
-            ^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/attributes.py", line 2161, in emit_backref_from_scalar_set_event
-    instance_state(child),
-    ^^^^^^^^^^^^^^^^^^^^^
-AttributeError: 'str' object has no attribute '_sa_instance_state'
- [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:261]
-2025-07-10 02:20:53,889 ERROR: Error processing container 2: 'str' object has no attribute '_sa_instance_state' [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:197]
-2025-07-10 02:20:53,934 INFO: Created product output for batch AAS-2025-010: 0 container SKUs, 4.0 bulk [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:148]
-2025-07-10 02:25:49,341 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-10 02:25:53,476 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-10 02:25:54,518 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-10 02:26:17,108 INFO: Processing container: Admin 4oz Glass Jars (ID: 2), 1 containers [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:192]
-2025-07-10 02:26:17,108 INFO: Creating container SKU with container: Admin 4oz Glass Jars, quantity: 1 [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:225]
-2025-07-10 02:26:17,109 ERROR: Error creating container SKU: 'str' object has no attribute '_sa_instance_state' [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:282]
-2025-07-10 02:26:17,111 ERROR: Full traceback: Traceback (most recent call last):
-  File "/home/runner/workspace/app/blueprints/batches/finish_batch.py", line 240, in _create_container_sku
-    inventory_item = InventoryItem(
-                     ^^^^^^^^^^^^^^
-  File "<string>", line 4, in __init__
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py", line 571, in _initialize_instance
-    with util.safe_reraise():
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py", line 146, in __exit__
-    raise exc_value.with_traceback(exc_tb)
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py", line 569, in _initialize_instance
-    manager.original_init(*mixed[1:], **kwargs)
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py", line 2178, in _declarative_constructor
-    setattr(self, k, kwargs[k])
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/attributes.py", line 537, in __set__
-    self.impl.set(
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/attributes.py", line 1467, in set
-    value = self.fire_replace_event(state, dict_, value, old, initiator)
-            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/attributes.py", line 1506, in fire_replace_event
-    value = fn(
-            ^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/attributes.py", line 2161, in emit_backref_from_scalar_set_event
-    instance_state(child),
-    ^^^^^^^^^^^^^^^^^^^^^
-AttributeError: 'str' object has no attribute '_sa_instance_state'
- [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:284]
-2025-07-10 02:26:17,112 ERROR: Error processing container 2: 'str' object has no attribute '_sa_instance_state' [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:214]
-2025-07-10 02:26:17,112 ERROR: Container processing traceback: Traceback (most recent call last):
-  File "/home/runner/workspace/app/blueprints/batches/finish_batch.py", line 195, in _process_container_allocations
-    container_sku = _create_container_sku(
-                    ^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/app/blueprints/batches/finish_batch.py", line 240, in _create_container_sku
-    inventory_item = InventoryItem(
-                     ^^^^^^^^^^^^^^
-  File "<string>", line 4, in __init__
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py", line 571, in _initialize_instance
-    with util.safe_reraise():
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py", line 146, in __exit__
-    raise exc_value.with_traceback(exc_tb)
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py", line 569, in _initialize_instance
-    manager.original_init(*mixed[1:], **kwargs)
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py", line 2178, in _declarative_constructor
-    setattr(self, k, kwargs[k])
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/attributes.py", line 537, in __set__
-    self.impl.set(
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/attributes.py", line 1467, in set
-    value = self.fire_replace_event(state, dict_, value, old, initiator)
-            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/attributes.py", line 1506, in fire_replace_event
-    value = fn(
-            ^^^
-  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/attributes.py", line 2161, in emit_backref_from_scalar_set_event
-    instance_state(child),
-    ^^^^^^^^^^^^^^^^^^^^^
-AttributeError: 'str' object has no attribute '_sa_instance_state'
- [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:216]
-2025-07-10 02:26:17,207 INFO: Created bulk SKU: ADM-BAS-BUL-3CF96A4E with 4.0 floz [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:342]
-2025-07-10 02:26:17,208 INFO: Created product output for batch AAS-2025-011: 0 container SKUs, 4.0 floz bulk [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:161]
-2025-07-10 02:29:37,640 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-10 02:29:42,014 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-10 02:29:42,833 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-10 02:30:44,189 INFO: Processing container: Admin 4oz Glass Jars (ID: 2), 1 containers [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:192]
-2025-07-10 02:30:44,190 INFO: Creating container SKU with container: Admin 4oz Glass Jars, quantity: 1 [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:225]
-2025-07-10 02:30:44,316 INFO: Successfully created/updated container SKU: ADM-BAS-4.0-20870A8F with 1 containers [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:254]
+2025-07-10 22:33:13,492 INFO: Container cost calculation: 1 used × $0.75 = $0.75, divided by 1 passed = $0.75 per container [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:233]
+2025-07-10 22:33:13,507 INFO: Creating container SKU with container: Admin Glass Jars, quantity: 1 [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:268]
+2025-07-10 22:33:13,507 INFO: Container cost breakdown: $0.35 ingredients + $0.75 container = $1.10 per container [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:283]
+2025-07-10 22:33:13,567 INFO: Successfully created/updated container SKU: ADM-BAS-4.0-BD524B44 with 1 containers at $1.10 per container [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:306]
+2025-07-10 22:33:13,568 INFO: Created container SKU for 1 x Admin Glass Jars containers [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:254]
+2025-07-10 22:33:13,571 INFO: Processing container: Admin Glass Jar (ID: 7), 1 containers [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:232]
+2025-07-10 22:33:13,571 INFO: Container cost calculation: 1 used × $0.8 = $0.8, divided by 1 passed = $0.80 per container [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:233]
+2025-07-10 22:33:13,571 INFO: Creating container SKU with container: Admin Glass Jar, quantity: 1 [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:268]
+2025-07-10 22:33:13,571 INFO: Container cost breakdown: $0.70 ingredients + $0.80 container = $1.50 per container [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:283]
+2025-07-10 22:33:13,598 INFO: Successfully created/updated container SKU: ADM-BAS-8.0-E91B543A with 1 containers at $1.50 per container [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:306]
+2025-07-10 22:33:13,599 INFO: Created container SKU for 1 x Admin Glass Jar containers [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:254]
+2025-07-10 22:33:13,649 INFO: Created/updated bulk SKU: ADM-BAS-BUL-3CF96A4E with 1.0 floz at $0.09 per floz [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:340]
+2025-07-10 22:33:13,650 INFO: Created product output for batch AAS-2025-018: 2 container SKUs, 1.0 floz bulk [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:177]
+2025-07-10 22:39:56,821 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-10 22:40:14,900 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-10 22:40:15,734 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-10 22:49:09,437 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-10 22:49:26,202 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-10 22:49:26,928 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-10 22:53:22,330 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-10 22:53:23,081 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-10 22:58:18,930 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-10 22:58:30,867 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-10 22:58:31,624 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-10 23:03:59,745 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-10 23:04:00,537 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-10 23:07:31,464 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-10 23:07:45,361 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-10 23:07:46,167 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-10 23:09:56,824 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-10 23:09:57,864 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-10 23:24:27,946 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-10 23:24:29,255 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-10 23:26:10,539 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-10 23:26:11,468 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-10 23:36:45,238 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-10 23:36:46,118 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-10 23:40:29,404 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-10 23:40:30,280 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-10 23:44:39,964 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-10 23:44:40,783 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-10 23:46:21,587 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-10 23:46:22,409 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-10 23:48:57,569 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-10 23:48:58,396 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-10 23:51:08,857 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-10 23:51:11,735 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-10 23:51:12,596 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-10 23:53:19,857 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-10 23:53:22,324 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-10 23:53:23,290 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-11 02:44:10,222 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-11 02:44:11,012 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-11 02:50:18,670 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-11 02:50:20,633 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-11 02:50:21,380 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-11 02:52:46,482 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-11 02:52:48,283 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-11 02:52:49,244 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-11 02:56:03,895 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-11 02:56:07,923 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-11 02:56:08,745 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-11 03:08:44,171 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-11 03:08:48,017 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-11 03:08:48,853 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-11 03:24:19,924 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-11 03:24:25,510 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-11 03:24:26,260 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-11 03:28:10,550 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-11 03:28:13,979 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-11 03:28:15,320 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-11 03:28:17,828 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-11 03:28:23,553 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-11 03:28:32,327 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-11 03:28:33,140 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-11 03:30:08,673 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-11 03:30:08,793 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-11 03:30:17,994 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-11 03:30:18,819 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-11 03:33:34,069 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-11 03:33:40,140 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-11 03:33:40,903 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-11 03:34:41,805 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-11 03:34:47,737 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-11 03:34:48,543 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-11 03:36:22,464 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-11 03:36:27,596 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-11 03:36:28,374 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
