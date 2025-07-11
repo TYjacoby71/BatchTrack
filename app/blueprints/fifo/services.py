@@ -421,13 +421,16 @@ class FIFOService:
     @staticmethod
     def recount_fifo(inventory_item_id, new_quantity, note, user_id):
         """
-        Handles recounts with proper FIFO integrity and expiration tracking
+        Handles recounts with proper FIFO integrity - fills ALL available lots including expired ones
+        For recounts, we use ALL entries since the user is physically counting what's there
         """
         from app.models.product import ProductSKUHistory
 
         item = InventoryItem.query.get(inventory_item_id)
-        current_entries = FIFOService.get_fifo_entries(inventory_item_id)
-        current_total = sum(entry.remaining_quantity for entry in current_entries)
+        
+        # For recounts, use ALL FIFO entries (including expired) since user is counting what's physically there
+        all_current_entries = FIFOService.get_all_fifo_entries(inventory_item_id)
+        current_total = sum(entry.remaining_quantity for entry in all_current_entries)
 
         difference = new_quantity - current_total
 
@@ -439,12 +442,23 @@ class FIFOService:
 
         # Handle reduction in quantity
         if difference < 0:
-            success, deduction_plan, _ = FIFOService.calculate_deduction_plan(
-                inventory_item_id, abs(difference), 'recount'
-            )
+            # For reductions, we need to deduct from available entries
+            # Use all entries (including expired) for recount deductions
+            available_entries = all_current_entries
+            available_quantity = sum(entry.remaining_quantity for entry in available_entries)
 
-            if not success:
+            if available_quantity < abs(difference):
                 return False
+
+            remaining = abs(difference)
+            deduction_plan = []
+
+            for entry in available_entries:
+                if remaining <= 0:
+                    break
+                deduction = min(entry.remaining_quantity, remaining)
+                remaining -= deduction
+                deduction_plan.append((entry.id, deduction, entry.unit_cost))
 
             # Execute the deduction (only update remaining quantities)
             FIFOService.execute_deduction_plan(deduction_plan, inventory_item_id)
@@ -460,63 +474,44 @@ class FIFOService:
 
         # Handle increase in quantity    
         else:
-            # Handle product vs raw inventory differently
+            # For recounts, we want to fill ALL existing entries with remaining capacity
+            # This includes expired entries since the user physically counted them
             if item.type == 'product':
-                # For products, look in ProductSKUHistory for entries with available capacity
-                # This includes both positive additions (restocks) and negative deductions (sales) that have remaining space
-                unfilled_entries = ProductSKUHistory.query.filter(
+                # Get ALL ProductSKUHistory entries with available capacity (including expired)
+                entries_with_capacity = ProductSKUHistory.query.filter(
                     and_(
                         ProductSKUHistory.inventory_item_id == inventory_item_id,
-                        ProductSKUHistory.remaining_quantity > 0,  # Has available capacity
-                        db.or_(
-                            # Positive entries that aren't fully filled
-                            and_(
-                                ProductSKUHistory.quantity_change > 0,
-                                ProductSKUHistory.remaining_quantity < ProductSKUHistory.quantity_change
-                            ),
-                            # Negative entries (sales/gifts) that have refund capacity
-                            and_(
-                                ProductSKUHistory.quantity_change < 0,
-                                ProductSKUHistory.remaining_quantity > 0
-                            )
-                        )
+                        ProductSKUHistory.quantity_change > 0,  # Only positive additions can be filled
+                        ProductSKUHistory.remaining_quantity < ProductSKUHistory.quantity_change  # Has unfilled capacity
                     )
                 ).order_by(ProductSKUHistory.timestamp.asc()).all()  # Fill oldest first (FIFO order)
             else:
-                # For raw inventory, look in InventoryHistory for entries with available capacity
-                unfilled_entries = InventoryHistory.query.filter(
+                # Get ALL InventoryHistory entries with available capacity (including expired)
+                entries_with_capacity = InventoryHistory.query.filter(
                     and_(
                         InventoryHistory.inventory_item_id == inventory_item_id,
-                        InventoryHistory.remaining_quantity > 0,  # Has available capacity
-                        db.or_(
-                            # Positive entries that aren't fully filled
-                            and_(
-                                InventoryHistory.quantity_change > 0,
-                                InventoryHistory.remaining_quantity < InventoryHistory.quantity_change
-                            ),
-                            # Negative entries (sales/usage) that have refund capacity
-                            and_(
-                                InventoryHistory.quantity_change < 0,
-                                InventoryHistory.remaining_quantity > 0
-                            )
-                        )
+                        InventoryHistory.quantity_change > 0,  # Only positive additions can be filled
+                        InventoryHistory.remaining_quantity < InventoryHistory.quantity_change  # Has unfilled capacity
                     )
                 ).order_by(InventoryHistory.timestamp.asc()).all()  # Fill oldest first (FIFO order)
 
             remaining_to_add = difference
 
-            # First try to fill existing FIFO entries
-            for entry in unfilled_entries:
+            # First try to fill existing FIFO entries with capacity
+            for entry in entries_with_capacity:
                 if remaining_to_add <= 0:
                     break
 
+                # Calculate how much capacity this entry has
                 available_capacity = entry.quantity_change - entry.remaining_quantity
                 fill_amount = min(available_capacity, remaining_to_add)
 
                 if fill_amount > 0:
-                    # Update the original FIFO entry
+                    # Update the original FIFO entry's remaining quantity
                     entry.remaining_quantity += fill_amount
                     remaining_to_add -= fill_amount
+
+                    print(f"Recount: Filled entry {entry.id} with {fill_amount}, now has {entry.remaining_quantity} remaining")
 
                     # For products, don't create individual restoration entries during recount
                     # The calling code will create a single recount summary entry
@@ -527,9 +522,9 @@ class FIFOService:
                             change_type='recount',
                             quantity_change=fill_amount,
                             unit=history_unit,
-                            remaining_quantity=0,  # Not a FIFO entry
+                            remaining_quantity=0,  # Not a FIFO entry itself
                             fifo_reference_id=entry.id,
-                            note=f"Recount restored to FIFO entry #{entry.id}",
+                            note=f"Recount filled FIFO entry #{entry.id}",
                             created_by=user_id,
                             quantity_used=0.0,
                             organization_id=current_user.organization_id if current_user else item.organization_id
@@ -538,6 +533,7 @@ class FIFOService:
 
             # Only create new FIFO entry if we couldn't fill existing ones
             if remaining_to_add > 0:
+                print(f"Recount: Creating new FIFO entry for remaining {remaining_to_add}")
                 # For all items, create new FIFO entry with proper recount change_type
                 # This ensures consistent FIFO code generation
                 FIFOService.add_fifo_entry(
@@ -545,7 +541,7 @@ class FIFOService:
                     quantity=remaining_to_add,
                     change_type='recount',  # Use 'recount' to generate LOT prefix for positive additions
                     unit=history_unit,
-                    notes=f"New stock from recount",
+                    notes=f"New stock from recount: {note}",
                     created_by=user_id
                 )
 
