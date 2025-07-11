@@ -413,58 +413,67 @@ class ExpirationService:
         }
 
     @staticmethod
-    def mark_as_spoiled(item_type: str, item_id: int):
-        """Mark an expired item as spoiled and remove from inventory"""
-        from flask_login import current_user
-
-        # Convert item_id to int to ensure proper type
+    def mark_as_spoiled(item_type, item_id, quantity=None):
+        """Mark inventory items as expired using centralized service"""
         try:
-            item_id = int(item_id)
-        except (ValueError, TypeError):
-            raise ValueError("Invalid item ID")
+            if item_type == 'raw':
+                # Raw inventory (InventoryItem)
+                from ...models import InventoryItem
+                item = InventoryItem.query.get(item_id)
+                if not item:
+                    return False, "Item not found"
 
-        if item_type == 'fifo':
-            # Handle FIFO entry spoilage
-            entry = InventoryHistory.query.get(item_id)
-            if not entry or float(entry.remaining_quantity) <= 0:
-                raise ValueError("FIFO entry not found or has no remaining quantity")
+                # Use all remaining quantity if not specified
+                if quantity is None:
+                    quantity = item.quantity
 
-            # Use centralized inventory adjustment service
-            from ...services.inventory_adjustment import process_inventory_adjustment
+                # Use centralized inventory adjustment service
+                from ...services.inventory_adjustment import process_inventory_adjustment
+                success = process_inventory_adjustment(
+                    item_id=item_id,
+                    quantity=quantity,
+                    change_type='expired',
+                    unit=item.unit,
+                    notes='Marked as expired from expiration manager',
+                    created_by=current_user.id,
+                    item_type='ingredient'
+                )
 
-            success = process_inventory_adjustment(
-                item_id=entry.inventory_item_id,
-                quantity=float(entry.remaining_quantity),
-                change_type='spoil',
-                unit=entry.unit,
-                notes=f"Marked as spoiled - expired on {entry.expiration_date}",
-                created_by=current_user.id if current_user.is_authenticated else None
-            )
+                return success, "Successfully marked as expired" if success else "Failed to mark as expired"
 
-            return 1 if success else 0
+            elif item_type == 'product':
+                # Product inventory (ProductSKU)
+                from ...models import ProductSKU
 
-        elif item_type == 'product':
-            # Handle product SKU history spoilage
-            from ...services.product_inventory_service import ProductInventoryService
+                # Find the SKU by inventory_item_id
+                sku = ProductSKU.query.filter_by(inventory_item_id=item_id).first()
+                if not sku:
+                    return False, "Product SKU not found"
 
-            history_entry = ProductSKUHistory.query.get(item_id)
-            if not history_entry or float(history_entry.remaining_quantity) <= 0:
-                raise ValueError("Product history entry not found or has no remaining quantity")
+                # Use all remaining quantity if not specified
+                if quantity is None:
+                    quantity = sku.quantity
 
-            # Use product inventory service to deduct the spoiled quantity
-            success = ProductInventoryService.deduct_stock(
-                inventory_item_id=history_entry.inventory_item_id,
-                quantity=float(history_entry.remaining_quantity),
-                change_type='spoil',
-                notes=f"Marked as spoiled - expired batch"
-            )
+                # Use centralized inventory adjustment service for products
+                from ...services.inventory_adjustment import process_inventory_adjustment
+                success = process_inventory_adjustment(
+                    item_id=item_id,
+                    quantity=quantity,
+                    change_type='expired',
+                    unit=sku.unit,
+                    notes='Marked as expired from expiration manager',
+                    created_by=current_user.id,
+                    item_type='product'
+                )
 
-            return 1 if success else 0
+                return success, "Successfully marked as expired" if success else "Failed to mark as expired"
 
-        else:
-            raise ValueError("Invalid item type. Must be 'fifo' or 'product'")
+            else:
+                return False, "Invalid item type"
 
-        return 0
+        except Exception as e:
+            logger.error(f"Error marking item as expired: {str(e)}")
+            return False, str(e)
 
     @staticmethod
     def get_expiration_summary():
