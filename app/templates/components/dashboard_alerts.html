@@ -62,12 +62,17 @@ async function dismissAlert(alertType) {
                 alertElement.style.opacity = '0';
                 setTimeout(() => {
                     alertElement.remove();
+                    // Check if there are any alerts left, and if not, hide the container
+                    const container = document.getElementById('alertContainer');
+                    if (container && container.children.length === 0) {
+                        container.style.display = 'none';
+                    }
                     // Refresh to show any new alerts that were hidden
                     refreshDashboardAlerts();
                 }, 300);
             }
         } else {
-            console.error('Failed to dismiss alert');
+            console.error('Failed to dismiss alert - response not ok');
         }
     } catch (error) {
         console.error('Error dismissing alert:', error);
