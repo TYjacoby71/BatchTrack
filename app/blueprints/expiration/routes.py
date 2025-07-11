@@ -31,6 +31,28 @@ def api_expiring_soon():
     expiring = ExpirationService.get_expiring_soon_items(days_ahead)
     return jsonify(expiring)
 
+@expiration_bp.route('/api/summary')
+@login_required
+def api_summary():
+    """API endpoint for expiration summary"""
+    from ...services.combined_inventory_alerts import CombinedInventoryAlertService
+    
+    # Get user's expiration warning preference
+    days_ahead = 7  # Default
+    from flask_login import current_user
+    if current_user and current_user.is_authenticated:
+        from ...models.user_preferences import UserPreferences
+        user_prefs = UserPreferences.get_for_user(current_user.id)
+        if user_prefs:
+            days_ahead = user_prefs.expiration_warning_days
+    
+    expiration_data = CombinedInventoryAlertService.get_expiration_alerts(days_ahead)
+    
+    return jsonify({
+        'expired_total': expiration_data['expired_total'],
+        'expiring_soon_total': expiration_data['expiring_soon_total']
+    })
+
 @expiration_bp.route('/api/calculate-expiration', methods=['POST'])
 @login_required
 def api_calculate_expiration():
