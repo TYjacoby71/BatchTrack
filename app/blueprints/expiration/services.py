@@ -111,18 +111,19 @@ class ExpirationService:
             'product_inventory': []
         }
 
-        # Check regular inventory items
-        inventory_items = InventoryItem.query.filter(
-            InventoryItem.quantity > 0,
-            InventoryItem.expiration_date.isnot(None)
+        # Check expired FIFO entries from inventory history
+        from ...models import InventoryHistory
+        fifo_entries = InventoryHistory.query.filter(
+            InventoryHistory.remaining_quantity > 0,
+            InventoryHistory.expiration_date.isnot(None)
         ).all()
 
-        for item in inventory_items:
-            if item.expiration_date:
+        for entry in fifo_entries:
+            if entry.expiration_date:
                 # Handle both date and datetime objects
-                exp_date = item.expiration_date.date() if hasattr(item.expiration_date, 'date') else item.expiration_date
+                exp_date = entry.expiration_date.date() if hasattr(entry.expiration_date, 'date') else entry.expiration_date
                 if exp_date < today:
-                    expired_items['fifo_entries'].append(item)
+                    expired_items['fifo_entries'].append(entry)
 
         # Check product SKUs via their inventory items
         from ...models import InventoryItem
@@ -154,23 +155,19 @@ class ExpirationService:
 
         expiring_items = {'fifo_entries': [], 'product_inventory': []}
 
-        # Check FIFO entries
-        fifo_entries = InventoryItem.query.filter(
-            InventoryItem.quantity > 0,
-            InventoryItem.expiration_date.isnot(None)
+        # Check FIFO entries from inventory history
+        from ...models import InventoryHistory
+        fifo_entries = InventoryHistory.query.filter(
+            InventoryHistory.remaining_quantity > 0,
+            InventoryHistory.expiration_date.isnot(None)
         ).all()
 
-        for item in fifo_entries:
-            # Get all FIFO entries for this inventory item
-            history_entries = item.get_fifo_entries_with_quantity()
-            for entry in history_entries:
-                if entry.get('remaining_quantity', 0) > 0 and entry.get('expiration_date'):
-                    exp_date = entry['expiration_date']
-                    if isinstance(exp_date, str):
-                        exp_date = datetime.strptime(exp_date, '%Y-%m-%d').date()
-
-                    if today <= exp_date <= warning_threshold:
-                        expiring_items['fifo_entries'].append(entry)
+        for entry in fifo_entries:
+            if entry.expiration_date:
+                # Handle both date and datetime objects
+                exp_date = entry.expiration_date.date() if hasattr(entry.expiration_date, 'date') else entry.expiration_date
+                if today <= exp_date <= warning_threshold:
+                    expiring_items['fifo_entries'].append(entry)
 
         # Check product SKUs - get all SKUs with expiration dates and check their inventory
         all_product_skus = ProductSKU.query.filter(
