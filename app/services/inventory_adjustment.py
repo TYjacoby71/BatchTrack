@@ -354,43 +354,13 @@ def handle_recount_adjustment(item_id, target_quantity, notes=None, created_by=N
         # Update inventory quantity to match target
         item.quantity = target_quantity
 
-        # Only create summary entries if we created a new lot (remaining_to_add > 0)
-        # This means there was overflow that required a new lot creation
-        # Deductions already have detailed FIFO entries created by FIFOService.create_deduction_history()
-        if remaining_to_add > 0:
-            if item.type == 'product':
-                # For products, create summary in ProductSKUHistory
-                from app.models.product import ProductSKUHistory
-                from app.utils.fifo_generator import generate_fifo_code
-
-                summary_history = ProductSKUHistory(
-                    inventory_item_id=item_id,
-                    change_type='recount',
-                    quantity_change=remaining_to_add,  # Only the overflow amount
-                    unit=history_unit,
-                    remaining_quantity=0,  # Summary entries don't create new FIFO capacity
-                    unit_cost=item.cost_per_unit,
-                    notes=f"Recount overflow summary: Created new lot with {remaining_to_add} units ({notes or 'Physical count'})",
-                    created_by=created_by,
-                    fifo_code=generate_fifo_code('recount', remaining_to_add, None),
-                    organization_id=current_user.organization_id if current_user and current_user.is_authenticated else item.organization_id
-                )
-            else:
-                # For raw inventory, create summary in InventoryHistory
-                summary_history = InventoryHistory(
-                    inventory_item_id=item_id,
-                    change_type='recount',
-                    quantity_change=remaining_to_add,  # Only the overflow amount
-                    unit=history_unit,
-                    remaining_quantity=0,  # Summary entries don't create new FIFO capacity
-                    unit_cost=item.cost_per_unit,
-                    note=f"Recount overflow summary: Created new lot with {remaining_to_add} units ({notes or 'Physical count'})",
-                    created_by=created_by,
-                    quantity_used=0.0,
-                    organization_id=current_user.organization_id if current_user and current_user.is_authenticated else item.organization_id
-                )
-
-            db.session.add(summary_history)
+        # Don't create any summary entries - all recount events are handled by:
+        # 1. FIFOService.create_deduction_history() for deductions (already creates proper FIFO entries)
+        # 2. FIFOService.add_fifo_entry() for new lots (already creates proper FIFO entries)
+        # 3. Direct FIFO entry updates for filling existing lots
+        #
+        # No additional summary entries are needed as all actions are properly logged
+        # in their respective FIFO history tables with appropriate FIFO codes
 
         db.session.commit()
 
