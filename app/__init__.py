@@ -65,7 +65,6 @@ def create_app():
     from .routes.bulk_stock_routes import bulk_stock_bp as bulk_stock_routes_bp
     from .routes.fault_log_routes import product_log_bp
     from .routes.tag_manager_routes import tag_manager_bp
-    from .blueprints.products import products_bp, register_product_blueprints
 
     # Register core blueprints
     app.register_blueprint(auth_bp, url_prefix='/auth')
@@ -81,37 +80,50 @@ def create_app():
     app.register_blueprint(product_log_bp)
     app.register_blueprint(tag_bp)
     app.register_blueprint(tag_manager_bp)
-    app.register_blueprint(timers_bp)
-    app.register_blueprint(quick_add_bp)
+    app.register_blueprint(timers_bp, url_prefix='/timers')
+    app.register_blueprint(quick_add_bp, url_prefix='/quick_add')
     app.register_blueprint(conversion_bp)
     app.register_blueprint(expiration_bp)
 
     # Register product blueprints
-    register_product_blueprints(app)
-
-    from .blueprints.products import products_bp
-    from .blueprints.products.api import products_api_bp
-    from .blueprints.products.product_inventory_routes import product_inventory_bp
-    from .blueprints.products.product_variants import product_variants_bp
-    from .blueprints.products.sku import sku_bp
-    app.register_blueprint(products_bp, url_prefix='/products')
-    app.register_blueprint(products_api_bp)
-    app.register_blueprint(product_inventory_bp, url_prefix='/products')
-    app.register_blueprint(product_variants_bp, url_prefix='/products')
-    app.register_blueprint(sku_bp, url_prefix='/products')
-
-    app.register_blueprint(timers_bp, url_prefix='/timers')
-    app.register_blueprint(quick_add_bp, url_prefix='/quick_add')
-    app.register_blueprint(app_routes.app_routes_bp)
-    app.register_blueprint(fifo_bp)
-    app.register_blueprint(add_extra_bp, url_prefix='/add-extra')
-    app.register_blueprint(bulk_stock_routes.bulk_stock_bp, url_prefix='/bulk_stock')
-    app.register_blueprint(fault_log_routes.fault_log_bp, url_prefix='/fault_log')
-    app.register_blueprint(tag_manager_routes.tag_manager_bp, url_prefix='/tag_manager')
-
+    try:
+        from .blueprints.products import register_product_blueprints
+        register_product_blueprints(app)
+    except ImportError:
+        # Fallback to individual product blueprint registration
+        try:
+            from .blueprints.products import products_bp
+            from .blueprints.products.api import products_api_bp
+            from .blueprints.products.product_inventory_routes import product_inventory_bp
+            from .blueprints.products.product_variants import product_variants_bp
+            from .blueprints.products.sku import sku_bp
+            app.register_blueprint(products_bp, url_prefix='/products')
+            app.register_blueprint(products_api_bp)
+            app.register_blueprint(product_inventory_bp, url_prefix='/products')
+            app.register_blueprint(product_variants_bp, url_prefix='/products')
+            app.register_blueprint(sku_bp, url_prefix='/products')
+        except ImportError:
+            print("Warning: Could not register product blueprints")
     # Register API blueprints
-    from .blueprints.api.routes import api_bp
-    app.register_blueprint(api_bp)
+    try:
+        from .blueprints.api.routes import api_bp
+        app.register_blueprint(api_bp)
+    except ImportError:
+        pass
+
+    # Register FIFO blueprint if available
+    try:
+        from .blueprints.fifo import fifo_bp
+        app.register_blueprint(fifo_bp)
+    except ImportError:
+        pass
+
+    # Register additional batch blueprints if available
+    try:
+        from .blueprints.batches.add_extra import add_extra_bp
+        app.register_blueprint(add_extra_bp, url_prefix='/add-extra')
+    except ImportError:
+        pass
 
     # Load additional config if provided
     #if config_filename:
