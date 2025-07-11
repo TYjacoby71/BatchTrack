@@ -59,6 +59,17 @@ def seed_roles_permissions_command():
         click.echo(f'❌ Error seeding roles and permissions: {str(e)}')
         raise
 
+@click.command('seed-users')
+@with_appcontext
+def seed_users_command():
+    """Seed users only"""
+    try:
+        seed_users()
+        click.echo('✅ Users seeded successfully!')
+    except Exception as e:
+        click.echo(f'❌ Error seeding users: {str(e)}')
+        raise
+
 @click.command('update-user-roles')
 @with_appcontext
 def update_user_roles_command():
@@ -83,4 +94,5 @@ def register_commands(app):
     app.cli.add_command(seed_all_command)
     app.cli.add_command(seed_units_only)
     app.cli.add_command(seed_roles_permissions_command)
+    app.cli.add_command(seed_users_command)
     app.cli.add_command(update_user_roles_command)
