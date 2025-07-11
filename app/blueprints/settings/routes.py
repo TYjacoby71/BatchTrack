@@ -1,39 +1,140 @@
-from flask import Blueprint, render_template, request, jsonify, redirect, url_for
+
+from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash
 from flask_login import login_required, current_user
-from ...models import db, Unit, User, InventoryItem
+from ...models import db, Unit, User, InventoryItem, UserPreferences, Organization
+from ...utils.permissions import has_permission, require_permission
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 import json
 
 from . import settings_bp
-# Replacement of settings routes and addition of user preferences model and endpoints.
+
 @settings_bp.route('/')
 @login_required
 def index():
-    """Settings dashboard"""
-    # Get current settings or use defaults
-    from ...utils.settings import get_user_settings
-    settings = get_user_settings(current_user.id)
-
-    # Ensure all required sections exist
-    if 'alerts' not in settings:
-        settings['alerts'] = {
-            'max_dashboard_alerts': 10,
-            'show_expiration_alerts': True,
-            'show_timer_alerts': True,
-            'show_batch_alerts': True,
-            'show_fault_alerts': True,
-            'show_alert_badges': True
-        }
-
-    return render_template('settings/index.html', settings=settings)
-
-@settings_bp.route('/save', methods=['POST'])
-@login_required
-def save_settings():
-    new_settings = request.get_json()
-
+    """Settings dashboard with organized sections"""
+    # Get or create user preferences
+    user_prefs = UserPreferences.get_for_user(current_user.id)
+    
+    # Get organization info for org owners
+    is_org_owner = current_user.organization and current_user.organization.owner and current_user.organization.owner.id == current_user.id
+    
+    # Get system settings from file or use defaults
     try:
+        with open("settings.json", "r") as f:
+            system_settings = json.load(f)
+    except FileNotFoundError:
+        system_settings = {}
+
+    # Ensure all required sections exist with defaults
+    system_defaults = {
+        'batch_rules': {
+            'require_timer_completion': False,
+            'allow_intermediate_tags': True,
+            'require_finish_confirmation': True,
+            'stuck_batch_hours': 24
+        },
+        'recipe_builder': {
+            'enable_variations': True,
+            'enable_containers': True,
+            'auto_scale_recipes': False,
+            'show_cost_breakdown': True
+        },
+        'inventory': {
+            'enable_fifo_tracking': True,
+            'show_expiration_dates': True,
+            'auto_calculate_costs': True,
+            'enable_barcode_scanning': False,
+            'show_supplier_info': True,
+            'enable_bulk_operations': True
+        },
+        'products': {
+            'enable_variants': True,
+            'show_profit_margins': True,
+            'auto_generate_skus': False,
+            'enable_product_images': True,
+            'track_production_costs': True
+        },
+        'system': {
+            'auto_backup': False,
+            'log_level': 'INFO',
+            'per_page': 25,
+            'enable_csv_export': True,
+            'auto_save_forms': False
+        },
+        'notifications': {
+            'browser_notifications': True,
+            'email_alerts': False,
+            'alert_frequency': 'real_time',
+            'quiet_hours_start': '22:00',
+            'quiet_hours_end': '08:00'
+        }
+    }
+    
+    # Merge defaults with existing settings
+    for section, section_settings in system_defaults.items():
+        if section not in system_settings:
+            system_settings[section] = section_settings
+        else:
+            for key, value in section_settings.items():
+                if key not in system_settings[section]:
+                    system_settings[section][key] = value
+
+    return render_template('settings/index.html', 
+                         user_prefs=user_prefs,
+                         system_settings=system_settings,
+                         is_org_owner=is_org_owner)
+
+@settings_bp.route('/api/user-preferences')
+@login_required
+def get_user_preferences():
+    """Get user preferences for current user"""
+    try:
+        user_prefs = UserPreferences.get_for_user(current_user.id)
+        return jsonify({
+            'max_dashboard_alerts': user_prefs.max_dashboard_alerts,
+            'show_expiration_alerts': user_prefs.show_expiration_alerts,
+            'show_timer_alerts': user_prefs.show_timer_alerts,
+            'show_low_stock_alerts': user_prefs.show_low_stock_alerts,
+            'show_batch_alerts': user_prefs.show_batch_alerts,
+            'show_fault_alerts': user_prefs.show_fault_alerts,
+            'expiration_warning_days': user_prefs.expiration_warning_days,
+            'show_alert_badges': user_prefs.show_alert_badges,
+            'dashboard_layout': user_prefs.dashboard_layout,
+            'compact_view': user_prefs.compact_view,
+            'show_quick_actions': user_prefs.show_quick_actions
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@settings_bp.route('/api/user-preferences', methods=['POST'])
+@login_required
+def update_user_preferences():
+    """Update user preferences"""
+    try:
+        data = request.get_json()
+        user_prefs = UserPreferences.get_for_user(current_user.id)
+        
+        # Update fields that are provided
+        for key, value in data.items():
+            if hasattr(user_prefs, key):
+                setattr(user_prefs, key, value)
+        
+        user_prefs.updated_at = datetime.utcnow()
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': 'Preferences updated successfully'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@settings_bp.route('/api/system-settings', methods=['POST'])
+@login_required
+@require_permission('settings.edit')
+def update_system_settings():
+    """Update system settings (requires permission)"""
+    try:
+        data = request.get_json()
+        
         # Load existing settings
         try:
             with open("settings.json", "r") as f:
@@ -41,81 +142,76 @@ def save_settings():
         except FileNotFoundError:
             settings_data = {}
 
-        # Handle both full settings update and individual setting updates
-        if len(new_settings) == 1 and not any(isinstance(v, dict) for v in new_settings.values()):
-            # Individual setting update - map back to nested structure
-            key, value = next(iter(new_settings.items()))
-
-            # Map setting keys to their proper nested locations
-            setting_mappings = {
-                'max_dashboard_alerts': ('alerts', 'max_dashboard_alerts'),
-                'show_expiration_alerts': ('alerts', 'show_expiration_alerts'),
-                'show_timer_alerts': ('alerts', 'show_timer_alerts'),
-                'show_low_stock_alerts': ('alerts', 'show_low_stock_alerts'),
-                'show_batch_alerts': ('alerts', 'show_batch_alerts'),
-                'show_fault_alerts': ('alerts', 'show_fault_alerts'),
-                'low_stock_threshold': ('alerts', 'low_stock_threshold'),
-                'expiration_warning_days': ('alerts', 'expiration_warning_days'),
-                'show_inventory_refund': ('alerts', 'show_inventory_refund'),
-                'show_alert_badges': ('alerts', 'show_alert_badges'),
-                'require_timer_completion': ('batch_rules', 'require_timer_completion'),
-                'allow_intermediate_tags': ('batch_rules', 'allow_intermediate_tags'),
-                'require_finish_confirmation': ('batch_rules', 'require_finish_confirmation'),
-                'stuck_batch_hours': ('batch_rules', 'stuck_batch_hours'),
-                'enable_variations': ('recipe_builder', 'enable_variations'),
-                'enable_containers': ('recipe_builder', 'enable_containers'),
-                'auto_scale_recipes': ('recipe_builder', 'auto_scale_recipes'),
-                'show_cost_breakdown': ('recipe_builder', 'show_cost_breakdown'),
-                'enable_fifo_tracking': ('inventory', 'enable_fifo_tracking'),
-                'show_expiration_dates': ('inventory', 'show_expiration_dates'),
-                'auto_calculate_costs': ('inventory', 'auto_calculate_costs'),
-                'enable_barcode_scanning': ('inventory', 'enable_barcode_scanning'),
-                'show_supplier_info': ('inventory', 'show_supplier_info'),
-                'enable_bulk_operations': ('inventory', 'enable_bulk_operations'),
-                'enable_product_variants': ('products', 'enable_variants'),
-                'show_profit_margins': ('products', 'show_profit_margins'),
-                'auto_generate_skus': ('products', 'auto_generate_skus'),
-                'enable_product_images': ('products', 'enable_product_images'),
-                'track_production_costs': ('products', 'track_production_costs'),
-                'items_per_page': ('display', 'per_page'),
-                'enable_csv_export': ('display', 'enable_csv_export'),
-                'auto_save_forms': ('display', 'auto_save_forms'),
-                'dashboard_layout': ('display', 'dashboard_layout'),
-                'show_quick_actions': ('display', 'show_quick_actions'),
-                'compact_view': ('display', 'compact_view'),
-                'reduce_animations': ('accessibility', 'reduce_animations'),
-                'high_contrast_mode': ('accessibility', 'high_contrast_mode'),
-                'keyboard_navigation': ('accessibility', 'keyboard_navigation'),
-                'large_buttons': ('accessibility', 'large_buttons'),
-                'auto_backup': ('system', 'auto_backup'),
-                'log_level': ('system', 'log_level'),
-                'browser_notifications': ('notifications', 'browser_notifications'),
-                'email_alerts': ('notifications', 'email_alerts'),
-                'alert_frequency': ('notifications', 'alert_frequency'),
-                'quiet_hours_start': ('notifications', 'quiet_hours_start'),
-                'quiet_hours_end': ('notifications', 'quiet_hours_end')
-            }
-
-            if key in setting_mappings:
-                section, setting_key = setting_mappings[key]
-                if section not in settings_data:
-                    settings_data[section] = {}
-                settings_data[section][setting_key] = value
-        else:
-            # Full settings update
-            settings_data.update(new_settings)
+        # Update the settings
+        settings_data.update(data)
 
         # Save updated settings
         with open("settings.json", "w") as f:
             json.dump(settings_data, f, indent=2)
 
-        return jsonify({"status": "success"})
+        return jsonify({'success': True, 'message': 'System settings updated successfully'})
     except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return jsonify({'error': str(e)}), 500
+
+@settings_bp.route('/organization')
+@login_required
+@require_permission('organization.manage')
+def organization_management():
+    """Organization management page (org owners only)"""
+    if not current_user.organization:
+        flash('No organization found', 'error')
+        return redirect(url_for('settings.index'))
+    
+    organization = current_user.organization
+    users = User.query.filter_by(organization_id=organization.id).all()
+    
+    return render_template('settings/organization.html', 
+                         organization=organization,
+                         users=users)
+
+@settings_bp.route('/organization/add-user', methods=['POST'])
+@login_required
+@require_permission('organization.manage')
+def add_user_to_organization():
+    """Add a new user to the organization"""
+    try:
+        data = request.get_json()
+        username = data.get('username')
+        email = data.get('email')
+        password = data.get('password')
+        role_id = data.get('role_id')
+        
+        if not all([username, email, password]):
+            return jsonify({'error': 'All fields are required'}), 400
+        
+        # Check if user already exists
+        if User.query.filter_by(username=username).first():
+            return jsonify({'error': 'Username already exists'}), 400
+        
+        if User.query.filter_by(email=email).first():
+            return jsonify({'error': 'Email already exists'}), 400
+        
+        # Create new user
+        new_user = User(
+            username=username,
+            email=email,
+            password_hash=generate_password_hash(password),
+            organization_id=current_user.organization_id,
+            role_id=role_id,
+            is_active=True
+        )
+        
+        db.session.add(new_user)
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': 'User added successfully'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @settings_bp.route('/profile/save', methods=['POST'])
 @login_required
 def save_profile():
+    """Save user profile information"""
     try:
         data = request.get_json()
 
@@ -130,13 +226,14 @@ def save_profile():
             current_user.phone = data['phone']
 
         db.session.commit()
-        return jsonify({"status": "success", "message": "Profile updated successfully"})
+        return jsonify({'success': True, 'message': 'Profile updated successfully'})
     except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return jsonify({'error': str(e)}), 500
 
 @settings_bp.route('/password/change', methods=['POST'])
 @login_required
 def change_password():
+    """Change user password"""
     try:
         data = request.get_json()
         current_password = data.get('current_password')
@@ -144,27 +241,29 @@ def change_password():
         confirm_password = data.get('confirm_password')
 
         if not current_password or not new_password or not confirm_password:
-            return jsonify({"status": "error", "message": "All fields are required"}), 400
+            return jsonify({'error': 'All fields are required'}), 400
 
         if not current_user.check_password(current_password):
-            return jsonify({"status": "error", "message": "Current password is incorrect"}), 400
+            return jsonify({'error': 'Current password is incorrect'}), 400
 
         if new_password != confirm_password:
-            return jsonify({"status": "error", "message": "New passwords do not match"}), 400
+            return jsonify({'error': 'New passwords do not match'}), 400
 
         if len(new_password) < 6:
-            return jsonify({"status": "error", "message": "Password must be at least 6 characters"}), 400
+            return jsonify({'error': 'Password must be at least 6 characters'}), 400
 
         current_user.password_hash = generate_password_hash(new_password)
         db.session.commit()
 
-        return jsonify({"status": "success", "message": "Password changed successfully"})
+        return jsonify({'success': True, 'message': 'Password changed successfully'})
     except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return jsonify({'error': str(e)}), 500
 
 @settings_bp.route('/bulk-update-ingredients', methods=['POST'])
 @login_required
+@require_permission('inventory.edit')
 def bulk_update_ingredients():
+    """Bulk update ingredients"""
     try:
         data = request.get_json()
         ingredients = data.get('ingredients', [])
@@ -187,7 +286,9 @@ def bulk_update_ingredients():
 
 @settings_bp.route('/bulk-update-containers', methods=['POST'])
 @login_required
+@require_permission('inventory.edit')
 def bulk_update_containers():
+    """Bulk update containers"""
     try:
         data = request.get_json()
         containers = data.get('containers', [])
@@ -208,130 +309,3 @@ def bulk_update_containers():
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 400
-
-# Catch-all route for unimplemented settings
-@settings_bp.route('/<path:subpath>')
-@login_required
-def unimplemented_setting(subpath):
-    flash('This setting is not yet implemented')
-    return redirect(url_for('settings.index'))
-from flask import Blueprint, render_template, request, jsonify, redirect, url_for, current_app
-from flask_login import login_required, current_user
-from ...utils.permissions import require_permission
-from ...utils.settings import SettingsManager
-from ...models import db, UserPreferences
-import json
-
-from . import settings_bp
-
-@settings_bp.route('/api/update', methods=['POST'])
-@login_required
-def update_setting():
-    """Update a specific setting"""
-    try:
-        data = request.get_json()
-        setting_key = data.get('key')
-        setting_value = data.get('value')
-        category = data.get('category', 'general')
-
-        if not setting_key:
-            return jsonify({'error': 'Setting key is required'}), 400
-
-        success = SettingsManager.update_setting(category, setting_key, setting_value)
-
-        if success:
-            return jsonify({'success': True, 'message': 'Setting updated successfully'})
-        else:
-            return jsonify({'error': 'Failed to update setting'}), 500
-
-    except Exception as e:
-        current_app.logger.error(f"Error updating setting: {str(e)}")
-        return jsonify({'error': str(e)}), 500
-
-@settings_bp.route('/api/user-preferences', methods=['GET'])
-@login_required
-def get_user_preferences():
-    """Get current user's preferences"""
-    try:
-        prefs = UserPreferences.get_for_user(current_user.id)
-        return jsonify({
-            'max_dashboard_alerts': prefs.max_dashboard_alerts,
-            'show_expiration_alerts': prefs.show_expiration_alerts,
-            'show_timer_alerts': prefs.show_timer_alerts,
-            'show_low_stock_alerts': prefs.show_low_stock_alerts,
-            'show_batch_alerts': prefs.show_batch_alerts,
-            'show_fault_alerts': prefs.show_fault_alerts,
-            'expiration_warning_days': prefs.expiration_warning_days,
-            'show_alert_badges': prefs.show_alert_badges,
-            'dashboard_layout': prefs.dashboard_layout,
-            'compact_view': prefs.compact_view,
-            'show_quick_actions': prefs.show_quick_actions
-        })
-    except Exception as e:
-        current_app.logger.error(f"Error getting user preferences: {str(e)}")
-        return jsonify({'error': str(e)}), 500
-
-@settings_bp.route('/api/user-preferences', methods=['POST'])
-@login_required
-def update_user_preferences():
-    """Update current user's preferences"""
-    try:
-        data = request.get_json()
-        prefs = UserPreferences.get_for_user(current_user.id)
-
-        # Update alert preferences
-        if 'max_dashboard_alerts' in data:
-            prefs.max_dashboard_alerts = int(data['max_dashboard_alerts'])
-        if 'show_expiration_alerts' in data:
-            prefs.show_expiration_alerts = bool(data['show_expiration_alerts'])
-        if 'show_timer_alerts' in data:
-            prefs.show_timer_alerts = bool(data['show_timer_alerts'])
-        if 'show_low_stock_alerts' in data:
-            prefs.show_low_stock_alerts = bool(data['show_low_stock_alerts'])
-        if 'show_batch_alerts' in data:
-            prefs.show_batch_alerts = bool(data['show_batch_alerts'])
-        if 'show_fault_alerts' in data:
-            prefs.show_fault_alerts = bool(data['show_fault_alerts'])
-        if 'expiration_warning_days' in data:
-            prefs.expiration_warning_days = int(data['expiration_warning_days'])
-        if 'show_alert_badges' in data:
-            prefs.show_alert_badges = bool(data['show_alert_badges'])
-
-        # Update display preferences
-        if 'dashboard_layout' in data:
-            prefs.dashboard_layout = data['dashboard_layout']
-        if 'compact_view' in data:
-            prefs.compact_view = bool(data['compact_view'])
-        if 'show_quick_actions' in data:
-            prefs.show_quick_actions = bool(data['show_quick_actions'])
-
-        db.session.commit()
-
-        return jsonify({'success': True, 'message': 'Preferences updated successfully'})
-
-    except Exception as e:
-        current_app.logger.error(f"Error updating user preferences: {str(e)}")
-        db.session.rollback()
-        return jsonify({'error': str(e)}), 500
-
-@settings_bp.route('/alerts')
-@login_required
-def alerts():
-    """Alert configuration settings"""
-    # Get current settings or use defaults
-    from ...utils.settings import get_user_settings
-    settings = get_user_settings(current_user.id)
-
-    # Ensure alerts section exists
-    if 'alerts' not in settings:
-        settings['alerts'] = {
-            'max_dashboard_alerts': 10,
-            'show_expiration_alerts': True,
-            'show_timer_alerts': True,
-            'show_low_stock_alerts': True,
-            'show_batch_alerts': True,
-            'show_fault_alerts': True,
-            'show_alert_badges': True
-        }
-
-    return render_template('settings/alerts.html', settings=settings)

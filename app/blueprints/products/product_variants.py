@@ -1,8 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
-from flask_login import login_required, current_user
 from ...models import db, ProductSKU, InventoryItem
+from ...models.product import Product, ProductVariant
 from ...services.product_service import ProductService
 from ...utils.unit_utils import get_global_unit_list
 
@@ -14,7 +13,6 @@ product_variants_bp = Blueprint('product_variants', __name__)
 def add_variant(product_id):
     """Quick add new product variant via AJAX"""
     try:
-
         # First try to get the Product record
         product = Product.query.filter_by(
             id=product_id,
@@ -74,7 +72,6 @@ def add_variant(product_id):
         db.session.flush()  # Get the variant ID without committing
 
         # Generate SKU code using the service
-        from ...services.product_service import ProductService
         sku_code = ProductService.generate_sku_code(product.name, variant_name, 'Bulk')
 
         # Create inventory item for the SKU first
@@ -105,6 +102,8 @@ def add_variant(product_id):
             created_by=current_user.id
         )
         db.session.add(new_sku)
+        
+        # Commit all changes together
         db.session.commit()
 
         return jsonify({
@@ -112,7 +111,7 @@ def add_variant(product_id):
             'variant': {
                 'id': new_variant.id,
                 'name': new_variant.name,
-                'sku_id': new_sku.id,
+                'sku_id': new_sku.inventory_item_id,
                 'sku': new_sku.sku_code,
                 'unit': new_sku.unit,
                 'size_label': new_sku.size_label
@@ -120,7 +119,12 @@ def add_variant(product_id):
         })
 
     except Exception as e:
+        # Rollback any changes if there's an error
         db.session.rollback()
+        # Log the full error for debugging
+        import traceback
+        print(f"Error creating variant: {str(e)}")
+        print(traceback.format_exc())
         return jsonify({'error': f'Failed to create variant: {str(e)}'}), 500
 
 @product_variants_bp.route('/<int:product_id>/variant/<variant_name>')

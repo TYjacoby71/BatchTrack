@@ -20,7 +20,7 @@ class ExpirationService:
         if not expiration_date:
             return None
         from ...utils.timezone_utils import TimezoneUtils
-        now = TimezoneUtils.now()
+        now = TimezoneUtils.now_naive()  # Use naive datetime for comparison
         # Use full datetime comparison for more precision
         time_diff = expiration_date - now
         return int(time_diff.total_seconds() / 86400)  # Convert seconds to days
@@ -32,7 +32,7 @@ class ExpirationService:
             return None
 
         from ...utils.timezone_utils import TimezoneUtils
-        now = TimezoneUtils.now()
+        now = TimezoneUtils.now_naive()
         total_life = (expiration_date - entry_date).total_seconds()
         if total_life <= 0:
             return 0.0
@@ -87,7 +87,8 @@ class ExpirationService:
     def get_expired_inventory_items() -> List[Dict]:
         """Get all expired inventory items across the system"""
         from flask_login import current_user
-        now = datetime.now()
+        from ...utils.timezone_utils import TimezoneUtils
+        now = TimezoneUtils.now_naive()
 
         # Get expired FIFO entries
         expired_fifo = db.session.query(
@@ -165,7 +166,8 @@ class ExpirationService:
     def get_expiring_soon_items(days_ahead: int = 7) -> List[Dict]:
         """Get items expiring within specified days"""
         from flask_login import current_user
-        now = datetime.now()
+        from ...utils.timezone_utils import TimezoneUtils
+        now = TimezoneUtils.now_naive()
         future_date = now + timedelta(days=days_ahead)
 
         # FIFO entries expiring soon
@@ -263,7 +265,8 @@ class ExpirationService:
     @staticmethod
     def archive_expired_items():
         """Archive expired items with zero quantity"""
-        today = datetime.now().date()
+        from ...utils.timezone_utils import TimezoneUtils
+        today = TimezoneUtils.now_naive().date()
 
         # Archive expired FIFO entries with no remaining quantity
         expired_fifo = InventoryHistory.query.filter(
@@ -296,7 +299,8 @@ class ExpirationService:
         """Check if an item is expired based on expiration date"""
         if not expiration_date:
             return False
-        today = datetime.now().date()
+        from ...utils.timezone_utils import TimezoneUtils
+        today = TimezoneUtils.now_naive().date()
         exp_date = expiration_date.date() if isinstance(expiration_date, datetime) else expiration_date
         return exp_date < today
 
@@ -305,7 +309,8 @@ class ExpirationService:
         """Check if an item is expiring within specified days"""
         if not expiration_date:
             return False
-        today = datetime.now().date()
+        from ...utils.timezone_utils import TimezoneUtils
+        today = TimezoneUtils.now_naive().date()
         future_date = today + timedelta(days=days_ahead)
         exp_date = expiration_date.date() if isinstance(expiration_date, datetime) else expiration_date
         return today <= exp_date <= future_date
@@ -314,7 +319,8 @@ class ExpirationService:
     def get_inventory_item_expiration_status(inventory_item_id: int):
         """Get expiration status for a specific inventory item"""
         from flask_login import current_user
-        now = datetime.now()
+        from ...utils.timezone_utils import TimezoneUtils
+        now = TimezoneUtils.now_naive()
         future_date = now + timedelta(days=7)
 
         # Get all FIFO entries for this item with organization scoping
@@ -363,7 +369,8 @@ class ExpirationService:
 
         total_weighted_freshness = 0.0
         total_quantity = 0.0
-        now = datetime.now()
+        from ...utils.timezone_utils import TimezoneUtils
+        now = TimezoneUtils.now_naive()
 
         for entry in entries:
             if entry.timestamp and entry.expiration_date:
