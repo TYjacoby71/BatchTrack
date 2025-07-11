@@ -6,16 +6,20 @@ document.addEventListener('DOMContentLoaded', function() {
     setInterval(loadExpirationSummary, 5 * 60 * 1000);
 });
 
-async function loadExpirationSummary() {
-    try {
-        const response = await fetch('/expiration/api/summary');
-        if (response.ok) {
-            const data = await response.json();
-            updateExpirationBadge(data.expired_total);
-        }
-    } catch (error) {
-        console.error('Failed to load expiration summary:', error);
-    }
+function loadExpirationSummary() {
+    fetch('/expiration/api/summary')
+        .then(response => {
+            if (response.ok) {
+                return response.json();
+            }
+            throw new Error('Network response was not ok');
+        })
+        .then(data => {
+            updateExpirationBadge(data.expired_count || 0);
+        })
+        .catch(error => {
+            console.error('Failed to load expiration summary:', error);
+        });
 }
 
 function updateExpirationBadge(count) {

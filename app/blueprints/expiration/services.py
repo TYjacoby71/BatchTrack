@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta, date
 from ...models import db, InventoryItem, InventoryHistory, ProductSKU, ProductSKUHistory, Batch
-from sqlalchemy import and_, or_
+from sqlalchemy import and_, or_, func
 from typing import List, Dict, Optional, Tuple
 from flask import current_app
 from flask_login import current_user

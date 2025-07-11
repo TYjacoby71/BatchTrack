@@ -1,82 +1,71 @@
 {% extends "layout.html" %}
 {% block content %}
 <div x-data="{
-        settings: {{ system_settings | tojson }},
-        userPrefs: {{ user_prefs | tojson }},
+        systemSettings: {},
+        userPrefs: {},
         saving: false,
         showMessage: false,
         message: '',
         messageType: 'success',
 
-        updateSystemSetting(section, key, value) {
-            this.settings[section] = this.settings[section] || {};
-            this.settings[section][key] = value;
-            this.saveSystemSettings();
+        async init() {
+            await this.loadSettings();
         },
 
-        updateUserPreference(key, value) {
-            this.userPrefs[key] = value;
-            this.saveUserPreferences();
+        async loadSettings() {
+            try {
+                const response = await fetch('/settings/api/all');
+                if (response.ok) {
+                    const data = await response.json();
+                    this.systemSettings = data.system_settings || {};
+                    this.userPrefs = data.user_preferences || {};
+                }
+            } catch (error) {
+                console.error('Failed to load settings:', error);
+            }
         },
 
-        async saveSystemSettings() {
+        async saveSettings() {
             this.saving = true;
             try {
-                const response = await fetch('/settings/api/system-settings', {
+                const response = await fetch('/settings/api/save', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRFToken': '{{ csrf_token() }}'
                     },
-                    body: JSON.stringify(this.settings)
+                    body: JSON.stringify({
+                        system_settings: this.systemSettings,
+                        user_preferences: this.userPrefs
+                    })
                 });
 
                 if (response.ok) {
-                    this.showSuccessMessage('Settings saved successfully');
+                    this.showNotification('Settings saved successfully!', 'success');
                 } else {
-                    this.showErrorMessage('Failed to save settings');
+                    this.showNotification('Failed to save settings', 'error');
                 }
             } catch (error) {
-                this.showErrorMessage('Error saving settings');
+                this.showNotification('Error saving settings', 'error');
+            } finally {
+                this.saving = false;
             }
-            this.saving = false;
         },
 
-        async saveUserPreferences() {
-            this.saving = true;
-            try {
-                const response = await fetch('/settings/api/user-preferences', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': '{{ csrf_token() }}'
-                    },
-                    body: JSON.stringify(this.userPrefs)
-                });
+        showNotification(msg, type) {
+            this.message = msg;
+            this.messageType = type;
+            this.showMessage = true;
+            setTimeout(() => {
+                this.showMessage = false;
+            }, 3000);
+        },
 
-                if (response.ok) {
-                    this.showSuccessMessage('Preferences saved successfully');
-                } else {
-                    this.showErrorMessage('Failed to save preferences');
-                }
-            } catch (error) {
-                this.showErrorMessage('Error saving preferences');
+        resetToDefaults() {
+            if (confirm('Are you sure you want to reset all settings to defaults?')) {
+                this.systemSettings = {};
+                this.userPrefs = {};
+                this.saveSettings();
             }
-            this.saving = false;
-        },
-
-        showSuccessMessage(msg) {
-            this.message = msg;
-            this.messageType = 'success';
-            this.showMessage = true;
-            setTimeout(() => this.showMessage = false, 3000);
-        },
-
-        showErrorMessage(msg) {
-            this.message = msg;
-            this.messageType = 'danger';
-            this.showMessage = true;
-            setTimeout(() => this.showMessage = false, 5000);
         }
     }" class="container-fluid mt-4">
     <h2><i class="fas fa-cog"></i> System Settings</h2>
