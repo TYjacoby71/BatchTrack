@@ -1,23 +1,16 @@
 {% extends "layout.html" %}
 
 {% block content %}
-<!-- Success/Error Message -->
-<div x-show="showMessage" 
-     x-transition.opacity.duration.150ms
-     :class="messageType === 'success' ? 'alert-success' : 'alert-danger'"
-     class="alert alert-dismissible fade show position-fixed"
-     style="top: 20px; right: 20px; z-index: 1050;"
-     x-data="settingsData()">
-    <span x-text="message"></span>
-    <button type="button" class="btn-close" @click="showMessage = false"></button>
-</div>
-
-<div class="container-fluid" x-data="settingsData()">
+<div class="container-fluid" x-data="settingsData()"
     <h2><i class="fas fa-cog"></i> System Settings</h2>
     <p class="text-muted">Configure BatchTrack to match your workflow and preferences</p>
 
     <!-- Success/Error Messages -->
-    <div x-show="showMessage" x-transition class="alert" :class="messageType === 'success' ? 'alert-success' : 'alert-danger'" style="display: none;">
+    <div x-show="showMessage" 
+         x-transition.opacity.duration.300ms
+         :class="messageType === 'success' ? 'alert alert-success' : 'alert alert-danger'"
+         class="alert alert-dismissible fade show position-fixed"
+         style="top: 20px; right: 20px; z-index: 1050; display: none;">
         <span x-text="message"></span>
         <button type="button" class="btn-close" @click="showMessage = false"></button>
     </div>
@@ -90,7 +83,8 @@
                                     <div class="form-text">All timestamps will be displayed in your selected timezone</div>
                                 </div>
                                 <button type="submit" class="btn btn-primary btn-sm">Update Timezone</button>
-                            </form></div_col>
+                            </form>
+                        </div>
 
                         <div class="col-md-6">
                             <h6>Profile Actions</h6>
@@ -722,6 +716,69 @@ function settingsData() {
             setTimeout(() => { this.showMessage = false; }, 5000);
         },
 
+        updateProfile(field, value) {
+            const data = {};
+            data[field] = value;
+            
+            fetch('/settings/profile/save', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    this.showSuccessMessage('Profile updated successfully');
+                } else {
+                    this.showErrorMessage(data.error || 'Failed to update profile');
+                }
+            })
+            .catch(error => {
+                this.showErrorMessage('Error updating profile');
+            });
+        },
+
+        changePassword() {
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            if (newPassword !== confirmPassword) {
+                this.showErrorMessage('New passwords do not match');
+                return;
+            }
+
+            fetch('/settings/password/change', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    current_password: currentPassword,
+                    new_password: newPassword,
+                    confirm_password: confirmPassword
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    this.showSuccessMessage('Password changed successfully');
+                    this.showPasswordModal = false;
+                    // Clear form
+                    document.getElementById('currentPassword').value = '';
+                    document.getElementById('newPassword').value = '';
+                    document.getElementById('confirmPassword').value = '';
+                } else {
+                    this.showErrorMessage(data.error || 'Failed to change password');
+                }
+            })
+            .catch(error => {
+                this.showErrorMessage('Error changing password');
+            });
+        },
+
         updateUserPreference(key, value) {
             this.userPrefs[key] = value;
             fetch('/settings/api/user-preferences', {
@@ -745,7 +802,11 @@ function settingsData() {
         },
 
         updateSystemSetting(section, key, value) {
+            if (!this.systemSettings[section]) {
+                this.systemSettings[section] = {};
+            }
             this.systemSettings[section][key] = value;
+            
             const updateData = {};
             updateData[section] = {};
             updateData[section][key] = value;
@@ -771,9 +832,6 @@ function settingsData() {
         }
     };
 }
-
-document.addEventListener('DOMContentLoaded', function() {
-});
 </script>
 {% endblock %}
 

@@ -9,6 +9,7 @@ class UserPreferences(ScopedModelMixin, db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, unique=True)
+    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=False)
     
     # Alert preferences
     max_dashboard_alerts = db.Column(db.Integer, default=3)
@@ -40,7 +41,7 @@ class UserPreferences(ScopedModelMixin, db.Model):
         prefs = cls.query.filter_by(user_id=user_id).first()
         if not prefs:
             # Get the user to access their organization_id
-            from .models import User
+            from . import User
             user = User.query.get(user_id)
             if not user:
                 raise ValueError(f"User {user_id} not found")
