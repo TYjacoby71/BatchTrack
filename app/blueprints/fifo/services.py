@@ -23,7 +23,6 @@ class FIFOService:
                 and_(
                     ProductSKUHistory.inventory_item_id == inventory_item_id,
                     ProductSKUHistory.remaining_quantity > 0,
-                    ProductSKUHistory.quantity_change > 0,  # Only positive entries (additions)
                     # Skip expired entries - they can only be spoiled/trashed
                     db.or_(
                         ProductSKUHistory.expiration_date.is_(None),  # Non-perishable
@@ -75,7 +74,6 @@ class FIFOService:
                 and_(
                     ProductSKUHistory.inventory_item_id == inventory_item_id,
                     ProductSKUHistory.remaining_quantity > 0,
-                    ProductSKUHistory.quantity_change > 0,  # Only positive entries (additions)
                     ProductSKUHistory.expiration_date.isnot(None),
                     ProductSKUHistory.expiration_date < today
                 )
@@ -118,8 +116,7 @@ class FIFOService:
             query = ProductSKUHistory.query.filter(
                 and_(
                     ProductSKUHistory.inventory_item_id == inventory_item_id,
-                    ProductSKUHistory.remaining_quantity > 0,
-                    ProductSKUHistory.quantity_change > 0  # Only positive entries (additions)
+                    ProductSKUHistory.remaining_quantity > 0
                 )
             )
 
