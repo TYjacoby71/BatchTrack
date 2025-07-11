@@ -92,8 +92,8 @@ document.addEventListener('DOMContentLoaded', function() {
         <div class="col-md-12">
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{{ url_for('products.product_list') }}">Products</a></li>
-                    <li class="breadcrumb-item"><a href="{{ url_for('products.view_product', product_id=sku.product_id) }}">{{ sku.product_name }}</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('products_routes.product_list') }}">Products</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('products_routes.view_product', product_id=sku.product_id) }}">{{ sku.product_name }}</a></li>
                     <li class="breadcrumb-item"><a href="{{ url_for('product_variants.view_variant', product_id=sku.product_id, variant_name=sku.variant_name) }}">{{ sku.variant_name }}</a></li>
                     <li class="breadcrumb-item active">{{ sku.size_label }}</li>
                 </ol>
