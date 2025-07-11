@@ -478,22 +478,34 @@ class FIFOService:
             # This includes expired entries since the user physically counted them
             if item.type == 'product':
                 # Get ALL ProductSKUHistory entries with available capacity (including expired)
-                entries_with_capacity = ProductSKUHistory.query.filter(
+                query = ProductSKUHistory.query.filter(
                     and_(
                         ProductSKUHistory.inventory_item_id == inventory_item_id,
                         ProductSKUHistory.quantity_change > 0,  # Only positive additions can be filled
                         ProductSKUHistory.remaining_quantity < ProductSKUHistory.quantity_change  # Has unfilled capacity
                     )
-                ).order_by(ProductSKUHistory.timestamp.asc()).all()  # Fill oldest first (FIFO order)
+                )
+                
+                # Add organization scoping if user is authenticated
+                if current_user and current_user.is_authenticated:
+                    query = query.filter(ProductSKUHistory.organization_id == current_user.organization_id)
+                
+                entries_with_capacity = query.order_by(ProductSKUHistory.timestamp.asc()).all()  # Fill oldest first (FIFO order)
             else:
                 # Get ALL InventoryHistory entries with available capacity (including expired)
-                entries_with_capacity = InventoryHistory.query.filter(
+                query = InventoryHistory.query.filter(
                     and_(
                         InventoryHistory.inventory_item_id == inventory_item_id,
                         InventoryHistory.quantity_change > 0,  # Only positive additions can be filled
                         InventoryHistory.remaining_quantity < InventoryHistory.quantity_change  # Has unfilled capacity
                     )
-                ).order_by(InventoryHistory.timestamp.asc()).all()  # Fill oldest first (FIFO order)
+                )
+                
+                # Add organization scoping if user is authenticated
+                if current_user and current_user.is_authenticated:
+                    query = query.filter(InventoryHistory.organization_id == current_user.organization_id)
+                
+                entries_with_capacity = query.order_by(InventoryHistory.timestamp.asc()).all()  # Fill oldest first (FIFO order)
 
             remaining_to_add = difference
 
