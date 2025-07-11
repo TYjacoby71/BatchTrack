@@ -126,7 +126,9 @@ class ExpirationService:
 
         # Check product SKUs via their inventory items
         from ...models import InventoryItem
-        product_skus = db.session.query(ProductSKU).join(InventoryItem).filter(
+        product_skus = db.session.query(ProductSKU).join(
+            InventoryItem, ProductSKU.inventory_item_id == InventoryItem.id
+        ).filter(
             InventoryItem.quantity > 0,
             ProductSKU.expiration_date.isnot(None)
         ).all()
@@ -171,7 +173,9 @@ class ExpirationService:
 
         # Check product SKUs via their inventory items
         from ...models import InventoryItem
-        product_skus = db.session.query(ProductSKU).join(InventoryItem).filter(
+        product_skus = db.session.query(ProductSKU).join(
+            InventoryItem, ProductSKU.inventory_item_id == InventoryItem.id
+        ).filter(
             InventoryItem.quantity > 0,
             ProductSKU.expiration_date.isnot(None)
         ).all()
