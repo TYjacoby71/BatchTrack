@@ -132,7 +132,9 @@ class ExpirationService:
             ProductSKUHistory.id.label('history_id'),
             ProductSKUHistory.batch_id,
             ProductSKUHistory.expiration_date,
-            ProductSKUHistory.is_perishable
+            ProductSKUHistory.is_perishable,
+            ProductSKU.product_id,
+            ProductSKU.variant_id
         ).join(ProductSKU, ProductSKUHistory.inventory_item_id == ProductSKU.inventory_item_id
         ).join(Product, ProductSKU.product_id == Product.id
         ).join(ProductVariant, ProductSKU.variant_id == ProductVariant.id
@@ -166,7 +168,10 @@ class ExpirationService:
                     'unit': sku_entry.unit,
                     'expiration_date': expiration_date,
                     'history_id': sku_entry.history_id,
-                    'product_inv_id': sku_entry.history_id  # Add this for template compatibility
+                    'product_inv_id': sku_entry.history_id,  # Add this for template compatibility
+                    'product_id': sku_entry.product_id,
+                    'variant_id': sku_entry.variant_id,
+                    'lot_number': f"LOT-{sku_entry.history_id}"  # Add lot number for identification
                 })
 
         return {
@@ -213,7 +218,9 @@ class ExpirationService:
             ProductSKUHistory.id.label('history_id'),
             ProductSKUHistory.batch_id,
             ProductSKUHistory.expiration_date,
-            ProductSKUHistory.is_perishable
+            ProductSKUHistory.is_perishable,
+            ProductSKU.product_id,
+            ProductSKU.variant_id
         ).join(ProductSKU, ProductSKUHistory.inventory_item_id == ProductSKU.inventory_item_id
         ).join(Product, ProductSKU.product_id == Product.id
         ).join(ProductVariant, ProductSKU.variant_id == ProductVariant.id
@@ -247,7 +254,10 @@ class ExpirationService:
                     'unit': sku_entry.unit,
                     'expiration_date': expiration_date,
                     'history_id': sku_entry.history_id,
-                    'product_inv_id': sku_entry.history_id  # Add this for template compatibility
+                    'product_inv_id': sku_entry.history_id,  # Add this for template compatibility
+                    'product_id': sku_entry.product_id,
+                    'variant_id': sku_entry.variant_id,
+                    'lot_number': f"LOT-{sku_entry.history_id}"  # Add lot number for identification
                 })
 
         return {

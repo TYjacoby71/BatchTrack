@@ -233,6 +233,7 @@
                                         <th>Variant</th>
                                         <th>Size</th>
                                         <th>Quantity</th>
+                                        <th>Lot Number</th>
                                         <th>Expired Date</th>
                                         <th>Expired Time</th>
                                         <th>Action</th>
@@ -241,10 +242,11 @@
                                 <tbody>
                                     {% for item in expired.product_inventory %}
                                     <tr>
-                                        <td>Product #{{ item.product_id }}</td>
-                                        <td>{{ item.variant or 'N/A' }}</td>
+                                        <td>{{ item.product_name or 'Unknown Product' }}</td>
+                                        <td>{{ item.variant_name or 'N/A' }}</td>
                                         <td>{{ item.size_label or 'N/A' }}</td>
                                         <td>{{ item.quantity }} {{ item.unit }}</td>
+                                        <td><span class="badge bg-secondary">{{ item.lot_number or 'LOT-' + item.history_id|string }}</span></td>
                                         <td>
                                             <small class="text-danger">
                                                 {{ item.expiration_date.strftime('%Y-%m-%d') }}
@@ -306,6 +308,7 @@
                                         <th>Variant</th>
                                         <th>Size</th>
                                         <th>Quantity</th>
+                                        <th>Lot Number</th>
                                         <th>Expires Date</th>
                                         <th>Expires Time</th>
                                         <th>Days Left</th>
@@ -315,10 +318,11 @@
                                     {% for item in expiring_soon.product_inventory %}
                                     {% set days_left = (item.expiration_date.date() - today.date()).days %}
                                     <tr>
-                                        <td>Product #{{ item.product_id }}</td>
-                                        <td>{{ item.variant or 'N/A' }}</td>
+                                        <td>{{ item.product_name or 'Unknown Product' }}</td>
+                                        <td>{{ item.variant_name or 'N/A' }}</td>
                                         <td>{{ item.size_label or 'N/A' }}</td>
                                         <td>{{ item.quantity }} {{ item.unit }}</td>
+                                        <td><span class="badge bg-secondary">{{ item.lot_number or 'LOT-' + item.history_id|string }}</span></td>
                                         <td>
                                             <small>{{ item.expiration_date.strftime('%Y-%m-%d') }}</small>
                                         </td>
