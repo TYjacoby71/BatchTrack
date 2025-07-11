@@ -16,9 +16,17 @@ branch_labels = None
 depends_on = None
 
 def upgrade():
-    # This is a mock revision - no actual changes needed
-    pass
+    # Mock revision - add timezone column that was referenced
+    try:
+        op.add_column('user', sa.Column('timezone', sa.String(length=64), nullable=True))
+    except Exception:
+        # Column might already exist or table might not exist
+        pass
 
 def downgrade():
-    # This is a mock revision - no actual changes needed
-    pass
+    # Remove timezone column if it exists
+    try:
+        op.drop_column('user', 'timezone')
+    except Exception:
+        # Column might not exist
+        pass
