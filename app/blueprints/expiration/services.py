@@ -395,6 +395,9 @@ class ExpirationService:
                     time_passed_seconds = (now - entry.timestamp).total_seconds()
                     remaining_seconds = max(0, total_life_seconds - time_passed_seconds)
                     life_remaining_percent = (remaining_seconds / total_life_seconds) * 100
+                
+                # Ensure freshness percentage doesn't exceed 100%
+                life_remaining_percent = min(100.0, max(0.0, life_remaining_percent))
 
                 # Weight by quantity
                 weighted_freshness = life_remaining_percent * entry.remaining_quantity
@@ -404,7 +407,9 @@ class ExpirationService:
         if total_quantity == 0:
             return None
 
-        return round(total_weighted_freshness / total_quantity, 1)
+        final_freshness = total_weighted_freshness / total_quantity
+        # Final safety check to ensure result is between 0 and 100
+        return round(min(100.0, max(0.0, final_freshness)), 1)
 
     @staticmethod
     def get_product_expiration_status(product_id: int):
