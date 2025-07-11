@@ -4,6 +4,14 @@ from datetime import datetime
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
+@api_bp.route('/server-time')
+def server_time():
+    """Get current server time"""
+    return jsonify({
+        'timestamp': datetime.utcnow().isoformat(),
+        'timezone': 'UTC'
+    })
+
 # Import sub-blueprints to register their routes
 from .stock_routes import stock_api_bp
 from .ingredient_routes import ingredient_api_bp
