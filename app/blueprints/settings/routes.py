@@ -11,20 +11,42 @@ from . import settings_bp
 @login_required
 def index():
     """Settings dashboard"""
-    # Get current settings or use defaults
-    from ...utils.settings import get_user_settings
-    settings = get_user_settings(current_user.id)
+    # Get current settings from file or use defaults
+    try:
+        with open("settings.json", "r") as f:
+            settings = json.load(f)
+    except FileNotFoundError:
+        settings = {}
 
-    # Ensure all required sections exist
-    if 'alerts' not in settings:
-        settings['alerts'] = {
+    # Ensure all required sections exist with defaults
+    defaults = {
+        'alerts': {
             'max_dashboard_alerts': 10,
             'show_expiration_alerts': True,
             'show_timer_alerts': True,
+            'show_low_stock_alerts': True,
             'show_batch_alerts': True,
             'show_fault_alerts': True,
+            'low_stock_threshold': 5,
+            'expiration_warning_days': 7,
+            'show_inventory_refund': True,
             'show_alert_badges': True
+        },
+        'display': {
+            'dashboard_layout': 'standard',
+            'compact_view': False,
+            'show_quick_actions': True
         }
+    }
+    
+    # Merge defaults with existing settings
+    for section, section_settings in defaults.items():
+        if section not in settings:
+            settings[section] = section_settings
+        else:
+            for key, value in section_settings.items():
+                if key not in settings[section]:
+                    settings[section][key] = value
 
     return render_template('settings/index.html', settings=settings)
 
@@ -248,90 +270,5 @@ def update_setting():
         current_app.logger.error(f"Error updating setting: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
-@settings_bp.route('/api/user-preferences', methods=['GET'])
-@login_required
-def get_user_preferences():
-    """Get current user's preferences"""
-    try:
-        prefs = UserPreferences.get_for_user(current_user.id)
-        return jsonify({
-            'max_dashboard_alerts': prefs.max_dashboard_alerts,
-            'show_expiration_alerts': prefs.show_expiration_alerts,
-            'show_timer_alerts': prefs.show_timer_alerts,
-            'show_low_stock_alerts': prefs.show_low_stock_alerts,
-            'show_batch_alerts': prefs.show_batch_alerts,
-            'show_fault_alerts': prefs.show_fault_alerts,
-            'expiration_warning_days': prefs.expiration_warning_days,
-            'show_alert_badges': prefs.show_alert_badges,
-            'dashboard_layout': prefs.dashboard_layout,
-            'compact_view': prefs.compact_view,
-            'show_quick_actions': prefs.show_quick_actions
-        })
-    except Exception as e:
-        current_app.logger.error(f"Error getting user preferences: {str(e)}")
-        return jsonify({'error': str(e)}), 500
 
-@settings_bp.route('/api/user-preferences', methods=['POST'])
-@login_required
-def update_user_preferences():
-    """Update current user's preferences"""
-    try:
-        data = request.get_json()
-        prefs = UserPreferences.get_for_user(current_user.id)
 
-        # Update alert preferences
-        if 'max_dashboard_alerts' in data:
-            prefs.max_dashboard_alerts = int(data['max_dashboard_alerts'])
-        if 'show_expiration_alerts' in data:
-            prefs.show_expiration_alerts = bool(data['show_expiration_alerts'])
-        if 'show_timer_alerts' in data:
-            prefs.show_timer_alerts = bool(data['show_timer_alerts'])
-        if 'show_low_stock_alerts' in data:
-            prefs.show_low_stock_alerts = bool(data['show_low_stock_alerts'])
-        if 'show_batch_alerts' in data:
-            prefs.show_batch_alerts = bool(data['show_batch_alerts'])
-        if 'show_fault_alerts' in data:
-            prefs.show_fault_alerts = bool(data['show_fault_alerts'])
-        if 'expiration_warning_days' in data:
-            prefs.expiration_warning_days = int(data['expiration_warning_days'])
-        if 'show_alert_badges' in data:
-            prefs.show_alert_badges = bool(data['show_alert_badges'])
-
-        # Update display preferences
-        if 'dashboard_layout' in data:
-            prefs.dashboard_layout = data['dashboard_layout']
-        if 'compact_view' in data:
-            prefs.compact_view = bool(data['compact_view'])
-        if 'show_quick_actions' in data:
-            prefs.show_quick_actions = bool(data['show_quick_actions'])
-
-        db.session.commit()
-
-        return jsonify({'success': True, 'message': 'Preferences updated successfully'})
-
-    except Exception as e:
-        current_app.logger.error(f"Error updating user preferences: {str(e)}")
-        db.session.rollback()
-        return jsonify({'error': str(e)}), 500
-
-@settings_bp.route('/alerts')
-@login_required
-def alerts():
-    """Alert configuration settings"""
-    # Get current settings or use defaults
-    from ...utils.settings import get_user_settings
-    settings = get_user_settings(current_user.id)
-
-    # Ensure alerts section exists
-    if 'alerts' not in settings:
-        settings['alerts'] = {
-            'max_dashboard_alerts': 10,
-            'show_expiration_alerts': True,
-            'show_timer_alerts': True,
-            'show_low_stock_alerts': True,
-            'show_batch_alerts': True,
-            'show_fault_alerts': True,
-            'show_alert_badges': True
-        }
-
-    return render_template('settings/alerts.html', settings=settings)

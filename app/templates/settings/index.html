@@ -723,7 +723,7 @@ function settingsManager() {
                 const preferences = {};
                 preferences[key] = value;
 
-                const response = await fetch('/settings/api/user-preferences', {
+                const response = await fetch('/settings/save', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
