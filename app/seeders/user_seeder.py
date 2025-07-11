@@ -51,7 +51,8 @@ def seed_users():
         if not dev_user.user_type:
             dev_user.user_type = 'developer'
             dev_user.role_id = developer_role.id
-            print(f"✅ Updated developer user with user_type and role")
+        dev_user.is_active = True  # Ensure user is active
+        print(f"✅ Updated developer user with user_type and role")
 
     # Create organization owner (admin) user if it doesn't exist
     if not User.query.filter_by(username='admin').first():
@@ -77,7 +78,8 @@ def seed_users():
             admin_user.user_type = 'organization_owner'
             admin_user.role_id = org_owner_role.id
             admin_user.is_owner = True
-            print(f"✅ Updated admin user with user_type and role")
+        admin_user.is_active = True  # Ensure user is active
+        print(f"✅ Updated admin user with user_type and role")
 
     # Create a sample manager user if it doesn't exist
     if not User.query.filter_by(username='manager').first() and manager_role:
@@ -102,7 +104,8 @@ def seed_users():
             if not manager_user.user_type:
                 manager_user.user_type = 'team_member'
                 manager_user.role_id = manager_role.id if manager_role else manager_user.role_id
-                print(f"✅ Updated manager user with user_type")
+            manager_user.is_active = True  # Ensure user is active
+            print(f"✅ Updated manager user with user_type")
 
     # Create sample operator user if it doesn't exist
     if not User.query.filter_by(username='operator').first() and operator_role:
@@ -127,7 +130,8 @@ def seed_users():
             if not operator_user.user_type:
                 operator_user.user_type = 'team_member'
                 operator_user.role_id = operator_role.id if operator_role else operator_user.role_id
-                print(f"✅ Updated operator user with user_type")
+            operator_user.is_active = True  # Ensure user is active
+            print(f"✅ Updated operator user with user_type")
 
     db.session.commit()
     print("✅ User seeding completed")
