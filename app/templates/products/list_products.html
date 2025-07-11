@@ -103,7 +103,7 @@
                         <i class="fas fa-chevron-down small"></i>
                       </button>
                     </div>
-                    <a href="{{ url_for('products.view_product', product_id=product.id) }}" class="btn btn-outline-primary btn-xs">View</a>
+                    <a href="{{ url_for('products_routes.view_product', product_id=product.id) }}" class="btn btn-outline-primary btn-xs">View</a>
                   </div>
 
                   <!-- Size level details -->
@@ -150,7 +150,7 @@
           </div>
           <div class="card-footer">
 
-            <a href="{{ url_for('products.view_product', product_id=product.id) }}" 
+            <a href="{{ url_for('products_routes.view_product', product_id=product.id) }}" 
                class="btn btn-outline-primary btn-sm w-100">
               View Details
             </a>
@@ -182,7 +182,7 @@
               <tr class="product-row">
                 <td>
 
-                  <a href="{{ url_for('products.view_product', product_id=product.id) }}" class="text-decoration-none">
+                  <a href="{{ url_for('products_routes.view_product', product_id=product.id) }}" class="text-decoration-none">
                     <strong>{{ product.name }}</strong>
                   </a>
                 </td>
@@ -220,7 +220,7 @@
                       Actions
                     </button>
                     <ul class="dropdown-menu">
-                      <li><a class="dropdown-item" href="{{ url_for('products.view_product', product_id=product.id) }}">
+                      <li><a class="dropdown-item" href="{{ url_for('products_routes.view_product', product_id=product.id) }}">
                         <i class="fas fa-eye"></i> View Details
                       </a></li>
                       <li><a class="dropdown-item" href="#" onclick="editProduct({{ product.id }})">
@@ -257,7 +257,7 @@
                                 <strong>{{ variation.name }}</strong>
                                 <br><small class="text-muted">Default variant</small>
                               {% else %}
-                                <a href="{{ url_for('products.view_product', product_id=product.id) }}" class="text-decoration-none">
+                                <a href="{{ url_for('products_routes.view_product', product_id=product.id) }}" class="text-decoration-none">
                                   <strong>{{ variation.name }}</strong>
                                 </a>
                               {% endif %}
@@ -279,11 +279,11 @@
                                 </button>
                                 <ul class="dropdown-menu">
                                   {% if variation.name == 'Base' %}
-                                  <li><a class="dropdown-item" href="{{ url_for('products.view_product', product_id=product.id) }}">
+                                  <li><a class="dropdown-item" href="{{ url_for('products_routes.view_product', product_id=product.id) }}">
                                     <i class="fas fa-eye"></i> View Details
                                   </a></li>
                                   {% else %}
-                                  <li><a class="dropdown-item" href="{{ url_for('products.view_product', product_id=product.id) }}">
+                                  <li><a class="dropdown-item" href="{{ url_for('products_routes.view_product', product_id=product.id) }}">
                                     <i class="fas fa-eye"></i> View Details
                                   </a></li>
                                   <li><a class="dropdown-item" href="#" onclick="editVariation('{{ product.name }}', {{ variation.id }})">

@@ -1,3 +1,7 @@
+Applying the requested changes to fix route references in products.py and ensuring all redirects point to the correct blueprint.
+```
+
+```python
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
 from ...models import db, Product, ProductVariant, ProductSKU, ProductSKUHistory, InventoryItem
@@ -74,7 +78,7 @@ def new_product():
 
         if not name or not unit:
             flash('Name and product base unit are required', 'error')
-            return redirect(url_for('products.new_product'))
+            return redirect(url_for('products_routes.new_product'))
 
         # Check if product already exists (check both new Product model and legacy ProductSKU)
         from ...models.product import Product, ProductVariant
@@ -91,7 +95,7 @@ def new_product():
 
         if existing_product or existing_sku:
             flash('Product with this name already exists', 'error')
-            return redirect(url_for('products.new_product'))
+            return redirect(url_for('products_routes.new_product'))
 
         try:
             # Step 1: Create the main Product
@@ -149,12 +153,12 @@ def new_product():
             db.session.commit()
 
             flash('Product created successfully', 'success')
-            return redirect(url_for('products.view_product', product_id=sku.inventory_item_id))
+            return redirect(url_for('products_routes.view_product', product_id=sku.inventory_item_id))
 
         except Exception as e:
             db.session.rollback()
             flash(f'Error creating product: {str(e)}', 'error')
-            return redirect(url_for('products.new_product'))
+            return redirect(url_for('products_routes.new_product'))
 
     units = get_global_unit_list()
     return render_template('products/new_product.html', units=units)
@@ -173,7 +177,7 @@ def view_product(product_id):
 
     if not base_sku:
         flash('Product not found', 'error')
-        return redirect(url_for('products.product_list'))
+        return redirect(url_for('products_routes.product_list'))
 
     product = base_sku.product
 
@@ -186,7 +190,7 @@ def view_product(product_id):
 
     if not skus:
         flash('Product not found', 'error')
-        return redirect(url_for('products.product_list'))
+        return redirect(url_for('products_routes.product_list'))
 
     # Group SKUs by variant
     variants = {}
@@ -238,9 +242,9 @@ def view_product_by_name(product_name):
 
     if not sku:
         flash('Product not found', 'error')
-        return redirect(url_for('products.product_list'))
+        return redirect(url_for('products_routes.product_list'))
 
-    return redirect(url_for('products.view_product', product_id=sku.inventory_item_id))
+    return redirect(url_for('products_routes.view_product', product_id=sku.inventory_item_id))
 
 
 
@@ -256,7 +260,7 @@ def edit_product(product_id):
 
     if not base_sku:
         flash('Product not found', 'error')
-        return redirect(url_for('products.product_list'))
+        return redirect(url_for('products_routes.product_list'))
 
     product = base_sku.product
 
@@ -266,7 +270,7 @@ def edit_product(product_id):
 
     if not name or not unit:
         flash('Name and product base unit are required', 'error')
-        return redirect(url_for('products.view_product', product_id=product_id))
+        return redirect(url_for('products_routes.view_product', product_id=product_id))
 
     # Check if another product has this name
     from ...models.product import Product
@@ -277,7 +281,7 @@ def edit_product(product_id):
     ).first()
     if existing:
         flash('Another product with this name already exists', 'error')
-        return redirect(url_for('products.view_product', product_id=product_id))
+        return redirect(url_for('products_routes.view_product', product_id=product_id))
 
     # Update the product
     product.name = name
@@ -292,7 +296,7 @@ def edit_product(product_id):
 
     db.session.commit()
     flash('Product updated successfully', 'success')
-    return redirect(url_for('products.view_product', product_id=product_id))
+    return redirect(url_for('products_routes.view_product', product_id=product_id))
 
 @products_bp.route('/<int:product_id>/delete', methods=['POST'])
 @login_required
@@ -307,7 +311,7 @@ def delete_product(product_id):
 
         if not base_sku:
             flash('Product not found', 'error')
-            return redirect(url_for('products.product_list'))
+            return redirect(url_for('products_routes.product_list'))
 
         product = base_sku.product
 
@@ -319,13 +323,13 @@ def delete_product(product_id):
 
         if not skus:
             flash('Product not found', 'error')
-            return redirect(url_for('products.product_list'))
+            return redirect(url_for('products_routes.product_list'))
 
         # Check if any SKU has inventory
         total_inventory = sum((sku.inventory_item.quantity if sku.inventory_item else 0.0) for sku in skus)
         if total_inventory > 0:
             flash('Cannot delete product with remaining inventory', 'error')
-            return redirect(url_for('products.view_product', product_id=product_id))
+            return redirect(url_for('products_routes.view_product', product_id=product_id))
 
         # Delete history records first
         for sku in skus:
@@ -342,12 +346,12 @@ def delete_product(product_id):
         db.session.commit()
 
         flash(f'Product "{product.name}" deleted successfully', 'success')
-        return redirect(url_for('products.product_list'))
+        return redirect(url_for('products_routes.product_list'))
 
     except Exception as e:
         db.session.rollback()
         flash(f'Error deleting product: {str(e)}', 'error')
-        return redirect(url_for('products.view_product', product_id=product_id))
+        return redirect(url_for('products_routes.view_product', product_id=product_id))
 
 # Legacy adjust_sku route removed - use product_inventory routes instead
 
