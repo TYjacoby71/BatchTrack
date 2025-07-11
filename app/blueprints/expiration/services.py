@@ -101,16 +101,15 @@ class ExpirationService:
     def get_expired_inventory_items():
         """Get all expired inventory items across different models"""
         from ...models import InventoryItem, ProductSKU
-        from ...utils.timezone_utils import get_user_timezone, convert_to_timezone
-        from datetime import datetime
-        import pytz
+        from ...utils.timezone_utils import TimezoneUtils
+        
+        # Get current time in user's timezone
+        now = TimezoneUtils.now_naive()
 
-        # Get current time in UTC and user's timezone
-        utc_now = datetime.utcnow().replace(tzinfo=pytz.UTC)
-        user_tz = get_user_timezone()
-        now = convert_to_timezone(utc_now, user_tz)
-
-        expired_items = []
+        expired_items = {
+            'fifo_entries': [],
+            'product_inventory': []
+        }
 
         # Check regular inventory items
         inventory_items = InventoryItem.query.filter(
@@ -119,21 +118,8 @@ class ExpirationService:
         ).all()
 
         for item in inventory_items:
-            if item.expiration_date:
-                # Ensure expiration_date is timezone-aware
-                if item.expiration_date.tzinfo is None:
-                    # Assume UTC if no timezone info
-                    expiration_date = item.expiration_date.replace(tzinfo=pytz.UTC)
-                else:
-                    expiration_date = item.expiration_date
-
-                # Convert to user timezone for comparison
-                expiration_date = convert_to_timezone(expiration_date, user_tz)
-                if expiration_date and expiration_date < now:
-                    expired_items.append({
-                        'item_type': 'inventory',
-                        'item': item
-                    })
+            if item.expiration_date and item.expiration_date.date() < now.date():
+                expired_items['fifo_entries'].append(item)
 
         # Check product SKUs
         product_skus = ProductSKU.query.filter(
@@ -142,21 +128,8 @@ class ExpirationService:
         ).all()
 
         for sku in product_skus:
-            if sku.expiration_date:
-                # Ensure expiration_date is timezone-aware
-                if sku.expiration_date.tzinfo is None:
-                    # Assume UTC if no timezone info
-                    expiration_date = sku.expiration_date.replace(tzinfo=pytz.UTC)
-                else:
-                    expiration_date = sku.expiration_date
-
-                # Convert expiration date to user timezone for comparison
-                expiration_date = convert_to_timezone(expiration_date, user_tz)
-                if expiration_date and expiration_date < now:
-                    expired_items.append({
-                        'item_type': 'product_sku',
-                        'item': sku
-                    })
+            if sku.expiration_date and sku.expiration_date.date() < now.date():
+                expired_items['product_inventory'].append(sku)
 
         return expired_items
 
@@ -164,17 +137,17 @@ class ExpirationService:
     def get_expiring_soon_items(warning_days=7):
         """Get items expiring within the specified warning period"""
         from ...models import InventoryItem, ProductSKU
-        from ...utils.timezone_utils import get_user_timezone, convert_to_timezone
-        from datetime import datetime, timedelta
-        import pytz
+        from ...utils.timezone_utils import TimezoneUtils
+        from datetime import timedelta
 
         # Get current time and warning threshold in user's timezone
-        utc_now = datetime.utcnow().replace(tzinfo=pytz.UTC)
-        user_tz = get_user_timezone()
-        now = convert_to_timezone(utc_now, user_tz)
+        now = TimezoneUtils.now_naive()
         warning_threshold = now + timedelta(days=warning_days)
 
-        expiring_items = []
+        expiring_items = {
+            'fifo_entries': [],
+            'product_inventory': []
+        }
 
         # Check inventory items
         inventory_items = InventoryItem.query.filter(
@@ -183,21 +156,8 @@ class ExpirationService:
         ).all()
 
         for item in inventory_items:
-            if item.expiration_date:
-                # Ensure expiration_date is timezone-aware
-                if item.expiration_date.tzinfo is None:
-                    # Assume UTC if no timezone info
-                    expiration_date = item.expiration_date.replace(tzinfo=pytz.UTC)
-                else:
-                    expiration_date = item.expiration_date
-
-                # Convert expiration date to user timezone for comparison
-                expiration_date = convert_to_timezone(expiration_date, user_tz)
-                if expiration_date and now <= expiration_date <= warning_threshold:
-                    expiring_items.append({
-                        'item_type': 'inventory',
-                        'item': item
-                    })
+            if item.expiration_date and now.date() <= item.expiration_date.date() <= warning_threshold.date():
+                expiring_items['fifo_entries'].append(item)
 
         # Check product SKUs
         product_skus = ProductSKU.query.filter(
@@ -206,21 +166,8 @@ class ExpirationService:
         ).all()
 
         for sku in product_skus:
-            if sku.expiration_date:
-                # Ensure expiration_date is timezone-aware
-                if sku.expiration_date.tzinfo is None:
-                    # Assume UTC if no timezone info
-                    expiration_date = sku.expiration_date.replace(tzinfo=pytz.UTC)
-                else:
-                    expiration_date = sku.expiration_date
-
-                # Convert expiration date to user timezone for comparison
-                expiration_date = convert_to_timezone(expiration_date, user_tz)
-                if expiration_date and now <= expiration_date <= warning_threshold:
-                    expiring_items.append({
-                        'item_type': 'product_sku',
-                        'item': sku
-                    })
+            if sku.expiration_date and now.date() <= sku.expiration_date.date() <= warning_threshold.date():
+                expiring_items['product_inventory'].append(sku)
 
         return expiring_items
 
