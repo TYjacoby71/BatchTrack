@@ -50,6 +50,7 @@ def seed_permissions():
 
         # Admin permissions
         {'name': 'admin.reservations', 'description': 'Manage reservations', 'category': 'admin'},
+        {'name': 'admin.view', 'description': 'View admin panel', 'category': 'admin'},
         {'name': 'settings.edit', 'description': 'Edit settings', 'category': 'settings'},
 
         # Dashboard permissions
@@ -79,7 +80,19 @@ def seed_roles():
         {
             'name': 'developer',
             'description': 'Full system access and development privileges',
-            'permissions': ['dev.dashboard', 'dev.system_admin', 'dev.all_organizations', 'inventory.view', 'inventory.edit', 'inventory.adjust', 'inventory.reserve']
+            'permissions': [
+                'dev.dashboard', 'dev.system_admin', 'dev.all_organizations',
+                'organization.manage_users', 'organization.manage_settings', 'organization.view_billing',
+                'alerts.show_timer_alerts', 'alerts.show_batch_alerts', 'alerts.show_expiration_alerts',
+                'alerts.show_low_stock_alerts', 'alerts.max_dashboard_alerts',
+                'batches.view', 'batches.create', 'batches.edit', 'batches.finish', 'batches.cancel',
+                'inventory.view', 'inventory.edit', 'inventory.adjust', 'inventory.reserve', 'inventory.delete',
+                'products.view', 'products.edit', 'products.create',
+                'recipes.view', 'recipes.edit', 'recipes.create',
+                'settings.view', 'settings.edit', 'dashboard.view',
+                'timers.view', 'timers.start', 'timers.stop', 'timers.manage',
+                'tags.manage', 'admin.reservations', 'admin.view'
+            ]
         },
         {
             'name': 'organization_owner',
@@ -94,7 +107,7 @@ def seed_roles():
                 'recipes.view', 'recipes.edit', 'recipes.create',
                 'settings.view', 'settings.edit', 'dashboard.view',
                 'timers.view', 'timers.start', 'timers.stop', 'timers.manage',
-                'tags.manage'
+                'tags.manage', 'admin.reservations', 'admin.view'
             ]
         },
         {

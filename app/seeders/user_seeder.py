@@ -11,7 +11,7 @@ def seed_users():
     if not org:
         org = Organization(
             name="Jacob Boulette's Organization",
-            subscription_tier='free'
+            subscription_tier='team'  # Changed from 'free' to 'team' for better features
         )
         db.session.add(org)
         db.session.commit()  # Commit to ensure we have a valid ID
@@ -40,12 +40,19 @@ def seed_users():
             email='dev@batchtrack.com',
             phone='000-000-0000',
             organization_id=org.id,
-            is_owner=False
+            is_owner=False,
+            user_type='developer',  # Add user_type
+            is_active=True
         )
         db.session.add(developer_user)
         print(f"✅ Created developer user: dev/dev123 (org_id: {org.id})")
     else:
-        print("ℹ️  Developer user already exists")
+        # Update existing developer user with missing fields
+        dev_user = User.query.filter_by(username='dev').first()
+        if not dev_user.user_type:
+            dev_user.user_type = 'developer'
+            dev_user.role_id = developer_role.id
+            print(f"✅ Updated developer user with user_type and role")
     
     # Create organization owner (admin) user if it doesn't exist
     if not User.query.filter_by(username='admin').first():
@@ -58,12 +65,20 @@ def seed_users():
             email='jacobboulette@outlook.com',
             phone='775-934-5968',
             organization_id=org.id,
-            is_owner=True
+            is_owner=True,
+            user_type='organization_owner',  # Add user_type
+            is_active=True
         )
         db.session.add(admin_user)
         print(f"✅ Created organization owner user: admin/admin (org_id: {org.id})")
     else:
-        print("ℹ️  Admin user already exists")
+        # Update existing admin user with missing fields
+        admin_user = User.query.filter_by(username='admin').first()
+        if not admin_user.user_type:
+            admin_user.user_type = 'organization_owner'
+            admin_user.role_id = org_owner_role.id
+            admin_user.is_owner = True
+            print(f"✅ Updated admin user with user_type and role")
     
     # Create a sample manager user if it doesn't exist
     if not User.query.filter_by(username='manager').first() and manager_role:
@@ -76,12 +91,19 @@ def seed_users():
             email='manager@example.com',
             phone='555-0124',
             organization_id=org.id,
-            is_owner=False
+            is_owner=False,
+            user_type='team_member',  # Add user_type
+            is_active=True
         )
         db.session.add(manager_user)
         print(f"✅ Created sample manager user: manager/manager123 (org_id: {org.id})")
     else:
-        print("ℹ️  Sample manager user already exists")
+        if User.query.filter_by(username='manager').first():
+            manager_user = User.query.filter_by(username='manager').first()
+            if not manager_user.user_type:
+                manager_user.user_type = 'team_member'
+                manager_user.role_id = manager_role.id if manager_role else manager_user.role_id
+                print(f"✅ Updated manager user with user_type")
     
     # Create sample operator user if it doesn't exist
     if not User.query.filter_by(username='operator').first() and operator_role:
@@ -94,35 +116,64 @@ def seed_users():
             email='operator@example.com',
             phone='555-0125',
             organization_id=org.id,
-            is_owner=False
+            is_owner=False,
+            user_type='team_member',  # Add user_type
+            is_active=True
         )
         db.session.add(operator_user)
         print(f"✅ Created sample operator user: operator/operator123 (org_id: {org.id})")
     else:
-        print("ℹ️  Sample operator user already exists")
+        if User.query.filter_by(username='operator').first():
+            operator_user = User.query.filter_by(username='operator').first()
+            if not operator_user.user_type:
+                operator_user.user_type = 'team_member'
+                operator_user.role_id = operator_role.id if operator_role else operator_user.role_id
+                print(f"✅ Updated operator user with user_type")
     
     db.session.commit()
     print("✅ User seeding completed")
 
 def update_existing_users_with_roles():
-    """Update existing users to have database role assignments"""
+    """Update existing users to have database role assignments and user_type"""
     users = User.query.all()
     
+    # Get roles
+    developer_role = Role.query.filter_by(name='developer').first()
+    org_owner_role = Role.query.filter_by(name='organization_owner').first()
+    manager_role = Role.query.filter_by(name='manager').first()
+    operator_role = Role.query.filter_by(name='operator').first()
+    
     for user in users:
-        if not user.role_id:  # Only update users without database roles
-            # Map legacy role strings to database roles
-            role_name = user.role if hasattr(user, 'role') and user.role else 'organization_owner'
-            db_role = Role.query.filter_by(name=role_name).first()
-            
-            if db_role:
-                user.role_id = db_role.id
-                print(f"✅ Updated user {user.username} with role: {role_name}")
+        updated = False
+        
+        # Set user_type if missing
+        if not hasattr(user, 'user_type') or not user.user_type:
+            if user.username == 'dev':
+                user.user_type = 'developer'
+            elif user.is_owner:
+                user.user_type = 'organization_owner'
             else:
-                # Default to organization_owner if role not found
-                default_role = Role.query.filter_by(name='organization_owner').first()
-                if default_role:
-                    user.role_id = default_role.id
-                    print(f"⚠️  User {user.username} had unknown role '{role_name}', set to organization_owner")
+                user.user_type = 'team_member'
+            updated = True
+        
+        # Set role_id if missing
+        if not user.role_id:
+            if user.user_type == 'developer' and developer_role:
+                user.role_id = developer_role.id
+            elif user.user_type == 'organization_owner' and org_owner_role:
+                user.role_id = org_owner_role.id
+            elif user.user_type == 'team_member':
+                # Assign manager role by default for team members
+                user.role_id = manager_role.id if manager_role else org_owner_role.id
+            updated = True
+        
+        # Ensure is_active is set
+        if not hasattr(user, 'is_active') or user.is_active is None:
+            user.is_active = True
+            updated = True
+        
+        if updated:
+            print(f"✅ Updated user {user.username} with user_type: {user.user_type}")
     
     db.session.commit()
-    print("✅ Existing users updated with database roles")
+    print("✅ Existing users updated with database roles and user_type")
