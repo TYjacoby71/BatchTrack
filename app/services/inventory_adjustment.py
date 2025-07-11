@@ -338,8 +338,16 @@ def handle_recount_adjustment(item_id, target_quantity, notes=None, created_by=N
 
                         print(f"RECOUNT: Filled entry {entry.id} with {fill_amount} (from {old_remaining} to {entry.remaining_quantity})")
                         
-                        # Don't create new entries when filling existing lots - the update to remaining_quantity
-                        # is sufficient. Only log when we create completely new lots.
+                        # Create a FIFO history entry for the positive recount addition
+                        FIFOService.add_fifo_entry(
+                            inventory_item_id=item_id,
+                            quantity=fill_amount,
+                            change_type='recount',
+                            unit=history_unit,
+                            notes=f"Recount addition: {notes or 'Physical count adjustment'}",
+                            cost_per_unit=item.cost_per_unit,
+                            created_by=created_by
+                        )
 
                 # Create new lot for any remaining quantity
                 if remaining_to_add > 0:
