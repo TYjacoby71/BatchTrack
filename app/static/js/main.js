@@ -57,23 +57,13 @@ async function updateClock() {
       if (response.ok) {
         const data = await response.json();
         const serverTime = new Date(data.current_time);
-        
-        // Format time in user's locale with timezone info
-        const timeOptions = {
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-          timeZoneName: 'short'
-        };
-        
-        clock.textContent = '🕐 ' + serverTime.toLocaleTimeString(undefined, timeOptions);
+        clock.textContent = '🕐 ' + serverTime.toLocaleTimeString();
       } else {
         // Fallback to local time if server endpoint unavailable
         const now = new Date();
         clock.textContent = '🕐 ' + now.toLocaleTimeString();
       }
     } catch (error) {
-      console.log('Clock update error:', error);
       // Fallback to local time on error
       const now = new Date();
       clock.textContent = '🕐 ' + now.toLocaleTimeString();
@@ -85,15 +75,6 @@ document.addEventListener('DOMContentLoaded', function() {
   // Initialize clock
   updateClock();
   setInterval(updateClock, 30000);
-  
-  // Update clock immediately when timezone changes
-  const timezoneForm = document.querySelector('form[action*="timezone"]');
-  if (timezoneForm) {
-    timezoneForm.addEventListener('submit', function() {
-      // Update clock immediately after form submission
-      setTimeout(updateClock, 1000);
-    });
-  }
   // Initialize all Select2 dropdowns
   const select2Config = {
     placeholder: 'Select...',
