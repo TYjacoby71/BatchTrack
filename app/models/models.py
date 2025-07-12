@@ -101,6 +101,28 @@ class User(UserMixin, db.Model):
             return False
         return self.user_role.has_permission(permission_name)
 
+    @property
+    def organization_tier_role(self):
+        """Get the user's role combined with organization tier for display purposes"""
+        if self.user_type == 'developer':
+            return 'System Developer'
+        elif self.user_type == 'organization_owner':
+            if self.organization:
+                tier = self.organization.subscription_tier
+                if tier == 'solo':
+                    return 'Solo Maker'
+                elif tier == 'team':
+                    return 'Team Owner'
+                elif tier == 'enterprise':
+                    return 'Enterprise Owner'
+                else:
+                    return 'Organization Owner'
+            return 'Organization Owner'
+        elif self.user_type == 'team_member':
+            return f'Team Member ({self.user_role.name if self.user_role else "No Role"})'
+        else:
+            return self.user_type.replace('_', ' ').title()
+
     def __repr__(self):
         return f'<User {self.username}>'
 

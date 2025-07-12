@@ -38,7 +38,7 @@ def seed_users():
         elif user.user_type == 'team_member' and manager_role:
             user.role_id = manager_role.id
         print(f"✅ Assigned role to existing user: {user.username} -> {user.user_type}")
-    
+
     db.session.commit()
 
     # Create developer user if it doesn't exist
@@ -51,7 +51,7 @@ def seed_users():
             last_name='Developer',
             email='dev@batchtrack.com',
             phone='000-000-0000',
-            organization_id=org.id,
+            organization_id=None,  # Developers don't belong to customer organizations
             is_owner=False,
             user_type='developer',  # Add user_type
             is_active=True
@@ -64,6 +64,7 @@ def seed_users():
         if not dev_user.user_type:
             dev_user.user_type = 'developer'
             dev_user.role_id = developer_role.id
+        dev_user.organization_id = None  # Remove from customer organization
         dev_user.is_active = True  # Ensure user is active
         print(f"✅ Updated developer user with user_type and role")
 
