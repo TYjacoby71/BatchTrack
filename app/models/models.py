@@ -110,7 +110,7 @@ class User(UserMixin, db.Model):
             if self.organization:
                 tier = self.organization.subscription_tier
                 if tier == 'solo':
-                    return 'Solo Owner'
+                    return 'Solo Maker'
                 elif tier == 'team':
                     return 'Team Owner'
                 elif tier == 'enterprise':
