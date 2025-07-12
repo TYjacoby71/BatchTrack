@@ -7,18 +7,9 @@
         <span x-text="message"></span>
         <button type="button" class="btn-close" @click="showMessage = false"></button>
     </div>
+
     <h2><i class="fas fa-cog"></i> System Settings</h2>
     <p class="text-muted">Configure BatchTrack to match your workflow and preferences</p>
-
-    <!-- Success/Error Messages -->
-    <div x-show="showMessage" 
-         x-transition.opacity.duration.300ms
-         :class="messageType === 'success' ? 'alert alert-success' : 'alert alert-danger'"
-         class="alert alert-dismissible fade show position-fixed"
-         style="top: 20px; right: 20px; z-index: 1050; display: none;">
-        <span x-text="message"></span>
-        <button type="button" class="btn-close" @click="showMessage = false"></button>
-    </div>
 
     <!-- Organization Management Section (Only for Org Owners) -->
     {% if is_org_owner %}
@@ -31,31 +22,135 @@
                     </h5>
                 </div>
                 <div class="card-body">
+                    <p class="text-muted mb-3">Manage your organization users, roles, and settings</p>
+                    <a href="{{ url_for('settings.organization_dashboard') }}" class="btn btn-primary">
+                        <i class="fas fa-users"></i> Open Organization Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- User Preferences Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-user-cog text-primary"></i> User Preferences
+                    </h5>
+                </div>
+                <div class="card-body">
                     <div class="row">
                         <div class="col-md-6">
-                            <h6>Organization Details</h6>
+                            <h6>Dashboard Alerts</h6>
+
                             <div class="mb-3">
-                                <label class="form-label">Organization Name</label>
-                                <input type="text" class="form-control" value="{{ current_user.organization.name }}" readonly>
+                                <label for="max-alerts" class="form-label">Maximum dashboard alerts</label>
+                                <select class="form-select" id="max-alerts" 
+                                        x-model="userPrefs.max_dashboard_alerts"
+                                        @change="updateUserPreference('max_dashboard_alerts', $event.target.value)">
+                                    <option value="5">5 alerts</option>
+                                    <option value="10">10 alerts</option>
+                                    <option value="15">15 alerts</option>
+                                    <option value="20">20 alerts</option>
+                                </select>
                             </div>
+
                             <div class="mb-3">
-                                <label class="form-label">Subscription Tier</label>
-                                <input type="text" class="form-control" value="{{ current_user.organization.subscription_tier }}" readonly>
+                                <label for="expiration-warning-days" class="form-label">Expiration warning (days)</label>
+                                <input type="number" class="form-control" id="expiration-warning-days" 
+                                       x-model="userPrefs.expiration_warning_days"
+                                       @change="updateUserPreference('expiration_warning_days', $event.target.value)"
+                                       min="1" max="30">
                             </div>
-                            <div class="mb-3">
-                                <label class="form-label">Active Users</label>
-                                <input type="text" class="form-control" value="{{ current_user.organization.active_users_count }}" readonly>
+
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="show-expiration-alerts" 
+                                       x-model="userPrefs.show_expiration_alerts"
+                                       @change="updateUserPreference('show_expiration_alerts', $event.target.checked)">
+                                <label class="form-check-label" for="show-expiration-alerts">
+                                    Show expiration alerts
+                                </label>
+                            </div>
+
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="show-timer-alerts" 
+                                       x-model="userPrefs.show_timer_alerts"
+                                       @change="updateUserPreference('show_timer_alerts', $event.target.checked)">
+                                <label class="form-check-label" for="show-timer-alerts">
+                                    Show timer alerts
+                                </label>
+                            </div>
+
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="show-low-stock-alerts" 
+                                       x-model="userPrefs.show_low_stock_alerts"
+                                       @change="updateUserPreference('show_low_stock_alerts', $event.target.checked)">
+                                <label class="form-check-label" for="show-low-stock-alerts">
+                                    Show low stock alerts
+                                </label>
+                            </div>
+
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="show-batch-alerts" 
+                                       x-model="userPrefs.show_batch_alerts"
+                                       @change="updateUserPreference('show_batch_alerts', $event.target.checked)">
+                                <label class="form-check-label" for="show-batch-alerts">
+                                    Show batch alerts
+                                </label>
+                            </div>
+
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="show-fault-alerts" 
+                                       x-model="userPrefs.show_fault_alerts"
+                                       @change="updateUserPreference('show_fault_alerts', $event.target.checked)">
+                                <label class="form-check-label" for="show-fault-alerts">
+                                    Show fault alerts
+                                </label>
+                            </div>
+
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="show-alert-badges" 
+                                       x-model="userPrefs.show_alert_badges"
+                                       @change="updateUserPreference('show_alert_badges', $event.target.checked)">
+                                <label class="form-check-label" for="show-alert-badges">
+                                    Show alert badges
+                                </label>
                             </div>
                         </div>
+
                         <div class="col-md-6">
-                            <h6>User Management</h6>
-                            <div class="d-flex gap-2">
-                                <a href="{{ url_for('settings.organization_management') }}" class="btn btn-primary btn-sm">
-                                    <i class="fas fa-users"></i> Manage Users
-                                </a>
-                                <a href="{{ url_for('settings.organization_dashboard') }}" class="btn btn-warning btn-sm">
-                                    <i class="fas fa-crown"></i> Org Dashboard
-                                </a>
+                            <h6>Dashboard Layout</h6>
+
+                            <div class="mb-3">
+                                <label for="dashboard-layout" class="form-label">Dashboard layout</label>
+                                <select class="form-select" id="dashboard-layout" 
+                                        x-model="userPrefs.dashboard_layout"
+                                        @change="updateUserPreference('dashboard_layout', $event.target.value)">
+                                    <option value="grid">Grid view</option>
+                                    <option value="list">List view</option>
+                                    <option value="cards">Card view</option>
+                                </select>
+                            </div>
+
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="show-quick-actions" 
+                                       x-model="userPrefs.show_quick_actions"
+                                       @change="updateUserPreference('show_quick_actions', $event.target.checked)">
+                                <label class="form-check-label" for="show-quick-actions">
+                                    Show quick actions
+                                </label>
+                            </div>
+
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="compact-view" 
+                                       x-model="userPrefs.compact_view"
+                                       @change="updateUserPreference('compact_view', $event.target.checked)">
+                                <label class="form-check-label" for="compact-view">
+                                    Compact view
+                                </label>
                             </div>
                         </div>
                     </div>
@@ -63,7 +158,6 @@
             </div>
         </div>
     </div>
-    {% endif %}
 
     <!-- User Management Section -->
     <div class="row mb-4">
@@ -607,7 +701,7 @@
                     <h5 class="card-title mb-0">
                         <i class="fas fa-envelope text-warning"></i> Notifications
                     </h5>
-                </div>
+</div>
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-6">
@@ -700,154 +794,83 @@
 <script>
 function settingsData() {
     return {
-        userPrefs: {{ user_prefs | tojson if user_prefs else '{}' }},
-        systemSettings: {{ system_settings | tojson if system_settings else '{}' }},
-        showPasswordModal: false,
         showMessage: false,
         message: '',
         messageType: 'success',
-        settings: {
-            // User Preferences with defaults
-            max_dashboard_alerts: {{ current_user_prefs.max_dashboard_alerts if current_user_prefs else 3 }},
-            expiration_warning_days: {{ current_user_prefs.expiration_warning_days if current_user_prefs else 7 }},
-            show_expiration_alerts: {{ 'true' if current_user_prefs and current_user_prefs.show_expiration_prefs else 'false' }},
-            show_timer_alerts: {{ 'true' if current_user_prefs and current_user_prefs.show_timer_alerts else 'false' }},
-            show_low_stock_alerts: {{ 'true' if current_user_prefs and current_user_prefs.show_low_stock_alerts else 'false' }},
-            show_batch_alerts: {{ 'true' if current_user_prefs and current_user_prefs.show_batch_alerts else 'false' }},
-            show_fault_alerts: {{ 'true' if current_user_prefs and current_user_prefs.show_fault_alerts else 'false' }},
-            show_alert_badges: {{ 'true' if current_user_prefs and current_user_prefs.show_alert_badges else 'false' }},
-            dashboard_layout: '{{ current_user_prefs.dashboard_layout if current_user_prefs else "standard" }}',
-            show_quick_actions: {{ 'true' if current_user_prefs and current_user_prefs.show_quick_actions else 'false' }},
-            compact_view: {{ 'true' if current_user_prefs and current_user_prefs.compact_view else 'false' }}
+        userPrefs: {{ user_prefs | tojson }},
+        systemSettings: {{ system_settings | tojson }},
+
+        showAlert(message, type = 'success') {
+            this.message = message;
+            this.messageType = type;
+            this.showMessage = true;
+
+            // Auto-hide after 3 seconds
+            setTimeout(() => {
+                this.showMessage = false;
+            }, 3000);
         },
 
-        // Methods
-        updateProfile(field, value) {
-            fetch('/settings/update-profile', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': document.querySelector('meta[name=csrf-token]')?.getAttribute('content')
-                },
-                body: JSON.stringify({ [field]: value })
-            })
-            .then(response => response.json())
-            .then(data => {
+        async updateUserPreference(key, value) {
+            try {
+                const response = await fetch('/settings/update-user-preference', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': this.getCSRFToken()
+                    },
+                    body: JSON.stringify({ key, value })
+                });
+
+                const data = await response.json();
                 if (data.success) {
-                    this.showSuccessMessage('Profile updated successfully');
+                    this.userPrefs[key] = value;
+                    this.showAlert('Preference updated successfully');
                 } else {
-                    this.showErrorMessage(data.message || 'Failed to update profile');
+                    this.showAlert('Failed to update preference: ' + data.error, 'error');
                 }
-            })
-            .catch(() => {
-                this.showErrorMessage('Error updating profile');
-            });
+            } catch (error) {
+                this.showAlert('Network error occurred', 'error');
+            }
         },
 
-        updateUserPreference(key, value) {
-            this.userPrefs[key] = value;
-            this.saveUserPreferences();
+        async updateSystemSetting(section, key, value) {
+            try {
+                const response = await fetch('/settings/update-system-setting', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': this.getCSRFToken()
+                    },
+                    body: JSON.stringify({ section, key, value })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    this.systemSettings[section][key] = value;
+                    this.showAlert('System setting updated successfully');
+                } else {
+                    this.showAlert('Failed to update setting: ' + data.error, 'error');
+                }
+            } catch (error) {
+                this.showAlert('Network error occurred', 'error');
+            }
         },
 
-        updateSystemSetting(group, key, value) {
-            this.systemSettings[group][key] = value;
-            this.saveSystemSettings();
-        },
-
-        changePassword() {
-            const currentPassword = document.getElementById('currentPassword').value;
-            const newPassword = document.getElementById('newPassword').value;
-            const confirmPassword = document.getElementById('confirmPassword').value;
-
-            if (newPassword !== confirmPassword) {
-                this.showErrorMessage('New passwords do not match.');
-                return;
+        getCSRFToken() {
+            const tokenMeta = document.querySelector('meta[name=csrf-token]');
+            if (tokenMeta) {
+                return tokenMeta.getAttribute('content');
             }
 
-            fetch('/settings/change-password', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': document.querySelector('meta[name=csrf-token]')?.getAttribute('content')
-                },
-                body: JSON.stringify({
-                    current_password: currentPassword,
-                    new_password: newPassword
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    this.showSuccessMessage('Password changed successfully');
-                    this.showPasswordModal = false;
-                } else {
-                    this.showErrorMessage(data.message || 'Failed to change password');
-                }
-            })
-            .catch(() => {
-                this.showErrorMessage('Error changing password');
-            });
-        },
+            const csrfInput = document.querySelector('input[name=csrf_token]');
+            if (csrfInput) {
+                return csrfInput.value;
+            }
 
-        saveUserPreferences() {
-            fetch('/settings/update-user-preferences', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': document.querySelector('meta[name=csrf-token]')?.getAttribute('content')
-                },
-                body: JSON.stringify(this.userPrefs)
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    this.showSuccessMessage('User preferences updated successfully');
-                } else {
-                    this.showErrorMessage(data.message || 'Failed to update preferences');
-                }
-            })
-            .catch(() => {
-                this.showErrorMessage('Error updating preferences');
-            });
-        },
-
-        saveSystemSettings() {
-            fetch('/settings/update-system-settings', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': document.querySelector('meta[name=csrf-token]')?.getAttribute('content')
-                },
-                body: JSON.stringify(this.systemSettings)
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    this.showSuccessMessage('System settings updated successfully');
-                } else {
-                    this.showErrorMessage(data.message || 'Failed to update settings');
-                }
-            })
-            .catch(() => {
-                this.showErrorMessage('Error updating settings');
-            });
-        },
-
-        showSuccessMessage(msg) {
-            this.message = msg;
-            this.messageType = 'success';
-            this.showMessage = true;
-            setTimeout(() => { this.showMessage = false; }, 3000);
-        },
-
-        showErrorMessage(msg) {
-            this.message = msg;
-            this.messageType = 'danger';
-            this.showMessage = true;
-            setTimeout(() => { this.showMessage = false; }, 5000);
+            return '';
         }
-    }
+    };
 }
 </script>
-<script src="{{ url_for('static', filename='js/settings.js') }}"></script>
 {% endblock %}

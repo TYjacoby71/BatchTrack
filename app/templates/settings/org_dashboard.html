@@ -1,4 +1,3 @@
-
 {% extends "layout.html" %}
 {% block content %}
 <div class="container-fluid" x-data="orgDashboard()">
@@ -145,48 +144,48 @@
                             </thead>
                             <tbody>
                                 {% for user in users %}
-                                <tr>
-                                    <td>
-                                        <div>
-                                            <strong>{{ user.full_name }}</strong>
-                                            <br><small class="text-muted">{{ user.username }} • {{ user.email or 'No email' }}</small>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-secondary">{{ user.user_role.name if user.user_role else 'No Role' }}</span>
-                                    </td>
-                                    <td>
-                                        {% if user.is_active %}
-                                            <span class="badge bg-success">Active</span>
-                                        {% else %}
-                                            <span class="badge bg-warning">Disabled</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        {% if user.last_login %}
-                                            {{ user.last_login.strftime('%Y-%m-%d %H:%M') }}
-                                        {% else %}
-                                            <span class="text-muted">Never</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        {% if user.id != current_user.id %}
-                                        <div class="btn-group btn-group-sm">
-                                            <button class="btn btn-outline-primary" @click="editUser({{ user.id }})">
-                                                <i class="fas fa-edit"></i>
-                                            </button>
-                                            <button class="btn btn-outline-warning" @click="toggleUserStatus({{ user.id }})">
-                                                <i class="fas fa-user-slash"></i>
-                                            </button>
-                                            <button class="btn btn-outline-info" @click="viewUserActivity({{ user.id }})">
-                                                <i class="fas fa-history"></i>
-                                            </button>
-                                        </div>
-                                        {% else %}
-                                        <span class="badge bg-info">Owner</span>
-                                        {% endif %}
-                                    </td>
-                                </tr>
+                                    <tr>
+                                        <td>
+                                            <div>
+                                                <strong>{{ user.full_name }}</strong>
+                                                <br><small class="text-muted">{{ user.username }} • {{ user.email or 'No email' }}</small>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-secondary">{{ user.user_role.name if user.user_role else 'No Role' }}</span>
+                                        </td>
+                                        <td>
+                                            {% if user.is_active %}
+                                                <span class="badge bg-success">Active</span>
+                                            {% else %}
+                                                <span class="badge bg-warning">Disabled</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if user.last_login %}
+                                                {{ user.last_login.strftime('%Y-%m-%d %H:%M') }}
+                                            {% else %}
+                                                <span class="text-muted">Never</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if user.id != current_user.id %}
+                                            <div class="btn-group btn-group-sm">
+                                                <button class="btn btn-outline-primary" @click="editUser({{ user.id }})">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <button class="btn btn-outline-warning" @click="toggleUserStatus({{ user.id }})">
+                                                    <i class="fas fa-user-slash"></i>
+                                                </button>
+                                                <button class="btn btn-outline-info" @click="viewUserActivity({{ user.id }})">
+                                                    <i class="fas fa-history"></i>
+                                                </button>
+                                            </div>
+                                            {% else %}
+                                            <span class="badge bg-info">Owner</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
                                 {% endfor %}
                             </tbody>
                         </table>
@@ -343,7 +342,7 @@
                         <div class="col-md-8">
                             <h6>Current Plan: <span class="badge bg-primary">{{ organization.subscription_tier|title }}</span></h6>
                             <p class="text-muted">{{ organization.active_users_count }}/{{ organization.get_max_users() }} users</p>
-                            
+
                             <h6 class="mt-4">Available Features:</h6>
                             <ul class="list-unstyled">
                                 {% for feature in organization.get_subscription_features() %}
@@ -421,14 +420,14 @@ function orgDashboard() {
         showQuickActions: false,
         showInviteModal: false,
         showCreateRoleModal: false,
-        
+
         orgSettings: {
             name: '{{ organization.name }}',
             timezone: 'America/New_York',
             contact_email: '',
             default_units: 'imperial'
         },
-        
+
         inviteForm: {
             email: '',
             role_id: '',
