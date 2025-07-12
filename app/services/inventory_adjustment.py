@@ -30,7 +30,7 @@ def validate_inventory_fifo_sync(item_id, item_type=None):
             and_(
                 ProductSKUHistory.inventory_item_id == item_id,
                 ProductSKUHistory.remaining_quantity > 0,
-                ProductSKUHistory.organization_id == current_user.organization_id if current_user and current_user.is_authenticated else None
+                ProductSKUHistory.organization_id == (current_user.organization_id if current_user and current_user.is_authenticated else item.organization_id)
             )
         ).all()
 
@@ -48,7 +48,7 @@ def validate_inventory_fifo_sync(item_id, item_type=None):
             and_(
                 InventoryHistory.inventory_item_id == item_id,
                 InventoryHistory.remaining_quantity > 0,
-                InventoryHistory.organization_id == current_user.organization_id if current_user and current_user.is_authenticated else None
+                InventoryHistory.organization_id == (current_user.organization_id if current_user and current_user.is_authenticated else item.organization_id)
             )
         ).all()
 
