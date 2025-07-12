@@ -368,6 +368,7 @@ def organization_dashboard():
     # Get users for this organization (excluding developers)
     users = User.query.filter_by(organization_id=current_user.organization_id)\
                      .filter(User.user_type != 'developer')\
+                     .filter(User.organization_id.isnot(None))\
                      .all()
 
     # Get organization-appropriate roles (exclude developer role)
