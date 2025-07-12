@@ -49,9 +49,14 @@
                         </div>
                         <div class="col-md-6">
                             <h6>User Management</h6>
-                            <a href="{{ url_for('settings.organization_management') }}" class="btn btn-primary">
-                                <i class="fas fa-users"></i> Manage Users
-                            </a>
+                            <div class="d-flex gap-2">
+                                <a href="{{ url_for('settings.organization_management') }}" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-users"></i> Manage Users
+                                </a>
+                                <a href="{{ url_for('settings.organization_dashboard') }}" class="btn btn-warning btn-sm">
+                                    <i class="fas fa-crown"></i> Org Dashboard
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </div>
