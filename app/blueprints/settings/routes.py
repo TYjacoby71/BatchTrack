@@ -370,9 +370,9 @@ def organization_dashboard():
                      .filter(User.user_type != 'developer')\
                      .all()
 
-    # Get all roles with their permissions
+    # Get organization-appropriate roles (exclude developer role)
     from ...models.role import Role
-    roles = Role.query.all()
+    roles = Role.query.filter(Role.name != 'developer').all()
     for role in roles:
         # Add assigned users count to each role
         role.assigned_users = User.query.filter_by(role_id=role.id, organization_id=organization.id).all()
