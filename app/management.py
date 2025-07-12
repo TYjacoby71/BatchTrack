@@ -1,4 +1,3 @@
-
 """
 Management commands for deployment and maintenance
 """
@@ -117,3 +116,22 @@ def register_commands(app):
     app.cli.add_command(seed_users_command)
     app.cli.add_command(update_user_roles_command)
     app.cli.add_command(activate_users)
+
+    @app.cli.command()
+    def assign_user_roles():
+        """Assign roles to existing users based on their user types"""
+        from .seeders.user_seeder import update_existing_users_with_roles
+        update_existing_users_with_roles()
+
+@click.command('assign-user-roles')
+@with_appcontext
+def assign_user_roles_command():
+    """Assign roles to existing users based on their user types"""
+    try:
+        update_existing_users_with_roles()
+        click.echo('✅ User roles assigned successfully!')
+    except Exception as e:
+        click.echo(f'❌ Error assigning user roles: {str(e)}')
+        raise
+
+    app.cli.add_command(assign_user_roles_command)

@@ -28,6 +28,19 @@ def seed_users():
         print("❌ Required roles not found. Please run 'flask seed-roles-permissions' first.")
         return
 
+    # Assign all users proper roles based on their user types
+    all_users = User.query.all()
+    for user in all_users:
+        if user.user_type == 'developer' and developer_role:
+            user.role_id = developer_role.id
+        elif user.user_type == 'organization_owner' and org_owner_role:
+            user.role_id = org_owner_role.id
+        elif user.user_type == 'team_member' and manager_role:
+            user.role_id = manager_role.id
+        print(f"✅ Assigned role to existing user: {user.username} -> {user.user_type}")
+    
+    db.session.commit()
+
     # Create developer user if it doesn't exist
     if not User.query.filter_by(username='dev').first():
         developer_user = User(

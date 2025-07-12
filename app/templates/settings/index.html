@@ -60,6 +60,50 @@
             quiet_hours_start: '22:00',
             quiet_hours_end: '08:00'
         }
+    },
+    showMessage(msg, type = 'success') {
+        this.message = msg;
+        this.messageType = type;
+        this.showMessage = true;
+        setTimeout(() => this.showMessage = false, 3000);
+    },
+    saveUserPreferences() {
+        // Save user preferences
+        fetch('/settings/save-user-preferences', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
+            },
+            body: JSON.stringify(this.userPrefs)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                this.showMessage('User preferences saved successfully!', 'success');
+            } else {
+                this.showMessage('Error saving preferences', 'error');
+            }
+        });
+    },
+    saveSystemSettings() {
+        // Save system settings
+        fetch('/settings/save-system-settings', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
+            },
+            body: JSON.stringify(this.systemSettings)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                this.showMessage('System settings saved successfully!', 'success');
+            } else {
+                this.showMessage('Error saving settings', 'error');
+            }
+        });
     }
 }">
     <!-- Flash Messages -->

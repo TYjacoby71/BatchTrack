@@ -352,39 +352,47 @@ def update_system_setting():
 
 @settings_bp.route('/organization/dashboard')
 @login_required
-@require_permission('organization.manage')
 def organization_dashboard():
-    """Organization owner dashboard"""
-    if not current_user.organization:
+    """Organization dashboard for managing users, roles, and settings"""
+
+    # Check if user is organization owner or has developer access
+    if not (current_user.user_type == 'organization_owner' or 
+            current_user.user_type == 'developer' or 
+            current_user.is_organization_owner):
+        abort(403)
+
+    # Get organization data
+    organization = current_user.organization
+    if not organization:
         flash('No organization found', 'error')
         return redirect(url_for('settings.index'))
 
-    organization = current_user.organization
+    # Get all users in the organization
     users = User.query.filter_by(organization_id=organization.id).all()
 
-    # Get roles for the organization
+    # Get all roles with their permissions
     from ...models.role import Role
-    roles = Role.query.filter_by(is_active=True).all()
+    roles = Role.query.all()
+    for role in roles:
+        # Add assigned users count to each role
+        role.assigned_users = User.query.filter_by(role_id=role.id, organization_id=organization.id).all()
 
-    # Get dashboard metrics
-    from ...models import Batch
-    total_batches = Batch.query.filter_by(organization_id=organization.id).count()
-    pending_invites = 0  # Placeholder for when we implement invites
+    # Get permissions grouped by category
+    from ...models.permission import Permission
+    permissions = Permission.query.all()
+    permission_categories = {}
+    for perm in permissions:
+        category = perm.category or 'general'
+        if category not in permission_categories:
+            permission_categories[category] = []
+        permission_categories[category].append(perm)
 
-    # Recent activity (placeholder)
-    recent_activity = [
-        {'user': 'Admin', 'action': 'created new batch', 'timestamp': '2 hours ago'},
-        {'user': 'Manager', 'action': 'added inventory', 'timestamp': '4 hours ago'},
-        {'user': 'Operator', 'action': 'finished batch #123', 'timestamp': '6 hours ago'},
-    ]
-
-    return render_template('settings/org_dashboard.html', 
+    return render_template('settings/org_dashboard.html',
                          organization=organization,
                          users=users,
                          roles=roles,
-                         total_batches=total_batches,
-                         pending_invites=pending_invites,
-                         recent_activity=recent_activity)
+                         permissions=permissions,
+                         permission_categories=permission_categories)
 
 @settings_bp.route('/organization/invite-user', methods=['POST'])
 @login_required
