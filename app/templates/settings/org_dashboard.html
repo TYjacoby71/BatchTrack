@@ -2,19 +2,23 @@
 {% extends "layout.html" %}
 {% block content %}
 <div class="container-fluid" x-data="orgDashboard()">
-    <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h2><i class="fas fa-crown text-warning"></i> Organization Dashboard</h2>
-            <p class="text-muted">Administrative control for {{ current_user.organization.name }}</p>
-        </div>
-        <div class="d-flex gap-2">
-            <button class="btn btn-outline-primary btn-sm" @click="showQuickActions = !showQuickActions">
-                <i class="fas fa-bolt"></i> Quick Actions
-            </button>
-            <a href="{{ url_for('settings.index') }}" class="btn btn-outline-secondary btn-sm">
-                <i class="fas fa-arrow-left"></i> Back to Settings
-            </a>
+    <!-- Header Card -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="mb-2"><i class="fas fa-crown text-warning"></i> Organization Dashboard</h2>
+                    <p class="text-muted mb-0">Administrative control for {{ current_user.organization.name }}</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-primary btn-sm" @click="showQuickActions = !showQuickActions">
+                        <i class="fas fa-bolt"></i> Quick Actions
+                    </button>
+                    <a href="{{ url_for('settings.index') }}" class="btn btn-outline-secondary btn-sm">
+                        <i class="fas fa-arrow-left"></i> Back to Settings
+                    </a>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -25,22 +29,22 @@
         </div>
         <div class="card-body">
             <div class="row">
-                <div class="col-md-3">
+                <div class="col-md-3 mb-2">
                     <button class="btn btn-primary btn-sm w-100" @click="showInviteModal = true">
                         <i class="fas fa-user-plus"></i> Invite User
                     </button>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-3 mb-2">
                     <button class="btn btn-success btn-sm w-100" @click="exportReport('users')">
                         <i class="fas fa-download"></i> Export Users
                     </button>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-3 mb-2">
                     <button class="btn btn-info btn-sm w-100" @click="exportReport('activity')">
                         <i class="fas fa-chart-line"></i> Activity Report
                     </button>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-3 mb-2">
                     <button class="btn btn-warning btn-sm w-100" @click="viewAuditLog()">
                         <i class="fas fa-history"></i> Audit Log
                     </button>
@@ -57,7 +61,7 @@
 
     <!-- Dashboard Metrics Row -->
     <div class="row mb-4">
-        <div class="col-md-3">
+        <div class="col-md-3 mb-3">
             <div class="card text-center">
                 <div class="card-body">
                     <h3 class="text-primary mb-1">{{ organization.active_users_count }}</h3>
@@ -65,7 +69,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-3 mb-3">
             <div class="card text-center">
                 <div class="card-body">
                     <h3 class="text-success mb-1">{{ total_batches }}</h3>
@@ -73,7 +77,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-3 mb-3">
             <div class="card text-center">
                 <div class="card-body">
                     <h3 class="text-info mb-1">{{ organization.subscription_tier|title }}</h3>
@@ -81,7 +85,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-3 mb-3">
             <div class="card text-center">
                 <div class="card-body">
                     <h3 class="text-warning mb-1">{{ pending_invites }}</h3>
@@ -91,47 +95,50 @@
         </div>
     </div>
 
-    <!-- Main Dashboard Tabs -->
-    <ul class="nav nav-tabs" id="orgDashboardTab" role="tablist">
-        <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="users-tab" data-bs-toggle="tab" data-bs-target="#users" type="button" role="tab">
-                <i class="fas fa-users"></i> User Management
-            </button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link" id="roles-tab" data-bs-toggle="tab" data-bs-target="#roles" type="button" role="tab">
-                <i class="fas fa-shield-alt"></i> Roles & Permissions
-            </button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link" id="reports-tab" data-bs-toggle="tab" data-bs-target="#reports" type="button" role="tab">
-                <i class="fas fa-chart-bar"></i> Reports & Logs
-            </button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link" id="organization-tab" data-bs-toggle="tab" data-bs-target="#organization" type="button" role="tab">
-                <i class="fas fa-building"></i> Organization Settings
-            </button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link" id="subscription-tab" data-bs-toggle="tab" data-bs-target="#subscription" type="button" role="tab">
-                <i class="fas fa-credit-card"></i> Subscription
-            </button>
-        </li>
-    </ul>
-
-    <!-- Tab Content -->
-    <div class="tab-content mt-4" id="orgDashboardTabContent">
-        <!-- User Management Tab -->
-        <div class="tab-pane fade show active" id="users" role="tabpanel">
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0"><i class="fas fa-users"></i> User Management</h5>
-                    <button class="btn btn-primary btn-sm" @click="showInviteModal = true">
-                        <i class="fas fa-user-plus"></i> Invite User
+    <!-- Main Dashboard Tabs Card -->
+    <div class="card">
+        <div class="card-header">
+            <ul class="nav nav-tabs card-header-tabs" id="orgDashboardTab" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="users-tab" data-bs-toggle="tab" data-bs-target="#users" type="button" role="tab">
+                        <i class="fas fa-users"></i> User Management
                     </button>
-                </div>
-                <div class="card-body">
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="roles-tab" data-bs-toggle="tab" data-bs-target="#roles" type="button" role="tab">
+                        <i class="fas fa-shield-alt"></i> Roles & Permissions
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="reports-tab" data-bs-toggle="tab" data-bs-target="#reports" type="button" role="tab">
+                        <i class="fas fa-chart-bar"></i> Reports & Logs
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="organization-tab" data-bs-toggle="tab" data-bs-target="#organization" type="button" role="tab">
+                        <i class="fas fa-building"></i> Organization Settings
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="subscription-tab" data-bs-toggle="tab" data-bs-target="#subscription" type="button" role="tab">
+                        <i class="fas fa-credit-card"></i> Subscription
+                    </button>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Tab Content -->
+        <div class="card-body">
+            <div class="tab-content" id="orgDashboardTabContent">
+                <!-- User Management Tab -->
+                <div class="tab-pane fade show active" id="users" role="tabpanel">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="mb-0"><i class="fas fa-users"></i> User Management</h5>
+                        <small class="text-muted">Organization users only (system developers excluded)</small>
+                        <button class="btn btn-primary btn-sm" @click="showInviteModal = true">
+                            <i class="fas fa-user-plus"></i> Invite User
+                        </button>
+                    </div>
                     <div class="table-responsive">
                         <table class="table table-hover">
                             <thead>
@@ -145,66 +152,62 @@
                             </thead>
                             <tbody>
                                 {% for user in users %}
-                                <tr>
-                                    <td>
-                                        <div>
-                                            <strong>{{ user.full_name }}</strong>
-                                            <br><small class="text-muted">{{ user.username }} • {{ user.email or 'No email' }}</small>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-secondary">{{ user.user_role.name if user.user_role else 'No Role' }}</span>
-                                    </td>
-                                    <td>
-                                        {% if user.is_active %}
-                                            <span class="badge bg-success">Active</span>
-                                        {% else %}
-                                            <span class="badge bg-warning">Disabled</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        {% if user.last_login %}
-                                            {{ user.last_login.strftime('%Y-%m-%d %H:%M') }}
-                                        {% else %}
-                                            <span class="text-muted">Never</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        {% if user.id != current_user.id %}
-                                        <div class="btn-group btn-group-sm">
-                                            <button class="btn btn-outline-primary" @click="editUser({{ user.id }})">
-                                                <i class="fas fa-edit"></i>
-                                            </button>
-                                            <button class="btn btn-outline-warning" @click="toggleUserStatus({{ user.id }})">
-                                                <i class="fas fa-user-slash"></i>
-                                            </button>
-                                            <button class="btn btn-outline-info" @click="viewUserActivity({{ user.id }})">
-                                                <i class="fas fa-history"></i>
-                                            </button>
-                                        </div>
-                                        {% else %}
-                                        <span class="badge bg-info">Owner</span>
-                                        {% endif %}
-                                    </td>
-                                </tr>
+                                    <tr>
+                                        <td>
+                                            <div>
+                                                <strong>{{ user.full_name }}</strong>
+                                                <br><small class="text-muted">{{ user.username }} • {{ user.email or 'No email' }}</small>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-secondary">{{ user.user_role.name if user.user_role else 'No Role' }}</span>
+                                        </td>
+                                        <td>
+                                            {% if user.is_active %}
+                                                <span class="badge bg-success">Active</span>
+                                            {% else %}
+                                                <span class="badge bg-warning">Disabled</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if user.last_login %}
+                                                {{ user.last_login.strftime('%Y-%m-%d %H:%M') }}
+                                            {% else %}
+                                                <span class="text-muted">Never</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if user.id != current_user.id %}
+                                            <div class="btn-group btn-group-sm">
+                                                <button class="btn btn-outline-primary" @click="editUser({{ user.id }})">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <button class="btn btn-outline-warning" @click="toggleUserStatus({{ user.id }})">
+                                                    <i class="fas fa-user-slash"></i>
+                                                </button>
+                                                <button class="btn btn-outline-info" @click="viewUserActivity({{ user.id }})">
+                                                    <i class="fas fa-history"></i>
+                                                </button>
+                                            </div>
+                                            {% else %}
+                                            <span class="badge bg-info">Owner</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
                                 {% endfor %}
                             </tbody>
                         </table>
                     </div>
                 </div>
-            </div>
-        </div>
 
-        <!-- Roles & Permissions Tab -->
-        <div class="tab-pane fade" id="roles" role="tabpanel">
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0"><i class="fas fa-shield-alt"></i> Roles & Permissions</h5>
-                    <button class="btn btn-primary btn-sm" @click="showCreateRoleModal = true">
-                        <i class="fas fa-plus"></i> Create Role
-                    </button>
-                </div>
-                <div class="card-body">
+                <!-- Roles & Permissions Tab -->
+                <div class="tab-pane fade" id="roles" role="tabpanel">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="mb-0"><i class="fas fa-shield-alt"></i> Roles & Permissions</h5>
+                        <button class="btn btn-primary btn-sm" @click="showCreateRoleModal = true">
+                            <i class="fas fa-plus"></i> Create Role
+                        </button>
+                    </div>
                     <div class="row">
                         {% for role in roles %}
                         <div class="col-md-6 mb-3">
@@ -235,64 +238,58 @@
                         {% endfor %}
                     </div>
                 </div>
-            </div>
-        </div>
 
-        <!-- Reports & Logs Tab -->
-        <div class="tab-pane fade" id="reports" role="tabpanel">
-            <div class="row">
-                <div class="col-md-6 mb-4">
-                    <div class="card">
-                        <div class="card-header">
-                            <h6 class="mb-0"><i class="fas fa-chart-line"></i> Activity Reports</h6>
-                        </div>
-                        <div class="card-body">
-                            <div class="list-group list-group-flush">
-                                <a href="#" class="list-group-item list-group-item-action" @click="exportReport('batches')">
-                                    <i class="fas fa-flask me-2"></i> Batch History Report
-                                </a>
-                                <a href="#" class="list-group-item list-group-item-action" @click="exportReport('inventory')">
-                                    <i class="fas fa-boxes me-2"></i> Inventory Movement Report
-                                </a>
-                                <a href="#" class="list-group-item list-group-item-action" @click="exportReport('users')">
-                                    <i class="fas fa-users me-2"></i> User Activity Report
-                                </a>
-                                <a href="#" class="list-group-item list-group-item-action" @click="exportReport('products')">
-                                    <i class="fas fa-shopping-bag me-2"></i> Product Performance Report
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6 mb-4">
-                    <div class="card">
-                        <div class="card-header">
-                            <h6 class="mb-0"><i class="fas fa-history"></i> Recent Activity</h6>
-                        </div>
-                        <div class="card-body">
-                            <div class="list-group list-group-flush">
-                                {% for activity in recent_activity %}
-                                <div class="list-group-item">
-                                    <div class="d-flex justify-content-between">
-                                        <small><strong>{{ activity.user }}</strong> {{ activity.action }}</small>
-                                        <small class="text-muted">{{ activity.timestamp }}</small>
+                <!-- Reports & Logs Tab -->
+                <div class="tab-pane fade" id="reports" role="tabpanel">
+                    <div class="row">
+                        <div class="col-md-6 mb-4">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="mb-0"><i class="fas fa-chart-line"></i> Activity Reports</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="list-group list-group-flush">
+                                        <a href="#" class="list-group-item list-group-item-action" @click="exportReport('batches')">
+                                            <i class="fas fa-flask me-2"></i> Batch History Report
+                                        </a>
+                                        <a href="#" class="list-group-item list-group-item-action" @click="exportReport('inventory')">
+                                            <i class="fas fa-boxes me-2"></i> Inventory Movement Report
+                                        </a>
+                                        <a href="#" class="list-group-item list-group-item-action" @click="exportReport('users')">
+                                            <i class="fas fa-users me-2"></i> User Activity Report
+                                        </a>
+                                        <a href="#" class="list-group-item list-group-item-action" @click="exportReport('products')">
+                                            <i class="fas fa-shopping-bag me-2"></i> Product Performance Report
+                                        </a>
                                     </div>
                                 </div>
-                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-4">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="mb-0"><i class="fas fa-history"></i> Recent Activity</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="list-group list-group-flush">
+                                        {% for activity in recent_activity %}
+                                        <div class="list-group-item">
+                                            <div class="d-flex justify-content-between">
+                                                <small><strong>{{ activity.user }}</strong> {{ activity.action }}</small>
+                                                <small class="text-muted">{{ activity.timestamp }}</small>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
 
-        <!-- Organization Settings Tab -->
-        <div class="tab-pane fade" id="organization" role="tabpanel">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-building"></i> Organization Settings</h5>
-                </div>
-                <div class="card-body">
+                <!-- Organization Settings Tab -->
+                <div class="tab-pane fade" id="organization" role="tabpanel">
+                    <h5 class="mb-3"><i class="fas fa-building"></i> Organization Settings</h5>
                     <form @submit.prevent="updateOrgSettings()">
                         <div class="row">
                             <div class="col-md-6">
@@ -329,27 +326,24 @@
                         </button>
                     </form>
                 </div>
-            </div>
-        </div>
 
-        <!-- Subscription Tab -->
-        <div class="tab-pane fade" id="subscription" role="tabpanel">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-credit-card"></i> Subscription & Billing</h5>
-                </div>
-                <div class="card-body">
+                <!-- Subscription Tab -->
+                <div class="tab-pane fade" id="subscription" role="tabpanel">
                     <div class="row">
                         <div class="col-md-8">
-                            <h6>Current Plan: <span class="badge bg-primary">{{ organization.subscription_tier|title }}</span></h6>
-                            <p class="text-muted">{{ organization.active_users_count }}/{{ organization.get_max_users() }} users</p>
-                            
-                            <h6 class="mt-4">Available Features:</h6>
-                            <ul class="list-unstyled">
-                                {% for feature in organization.get_subscription_features() %}
-                                <li><i class="fas fa-check text-success me-2"></i>{{ feature|replace('_', ' ')|title }}</li>
-                                {% endfor %}
-                            </ul>
+                            <div class="card mb-3">
+                                <div class="card-body">
+                                    <h6>Current Plan: <span class="badge bg-primary">{{ organization.subscription_tier|title }}</span></h6>
+                                    <p class="text-muted">{{ organization.active_users_count }}/{{ organization.get_max_users() }} users</p>
+
+                                    <h6 class="mt-4">Available Features:</h6>
+                                    <ul class="list-unstyled">
+                                        {% for feature in organization.get_subscription_features() %}
+                                        <li><i class="fas fa-check text-success me-2"></i>{{ feature|replace('_', ' ')|title }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            </div>
                         </div>
                         <div class="col-md-4">
                             <div class="card border-primary">
@@ -421,14 +415,14 @@ function orgDashboard() {
         showQuickActions: false,
         showInviteModal: false,
         showCreateRoleModal: false,
-        
+
         orgSettings: {
             name: '{{ organization.name }}',
             timezone: 'America/New_York',
             contact_email: '',
             default_units: 'imperial'
         },
-        
+
         inviteForm: {
             email: '',
             role_id: '',
