@@ -394,13 +394,13 @@ function getCSRFToken() {
     if (tokenMeta) {
         return tokenMeta.getAttribute('content');
     }
-    
+
     // Fallback: try to find it in forms
     const csrfInput = document.querySelector('input[name=csrf_token]');
     if (csrfInput) {
         return csrfInput.value;
     }
-    
+
     return '';
 }
 
