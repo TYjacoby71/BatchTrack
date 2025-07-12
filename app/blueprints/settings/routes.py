@@ -353,12 +353,10 @@ def update_system_setting():
 @settings_bp.route('/organization/dashboard')
 @login_required
 def organization_dashboard():
-    """Organization dashboard for managing users, roles, and settings"""
+    """Organization dashboard for managing users, roles, and settings (organization owners only)"""
 
-    # Check if user is organization owner or has developer access
-    if not (current_user.user_type == 'organization_owner' or 
-            current_user.user_type == 'developer' or 
-            current_user.is_organization_owner):
+    # Check if user is organization owner only - developers should not access this
+    if not (current_user.user_type == 'organization_owner' or current_user.is_organization_owner):
         abort(403)
 
     # Get organization data
