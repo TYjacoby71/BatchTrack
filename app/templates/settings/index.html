@@ -857,6 +857,70 @@ function settingsData() {
             }
         },
 
+        async updateProfile(field, value) {
+            try {
+                const response = await fetch('/settings/profile/save', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': this.getCSRFToken()
+                    },
+                    body: JSON.stringify({ [field]: value })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    this.showAlert('Profile updated successfully');
+                } else {
+                    this.showAlert('Failed to update profile: ' + data.error, 'error');
+                }
+            } catch (error) {
+                this.showAlert('Network error occurred', 'error');
+            }
+        },
+
+        showPasswordModal: false,
+
+        async changePassword() {
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            if (newPassword !== confirmPassword) {
+                this.showAlert('New passwords do not match', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/settings/password/change', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': this.getCSRFToken()
+                    },
+                    body: JSON.stringify({
+                        current_password: currentPassword,
+                        new_password: newPassword,
+                        confirm_password: confirmPassword
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    this.showAlert('Password changed successfully');
+                    this.showPasswordModal = false;
+                    // Clear form
+                    document.getElementById('currentPassword').value = '';
+                    document.getElementById('newPassword').value = '';
+                    document.getElementById('confirmPassword').value = '';
+                } else {
+                    this.showAlert('Failed to change password: ' + data.error, 'error');
+                }
+            } catch (error) {
+                this.showAlert('Network error occurred', 'error');
+            }
+        },
+
         getCSRFToken() {
             const tokenMeta = document.querySelector('meta[name=csrf-token]');
             if (tokenMeta) {

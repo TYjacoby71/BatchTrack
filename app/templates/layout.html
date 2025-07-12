@@ -124,6 +124,10 @@
                     <li><a class="dropdown-item" href="{{ url_for('reservations.list_reservations') }}"><i class="fas fa-clock"></i> Reservations</a></li>
                     {% endif %}
 
+                    {% if has_permission('organization.manage') %}
+                    <li><a class="dropdown-item" href="{{ url_for('settings.organization_dashboard') }}"><i class="fas fa-crown"></i> Organization Dashboard</a></li>
+                    {% endif %}
+
                     {% if has_role('developer') or is_organization_owner() %}
                     <li><hr class="dropdown-divider"></li>
                     {% endif %}
