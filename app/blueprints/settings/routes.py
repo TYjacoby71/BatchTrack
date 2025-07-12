@@ -367,6 +367,11 @@ def organization_dashboard():
 
     # Get users for this organization (developers have organization_id=None so are automatically excluded)
     users = User.query.filter_by(organization_id=current_user.organization_id).all()
+    
+    # Debug: Check if any developers are accidentally included
+    for user in users:
+        if user.user_type == 'developer':
+            print(f"WARNING: Developer {user.username} found in organization {current_user.organization_id} - this should not happen!")
 
     # Get organization-appropriate roles (exclude developer role)
     from ...models.role import Role

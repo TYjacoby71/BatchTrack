@@ -1,4 +1,3 @@
-
 {% extends "layout.html" %}
 {% block content %}
 <div class="container-fluid" x-data="orgDashboard()">
@@ -486,27 +485,22 @@ function orgDashboard() {
         },
 
         editUser(userId) {
-            // Placeholder for edit user functionality
             this.showErrorMessage('Edit user functionality coming soon');
         },
 
         toggleUserStatus(userId) {
-            // Placeholder for toggle user status
             this.showErrorMessage('Toggle user status functionality coming soon');
         },
 
         viewUserActivity(userId) {
-            // Placeholder for user activity view
-            this.showErrorMessage('User activity view coming soon');
+            this.showErrorMessage('User activity view functionality coming soon');
         },
 
         editRole(roleId) {
-            // Placeholder for role editing
             this.showErrorMessage('Role editing functionality coming soon');
         },
 
         viewAuditLog() {
-            // Placeholder for audit log
             this.showErrorMessage('Audit log functionality coming soon');
         },
 
@@ -537,7 +531,7 @@ function orgDashboard() {
             this.showMessage = true;
             setTimeout(() => this.showMessage = false, 5000);
         }
-    }
+    };
 }
 </script>
 {% endblock %}
