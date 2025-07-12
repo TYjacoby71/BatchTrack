@@ -38,7 +38,7 @@ def seed_users():
         elif user.user_type == 'team_member' and manager_role:
             user.role_id = manager_role.id
         print(f"✅ Assigned role to existing user: {user.username} -> {user.user_type}")
-    
+
     db.session.commit()
 
     # Create developer user if it doesn't exist
