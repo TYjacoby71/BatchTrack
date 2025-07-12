@@ -367,8 +367,10 @@ def organization_dashboard():
         flash('No organization found', 'error')
         return redirect(url_for('settings.index'))
 
-    # Get all users in the organization
-    users = User.query.filter_by(organization_id=organization.id).all()
+    # Get users for this organization (excluding developers)
+    users = User.query.filter_by(organization_id=current_user.organization_id)\
+                     .filter(User.user_type != 'developer')\
+                     .all()
 
     # Get all roles with their permissions
     from ...models.role import Role
