@@ -1,7 +1,67 @@
 {% extends "layout.html" %}
 
 {% block content %}
-<div class="container-fluid" x-data="settingsData()">
+<div class="container-fluid" x-data="{
+    showMessage: false,
+    message: '',
+    messageType: 'success',
+    showPasswordModal: false,
+    userPrefs: {
+        max_dashboard_alerts: {{ current_user.max_dashboard_alerts or 5 }},
+        expiration_warning_days: {{ current_user.expiration_warning_days or 7 }},
+        show_expiration_alerts: {{ 'true' if current_user.show_expiration_alerts else 'false' }},
+        show_timer_alerts: {{ 'true' if current_user.show_timer_alerts else 'false' }},
+        show_low_stock_alerts: {{ 'true' if current_user.show_low_stock_alerts else 'false' }},
+        show_batch_alerts: {{ 'true' if current_user.show_batch_alerts else 'false' }},
+        show_fault_alerts: {{ 'true' if current_user.show_fault_alerts else 'false' }},
+        show_alert_badges: {{ 'true' if current_user.show_alert_badges else 'false' }},
+        dashboard_layout: '{{ current_user.dashboard_layout or 'default' }}',
+        show_quick_actions: {{ 'true' if current_user.show_quick_actions else 'false' }},
+        compact_view: {{ 'true' if current_user.compact_view else 'false' }}
+    },
+    systemSettings: {
+        batch_rules: {
+            require_timer_completion: false,
+            allow_intermediate_tags: true,
+            require_finish_confirmation: true,
+            stuck_batch_hours: 24
+        },
+        recipe_builder: {
+            enable_variations: true,
+            enable_containers: true,
+            auto_scale_recipes: false,
+            show_cost_breakdown: true
+        },
+        inventory: {
+            enable_fifo_tracking: true,
+            show_expiration_dates: true,
+            auto_calculate_costs: true,
+            show_supplier_info: false,
+            enable_barcode_scanning: false,
+            enable_bulk_operations: true
+        },
+        products: {
+            enable_variants: true,
+            show_profit_margins: false,
+            track_production_costs: true,
+            enable_product_images: true,
+            auto_generate_skus: false
+        },
+        system: {
+            auto_backup: false,
+            per_page: 25,
+            enable_csv_export: true,
+            auto_save_forms: true
+        },
+        notifications: {
+            browser_notifications: false,
+            email_alerts: false,
+            alert_frequency: 'immediate',
+            quiet_hours_start: '22:00',
+            quiet_hours_end: '08:00'
+        }
+    }
+}">
     <!-- Flash Messages -->
     <div x-show="showMessage" x-transition class="alert" :class="messageType === 'success' ? 'alert-success' : 'alert-danger'">
         <span x-text="message"></span>
