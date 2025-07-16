@@ -14,26 +14,48 @@ products_bp = Blueprint('products', __name__, url_prefix='/products')
 @login_required
 def product_list():
     """List all products with inventory summary and sorting"""
-    from ...models.product import Product
-    
+    from ...services.product_service import ProductService
+
     sort_type = request.args.get('sort', 'name')
-    
-    # Get all products with their SKUs and inventory items loaded
-    products = Product.query.filter_by(
-        organization_id=current_user.organization_id,
-        is_active=True
-    ).options(
-        db.joinedload(Product.skus).joinedload(ProductSKU.inventory_item),
-        db.joinedload(Product.variants)
-    ).all()
+    product_data = ProductService.get_product_summary_skus()
+
+    # Convert dict data to objects with the attributes the template expects
+    class ProductSummary:
+        def __init__(self, data):
+            self.name = data.get('product_name', '')
+            self.product_base_unit = data.get('product_base_unit', '')
+            self.variant_count = data.get('sku_count', 0)
+            self.created_at = data.get('last_updated')
+            self.variations = []
+            self.inventory = []
+            # Calculate total quantity from inventory
+            self.total_quantity = data.get('total_quantity', 0)
+            # Add product ID for URL generation
+            self.id = data.get('product_id', None)
+
+    # Get product IDs for the summary objects
+    enhanced_product_data = []
+    for data in product_data:
+        # Get the first SKU ID for this product to use as product_id
+        first_sku = ProductSKU.query.filter_by(
+            organization_id=current_user.organization_id,
+            is_active=True
+        ).join(ProductSKU.product).filter(
+            Product.name == data['product_name']
+        ).first()
+        if first_sku:
+            data['product_id'] = first_sku.inventory_item_id
+            enhanced_product_data.append(data)
+
+    products = [ProductSummary(data) for data in enhanced_product_data]
 
     # Sort products based on the requested sort type
     if sort_type == 'popular':
-        # Sort by total inventory quantity (most stock first)
-        products.sort(key=lambda p: sum(sku.inventory_item.quantity for sku in p.skus if sku.is_active and sku.inventory_item), reverse=True)
+        # Sort by sales volume (most sales first) - TODO: implement sales tracking for SKUs
+        products.sort(key=lambda p: p.total_quantity, reverse=True)
     elif sort_type == 'stock':
         # Sort by stock level (low stock first)
-        products.sort(key=lambda p: sum(sku.inventory_item.quantity for sku in p.skus if sku.is_active and sku.inventory_item))
+        products.sort(key=lambda p: p.total_quantity)
     else:  # default to name
         products.sort(key=lambda p: p.name.lower())
 
