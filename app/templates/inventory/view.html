@@ -60,8 +60,8 @@
                       <span class="badge bg-danger">{{ days_overdue }} day{{ 's' if days_overdue != 1 else '' }}</span>
                     </td>
                     <td>
-                      <button class="btn btn-outline-danger btn-sm" onclick="markAsSpoiled('fifo', {{ entry.id }})">
-                        <i class="fas fa-trash"></i> Mark Spoiled
+                      <button class="btn btn-outline-danger btn-sm" onclick="markAsExpired('fifo', {{ entry.id }})">
+                        <i class="fas fa-clock"></i> Mark Expired
                       </button>
                     </td>
                   </tr>

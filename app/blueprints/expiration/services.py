@@ -451,11 +451,11 @@ class ExpirationService:
         }
 
     @staticmethod
-    def mark_as_spoiled(item_type, item_id, quantity=None):
-        """Mark inventory items as expired using centralized service"""
+    def mark_as_expired(item_type, item_id, quantity=None):
+        """Mark inventory items as expired by directly targeting specific FIFO entries"""
         try:
             if item_type == 'fifo':
-                # FIFO entry (InventoryHistory)
+                # FIFO entry (InventoryHistory) - target the specific expired entry
                 from ...models import InventoryHistory, InventoryItem
                 fifo_entry = InventoryHistory.query.get(item_id)
                 if not fifo_entry:
@@ -470,26 +470,39 @@ class ExpirationService:
                 if quantity is None:
                     quantity = fifo_entry.remaining_quantity
 
-                # Use centralized inventory adjustment service
-                from ...services.inventory_adjustment import process_inventory_adjustment
-                success = process_inventory_adjustment(
-                    item_id=fifo_entry.inventory_item_id,
-                    quantity=quantity,
-                    change_type='expired',
+                # DIRECTLY modify the expired FIFO entry instead of going through inventory adjustment
+                # This ensures we target the specific expired lot, not the available inventory
+                
+                # Reduce the remaining quantity on the specific FIFO entry
+                fifo_entry.remaining_quantity = max(0.0, fifo_entry.remaining_quantity - quantity)
+                
+                # Reduce the overall inventory quantity to maintain sync
+                item.quantity = max(0.0, item.quantity - quantity)
+                
+                # Create a history entry for the expiration action
+                expiration_entry = InventoryHistory(
+                    inventory_item_id=fifo_entry.inventory_item_id,
+                    timestamp=datetime.utcnow(),
+                    change_type='expired_disposal',
+                    quantity_change=-quantity,
                     unit=item.unit,
-                    notes=f'Marked as expired from expiration manager - FIFO entry {item_id}',
+                    remaining_quantity=0.0,  # Disposal entries don't have remaining quantity
+                    unit_cost=fifo_entry.unit_cost,
+                    fifo_reference_id=fifo_entry.id,
+                    note=f'Expired disposal from FIFO entry #{item_id}',
                     created_by=current_user.id,
-                    item_type='ingredient'
+                    organization_id=item.organization_id
                 )
+                
+                db.session.add(expiration_entry)
+                db.session.commit()
 
-                if success:
-                    return True, "Successfully marked as expired"
-                else:
-                    return False, "Failed to mark as expired - inventory sync error"
+                return True, f"Successfully marked FIFO entry #{item_id} as expired"
 
             elif item_type == 'product':
                 # Product inventory - item_id is the product_inv_id (history entry ID)
-                from ...models import ProductSKUHistory, ProductSKU
+                from ...models import ProductSKUHistory, ProductSKU, InventoryItem
+                from datetime import datetime
                 
                 # Get the history entry first
                 history_entry = ProductSKUHistory.query.get(item_id)
@@ -504,26 +517,42 @@ class ExpirationService:
                 if not sku:
                     return False, "Product SKU not found"
 
+                # Get the inventory item
+                item = InventoryItem.query.get(inventory_item_id)
+                if not item:
+                    return False, "Inventory item not found"
+
                 # Use the remaining quantity from the history entry if not specified
                 if quantity is None:
                     quantity = history_entry.remaining_quantity
 
-                # Use centralized inventory adjustment service for products
-                from ...services.inventory_adjustment import process_inventory_adjustment
-                success = process_inventory_adjustment(
-                    item_id=inventory_item_id,
-                    quantity=quantity,
-                    change_type='expired',
+                # DIRECTLY modify the expired product FIFO entry
+                
+                # Reduce the remaining quantity on the specific FIFO entry
+                history_entry.remaining_quantity = max(0.0, history_entry.remaining_quantity - quantity)
+                
+                # Reduce the overall inventory quantity to maintain sync
+                item.quantity = max(0.0, item.quantity - quantity)
+                
+                # Create a history entry for the expiration action
+                expiration_entry = ProductSKUHistory(
+                    inventory_item_id=inventory_item_id,
+                    timestamp=datetime.utcnow(),
+                    change_type='expired_disposal',
+                    quantity_change=-quantity,
                     unit=sku.unit,
-                    notes=f'Marked as expired from expiration manager - History entry {item_id}',
+                    remaining_quantity=0.0,  # Disposal entries don't have remaining quantity
+                    unit_cost=history_entry.unit_cost,
+                    fifo_reference_id=history_entry.id,
+                    notes=f'Expired disposal from product FIFO entry #{item_id}',
                     created_by=current_user.id,
-                    item_type='product'
+                    organization_id=item.organization_id
                 )
+                
+                db.session.add(expiration_entry)
+                db.session.commit()
 
-                if success:
-                    return True, "Successfully marked as expired"
-                else:
-                    return False, "Failed to mark as expired - inventory sync error"
+                return True, f"Successfully marked product FIFO entry #{item_id} as expired"
 
             else:
                 return False, "Invalid item type"

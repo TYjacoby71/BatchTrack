@@ -105,8 +105,8 @@
                                         <td><small class="text-muted">#{{ item.fifo_id }}</small></td>
                                         <td>
                                             <button class="btn btn-outline-danger btn-sm" 
-                                                    onclick="markAsSpoiled('fifo', '{{ item.fifo_id }}')">
-                                                <i class="fas fa-trash"></i> Spoiled
+                                                    onclick="markAsExpired('fifo', '{{ item.fifo_id }}')">
+                                                <i class="fas fa-clock"></i> Mark Expired
                                             </button>
                                         </td>
                                     </tr>
@@ -270,8 +270,8 @@
                                         </td>
                                         <td>
                                             <button class="btn btn-outline-danger btn-sm" 
-                                                    onclick="markAsSpoiled('product', '{{ item.product_inv_id }}')">
-                                                <i class="fas fa-trash"></i> Spoiled
+                                                    onclick="markAsExpired('product', '{{ item.product_inv_id }}')">
+                                                <i class="fas fa-clock"></i> Mark Expired
                                             </button>
                                         </td>
                                     </tr>
@@ -405,13 +405,13 @@ function getCSRFToken() {
     return '';
 }
 
-async function markAsSpoiled(type, id) {
-    if (!confirm('Only mark this item as spoiled if you have physically removed it from your inventory to maintain proper count.\n\nThis action will remove it from the system and cannot be undone.\n\nProceed?')) return;
+async function markAsExpired(type, id) {
+    if (!confirm('Mark this item as expired and remove it from inventory?\n\nThis action targets the specific expired lot and cannot be undone.\n\nProceed?')) return;
 
-    console.log('Mark spoiled called with:', { type, id });
+    console.log('Mark expired called with:', { type, id });
 
     try {
-        const response = await fetch('/expiration/api/mark-spoiled', {
+        const response = await fetch('/expiration/api/mark-expired', {
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json',
@@ -423,14 +423,14 @@ async function markAsSpoiled(type, id) {
         const data = await response.json();
 
         if (response.ok) {
-            alert(`Marked ${data.spoiled_count} item as spoiled`);
+            alert(`Marked ${data.expired_count} item as expired`);
             // Stay on expiration page by reloading the current URL
             window.location.href = '/expiration/alerts';
         } else {
             alert(`Error: ${data.error}`);
         }
     } catch (error) {
-        console.error('Spoilage error:', error);
+        console.error('Expiration error:', error);
         alert('Network error occurred');
     }
 }
