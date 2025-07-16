@@ -90,7 +90,7 @@ def product_list():
     # Get product IDs for the summary objects
     enhanced_product_data = []
     for data in product_data:
-        # Get the first SKU ID for this product to use as product_id
+        # Get the actual product ID instead of SKU inventory_item_id
         first_sku = ProductSKU.query.filter_by(
             organization_id=current_user.organization_id,
             is_active=True
@@ -98,7 +98,7 @@ def product_list():
             Product.name == data['product_name']
         ).first()
         if first_sku:
-            data['product_id'] = first_sku.inventory_item_id
+            data['product_id'] = first_sku.product_id  # Use actual product ID
             enhanced_product_data.append(data)
 
     products = [ProductSummary(data) for data in enhanced_product_data]
@@ -218,18 +218,26 @@ def new_product():
 def view_product(product_id):
     """View product details with all SKUs by product ID"""
     from ...services.product_service import ProductService
+    from ...models.product import Product
 
-    # Get the base SKU to find the product - with org scoping
-    base_sku = ProductSKU.query.filter_by(
-        inventory_item_id=product_id,
+    # First try to find the product directly by ID
+    product = Product.query.filter_by(
+        id=product_id,
         organization_id=current_user.organization_id
     ).first()
 
-    if not base_sku:
-        flash('Product not found', 'error')
-        return redirect(url_for('products.product_list'))
+    if not product:
+        # If not found by product ID, try to find by inventory_item_id (legacy support)
+        base_sku = ProductSKU.query.filter_by(
+            inventory_item_id=product_id,
+            organization_id=current_user.organization_id
+        ).first()
 
-    product = base_sku.product
+        if not base_sku:
+            flash('Product not found', 'error')
+            return redirect(url_for('products.product_list'))
+        
+        product = base_sku.product
 
     # Get all SKUs for this product - with org scoping
     skus = ProductSKU.query.filter_by(
@@ -302,20 +310,20 @@ def view_product_by_name(product_name):
 @login_required
 def edit_product(product_id):
     """Edit product details by product ID"""
-    # Get the base SKU to find the product - with org scoping
-    base_sku = ProductSKU.query.filter_by(
-        inventory_item_id=product_id,
+    from ...models.product import Product
+    
+    # First try to find the product directly by ID
+    product = Product.query.filter_by(
+        id=product_id,
         organization_id=current_user.organization_id
     ).first()
 
-    if not base_sku:
+    if not product:
         flash('Product not found', 'error')
         return redirect(url_for('products.product_list'))
 
-    product = base_sku.product
-
     name = request.form.get('name')
-    unit = request.form.get('product_base_unit')
+    unit = request.form.get('base_unit')  # Updated to match template form field name
     low_stock_threshold = request.form.get('low_stock_threshold', 0)
 
     if not name or not unit:
@@ -323,7 +331,6 @@ def edit_product(product_id):
         return redirect(url_for('products.view_product', product_id=product_id))
 
     # Check if another product has this name
-    from ...models.product import Product
     existing = Product.query.filter(
         Product.name == name,
         Product.id != product.id,
@@ -346,7 +353,7 @@ def edit_product(product_id):
 
     db.session.commit()
     flash('Product updated successfully', 'success')
-    return redirect(url_for('products.view_product', product_id=product_id))
+    return redirect(url_for('products.view_product', product_id=product.id))
 
 @products_bp.route('/<int:product_id>/delete', methods=['POST'])
 @login_required

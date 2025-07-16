@@ -1,4 +1,3 @@
-
 {% extends "layout.html" %}
 {% block content %}
 <div class="container-fluid">
@@ -71,45 +70,30 @@
                                     <tr>
                                         <th>Ingredient</th>
                                         <th>Quantity</th>
-                                        <th>Expired Date</th>
-                                        <th>Expired Time</th>
-                                        <th class="text-muted">ID</th>
-                                        <th>Action</th>
+                                        <th>Lot Number</th>
+                                        <th>Expires Date</th>
+                                        <th>Expires Time</th>
+                                        <th>ID</th>
+                                        <th>Days Left</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {% for item in expired.fifo_entries %}
+                                    {% if item.expiration_date %}
                                     <tr>
-                                        <td>{{ item.name }}</td>
-                                        <td>{{ item.remaining_quantity }} {{ item.unit }}</td>
-                                        <td>
-                                            <small class="text-danger">
-                                                {{ item.expiration_date.strftime('%Y-%m-%d') }}
-                                            </small>
-                                        </td>
-                                        <td>
-                                            {% if item.expiration_date %}
-                                                {% set exp_date = item.expiration_date %}
-                                                {% if exp_date is string %}
-                                                  {% set exp_date = exp_date | parse_datetime %}
-                                                {% endif %}
-                                                {% if exp_date and exp_date.time() != exp_date.time().replace(hour=0, minute=0, second=0) %}
-                                                  {{ exp_date.strftime('%H:%M:%S') }}
-                                                {% else %}
-                                                  <span class="text-muted">--:--:--</span>
-                                                {% endif %}
-                                              {% else %}
-                                                <span class="text-muted">--:--:--</span>
-                                              {% endif %}
-                                        </td>
+                                        <td><strong>{{ item.name }}</strong></td>
+                                        <td><strong>{{ item.remaining_quantity }} {{ item.unit }}</strong></td>
+                                        <td>LOT-{{ item.fifo_id }}</td>
+                                        <td>{{ item.expiration_date.strftime('%Y-%m-%d') }}</td>
+                                        <td>{{ item.expiration_date.strftime('%H:%M:%S') }}</td>
                                         <td><small class="text-muted">#{{ item.fifo_id }}</small></td>
                                         <td>
-                                            <button class="btn btn-outline-danger btn-sm" 
-                                                    onclick="markAsExpired('fifo', '{{ item.fifo_id }}')">
-                                                <i class="fas fa-clock"></i> Mark Expired
-                                            </button>
+                                            <span class="badge bg-danger">
+                                                EXPIRED
+                                            </span>
                                         </td>
                                     </tr>
+                                    {% endif %}
                                     {% endfor %}
                                 </tbody>
                             </table>
@@ -142,41 +126,31 @@
                                     <tr>
                                         <th>Ingredient</th>
                                         <th>Quantity</th>
+                                        <th>Lot Number</th>
                                         <th>Expires Date</th>
                                         <th>Expires Time</th>
+                                        <th>ID</th>
                                         <th>Days Left</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {% for item in expiring_soon.fifo_entries %}
-                                    {% set days_left = (item.expiration_date.date() - today.date()).days %}
+                                    {% if item.expiration_date %}
+                                    {% set days_left = ((item.expiration_date - today).days) %}
                                     <tr>
-                                        <td>{{ item.name }}</td>
-                                        <td>{{ item.remaining_quantity }} {{ item.unit }}</td>
+                                        <td><strong>{{ item.name }}</strong></td>
+                                        <td><strong>{{ item.remaining_quantity }} {{ item.unit }}</strong></td>
+                                        <td>LOT-{{ item.fifo_id }}</td>
+                                        <td>{{ item.expiration_date.strftime('%Y-%m-%d') }}</td>
+                                        <td>{{ item.expiration_date.strftime('%H:%M:%S') }}</td>
+                                        <td><small class="text-muted">#{{ item.fifo_id }}</small></td>
                                         <td>
-                                            <small>{{ item.expiration_date.strftime('%Y-%m-%d') }}</small>
-                                        </td>
-                                        <td>
-                                            {% if item.expiration_date %}
-                                                {% set exp_date = item.expiration_date %}
-                                                {% if exp_date is string %}
-                                                  {% set exp_date = exp_date | parse_datetime %}
-                                                {% endif %}
-                                                {% if exp_date and exp_date.time() != exp_date.time().replace(hour=0, minute=0, second=0) %}
-                                                  {{ exp_date.strftime('%H:%M:%S') }}
-                                                {% else %}
-                                                  <span class="text-muted">--:--:--</span>
-                                                {% endif %}
-                                              {% else %}
-                                                <span class="text-muted">--:--:--</span>
-                                              {% endif %}
-                                        </td>
-                                        <td>
-                                            <span class="badge {% if days_left <= 2 %}bg-danger{% elif days_left <= 5 %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
+                                            <span class="badge bg-warning text-dark">
                                                 {{ days_left }} day{{ 's' if days_left != 1 else '' }}
                                             </span>
                                         </td>
                                     </tr>
+                                    {% endif %}
                                     {% endfor %}
                                 </tbody>
                             </table>
@@ -235,46 +209,32 @@
                                         <th>Size</th>
                                         <th>Quantity</th>
                                         <th>Lot Number</th>
-                                        <th>Expired Date</th>
-                                        <th>Expired Time</th>
-                                        <th>Action</th>
+                                        <th>Expires Date</th>
+                                        <th>Expires Time</th>
+                                        <th>ID</th>
+                                        <th>Days Left</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {% for item in expired.product_inventory %}
+                                    {% if item.expiration_date %}
                                     <tr>
-                                        <td>{{ item.product_name or 'Unknown Product' }}</td>
-                                        <td>{{ item.variant_name or 'N/A' }}</td>
-                                        <td>{{ item.size_label or 'N/A' }}</td>
-                                        <td>{{ item.quantity }} {{ item.unit }}</td>
-                                        <td><span class="badge bg-secondary">{{ item.lot_number or 'LOT-' + item.history_id|string }}</span></td>
                                         <td>
-                                            <small class="text-danger">
-                                                {{ item.expiration_date.strftime('%Y-%m-%d') }}
-                                            </small>
+                                            <strong>{{ item.product_name }}</strong>
+                                            <br><small class="text-muted">{{ item.variant_name }} - {{ item.size_label }}</small>
                                         </td>
+                                        <td><strong>{{ item.quantity }} {{ item.unit }}</strong></td>
+                                        <td>{{ item.lot_number }}</td>
+                                        <td>{{ item.expiration_date.strftime('%Y-%m-%d') }}</td>
+                                        <td>{{ item.expiration_date.strftime('%H:%M:%S') }}</td>
+                                        <td><small class="text-muted">#{{ item.product_inv_id }}</small></td>
                                         <td>
-                                            {% if item.expiration_date %}
-                                                {% set exp_date = item.expiration_date %}
-                                                {% if exp_date is string %}
-                                                  {% set exp_date = exp_date | parse_datetime %}
-                                                {% endif %}
-                                                {% if exp_date and exp_date.time() != exp_date.time().replace(hour=0, minute=0, second=0) %}
-                                                  {{ exp_date.strftime('%H:%M:%S') }}
-                                                {% else %}
-                                                  <span class="text-muted">--:--:--</span>
-                                                {% endif %}
-                                              {% else %}
-                                                <span class="text-muted">--:--:--</span>
-                                              {% endif %}
-                                        </td>
-                                        <td>
-                                            <button class="btn btn-outline-danger btn-sm" 
-                                                    onclick="markAsExpired('product', '{{ item.product_inv_id }}')">
-                                                <i class="fas fa-clock"></i> Mark Expired
-                                            </button>
+                                            <span class="badge bg-danger">
+                                                EXPIRED
+                                            </span>
                                         </td>
                                     </tr>
+                                    {% endif %}
                                     {% endfor %}
                                 </tbody>
                             </table>
@@ -312,42 +272,31 @@
                                         <th>Lot Number</th>
                                         <th>Expires Date</th>
                                         <th>Expires Time</th>
+                                        <th>ID</th>
                                         <th>Days Left</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {% for item in expiring_soon.product_inventory %}
-                                    {% set days_left = (item.expiration_date.date() - today.date()).days %}
+                                    {% if item.expiration_date %}
+                                    {% set days_left = ((item.expiration_date - today).days) %}
                                     <tr>
-                                        <td>{{ item.product_name or 'Unknown Product' }}</td>
-                                        <td>{{ item.variant_name or 'N/A' }}</td>
-                                        <td>{{ item.size_label or 'N/A' }}</td>
-                                        <td>{{ item.quantity }} {{ item.unit }}</td>
-                                        <td><span class="badge bg-secondary">{{ item.lot_number or 'LOT-' + item.history_id|string }}</span></td>
                                         <td>
-                                            <small>{{ item.expiration_date.strftime('%Y-%m-%d') }}</small>
+                                            <strong>{{ item.product_name }}</strong>
+                                            <br><small class="text-muted">{{ item.variant_name }} - {{ item.size_label }}</small>
                                         </td>
+                                        <td><strong>{{ item.quantity }} {{ item.unit }}</strong></td>
+                                        <td>{{ item.lot_number }}</td>
+                                        <td>{{ item.expiration_date.strftime('%Y-%m-%d') }}</td>
+                                        <td>{{ item.expiration_date.strftime('%H:%M:%S') }}</td>
+                                        <td><small class="text-muted">#{{ item.product_inv_id }}</small></td>
                                         <td>
-                                            {% if item.expiration_date %}
-                                                {% set exp_date = item.expiration_date %}
-                                                {% if exp_date is string %}
-                                                  {% set exp_date = exp_date | parse_datetime %}
-                                                {% endif %}
-                                                {% if exp_date and exp_date.time() != exp_date.time().replace(hour=0, minute=0, second=0) %}
-                                                  {{ exp_date.strftime('%H:%M:%S') }}
-                                                {% else %}
-                                                  <span class="text-muted">--:--:--</span>
-                                                {% endif %}
-                                              {% else %}
-                                                <span class="text-muted">--:--:--</span>
-                                              {% endif %}
-                                        </td>
-                                        <td>
-                                            <span class="badge {% if days_left <= 1 %}danger{% elif days_left <= 3 %}warning{% else %}secondary{% endif %}">
+                                            <span class="badge bg-warning text-dark">
                                                 {{ days_left }} day{{ 's' if days_left != 1 else '' }}
                                             </span>
                                         </td>
                                     </tr>
+                                    {% endif %}
                                     {% endfor %}
                                 </tbody>
                             </table>
@@ -395,13 +344,13 @@ function getCSRFToken() {
     if (tokenMeta) {
         return tokenMeta.getAttribute('content');
     }
-    
+
     // Fallback: try to find it in forms
     const csrfInput = document.querySelector('input[name=csrf_token]');
     if (csrfInput) {
         return csrfInput.value;
     }
-    
+
     return '';
 }
 
