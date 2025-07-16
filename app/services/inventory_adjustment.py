@@ -235,14 +235,8 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
         rounded_qty_change = ConversionEngine.round_value(qty_change, 3)
         item.quantity = ConversionEngine.round_value(item.quantity + rounded_qty_change, 3)
 
-        db.session.commit()
-
-        # Validate inventory/FIFO sync after adjustment
-        is_valid, error_msg, inv_qty, fifo_total = validate_inventory_fifo_sync(item_id, item_type)
-        if not is_valid:
-            # Rollback the transaction
-            db.session.rollback()
-            raise ValueError(f"Inventory adjustment failed validation: {error_msg}")
+        # DO NOT COMMIT YET - validate first
+        db.session.flush()  # Flush to database but don't commit
 
         # Final validation after all changes are complete but before commit
         final_is_valid, final_error_msg, final_inv_qty, final_fifo_total = validate_inventory_fifo_sync(item_id, item_type)
