@@ -27,8 +27,30 @@ def complete_batch(batch_id):
             flash('Batch not found or already completed', 'error')
             return redirect(url_for('batches.list_batches'))
 
-        # FIFO validation will be handled during actual inventory adjustments
-        # No need for pre-validation since we're only adding inventory, not deducting
+        # Pre-validate FIFO sync for any product SKUs that will be created
+        output_type = request.form.get('output_type')
+        if output_type == 'product':
+            product_id = request.form.get('product_id')
+            variant_id = request.form.get('variant_id')
+            
+            if product_id and variant_id:
+                # Check existing SKUs that might be updated
+                from app.services.product_service import ProductService
+                from app.models.product import ProductSKU
+                from app.services.inventory_adjustment import validate_inventory_fifo_sync
+                
+                # Get potential SKUs that could be affected
+                existing_skus = ProductSKU.query.join(ProductSKU.inventory_item).filter(
+                    ProductSKU.product_id == product_id,
+                    ProductSKU.variant_id == variant_id,
+                    InventoryItem.organization_id == current_user.organization_id
+                ).all()
+                
+                for sku in existing_skus:
+                    is_valid, error_msg, inv_qty, fifo_total = validate_inventory_fifo_sync(sku.inventory_item_id, 'product')
+                    if not is_valid:
+                        flash(f'Cannot complete batch - inventory sync error for existing SKU {sku.sku_code}: {error_msg}', 'error')
+                        return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch_id))
 
         # Get form data
         output_type = request.form.get('output_type')
@@ -299,18 +321,6 @@ def _create_container_sku(product, variant, container_item, quantity, batch, exp
             size_label=size_label,
             unit='count'  # Containers are always counted as individual units
         )
-        
-        # Ensure new SKU inventory starts at zero before we add batch inventory
-        if product_sku.inventory_item and product_sku.inventory_item.quantity > 0:
-            # Check if this SKU has any FIFO history - if not, reset to zero
-            from app.models.product import ProductSKUHistory
-            existing_history = ProductSKUHistory.query.filter_by(
-                inventory_item_id=product_sku.inventory_item_id
-            ).first()
-            
-            if not existing_history:
-                logger.info(f"Resetting newly created SKU {product_sku.sku_code} inventory to zero before adding batch inventory")
-                product_sku.inventory_item.quantity = 0.0
 
         # Add containers to inventory - quantity is number of containers
         process_inventory_adjustment(
@@ -345,18 +355,6 @@ def _create_bulk_sku(product, variant, quantity, unit, expiration_date, batch, i
             size_label='Bulk',
             unit=unit  # Use the batch output unit
         )
-        
-        # Ensure new SKU inventory starts at zero before we add batch inventory
-        if bulk_sku.inventory_item and bulk_sku.inventory_item.quantity > 0:
-            # Check if this SKU has any FIFO history - if not, reset to zero
-            from app.models.product import ProductSKUHistory
-            existing_history = ProductSKUHistory.query.filter_by(
-                inventory_item_id=bulk_sku.inventory_item_id
-            ).first()
-            
-            if not existing_history:
-                logger.info(f"Resetting newly created bulk SKU {bulk_sku.sku_code} inventory to zero before adding batch inventory")
-                bulk_sku.inventory_item.quantity = 0.0
 
         # Add bulk quantity to inventory with calculated unit cost
         process_inventory_adjustment(

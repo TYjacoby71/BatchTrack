@@ -26,12 +26,11 @@ def validate_inventory_fifo_sync(item_id, item_type=None):
 
         # Get ALL FIFO entries with remaining quantity (including frozen expired ones)
         from sqlalchemy import and_
-        org_id = current_user.organization_id if current_user and current_user.is_authenticated else item.organization_id
         all_fifo_entries = ProductSKUHistory.query.filter(
             and_(
                 ProductSKUHistory.inventory_item_id == item_id,
                 ProductSKUHistory.remaining_quantity > 0,
-                ProductSKUHistory.organization_id == org_id
+                ProductSKUHistory.organization_id == (current_user.organization_id if current_user and current_user.is_authenticated else item.organization_id)
             )
         ).all()
 
@@ -39,10 +38,10 @@ def validate_inventory_fifo_sync(item_id, item_type=None):
         current_qty = item.quantity
         item_name = item.name
         
-        # If there are no FIFO entries but there is inventory, allow it for newly created SKUs
-        # This handles cases where ProductSKUs are created but haven't had FIFO entries created yet
+        # If there are no FIFO entries but there is inventory, allow it for now 
+        # This handles cases where ProductSKUs exist but haven't had FIFO entries created yet
         if fifo_total == 0 and current_qty > 0:
-            print(f"INFO: Product SKU {item_name} has inventory ({current_qty}) but no FIFO entries - this is normal for newly created SKUs")
+            print(f"WARNING: Product SKU {item_name} has inventory ({current_qty}) but no FIFO entries - allowing operation to proceed")
             return True, "", current_qty, fifo_total
     else:
         item = InventoryItem.query.get(item_id)
@@ -51,12 +50,11 @@ def validate_inventory_fifo_sync(item_id, item_type=None):
 
         # Get ALL InventoryHistory entries with remaining quantity (including frozen expired ones)
         from sqlalchemy import and_
-        org_id = current_user.organization_id if current_user and current_user.is_authenticated else item.organization_id
         all_fifo_entries = InventoryHistory.query.filter(
             and_(
                 InventoryHistory.inventory_item_id == item_id,
                 InventoryHistory.remaining_quantity > 0,
-                InventoryHistory.organization_id == org_id
+                InventoryHistory.organization_id == (current_user.organization_id if current_user and current_user.is_authenticated else item.organization_id)
             )
         ).all()
 
