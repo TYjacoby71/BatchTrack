@@ -26,18 +26,30 @@ def validate_inventory_fifo_sync(item_id, item_type=None):
 
         # Get ALL FIFO entries with remaining quantity (including frozen expired ones)
         from sqlalchemy import and_
+
+        # Ensure we have the correct organization ID
+        if current_user and current_user.is_authenticated:
+            org_id = current_user.organization_id
+        else:
+            org_id = item.organization_id
+
+        # Debug organization scoping
+        print(f"DEBUG ProductSKU FIFO validation: item_id={item_id}, org_id={org_id}, current_user_org={current_user.organization_id if current_user else 'None'}")
+
         all_fifo_entries = ProductSKUHistory.query.filter(
             and_(
                 ProductSKUHistory.inventory_item_id == item_id,
                 ProductSKUHistory.remaining_quantity > 0,
-                ProductSKUHistory.organization_id == (current_user.organization_id if current_user and current_user.is_authenticated else item.organization_id)
+                ProductSKUHistory.organization_id == org_id
             )
         ).all()
+
+        print(f"DEBUG ProductSKU FIFO entries found: {len(all_fifo_entries)} for item {item_id}")
 
         fifo_total = sum(entry.remaining_quantity for entry in all_fifo_entries)
         current_qty = item.quantity
         item_name = item.name
-        
+
         # If there are no FIFO entries but there is inventory, allow it for now 
         # This handles cases where ProductSKUs exist but haven't had FIFO entries created yet
         if fifo_total == 0 and current_qty > 0:
@@ -50,13 +62,25 @@ def validate_inventory_fifo_sync(item_id, item_type=None):
 
         # Get ALL InventoryHistory entries with remaining quantity (including frozen expired ones)
         from sqlalchemy import and_
+
+        # Ensure we have the correct organization ID
+        if current_user and current_user.is_authenticated:
+            org_id = current_user.organization_id
+        else:
+            org_id = item.organization_id
+
+        # Debug organization scoping
+        print(f"DEBUG Ingredient FIFO validation: item_id={item_id}, org_id={org_id}, current_user_org={current_user.organization_id if current_user else 'None'}")
+
         all_fifo_entries = InventoryHistory.query.filter(
             and_(
                 InventoryHistory.inventory_item_id == item_id,
                 InventoryHistory.remaining_quantity > 0,
-                InventoryHistory.organization_id == (current_user.organization_id if current_user and current_user.is_authenticated else item.organization_id)
+                InventoryHistory.organization_id == org_id
             )
         ).all()
+
+        print(f"DEBUG Ingredient FIFO entries found: {len(all_fifo_entries)} for item {item_id}")
 
         fifo_total = sum(entry.remaining_quantity for entry in all_fifo_entries)
         current_qty = item.quantity
@@ -336,16 +360,29 @@ def handle_recount_adjustment(item_id, target_quantity, notes=None, created_by=N
                 # Get entries that can be filled (have remaining capacity)
                 if item.type == 'product':
                     from app.models.product import ProductSKUHistory
+
+                    # Ensure we have the correct organization ID
+                    if current_user and current_user.is_authenticated:
+                        org_id = current_user.organization_id
+                    else:
+                        org_id = item.organization_id
+
                     fillable_entries = ProductSKUHistory.query.filter(
                         ProductSKUHistory.inventory_item_id == item_id,
                         ProductSKUHistory.quantity_change > 0,  # Only positive additions can be filled
-                        ProductSKUHistory.organization_id == current_user.organization_id if current_user and current_user.is_authenticated else item.organization_id
+                        ProductSKUHistory.organization_id == org_id
                     ).order_by(ProductSKUHistory.timestamp.desc()).all()  # Fill newest first
                 else:
+                    # Ensure we have the correct organization ID
+                    if current_user and current_user.is_authenticated:
+                        org_id = current_user.organization_id
+                    else:
+                        org_id = item.organization_id
+
                     fillable_entries = InventoryHistory.query.filter(
                         InventoryHistory.inventory_item_id == item_id,
                         InventoryHistory.quantity_change > 0,  # Only positive additions can be filled
-                        InventoryHistory.organization_id == current_user.organization_id if current_user and current_user.is_authenticated else item.organization_id
+                        InventoryHistory.organization_id == org_id
                     ).order_by(InventoryHistory.timestamp.desc()).all()  # Fill newest first
 
                 remaining_to_add = addition_needed
@@ -364,7 +401,7 @@ def handle_recount_adjustment(item_id, target_quantity, notes=None, created_by=N
                         remaining_to_add -= fill_amount
 
                         print(f"RECOUNT: Filled entry {entry.id} with {fill_amount} (from {old_remaining} to {entry.remaining_quantity})")
-                        
+
                         # Create a FIFO history entry for the positive recount addition
                         FIFOService.add_fifo_entry(
                             inventory_item_id=item_id,
