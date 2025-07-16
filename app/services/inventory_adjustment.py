@@ -26,11 +26,12 @@ def validate_inventory_fifo_sync(item_id, item_type=None):
 
         # Get ALL FIFO entries with remaining quantity (including frozen expired ones)
         from sqlalchemy import and_
+        org_id = current_user.organization_id if current_user and current_user.is_authenticated else item.organization_id
         all_fifo_entries = ProductSKUHistory.query.filter(
             and_(
                 ProductSKUHistory.inventory_item_id == item_id,
                 ProductSKUHistory.remaining_quantity > 0,
-                ProductSKUHistory.organization_id == (current_user.organization_id if current_user and current_user.is_authenticated else item.organization_id)
+                ProductSKUHistory.organization_id == org_id
             )
         ).all()
 
@@ -50,11 +51,12 @@ def validate_inventory_fifo_sync(item_id, item_type=None):
 
         # Get ALL InventoryHistory entries with remaining quantity (including frozen expired ones)
         from sqlalchemy import and_
+        org_id = current_user.organization_id if current_user and current_user.is_authenticated else item.organization_id
         all_fifo_entries = InventoryHistory.query.filter(
             and_(
                 InventoryHistory.inventory_item_id == item_id,
                 InventoryHistory.remaining_quantity > 0,
-                InventoryHistory.organization_id == (current_user.organization_id if current_user and current_user.is_authenticated else item.organization_id)
+                InventoryHistory.organization_id == org_id
             )
         ).all()
 
