@@ -81,6 +81,52 @@ document.addEventListener('DOMContentLoaded', function() {
     // Any page initialization code here
     console.log('SKU page loaded');
 });
+
+// Mark expired function for product SKU history
+function getCSRFToken() {
+    const tokenMeta = document.querySelector('meta[name=csrf-token]');
+    if (tokenMeta) {
+        return tokenMeta.getAttribute('content');
+    }
+    
+    // Fallback: try to find it in forms
+    const csrfInput = document.querySelector('input[name=csrf_token]');
+    if (csrfInput) {
+        return csrfInput.value;
+    }
+    
+    return '';
+}
+
+async function markAsExpired(type, id) {
+    if (!confirm('Mark this item as expired and remove it from inventory?\n\nThis action targets the specific expired lot and cannot be undone.\n\nProceed?')) return;
+
+    console.log('Mark expired called with:', { type, id });
+
+    try {
+        const response = await fetch('/expiration/api/mark-expired', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRFToken() 
+            },
+            body: JSON.stringify({ type: type, id: id })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            alert(`Marked ${data.expired_count} item as expired`);
+            // Reload the current page to refresh the SKU view
+            location.reload();
+        } else {
+            alert(`Error: ${data.error}`);
+        }
+    } catch (error) {
+        console.error('Expiration error:', error);
+        alert('Network error occurred');
+    }
+}
 </script>
 {% endblock %}
 
@@ -120,6 +166,85 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                 </div>
             </div>
+
+            <!-- Expired Items Alert Section -->
+            {% set expired_entries = history|selectattr('expiration_date')|selectattr('remaining_quantity', '>', 0)|list %}
+            {% set expired_entries = expired_entries|selectattr('expiration_date', '<', now)|list %}
+            {% if expired_entries %}
+            <div class="card mb-4">
+                <div class="card-header bg-danger text-white">
+                    <h6 class="mb-0">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Expired Product Inventory (Action Required)
+                        <span class="badge bg-dark ms-2">{{ expired_entries|length }} entries</span>
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-danger">
+                        <strong>Action Required:</strong> These expired entries are still counted in your digital inventory but should be physically removed from storage and marked as expired.
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Date Added</th>
+                                    <th>Source</th>
+                                    <th>Remaining Qty</th>
+                                    <th>Expired Date</th>
+                                    <th>Days Overdue</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for entry in expired_entries %}
+                                {% set days_overdue = (now.date() - entry.expiration_date.date()).days %}
+                                <tr>
+                                    <td>
+                                        {% if entry.timestamp %}
+                                            {{ entry.timestamp.strftime('%m/%d/%y') }}
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if entry.batch_id %}
+                                            <span class="text-info">
+                                                {% if entry.batch and entry.batch.label_code %}
+                                                    {{ entry.batch.label_code }}
+                                                {% else %}
+                                                    Batch #{{ entry.batch_id }}
+                                                {% endif %}
+                                            </span>
+                                        {% else %}
+                                            <span class="text-success">Production</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <strong>{{ "%.1f"|format(entry.remaining_quantity) }} {{ entry.unit }}</strong>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-danger">
+                                            {{ entry.expiration_date.strftime('%m/%d/%y') }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-dark">{{ days_overdue }} days</span>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-danger" 
+                                                onclick="markAsExpired('product', '{{ entry.id }}')"
+                                                title="Mark as expired and remove from inventory">
+                                            <i class="fas fa-clock"></i> Mark Expired
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
 
             <!-- History Table Component -->
             {% include 'components/sku/history_table.html' %}

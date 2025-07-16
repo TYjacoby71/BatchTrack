@@ -172,19 +172,31 @@
                             {% if entry.expiration_date %}
                                 {% set exp_date = entry.expiration_date.strftime('%m/%d/%y') %}
                                 {% set exp_time = entry.expiration_date.strftime('%H:%M') %}
+                                {% set is_expired = entry.expiration_date < now %}
+                                {% set days_until = (entry.expiration_date.date() - now.date()).days %}
+                                
                                 <span class="badge 
-                                    {% if entry.expiration_date < now %}
+                                    {% if is_expired %}
                                         bg-danger
-                                    {% elif entry.expiration_date <= (now + timedelta(days=7)) %}
-                                        bg-warning
+                                    {% elif days_until <= 7 %}
+                                        bg-warning text-dark
                                     {% else %}
                                         bg-success
                                     {% endif %}
-                                " title="Expires: {{ entry.expiration_date.strftime('%Y-%m-%d %H:%M') }}">
-                                    {% if exp_time != '00:00' %}
-                                        {{ exp_date }} {{ exp_time }}
+                                " title="{% if is_expired %}EXPIRED {{ (-days_until) }} days ago{% else %}Expires in {{ days_until }} days{% endif %}: {{ entry.expiration_date.strftime('%Y-%m-%d %H:%M') }}">
+                                    {% if is_expired %}
+                                        <i class="fas fa-exclamation-triangle me-1"></i>
+                                        EXPIRED {{ exp_date }}
+                                    {% elif days_until <= 7 %}
+                                        <i class="fas fa-clock me-1"></i>
+                                        {{ exp_date }} ({{ days_until }}d)
                                     {% else %}
-                                        {{ exp_date }}
+                                        <i class="fas fa-check-circle me-1"></i>
+                                        {% if exp_time != '00:00' %}
+                                            {{ exp_date }} {{ exp_time }}
+                                        {% else %}
+                                            {{ exp_date }}
+                                        {% endif %}
                                     {% endif %}
                                 </span>
                             {% else %}
@@ -201,14 +213,23 @@
                         </td>
                         <td>
                             {% if entry.remaining_quantity and entry.remaining_quantity > 0 %}
-                                <button class="btn btn-sm btn-outline-warning" 
-                                        data-bs-toggle="modal" 
-                                        data-bs-target="#adjustFifoModal"
-                                        data-inventory-id="{{ entry.id }}"
-                                        data-current-quantity="{{ entry.remaining_quantity }}"
-                                        data-unit="{{ entry.unit }}">
-                                    Adj
-                                </button>
+                                {% set is_expired = entry.expiration_date and entry.expiration_date < now %}
+                                {% if is_expired %}
+                                    <button class="btn btn-sm btn-outline-danger" 
+                                            onclick="markAsExpired('product', '{{ entry.id }}')"
+                                            title="Mark as expired and remove from inventory">
+                                        <i class="fas fa-clock"></i> Mark Expired
+                                    </button>
+                                {% else %}
+                                    <button class="btn btn-sm btn-outline-warning" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#adjustFifoModal"
+                                            data-inventory-id="{{ entry.id }}"
+                                            data-current-quantity="{{ entry.remaining_quantity }}"
+                                            data-unit="{{ entry.unit }}">
+                                        Adj
+                                    </button>
+                                {% endif %}
                             {% else %}
                                 <span class="text-muted">-</span>
                             {% endif %}
