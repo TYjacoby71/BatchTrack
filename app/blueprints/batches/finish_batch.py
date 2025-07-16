@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 @login_required
 def complete_batch(batch_id):
     """Complete a batch and create final products/ingredients"""
+    # Start transaction with savepoint for complete rollback protection
     try:
         # Get the batch
         batch = Batch.query.filter_by(
@@ -67,40 +68,57 @@ def complete_batch(batch_id):
             if exp_date_str:
                 expiration_date = datetime.strptime(exp_date_str, '%Y-%m-%d')
 
-        # Update batch with completion data
-        batch.final_quantity = final_quantity
-        batch.output_unit = output_unit
-        batch.status = 'completed'
-        batch.completed_at = datetime.utcnow()
-        batch.is_perishable = is_perishable
-        batch.shelf_life_days = shelf_life_days
-        batch.expiration_date = expiration_date
-
-        if output_type == 'ingredient':
-            # Handle intermediate ingredient creation
-            _create_intermediate_ingredient(batch, final_quantity, output_unit, expiration_date)
-        else:
-            # Handle product creation
-            product_id = request.form.get('product_id')
-            variant_id = request.form.get('variant_id')
-
-            if not product_id or not variant_id:
-                flash('Product and variant selection required', 'error')
-                return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch_id))
-
-            _create_product_output(batch, product_id, variant_id, final_quantity, output_unit, expiration_date, request.form)
-
+        # Create savepoint before any inventory changes
+        savepoint = db.session.begin_nested()
+        
         try:
+            # Update batch with completion data
+            batch.final_quantity = final_quantity
+            batch.output_unit = output_unit
+            batch.status = 'completed'
+            batch.completed_at = datetime.utcnow()
+            batch.is_perishable = is_perishable
+            batch.shelf_life_days = shelf_life_days
+            batch.expiration_date = expiration_date
+
+            if output_type == 'ingredient':
+                # Handle intermediate ingredient creation
+                _create_intermediate_ingredient(batch, final_quantity, output_unit, expiration_date)
+            else:
+                # Handle product creation
+                product_id = request.form.get('product_id')
+                variant_id = request.form.get('variant_id')
+
+                if not product_id or not variant_id:
+                    raise ValueError('Product and variant selection required')
+
+                _create_product_output(batch, product_id, variant_id, final_quantity, output_unit, expiration_date, request.form)
+
+            # Commit the savepoint - this validates all inventory adjustments
+            savepoint.commit()
+            
+            # Final commit to database
             db.session.commit()
             flash(f'Batch {batch.label_code} completed successfully!', 'success')
             return redirect(url_for('batches.list_batches'))
-        except Exception as commit_error:
-            db.session.rollback()
-            flash(f'Failed to complete batch due to database error: {str(commit_error)}', 'error')
-            return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch_id))
+
+        except Exception as nested_error:
+            # Rollback the savepoint first
+            try:
+                savepoint.rollback()
+            except:
+                pass
+            
+            # Re-raise to be caught by outer exception handler
+            raise nested_error
 
     except Exception as e:
-        db.session.rollback()
+        # Ensure complete rollback on any error
+        try:
+            db.session.rollback()
+        except:
+            pass
+            
         logger.error(f"Error completing batch {batch_id}: {str(e)}")
         flash(f'Error completing batch: {str(e)}', 'error')
         return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch_id))
