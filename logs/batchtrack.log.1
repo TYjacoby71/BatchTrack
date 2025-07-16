@@ -1,72 +1,72 @@
-2025-07-16 19:53:26,243 ERROR: Error creating product output: Pre-adjustment validation failed - FIFO sync error: SYNC ERROR: Admin Apple Sauce - Base - Bulk inventory (4.0) != FIFO total (0) [includes frozen expired] [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:228]
-2025-07-16 19:53:26,246 ERROR: Error completing batch 26: Pre-adjustment validation failed - FIFO sync error: SYNC ERROR: Admin Apple Sauce - Base - Bulk inventory (4.0) != FIFO total (0) [includes frozen expired] [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:122]
-2025-07-16 19:53:31,524 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-16 19:53:32,314 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-16 19:53:54,050 INFO: === PRODUCT INVENTORY ADJUSTMENT START === [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:19]
-2025-07-16 19:53:54,050 INFO: Inventory Item ID: 3 [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:20]
-2025-07-16 19:53:54,051 INFO: User: 3 (manager) [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:21]
-2025-07-16 19:53:54,051 INFO: Organization: 1 [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:22]
-2025-07-16 19:53:54,051 INFO: Request method: POST [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:23]
-2025-07-16 19:53:54,051 INFO: Request is JSON: False [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:24]
-2025-07-16 19:53:54,054 INFO: SKU lookup result: <ProductSKU Admin Apple Sauce - Base - Bulk> [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:32]
-2025-07-16 19:53:54,054 INFO: SKU details - inventory_item_id: 3, Product: Admin Apple Sauce, Variant: Base [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:34]
-2025-07-16 19:53:54,055 INFO: SKU inventory item: <InventoryItem 3> [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:35]
-2025-07-16 19:53:54,055 INFO: Current inventory quantity: 4.0 [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:37]
-2025-07-16 19:53:54,055 INFO: Form request data: {'csrf_token': 'ImUyYjY5MzZmMTkzMWM4M2MzNjM3MWRkNDNjZDE4NmQ3NTQ1MjQ5MTUi.aHgDRQ.T4ZU0Dq_Bv-glfjR6n_-7SZdYvk', 'action': 'adjust_fifo', 'inventory_id': '', 'change_type': 'recount', 'quantity': '0', 'notes': '', 'order_id': '', 'sale_price': '', 'restock_cost': '', 'expiration_minutes': '30'} [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:54]
-2025-07-16 19:53:54,055 INFO: Extracted quantity: 0 (type: <class 'str'>) [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:60]
-2025-07-16 19:53:54,055 INFO: Extracted change_type: recount [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:61]
-2025-07-16 19:53:54,056 INFO: Converting quantity '0' to float [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:87]
-2025-07-16 19:53:54,056 INFO: Converted quantity: 0.0 [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:89]
-2025-07-16 19:53:54,056 INFO: Optional fields extracted: [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:113]
-2025-07-16 19:53:54,056 INFO:   - notes:  [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:114]
-2025-07-16 19:53:54,056 INFO:   - unit: floz [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:115]
-2025-07-16 19:53:54,056 INFO:   - customer: None [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:116]
-2025-07-16 19:53:54,057 INFO:   - sale_price: None [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:117]
-2025-07-16 19:53:54,057 INFO:   - order_id:  [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:118]
-2025-07-16 19:53:54,057 INFO:   - cost_override: None [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:119]
-2025-07-16 19:53:54,057 INFO: === CALLING CENTRALIZED INVENTORY ADJUSTMENT === [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:137]
-2025-07-16 19:53:54,057 INFO: Parameters: [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:138]
-2025-07-16 19:53:54,058 INFO:   - item_id (inventory_item_id): 3 [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:139]
-2025-07-16 19:53:54,058 INFO:   - quantity: 0.0 [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:140]
-2025-07-16 19:53:54,058 INFO:   - change_type: recount [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:141]
-2025-07-16 19:53:54,058 INFO:   - unit: floz [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:142]
-2025-07-16 19:53:54,058 INFO:   - notes:  [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:143]
-2025-07-16 19:53:54,059 INFO:   - created_by: 3 [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:144]
-2025-07-16 19:53:54,059 INFO:   - item_type: product [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:145]
-2025-07-16 19:53:54,059 INFO:   - customer: None [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:146]
-2025-07-16 19:53:54,059 INFO:   - sale_price: None [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:147]
-2025-07-16 19:53:54,059 INFO:   - order_id:  [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:148]
-2025-07-16 19:53:54,059 INFO:   - cost_override: None [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:149]
-2025-07-16 19:53:54,060 INFO:   - custom_expiration_date: None [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:150]
-2025-07-16 19:53:54,060 INFO:   - custom_shelf_life_days: None [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:151]
-2025-07-16 19:53:54,151 INFO: === PRODUCT INVENTORY ADJUSTMENT END === [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:187]
-2025-07-16 19:53:54,151 INFO: Redirecting to SKU view: 3 [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:189]
-2025-07-16 19:54:16,197 INFO: Batch AAS-2025-027: Total ingredient cost $1.13, Unit cost $0.28 per floz [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:199]
-2025-07-16 19:54:16,200 INFO: Processing container: Admin Glass Jars (ID: 2), 1 containers [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:280]
-2025-07-16 19:54:16,200 INFO: Container cost calculation: 1 used × $0.75 = $0.75, divided by 1 passed = $0.75 per container [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:281]
-2025-07-16 19:54:16,200 INFO: Creating container SKU with container: Admin Glass Jars, quantity: 1 [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:316]
-2025-07-16 19:54:16,200 INFO: Container cost breakdown: $1.13 ingredients + $0.75 container = $1.88 per container [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:331]
-2025-07-16 19:54:16,208 ERROR: Error creating container SKU: Pre-adjustment validation failed - FIFO sync error: SYNC ERROR: Admin Apple Sauce - Base - 4.0 floz Admin Glass Jars inventory (7.0) != FIFO total (0) [includes frozen expired] [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:358]
-2025-07-16 19:54:16,209 ERROR: Full traceback: Traceback (most recent call last):
-  File "/home/runner/workspace/app/blueprints/batches/finish_batch.py", line 343, in _create_container_sku
+2025-07-12 01:23:17,068 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-12 01:23:45,506 INFO: Batch AAS-2025-026: Total ingredient cost $1.13, Unit cost $0.28 per floz [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:181]
+2025-07-12 01:23:45,509 INFO: Processing container: Admin Glass Jars (ID: 2), 1 containers [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:262]
+2025-07-12 01:23:45,509 INFO: Container cost calculation: 1 used × $0.75 = $0.75, divided by 1 passed = $0.75 per container [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:263]
+2025-07-12 01:23:45,509 INFO: Creating container SKU with container: Admin Glass Jars, quantity: 1 [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:298]
+2025-07-12 01:23:45,510 INFO: Container cost breakdown: $1.13 ingredients + $0.75 container = $1.88 per container [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:313]
+2025-07-12 01:23:45,516 ERROR: Error creating container SKU: Pre-adjustment validation failed - FIFO sync error: SYNC ERROR: Admin Apple Sauce - Base - 4.0 floz Admin Glass Jars inventory (7.0) != FIFO total (0) [includes frozen expired] [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:340]
+2025-07-12 01:23:45,517 ERROR: Full traceback: Traceback (most recent call last):
+  File "/home/runner/workspace/app/blueprints/batches/finish_batch.py", line 325, in _create_container_sku
     process_inventory_adjustment(
-  File "/home/runner/workspace/app/services/inventory_adjustment.py", line 259, in process_inventory_adjustment
+  File "/home/runner/workspace/app/services/inventory_adjustment.py", line 258, in process_inventory_adjustment
     raise e
-  File "/home/runner/workspace/app/services/inventory_adjustment.py", line 86, in process_inventory_adjustment
+  File "/home/runner/workspace/app/services/inventory_adjustment.py", line 79, in process_inventory_adjustment
     raise ValueError(f"Pre-adjustment validation failed - FIFO sync error: {error_msg}")
 ValueError: Pre-adjustment validation failed - FIFO sync error: SYNC ERROR: Admin Apple Sauce - Base - 4.0 floz Admin Glass Jars inventory (7.0) != FIFO total (0) [includes frozen expired]
- [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:360]
-2025-07-16 19:54:16,209 ERROR: Error processing container 2: Pre-adjustment validation failed - FIFO sync error: SYNC ERROR: Admin Apple Sauce - Base - 4.0 floz Admin Glass Jars inventory (7.0) != FIFO total (0) [includes frozen expired] [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:305]
-2025-07-16 19:54:16,210 ERROR: Container processing traceback: Traceback (most recent call last):
-  File "/home/runner/workspace/app/blueprints/batches/finish_batch.py", line 284, in _process_container_allocations
+ [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:342]
+2025-07-12 01:23:45,519 ERROR: Error processing container 2: Pre-adjustment validation failed - FIFO sync error: SYNC ERROR: Admin Apple Sauce - Base - 4.0 floz Admin Glass Jars inventory (7.0) != FIFO total (0) [includes frozen expired] [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:287]
+2025-07-12 01:23:45,519 ERROR: Container processing traceback: Traceback (most recent call last):
+  File "/home/runner/workspace/app/blueprints/batches/finish_batch.py", line 266, in _process_container_allocations
     container_sku = _create_container_sku(
                     ^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/app/blueprints/batches/finish_batch.py", line 343, in _create_container_sku
+  File "/home/runner/workspace/app/blueprints/batches/finish_batch.py", line 325, in _create_container_sku
     process_inventory_adjustment(
-  File "/home/runner/workspace/app/services/inventory_adjustment.py", line 259, in process_inventory_adjustment
+  File "/home/runner/workspace/app/services/inventory_adjustment.py", line 258, in process_inventory_adjustment
     raise e
-  File "/home/runner/workspace/app/services/inventory_adjustment.py", line 86, in process_inventory_adjustment
+  File "/home/runner/workspace/app/services/inventory_adjustment.py", line 79, in process_inventory_adjustment
     raise ValueError(f"Pre-adjustment validation failed - FIFO sync error: {error_msg}")
 ValueError: Pre-adjustment validation failed - FIFO sync error: SYNC ERROR: Admin Apple Sauce - Base - 4.0 floz Admin Glass Jars inventory (7.0) != FIFO total (0) [includes frozen expired]
- [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:307]
-2025-07-16 19:54:16,230 ERROR: Error creating bulk SKU: Post-adjustment validation failed - FIFO sync error: SYNC ERROR: Admin Apple Sauce - Base - Bulk inventory (4.0) != FIFO total (0) [includes frozen expired] [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:392]
+ [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:289]
+2025-07-12 01:23:45,526 ERROR: Error creating bulk SKU: Pre-adjustment validation failed - FIFO sync error: SYNC ERROR: Admin Apple Sauce - Base - Bulk inventory (4.0) != FIFO total (0) [includes frozen expired] [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:374]
+2025-07-12 01:23:45,527 ERROR: Error creating product output: Pre-adjustment validation failed - FIFO sync error: SYNC ERROR: Admin Apple Sauce - Base - Bulk inventory (4.0) != FIFO total (0) [includes frozen expired] [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:210]
+2025-07-12 01:23:45,527 ERROR: Error completing batch 26: Pre-adjustment validation failed - FIFO sync error: SYNC ERROR: Admin Apple Sauce - Base - Bulk inventory (4.0) != FIFO total (0) [includes frozen expired] [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:104]
+2025-07-12 01:26:13,083 INFO: Batch AAS-2025-026: Total ingredient cost $1.13, Unit cost $0.28 per floz [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:181]
+2025-07-12 01:26:13,085 INFO: Processing container: Admin Glass Jars (ID: 2), 1 containers [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:262]
+2025-07-12 01:26:13,085 INFO: Container cost calculation: 1 used × $0.75 = $0.75, divided by 1 passed = $0.75 per container [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:263]
+2025-07-12 01:26:13,085 INFO: Creating container SKU with container: Admin Glass Jars, quantity: 1 [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:298]
+2025-07-12 01:26:13,085 INFO: Container cost breakdown: $1.13 ingredients + $0.75 container = $1.88 per container [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:313]
+2025-07-12 01:26:13,088 ERROR: Error creating container SKU: Pre-adjustment validation failed - FIFO sync error: SYNC ERROR: Admin Apple Sauce - Base - 4.0 floz Admin Glass Jars inventory (7.0) != FIFO total (0) [includes frozen expired] [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:340]
+2025-07-12 01:26:13,089 ERROR: Full traceback: Traceback (most recent call last):
+  File "/home/runner/workspace/app/blueprints/batches/finish_batch.py", line 325, in _create_container_sku
+    process_inventory_adjustment(
+  File "/home/runner/workspace/app/services/inventory_adjustment.py", line 258, in process_inventory_adjustment
+    raise e
+  File "/home/runner/workspace/app/services/inventory_adjustment.py", line 79, in process_inventory_adjustment
+    raise ValueError(f"Pre-adjustment validation failed - FIFO sync error: {error_msg}")
+ValueError: Pre-adjustment validation failed - FIFO sync error: SYNC ERROR: Admin Apple Sauce - Base - 4.0 floz Admin Glass Jars inventory (7.0) != FIFO total (0) [includes frozen expired]
+ [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:342]
+2025-07-12 01:26:13,089 ERROR: Error processing container 2: Pre-adjustment validation failed - FIFO sync error: SYNC ERROR: Admin Apple Sauce - Base - 4.0 floz Admin Glass Jars inventory (7.0) != FIFO total (0) [includes frozen expired] [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:287]
+2025-07-12 01:26:13,090 ERROR: Container processing traceback: Traceback (most recent call last):
+  File "/home/runner/workspace/app/blueprints/batches/finish_batch.py", line 266, in _process_container_allocations
+    container_sku = _create_container_sku(
+                    ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/app/blueprints/batches/finish_batch.py", line 325, in _create_container_sku
+    process_inventory_adjustment(
+  File "/home/runner/workspace/app/services/inventory_adjustment.py", line 258, in process_inventory_adjustment
+    raise e
+  File "/home/runner/workspace/app/services/inventory_adjustment.py", line 79, in process_inventory_adjustment
+    raise ValueError(f"Pre-adjustment validation failed - FIFO sync error: {error_msg}")
+ValueError: Pre-adjustment validation failed - FIFO sync error: SYNC ERROR: Admin Apple Sauce - Base - 4.0 floz Admin Glass Jars inventory (7.0) != FIFO total (0) [includes frozen expired]
+ [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:289]
+2025-07-12 01:26:13,094 ERROR: Error creating bulk SKU: Pre-adjustment validation failed - FIFO sync error: SYNC ERROR: Admin Apple Sauce - Base - Bulk inventory (4.0) != FIFO total (0) [includes frozen expired] [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:374]
+2025-07-12 01:26:13,094 ERROR: Error creating product output: Pre-adjustment validation failed - FIFO sync error: SYNC ERROR: Admin Apple Sauce - Base - Bulk inventory (4.0) != FIFO total (0) [includes frozen expired] [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:210]
+2025-07-12 01:26:13,094 ERROR: Error completing batch 26: Pre-adjustment validation failed - FIFO sync error: SYNC ERROR: Admin Apple Sauce - Base - Bulk inventory (4.0) != FIFO total (0) [includes frozen expired] [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:104]
+2025-07-12 01:27:08,673 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-12 01:27:23,228 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-12 01:27:23,968 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-12 01:27:42,485 INFO: Batch AAS-2025-026: Total ingredient cost $1.13, Unit cost $0.28 per floz [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:181]
+2025-07-12 01:27:42,487 INFO: Processing container: Admin Glass Jars (ID: 2), 1 containers [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:262]
+2025-07-12 01:27:42,487 INFO: Container cost calculation: 1 used × $0.75 = $0.75, divided by 1 passed = $0.75 per container [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:263]
+2025-07-12 01:27:42,487 INFO: Creating container SKU with container: Admin Glass Jars, quantity: 1 [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:298]
+2025-07-12 01:27:42,488 INFO: Container cost breakdown: $1.13 ingredients + $0.75 container = $1.88 per container [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:313]
+2025-07-12 01:27:42,496 ERROR: Error creating container SKU: Pre-adjustment validation failed - FIFO sync error: SYNC ERROR: Admin Apple Sauce - Base - 4.0 floz Admin Glass Jars inventory (7.0) != FIFO total (0) [includes frozen expired] [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:340]

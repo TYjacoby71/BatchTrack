@@ -1,87 +1,68 @@
-2025-07-11 22:34:18,379 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-11 22:34:35,875 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-11 22:38:31,690 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-11 22:38:32,582 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-11 22:39:49,850 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-11 22:39:50,580 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-11 22:41:36,985 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-11 22:41:38,310 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-11 22:41:39,175 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-11 22:42:49,631 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-11 22:42:50,434 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-11 22:43:18,343 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-11 22:44:35,055 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-11 22:44:37,108 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-11 22:44:37,844 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-11 22:45:42,186 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-11 22:45:42,923 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-11 22:46:33,101 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-11 22:46:36,018 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-11 22:46:36,742 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-11 22:49:12,854 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-11 22:49:15,548 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-11 22:49:16,420 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-11 22:51:20,764 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-11 22:51:21,669 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-11 22:53:41,572 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-11 22:53:42,481 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-11 22:55:10,938 INFO: Batch AAS-2025-024: Total ingredient cost $2.26, Unit cost $0.56 per floz [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:151]
-2025-07-11 22:55:10,940 INFO: Processing container: Admin Glass Jars (ID: 2), 1 containers [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:232]
-2025-07-11 22:55:10,941 INFO: Container cost calculation: 1 used × $0.75 = $0.75, divided by 1 passed = $0.75 per container [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:233]
-2025-07-11 22:55:10,941 INFO: Creating container SKU with container: Admin Glass Jars, quantity: 1 [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:268]
-2025-07-11 22:55:10,941 INFO: Container cost breakdown: $2.26 ingredients + $0.75 container = $3.01 per container [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:283]
-2025-07-11 22:55:11,049 ERROR: Error creating container SKU: Inventory adjustment failed validation: SYNC ERROR: Admin Apple Sauce - Base - 4.0 floz Admin Glass Jars inventory (7.0) != FIFO total (0) [includes frozen expired] [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:310]
-2025-07-11 22:55:11,052 ERROR: Full traceback: Traceback (most recent call last):
-  File "/home/runner/workspace/app/blueprints/batches/finish_batch.py", line 295, in _create_container_sku
-    process_inventory_adjustment(
-  File "/home/runner/workspace/app/services/inventory_adjustment.py", line 238, in process_inventory_adjustment
-    raise e
-  File "/home/runner/workspace/app/services/inventory_adjustment.py", line 232, in process_inventory_adjustment
-    raise ValueError(f"Inventory adjustment failed validation: {error_msg}")
-ValueError: Inventory adjustment failed validation: SYNC ERROR: Admin Apple Sauce - Base - 4.0 floz Admin Glass Jars inventory (7.0) != FIFO total (0) [includes frozen expired]
- [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:312]
-2025-07-11 22:55:11,053 ERROR: Error processing container 2: Inventory adjustment failed validation: SYNC ERROR: Admin Apple Sauce - Base - 4.0 floz Admin Glass Jars inventory (7.0) != FIFO total (0) [includes frozen expired] [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:257]
-2025-07-11 22:55:11,055 ERROR: Container processing traceback: Traceback (most recent call last):
-  File "/home/runner/workspace/app/blueprints/batches/finish_batch.py", line 236, in _process_container_allocations
-    container_sku = _create_container_sku(
-                    ^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/app/blueprints/batches/finish_batch.py", line 295, in _create_container_sku
-    process_inventory_adjustment(
-  File "/home/runner/workspace/app/services/inventory_adjustment.py", line 238, in process_inventory_adjustment
-    raise e
-  File "/home/runner/workspace/app/services/inventory_adjustment.py", line 232, in process_inventory_adjustment
-    raise ValueError(f"Inventory adjustment failed validation: {error_msg}")
-ValueError: Inventory adjustment failed validation: SYNC ERROR: Admin Apple Sauce - Base - 4.0 floz Admin Glass Jars inventory (7.0) != FIFO total (0) [includes frozen expired]
- [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:259]
-2025-07-11 22:55:11,057 INFO: Processing container: Admin Glass Jar (ID: 7), 1 containers [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:232]
-2025-07-11 22:55:11,059 INFO: Container cost calculation: 1 used × $0.8 = $0.8, divided by 1 passed = $0.80 per container [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:233]
-2025-07-11 22:55:11,059 INFO: Creating container SKU with container: Admin Glass Jar, quantity: 1 [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:268]
-2025-07-11 22:55:11,060 INFO: Container cost breakdown: $4.52 ingredients + $0.80 container = $5.32 per container [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:283]
-2025-07-11 22:55:11,111 ERROR: Error creating container SKU: Inventory adjustment failed validation: SYNC ERROR: Admin Apple Sauce - Base - 8.0 floz Admin Glass Jar inventory (2.0) != FIFO total (0) [includes frozen expired] [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:310]
-2025-07-11 22:55:11,112 ERROR: Full traceback: Traceback (most recent call last):
-  File "/home/runner/workspace/app/blueprints/batches/finish_batch.py", line 295, in _create_container_sku
-    process_inventory_adjustment(
-  File "/home/runner/workspace/app/services/inventory_adjustment.py", line 238, in process_inventory_adjustment
-    raise e
-  File "/home/runner/workspace/app/services/inventory_adjustment.py", line 232, in process_inventory_adjustment
-    raise ValueError(f"Inventory adjustment failed validation: {error_msg}")
-ValueError: Inventory adjustment failed validation: SYNC ERROR: Admin Apple Sauce - Base - 8.0 floz Admin Glass Jar inventory (2.0) != FIFO total (0) [includes frozen expired]
- [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:312]
-2025-07-11 22:55:11,113 ERROR: Error processing container 7: Inventory adjustment failed validation: SYNC ERROR: Admin Apple Sauce - Base - 8.0 floz Admin Glass Jar inventory (2.0) != FIFO total (0) [includes frozen expired] [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:257]
-2025-07-11 22:55:11,114 ERROR: Container processing traceback: Traceback (most recent call last):
-  File "/home/runner/workspace/app/blueprints/batches/finish_batch.py", line 236, in _process_container_allocations
-    container_sku = _create_container_sku(
-                    ^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/runner/workspace/app/blueprints/batches/finish_batch.py", line 295, in _create_container_sku
-    process_inventory_adjustment(
-  File "/home/runner/workspace/app/services/inventory_adjustment.py", line 238, in process_inventory_adjustment
-    raise e
-  File "/home/runner/workspace/app/services/inventory_adjustment.py", line 232, in process_inventory_adjustment
-    raise ValueError(f"Inventory adjustment failed validation: {error_msg}")
-ValueError: Inventory adjustment failed validation: SYNC ERROR: Admin Apple Sauce - Base - 8.0 floz Admin Glass Jar inventory (2.0) != FIFO total (0) [includes frozen expired]
- [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:259]
-2025-07-11 22:55:11,148 ERROR: Error creating bulk SKU: Inventory adjustment failed validation: SYNC ERROR: Admin Apple Sauce - Base - Bulk inventory (4.0) != FIFO total (0) [includes frozen expired] [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:344]
-2025-07-11 22:55:11,148 ERROR: Error creating product output: Inventory adjustment failed validation: SYNC ERROR: Admin Apple Sauce - Base - Bulk inventory (4.0) != FIFO total (0) [includes frozen expired] [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:180]
-2025-07-11 22:55:11,148 ERROR: Error completing batch 24: Inventory adjustment failed validation: SYNC ERROR: Admin Apple Sauce - Base - Bulk inventory (4.0) != FIFO total (0) [includes frozen expired] [in /home/runner/workspace/app/blueprints/batches/finish_batch.py:74]
-2025-07-11 22:57:27,891 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
-2025-07-11 22:57:31,750 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:17]
+2025-07-11 21:53:30,836 INFO:   - quantity: 3.0 [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:140]
+2025-07-11 21:53:30,837 INFO:   - change_type: recount [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:141]
+2025-07-11 21:53:30,837 INFO:   - unit: floz [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:142]
+2025-07-11 21:53:30,837 INFO:   - notes:  [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:143]
+2025-07-11 21:53:30,837 INFO:   - created_by: 2 [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:144]
+2025-07-11 21:53:30,837 INFO:   - item_type: product [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:145]
+2025-07-11 21:53:30,837 INFO:   - customer: None [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:146]
+2025-07-11 21:53:30,837 INFO:   - sale_price: None [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:147]
+2025-07-11 21:53:30,838 INFO:   - order_id:  [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:148]
+2025-07-11 21:53:30,838 INFO:   - cost_override: None [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:149]
+2025-07-11 21:53:30,838 INFO:   - custom_expiration_date: None [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:150]
+2025-07-11 21:53:30,838 INFO:   - custom_shelf_life_days: None [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:151]
+2025-07-11 21:53:31,012 INFO: === PRODUCT INVENTORY ADJUSTMENT END === [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:187]
+2025-07-11 21:53:31,012 INFO: Redirecting to SKU view: 3 [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:189]
+2025-07-11 21:53:38,939 INFO: === PRODUCT INVENTORY ADJUSTMENT START === [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:19]
+2025-07-11 21:53:38,939 INFO: Inventory Item ID: 3 [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:20]
+2025-07-11 21:53:38,940 INFO: User: 2 (admin) [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:21]
+2025-07-11 21:53:38,940 INFO: Organization: 1 [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:22]
+2025-07-11 21:53:38,940 INFO: Request method: POST [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:23]
+2025-07-11 21:53:38,940 INFO: Request is JSON: False [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:24]
+2025-07-11 21:53:38,942 INFO: SKU lookup result: <ProductSKU Admin Apple Sauce - Base - Bulk> [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:32]
+2025-07-11 21:53:38,942 INFO: SKU details - inventory_item_id: 3, Product: Admin Apple Sauce, Variant: Base [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:34]
+2025-07-11 21:53:38,943 INFO: SKU inventory item: <InventoryItem 3> [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:35]
+2025-07-11 21:53:38,943 INFO: Current inventory quantity: 3.0 [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:37]
+2025-07-11 21:53:38,943 INFO: Form request data: {'csrf_token': 'ImUyYjY5MzZmMTkzMWM4M2MzNjM3MWRkNDNjZDE4NmQ3NTQ1MjQ5MTUi.aHGH2w.IIHSiM3yKrLSH0N2WgTxbLwnA9E', 'action': 'adjust_fifo', 'inventory_id': '', 'change_type': 'recount', 'quantity': '4', 'notes': '', 'order_id': '', 'sale_price': '', 'restock_cost': '', 'expiration_minutes': '30'} [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:54]
+2025-07-11 21:53:38,943 INFO: Extracted quantity: 4 (type: <class 'str'>) [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:60]
+2025-07-11 21:53:38,944 INFO: Extracted change_type: recount [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:61]
+2025-07-11 21:53:38,944 INFO: Converting quantity '4' to float [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:87]
+2025-07-11 21:53:38,944 INFO: Converted quantity: 4.0 [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:89]
+2025-07-11 21:53:38,944 INFO: Optional fields extracted: [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:113]
+2025-07-11 21:53:38,944 INFO:   - notes:  [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:114]
+2025-07-11 21:53:38,944 INFO:   - unit: floz [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:115]
+2025-07-11 21:53:38,945 INFO:   - customer: None [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:116]
+2025-07-11 21:53:38,945 INFO:   - sale_price: None [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:117]
+2025-07-11 21:53:38,945 INFO:   - order_id:  [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:118]
+2025-07-11 21:53:38,945 INFO:   - cost_override: None [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:119]
+2025-07-11 21:53:38,946 INFO: === CALLING CENTRALIZED INVENTORY ADJUSTMENT === [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:137]
+2025-07-11 21:53:38,946 INFO: Parameters: [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:138]
+2025-07-11 21:53:38,946 INFO:   - item_id (inventory_item_id): 3 [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:139]
+2025-07-11 21:53:38,946 INFO:   - quantity: 4.0 [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:140]
+2025-07-11 21:53:38,946 INFO:   - change_type: recount [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:141]
+2025-07-11 21:53:38,946 INFO:   - unit: floz [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:142]
+2025-07-11 21:53:38,947 INFO:   - notes:  [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:143]
+2025-07-11 21:53:38,947 INFO:   - created_by: 2 [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:144]
+2025-07-11 21:53:38,947 INFO:   - item_type: product [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:145]
+2025-07-11 21:53:38,947 INFO:   - customer: None [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:146]
+2025-07-11 21:53:38,947 INFO:   - sale_price: None [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:147]
+2025-07-11 21:53:38,947 INFO:   - order_id:  [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:148]
+2025-07-11 21:53:38,948 INFO:   - cost_override: None [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:149]
+2025-07-11 21:53:38,948 INFO:   - custom_expiration_date: None [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:150]
+2025-07-11 21:53:38,948 INFO:   - custom_shelf_life_days: None [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:151]
+2025-07-11 21:53:39,074 INFO: === PRODUCT INVENTORY ADJUSTMENT END === [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:187]
+2025-07-11 21:53:39,074 INFO: Redirecting to SKU view: 3 [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:189]
+2025-07-11 21:53:45,957 INFO: === PRODUCT INVENTORY ADJUSTMENT START === [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:19]
+2025-07-11 21:53:45,957 INFO: Inventory Item ID: 3 [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:20]
+2025-07-11 21:53:45,958 INFO: User: 2 (admin) [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:21]
+2025-07-11 21:53:45,958 INFO: Organization: 1 [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:22]
+2025-07-11 21:53:45,958 INFO: Request method: POST [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:23]
+2025-07-11 21:53:45,958 INFO: Request is JSON: False [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:24]
+2025-07-11 21:53:45,960 INFO: SKU lookup result: <ProductSKU Admin Apple Sauce - Base - Bulk> [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:32]
+2025-07-11 21:53:45,960 INFO: SKU details - inventory_item_id: 3, Product: Admin Apple Sauce, Variant: Base [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:34]
+2025-07-11 21:53:45,960 INFO: SKU inventory item: <InventoryItem 3> [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:35]
+2025-07-11 21:53:45,961 INFO: Current inventory quantity: 4.0 [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:37]
+2025-07-11 21:53:45,961 INFO: Form request data: {'csrf_token': 'ImUyYjY5MzZmMTkzMWM4M2MzNjM3MWRkNDNjZDE4NmQ3NTQ1MjQ5MTUi.aHGH4w.NTJkvMLP85RkLdG0JLvEvIUZvgU', 'action': 'adjust_fifo', 'inventory_id': '', 'change_type': 'sale', 'quantity': '1', 'notes': '', 'order_id': '', 'sale_price': '10.0', 'restock_cost': '', 'expiration_minutes': '30'} [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:54]
+2025-07-11 21:53:45,961 INFO: Extracted quantity: 1 (type: <class 'str'>) [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:60]
+2025-07-11 21:53:45,961 INFO: Extracted change_type: sale [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:61]
+2025-07-11 21:53:45,961 INFO: Converting quantity '1' to float [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:87]
+2025-07-11 21:53:45,961 INFO: Converted quantity: 1.0 [in /home/runner/workspace/app/blueprints/products/product_inventory_routes.py:89]
