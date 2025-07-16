@@ -121,12 +121,13 @@ def _create_intermediate_ingredient(batch, final_quantity, output_unit, expirati
             inventory_item = InventoryItem(
                 name=ingredient_name,
                 unit=output_unit,
-                category='Intermediate',
+                type='ingredient',  # Set the type properly
+                intermediate=True,  # Mark as intermediate ingredient
                 organization_id=current_user.organization_id,
                 created_by=current_user.id
             )
             db.session.add(inventory_item)
-            db.session.flush()
+            db.session.flush()  # Ensure we get the ID
 
         # Process inventory adjustment to add the intermediate ingredient
         success = process_inventory_adjustment(
@@ -137,7 +138,7 @@ def _create_intermediate_ingredient(batch, final_quantity, output_unit, expirati
             notes=f'Batch {batch.label_code} completed',
             created_by=current_user.id,
             custom_expiration_date=expiration_date,
-            item_type='ingredient'  # Ensure proper FIFO routing
+            item_type='ingredient'  # Ensure proper FIFO routing for intermediate ingredients
         )
 
         if not success:
