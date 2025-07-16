@@ -31,9 +31,10 @@ class FIFOService:
                 )
             )
 
-            # Add organization scoping if user is authenticated
-            if current_user and current_user.is_authenticated:
-                query = query.filter(ProductSKUHistory.organization_id == current_user.organization_id)
+            # Add organization scoping - always required
+            org_id = current_user.organization_id if current_user and current_user.is_authenticated else None
+            if org_id:
+                query = query.filter(ProductSKUHistory.organization_id == org_id)
 
             return query.order_by(ProductSKUHistory.timestamp.asc()).all()
         else:
@@ -50,9 +51,10 @@ class FIFOService:
                 )
             )
 
-            # Add organization scoping if user is authenticated
-            if current_user and current_user.is_authenticated:
-                query = query.filter(InventoryHistory.organization_id == current_user.organization_id)
+            # Add organization scoping - always required
+            org_id = current_user.organization_id if current_user and current_user.is_authenticated else None
+            if org_id:
+                query = query.filter(InventoryHistory.organization_id == org_id)
 
             return query.order_by(InventoryHistory.timestamp.asc()).all()
 
@@ -79,9 +81,10 @@ class FIFOService:
                 )
             )
 
-            # Add organization scoping if user is authenticated
-            if current_user and current_user.is_authenticated:
-                query = query.filter(ProductSKUHistory.organization_id == current_user.organization_id)
+            # Add organization scoping - always required
+            org_id = current_user.organization_id if current_user and current_user.is_authenticated else None
+            if org_id:
+                query = query.filter(ProductSKUHistory.organization_id == org_id)
 
             return query.order_by(ProductSKUHistory.timestamp.asc()).all()
         else:
@@ -95,9 +98,10 @@ class FIFOService:
                 )
             )
 
-            # Add organization scoping if user is authenticated
-            if current_user and current_user.is_authenticated:
-                query = query.filter(InventoryHistory.organization_id == current_user.organization_id)
+            # Add organization scoping - always required
+            org_id = current_user.organization_id if current_user and current_user.is_authenticated else None
+            if org_id:
+                query = query.filter(InventoryHistory.organization_id == org_id)
 
             return query.order_by(InventoryHistory.timestamp.asc()).all()
 

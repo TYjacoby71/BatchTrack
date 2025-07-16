@@ -129,15 +129,19 @@ def _create_intermediate_ingredient(batch, final_quantity, output_unit, expirati
             db.session.flush()
 
         # Process inventory adjustment to add the intermediate ingredient
-        process_inventory_adjustment(
+        success = process_inventory_adjustment(
             item_id=inventory_item.id,
             quantity=final_quantity,
             change_type='finished_batch',
             unit=output_unit,
             notes=f'Batch {batch.label_code} completed',
             created_by=current_user.id,
-            custom_expiration_date=expiration_date
+            custom_expiration_date=expiration_date,
+            item_type='ingredient'  # Ensure proper FIFO routing
         )
+
+        if not success:
+            raise ValueError(f"Failed to add intermediate ingredient inventory")
 
         logger.info(f"Created intermediate ingredient: {ingredient_name}, quantity: {final_quantity} {output_unit}")
 
@@ -147,9 +151,9 @@ def _create_intermediate_ingredient(batch, final_quantity, output_unit, expirati
 
 
 def _create_product_output(batch, product_id, variant_id, final_quantity, output_unit, expiration_date, form_data):
-    """Create product SKUs from batch completion"""
+    """Create product SKUs from batch completion using centralized inventory adjustment"""
     try:
-        # Get product and variant
+        # Get product and variant with proper organization scoping
         product = Product.query.filter_by(
             id=product_id,
             organization_id=current_user.organization_id
@@ -196,10 +200,8 @@ def _create_product_output(batch, product_id, variant_id, final_quantity, output
 
         # Create bulk SKU if there's remaining quantity
         if bulk_quantity > 0:
-            # For bulk, use the batch output unit (may need conversion to product base unit)
             bulk_unit = output_unit
             if bulk_unit != product.base_unit:
-                # Convert if needed - for now, use output_unit as-is
                 logger.warning(f"Bulk unit {bulk_unit} differs from product base unit {product.base_unit}")
 
             _create_bulk_sku(product, variant, bulk_quantity, bulk_unit, expiration_date, batch, ingredient_unit_cost)
@@ -322,7 +324,7 @@ def _create_container_sku(product, variant, container_item, quantity, batch, exp
         )
 
         # Add containers to inventory - quantity is number of containers
-        process_inventory_adjustment(
+        success = process_inventory_adjustment(
             item_id=product_sku.inventory_item_id,
             quantity=quantity,  # Number of containers
             change_type='finished_batch',
@@ -330,8 +332,12 @@ def _create_container_sku(product, variant, container_item, quantity, batch, exp
             notes=f'Batch {batch.label_code} completed - {quantity} containers of {size_label}',
             created_by=current_user.id,
             custom_expiration_date=expiration_date,
-            cost_override=total_cost_per_container  # Pass calculated cost per container
+            cost_override=total_cost_per_container,  # Pass calculated cost per container
+            item_type='product'  # Ensure proper FIFO routing
         )
+
+        if not success:
+            raise ValueError(f"Failed to add container inventory for {size_label}")
 
         logger.info(f"Successfully created/updated container SKU: {product_sku.sku_code} with {quantity} containers at ${total_cost_per_container:.2f} per container")
         return product_sku
@@ -356,7 +362,7 @@ def _create_bulk_sku(product, variant, quantity, unit, expiration_date, batch, i
         )
 
         # Add bulk quantity to inventory with calculated unit cost
-        process_inventory_adjustment(
+        success = process_inventory_adjustment(
             item_id=bulk_sku.inventory_item_id,
             quantity=quantity,
             change_type='finished_batch',
@@ -364,8 +370,12 @@ def _create_bulk_sku(product, variant, quantity, unit, expiration_date, batch, i
             notes=f'Batch {batch.label_code} completed - bulk remainder',
             created_by=current_user.id,
             custom_expiration_date=expiration_date,
-            cost_override=ingredient_unit_cost  # Pass ingredient unit cost for bulk
+            cost_override=ingredient_unit_cost,  # Pass ingredient unit cost for bulk
+            item_type='product'  # Ensure proper FIFO routing
         )
+
+        if not success:
+            raise ValueError(f"Failed to add bulk inventory for {quantity} {unit}")
 
         logger.info(f"Created/updated bulk SKU: {bulk_sku.sku_code} with {quantity} {unit} at ${ingredient_unit_cost:.2f} per {unit}")
         return bulk_sku
