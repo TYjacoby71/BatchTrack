@@ -1,4 +1,3 @@
-
 {% extends "layout.html" %}
 {% block content %}
 <div class="container-fluid">
@@ -312,6 +311,7 @@
                                         <th>Lot Number</th>
                                         <th>Expires Date</th>
                                         <th>Expires Time</th>
+                                        <th>ID</th>
                                         <th>Days Left</th>
                                     </tr>
                                 </thead>
@@ -342,6 +342,7 @@
                                                 <span class="text-muted">--:--:--</span>
                                               {% endif %}
                                         </td>
+                                        <td><small class="text-muted">#{{ item.product_inv_id }}</small></td>
                                         <td>
                                             <span class="badge bg-warning text-dark">
                                                 {{ days_left }} day{{ 's' if days_left != 1 else '' }}
@@ -395,13 +396,13 @@ function getCSRFToken() {
     if (tokenMeta) {
         return tokenMeta.getAttribute('content');
     }
-    
+
     // Fallback: try to find it in forms
     const csrfInput = document.querySelector('input[name=csrf_token]');
     if (csrfInput) {
         return csrfInput.value;
     }
-    
+
     return '';
 }
 
