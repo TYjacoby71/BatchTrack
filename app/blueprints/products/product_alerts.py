@@ -6,7 +6,7 @@ from . import products_bp
 
 @products_bp.route('/alerts')
 @login_required
-def product_alerts():
+def alerts():
     """Product alerts dashboard for low stock and out of stock items"""
     stock_summary = CombinedInventoryAlertService.get_product_stock_summary()
     
