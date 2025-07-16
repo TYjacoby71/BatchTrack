@@ -47,7 +47,7 @@ class ProductService:
             db.session.add(variant)
             db.session.flush()
 
-        # Get or create ProductSKU
+        # Get or create ProductSKU - ensure exact size_label match
         sku = ProductSKU.query.filter_by(
             product_id=product.id,
             variant_id=variant.id,
@@ -85,6 +85,7 @@ class ProductService:
                 organization_id=inventory_item.organization_id
             )
             db.session.add(initial_history)
+            db.session.flush()  # Ensure the history entry is written before continuing
 
             # Generate SKU code
             sku_code = ProductService.generate_sku_code(product.name, variant.name, size_label)

@@ -32,20 +32,20 @@ def complete_batch(batch_id):
         if output_type == 'product':
             product_id = request.form.get('product_id')
             variant_id = request.form.get('variant_id')
-            
+
             if product_id and variant_id:
                 # Check existing SKUs that might be updated
                 from app.services.product_service import ProductService
                 from app.models.product import ProductSKU
                 from app.services.inventory_adjustment import validate_inventory_fifo_sync
-                
+
                 # Get potential SKUs that could be affected
                 existing_skus = ProductSKU.query.join(ProductSKU.inventory_item).filter(
                     ProductSKU.product_id == product_id,
                     ProductSKU.variant_id == variant_id,
                     InventoryItem.organization_id == current_user.organization_id
                 ).all()
-                
+
                 for sku in existing_skus:
                     is_valid, error_msg, inv_qty, fifo_total = validate_inventory_fifo_sync(sku.inventory_item_id, 'product')
                     if not is_valid:
@@ -70,7 +70,7 @@ def complete_batch(batch_id):
 
         # Create savepoint before any inventory changes
         savepoint = db.session.begin_nested()
-        
+
         try:
             # Update batch with completion data
             batch.final_quantity = final_quantity
@@ -96,7 +96,7 @@ def complete_batch(batch_id):
 
             # Commit the savepoint - this validates all inventory adjustments
             savepoint.commit()
-            
+
             # Final commit to database
             db.session.commit()
             flash(f'Batch {batch.label_code} completed successfully!', 'success')
@@ -108,7 +108,7 @@ def complete_batch(batch_id):
                 savepoint.rollback()
             except:
                 pass
-            
+
             # Re-raise to be caught by outer exception handler
             raise nested_error
 
@@ -118,7 +118,7 @@ def complete_batch(batch_id):
             db.session.rollback()
         except:
             pass
-            
+
         logger.error(f"Error completing batch {batch_id}: {str(e)}")
         flash(f'Error completing batch: {str(e)}', 'error')
         return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch_id))
@@ -184,18 +184,18 @@ def _create_product_output(batch, product_id, variant_id, final_quantity, output
 
         # Calculate total ingredient cost for unit cost calculation
         total_ingredient_cost = 0
-        
+
         # Add regular batch ingredients
         for ing in batch.batch_ingredients:
             total_ingredient_cost += (ing.quantity_used or 0) * (ing.cost_per_unit or 0)
-        
+
         # Add extra ingredients
         for extra in batch.extra_ingredients:
             total_ingredient_cost += (extra.quantity_used or 0) * (extra.cost_per_unit or 0)
-        
+
         # Calculate ingredient unit cost (cost per unit of final product)
         ingredient_unit_cost = total_ingredient_cost / final_quantity if final_quantity > 0 else 0
-        
+
         logger.info(f"Batch {batch.label_code}: Total ingredient cost ${total_ingredient_cost:.2f}, Unit cost ${ingredient_unit_cost:.2f} per {output_unit}")
 
         # Process container allocations with cost calculation
@@ -219,7 +219,7 @@ def _create_product_output(batch, product_id, variant_id, final_quantity, output
             if bulk_unit != product.base_unit:
                 # Convert if needed - for now, use output_unit as-is
                 logger.warning(f"Bulk unit {bulk_unit} differs from product base unit {product.base_unit}")
-            
+
             _create_bulk_sku(product, variant, bulk_quantity, bulk_unit, expiration_date, batch, ingredient_unit_cost)
 
         logger.info(f"Created product output for batch {batch.label_code}: {len(container_skus)} container SKUs, {bulk_quantity} {bulk_unit if bulk_quantity > 0 else ''} bulk")
@@ -235,14 +235,14 @@ def _process_container_allocations(batch, product, variant, form_data, expiratio
 
     # Calculate total containers used vs passed to product for cost allocation
     container_usage = {}  # container_id -> {'used': total_used, 'passed': passed_to_product}
-    
+
     # First pass: calculate total used for each container type
     for container in batch.containers:
         container_id = container.container_id
         if container_id not in container_usage:
             container_usage[container_id] = {'used': 0, 'passed': 0, 'cost_each': container.cost_each or 0}
         container_usage[container_id]['used'] += container.quantity_used or 0
-    
+
     for extra_container in batch.extra_containers:
         container_id = extra_container.container_id
         if container_id not in container_usage:
@@ -250,62 +250,67 @@ def _process_container_allocations(batch, product, variant, form_data, expiratio
         container_usage[container_id]['used'] += extra_container.quantity_used or 0
 
     # Process containers by container_final_X keys from the combined form
-    container_final_keys = [k for k in form_data.keys() if k.startswith('container_final_')]
+        container_final_keys = [k for k in form_data.keys() if k.startswith('container_final_')]
+        successful_containers = []
 
-    for key in container_final_keys:
-        container_id = key.replace('container_final_', '')
-        final_quantity = int(form_data.get(key, 0))
+        for key in container_final_keys:
+            container_id = key.replace('container_final_', '')
+            final_quantity = int(form_data.get(key, 0))
 
-        if final_quantity > 0:
-            try:
-                # Get container with simple query
-                container_item = InventoryItem.query.filter_by(
-                    id=int(container_id),
-                    organization_id=current_user.organization_id
-                ).first()
+            if final_quantity > 0:
+                try:
+                    # Get container with simple query
+                    container_item = InventoryItem.query.filter_by(
+                        id=int(container_id),
+                        organization_id=current_user.organization_id
+                    ).first()
 
-                if not container_item:
-                    logger.error(f"Container with ID {container_id} not found for organization {current_user.organization_id}")
-                    continue
+                    if not container_item:
+                        logger.error(f"Container with ID {container_id} not found for organization {current_user.organization_id}")
+                        continue
 
-                # Update passed quantity for cost calculation
-                container_usage[int(container_id)]['passed'] = final_quantity
+                    # Update passed quantity for cost calculation
+                    container_usage[int(container_id)]['passed'] = final_quantity
 
-                # Calculate adjusted container cost per unit
-                usage_info = container_usage[int(container_id)]
-                total_container_cost = usage_info['cost_each'] * usage_info['used']
-                adjusted_container_cost_per_unit = total_container_cost / final_quantity if final_quantity > 0 else usage_info['cost_each']
+                    # Calculate adjusted container cost per unit
+                    usage_info = container_usage[int(container_id)]
+                    total_container_cost = usage_info['cost_each'] * usage_info['used']
+                    adjusted_container_cost_per_unit = total_container_cost / final_quantity if final_quantity > 0 else usage_info['cost_each']
 
-                # Debug logging
-                logger.info(f"Processing container: {container_item.name} (ID: {container_item.id}), {final_quantity} containers")
-                logger.info(f"Container cost calculation: {usage_info['used']} used × ${usage_info['cost_each']} = ${total_container_cost}, divided by {final_quantity} passed = ${adjusted_container_cost_per_unit:.2f} per container")
+                    # Debug logging
+                    logger.info(f"Processing container: {container_item.name} (ID: {container_item.id}), {final_quantity} containers")
+                    logger.info(f"Container cost calculation: {usage_info['used']} used × ${usage_info['cost_each']} = ${total_container_cost}, divided by {final_quantity} passed = ${adjusted_container_cost_per_unit:.2f} per container")
 
-                # Create container SKU - final_quantity is number of containers
-                container_sku = _create_container_sku(
-                    product=product,
-                    variant=variant,
-                    container_item=container_item,
-                    quantity=final_quantity,  # Number of containers
-                    batch=batch,
-                    expiration_date=expiration_date,
-                    ingredient_unit_cost=ingredient_unit_cost,
-                    adjusted_container_cost=adjusted_container_cost_per_unit
-                )
+                    # Create container SKU - final_quantity is number of containers
+                    container_sku = _create_container_sku(
+                        product=product,
+                        variant=variant,
+                        container_item=container_item,
+                        quantity=final_quantity,  # Number of containers
+                        batch=batch,
+                        expiration_date=expiration_date,
+                        ingredient_unit_cost=ingredient_unit_cost,
+                        adjusted_container_cost=adjusted_container_cost_per_unit
+                    )
 
-                # Track container info for volume calculation
-                container_skus.append({
-                    'sku': container_sku,
-                    'quantity': final_quantity,  # Number of containers
-                    'container_capacity': container_item.storage_amount or 1  # Volume per container
-                })
-                
-                logger.info(f"Created container SKU for {final_quantity} x {container_item.name} containers")
-                
-            except Exception as e:
-                logger.error(f"Error processing container {container_id}: {e}")
-                import traceback
-                logger.error(f"Container processing traceback: {traceback.format_exc()}")
-                continue
+                    # Track container info for volume calculation - only if successful
+                    successful_containers.append({
+                        'sku': container_sku,
+                        'quantity': final_quantity,  # Number of containers
+                        'container_capacity': container_item.storage_amount or 1  # Volume per container
+                    })
+
+                    logger.info(f"Created container SKU for {final_quantity} x {container_item.name} containers")
+
+                except Exception as e:
+                    logger.error(f"Error processing container {container_id}: {e}")
+                    import traceback
+                    logger.error(f"Container processing traceback: {traceback.format_exc()}")
+                    # Don't continue - fail the entire batch if container creation fails
+                    raise e
+
+        # Only use successful containers for volume calculation
+        container_skus.extend(successful_containers)
 
     return container_skus
 
@@ -314,7 +319,7 @@ def _create_container_sku(product, variant, container_item, quantity, batch, exp
     """Create or get existing container SKU using ProductService"""
     try:
         logger.info(f"Creating container SKU with container: {container_item.name}, quantity: {quantity}")
-        
+
         # Create size label format: "[storage_amount] [storage_unit] [container_name]"
         # Example: "4 floz Admin 4oz Glass Jars"
         if container_item.storage_amount and container_item.storage_unit:
@@ -327,7 +332,7 @@ def _create_container_sku(product, variant, container_item, quantity, batch, exp
         container_capacity = container_item.storage_amount or 1
         ingredient_cost_per_container = ingredient_unit_cost * container_capacity
         total_cost_per_container = ingredient_cost_per_container + adjusted_container_cost
-        
+
         logger.info(f"Container cost breakdown: ${ingredient_cost_per_container:.2f} ingredients + ${adjusted_container_cost:.2f} container = ${total_cost_per_container:.2f} per container")
 
         # Use ProductService to get or create the SKU - this handles existing SKUs properly
