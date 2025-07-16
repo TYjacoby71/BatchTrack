@@ -483,13 +483,13 @@ class ExpirationService:
                 expiration_entry = InventoryHistory(
                     inventory_item_id=fifo_entry.inventory_item_id,
                     timestamp=datetime.utcnow(),
-                    change_type='expired_disposal',
+                    change_type='expired',
                     quantity_change=-quantity,
                     unit=item.unit,
                     remaining_quantity=0.0,  # Disposal entries don't have remaining quantity
                     unit_cost=fifo_entry.unit_cost,
                     fifo_reference_id=fifo_entry.id,
-                    note=f'Expired disposal from FIFO entry #{item_id}',
+                    note=f'Expired removal from FIFO entry #{item_id}',
                     created_by=current_user.id,
                     organization_id=item.organization_id
                 )
@@ -538,13 +538,13 @@ class ExpirationService:
                 expiration_entry = ProductSKUHistory(
                     inventory_item_id=inventory_item_id,
                     timestamp=datetime.utcnow(),
-                    change_type='expired_disposal',
+                    change_type='expired',
                     quantity_change=-quantity,
                     unit=sku.unit,
                     remaining_quantity=0.0,  # Disposal entries don't have remaining quantity
                     unit_cost=history_entry.unit_cost,
                     fifo_reference_id=history_entry.id,
-                    notes=f'Expired disposal from product FIFO entry #{item_id}',
+                    notes=f'Expired removal from product FIFO entry #{item_id}',
                     created_by=current_user.id,
                     organization_id=item.organization_id
                 )
