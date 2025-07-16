@@ -69,6 +69,23 @@ class ProductService:
             db.session.add(inventory_item)
             db.session.flush()
 
+            # Initialize FIFO history for the new product inventory item
+            from app.models.product import ProductSKUHistory
+            initial_history = ProductSKUHistory(
+                inventory_item_id=inventory_item.id,
+                change_type='initial',
+                quantity_change=0,
+                remaining_quantity=0,
+                unit=inventory_item.unit,
+                unit_cost=0,
+                note='Initial product SKU creation',
+                created_by=current_user.id if current_user and current_user.is_authenticated else None,
+                quantity_used=0,
+                is_perishable=False,
+                organization_id=inventory_item.organization_id
+            )
+            db.session.add(initial_history)
+
             # Generate SKU code
             sku_code = ProductService.generate_sku_code(product.name, variant.name, size_label)
 
@@ -91,7 +108,7 @@ class ProductService:
     def get_product_summary_skus():
         """Get summary of all products with their total quantities"""
         from ..models import InventoryItem
-        
+
         product_summaries = db.session.query(
             Product.id.label('product_id'),
             Product.name.label('product_name'),
@@ -170,13 +187,13 @@ class ProductService:
             ProductVariant.name
         ).all()
 
-    
+
 
     @staticmethod
     def get_low_stock_skus(threshold_multiplier: float = 1.0):
         """Get SKUs that are low on stock"""
         from ..models import InventoryItem
-        
+
         return ProductSKU.query.join(InventoryItem, ProductSKU.inventory_item_id == InventoryItem.id).filter(
             InventoryItem.quantity <= ProductSKU.low_stock_threshold * threshold_multiplier,
             ProductSKU.is_active == True,
