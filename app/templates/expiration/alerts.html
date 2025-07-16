@@ -85,7 +85,7 @@
                                         <td><strong>{{ item.remaining_quantity }} {{ item.unit }}</strong></td>
                                         <td>
                                             {% if item.fifo_code %}
-                                                <a href="{{ url_for('inventory.view_inventory', id=item.id) }}" class="text-decoration-none">
+                                                <a href="{{ url_for('inventory.view_inventory', id=item.inventory_item_id) }}" class="text-decoration-none">
                                                     {{ item.fifo_code }}
                                                 </a>
                                             {% else %}
@@ -150,7 +150,7 @@
                                         <td><strong>{{ item.remaining_quantity }} {{ item.unit }}</strong></td>
                                         <td>
                                             {% if item.fifo_code %}
-                                                <a href="{{ url_for('inventory.view_inventory', id=item.id) }}" class="text-decoration-none">
+                                                <a href="{{ url_for('inventory.view_inventory', id=item.inventory_item_id) }}" class="text-decoration-none">
                                                     {{ item.fifo_code }}
                                                 </a>
                                             {% else %}
