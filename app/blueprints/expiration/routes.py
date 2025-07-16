@@ -102,10 +102,10 @@ def api_archive_expired():
     count = ExpirationService.archive_expired_items()
     return jsonify({'archived_count': count})
 
-@expiration_bp.route('/api/mark-spoiled', methods=['POST'])
+@expiration_bp.route('/api/mark-expired', methods=['POST'])
 @login_required
-def api_mark_spoiled():
-    """Mark expired items as spoiled and remove from inventory"""
+def api_mark_expired():
+    """Mark expired items as expired and remove from inventory"""
     try:
         data = request.get_json()
         if not data:
@@ -114,7 +114,7 @@ def api_mark_spoiled():
         item_type = data.get('type')  # 'fifo' or 'product'
         item_id = data.get('id')
 
-        print(f"Mark spoiled request - type: {item_type}, id: {item_id}")
+        print(f"Mark expired request - type: {item_type}, id: {item_id}")
 
         if not item_type or not item_id:
             return jsonify({'error': 'Missing type or id'}), 400
@@ -122,14 +122,14 @@ def api_mark_spoiled():
         if item_type not in ['fifo', 'product', 'raw']:
             return jsonify({'error': 'Invalid item type. Must be "fifo", "product", or "raw"'}), 400
 
-        success, message = ExpirationService.mark_as_spoiled(item_type, item_id)
+        success, message = ExpirationService.mark_as_expired(item_type, item_id)
         
         if success:
-            return jsonify({'success': True, 'message': message, 'spoiled_count': 1})
+            return jsonify({'success': True, 'message': message, 'expired_count': 1})
         else:
-            return jsonify({'success': False, 'error': message, 'spoiled_count': 0}), 400
+            return jsonify({'success': False, 'error': message, 'expired_count': 0}), 400
     except Exception as e:
-        print(f"Error marking item as spoiled: {str(e)}")
+        print(f"Error marking item as expired: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @expiration_bp.route('/api/summary')
