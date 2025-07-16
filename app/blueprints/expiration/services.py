@@ -258,8 +258,8 @@ class ExpirationService:
         if not batch or not batch.is_perishable or not batch.shelf_life_days:
             return None
 
-        # Use the batch's created timestamp (started_at) for expiration calculation
-        base_date = batch.started_at
+        # Use the batch's created timestamp (when it was finished/added) for expiration calculation
+        base_date = batch.created_at
         if not base_date:
             return None
 
@@ -323,7 +323,7 @@ class ExpirationService:
 
         if is_perishable and shelf_life_days:
             batch.expiration_date = ExpirationService.calculate_expiration_date(
-                batch.started_at, shelf_life_days
+                batch.created_at, shelf_life_days
             )
         else:
             batch.expiration_date = None
