@@ -85,7 +85,9 @@
                                         <td><strong>{{ item.remaining_quantity }} {{ item.unit }}</strong></td>
                                         <td>
                                             {% if item.fifo_code %}
-                                                <small class="font-monospace">{{ item.fifo_code }}</small>
+                                                <a href="{{ url_for('inventory.view', id=item.id) }}" class="text-decoration-none">
+                                                    <small class="font-monospace">{{ item.fifo_code }}</small>
+                                                </a>
                                             {% else %}
                                                 <span class="text-muted">-</span>
                                             {% endif %}
@@ -148,7 +150,9 @@
                                         <td><strong>{{ item.remaining_quantity }} {{ item.unit }}</strong></td>
                                         <td>
                                             {% if item.fifo_code %}
-                                                <small class="font-monospace">{{ item.fifo_code }}</small>
+                                                <a href="{{ url_for('inventory.view', id=item.id) }}" class="text-decoration-none">
+                                                    <small class="font-monospace">{{ item.fifo_code }}</small>
+                                                </a>
                                             {% else %}
                                                 <span class="text-muted">-</span>
                                             {% endif %}
@@ -236,7 +240,9 @@
                                         <td><strong>{{ item.quantity }} {{ item.unit }}</strong></td>
                                         <td>
                                             {% if item.lot_number %}
-                                                <small class="font-monospace">{{ item.lot_number }}</small>
+                                                <a href="{{ url_for('products.view_sku', id=item.sku_id) }}" class="text-decoration-none">
+                                                    <small class="font-monospace">{{ item.lot_number }}</small>
+                                                </a>
                                             {% else %}
                                                 <span class="text-muted">-</span>
                                             {% endif %}
@@ -302,7 +308,9 @@
                                         <td><strong>{{ item.quantity }} {{ item.unit }}</strong></td>
                                         <td>
                                             {% if item.lot_number %}
-                                                <small class="font-monospace">{{ item.lot_number }}</small>
+                                                <a href="{{ url_for('products.view_sku', id=item.sku_id) }}" class="text-decoration-none">
+                                                    <small class="font-monospace">{{ item.lot_number }}</small>
+                                                </a>
                                             {% else %}
                                                 <span class="text-muted">-</span>
                                             {% endif %}
