@@ -24,9 +24,7 @@ def product_list():
         def __init__(self, data):
             self.name = data.get('product_name', '')
             self.product_base_unit = data.get('product_base_unit', '')
-            self.variant_count = data.get('sku_count', 0)
             self.created_at = data.get('last_updated')
-            self.variations = []
             self.inventory = []
             # Calculate total quantity from inventory
             self.total_quantity = data.get('total_quantity', 0)
@@ -37,23 +35,57 @@ def product_list():
             self.total_bulk = 0
             self.total_packaged = 0
             
-            # Get actual SKUs for this product to calculate aggregates
+            # Get actual Product and its variants
             if self.id:
-                from ...models.product import ProductSKU
-                product_skus = ProductSKU.query.filter_by(
-                    organization_id=current_user.organization_id,
-                    is_active=True
-                ).join(ProductSKU.product).filter(
-                    Product.name == self.name
-                ).all()
+                from ...models.product import ProductSKU, Product, ProductVariant
                 
-                for sku in product_skus:
-                    if sku.inventory_item and sku.inventory_item.quantity > 0:
-                        size_label = sku.size_label if sku.size_label else 'Bulk'
-                        if size_label == 'Bulk':
-                            self.total_bulk += sku.inventory_item.quantity
-                        else:
-                            self.total_packaged += sku.inventory_item.quantity
+                # Find the actual Product by name
+                product = Product.query.filter_by(
+                    name=self.name,
+                    organization_id=current_user.organization_id
+                ).first()
+                
+                if product:
+                    self.id = product.id  # Use actual product ID
+                    
+                    # Get actual ProductVariant objects (not size labels)
+                    actual_variants = ProductVariant.query.filter_by(
+                        product_id=product.id,
+                        is_active=True
+                    ).all()
+                    
+                    # Create variation objects for template compatibility
+                    self.variations = []
+                    for variant in actual_variants:
+                        variant_obj = type('Variation', (), {
+                            'name': variant.name,
+                            'description': variant.description,
+                            'id': variant.id,
+                            'sku': None  # Will be set below if there's a primary SKU
+                        })()
+                        self.variations.append(variant_obj)
+                    
+                    # Set variant count to actual number of variants
+                    self.variant_count = len(actual_variants)
+                    
+                    # Calculate aggregates from SKUs
+                    product_skus = ProductSKU.query.filter_by(
+                        product_id=product.id,
+                        organization_id=current_user.organization_id,
+                        is_active=True
+                    ).all()
+                    
+                    for sku in product_skus:
+                        if sku.inventory_item and sku.inventory_item.quantity > 0:
+                            size_label = sku.size_label if sku.size_label else 'Bulk'
+                            if size_label == 'Bulk':
+                                self.total_bulk += sku.inventory_item.quantity
+                            else:
+                                self.total_packaged += sku.inventory_item.quantity
+                else:
+                    # Fallback for legacy data
+                    self.variant_count = data.get('sku_count', 0)
+                    self.variations = []
 
     # Get product IDs for the summary objects
     enhanced_product_data = []
