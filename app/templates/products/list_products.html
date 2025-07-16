@@ -55,20 +55,13 @@
             <div class="row text-center">
               <div class="col-4">
                 <div class="border-end">
-                  {% set bulk_inventory = product.inventory|selectattr('quantity', 'gt', 0)|selectattr('size_label', 'equalto', 'Bulk')|list %}
-                  {% if bulk_inventory %}
-                  <h5 class="mb-0">{{ bulk_inventory|sum(attribute='quantity')|round(1) }}</h5>
+                  <h5 class="mb-0">{{ product.total_bulk|round(1) }}</h5>
                   <small class="text-muted">Bulk {{ product.product_base_unit }}</small>
-                  {% else %}
-                  <h5 class="mb-0">0</h5>
-                  <small class="text-muted">Bulk {{ product.product_base_unit }}</small>
-                  {% endif %}
                 </div>
               </div>
               <div class="col-4">
                 <div class="border-end">
-                  {% set packaged_inventory = product.inventory|selectattr('quantity', 'gt', 0)|selectattr('size_label', 'ne', 'Bulk')|list %}
-                  <h5 class="mb-0">{{ packaged_inventory|sum(attribute='quantity')|round(0)|int }}</h5>
+                  <h5 class="mb-0">{{ product.total_packaged|round(0)|int }}</h5>
                   <small class="text-muted">Packaged</small>
                 </div>
               </div>
@@ -137,9 +130,7 @@
                 </small>
               </div>
               <div>
-                {% set bulk_inventory = product.inventory|selectattr('quantity', 'gt', 0)|selectattr('size_label', 'equalto', 'Bulk')|list %}
-                {% set packaged_inventory = product.inventory|selectattr('quantity', 'gt', 0)|selectattr('size_label', 'ne', 'Bulk')|list %}
-                {% set total_quantity = (bulk_inventory|sum(attribute='quantity') + packaged_inventory|sum(attribute='quantity')) %}
+                {% set total_quantity = (product.total_bulk + product.total_packaged) %}
                 {% if total_quantity == 0 %}
                   <span class="badge bg-danger">Out of Stock</span>
                 {% else %}
@@ -188,12 +179,10 @@
                 </td>
                 <td>{{ product.product_base_unit }}</td>
                 <td>
-                  {% set bulk_inventory = product.inventory|selectattr('quantity', 'gt', 0)|selectattr('size_label', 'equalto', 'Bulk')|list %}
-                  {{ bulk_inventory|sum(attribute='quantity')|round(1) if bulk_inventory else 0 }}
+                  {{ product.total_bulk|round(1) }}
                 </td>
                 <td>
-                  {% set packaged_inventory = product.inventory|selectattr('quantity', 'gt', 0)|selectattr('size_label', 'ne', 'Bulk')|list %}
-                  {{ packaged_inventory|sum(attribute='quantity')|round(0)|int }}
+                  {{ product.total_packaged|round(0)|int }}
                 </td>
                 <td>
                   {{ product.variant_count }}
@@ -204,9 +193,7 @@
                   {% endif %}
                 </td>
                 <td>
-                  {% set bulk_inventory = product.inventory|selectattr('quantity', 'gt', 0)|selectattr('size_label', 'equalto', 'Bulk')|list %}
-                  {% set packaged_inventory = product.inventory|selectattr('quantity', 'gt', 0)|selectattr('size_label', 'ne', 'Bulk')|list %}
-                  {% set total_quantity = (bulk_inventory|sum(attribute='quantity') + packaged_inventory|sum(attribute='quantity')) %}
+                  {% set total_quantity = (product.total_bulk + product.total_packaged) %}
                   {% if total_quantity == 0 %}
                     <span class="badge bg-danger">Out of Stock</span>
                   {% else %}

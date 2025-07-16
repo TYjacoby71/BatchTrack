@@ -32,6 +32,28 @@ def product_list():
             self.total_quantity = data.get('total_quantity', 0)
             # Add product ID for URL generation
             self.id = data.get('product_id', None)
+            
+            # Calculate aggregate inventory values
+            self.total_bulk = 0
+            self.total_packaged = 0
+            
+            # Get actual SKUs for this product to calculate aggregates
+            if self.id:
+                from ...models.product import ProductSKU
+                product_skus = ProductSKU.query.filter_by(
+                    organization_id=current_user.organization_id,
+                    is_active=True
+                ).join(ProductSKU.product).filter(
+                    Product.name == self.name
+                ).all()
+                
+                for sku in product_skus:
+                    if sku.inventory_item and sku.inventory_item.quantity > 0:
+                        size_label = sku.size_label if sku.size_label else 'Bulk'
+                        if size_label == 'Bulk':
+                            self.total_bulk += sku.inventory_item.quantity
+                        else:
+                            self.total_packaged += sku.inventory_item.quantity
 
     # Get product IDs for the summary objects
     enhanced_product_data = []
