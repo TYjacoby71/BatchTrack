@@ -322,7 +322,8 @@ def adjust_inventory(id):
                 quantity_used=0.0,  # Restocks don't consume inventory - always 0
                 is_perishable=item.is_perishable,
                 shelf_life_days=item.shelf_life_days,
-                expiration_date=item.expiration_date
+                expiration_date=item.expiration_date,
+                organization_id=current_user.organization_id
             )
             db.session.add(history)
 
