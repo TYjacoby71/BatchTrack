@@ -55,26 +55,31 @@
             <div class="row text-center">
               <div class="col-4">
                 <div class="border-end">
-                  {% set bulk_inventory = product.inventory|selectattr('quantity', 'gt', 0)|selectattr('size_label', 'equalto', 'Bulk')|list %}
-                  {% if bulk_inventory %}
-                  <h5 class="mb-0">{{ bulk_inventory|sum(attribute='quantity')|round(1) }}</h5>
-                  <small class="text-muted">Bulk {{ product.product_base_unit }}</small>
-                  {% else %}
-                  <h5 class="mb-0">0</h5>
-                  <small class="text-muted">Bulk {{ product.product_base_unit }}</small>
+                  {% set ns_totals = namespace(bulk=0, packaged=0) %}
+                  {% if product.id %}
+                    {% for sku in product.skus %}
+                      {% if sku.is_active and sku.inventory_item and sku.inventory_item.quantity > 0 %}
+                        {% if sku.size_label == 'Bulk' or not sku.size_label %}
+                          {% set ns_totals.bulk = ns_totals.bulk + sku.inventory_item.quantity %}
+                        {% else %}
+                          {% set ns_totals.packaged = ns_totals.packaged + sku.inventory_item.quantity %}
+                        {% endif %}
+                      {% endif %}
+                    {% endfor %}
                   {% endif %}
+                  <h5 class="mb-0">{{ ns_totals.bulk|round(1) if ns_totals.bulk > 0 else 0 }}</h5>
+                  <small class="text-muted">Bulk {{ product.product_base_unit if product.product_base_unit else 'units' }}</small>
                 </div>
               </div>
               <div class="col-4">
                 <div class="border-end">
-                  {% set packaged_inventory = product.inventory|selectattr('quantity', 'gt', 0)|selectattr('size_label', 'ne', 'Bulk')|list %}
-                  <h5 class="mb-0">{{ packaged_inventory|sum(attribute='quantity')|round(0)|int }}</h5>
+                  <h5 class="mb-0">{{ ns_totals.packaged|round(1) if ns_totals.packaged > 0 else 0 }}</h5>
                   <small class="text-muted">Packaged</small>
                 </div>
               </div>
               <div class="col-4">
                 <h5 class="mb-0">{{ product.variant_count }}</h5>
-                <small class="text-muted">Variants</small>
+                <small class="text-muted">Variations</small>
               </div>
             </div>
 
@@ -137,11 +142,24 @@
                 </small>
               </div>
               <div>
-                {% set bulk_inventory = product.inventory|selectattr('quantity', 'gt', 0)|selectattr('size_label', 'equalto', 'Bulk')|list %}
-                {% set packaged_inventory = product.inventory|selectattr('quantity', 'gt', 0)|selectattr('size_label', 'ne', 'Bulk')|list %}
-                {% set total_quantity = (bulk_inventory|sum(attribute='quantity') + packaged_inventory|sum(attribute='quantity')) %}
-                {% if total_quantity == 0 %}
+                {% set ns_totals = namespace(bulk=0, packaged=0) %}
+                {% set ns_status = namespace(total = 0) %}
+                  {% if product.id %}
+                    {% for sku in product.skus %}
+                      {% if sku.is_active and sku.inventory_item and sku.inventory_item.quantity > 0 %}
+                        {% if sku.size_label == 'Bulk' or not sku.size_label %}
+                          {% set ns_totals.bulk = ns_totals.bulk + sku.inventory_item.quantity %}
+                        {% else %}
+                          {% set ns_totals.packaged = ns_totals.packaged + sku.inventory_item.quantity %}
+                        {% endif %}
+                      {% endif %}
+                    {% endfor %}
+                  {% endif %}
+                  {% set ns_status.total =  ns_totals.bulk + ns_totals.packaged %}
+                {% if ns_status.total == 0 %}
                   <span class="badge bg-danger">Out of Stock</span>
+                {% elif ns_status.total <= 10 %}
+                  <span class="badge bg-warning">Low Stock</span>
                 {% else %}
                   <span class="badge bg-success">In Stock</span>
                 {% endif %}
@@ -188,12 +206,34 @@
                 </td>
                 <td>{{ product.product_base_unit }}</td>
                 <td>
-                  {% set bulk_inventory = product.inventory|selectattr('quantity', 'gt', 0)|selectattr('size_label', 'equalto', 'Bulk')|list %}
-                  {{ bulk_inventory|sum(attribute='quantity')|round(1) if bulk_inventory else 0 }}
+                  {% set ns_totals = namespace(bulk=0, packaged=0) %}
+                  {% if product.id %}
+                    {% for sku in product.skus %}
+                      {% if sku.is_active and sku.inventory_item and sku.inventory_item.quantity > 0 %}
+                        {% if sku.size_label == 'Bulk' or not sku.size_label %}
+                          {% set ns_totals.bulk = ns_totals.bulk + sku.inventory_item.quantity %}
+                        {% else %}
+                          {% set ns_totals.packaged = ns_totals.packaged + sku.inventory_item.quantity %}
+                        {% endif %}
+                      {% endif %}
+                    {% endfor %}
+                  {% endif %}
+                  {{ ns_totals.bulk|round(1) if ns_totals.bulk > 0 else 0 }}
                 </td>
                 <td>
-                  {% set packaged_inventory = product.inventory|selectattr('quantity', 'gt', 0)|selectattr('size_label', 'ne', 'Bulk')|list %}
-                  {{ packaged_inventory|sum(attribute='quantity')|round(0)|int }}
+                {% set ns_totals = namespace(bulk=0, packaged=0) %}
+                  {% if product.id %}
+                    {% for sku in product.skus %}
+                      {% if sku.is_active and sku.inventory_item and sku.inventory_item.quantity > 0 %}
+                        {% if sku.size_label == 'Bulk' or not sku.size_label %}
+                          {% set ns_totals.bulk = ns_totals.bulk + sku.inventory_item.quantity %}
+                        {% else %}
+                          {% set ns_totals.packaged = ns_totals.packaged + sku.inventory_item.quantity %}
+                        {% endif %}
+                      {% endif %}
+                    {% endfor %}
+                  {% endif %}
+                  {{ ns_totals.packaged|round(1) if ns_totals.packaged > 0 else 0 }}
                 </td>
                 <td>
                   {{ product.variant_count }}
@@ -204,14 +244,27 @@
                   {% endif %}
                 </td>
                 <td>
-                  {% set bulk_inventory = product.inventory|selectattr('quantity', 'gt', 0)|selectattr('size_label', 'equalto', 'Bulk')|list %}
-                  {% set packaged_inventory = product.inventory|selectattr('quantity', 'gt', 0)|selectattr('size_label', 'ne', 'Bulk')|list %}
-                  {% set total_quantity = (bulk_inventory|sum(attribute='quantity') + packaged_inventory|sum(attribute='quantity')) %}
-                  {% if total_quantity == 0 %}
-                    <span class="badge bg-danger">Out of Stock</span>
-                  {% else %}
-                    <span class="badge bg-success">In Stock</span>
+                {% set ns_totals = namespace(bulk=0, packaged=0) %}
+                {% set ns_status = namespace(total = 0) %}
+                  {% if product.id %}
+                    {% for sku in product.skus %}
+                      {% if sku.is_active and sku.inventory_item and sku.inventory_item.quantity > 0 %}
+                        {% if sku.size_label == 'Bulk' or not sku.size_label %}
+                          {% set ns_totals.bulk = ns_totals.bulk + sku.inventory_item.quantity %}
+                        {% else %}
+                          {% set ns_totals.packaged = ns_totals.packaged + sku.inventory_item.quantity %}
+                        {% endif %}
+                      {% endif %}
+                    {% endfor %}
                   {% endif %}
+                  {% set ns_status.total =  ns_totals.bulk + ns_totals.packaged %}
+                {% if ns_status.total == 0 %}
+                  <span class="badge bg-danger">Out of Stock</span>
+                {% elif ns_status.total <= 10 %}
+                  <span class="badge bg-warning">Low Stock</span>
+                {% else %}
+                  <span class="badge bg-success">In Stock</span>
+                {% endif %}
                 </td>
                 <td>{{ product.created_at.strftime('%Y-%m-%d') if product.created_at else 'N/A' }}</td>
                 <td>

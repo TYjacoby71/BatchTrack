@@ -51,6 +51,11 @@ class Product(ScopedModelMixin, db.Model):
         """Number of active variants"""
         return self.variants.filter_by(is_active=True).count()
 
+    @property
+    def product_base_unit(self):
+        """Alias for base_unit for template compatibility"""
+        return self.base_unit
+
     def __repr__(self):
         return f'<Product {self.name}>'
 
