@@ -354,7 +354,7 @@ def edit_product(product_id):
 
     db.session.commit()
     flash('Product updated successfully', 'success')
-    return redirect(url_for('products.view_product', product_id=product_id))
+    return redirect(url_for('products.view_product', product_id=product.id))
 
 @products_bp.route('/<int:product_id>/delete', methods=['POST'])
 @login_required
