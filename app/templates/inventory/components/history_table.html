@@ -85,11 +85,11 @@
                           </a>
                         {% elif ref_entry %}
                           <a href="{{ url_for('inventory.view_inventory', id=item.id) }}#entry-{{ entry.fifo_reference_id }}">
-                            {{ get_change_type_prefix(ref_entry.change_type) }}-{{ int_to_base36(ref_entry.id).zfill(6) }}
+                            lot-{{ ref_entry.id }}
                           </a>
                         {% else %}
                           <a href="{{ url_for('inventory.view_inventory', id=item.id) }}#entry-{{ entry.fifo_reference_id }}">
-                            {{ get_change_type_prefix('restock') }}-{{ int_to_base36(entry.fifo_reference_id).zfill(6) }}
+                            lot-{{ entry.fifo_reference_id }}
                           </a>
                         {% endif %}
                       {% else %}
