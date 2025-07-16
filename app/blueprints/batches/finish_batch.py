@@ -1,4 +1,3 @@
-
 import logging
 from datetime import datetime
 from flask import Blueprint, request, redirect, url_for, flash, jsonify
@@ -27,8 +26,30 @@ def complete_batch(batch_id):
             flash('Batch not found or already completed', 'error')
             return redirect(url_for('batches.list_batches'))
 
-        # FIFO validation will be handled during actual inventory adjustments
-        # No need for pre-validation since we're only adding inventory, not deducting
+        # Pre-validate FIFO sync for any product SKUs that will be created
+        output_type = request.form.get('output_type')
+        if output_type == 'product':
+            product_id = request.form.get('product_id')
+            variant_id = request.form.get('variant_id')
+
+            if product_id and variant_id:
+                # Check existing SKUs that might be updated
+                from app.services.product_service import ProductService
+                from app.models.product import ProductSKU
+                from app.services.inventory_adjustment import validate_inventory_fifo_sync
+
+                # Get potential SKUs that could be affected
+                existing_skus = ProductSKU.query.join(ProductSKU.inventory_item).filter(
+                    ProductSKU.product_id == product_id,
+                    ProductSKU.variant_id == variant_id,
+                    InventoryItem.organization_id == current_user.organization_id
+                ).all()
+
+                for sku in existing_skus:
+                    is_valid, error_msg, inv_qty, fifo_total = validate_inventory_fifo_sync(sku.inventory_item_id, 'product')
+                    if not is_valid:
+                        flash(f'Cannot complete batch - inventory sync error for existing SKU {sku.sku_code}: {error_msg}', 'error')
+                        return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch_id))
 
         # Get form data
         output_type = request.form.get('output_type')
@@ -145,18 +166,18 @@ def _create_product_output(batch, product_id, variant_id, final_quantity, output
 
         # Calculate total ingredient cost for unit cost calculation
         total_ingredient_cost = 0
-        
+
         # Add regular batch ingredients
         for ing in batch.batch_ingredients:
             total_ingredient_cost += (ing.quantity_used or 0) * (ing.cost_per_unit or 0)
-        
+
         # Add extra ingredients
         for extra in batch.extra_ingredients:
             total_ingredient_cost += (extra.quantity_used or 0) * (extra.cost_per_unit or 0)
-        
+
         # Calculate ingredient unit cost (cost per unit of final product)
         ingredient_unit_cost = total_ingredient_cost / final_quantity if final_quantity > 0 else 0
-        
+
         logger.info(f"Batch {batch.label_code}: Total ingredient cost ${total_ingredient_cost:.2f}, Unit cost ${ingredient_unit_cost:.2f} per {output_unit}")
 
         # Process container allocations with cost calculation
@@ -180,7 +201,7 @@ def _create_product_output(batch, product_id, variant_id, final_quantity, output
             if bulk_unit != product.base_unit:
                 # Convert if needed - for now, use output_unit as-is
                 logger.warning(f"Bulk unit {bulk_unit} differs from product base unit {product.base_unit}")
-            
+
             _create_bulk_sku(product, variant, bulk_quantity, bulk_unit, expiration_date, batch, ingredient_unit_cost)
 
         logger.info(f"Created product output for batch {batch.label_code}: {len(container_skus)} container SKUs, {bulk_quantity} {bulk_unit if bulk_quantity > 0 else ''} bulk")
@@ -196,14 +217,14 @@ def _process_container_allocations(batch, product, variant, form_data, expiratio
 
     # Calculate total containers used vs passed to product for cost allocation
     container_usage = {}  # container_id -> {'used': total_used, 'passed': passed_to_product}
-    
+
     # First pass: calculate total used for each container type
     for container in batch.containers:
         container_id = container.container_id
         if container_id not in container_usage:
             container_usage[container_id] = {'used': 0, 'passed': 0, 'cost_each': container.cost_each or 0}
         container_usage[container_id]['used'] += container.quantity_used or 0
-    
+
     for extra_container in batch.extra_containers:
         container_id = extra_container.container_id
         if container_id not in container_usage:
@@ -259,9 +280,9 @@ def _process_container_allocations(batch, product, variant, form_data, expiratio
                     'quantity': final_quantity,  # Number of containers
                     'container_capacity': container_item.storage_amount or 1  # Volume per container
                 })
-                
+
                 logger.info(f"Created container SKU for {final_quantity} x {container_item.name} containers")
-                
+
             except Exception as e:
                 logger.error(f"Error processing container {container_id}: {e}")
                 import traceback
@@ -275,7 +296,7 @@ def _create_container_sku(product, variant, container_item, quantity, batch, exp
     """Create or get existing container SKU using ProductService"""
     try:
         logger.info(f"Creating container SKU with container: {container_item.name}, quantity: {quantity}")
-        
+
         # Create size label format: "[storage_amount] [storage_unit] [container_name]"
         # Example: "4 floz Admin 4oz Glass Jars"
         if container_item.storage_amount and container_item.storage_unit:
@@ -288,7 +309,7 @@ def _create_container_sku(product, variant, container_item, quantity, batch, exp
         container_capacity = container_item.storage_amount or 1
         ingredient_cost_per_container = ingredient_unit_cost * container_capacity
         total_cost_per_container = ingredient_cost_per_container + adjusted_container_cost
-        
+
         logger.info(f"Container cost breakdown: ${ingredient_cost_per_container:.2f} ingredients + ${adjusted_container_cost:.2f} container = ${total_cost_per_container:.2f} per container")
 
         # Use ProductService to get or create the SKU - this handles existing SKUs properly
