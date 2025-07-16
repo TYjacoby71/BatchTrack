@@ -79,7 +79,7 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
     """
     # Start a transaction with explicit rollback protection
     try:
-        # Pre-validate FIFO sync BEFORE starting any inventory changes (skip for recount)
+        # CRITICAL: Pre-validate FIFO sync BEFORE starting any inventory changes (skip for recount)
         if change_type != 'recount':
             is_valid, error_msg, inv_qty, fifo_total = validate_inventory_fifo_sync(item_id, item_type)
             if not is_valid:
@@ -231,25 +231,17 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
                     order_id=order_id
                 )
 
-        # Update inventory quantity with rounding
+        # Update inventory quantity with rounding AFTER all FIFO operations
         rounded_qty_change = ConversionEngine.round_value(qty_change, 3)
         item.quantity = ConversionEngine.round_value(item.quantity + rounded_qty_change, 3)
 
-        db.session.commit()
-
-        # Validate inventory/FIFO sync after adjustment
+        # CRITICAL: Validate inventory/FIFO sync BEFORE committing
+        # This ensures we can rollback if sync fails
         is_valid, error_msg, inv_qty, fifo_total = validate_inventory_fifo_sync(item_id, item_type)
         if not is_valid:
-            # Rollback the transaction
+            # Rollback the transaction BEFORE raising error
             db.session.rollback()
             raise ValueError(f"Inventory adjustment failed validation: {error_msg}")
-
-        # Final validation after all changes are complete but before commit
-        final_is_valid, final_error_msg, final_inv_qty, final_fifo_total = validate_inventory_fifo_sync(item_id, item_type)
-        if not final_is_valid:
-            # Rollback the transaction
-            db.session.rollback()
-            raise ValueError(f"Post-adjustment validation failed - FIFO sync error: {final_error_msg}")
 
         # Commit only if everything validates
         db.session.commit()

@@ -26,32 +26,7 @@ def complete_batch(batch_id):
             flash('Batch not found or already completed', 'error')
             return redirect(url_for('batches.list_batches'))
 
-        # Pre-validate FIFO sync for any product SKUs that will be created
-        output_type = request.form.get('output_type')
-        if output_type == 'product':
-            product_id = request.form.get('product_id')
-            variant_id = request.form.get('variant_id')
-            
-            if product_id and variant_id:
-                # Check existing SKUs that might be updated
-                from app.services.product_service import ProductService
-                from app.models.product import ProductSKU
-                from app.services.inventory_adjustment import validate_inventory_fifo_sync
-                
-                # Get potential SKUs that could be affected
-                existing_skus = ProductSKU.query.join(ProductSKU.inventory_item).filter(
-                    ProductSKU.product_id == product_id,
-                    ProductSKU.variant_id == variant_id,
-                    InventoryItem.organization_id == current_user.organization_id
-                ).all()
-                
-                for sku in existing_skus:
-                    is_valid, error_msg, inv_qty, fifo_total = validate_inventory_fifo_sync(sku.inventory_item_id, 'product')
-                    if not is_valid:
-                        flash(f'Cannot complete batch - inventory sync error for existing SKU {sku.sku_code}: {error_msg}', 'error')
-                        return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch_id))
-
-        # Get form data
+        # Get form data early for validation
         output_type = request.form.get('output_type')
         final_quantity = float(request.form.get('final_quantity', 0))
         output_unit = request.form.get('output_unit')
@@ -67,6 +42,98 @@ def complete_batch(batch_id):
             if exp_date_str:
                 expiration_date = datetime.strptime(exp_date_str, '%Y-%m-%d')
 
+        # COMPREHENSIVE PRE-VALIDATION: Check all existing inventory items that will be affected
+        from app.services.inventory_adjustment import validate_inventory_fifo_sync
+        from app.services.product_service import ProductService
+        from app.models.product import ProductSKU
+        
+        # Validate existing SKUs that might be updated for products
+        if output_type == 'product':
+            product_id = request.form.get('product_id')
+            variant_id = request.form.get('variant_id')
+            
+            if not product_id or not variant_id:
+                flash('Product and variant selection required', 'error')
+                return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch_id))
+
+            # Check existing SKUs that might be updated
+            existing_skus = ProductSKU.query.join(ProductSKU.inventory_item).filter(
+                ProductSKU.product_id == product_id,
+                ProductSKU.variant_id == variant_id,
+                InventoryItem.organization_id == current_user.organization_id
+            ).all()
+            
+            for sku in existing_skus:
+                is_valid, error_msg, inv_qty, fifo_total = validate_inventory_fifo_sync(sku.inventory_item_id, 'product')
+                if not is_valid:
+                    flash(f'Cannot complete batch - inventory sync error for existing SKU {sku.sku_code}: {error_msg}', 'error')
+                    return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch_id))
+
+            # Pre-validate potential new SKUs that might be created
+            # Check if bulk SKU would need to be created/updated
+            try:
+                # Get potential container allocations
+                container_final_keys = [k for k in request.form.keys() if k.startswith('container_final_')]
+                total_containerized = 0
+                
+                for key in container_final_keys:
+                    container_quantity = int(request.form.get(key, 0))
+                    if container_quantity > 0:
+                        container_id = key.replace('container_final_', '')
+                        container_item = InventoryItem.query.filter_by(
+                            id=int(container_id),
+                            organization_id=current_user.organization_id
+                        ).first()
+                        if container_item:
+                            container_capacity = container_item.storage_amount or 1
+                            total_containerized += container_capacity * container_quantity
+
+                # Check if bulk quantity would remain
+                bulk_quantity = final_quantity - total_containerized
+                if bulk_quantity > 0:
+                    # Get potential bulk SKU
+                    product = Product.query.filter_by(
+                        id=product_id,
+                        organization_id=current_user.organization_id
+                    ).first()
+                    
+                    if product:
+                        # Check if bulk SKU already exists
+                        bulk_sku = ProductSKU.query.join(ProductSKU.inventory_item).filter(
+                            ProductSKU.product_id == product_id,
+                            ProductSKU.variant_id == variant_id,
+                            ProductSKU.size_label == 'Bulk',
+                            InventoryItem.organization_id == current_user.organization_id
+                        ).first()
+                        
+                        if bulk_sku:
+                            # Validate existing bulk SKU
+                            is_valid, error_msg, inv_qty, fifo_total = validate_inventory_fifo_sync(bulk_sku.inventory_item_id, 'product')
+                            if not is_valid:
+                                flash(f'Cannot complete batch - inventory sync error for bulk SKU {bulk_sku.sku_code}: {error_msg}', 'error')
+                                return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch_id))
+                        
+            except Exception as validation_error:
+                flash(f'Pre-validation error: {str(validation_error)}', 'error')
+                return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch_id))
+
+        # Validate intermediate ingredient if creating one
+        elif output_type == 'ingredient':
+            # Check if intermediate ingredient already exists
+            ingredient = InventoryItem.query.filter_by(
+                name=batch.recipe.name, 
+                type='ingredient', 
+                intermediate=True,
+                organization_id=current_user.organization_id
+            ).first()
+            
+            if ingredient:
+                is_valid, error_msg, inv_qty, fifo_total = validate_inventory_fifo_sync(ingredient.id)
+                if not is_valid:
+                    flash(f'Cannot complete batch - inventory sync error for intermediate ingredient {ingredient.name}: {error_msg}', 'error')
+                    return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch_id))
+
+        # All validations passed - proceed with batch completion
         # Update batch with completion data
         batch.final_quantity = final_quantity
         batch.output_unit = output_unit
@@ -83,21 +150,12 @@ def complete_batch(batch_id):
             # Handle product creation
             product_id = request.form.get('product_id')
             variant_id = request.form.get('variant_id')
-
-            if not product_id or not variant_id:
-                flash('Product and variant selection required', 'error')
-                return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch_id))
-
             _create_product_output(batch, product_id, variant_id, final_quantity, output_unit, expiration_date, request.form)
 
-        try:
-            db.session.commit()
-            flash(f'Batch {batch.label_code} completed successfully!', 'success')
-            return redirect(url_for('batches.list_batches'))
-        except Exception as commit_error:
-            db.session.rollback()
-            flash(f'Failed to complete batch due to database error: {str(commit_error)}', 'error')
-            return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch_id))
+        # Commit all changes
+        db.session.commit()
+        flash(f'Batch {batch.label_code} completed successfully!', 'success')
+        return redirect(url_for('batches.list_batches'))
 
     except Exception as e:
         db.session.rollback()
