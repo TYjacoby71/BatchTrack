@@ -66,55 +66,106 @@ class ExpirationService:
     @staticmethod
     def _resolve_sku_expiration(sku_entry):
         """Resolve expiration date for SKU entry (FIFO or batch-based)"""
-        if sku_entry.is_perishable and sku_entry.expiration_date:
+        # Only process perishable items
+        if not sku_entry.is_perishable:
+            return None
+            
+        # If SKU has explicit expiration date, use it
+        if sku_entry.expiration_date:
             return sku_entry.expiration_date
+            
+        # If from batch, get batch expiration
         if sku_entry.batch_id:
-            return ExpirationService.get_batch_expiration_date(sku_entry.batch_id)
+            batch_exp = ExpirationService.get_batch_expiration_date(sku_entry.batch_id)
+            if batch_exp:
+                return batch_exp
+                
+        # Fall back to calculating from shelf life if available
+        if hasattr(sku_entry, 'shelf_life_days') and sku_entry.shelf_life_days:
+            # Need to get the creation timestamp - this should be from the history entry
+            # For now, return None if we can't calculate
+            pass
+            
         return None
 
     @staticmethod
     def _query_fifo_entries(expired=False, days_ahead: int = None):
-        """Query FIFO entries based on expiration criteria"""
+        """Query FIFO entries based on expiration criteria - only perishable items"""
         from ...utils.timezone_utils import TimezoneUtils
         now = TimezoneUtils.now_naive()
 
         base_filter = [
-            InventoryHistory.expiration_date.isnot(None),
+            InventoryHistory.is_perishable == True,  # Only perishable items
             InventoryHistory.remaining_quantity > 0,
             InventoryItem.organization_id == current_user.organization_id if current_user.is_authenticated and current_user.organization_id else True
         ]
 
-        if expired:
-            base_filter.append(InventoryHistory.expiration_date < now)
-        elif days_ahead:
-            future_date = now + timedelta(days=days_ahead)
-            base_filter.append(InventoryHistory.expiration_date.between(now, future_date))
-
-        return db.session.query(
+        # Calculate expiration date on the fly for entries that don't have it set
+        fifo_entries = db.session.query(
             InventoryHistory.inventory_item_id,
             InventoryItem.name,
             InventoryHistory.remaining_quantity,
             InventoryHistory.unit,
             InventoryHistory.expiration_date,
+            InventoryHistory.timestamp,
+            InventoryHistory.shelf_life_days,
             InventoryHistory.id.label('fifo_id')
         ).join(InventoryItem).filter(and_(*base_filter)).all()
 
+        # Filter and calculate expiration dates
+        filtered_entries = []
+        for entry in fifo_entries:
+            # Calculate expiration date if not set
+            expiration_date = entry.expiration_date
+            if not expiration_date and entry.timestamp and entry.shelf_life_days:
+                expiration_date = ExpirationService.calculate_expiration_date(
+                    entry.timestamp, entry.shelf_life_days
+                )
+            elif not expiration_date:
+                # Skip entries without expiration data
+                continue
+
+            # Apply time-based filtering
+            if expired and expiration_date < now:
+                # Return the entry data in the expected format
+                filtered_entries.append(type('Entry', (), {
+                    'inventory_item_id': entry.inventory_item_id,
+                    'name': entry.name,
+                    'remaining_quantity': entry.remaining_quantity,
+                    'unit': entry.unit,
+                    'expiration_date': expiration_date,
+                    'fifo_id': entry.fifo_id
+                })())
+            elif days_ahead:
+                future_date = now + timedelta(days=days_ahead)
+                if now <= expiration_date <= future_date:
+                    filtered_entries.append(type('Entry', (), {
+                        'inventory_item_id': entry.inventory_item_id,
+                        'name': entry.name,
+                        'remaining_quantity': entry.remaining_quantity,
+                        'unit': entry.unit,
+                        'expiration_date': expiration_date,
+                        'fifo_id': entry.fifo_id
+                    })())
+
+        return filtered_entries
+
     @staticmethod
     def _query_sku_entries(expired=False, days_ahead: int = None):
-        """Query product SKU entries based on expiration criteria"""
+        """Query product SKU entries based on expiration criteria - only perishable items"""
         from ...utils.timezone_utils import TimezoneUtils
-        from ...models import Product, ProductVariant
+        from ...models import Product, ProductVariant, ProductSKU, ProductSKUHistory
 
         now = TimezoneUtils.now_naive()
 
         base_filter = [
             ProductSKUHistory.remaining_quantity > 0,
             ProductSKUHistory.quantity_change > 0,  # Only addition entries
+            ProductSKUHistory.is_perishable == True,  # Only perishable items
             InventoryItem.organization_id == current_user.organization_id if current_user.is_authenticated and current_user.organization_id else True
         ]
 
-        # Get all SKU entries first, then filter by expiration in code
-        # This is because expiration might come from batch or FIFO level
+        # Get SKU entries with expiration data
         sku_entries = db.session.query(
             ProductSKUHistory.inventory_item_id,
             Product.name.label('product_name'),
@@ -126,6 +177,8 @@ class ExpirationService:
             ProductSKUHistory.batch_id,
             ProductSKUHistory.expiration_date,
             ProductSKUHistory.is_perishable,
+            ProductSKUHistory.timestamp,
+            ProductSKUHistory.shelf_life_days,
             ProductSKU.product_id,
             ProductSKU.variant_id
         ).join(ProductSKU, ProductSKUHistory.inventory_item_id == ProductSKU.inventory_item_id
@@ -138,21 +191,49 @@ class ExpirationService:
         # Filter by expiration criteria
         filtered_entries = []
         for sku_entry in sku_entries:
-            expiration_date = ExpirationService._resolve_sku_expiration(sku_entry)
+            # Calculate expiration date
+            expiration_date = None
+            
+            # First try explicit expiration date
+            if sku_entry.expiration_date:
+                expiration_date = sku_entry.expiration_date
+            # Then try batch expiration
+            elif sku_entry.batch_id:
+                expiration_date = ExpirationService.get_batch_expiration_date(sku_entry.batch_id)
+            # Finally calculate from timestamp + shelf life
+            elif sku_entry.timestamp and sku_entry.shelf_life_days:
+                expiration_date = ExpirationService.calculate_expiration_date(
+                    sku_entry.timestamp, sku_entry.shelf_life_days
+                )
+            
+            # Skip if no expiration date can be determined
+            if not expiration_date:
+                continue
 
-            if expiration_date:
-                if expired and expiration_date < now:
+            # Apply time-based filtering
+            if expired and expiration_date < now:
+                filtered_entries.append(sku_entry)
+            elif days_ahead:
+                future_date = now + timedelta(days=days_ahead)
+                if now <= expiration_date <= future_date:
                     filtered_entries.append(sku_entry)
-                elif days_ahead:
-                    future_date = now + timedelta(days=days_ahead)
-                    if now <= expiration_date <= future_date:
-                        filtered_entries.append(sku_entry)
 
         return filtered_entries
 
     @staticmethod
     def _format_sku_entry(sku_entry):
         """Format SKU entry for consistent return structure"""
+        # Calculate expiration date properly
+        expiration_date = None
+        if sku_entry.expiration_date:
+            expiration_date = sku_entry.expiration_date
+        elif sku_entry.batch_id:
+            expiration_date = ExpirationService.get_batch_expiration_date(sku_entry.batch_id)
+        elif hasattr(sku_entry, 'timestamp') and hasattr(sku_entry, 'shelf_life_days') and sku_entry.timestamp and sku_entry.shelf_life_days:
+            expiration_date = ExpirationService.calculate_expiration_date(
+                sku_entry.timestamp, sku_entry.shelf_life_days
+            )
+        
         return {
             'inventory_item_id': sku_entry.inventory_item_id,
             'product_name': sku_entry.product_name,
@@ -160,7 +241,7 @@ class ExpirationService:
             'size_label': sku_entry.size_label,
             'quantity': sku_entry.remaining_quantity,
             'unit': sku_entry.unit,
-            'expiration_date': ExpirationService._resolve_sku_expiration(sku_entry),
+            'expiration_date': expiration_date,
             'history_id': sku_entry.history_id,
             'product_inv_id': sku_entry.history_id,
             'product_id': sku_entry.product_id,
@@ -177,8 +258,8 @@ class ExpirationService:
         if not batch or not batch.is_perishable or not batch.shelf_life_days:
             return None
 
-        # Use completion date if available, otherwise start date
-        base_date = batch.completed_at or batch.started_at
+        # Use the batch's created timestamp (started_at) for expiration calculation
+        base_date = batch.started_at
         if not base_date:
             return None
 
