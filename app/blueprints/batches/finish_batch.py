@@ -299,6 +299,18 @@ def _create_container_sku(product, variant, container_item, quantity, batch, exp
             size_label=size_label,
             unit='count'  # Containers are always counted as individual units
         )
+        
+        # Ensure new SKU inventory starts at zero before we add batch inventory
+        if product_sku.inventory_item and product_sku.inventory_item.quantity > 0:
+            # Check if this SKU has any FIFO history - if not, reset to zero
+            from app.models.product import ProductSKUHistory
+            existing_history = ProductSKUHistory.query.filter_by(
+                inventory_item_id=product_sku.inventory_item_id
+            ).first()
+            
+            if not existing_history:
+                logger.info(f"Resetting newly created SKU {product_sku.sku_code} inventory to zero before adding batch inventory")
+                product_sku.inventory_item.quantity = 0.0
 
         # Add containers to inventory - quantity is number of containers
         process_inventory_adjustment(
@@ -333,6 +345,18 @@ def _create_bulk_sku(product, variant, quantity, unit, expiration_date, batch, i
             size_label='Bulk',
             unit=unit  # Use the batch output unit
         )
+        
+        # Ensure new SKU inventory starts at zero before we add batch inventory
+        if bulk_sku.inventory_item and bulk_sku.inventory_item.quantity > 0:
+            # Check if this SKU has any FIFO history - if not, reset to zero
+            from app.models.product import ProductSKUHistory
+            existing_history = ProductSKUHistory.query.filter_by(
+                inventory_item_id=bulk_sku.inventory_item_id
+            ).first()
+            
+            if not existing_history:
+                logger.info(f"Resetting newly created bulk SKU {bulk_sku.sku_code} inventory to zero before adding batch inventory")
+                bulk_sku.inventory_item.quantity = 0.0
 
         # Add bulk quantity to inventory with calculated unit cost
         process_inventory_adjustment(

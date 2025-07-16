@@ -38,10 +38,10 @@ def validate_inventory_fifo_sync(item_id, item_type=None):
         current_qty = item.quantity
         item_name = item.name
         
-        # If there are no FIFO entries but there is inventory, allow it for now 
-        # This handles cases where ProductSKUs exist but haven't had FIFO entries created yet
+        # If there are no FIFO entries but there is inventory, allow it for newly created SKUs
+        # This handles cases where ProductSKUs are created but haven't had FIFO entries created yet
         if fifo_total == 0 and current_qty > 0:
-            print(f"WARNING: Product SKU {item_name} has inventory ({current_qty}) but no FIFO entries - allowing operation to proceed")
+            print(f"INFO: Product SKU {item_name} has inventory ({current_qty}) but no FIFO entries - this is normal for newly created SKUs")
             return True, "", current_qty, fifo_total
     else:
         item = InventoryItem.query.get(item_id)
