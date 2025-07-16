@@ -85,11 +85,11 @@
                           </a>
                         {% elif ref_entry %}
                           <a href="{{ url_for('inventory.view_inventory', id=item.id) }}#entry-{{ entry.fifo_reference_id }}">
-                            lot-{{ ref_entry.id }}
+                            {{ get_change_type_prefix(ref_entry.change_type) }}-{{ int_to_base36(ref_entry.id).zfill(6) }}
                           </a>
                         {% else %}
                           <a href="{{ url_for('inventory.view_inventory', id=item.id) }}#entry-{{ entry.fifo_reference_id }}">
-                            lot-{{ entry.fifo_reference_id }}
+                            {{ get_change_type_prefix('restock') }}-{{ int_to_base36(entry.fifo_reference_id).zfill(6) }}
                           </a>
                         {% endif %}
                       {% else %}
@@ -104,15 +104,7 @@
                           <a href="{{ url_for('batches.view_batch', batch_identifier=entry.batch.id) }}">{{ entry.batch.label_code }}</a>
                         {% endif %}
                       {% else %}
-                        {% if entry.lot_number %}
-                          <a href="{{ url_for('inventory.view_inventory', id=item.id) }}#entry-{{ entry.id }}" class="text-decoration-none">
-                            {{ entry.lot_number }}
-                          </a>
-                        {% else %}
-                          <a href="{{ url_for('inventory.view_inventory', id=item.id) }}#entry-{{ entry.id }}" class="text-decoration-none">
-                            lot-{{ entry.id }}
-                          </a>
-                        {% endif %}
+                        {{ get_change_type_prefix(entry.change_type) }}-{{ int_to_base36(entry.id).zfill(6) }}
                       {% endif %}
                     </td>
                     <td>
