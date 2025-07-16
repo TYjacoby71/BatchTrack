@@ -83,7 +83,13 @@
                                     <tr>
                                         <td><strong>{{ item.name }}</strong></td>
                                         <td><strong>{{ item.remaining_quantity }} {{ item.unit }}</strong></td>
-                                        <td>LOT-{{ item.fifo_id }}</td>
+                                        <td>
+                                            {% if item.fifo_code %}
+                                                <small class="font-monospace">{{ item.fifo_code }}</small>
+                                            {% else %}
+                                                LOT-{{ item.fifo_id }}
+                                            {% endif %}
+                                        </td>
                                         <td>{{ item.expiration_date.strftime('%Y-%m-%d') }}</td>
                                         <td>{{ item.expiration_date.strftime('%H:%M:%S') }}</td>
                                         <td><small class="text-muted">#{{ item.fifo_id }}</small></td>
@@ -140,7 +146,13 @@
                                     <tr>
                                         <td><strong>{{ item.name }}</strong></td>
                                         <td><strong>{{ item.remaining_quantity }} {{ item.unit }}</strong></td>
-                                        <td>LOT-{{ item.fifo_id }}</td>
+                                        <td>
+                                            {% if item.fifo_code %}
+                                                <small class="font-monospace">{{ item.fifo_code }}</small>
+                                            {% else %}
+                                                LOT-{{ item.fifo_id }}
+                                            {% endif %}
+                                        </td>
                                         <td>{{ item.expiration_date.strftime('%Y-%m-%d') }}</td>
                                         <td>{{ item.expiration_date.strftime('%H:%M:%S') }}</td>
                                         <td><small class="text-muted">#{{ item.fifo_id }}</small></td>
@@ -222,7 +234,13 @@
                                             <br><small class="text-muted">{{ item.variant_name }} - {{ item.size_label }}</small>
                                         </td>
                                         <td><strong>{{ item.quantity }} {{ item.unit }}</strong></td>
-                                        <td>{{ item.lot_number }}</td>
+                                        <td>
+                                            {% if item.lot_number %}
+                                                <small class="font-monospace">{{ item.lot_number }}</small>
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
                                         <td>{{ item.expiration_date.strftime('%Y-%m-%d') }}</td>
                                         <td>{{ item.expiration_date.strftime('%H:%M:%S') }}</td>
                                         <td><small class="text-muted">#{{ item.product_inv_id }}</small></td>
@@ -282,7 +300,13 @@
                                             <br><small class="text-muted">{{ item.variant_name }} - {{ item.size_label }}</small>
                                         </td>
                                         <td><strong>{{ item.quantity }} {{ item.unit }}</strong></td>
-                                        <td>{{ item.lot_number }}</td>
+                                        <td>
+                                            {% if item.lot_number %}
+                                                <small class="font-monospace">{{ item.lot_number }}</small>
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
                                         <td>{{ item.expiration_date.strftime('%Y-%m-%d') }}</td>
                                         <td>{{ item.expiration_date.strftime('%H:%M:%S') }}</td>
                                         <td><small class="text-muted">#{{ item.product_inv_id }}</small></td>
