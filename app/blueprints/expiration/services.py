@@ -109,7 +109,8 @@ class ExpirationService:
             InventoryHistory.expiration_date,
             InventoryHistory.timestamp,
             InventoryHistory.shelf_life_days,
-            InventoryHistory.id.label('fifo_id')
+            InventoryHistory.id.label('fifo_id'),
+            InventoryHistory.fifo_code
         ).join(InventoryItem).filter(and_(*base_filter)).all()
 
         # Filter and calculate expiration dates
@@ -134,7 +135,8 @@ class ExpirationService:
                     'remaining_quantity': entry.remaining_quantity,
                     'unit': entry.unit,
                     'expiration_date': expiration_date,
-                    'fifo_id': entry.fifo_id
+                    'fifo_id': entry.fifo_id,
+                    'fifo_code': entry.fifo_code
                 })())
             elif days_ahead:
                 future_date = now + timedelta(days=days_ahead)
@@ -145,7 +147,8 @@ class ExpirationService:
                         'remaining_quantity': entry.remaining_quantity,
                         'unit': entry.unit,
                         'expiration_date': expiration_date,
-                        'fifo_id': entry.fifo_id
+                        'fifo_id': entry.fifo_id,
+                        'fifo_code': entry.fifo_code
                     })())
 
         return filtered_entries

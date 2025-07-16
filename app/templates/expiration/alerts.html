@@ -87,7 +87,7 @@
                                             {% if item.fifo_code %}
                                                 <small class="font-monospace">{{ item.fifo_code }}</small>
                                             {% else %}
-                                                LOT-{{ item.fifo_id }}
+                                                <span class="text-muted">-</span>
                                             {% endif %}
                                         </td>
                                         <td>{{ item.expiration_date.strftime('%Y-%m-%d') }}</td>
@@ -150,7 +150,7 @@
                                             {% if item.fifo_code %}
                                                 <small class="font-monospace">{{ item.fifo_code }}</small>
                                             {% else %}
-                                                LOT-{{ item.fifo_id }}
+                                                <span class="text-muted">-</span>
                                             {% endif %}
                                         </td>
                                         <td>{{ item.expiration_date.strftime('%Y-%m-%d') }}</td>
