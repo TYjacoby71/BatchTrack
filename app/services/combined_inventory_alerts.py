@@ -59,41 +59,6 @@ class CombinedInventoryAlertService:
         return query.all()
 
     @staticmethod
-    def get_low_stock_products_summary():
-        """Get products with low stock, grouped by product with SKU details"""
-        from flask_login import current_user
-        from ..models.product import Product
-        
-        # Get all low stock SKUs
-        low_stock_skus = CombinedInventoryAlertService.get_low_stock_skus()
-        
-        # Group by product
-        products_summary = {}
-        for sku in low_stock_skus:
-            product_id = sku.product_id
-            if product_id not in products_summary:
-                products_summary[product_id] = {
-                    'product': sku.product,
-                    'total_skus': 0,
-                    'low_stock_skus': [],
-                    'total_quantity': 0,
-                    'is_completely_out': True,
-                    'lowest_threshold': float('inf')
-                }
-            
-            summary = products_summary[product_id]
-            summary['total_skus'] += 1
-            summary['low_stock_skus'].append(sku)
-            summary['total_quantity'] += sku.quantity
-            summary['lowest_threshold'] = min(summary['lowest_threshold'], sku.low_stock_threshold)
-            
-            # Check if any SKU has stock
-            if sku.quantity > 0:
-                summary['is_completely_out'] = False
-        
-        return products_summary
-
-    @staticmethod
     def get_out_of_stock_skus():
         """Get all product SKUs that are out of stock"""
         from flask_login import current_user
@@ -119,19 +84,19 @@ class CombinedInventoryAlertService:
         low_stock_skus = CombinedInventoryAlertService.get_low_stock_skus()
         out_of_stock_skus = CombinedInventoryAlertService.get_out_of_stock_skus()
 
-        # Get product-level summaries
-        low_stock_products_summary = CombinedInventoryAlertService.get_low_stock_products_summary()
-        
-        # Separate completely out of stock products
+        # Group products by name to avoid duplicates
         low_stock_products = {}
         out_of_stock_products = {}
-        
-        for product_id, summary in low_stock_products_summary.items():
-            product_name = summary['product'].name
-            if summary['is_completely_out']:
-                out_of_stock_products[product_name] = summary['low_stock_skus']
-            else:
-                low_stock_products[product_name] = summary['low_stock_skus']
+
+        for sku in low_stock_skus:
+            if sku.product.name not in low_stock_products:
+                low_stock_products[sku.product.name] = []
+            low_stock_products[sku.product.name].append(sku)
+
+        for sku in out_of_stock_skus:
+            if sku.product.name not in out_of_stock_products:
+                out_of_stock_products[sku.product.name] = []
+            out_of_stock_products[sku.product.name].append(sku)
 
         return {
             # Raw materials

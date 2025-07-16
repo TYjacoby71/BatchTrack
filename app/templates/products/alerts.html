@@ -1,3 +1,4 @@
+
 {% extends 'layout.html' %}
 {% block content %}
 <div class="container mt-4">
@@ -55,8 +56,8 @@
 
   {% if stock_summary.low_stock_count > 0 %}
   <div class="alert alert-warning">
-    <h5><i class="fas fa-exclamation-triangle"></i> Low Stock Products</h5>
-    <p>{{ stock_summary.affected_products_count }} products need restocking attention.</p>
+    <h5><i class="fas fa-exclamation-circle"></i> Low Stock Products</h5>
+    <p>{{ stock_summary.low_stock_count }} product SKUs are below their low stock threshold.</p>
   </div>
 
   <div class="card mb-4">

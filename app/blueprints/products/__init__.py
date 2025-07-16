@@ -2,9 +2,7 @@ from flask import Blueprint
 
 products_bp = Blueprint('products', __name__, url_prefix='/products')
 
-# Import all modules to ensure routes are registered
-from . import products, sku, product_variants, api, product_inventory_routes, reservation_routes
-from . import product_alerts  # Explicit import to ensure route registration
+from . import products, product_variants, sku, api, product_inventory_routes, reservation_routes
 from .sku import sku_bp
 from .reservation_routes import reservation_bp
 

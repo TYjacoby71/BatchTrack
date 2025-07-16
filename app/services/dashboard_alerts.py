@@ -104,27 +104,25 @@ class DashboardAlertService:
                     'dismissible': True
                 })
 
-            if stock_summary['affected_products_count'] > 0:
+            if stock_summary['low_stock_count'] > 0:
                 alerts.append({
                     'priority': 'HIGH',
                     'type': 'low_stock_products',
                     'title': 'Low Stock Products',
-                    'message': f"{stock_summary['affected_products_count']} products need restocking",
-                    'action_url': '/products/alerts',
-                    'action_text': 'View Product Alerts',
+                    'message': f"{stock_summary['affected_products_count']} products have low stock SKUs",
+                    'action_url': '/products/',
+                    'action_text': 'View Products',
                     'dismissible': True
                 })
 
             if stock_summary['out_of_stock_count'] > 0:
-                # Count products that are completely out of stock
-                completely_out_products = len([name for name, skus in stock_summary['out_of_stock_products'].items()])
                 alerts.append({
                     'priority': 'CRITICAL',
                     'type': 'out_of_stock_products',
                     'title': 'Out of Stock Products',
-                    'message': f"{completely_out_products} products are completely out of stock",
-                    'action_url': '/products/alerts',
-                    'action_text': 'View Product Alerts',
+                    'message': f"{stock_summary['out_of_stock_count']} product SKUs are out of stock",
+                    'action_url': '/products/',
+                    'action_text': 'View Products',
                     'dismissible': True
                 })
 
