@@ -79,10 +79,11 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
     """
     # Start a transaction with explicit rollback protection
     try:
-        # Pre-validate FIFO sync BEFORE starting any inventory changes
-        is_valid, error_msg, inv_qty, fifo_total = validate_inventory_fifo_sync(item_id, item_type)
-        if not is_valid:
-            raise ValueError(f"Pre-adjustment validation failed - FIFO sync error: {error_msg}")
+        # Pre-validate FIFO sync BEFORE starting any inventory changes (skip for recount)
+        if change_type != 'recount':
+            is_valid, error_msg, inv_qty, fifo_total = validate_inventory_fifo_sync(item_id, item_type)
+            if not is_valid:
+                raise ValueError(f"Pre-adjustment validation failed - FIFO sync error: {error_msg}")
 
         # Get the item - treat item_id as inventory_item_id for unified handling
         item = InventoryItem.query.get(item_id)

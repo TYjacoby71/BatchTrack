@@ -230,6 +230,36 @@ async function markAsSpoiled(type, id) {
     }
 }
 
+// Function to mark expired items as expired
+async function markAsExpired(type, id) {
+    if (!confirm('Mark this item as expired and remove it from inventory?\n\nThis action targets the specific expired lot and cannot be undone.\n\nProceed?')) return;
+
+    console.log('Mark expired called with:', { type, id });
+
+    try {
+        const response = await fetch('/expiration/api/mark-expired', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRFToken() 
+            },
+            body: JSON.stringify({ type: type, id: id })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            alert(`Marked ${data.expired_count} item as expired`);
+            location.reload();
+        } else {
+            alert(`Error: ${data.error}`);
+        }
+    } catch (error) {
+        console.error('Expiration error:', error);
+        alert('Network error occurred');
+    }
+}
+
 // Get CSRF token function
 function getCSRFToken() {
     const tokenMeta = document.querySelector('meta[name=csrf-token]');
