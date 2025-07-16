@@ -27,30 +27,8 @@ def complete_batch(batch_id):
             flash('Batch not found or already completed', 'error')
             return redirect(url_for('batches.list_batches'))
 
-        # Pre-validate FIFO sync for any product SKUs that will be created
-        output_type = request.form.get('output_type')
-        if output_type == 'product':
-            product_id = request.form.get('product_id')
-            variant_id = request.form.get('variant_id')
-            
-            if product_id and variant_id:
-                # Check existing SKUs that might be updated
-                from app.services.product_service import ProductService
-                from app.models.product import ProductSKU
-                from app.services.inventory_adjustment import validate_inventory_fifo_sync
-                
-                # Get potential SKUs that could be affected
-                existing_skus = ProductSKU.query.join(ProductSKU.inventory_item).filter(
-                    ProductSKU.product_id == product_id,
-                    ProductSKU.variant_id == variant_id,
-                    InventoryItem.organization_id == current_user.organization_id
-                ).all()
-                
-                for sku in existing_skus:
-                    is_valid, error_msg, inv_qty, fifo_total = validate_inventory_fifo_sync(sku.inventory_item_id, 'product')
-                    if not is_valid:
-                        flash(f'Cannot complete batch - inventory sync error for existing SKU {sku.sku_code}: {error_msg}', 'error')
-                        return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch_id))
+        # FIFO validation will be handled during actual inventory adjustments
+        # No need for pre-validation since we're only adding inventory, not deducting
 
         # Get form data
         output_type = request.form.get('output_type')
