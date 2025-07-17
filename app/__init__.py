@@ -78,6 +78,10 @@ def create_app():
     from .blueprints.admin.admin_routes import admin_bp
     app.register_blueprint(admin_bp)
 
+    # Register developer blueprint
+    from .blueprints.developer.routes import developer_bp
+    app.register_blueprint(developer_bp)
+
     # Register reservation blueprints (now under products)
     from .blueprints.products.reservation_routes import reservation_bp
     from .blueprints.api.reservation_routes import reservation_api_bp
