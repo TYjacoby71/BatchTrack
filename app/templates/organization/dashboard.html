@@ -1,4 +1,3 @@
-
 {% extends "layout.html" %}
 {% block content %}
 <div class="container-fluid">
@@ -35,25 +34,31 @@
                     </button>
                 </div>
                 <div class="col-md-3 mb-2">
-                    <button class="btn btn-success btn-sm w-100" onclick="location.href='{{ url_for('organization.export', report_type='users') }}'">
+                    <button class="btn btn-success btn-sm w-100" onclick="exportReport('users')">
                         <i class="fas fa-download"></i> Export Users
                     </button>
                 </div>
                 <div class="col-md-3 mb-2">
-                    <button class="btn btn-info btn-sm w-100" onclick="location.href='{{ url_for('organization.export', report_type='activity') }}'">
+                    <button class="btn btn-info btn-sm w-100" onclick="exportReport('activity')">
                         <i class="fas fa-chart-line"></i> Activity Report
                     </button>
                 </div>
                 <div class="col-md-3 mb-2">
-                    <button class="btn btn-warning btn-sm w-100" onclick="alert('Billing management coming soon!')">
-                        <i class="fas fa-credit-card"></i> Manage Billing
+                    <button class="btn btn-warning btn-sm w-100" onclick="viewAuditLog()">
+                        <i class="fas fa-history"></i> Audit Log
                     </button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Stats Cards -->
+    <!-- Success/Error Messages -->
+    <div x-show="showMessage" x-transition class="alert" :class="messageType === 'success' ? 'alert-success' : 'alert-danger'" style="display: none;">
+        <span x-text="message"></span>
+        <button type="button" class="btn-close" @click="showMessage = false"></button>
+    </div>
+
+    <!-- Dashboard Metrics Row -->
     <div class="row mb-4">
         <div class="col-md-3 mb-3">
             <div class="card text-center">
@@ -113,8 +118,15 @@
                         <i class="fas fa-building"></i> Organization Settings
                     </button>
                 </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="subscription-tab" data-bs-toggle="tab" data-bs-target="#subscription" type="button" role="tab">
+                        <i class="fas fa-credit-card"></i> Subscription
+                    </button>
+                </li>
             </ul>
         </div>
+
+        <!-- Tab Content -->
         <div class="card-body">
             <div class="tab-content" id="orgDashboardTabContent">
                 <!-- User Management Tab -->
@@ -141,44 +153,48 @@
                                 {% for user in users %}
                                     <tr>
                                         <td>
-                                            <div class="d-flex align-items-center">
-                                                <div class="avatar-sm bg-primary rounded-circle d-flex align-items-center justify-content-center me-2">
-                                                    {{ user.username[0]|upper }}
-                                                </div>
-                                                <div>
-                                                    <div class="fw-bold">{{ user.username }}</div>
-                                                    <small class="text-muted">{{ user.email or 'No email' }}</small>
-                                                </div>
+                                            <div>
+                                                <strong>{{ user.full_name }}</strong>
+                                                <br><small class="text-muted">{{ user.username }} • {{ user.email or 'No email' }}</small>
                                             </div>
                                         </td>
                                         <td>
-                                            <span class="badge bg-secondary">
-                                                {{ user.role.name if user.role else 'No Role' }}
-                                            </span>
+                                            <span class="badge bg-secondary">{{ user.user_role.name if user.user_role else 'No Role' }}</span>
                                         </td>
                                         <td>
                                             {% if user.is_active %}
                                                 <span class="badge bg-success">Active</span>
                                             {% else %}
-                                                <span class="badge bg-secondary">Inactive</span>
+                                                <span class="badge bg-warning">Disabled</span>
                                             {% endif %}
                                         </td>
                                         <td>
-                                            <small class="text-muted">
-                                                {{ user.last_login.strftime('%Y-%m-%d %H:%M') if user.last_login else 'Never' }}
-                                            </small>
+                                            {% if user.last_login %}
+                                                {{ user.last_login.strftime('%Y-%m-%d %H:%M') }}
+                                            {% else %}
+                                                <span class="text-muted">Never</span>
+                                            {% endif %}
                                         </td>
                                         <td>
+                                            {% if user.id != current_user.id %}
                                             <div class="btn-group btn-group-sm">
                                                 <button class="btn btn-outline-primary" onclick="editUser({{ user.id }})">
                                                     <i class="fas fa-edit"></i>
                                                 </button>
-                                                {% if user.id != current_user.id %}
-                                                <button class="btn btn-outline-danger" onclick="deleteUser({{ user.id }})">
-                                                    <i class="fas fa-trash"></i>
+                                                <button class="btn btn-outline-warning" onclick="toggleUserStatus({{ user.id }})">
+                                                    {% if user.is_active %}
+                                                    <i class="fas fa-user-slash"></i>
+                                                    {% else %}
+                                                    <i class="fas fa-user-check"></i>
+                                                    {% endif %}
                                                 </button>
-                                                {% endif %}
+                                                <button class="btn btn-outline-info" onclick="viewUserActivity({{ user.id }})">
+                                                    <i class="fas fa-history"></i>
+                                                </button>
                                             </div>
+                                            {% else %}
+                                            <span class="badge bg-info">Owner</span>
+                                            {% endif %}
                                         </td>
                                     </tr>
                                 {% endfor %}
@@ -191,74 +207,68 @@
                 <div class="tab-pane fade" id="roles" role="tabpanel">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h5 class="mb-0"><i class="fas fa-shield-alt"></i> Roles & Permissions</h5>
-                        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#createRoleModal">
+                        <button class="btn btn-primary btn-sm" @click="showCreateRoleModal = true">
                             <i class="fas fa-plus"></i> Create Role
                         </button>
                     </div>
                     <div class="row">
                         {% for role in roles %}
                         <div class="col-md-6 mb-3">
-                            <div class="card">
+                            <div class="card border">
                                 <div class="card-header d-flex justify-content-between align-items-center">
-                                    <h6 class="mb-0">{{ role.name|title }}</h6>
-                                    <span class="badge bg-info">{{ role.assigned_users|length }} users</span>
+                                    <h6 class="mb-0">{{ role.name }}</h6>
+                                    <span class="badge bg-secondary">{{ role.assigned_users|length }} users</span>
                                 </div>
                                 <div class="card-body">
                                     <p class="text-muted small mb-2">{{ role.description or 'No description' }}</p>
                                     <div class="mb-2">
-                                        <strong>Permissions:</strong>
+                                        <small class="text-muted">Permissions:</small>
                                         <div class="mt-1">
-                                            {% for permission in role.permissions %}
-                                            <span class="badge bg-light text-dark me-1 mb-1">{{ permission.name }}</span>
+                                            {% for permission in role.permissions[:3] %}
+                                            <span class="badge bg-light text-dark me-1">{{ permission.name }}</span>
                                             {% endfor %}
+                                            {% if role.permissions|length > 3 %}
+                                            <span class="text-muted">+{{ role.permissions|length - 3 }} more</span>
+                                            {% endif %}
                                         </div>
                                     </div>
-                                    <div class="btn-group btn-group-sm w-100">
-                                        <button class="btn btn-outline-primary" onclick="editRole({{ role.id }})">
-                                            <i class="fas fa-edit"></i> Edit
-                                        </button>
-                                        {% if not role.is_system_role %}
-                                        <button class="btn btn-outline-danger" onclick="deleteRole({{ role.id }})">
-                                            <i class="fas fa-trash"></i> Delete
-                                        </button>
-                                        {% endif %}
-                                    </div>
+                                    <button class="btn btn-outline-primary btn-sm" onclick="editRole({{ role.id }})"
+                                        <i class="fas fa-edit"></i> Edit
+                                    </button>
                                 </div>
                             </div>
                         </div>
                         {% endfor %}
                     </div>
-
-                    <!-- Permission Categories -->
-                    <div class="mt-4">
-                        <h6><i class="fas fa-key"></i> Available Permissions</h6>
-                        <div class="row">
-                            {% for category, perms in permission_categories.items() %}
-                            <div class="col-md-4 mb-3">
-                                <div class="card">
-                                    <div class="card-header">
-                                        <h6 class="mb-0">{{ category|title }}</h6>
-                                    </div>
-                                    <div class="card-body">
-                                        {% for perm in perms %}
-                                        <div class="mb-1">
-                                            <span class="badge bg-light text-dark">{{ perm.name }}</span>
-                                            <small class="text-muted d-block">{{ perm.description or 'No description' }}</small>
-                                        </div>
-                                        {% endfor %}
-                                    </div>
-                                </div>
-                            </div>
-                            {% endfor %}
-                        </div>
-                    </div>
                 </div>
 
                 <!-- Reports & Logs Tab -->
                 <div class="tab-pane fade" id="reports" role="tabpanel">
-                    <h5 class="mb-3"><i class="fas fa-chart-bar"></i> Reports & Activity</h5>
                     <div class="row">
-                        <div class="col-md-8">
+                        <div class="col-md-6 mb-4">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="mb-0"><i class="fas fa-chart-line"></i> Activity Reports</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="list-group list-group-flush">
+                                        <a href="#" class="list-group-item list-group-item-action" onclick="exportReport('batches')">
+                                            <i class="fas fa-flask me-2"></i> Batch History Report
+                                        </a>
+                                        <a href="#" class="list-group-item list-group-item-action" onclick="exportReport('inventory')">
+                                            <i class="fas fa-boxes me-2"></i> Inventory Movement Report
+                                        </a>
+                                        <a href="#" class="list-group-item list-group-item-action" onclick="exportReport('users')">
+                                            <i class="fas fa-users me-2"></i> User Activity Report
+                                        </a>
+                                        <a href="#" class="list-group-item list-group-item-action" onclick="exportReport('products')"
+                                            <i class="fas fa-shopping-bag me-2"></i> Product Performance Report
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-4">
                             <div class="card">
                                 <div class="card-header">
                                     <h6 class="mb-0"><i class="fas fa-history"></i> Recent Activity</h6>
@@ -277,26 +287,6 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-4">
-                            <div class="card">
-                                <div class="card-header">
-                                    <h6 class="mb-0"><i class="fas fa-download"></i> Export Data</h6>
-                                </div>
-                                <div class="card-body">
-                                    <div class="d-grid gap-2">
-                                        <a href="{{ url_for('organization.export', report_type='users') }}" class="btn btn-outline-primary btn-sm">
-                                            <i class="fas fa-users"></i> Export Users
-                                        </a>
-                                        <a href="{{ url_for('organization.export', report_type='activity') }}" class="btn btn-outline-info btn-sm">
-                                            <i class="fas fa-history"></i> Export Activity Log
-                                        </a>
-                                        <a href="{{ url_for('organization.export', report_type='batches') }}" class="btn btn-outline-success btn-sm">
-                                            <i class="fas fa-flask"></i> Export Batch Data
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
                     </div>
                 </div>
 
@@ -306,58 +296,72 @@
                     <form @submit.prevent="updateOrgSettings()">
                         <div class="row">
                             <div class="col-md-6">
-                                <div class="card">
-                                    <div class="card-header">
-                                        <h6 class="mb-0">General Settings</h6>
-                                    </div>
-                                    <div class="card-body">
-                                        <div class="mb-3">
-                                            <label class="form-label">Organization Name</label>
-                                            <input type="text" class="form-control" v-model="orgSettings.name" value="{{ organization.name }}">
-                                        </div>
-                                        <div class="mb-3">
-                                            <label class="form-label">Organization ID</label>
-                                            <input type="text" class="form-control" value="{{ organization.id }}" readonly>
-                                        </div>
-                                        <div class="mb-3">
-                                            <label class="form-label">Created</label>
-                                            <input type="text" class="form-control" value="{{ organization.created_at.strftime('%Y-%m-%d') }}" readonly>
-                                        </div>
-                                        <button type="submit" class="btn btn-primary">Update Settings</button>
-                                    </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Organization Name</label>
+                                    <input type="text" class="form-control" x-model="orgSettings.name" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Default Timezone</label>
+                                    <select class="form-select" x-model="orgSettings.timezone">
+                                        <option value="America/New_York">Eastern Time</option>
+                                        <option value="America/Chicago">Central Time</option>
+                                        <option value="America/Denver">Mountain Time</option>
+                                        <option value="America/Los_Angeles">Pacific Time</option>
+                                    </select>
                                 </div>
                             </div>
                             <div class="col-md-6">
-                                <div class="card">
-                                    <div class="card-header">
-                                        <h6 class="mb-0">Subscription & Billing</h6>
-                                    </div>
-                                    <div class="card-body">
-                                        <h6>Current Plan: <span class="badge bg-primary">{{ organization.subscription_tier|title }}</span></h6>
-                                        <p class="text-muted">{{ organization.active_users_count }}/{{ organization.get_max_users() }} users</p>
-
-                                        <h6 class="mt-4">Available Features:</h6>
-                                        <ul class="list-unstyled">
-                                            {% for feature in organization.get_subscription_features() %}
-                                            <li><i class="fas fa-check text-success me-2"></i>{{ feature|replace('_', ' ')|title }}</li>
-                                            {% endfor %}
-                                        </ul>
-                                    </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Contact Email</label>
+                                    <input type="email" class="form-control" x-model="orgSettings.contact_email">
                                 </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="card border-primary">
-                                    <div class="card-header bg-primary text-white">
-                                        <h6 class="mb-0">Upgrade Available</h6>
-                                    </div>
-                                    <div class="card-body">
-                                        <p class="small">Unlock more features and user slots with our premium plans.</p>
-                                        <button class="btn btn-primary btn-sm w-100">View Plans</button>
-                                    </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Default Units</label>
+                                    <select class="form-select" x-model="orgSettings.default_units">
+                                        <option value="imperial">Imperial (oz, lb, etc.)</option>
+                                        <option value="metric">Metric (g, kg, etc.)</option>
+                                    </select>
                                 </div>
                             </div>
                         </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Save Settings
+                        </button>
                     </form>
+                </div>
+
+                <!-- Subscription Tab -->
+                <div class="tab-pane fade" id="subscription" role="tabpanel">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="card mb-3">
+                                <div class="card-body">
+                                    <h6>Current Plan: <span class="badge bg-primary">{{ organization.subscription_tier|title }}</span></h6>
+                                    <p class="text-muted">{{ organization.active_users_count }}/{{ organization.get_max_users() }} users</p>
+
+                                    <h6 class="mt-4">Available Features:</h6>
+                                    <ul class="list-unstyled">
+                                        {% for feature in organization.get_subscription_features() %}
+                                        <li><i class="fas fa-check text-success me-2"></i>{{ feature|replace('_', ' ')|title }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card border-primary">
+                                <div class="card-header bg-primary text-white">
+                                    <h6 class="mb-0">Upgrade Available</h6>
+                                </div>
+                                <div class="card-body text-center">
+                                    <p>Get more users, features, and integrations</p>
+                                    <button class="btn btn-outline-primary">
+                                        <i class="fas fa-arrow-up"></i> Upgrade Plan
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -365,94 +369,427 @@
 </div>
 
 <!-- Invite User Modal -->
-<div class="modal fade" id="inviteUserModal" tabindex="-1">
-    <div class="modal-dialog">
+<div class="modal fade" id="inviteUserModal" tabindex="-1" aria-labelledby="inviteUserModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Invite New User</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="inviteUserModalLabel">
+                    <i class="fas fa-user-plus me-2"></i>Invite New User
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body p-4">
                 <form id="inviteUserForm">
-                    <div class="mb-3">
-                        <label class="form-label">Email Address</label>
-                        <input type="email" class="form-control" name="email" required>
+                    <div class="row">
+                        <div class="col-12 mb-3">
+                            <label for="inviteEmail" class="form-label fw-bold">Email Address <span class="text-danger">*</span></label>
+                            <input type="email" class="form-control" id="inviteEmail" placeholder="user@example.com" required>
+                        </div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Role</label>
-                        <select class="form-select" name="role_id" required>
-                            <option value="">Select a role...</option>
-                            {% for role in roles %}
-                            <option value="{{ role.id }}">{{ role.name|title }}</option>
-                            {% endfor %}
-                        </select>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="inviteFirstName" class="form-label fw-bold">First Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="inviteFirstName" placeholder="First name" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="inviteLastName" class="form-label fw-bold">Last Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="inviteLastName" placeholder="Last name" required>
+                        </div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Username</label>
-                        <input type="text" class="form-control" name="username" required>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="inviteRole" class="form-label fw-bold">Role <span class="text-danger">*</span></label>
+                            <select class="form-select" id="inviteRole" required>
+                                <option value="">Select Role</option>
+                                {% for role in roles %}
+                                <option value="{{ role.id }}">{{ role.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="invitePhone" class="form-label fw-bold">Phone Number <span class="text-muted">(optional)</span></label>
+                            <input type="tel" class="form-control" id="invitePhone" placeholder="(555) 123-4567">
+                        </div>
+                    </div>
+                    <div class="alert alert-info border-0" style="background-color: #e7f3ff;">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Important:</strong> A temporary password will be generated and displayed after successful invitation. Please share these credentials securely with the new user.
                     </div>
                 </form>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="submitInviteUser()">Send Invite</button>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Cancel
+                </button>
+                <button type="button" class="btn btn-primary" onclick="inviteUser()">
+                    <i class="fas fa-paper-plane me-2"></i>Send Invite
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit User Modal -->
+<div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="editUserModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title" id="editUserModalLabel">
+                    <i class="fas fa-user-edit me-2"></i>Edit User
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="editUserForm">
+                    <input type="hidden" id="editUserId">
+
+                    <!-- User Info Section -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-muted mb-3">User Information</h6>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="editFirstName" class="form-label fw-bold">First Name</label>
+                            <input type="text" class="form-control" id="editFirstName" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="editLastName" class="form-label fw-bold">Last Name</label>
+                            <input type="text" class="form-control" id="editLastName" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="editEmail" class="form-label fw-bold">Email</label>
+                            <input type="email" class="form-control" id="editEmail">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="editPhone" class="form-label fw-bold">Phone</label>
+                            <input type="tel" class="form-control" id="editPhone">
+                        </div>
+                    </div>
+
+                    <!-- Role & Status Section -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-muted mb-3">Role & Status</h6>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="editRole" class="form-label fw-bold">Role</label>
+                            <select class="form-select" id="editRole" required>
+                                <option value="">Select Role</option>
+                                {% for role in roles %}
+                                <option value="{{ role.id }}">{{ role.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="editStatus" class="form-label fw-bold">Status</label>
+                            <select class="form-select" id="editStatus" required>
+                                <option value="true">Active</option>
+                                <option value="false">Inactive</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Account Info -->
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <div class="alert alert-light border">
+                                <h6 class="mb-2">Account Information</h6>
+                                <p class="mb-1"><strong>Username:</strong> <span id="editUsername"></span></p>
+                                <p class="mb-1"><strong>Last Login:</strong> <span id="editLastLogin"></span></p>
+                                <p class="mb-0"><strong>Created:</strong> <span id="editCreatedAt"></span></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Danger Zone -->
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="alert alert-danger border-danger">
+                                <h6 class="text-danger mb-2">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>Danger Zone
+                                </h6>
+                                <p class="mb-3 small">Permanent actions that cannot be undone.</p>
+                                <button type="button" class="btn btn-outline-danger btn-sm" onclick="confirmDeleteUser()">
+                                    <i class="fas fa-trash me-2"></i>Delete User Permanently
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Cancel
+                </button>
+                <button type="button" class="btn btn-warning" onclick="updateUser()">
+                    <i class="fas fa-save me-2"></i>Save Changes
+                </button>
             </div>
         </div>
     </div>
 </div>
 
 <script>
-function submitInviteUser() {
-    const form = document.getElementById('inviteUserForm');
-    const formData = new FormData(form);
-    
-    fetch('{{ url_for("organization.invite_user") }}', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            alert('User invited successfully!');
-            location.reload();
-        } else {
-            alert('Error: ' + data.error);
+// Global functions for organization dashboard
+function getCSRFToken() {
+    const tokenMeta = document.querySelector('meta[name=csrf-token]');
+    return tokenMeta ? tokenMeta.getAttribute('content') : '';
+}
+
+function showMessage(message, type = 'success') {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+
+    // Insert at top of container
+    const container = document.querySelector('.container-fluid');
+    container.insertBefore(alertDiv, container.firstChild);
+
+    // Auto dismiss after 5 seconds
+    setTimeout(() => {
+        if (alertDiv && alertDiv.parentNode) {
+            alertDiv.remove();
         }
-    });
+    }, 5000);
 }
 
-function editUser(userId) {
-    // Implementation for editing user
-    alert('Edit user functionality - to be implemented');
+async function inviteUser() {
+    const email = document.getElementById('inviteEmail').value;
+    const roleId = document.getElementById('inviteRole').value;
+    const firstName = document.getElementById('inviteFirstName').value;
+    const lastName = document.getElementById('inviteLastName').value;
+    const phone = document.getElementById('invitePhone').value;
+
+    // Validate form
+    if (!email || !roleId || !firstName || !lastName) {
+        showMessage('Email, role, first name, and last name are required', 'danger');
+        return;
+    }
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        showMessage('Please enter a valid email address', 'danger');
+        return;
+    }
+
+    const inviteData = {
+        email: email,
+        role_id: roleId,
+        first_name: firstName,
+        last_name: lastName,
+        phone: phone
+    };
+
+    try {
+        const response = await fetch('/organization/invite-user', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRFToken()
+            },
+            body: JSON.stringify(inviteData)
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showMessage(result.message || 'User invited successfully', 'success');
+
+            // Close modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('inviteUserModal'));
+            modal.hide();
+
+            // Reset form
+            document.getElementById('inviteUserForm').reset();
+
+            // Show credentials if provided (development mode)
+            if (result.user_data && result.user_data.temp_password) {
+                setTimeout(() => {
+                    alert(`Login Credentials:\nUsername: ${result.user_data.username}\nPassword: ${result.user_data.temp_password}\n\nPlease share these securely with the new user.`);
+                }, 500);
+            }
+
+            // Reload page to show new user
+            setTimeout(() => window.location.reload(), 2000);
+        } else {
+            showMessage(result.error || 'Failed to send invite', 'danger');
+        }
+    } catch (error) {
+        console.error('Invite error:', error);
+        showMessage('Failed to send invite', 'danger');
+    }
 }
 
-function deleteUser(userId) {
-    if (confirm('Are you sure you want to delete this user?')) {
-        fetch(`{{ url_for("organization.delete_user", user_id=0) }}`.replace('0', userId), {
-            method: 'DELETE'
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert('User deleted successfully!');
-                location.reload();
-            } else {
-                alert('Error: ' + data.error);
+function exportReport(type) {
+    window.open(`/organization/export/${type}`, '_blank');
+}
+
+async function editUser(userId) {
+    try {
+        const response = await fetch(`/organization/user/${userId}`, {
+            method: 'GET',
+            headers: {
+                'X-CSRFToken': getCSRFToken()
             }
         });
+
+        const result = await response.json();
+
+        if (result.success) {
+            const user = result.user;
+
+            // Populate form fields
+            document.getElementById('editUserId').value = user.id;
+            document.getElementById('editFirstName').value = user.first_name || '';
+            document.getElementById('editLastName').value = user.last_name || '';
+            document.getElementById('editEmail').value = user.email || '';
+            document.getElementById('editPhone').value = user.phone || '';
+            document.getElementById('editRole').value = user.role_id || '';
+            document.getElementById('editStatus').value = user.is_active.toString();
+
+            // Populate read-only fields
+            document.getElementById('editUsername').textContent = user.username;
+            document.getElementById('editLastLogin').textContent = user.last_login || 'Never';
+            document.getElementById('editCreatedAt').textContent = user.created_at || 'Unknown';
+
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('editUserModal'));
+            modal.show();
+        } else {
+            showMessage(result.error || 'Failed to load user data', 'danger');
+        }
+    } catch (error) {
+        console.error('Edit user error:', error);
+        showMessage('Failed to load user data', 'danger');
     }
+}
+
+async function updateUser() {
+    const userId = document.getElementById('editUserId').value;
+    const userData = {
+        first_name: document.getElementById('editFirstName').value,
+        last_name: document.getElementById('editLastName').value,
+        email: document.getElementById('editEmail').value,
+        phone: document.getElementById('editPhone').value,
+        role_id: document.getElementById('editRole').value,
+        is_active: document.getElementById('editStatus').value === 'true'
+    };
+
+    try {
+        const response = await fetch(`/organization/user/${userId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRFToken()
+            },
+            body: JSON.stringify(userData)
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showMessage(result.message || 'User updated successfully', 'success');
+
+            // Close modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('editUserModal'));
+            modal.hide();
+
+            // Reload page to show changes
+            setTimeout(() => window.location.reload(), 1000);
+        } else {
+            showMessage(result.error || 'Failed to update user', 'danger');
+        }
+    } catch (error) {
+        console.error('Update error:', error);
+        showMessage('Failed to update user', 'danger');
+    }
+}
+
+async function toggleUserStatus(userId) {
+    if (!confirm('Are you sure you want to change this user\'s status?')) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/organization/user/${userId}/toggle-status`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRFToken()
+            }
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showMessage(result.message || 'User status updated', 'success');
+            setTimeout(() => window.location.reload(), 1000);
+        } else {
+            showMessage(result.error || 'Failed to update user status', 'danger');
+        }
+    } catch (error) {
+        console.error('Toggle status error:', error);
+        showMessage('Failed to update user status', 'danger');
+    }
+}
+
+async function confirmDeleteUser() {
+    const userId = document.getElementById('editUserId').value;
+    const username = document.getElementById('editUsername').textContent;
+
+    if (!confirm(`Are you sure you want to permanently delete user "${username}"? This action cannot be undone and will remove all associated data.`)) {
+        return;
+    }
+
+    if (!confirm('This is your final warning. This will permanently delete the user and all their data. Are you absolutely sure?')) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/organization/user/${userId}`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRFToken': getCSRFToken()
+            }
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showMessage(result.message || 'User deleted successfully', 'success');
+
+            // Close modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('editUserModal'));
+            modal.hide();
+
+            // Reload page
+            setTimeout(() => window.location.reload(), 1000);
+        } else {
+            showMessage(result.error || 'Failed to delete user', 'danger');
+        }
+    } catch (error) {
+        console.error('Delete user error:', error);
+        showMessage('Failed to delete user', 'danger');
+    }
+}
+
+function viewUserActivity(userId) {
+    showMessage('User activity view functionality coming soon', 'info');
 }
 
 function editRole(roleId) {
-    // Implementation for editing role
-    alert('Edit role functionality - to be implemented');
+    showMessage('Role editing functionality coming soon', 'info');
 }
 
-function deleteRole(roleId) {
-    if (confirm('Are you sure you want to delete this role?')) {
-        // Implementation for deleting role
-        alert('Delete role functionality - to be implemented');
-    }
+function viewAuditLog() {
+    showMessage('Audit log functionality coming soon', 'info');
 }
 </script>
+{% endblock %}
+
+{% block scripts %}
 {% endblock %}
