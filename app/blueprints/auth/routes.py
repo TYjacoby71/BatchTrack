@@ -1,4 +1,3 @@
-
 from flask import render_template, request, redirect, url_for, flash
 from flask_login import login_user, logout_user, current_user
 from flask_wtf import FlaskForm
@@ -9,6 +8,7 @@ from . import auth_bp
 from ...extensions import db
 from ...models import User, Organization
 from ...utils.timezone_utils import TimezoneUtils
+from flask_login import login_required
 
 class LoginForm(FlaskForm):
     username = StringField('Username', validators=[DataRequired()])
@@ -19,7 +19,7 @@ class LoginForm(FlaskForm):
 def login():
     if current_user.is_authenticated:
         return redirect(url_for('app_routes.dashboard'))
-        
+
     form = LoginForm()
     if request.method == 'POST' and form.validate_on_submit():
         form_type = request.form.get('form_type')
@@ -66,20 +66,20 @@ def login():
         else:
             # Handle login
             user = User.query.filter_by(username=username).first()
-            
+
             if user and user.check_password(password):
                 # Ensure user is active
                 if not user.is_active:
                     flash('Account is inactive. Please contact administrator.')
                     return render_template('auth/login.html', form=form)
-                
+
                 # Update last login
                 user.last_login = TimezoneUtils.utc_now()
                 db.session.commit()
-                
+
                 login_user(user, remember=True)
                 flash('Login successful!', 'success')
-                
+
                 # Check for next parameter or redirect to dashboard
                 next_page = request.args.get('next')
                 if next_page:
@@ -132,14 +132,14 @@ def update_role_route(role_id):
 def get_role(role_id):
     """Get role details for editing"""
     role = Role.query.get_or_404(role_id)
-    
+
     # Check permissions
     if role.is_system_role and current_user.user_type != 'developer':
         abort(403)
-    
+
     if role.organization_id != current_user.organization_id and current_user.user_type != 'developer':
         abort(403)
-    
+
     return jsonify({
         'success': True,
         'role': {
@@ -155,7 +155,7 @@ def get_role(role_id):
 def permissions_api():
     """API endpoint for permissions data"""
     permissions = Permission.query.filter_by(is_active=True).all()
-    
+
     categories = {}
     for perm in permissions:
         category = perm.category or 'general'
@@ -167,7 +167,7 @@ def permissions_api():
             'description': perm.description,
             'required_subscription_tier': perm.required_subscription_tier
         })
-    
+
     return jsonify({
         'success': True,
         'categories': categories
