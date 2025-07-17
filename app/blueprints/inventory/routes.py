@@ -13,13 +13,21 @@ from . import inventory_bp
 @login_required
 def list_inventory():
     inventory_type = request.args.get('type')
+    show_archived = request.args.get('show_archived') == 'true'
     query = InventoryItem.query
 
     # Exclude product and product-reserved items from inventory management
     query = query.filter(~InventoryItem.type.in_(['product', 'product-reserved']))
 
+    # Filter by archived status unless show_archived is true
+    if not show_archived:
+        query = query.filter(InventoryItem.is_archived != True)
+
     if inventory_type:
         query = query.filter_by(type=inventory_type)
+    
+    # Order by archived status (active items first) then by name
+    query = query.order_by(InventoryItem.is_archived.asc(), InventoryItem.name.asc())
     inventory_items = query.all()
     units = get_global_unit_list()
     categories = IngredientCategory.query.all()
@@ -56,6 +64,7 @@ def list_inventory():
                          categories=categories,
                          total_value=total_value,
                          units=units,
+                         show_archived=show_archived,
                          get_global_unit_list=get_global_unit_list)
 @inventory_bp.route('/set-columns', methods=['POST'])
 @login_required
