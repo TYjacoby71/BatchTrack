@@ -102,6 +102,44 @@ def api_archive_expired():
     count = ExpirationService.archive_expired_items()
     return jsonify({'archived_count': count})
 
+@expiration_bp.route('/api/debug-expiration')
+@login_required
+def api_debug_expiration():
+    """Debug endpoint to check expiration setup"""
+    from ...models import ProductSKUHistory, InventoryItem
+    from sqlalchemy import and_
+    
+    # Get all SKU entries with remaining quantity
+    sku_entries = db.session.query(ProductSKUHistory).join(
+        InventoryItem, ProductSKUHistory.inventory_item_id == InventoryItem.id
+    ).filter(and_(
+        ProductSKUHistory.remaining_quantity > 0,
+        ProductSKUHistory.quantity_change > 0,
+        InventoryItem.organization_id == current_user.organization_id if current_user.is_authenticated and current_user.organization_id else True
+    )).all()
+    
+    debug_info = []
+    for entry in sku_entries:
+        inventory_item = InventoryItem.query.get(entry.inventory_item_id)
+        debug_info.append({
+            'sku_entry_id': entry.id,
+            'inventory_item_name': inventory_item.name if inventory_item else 'Unknown',
+            'inventory_item_id': entry.inventory_item_id,
+            'is_perishable': inventory_item.is_perishable if inventory_item else False,
+            'shelf_life_days': inventory_item.shelf_life_days if inventory_item else None,
+            'remaining_quantity': entry.remaining_quantity,
+            'timestamp': entry.timestamp.isoformat() if entry.timestamp else None,
+            'batch_id': entry.batch_id,
+            'calculated_expiration': ExpirationService.get_effective_sku_expiration_date(entry).isoformat() if ExpirationService.get_effective_sku_expiration_date(entry) else None
+        })
+    
+    return jsonify({
+        'total_sku_entries': len(sku_entries),
+        'entries': debug_info[:10],  # First 10 entries for debugging
+        'perishable_count': len([e for e in debug_info if e['is_perishable']]),
+        'non_perishable_count': len([e for e in debug_info if not e['is_perishable']])
+    })
+
 @expiration_bp.route('/api/mark-expired', methods=['POST'])
 @login_required
 def api_mark_expired():

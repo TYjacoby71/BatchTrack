@@ -121,7 +121,7 @@ class ExpirationService:
             return None
 
         master_shelf_life = inventory_item.shelf_life_days if inventory_item.is_perishable else None
-        logger.debug(f"SKU entry {sku_entry.id}: master_shelf_life = {master_shelf_life}")
+        logger.debug(f"SKU entry {sku_entry.id}: inventory_item.name={inventory_item.name}, is_perishable={inventory_item.is_perishable}, shelf_life_days={inventory_item.shelf_life_days}, master_shelf_life = {master_shelf_life}")
         
         # If this entry is from a batch
         if sku_entry.batch_id:
