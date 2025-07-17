@@ -14,7 +14,8 @@ class Organization(db.Model):
 
     @property
     def active_users_count(self):
-        return len([u for u in self.users if u.is_active and u.user_type != 'developer'])
+        # Only count users that belong to this organization AND are not developers
+        return len([u for u in self.users if u.is_active and u.user_type != 'developer' and u.organization_id == self.id])
 
     @property
     def owner(self):
