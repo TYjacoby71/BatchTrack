@@ -340,43 +340,6 @@ def _create_container_sku(product, variant, container_item, quantity, batch, exp
         if not success:
             raise ValueError(f"Failed to add container inventory for {size_label}")
 
-        # Calculate expiration date for batch output
-        expiration_date = None
-        is_perishable = False
-        shelf_life_days = None
-
-        # First check if batch has expiration settings
-        if batch.is_perishable and batch.shelf_life_days:
-            is_perishable = True
-            shelf_life_days = batch.shelf_life_days
-            # Use batch completion time for expiration calculation
-            from ...blueprints.expiration.services import ExpirationService
-            expiration_date = ExpirationService.calculate_expiration_date(
-                batch.completed_at or batch.started_at, shelf_life_days
-            )
-        else:
-            # Fall back to inventory item's master shelf life settings
-            inventory_item = product_sku.inventory_item
-            if inventory_item and inventory_item.is_perishable and inventory_item.shelf_life_days:
-                is_perishable = True
-                shelf_life_days = inventory_item.shelf_life_days
-                from ...blueprints.expiration.services import ExpirationService
-                expiration_date = ExpirationService.calculate_expiration_date(
-                    batch.completed_at or batch.started_at, shelf_life_days
-                )
-
-        # Update the most recent ProductSKUHistory entry with expiration data
-        if is_perishable and shelf_life_days and expiration_date:
-            latest_entry = ProductSKUHistory.query.filter_by(
-                inventory_item_id=product_sku.inventory_item_id
-            ).order_by(ProductSKUHistory.timestamp.desc()).first()
-            
-            if latest_entry and latest_entry.remaining_quantity > 0:
-                latest_entry.is_perishable = is_perishable
-                latest_entry.shelf_life_days = shelf_life_days
-                latest_entry.expiration_date = expiration_date
-                db.session.commit()
-
         logger.info(f"Successfully created/updated container SKU: {product_sku.sku_code} with {quantity} containers at ${total_cost_per_container:.2f} per container")
         return product_sku
 
@@ -414,43 +377,6 @@ def _create_bulk_sku(product, variant, quantity, unit, expiration_date, batch, i
 
         if not success:
             raise ValueError(f"Failed to add bulk inventory for {quantity} {unit}")
-
-        # Calculate expiration date for bulk output
-        expiration_date = None
-        is_perishable = False
-        shelf_life_days = None
-
-        # First check if batch has expiration settings
-        if batch.is_perishable and batch.shelf_life_days:
-            is_perishable = True
-            shelf_life_days = batch.shelf_life_days
-            # Use batch completion time for expiration calculation
-            from ...blueprints.expiration.services import ExpirationService
-            expiration_date = ExpirationService.calculate_expiration_date(
-                batch.completed_at or batch.started_at, shelf_life_days
-            )
-        else:
-            # Fall back to inventory item's master shelf life settings
-            inventory_item = bulk_sku.inventory_item
-            if inventory_item and inventory_item.is_perishable and inventory_item.shelf_life_days:
-                is_perishable = True
-                shelf_life_days = inventory_item.shelf_life_days
-                from ...blueprints.expiration.services import ExpirationService
-                expiration_date = ExpirationService.calculate_expiration_date(
-                    batch.completed_at or batch.started_at, shelf_life_days
-                )
-
-        # Update the most recent ProductSKUHistory entry with expiration data
-        if is_perishable and shelf_life_days and expiration_date:
-            latest_entry = ProductSKUHistory.query.filter_by(
-                inventory_item_id=bulk_sku.inventory_item_id
-            ).order_by(ProductSKUHistory.timestamp.desc()).first()
-            
-            if latest_entry and latest_entry.remaining_quantity > 0:
-                latest_entry.is_perishable = is_perishable
-                latest_entry.shelf_life_days = shelf_life_days
-                latest_entry.expiration_date = expiration_date
-                db.session.commit()
 
         logger.info(f"Created/updated bulk SKU: {bulk_sku.sku_code} with {quantity} {unit} at ${ingredient_unit_cost:.2f} per {unit}")
         return bulk_sku

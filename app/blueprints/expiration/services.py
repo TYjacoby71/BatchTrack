@@ -226,48 +226,31 @@ class ExpirationService:
     @staticmethod
     def _format_sku_entry(sku_entry):
         """Format SKU entry for consistent return structure"""
-        try:
-            # Calculate expiration date properly
-            expiration_date = None
-            if sku_entry.expiration_date:
-                expiration_date = sku_entry.expiration_date
-            elif sku_entry.batch_id:
-                expiration_date = ExpirationService.get_batch_expiration_date(sku_entry.batch_id)
-            elif hasattr(sku_entry, 'timestamp') and hasattr(sku_entry, 'shelf_life_days') and sku_entry.timestamp and sku_entry.shelf_life_days:
-                expiration_date = ExpirationService.calculate_expiration_date(
-                    sku_entry.timestamp, sku_entry.shelf_life_days
-                )
-            
-            return {
-                'inventory_item_id': getattr(sku_entry, 'inventory_item_id', None),
-                'product_name': getattr(sku_entry, 'product_name', 'Unknown Product'),
-                'variant_name': getattr(sku_entry, 'variant_name', 'Unknown Variant'),
-                'size_label': getattr(sku_entry, 'size_label', 'Unknown Size'),
-                'quantity': getattr(sku_entry, 'remaining_quantity', 0),
-                'unit': getattr(sku_entry, 'unit', 'units'),
-                'expiration_date': expiration_date,
-                'history_id': getattr(sku_entry, 'history_id', None),
-                'product_inv_id': getattr(sku_entry, 'history_id', None),
-                'product_id': getattr(sku_entry, 'product_id', None),
-                'variant_id': getattr(sku_entry, 'variant_id', None),
-                'lot_number': f"LOT-{getattr(sku_entry, 'history_id', 'unknown')}"
-            }
-        except Exception as e:
-            logger.error(f"Error formatting SKU entry: {str(e)}")
-            return {
-                'inventory_item_id': None,
-                'product_name': 'Error Loading Product',
-                'variant_name': 'Error',
-                'size_label': 'Error',
-                'quantity': 0,
-                'unit': 'units',
-                'expiration_date': None,
-                'history_id': None,
-                'product_inv_id': None,
-                'product_id': None,
-                'variant_id': None,
-                'lot_number': 'LOT-error'
-            }
+        # Calculate expiration date properly
+        expiration_date = None
+        if sku_entry.expiration_date:
+            expiration_date = sku_entry.expiration_date
+        elif sku_entry.batch_id:
+            expiration_date = ExpirationService.get_batch_expiration_date(sku_entry.batch_id)
+        elif hasattr(sku_entry, 'timestamp') and hasattr(sku_entry, 'shelf_life_days') and sku_entry.timestamp and sku_entry.shelf_life_days:
+            expiration_date = ExpirationService.calculate_expiration_date(
+                sku_entry.timestamp, sku_entry.shelf_life_days
+            )
+        
+        return {
+            'inventory_item_id': sku_entry.inventory_item_id,
+            'product_name': sku_entry.product_name,
+            'variant_name': sku_entry.variant_name,
+            'size_label': sku_entry.size_label,
+            'quantity': sku_entry.remaining_quantity,
+            'unit': sku_entry.unit,
+            'expiration_date': expiration_date,
+            'history_id': sku_entry.history_id,
+            'product_inv_id': sku_entry.history_id,
+            'product_id': sku_entry.product_id,
+            'variant_id': sku_entry.variant_id,
+            'lot_number': f"LOT-{sku_entry.history_id}"
+        }
 
     @staticmethod
     def get_batch_expiration_date(batch_id: int) -> Optional[datetime]:
@@ -278,8 +261,8 @@ class ExpirationService:
         if not batch or not batch.is_perishable or not batch.shelf_life_days:
             return None
 
-        # Use batch completion timestamp first, fall back to started timestamp
-        base_date = batch.completed_at or batch.started_at
+        # Use the batch's created timestamp (when it was finished/added) for expiration calculation
+        base_date = batch.created_at
         if not base_date:
             return None
 
@@ -448,22 +431,14 @@ class ExpirationService:
     @staticmethod
     def get_expiration_summary():
         """Get summary of expiration data for dashboard"""
-        try:
-            expired_items = ExpirationService.get_expired_inventory_items()
-            expiring_soon = ExpirationService.get_expiring_soon_items(7)
+        expired_items = ExpirationService.get_expired_inventory_items()
+        expiring_soon = ExpirationService.get_expiring_soon_items(7)
 
-            return {
-                'expired_count': len(expired_items['fifo_entries']) + len(expired_items['product_inventory']),
-                'expiring_soon_count': len(expiring_soon['fifo_entries']) + len(expiring_soon['product_inventory']),
-                'total_expiration_issues': len(expired_items['fifo_entries']) + len(expired_items['product_inventory']) + len(expiring_soon['fifo_entries']) + len(expiring_soon['product_inventory'])
-            }
-        except Exception as e:
-            logger.error(f"Error getting expiration summary: {str(e)}")
-            return {
-                'expired_count': 0,
-                'expiring_soon_count': 0,
-                'total_expiration_issues': 0
-            }
+        return {
+            'expired_count': len(expired_items['fifo_entries']) + len(expired_items['product_inventory']),
+            'expiring_soon_count': len(expiring_soon['fifo_entries']) + len(expiring_soon['product_inventory']),
+            'total_expiration_issues': len(expired_items['fifo_entries']) + len(expired_items['product_inventory']) + len(expiring_soon['fifo_entries']) + len(expiring_soon['product_inventory'])
+        }
 
     @staticmethod
     def mark_as_expired(item_type, item_id, quantity=None):
