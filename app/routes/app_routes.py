@@ -27,6 +27,10 @@ def check_container_availability(container_ids, scale=1):
 @app_routes_bp.route('/user_dashboard')
 @login_required
 def dashboard():
+    # Developer users should not access this dashboard
+    if current_user.user_type == 'developer':
+        return redirect(url_for('developer.dashboard'))
+    
     recipes = Recipe.scoped().all()
     active_batch = Batch.query.filter_by(status='in_progress').first()
 

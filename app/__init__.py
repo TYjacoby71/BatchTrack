@@ -251,8 +251,11 @@ def create_app():
     def index():
         from flask_login import current_user
         if current_user.is_authenticated:
-            return redirect(url_for('app_routes.dashboard'))
-        return redirect(url_for('homepage'))
+            if current_user.user_type == 'developer':
+                return redirect(url_for('developer.dashboard'))
+            else:
+                return redirect(url_for('app_routes.dashboard'))
+        return redirect(url_for('auth.login'))
 
     @app.route('/homepage')
     def homepage():
