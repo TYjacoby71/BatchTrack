@@ -1,6 +1,4 @@
-` tags, preserving indentation and formatting.
-
-```python
+from flask import current_user
 from flask import current_app
 from .timezone_utils import TimezoneUtils
 from flask import Blueprint
