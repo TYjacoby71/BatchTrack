@@ -366,20 +366,22 @@
 
 <!-- Invite User Modal -->
 <div class="modal fade" id="inviteUserModal" tabindex="-1" aria-labelledby="inviteUserModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="inviteUserModalLabel">Invite New User</h5>
+                <h5 class="modal-title" id="inviteUserModalLabel">
+                    <i class="fas fa-user-plus me-2"></i>Invite New User
+                </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div></div>
+            </div>
             <div class="modal-body">
                 <form id="inviteUserForm">
                     <div class="mb-3">
-                        <label class="form-label">Email Address</label>
-                        <input type="email" class="form-control" id="inviteEmail" required>
+                        <label for="inviteEmail" class="form-label">Email Address <span class="text-danger">*</span></label>
+                        <input type="email" class="form-control" id="inviteEmail" placeholder="user@example.com" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Role</label>
+                        <label for="inviteRole" class="form-label">Role <span class="text-danger">*</span></label>
                         <select class="form-select" id="inviteRole" required>
                             <option value="">Select Role</option>
                             {% for role in roles %}
@@ -387,23 +389,35 @@
                             {% endfor %}
                         </select>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">First Name</label>
-                        <input type="text" class="form-control" id="inviteFirstName" required>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="inviteFirstName" class="form-label">First Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="inviteFirstName" placeholder="First name" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="inviteLastName" class="form-label">Last Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="inviteLastName" placeholder="Last name" required>
+                            </div>
+                        </div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Last Name</label>
-                        <input type="text" class="form-control" id="inviteLastName" required>
+                        <label for="invitePhone" class="form-label">Phone Number <span class="text-muted">(optional)</span></label>
+                        <input type="tel" class="form-control" id="invitePhone" placeholder="(555) 123-4567">
                     </div>
-                     <div class="mb-3">
-                        <label class="form-label">Phone Number</label>
-                        <input type="text" class="form-control" id="invitePhone">
+                    <div class="alert alert-info mb-0">
+                        <i class="fas fa-info-circle me-2"></i>
+                        A temporary password will be generated and sent to the user's email. They will be prompted to set up their username and password upon email verification.
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="inviteUser()">Send Invite</button>
+                <button type="button" class="btn btn-primary" onclick="inviteUser()">
+                    <i class="fas fa-paper-plane me-2"></i>Send Invite
+                </button>
             </div>
         </div>
     </div>
