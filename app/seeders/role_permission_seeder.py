@@ -162,7 +162,20 @@ def seed_system_roles():
                 organization_id=None
             )
             db.session.add(role)
-            db.session.flush()  # Get the ID
+            try:
+                db.session.flush()  # Get the ID
+            except Exception as e:
+                # If there's a constraint error, try to find an existing role
+                db.session.rollback()
+                role = Role.query.filter_by(name=role_data['name']).first()
+                if not role:
+                    print(f"❌ Could not create or find role '{role_data['name']}': {e}")
+                    continue
+                else:
+                    # Update existing role to be a system role
+                    role.is_system_role = True
+                    role.description = role_data['description']
+                    role.organization_id = None
         else:
             role.description = role_data['description']
 
