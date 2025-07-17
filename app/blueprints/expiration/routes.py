@@ -3,19 +3,6 @@ from flask_login import login_required
 from .services import ExpirationService
 from . import expiration_bp
 
-@expiration_bp.route('/alerts')
-@login_required
-def alerts():
-    """Main expiration alerts dashboard"""
-    from datetime import datetime
-    expired = ExpirationService.get_expired_inventory_items()
-    expiring_soon = ExpirationService.get_expiring_soon_items(7)
-
-    return render_template('expiration/alerts.html', 
-                         expired=expired, 
-                         expiring_soon=expiring_soon,
-                         today=datetime.now())
-
 @expiration_bp.route('/api/expired-items')
 @login_required
 def api_expired_items():
@@ -36,7 +23,7 @@ def api_expiring_soon():
 def api_summary():
     """API endpoint for expiration summary"""
     from ...services.combined_inventory_alerts import CombinedInventoryAlertService
-    
+
     # Get user's expiration warning preference
     days_ahead = 7  # Default
     from flask_login import current_user
@@ -45,9 +32,9 @@ def api_summary():
         user_prefs = UserPreferences.get_for_user(current_user.id)
         if user_prefs:
             days_ahead = user_prefs.expiration_warning_days
-    
+
     expiration_data = CombinedInventoryAlertService.get_expiration_alerts(days_ahead)
-    
+
     return jsonify({
         'expired_total': expiration_data['expired_total'],
         'expiring_soon_total': expiration_data['expiring_soon_total']
@@ -110,7 +97,7 @@ def api_debug_expiration():
     from ...models import db
     from sqlalchemy import and_
     from flask_login import current_user
-    
+
     # Get all SKU entries with remaining quantity
     sku_entries = db.session.query(ProductSKUHistory).join(
         InventoryItem, ProductSKUHistory.inventory_item_id == InventoryItem.id
@@ -119,7 +106,7 @@ def api_debug_expiration():
         ProductSKUHistory.quantity_change > 0,
         InventoryItem.organization_id == current_user.organization_id if current_user.is_authenticated and current_user.organization_id else True
     )).all()
-    
+
     debug_info = []
     for entry in sku_entries:
         inventory_item = InventoryItem.query.get(entry.inventory_item_id)
@@ -134,7 +121,7 @@ def api_debug_expiration():
             'batch_id': entry.batch_id,
             'calculated_expiration': ExpirationService.get_effective_sku_expiration_date(entry).isoformat() if ExpirationService.get_effective_sku_expiration_date(entry) else None
         })
-    
+
     return jsonify({
         'total_sku_entries': len(sku_entries),
         'entries': debug_info[:10],  # First 10 entries for debugging
@@ -150,7 +137,7 @@ def api_mark_expired():
         data = request.get_json()
         if not data:
             return jsonify({'error': 'No JSON data provided'}), 400
-            
+
         item_type = data.get('type')  # 'fifo' or 'product'
         item_id = data.get('id')
 
@@ -163,7 +150,7 @@ def api_mark_expired():
             return jsonify({'error': 'Invalid item type. Must be "fifo", "product", or "raw"'}), 400
 
         success, message = ExpirationService.mark_as_expired(item_type, item_id)
-        
+
         if success:
             return jsonify({'success': True, 'message': message, 'expired_count': 1})
         else:
@@ -226,6 +213,35 @@ def api_product_inventory_expiration(inventory_id):
 
 @expiration_bp.route('/alerts')
 @login_required
+def alerts():
+    from ...services.combined_inventory_alerts import CombinedInventoryAlertService
+    from ...utils.timezone_utils import TimezoneUtils
+
+    # Get user's expiration warning preference
+    days_ahead = 7  # Default
+    if current_user and current_user.is_authenticated:
+        from ...models.user_preferences import UserPreferences
+        user_prefs = UserPreferences.get_for_user(current_user.id)
+        if user_prefs:
+            days_ahead = user_prefs.expiration_warning_days
+
+    # Get comprehensive expiration data
+    expiration_data = CombinedInventoryAlertService.get_expiration_alerts(days_ahead)
+
+    # Get timezone-aware current time for template calculations
+    user_now = TimezoneUtils.now()
+    user_today = user_now.date()
+
+    return render_template('expiration/alerts.html',
+                         expired_fifo_entries=expiration_data['expired_fifo_entries'],
+                         expired_products=expiration_data['expired_products'],
+                         expiring_fifo_entries=expiration_data['expiring_fifo_entries'],
+                         expiring_products=expiration_data['expiring_products'],
+                         days_ahead=days_ahead,
+                         user_now=user_now,
+                         user_today=user_today)
+@expiration_bp.route('/alerts')
+@login_required
 def expiration_alerts():
     """Display expiration alerts and management"""
     from ...models.user_preferences import UserPreferences
@@ -241,7 +257,7 @@ def expiration_alerts():
     # Get comprehensive expiration data
     from ...services.combined_inventory_alerts import CombinedInventoryAlertService
     expiration_data = CombinedInventoryAlertService.get_expiration_alerts(days_ahead)
-    
+
     # For template compatibility, structure the data
     expired_items = {
         'fifo_entries': expiration_data['expired_fifo_entries'],
