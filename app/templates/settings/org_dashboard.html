@@ -430,6 +430,19 @@ function orgDashboard() {
         },
 
         async inviteUser() {
+            // Validate form before sending
+            if (!this.inviteForm.email || !this.inviteForm.role_id) {
+                this.showErrorMessage('Email and role are required');
+                return;
+            }
+
+            // Basic email validation
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(this.inviteForm.email)) {
+                this.showErrorMessage('Please enter a valid email address');
+                return;
+            }
+
             try {
                 const response = await fetch('/settings/organization/invite-user', {
                     method: 'POST',
@@ -443,10 +456,18 @@ function orgDashboard() {
                 const result = await response.json();
 
                 if (result.success) {
-                    this.showSuccessMessage('User invite sent successfully');
+                    this.showSuccessMessage(result.message || 'User invited successfully');
                     this.showInviteModal = false;
                     this.resetInviteForm();
-                    setTimeout(() => window.location.reload(), 1000);
+                    
+                    // Show credentials if provided (development mode)
+                    if (result.user_data && result.user_data.temp_password) {
+                        setTimeout(() => {
+                            alert(`Login Credentials:\nUsername: ${result.user_data.username}\nPassword: ${result.user_data.temp_password}\n\nPlease share these securely with the new user.`);
+                        }, 500);
+                    }
+                    
+                    setTimeout(() => window.location.reload(), 2000);
                 } else {
                     this.showErrorMessage(result.error || 'Failed to send invite');
                 }
@@ -454,6 +475,15 @@ function orgDashboard() {
                 console.error('Invite error:', error);
                 this.showErrorMessage('Failed to send invite');
             }
+        },
+
+        resetInviteForm() {
+            this.inviteForm = {
+                email: '',
+                role_id: '',
+                first_name: '',
+                last_name: ''
+            };
         },
 
         async updateOrgSettings() {

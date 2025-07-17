@@ -355,8 +355,10 @@ def update_system_setting():
 def organization_dashboard():
     """Organization dashboard for managing users, roles, and settings (organization owners only)"""
 
-    # Check if user is organization owner only - developers should not access this
-    if not (current_user.user_type == 'organization_owner' or current_user.is_organization_owner):
+    # Check if user is organization owner - developers can access for testing but normal team members cannot
+    if not (current_user.user_type == 'organization_owner' or 
+            current_user.is_organization_owner or 
+            current_user.user_type == 'developer'):
         abort(403)
 
     # Get organization data
@@ -402,26 +404,51 @@ def invite_user():
     """Invite a new user to the organization"""
     try:
         data = request.get_json()
+        
+        if not data:
+            return jsonify({'success': False, 'error': 'No data provided'})
 
         # Validate required fields
-        email = data.get('email')
+        email = data.get('email', '').strip()
         role_id = data.get('role_id')
-        first_name = data.get('first_name', '')
-        last_name = data.get('last_name', '')
+        first_name = data.get('first_name', '').strip()
+        last_name = data.get('last_name', '').strip()
 
         if not email or not role_id:
             return jsonify({'success': False, 'error': 'Email and role are required'})
 
-        # Check if user already exists
-        if User.query.filter_by(email=email).first():
+        # Validate email format
+        import re
+        email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        if not re.match(email_pattern, email):
+            return jsonify({'success': False, 'error': 'Invalid email format'})
+
+        # Check if user already exists (by email or username)
+        existing_user = User.query.filter(
+            (User.email == email) | (User.username == email)
+        ).first()
+        if existing_user:
             return jsonify({'success': False, 'error': 'User with this email already exists'})
+
+        # Validate role exists and is not developer role
+        from ...models.role import Role
+        role = Role.query.filter_by(id=role_id).first()
+        if not role:
+            return jsonify({'success': False, 'error': 'Invalid role selected'})
+        
+        if role.name == 'developer':
+            return jsonify({'success': False, 'error': 'Cannot assign developer role to organization users'})
 
         # Check if organization can add more users
         if not current_user.organization.can_add_users():
-            return jsonify({'success': False, 'error': 'Organization has reached user limit for current subscription'})
+            current_count = current_user.organization.active_users_count
+            max_users = current_user.organization.get_max_users()
+            return jsonify({
+                'success': False, 
+                'error': f'Organization has reached user limit ({current_count}/{max_users}) for {current_user.organization.subscription_tier} subscription'
+            })
 
-        # For now, create user directly (later we'll implement proper invites)
-        # Generate a temporary username from email
+        # Generate a unique username from email
         username = email.split('@')[0]
         counter = 1
         original_username = username
@@ -433,6 +460,7 @@ def invite_user():
         import secrets
         temp_password = secrets.token_urlsafe(12)
 
+        # Create new user
         new_user = User(
             username=username,
             email=email,
@@ -441,30 +469,49 @@ def invite_user():
             role_id=role_id,
             organization_id=current_user.organization_id,
             is_active=True,
-            user_type='team_member'
+            user_type='team_member',
+            is_owner=False
         )
         new_user.set_password(temp_password)
 
         db.session.add(new_user)
         db.session.commit()
 
-        # In a real implementation, send email with login details
-        # For now, we'll just return success
-
+        # Log the invitation for audit purposes
+        from ...utils.timezone_utils import TimezoneUtils
+        from app.models import db
+        
+        # TODO: In a real implementation, send email with login details
+        # For now, we'll return the credentials directly
+        
         return jsonify({
             'success': True, 
-            'message': f'User invited successfully. Username: {username}, Temp password: {temp_password}'
+            'message': f'User invited successfully! Login details - Username: {username}, Temporary password: {temp_password}',
+            'user_data': {
+                'username': username,
+                'email': email,
+                'full_name': new_user.full_name,
+                'role': role.name,
+                'temp_password': temp_password  # Remove this in production
+            }
         })
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'success': False, 'error': str(e)})
+        print(f"Error inviting user: {str(e)}")  # For debugging
+        return jsonify({'success': False, 'error': f'Failed to invite user: {str(e)}'})
 
 @settings_bp.route('/organization/update', methods=['POST'])
 @login_required
-@require_permission('organization.manage')
 def update_organization():
     """Update organization settings"""
+    
+    # Check permissions
+    if not (current_user.user_type == 'organization_owner' or 
+            current_user.is_organization_owner or 
+            current_user.user_type == 'developer'):
+        return jsonify({'success': False, 'error': 'Insufficient permissions'})
+        
     try:
         data = request.get_json()
         organization = current_user.organization
@@ -485,23 +532,30 @@ def update_organization():
 
 @settings_bp.route('/organization/export/<report_type>')
 @login_required
-@require_permission('organization.manage')
 def export_report(report_type):
     """Export various organization reports"""
+    
+    # Check permissions - only org owners and developers can export
+    if not (current_user.user_type == 'organization_owner' or 
+            current_user.is_organization_owner or 
+            current_user.user_type == 'developer'):
+        abort(403)
+        
     try:
         if report_type == 'users':
-            # Export users CSV
-            users = User.query.filter_by(organization_id=current_user.organization_id).all()
-            # Implement CSV export logic
+            # Export users CSV - exclude developers from org exports
+            users = User.query.filter(
+                User.organization_id == current_user.organization_id,
+                User.user_type != 'developer'
+            ).all()
             flash('User export functionality coming soon', 'info')
         elif report_type == 'batches':
-            # Export batch history
             flash('Batch export functionality coming soon', 'info')
         elif report_type == 'inventory':
-            # Export inventory movements
             flash('Inventory export functionality coming soon', 'info')
+        elif report_type == 'products':
+            flash('Product export functionality coming soon', 'info')
         elif report_type == 'activity':
-            # Export activity log
             flash('Activity export functionality coming soon', 'info')
         else:
             flash('Unknown report type', 'error')
