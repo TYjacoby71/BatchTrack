@@ -1,4 +1,4 @@
-from ...models import InventoryHistory, db, InventoryItem
+from ...models import InventoryHistory, db, InventoryItem, Batch
 from sqlalchemy import and_, desc, or_
 from datetime import datetime
 from flask_login import current_user
@@ -236,8 +236,15 @@ class FIFOService:
         if not unit:
             unit = item.unit if item.unit else 'count'
 
-        # Generate FIFO code
-        fifo_code = generate_fifo_code(change_type, quantity, batch_id)
+        # Generate FIFO code - for finished_batch, use batch label if available
+        if change_type == 'finished_batch' and batch_id:
+            batch = db.session.get(Batch, batch_id)
+            if batch and batch.label_code:
+                fifo_code = f"BCH-{batch.label_code}"
+            else:
+                fifo_code = generate_fifo_code(change_type, quantity, batch_id)
+        else:
+            fifo_code = generate_fifo_code(change_type, quantity, batch_id)
 
         # Check if this is a product item
         if item.type == 'product':
