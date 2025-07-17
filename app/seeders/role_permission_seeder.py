@@ -148,21 +148,7 @@ def seed_system_roles():
                 'api.access', 'api.admin'
             ]
         },
-        {
-            'name': 'developer',
-            'description': 'System developer with full system access',
-            'permissions': [
-                'dashboard.view', 'alerts.view', 'alerts.manage',
-                'batches.view', 'batches.create', 'batches.edit', 'batches.finish', 'batches.cancel',
-                'inventory.view', 'inventory.edit', 'inventory.adjust', 'inventory.reserve', 'inventory.delete',
-                'products.view', 'products.edit', 'products.create', 'products.delete',
-                'recipes.view', 'recipes.create', 'recipes.edit', 'recipes.delete',
-                'organization.view', 'organization.edit', 'organization.manage_users', 'organization.manage_roles', 'organization.manage_billing',
-                'reports.view', 'reports.export', 'reports.advanced',
-                'api.access', 'api.admin',
-                'system.admin', 'system.debug'
-            ]
-        }
+        
     ]
     
     print("Seeding system roles...")

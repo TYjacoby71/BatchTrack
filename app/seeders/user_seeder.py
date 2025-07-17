@@ -28,45 +28,39 @@ def seed_users():
         print("❌ Required roles not found. Please run 'flask seed-roles-permissions' first.")
         return
 
-    # Assign all users proper roles based on their user types
-    all_users = User.query.all()
+    # Assign all users proper roles based on their user types (excluding developers)
+    all_users = User.query.filter(User.user_type != 'developer').all()
     for user in all_users:
-        if user.user_type == 'developer' and developer_role:
-            user.role_id = developer_role.id
-        elif user.user_type == 'organization_owner' and org_owner_role:
-            user.role_id = org_owner_role.id
+        if user.user_type == 'organization_owner' and org_owner_role:
+            user.assign_role(org_owner_role)
         elif user.user_type == 'team_member' and manager_role:
-            user.role_id = manager_role.id
+            user.assign_role(manager_role)
         print(f"✅ Assigned role to existing user: {user.username} -> {user.user_type}")
 
-    db.session.commit()
+    db.session.commit()n.commit()
 
     # Create developer user if it doesn't exist
     if not User.query.filter_by(username='dev').first():
         developer_user = User(
             username='dev',
             password_hash=generate_password_hash('dev123'),
-            role_id=developer_role.id,
             first_name='System',
             last_name='Developer',
             email='dev@batchtrack.com',
             phone='000-000-0000',
             organization_id=None,  # Developers don't belong to customer organizations
-            is_owner=False,
-            user_type='developer',  # Add user_type
+            user_type='developer',
             is_active=True
         )
         db.session.add(developer_user)
-        print(f"✅ Created developer user: dev/dev123 (org_id: {org.id})")
+        print(f"✅ Created developer user: dev/dev123 (no organization)")
     else:
-        # Update existing developer user with missing fields
+        # Update existing developer user
         dev_user = User.query.filter_by(username='dev').first()
-        if not dev_user.user_type:
-            dev_user.user_type = 'developer'
-            dev_user.role_id = developer_role.id
+        dev_user.user_type = 'developer'
         dev_user.organization_id = None  # Remove from customer organization
-        dev_user.is_active = True  # Ensure user is active
-        print(f"✅ Updated developer user with user_type and role")
+        dev_user.is_active = True
+        print(f"✅ Updated developer user with user_type: developer")ype and role")
 
     # Create organization owner (admin) user if it doesn't exist
     if not User.query.filter_by(username='admin').first():
