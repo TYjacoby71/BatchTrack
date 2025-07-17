@@ -80,10 +80,15 @@ def login():
                 login_user(user, remember=True)
                 flash('Login successful!', 'success')
 
-                # Check for next parameter or redirect to dashboard
+                # Check for next parameter or redirect based on user type
                 next_page = request.args.get('next')
                 if next_page:
                     return redirect(next_page)
+                
+                # Redirect developers to developer dashboard
+                if user.user_type == 'developer':
+                    return redirect(url_for('developer.dashboard'))
+                
                 return redirect(url_for('app_routes.dashboard'))
             else:
                 flash('Invalid username or password')
@@ -103,7 +108,7 @@ def dev_login():
     if dev_user:
         login_user(dev_user)
         flash('Developer access granted', 'success')
-        return redirect(url_for('app_routes.dashboard'))
+        return redirect(url_for('developer.dashboard'))
     else:
         flash('Developer account not found. Please contact system administrator.', 'error')
         return redirect(url_for('auth.login'))
