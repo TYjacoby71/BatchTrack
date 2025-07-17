@@ -288,11 +288,6 @@
                             <a href="{{ url_for('settings.user_management') }}" class="btn btn-outline-primary">
                                 <i class="fas fa-users"></i> User Management
                             </a>
-                            {% if has_permission('settings.edit') %}
-                            <a href="{{ url_for('settings.system') }}" class="btn btn-outline-secondary">
-                                <i class="fas fa-server"></i> System Settings
-                            </a>
-                            {% endif %}
                         </div>
                     </div>
                 </div>
