@@ -92,6 +92,10 @@
                           <a href="{{ url_for('inventory.view_inventory', id=item.id) }}#entry-{{ entry.fifo_reference_id }}">
                             {{ ref_entry.batch.label_code }}
                           </a>
+                        {% elif ref_entry and ref_entry.fifo_code %}
+                          <a href="{{ url_for('inventory.view_inventory', id=item.id) }}#entry-{{ entry.fifo_reference_id }}">
+                            {{ ref_entry.fifo_code }}
+                          </a>
                         {% elif ref_entry %}
                           <a href="{{ url_for('inventory.view_inventory', id=item.id) }}#entry-{{ entry.fifo_reference_id }}">
                             {{ get_change_type_prefix(ref_entry.change_type) }}-{{ int_to_base36(ref_entry.id).zfill(6) }}
@@ -117,13 +121,9 @@
                           <a href="{{ url_for('inventory.view_inventory', id=item.id) }}#entry-{{ entry.id }}" class="text-decoration-none">
                             {{ entry.fifo_code }}
                           </a>
-                        {% elif entry.lot_number %}
-                          <a href="{{ url_for('inventory.view_inventory', id=item.id) }}#entry-{{ entry.id }}" class="text-decoration-none">
-                            {{ entry.lot_number }}
-                          </a>
                         {% else %}
                           <a href="{{ url_for('inventory.view_inventory', id=item.id) }}#entry-{{ entry.id }}" class="text-decoration-none">
-                            lot-{{ entry.id }}
+                            {{ get_change_type_prefix(entry.change_type) }}-{{ int_to_base36(entry.id).zfill(6) }}
                           </a>
                         {% endif %}
                       {% endif %}
