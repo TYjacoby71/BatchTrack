@@ -27,8 +27,8 @@ def check_container_availability(container_ids, scale=1):
 @app_routes_bp.route('/user_dashboard')
 @login_required
 def dashboard():
-    # Developer users should not access this dashboard
-    if current_user.user_type == 'developer':
+    # Developer users should only access this dashboard when viewing an organization
+    if current_user.user_type == 'developer' and not session.get('dev_selected_org_id'):
         return redirect(url_for('developer.dashboard'))
     
     recipes = Recipe.scoped().all()
