@@ -32,7 +32,7 @@ class Organization(db.Model):
             return True  # Unlimited active users for enterprise
         else:
             return active_non_dev_users < 1  # Default to solo limits
-    
+
     def get_max_users(self):
         """Get maximum users allowed for subscription tier"""
         tier_limits = {
@@ -41,7 +41,7 @@ class Organization(db.Model):
             'enterprise': float('inf')
         }
         return tier_limits.get(self.subscription_tier, 1)
-    
+
     def get_subscription_features(self):
         """Get features available for subscription tier"""
         features = {
@@ -59,7 +59,7 @@ class User(UserMixin, db.Model):
     last_name = db.Column(db.String(64), nullable=True)
     email = db.Column(db.String(120), nullable=True)
     phone = db.Column(db.String(20), nullable=True)
-    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=False)
+    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)
     user_type = db.Column(db.String(32), default='team_member')  # 'developer', 'organization_owner', 'team_member'
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
@@ -103,7 +103,7 @@ class User(UserMixin, db.Model):
         # Developers have all permissions
         if self.user_type == 'developer':
             return True
-        
+
         # Organization owners have all permissions available to their subscription tier
         if self.user_type == 'organization_owner':
             from .permission import Permission
@@ -111,7 +111,7 @@ class User(UserMixin, db.Model):
             if permission:
                 return permission.is_available_for_tier(self.organization.subscription_tier)
             return False
-        
+
         # Team members need to check their assigned roles
         roles = self.get_active_roles()
         for role in roles:
@@ -121,20 +121,20 @@ class User(UserMixin, db.Model):
                 permission = Permission.query.filter_by(name=permission_name).first()
                 if permission and permission.is_available_for_tier(self.organization.subscription_tier):
                     return True
-        
+
         return False
 
     def assign_role(self, role, assigned_by=None):
         """Assign a role to this user"""
         from .user_role_assignment import UserRoleAssignment
-        
+
         # Check if already assigned
         existing = UserRoleAssignment.query.filter_by(
             user_id=self.id,
             role_id=role.id,
             organization_id=self.organization_id
         ).first()
-        
+
         if existing:
             existing.is_active = True
             existing.assigned_by = assigned_by.id if assigned_by else None
@@ -147,19 +147,19 @@ class User(UserMixin, db.Model):
                 assigned_by=assigned_by.id if assigned_by else None
             )
             db.session.add(assignment)
-        
+
         db.session.commit()
 
     def remove_role(self, role):
         """Remove a role from this user"""
         from .user_role_assignment import UserRoleAssignment
-        
+
         assignment = UserRoleAssignment.query.filter_by(
             user_id=self.id,
             role_id=role.id,
             organization_id=self.organization_id
         ).first()
-        
+
         if assignment:
             assignment.is_active = False
             db.session.commit()

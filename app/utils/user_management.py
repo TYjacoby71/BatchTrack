@@ -7,7 +7,7 @@ class UserTypeManager:
     """Manage user types and role assignments"""
     
     USER_TYPES = {
-        'developer': 'developer',
+        'developer': None,  # Developers don't get roles - they have all permissions by user_type
         'organization_owner': 'organization_owner', 
         'team_member': 'manager'  # Default team members get manager role
     }
@@ -16,19 +16,19 @@ class UserTypeManager:
     def assign_role_by_user_type(user):
         """Assign appropriate role based on user type and organization subscription"""
         if user.user_type == 'developer':
-            role = Role.query.filter_by(name='developer').first()
+            # Developers don't get roles - they have all permissions by user_type
+            return None
         elif user.user_type == 'organization_owner':
             role = Role.query.filter_by(name='organization_owner').first()
         else:  # team_member
             # Assign role based on organization subscription
-            if user.organization.subscription_tier == 'solo':
+            if user.organization and user.organization.subscription_tier == 'solo':
                 role = Role.query.filter_by(name='operator').first()  # Limited for solo
             else:
                 role = Role.query.filter_by(name='manager').first()  # Full access for team/enterprise
         
         if role:
-            user.role_id = role.id
-            db.session.commit()
+            user.assign_role(role)
         
         return role
     
