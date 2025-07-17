@@ -16,7 +16,7 @@ def seed_permissions():
         {'name': 'batches.create', 'description': 'Create batches', 'category': 'batches', 'tier': 'free'},
         {'name': 'batches.edit', 'description': 'Edit batches', 'category': 'batches', 'tier': 'free'},
         {'name': 'batches.finish', 'description': 'Finish batches', 'category': 'batches', 'tier': 'free'},
-        {'name': 'batches.cancel', 'description': 'Cancel batches', 'tier': 'free'},
+        {'name': 'batches.cancel', 'description': 'Cancel batches', 'category': 'batches', 'tier': 'free'},
 
         # Inventory permissions
         {'name': 'inventory.view', 'description': 'View inventory', 'category': 'inventory', 'tier': 'free'},
