@@ -107,3 +107,68 @@ def dev_login():
     else:
         flash('Developer account not found. Please contact system administrator.', 'error')
         return redirect(url_for('auth.login'))
+
+# Permission and Role Management Routes
+from .permissions import manage_permissions, manage_roles, create_role, update_role
+
+@auth_bp.route('/permissions')
+def permissions():
+    return manage_permissions()
+
+@auth_bp.route('/roles')
+def roles():
+    return manage_roles()
+
+@auth_bp.route('/roles', methods=['POST'])
+def create_role_route():
+    return create_role()
+
+@auth_bp.route('/roles/<int:role_id>', methods=['PUT'])
+def update_role_route(role_id):
+    return update_role(role_id)
+
+@auth_bp.route('/roles/<int:role_id>')
+@login_required
+def get_role(role_id):
+    """Get role details for editing"""
+    role = Role.query.get_or_404(role_id)
+    
+    # Check permissions
+    if role.is_system_role and current_user.user_type != 'developer':
+        abort(403)
+    
+    if role.organization_id != current_user.organization_id and current_user.user_type != 'developer':
+        abort(403)
+    
+    return jsonify({
+        'success': True,
+        'role': {
+            'id': role.id,
+            'name': role.name,
+            'description': role.description,
+            'permission_ids': [p.id for p in role.permissions]
+        }
+    })
+
+@auth_bp.route('/permissions/api')
+@login_required
+def permissions_api():
+    """API endpoint for permissions data"""
+    permissions = Permission.query.filter_by(is_active=True).all()
+    
+    categories = {}
+    for perm in permissions:
+        category = perm.category or 'general'
+        if category not in categories:
+            categories[category] = []
+        categories[category].append({
+            'id': perm.id,
+            'name': perm.name,
+            'description': perm.description,
+            'required_subscription_tier': perm.required_subscription_tier
+        })
+    
+    return jsonify({
+        'success': True,
+        'categories': categories
+    })
