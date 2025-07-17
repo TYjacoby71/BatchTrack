@@ -53,7 +53,7 @@ def create_app():
     def enforce_developer_isolation():
         """Ensure developers can only access developer routes unless they have an org filter active"""
         if current_user.is_authenticated and current_user.user_type == 'developer':
-            # Allow access to developer routes
+            # Allow access to developer routes (including dashboard)
             if request.path.startswith('/developer/'):
                 return None
 
@@ -61,16 +61,14 @@ def create_app():
             if request.path.startswith('/auth/'):
                 return None
 
-            # If accessing non-developer routes, require organization selection
-            if not session.get('dev_selected_org_id'):
-                # Skip redirect for API routes and static files
-                if request.path.startswith('/api/') or request.path.startswith('/static/'):
-                    return None
+            # Allow access to static files and API routes
+            if request.path.startswith('/api/') or request.path.startswith('/static/'):
+                return None
 
-                # Otherwise, redirect to developer dashboard
-                if request.path != '/developer/dashboard':
-                    flash('Please select an organization to view customer data, or use the developer dashboard.', 'warning')
-                    return redirect(url_for('developer.dashboard'))
+            # If accessing customer routes, require organization selection
+            if not session.get('dev_selected_org_id'):
+                flash('Please select an organization to view customer data, or use the developer dashboard.', 'warning')
+                return redirect(url_for('developer.dashboard'))
 
     # Register blueprints
     from .blueprints.auth import auth_bp
