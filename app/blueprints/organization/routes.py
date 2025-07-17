@@ -1,13 +1,10 @@
-
-from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash, abort
+from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for, current_app as app
 from flask_login import login_required, current_user
-from ...extensions import db
-from ...models import User, Organization
-from ...utils.permissions import require_permission
-from ...models.role import Role
-from ...models.permission import Permission
-import re
+from werkzeug.security import generate_password_hash
 import secrets
+from app.models import User, Organization, Role
+from app.extensions import db
+from app.utils.permissions import require_permission
 
 organization_bp = Blueprint('organization', __name__)
 
@@ -71,7 +68,7 @@ def invite_user():
     """Invite a new user to the organization"""
     try:
         data = request.get_json()
-        
+
         if not data:
             return jsonify({'success': False, 'error': 'No data provided'})
 
@@ -101,7 +98,7 @@ def invite_user():
         role = Role.query.filter_by(id=role_id).first()
         if not role:
             return jsonify({'success': False, 'error': 'Invalid role selected'})
-        
+
         if role.name == 'developer':
             return jsonify({'success': False, 'error': 'Cannot assign developer role to organization users'})
 
@@ -145,7 +142,7 @@ def invite_user():
 
         # TODO: In a real implementation, send email with login details
         # For now, we'll return the credentials directly
-        
+
         return jsonify({
             'success': True, 
             'message': f'User invited successfully! Login details - Username: {username}, Temporary password: {temp_password}',
@@ -167,13 +164,13 @@ def invite_user():
 @login_required
 def update_organization():
     """Update organization settings"""
-    
+
     # Check permissions
     if not (current_user.user_type == 'organization_owner' or 
             current_user.is_organization_owner or 
             current_user.user_type == 'developer'):
         return jsonify({'success': False, 'error': 'Insufficient permissions'})
-        
+
     try:
         data = request.get_json()
         organization = current_user.organization
@@ -196,13 +193,13 @@ def update_organization():
 @login_required
 def export_report(report_type):
     """Export various organization reports"""
-    
+
     # Check permissions - only org owners and developers can export
     if not (current_user.user_type == 'organization_owner' or 
             current_user.is_organization_owner or 
             current_user.user_type == 'developer'):
         abort(403)
-        
+
     try:
         if report_type == 'users':
             # Export users CSV - exclude developers from org exports
