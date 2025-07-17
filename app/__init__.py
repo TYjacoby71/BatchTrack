@@ -41,9 +41,14 @@ def create_app():
         """Load user by ID for Flask-Login"""
         try:
             user = User.query.get(int(user_id))
-            # Ensure user is active and belongs to an active organization
-            if user and user.is_active and user.organization and user.organization.is_active:
-                return user
+            # Ensure user is active
+            if user and user.is_active:
+                # For developers, organization is not required
+                if user.user_type == 'developer':
+                    return user
+                # For regular users, check organization
+                elif user.organization and user.organization.is_active:
+                    return user
             return None
         except (ValueError, TypeError):
             return None
@@ -63,6 +68,10 @@ def create_app():
 
             # Allow access to static files and API routes
             if request.path.startswith('/api/') or request.path.startswith('/static/'):
+                return None
+
+            # Allow access to root and homepage
+            if request.path in ['/', '/homepage']:
                 return None
 
             # If accessing customer routes, require organization selection
