@@ -1,163 +1,164 @@
-from ..extensions import db
-from ..models import Role, Permission, role_permission
+
+from ..models import Role, Permission, db, role_permission
+from ..extensions import db as database
 
 def seed_permissions():
-    """Seed permissions from the existing permissions.json structure"""
+    """Seed all permissions with their subscription tier requirements"""
     permissions_data = [
-        # Developer permissions
-        {'name': 'dev.dashboard', 'description': 'Access developer dashboard', 'category': 'developer'},
-        {'name': 'dev.system_admin', 'description': 'System administration', 'category': 'developer'},
-        {'name': 'dev.all_organizations', 'description': 'Access all organizations', 'category': 'developer'},
-
-        # Organization permissions
-        {'name': 'organization.manage_users', 'description': 'Manage organization users', 'category': 'organization'},
-        {'name': 'organization.manage_settings', 'description': 'Manage organization settings', 'category': 'organization'},
-        {'name': 'organization.view_billing', 'description': 'View billing information', 'category': 'organization'},
-
-        # Alert permissions
-        {'name': 'alerts.show_timer_alerts', 'description': 'Show timer alerts', 'category': 'alerts'},
-        {'name': 'alerts.show_batch_alerts', 'description': 'Show batch alerts', 'category': 'alerts'},
-        {'name': 'alerts.show_expiration_alerts', 'description': 'Show expiration alerts', 'category': 'alerts'},
-        {'name': 'alerts.show_low_stock_alerts', 'description': 'Show low stock alerts', 'category': 'alerts'},
-        {'name': 'alerts.max_dashboard_alerts', 'description': 'Configure max dashboard alerts', 'category': 'alerts'},
-
-        # Batch permissions
-        {'name': 'batches.view', 'description': 'View batches', 'category': 'batches'},
-        {'name': 'batches.create', 'description': 'Create batches', 'category': 'batches'},
-        {'name': 'batches.edit', 'description': 'Edit batches', 'category': 'batches'},
-        {'name': 'batches.finish', 'description': 'Finish batches', 'category': 'batches'},
-        {'name': 'batches.cancel', 'description': 'Cancel batches', 'category': 'batches'},
-
-        # Inventory permissions
-        {'name': 'inventory.view', 'description': 'View inventory', 'category': 'inventory'},
-        {'name': 'inventory.edit', 'description': 'Edit inventory', 'category': 'inventory'},
-        {'name': 'inventory.adjust', 'description': 'Adjust inventory', 'category': 'inventory'},
-        {'name': 'inventory.reserve', 'description': 'Reserve inventory', 'category': 'inventory'},
-        {'name': 'inventory.delete', 'description': 'Delete inventory', 'category': 'inventory'},
-
-        # Product permissions
-        {'name': 'products.view', 'description': 'View products', 'category': 'products'},
-        {'name': 'products.edit', 'description': 'Edit products', 'category': 'products'},
-        {'name': 'products.create', 'description': 'Create products', 'category': 'products'},
-
-        # Recipe permissions
-        {'name': 'recipes.view', 'description': 'View recipes', 'category': 'recipes'},
-        {'name': 'recipes.edit', 'description': 'Edit recipes', 'category': 'recipes'},
-        {'name': 'recipes.create', 'description': 'Create recipes', 'category': 'recipes'},
-
-        # Settings permissions
-        {'name': 'settings.view', 'description': 'View settings', 'category': 'settings'},
-
-        # Admin permissions
-        {'name': 'admin.reservations', 'description': 'Manage reservations', 'category': 'admin'},
-        {'name': 'admin.view', 'description': 'View admin panel', 'category': 'admin'},
-        {'name': 'settings.edit', 'description': 'Edit settings', 'category': 'settings'},
-
         # Dashboard permissions
-        {'name': 'dashboard.view', 'description': 'View dashboard', 'category': 'dashboard'},
-
-        # Timer permissions
-        {'name': 'timers.view', 'description': 'View timers', 'category': 'timers'},
-        {'name': 'timers.start', 'description': 'Start timers', 'category': 'timers'},
-        {'name': 'timers.stop', 'description': 'Stop timers', 'category': 'timers'},
-        {'name': 'timers.manage', 'description': 'Manage timers', 'category': 'timers'},
-
-        # Tags permissions
-        {'name': 'tags.manage', 'description': 'Manage tags', 'category': 'tags'},
+        {'name': 'dashboard.view', 'description': 'View dashboard', 'category': 'dashboard', 'tier': 'free'},
+        
+        # Alert permissions
+        {'name': 'alerts.view', 'description': 'View alerts', 'category': 'alerts', 'tier': 'free'},
+        {'name': 'alerts.manage', 'description': 'Manage alert settings', 'category': 'alerts', 'tier': 'team'},
+        
+        # Batch permissions
+        {'name': 'batches.view', 'description': 'View batches', 'category': 'batches', 'tier': 'free'},
+        {'name': 'batches.create', 'description': 'Create batches', 'category': 'batches', 'tier': 'free'},
+        {'name': 'batches.edit', 'description': 'Edit batches', 'category': 'batches', 'tier': 'free'},
+        {'name': 'batches.finish', 'description': 'Finish batches', 'category': 'batches', 'tier': 'free'},
+        {'name': 'batches.cancel', 'description': 'Cancel batches', 'category': 'batches', 'tier': 'free'},
+        
+        # Inventory permissions
+        {'name': 'inventory.view', 'description': 'View inventory', 'category': 'inventory', 'tier': 'free'},
+        {'name': 'inventory.edit', 'description': 'Edit inventory', 'category': 'inventory', 'tier': 'free'},
+        {'name': 'inventory.adjust', 'description': 'Adjust inventory', 'category': 'inventory', 'tier': 'free'},
+        {'name': 'inventory.reserve', 'description': 'Reserve inventory', 'category': 'inventory', 'tier': 'team'},
+        {'name': 'inventory.delete', 'description': 'Delete inventory', 'category': 'inventory', 'tier': 'team'},
+        
+        # Product permissions
+        {'name': 'products.view', 'description': 'View products', 'category': 'products', 'tier': 'free'},
+        {'name': 'products.edit', 'description': 'Edit products', 'category': 'products', 'tier': 'free'},
+        {'name': 'products.create', 'description': 'Create products', 'category': 'products', 'tier': 'free'},
+        {'name': 'products.delete', 'description': 'Delete products', 'category': 'products', 'tier': 'team'},
+        
+        # Recipe permissions
+        {'name': 'recipes.view', 'description': 'View recipes', 'category': 'recipes', 'tier': 'free'},
+        {'name': 'recipes.create', 'description': 'Create recipes', 'category': 'recipes', 'tier': 'free'},
+        {'name': 'recipes.edit', 'description': 'Edit recipes', 'category': 'recipes', 'tier': 'free'},
+        {'name': 'recipes.delete', 'description': 'Delete recipes', 'category': 'recipes', 'tier': 'team'},
+        
+        # Organization permissions
+        {'name': 'organization.view', 'description': 'View organization settings', 'category': 'organization', 'tier': 'team'},
+        {'name': 'organization.edit', 'description': 'Edit organization settings', 'category': 'organization', 'tier': 'team'},
+        {'name': 'organization.manage_users', 'description': 'Manage organization users', 'category': 'organization', 'tier': 'team'},
+        {'name': 'organization.manage_roles', 'description': 'Manage organization roles', 'category': 'organization', 'tier': 'team'},
+        {'name': 'organization.manage_billing', 'description': 'Manage billing', 'category': 'organization', 'tier': 'team'},
+        
+        # Reporting permissions
+        {'name': 'reports.view', 'description': 'View reports', 'category': 'reports', 'tier': 'team'},
+        {'name': 'reports.export', 'description': 'Export reports', 'category': 'reports', 'tier': 'team'},
+        {'name': 'reports.advanced', 'description': 'Advanced reporting', 'category': 'reports', 'tier': 'enterprise'},
+        
+        # API permissions
+        {'name': 'api.access', 'description': 'API access', 'category': 'api', 'tier': 'enterprise'},
+        {'name': 'api.admin', 'description': 'API administration', 'category': 'api', 'tier': 'enterprise'},
+        
+        # System permissions
+        {'name': 'system.admin', 'description': 'System administration', 'category': 'system', 'tier': 'enterprise'},
+        {'name': 'system.debug', 'description': 'System debugging', 'category': 'system', 'tier': 'enterprise'},
     ]
-
+    
+    print("Seeding permissions...")
     for perm_data in permissions_data:
-        existing = Permission.query.filter_by(name=perm_data['name']).first()
-        if not existing:
-            permission = Permission(**perm_data)
+        permission = Permission.query.filter_by(name=perm_data['name']).first()
+        if not permission:
+            permission = Permission(
+                name=perm_data['name'],
+                description=perm_data['description'],
+                category=perm_data['category'],
+                required_subscription_tier=perm_data['tier']
+            )
             db.session.add(permission)
-
+        else:
+            # Update existing permission
+            permission.description = perm_data['description']
+            permission.category = perm_data['category']
+            permission.required_subscription_tier = perm_data['tier']
+    
     db.session.commit()
+    print(f"✅ Seeded {len(permissions_data)} permissions")
 
-def seed_roles():
-    """Seed roles based on existing role structure"""
-    roles_data = [
+def seed_system_roles():
+    """Seed system roles that are available to all organizations"""
+    system_roles = [
         {
-            'name': 'developer',
-            'description': 'Full system access and development privileges',
-            'permissions': [
-                'dev.dashboard', 'dev.system_admin', 'dev.all_organizations',
-                'organization.manage_users', 'organization.manage_settings', 'organization.view_billing',
-                'alerts.show_timer_alerts', 'alerts.show_batch_alerts', 'alerts.show_expiration_alerts',
-                'alerts.show_low_stock_alerts', 'alerts.max_dashboard_alerts',
-                'batches.view', 'batches.create', 'batches.edit', 'batches.finish', 'batches.cancel',
-                'inventory.view', 'inventory.edit', 'inventory.adjust', 'inventory.reserve', 'inventory.delete',
-                'products.view', 'products.edit', 'products.create',
-                'recipes.view', 'recipes.edit', 'recipes.create',
-                'settings.view', 'settings.edit', 'dashboard.view',
-                'timers.view', 'timers.start', 'timers.stop', 'timers.manage',
-                'tags.manage', 'admin.reservations', 'admin.view'
-            ]
+            'name': 'viewer',
+            'description': 'Can view basic information',
+            'permissions': ['dashboard.view', 'batches.view', 'inventory.view', 'products.view', 'recipes.view']
         },
         {
-            'name': 'organization_owner',
-            'description': 'Full access within organization',
+            'name': 'editor',
+            'description': 'Can edit and create content',
             'permissions': [
-                'organization.manage_users', 'organization.manage_settings', 'organization.view_billing',
-                'alerts.show_timer_alerts', 'alerts.show_batch_alerts', 'alerts.show_expiration_alerts',
-                'alerts.show_low_stock_alerts', 'alerts.max_dashboard_alerts',
-                'batches.view', 'batches.create', 'batches.edit', 'batches.finish', 'batches.cancel',
-                'inventory.view', 'inventory.edit', 'inventory.adjust', 'inventory.reserve', 'inventory.delete',
+                'dashboard.view', 'batches.view', 'batches.create', 'batches.edit', 'batches.finish',
+                'inventory.view', 'inventory.edit', 'inventory.adjust',
                 'products.view', 'products.edit', 'products.create',
-                'recipes.view', 'recipes.edit', 'recipes.create',
-                'settings.view', 'settings.edit', 'dashboard.view',
-                'timers.view', 'timers.start', 'timers.stop', 'timers.manage',
-                'tags.manage', 'admin.reservations', 'admin.view'
+                'recipes.view', 'recipes.create', 'recipes.edit'
             ]
         },
         {
             'name': 'manager',
-            'description': 'Management access to operations',
+            'description': 'Can manage operations and users',
             'permissions': [
-                'alerts.show_timer_alerts', 'alerts.show_batch_alerts', 'alerts.show_expiration_alerts',
-                'alerts.show_low_stock_alerts',
+                'dashboard.view', 'alerts.view', 'alerts.manage',
                 'batches.view', 'batches.create', 'batches.edit', 'batches.finish', 'batches.cancel',
-                'inventory.view', 'inventory.edit', 'inventory.adjust', 'inventory.reserve',
-                'products.view', 'products.edit', 'products.create',
-                'recipes.view', 'recipes.edit', 'recipes.create',
-                'settings.view', 'settings.edit', 'dashboard.view',
-                'timers.view', 'timers.start', 'timers.stop', 'timers.manage',
-                'tags.manage'
+                'inventory.view', 'inventory.edit', 'inventory.adjust', 'inventory.reserve', 'inventory.delete',
+                'products.view', 'products.edit', 'products.create', 'products.delete',
+                'recipes.view', 'recipes.create', 'recipes.edit', 'recipes.delete',
+                'organization.view', 'organization.manage_users', 'organization.manage_roles',
+                'reports.view', 'reports.export'
             ]
         },
         {
-            'name': 'operator',
-            'description': 'Basic operational access',
+            'name': 'admin',
+            'description': 'Full administrative access',
             'permissions': [
-                'alerts.show_timer_alerts', 'alerts.show_batch_alerts',
-                'batches.view', 'batches.create', 'batches.finish',
-                'recipes.view', 'inventory.view', 'dashboard.view',
-                'timers.view', 'timers.start', 'timers.stop'
+                'dashboard.view', 'alerts.view', 'alerts.manage',
+                'batches.view', 'batches.create', 'batches.edit', 'batches.finish', 'batches.cancel',
+                'inventory.view', 'inventory.edit', 'inventory.adjust', 'inventory.reserve', 'inventory.delete',
+                'products.view', 'products.edit', 'products.create', 'products.delete',
+                'recipes.view', 'recipes.create', 'recipes.edit', 'recipes.delete',
+                'organization.view', 'organization.edit', 'organization.manage_users', 'organization.manage_roles', 'organization.manage_billing',
+                'reports.view', 'reports.export', 'reports.advanced',
+                'api.access', 'api.admin'
             ]
         }
     ]
-
-    for role_data in roles_data:
-        existing_role = Role.query.filter_by(name=role_data['name']).first()
-        if not existing_role:
-            role = Role(name=role_data['name'], description=role_data['description'])
+    
+    print("Seeding system roles...")
+    for role_data in system_roles:
+        role = Role.query.filter_by(name=role_data['name'], is_system_role=True).first()
+        if not role:
+            role = Role(
+                name=role_data['name'],
+                description=role_data['description'],
+                is_system_role=True,
+                organization_id=None
+            )
             db.session.add(role)
-            db.session.commit()
+            db.session.flush()  # Get the ID
         else:
-            role = existing_role
-            # Clear existing permissions and re-add them
-            role.permissions.clear()
-
-        # Add permissions to role
+            role.description = role_data['description']
+        
+        # Clear existing permissions
+        role.permissions.clear()
+        
+        # Add permissions
         for perm_name in role_data['permissions']:
             permission = Permission.query.filter_by(name=perm_name).first()
-            if permission and permission not in role.permissions:
+            if permission:
                 role.permissions.append(permission)
-
-        db.session.commit()
+    
+    db.session.commit()
+    print(f"✅ Seeded {len(system_roles)} system roles")
 
 def seed_roles_and_permissions():
-    """Seed both roles and permissions"""
+    """Main seeder function"""
+    print("=== Seeding Roles and Permissions ===")
     seed_permissions()
-    seed_roles()
-    print("Roles and permissions seeded successfully!")
+    seed_system_roles()
+    print("✅ Roles and permissions seeded successfully!")
+
+if __name__ == "__main__":
+    seed_roles_and_permissions()

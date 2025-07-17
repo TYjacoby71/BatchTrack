@@ -1,36 +1,20 @@
+
 from flask_login import current_user
 
 def has_permission(permission_name):
     """Check if current user has a specific permission"""
     if not current_user.is_authenticated:
         return False
-
-    # Use database-driven permissions only
-    if not hasattr(current_user, 'user_role') or not current_user.user_role:
-        return False
-
-    # Check database permissions
-    if current_user.user_role.has_permission(permission_name):
-        return True
-
-    # Check for wildcard permissions in database
-    for perm in current_user.user_role.permissions:
-        if perm.name.endswith('.*'):
-            prefix = perm.name[:-2]  # Remove ".*"
-            if permission_name.startswith(prefix + '.'):
-                return True
-
-    return False
+    
+    return current_user.has_permission(permission_name)
 
 def has_role(role_name):
     """Check if current user has specific role"""
     if not current_user.is_authenticated:
         return False
-
-    if not hasattr(current_user, 'user_role') or not current_user.user_role:
-        return False
-
-    return current_user.user_role.name == role_name
+    
+    roles = current_user.get_active_roles()
+    return any(role.name == role_name for role in roles)
 
 def has_subscription_feature(feature):
     """Check if current user's organization has subscription feature"""
@@ -48,13 +32,13 @@ def is_organization_owner():
     """Check if current user is organization owner"""
     if not current_user.is_authenticated:
         return False
-    return has_role('organization_owner')
+    return current_user.user_type == 'organization_owner'
 
 def is_developer():
     """Check if current user is developer"""
     if not current_user.is_authenticated:
         return False
-    return has_role('developer')
+    return current_user.user_type == 'developer'
 
 def require_permission(permission):
     """Decorator for permission checking"""
@@ -68,18 +52,36 @@ def require_permission(permission):
         return wrapper
     return decorator
 
-def user_scoped_query(model_class):
-    """Return scoped query for the given model"""
-    if hasattr(model_class, 'scoped'):
-        return model_class.scoped()
-    return model_class.query
-
 def get_user_permissions():
     """Get all permissions for the current user"""
     if not current_user.is_authenticated:
         return []
+    
+    if current_user.user_type == 'developer':
+        # Developers get all permissions
+        from ..models.permission import Permission
+        return [perm.name for perm in Permission.query.filter_by(is_active=True).all()]
+    
+    if current_user.user_type == 'organization_owner':
+        # Organization owners get all permissions available to their subscription tier
+        from ..models.permission import Permission
+        available_perms = Permission.get_permissions_for_tier(current_user.organization.subscription_tier)
+        return [perm.name for perm in available_perms]
+    
+    # Team members get permissions from their assigned roles
+    permissions = set()
+    roles = current_user.get_active_roles()
+    for role in roles:
+        for perm in role.get_permissions():
+            if perm.is_available_for_tier(current_user.organization.subscription_tier):
+                permissions.add(perm.name)
+    
+    return list(permissions)
 
-    if not hasattr(current_user, 'user_role') or not current_user.user_role:
-        return []
-
-    return [perm.name for perm in current_user.user_role.permissions]
+def get_available_roles_for_user(user=None):
+    """Get roles that can be assigned to a user"""
+    if not user:
+        user = current_user
+    
+    from ..models.role import Role
+    return Role.get_organization_roles(user.organization_id)

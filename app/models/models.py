@@ -55,22 +55,16 @@ class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(64), unique=True, nullable=False)
     password_hash = db.Column(db.String(128), nullable=False)
-    role_id = db.Column(db.Integer, db.ForeignKey('role.id'), nullable=False)
     first_name = db.Column(db.String(64), nullable=True)
     last_name = db.Column(db.String(64), nullable=True)
     email = db.Column(db.String(120), nullable=True)
     phone = db.Column(db.String(20), nullable=True)
-    subscription_class = db.Column(db.String(32), default='free')  # Deprecated - use organization.subscription_tier
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=False)
-    is_owner = db.Column(db.Boolean, default=False)  # Explicit owner flag
     user_type = db.Column(db.String(32), default='team_member')  # 'developer', 'organization_owner', 'team_member'
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
     last_login = db.Column(db.DateTime, nullable=True)
-    timezone = db.Column(db.String(64), default='America/New_York')  # User's preferred timezone
-
-    # Relationship to role
-    user_role = db.relationship('Role', backref='assigned_users')
+    timezone = db.Column(db.String(64), default='America/New_York')
 
     def set_password(self, password):
         from werkzeug.security import generate_password_hash
@@ -93,35 +87,97 @@ class User(UserMixin, db.Model):
     @property
     def is_organization_owner(self):
         """Check if user is the owner of their organization"""
-        return self.is_owner
+        return self.user_type == 'organization_owner'
+
+    def get_active_roles(self):
+        """Get all active roles assigned to this user"""
+        from .user_role_assignment import UserRoleAssignment
+        assignments = UserRoleAssignment.query.filter_by(
+            user_id=self.id,
+            is_active=True
+        ).all()
+        return [assignment.role for assignment in assignments if assignment.role.is_active]
 
     def has_permission(self, permission_name):
-        """Check if user has a specific permission"""
-        if not self.user_role:
+        """Check if user has a specific permission through any of their roles"""
+        # Developers have all permissions
+        if self.user_type == 'developer':
+            return True
+        
+        # Organization owners have all permissions available to their subscription tier
+        if self.user_type == 'organization_owner':
+            from .permission import Permission
+            permission = Permission.query.filter_by(name=permission_name).first()
+            if permission:
+                return permission.is_available_for_tier(self.organization.subscription_tier)
             return False
-        return self.user_role.has_permission(permission_name)
+        
+        # Team members need to check their assigned roles
+        roles = self.get_active_roles()
+        for role in roles:
+            if role.has_permission(permission_name):
+                # Also check if the permission is available for the organization's tier
+                from .permission import Permission
+                permission = Permission.query.filter_by(name=permission_name).first()
+                if permission and permission.is_available_for_tier(self.organization.subscription_tier):
+                    return True
+        
+        return False
+
+    def assign_role(self, role, assigned_by=None):
+        """Assign a role to this user"""
+        from .user_role_assignment import UserRoleAssignment
+        
+        # Check if already assigned
+        existing = UserRoleAssignment.query.filter_by(
+            user_id=self.id,
+            role_id=role.id,
+            organization_id=self.organization_id
+        ).first()
+        
+        if existing:
+            existing.is_active = True
+            existing.assigned_by = assigned_by.id if assigned_by else None
+            existing.assigned_at = TimezoneUtils.utc_now()
+        else:
+            assignment = UserRoleAssignment(
+                user_id=self.id,
+                role_id=role.id,
+                organization_id=self.organization_id,
+                assigned_by=assigned_by.id if assigned_by else None
+            )
+            db.session.add(assignment)
+        
+        db.session.commit()
+
+    def remove_role(self, role):
+        """Remove a role from this user"""
+        from .user_role_assignment import UserRoleAssignment
+        
+        assignment = UserRoleAssignment.query.filter_by(
+            user_id=self.id,
+            role_id=role.id,
+            organization_id=self.organization_id
+        ).first()
+        
+        if assignment:
+            assignment.is_active = False
+            db.session.commit()
 
     @property
-    def organization_tier_role(self):
-        """Get the user's role combined with organization tier for display purposes"""
+    def display_role(self):
+        """Get display-friendly role description"""
         if self.user_type == 'developer':
             return 'System Developer'
         elif self.user_type == 'organization_owner':
-            if self.organization:
-                tier = self.organization.subscription_tier
-                if tier == 'solo':
-                    return 'Solo Maker'
-                elif tier == 'team':
-                    return 'Team Owner'
-                elif tier == 'enterprise':
-                    return 'Enterprise Owner'
-                else:
-                    return 'Organization Owner'
-            return 'Organization Owner'
-        elif self.user_type == 'team_member':
-            return f'Team Member ({self.user_role.name if self.user_role else "No Role"})'
+            tier = self.organization.subscription_tier.title()
+            return f'{tier} Owner'
         else:
-            return self.user_type.replace('_', ' ').title()
+            roles = self.get_active_roles()
+            if roles:
+                role_names = [role.name for role in roles]
+                return f'Team Member ({", ".join(role_names)})'
+            return 'Team Member (No Roles)'
 
     def __repr__(self):
         return f'<User {self.username}>'
