@@ -12,7 +12,7 @@
             <div class="card">
                 <div class="card-header">
                     <h5 class="card-title mb-0">
-                        <i class="fas fa-user text-primary"></i> Profile Information
+                        <i class="fas fa-user text-primary"></i> Your Profile Information
                     </h5>
                 </div>
                 <div class="card-body">
@@ -66,13 +66,155 @@
         </div>
     </div>
 
+    <!-- Customer Users Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-users text-success"></i> Customer Users
+                    </h5>
+                    <p class="text-muted mb-0">Organization users and team members</p>
+                </div>
+                <div class="card-body">
+                    {% if customer_users %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>User</th>
+                                    <th>Organization</th>
+                                    <th>User Type</th>
+                                    <th>Status</th>
+                                    <th>Last Login</th>
+                                    <th>Created</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for user in customer_users %}
+                                <tr>
+                                    <td>
+                                        <div>
+                                            <strong>{{ user.full_name }}</strong>
+                                            <br>
+                                            <small class="text-muted">{{ user.username }}</small>
+                                            {% if user.email %}
+                                            <br>
+                                            <small class="text-info">{{ user.email }}</small>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        {% if user.organization %}
+                                        <span class="badge bg-info">{{ user.organization.name }}</span>
+                                        {% else %}
+                                        <span class="text-muted">No Organization</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{{ 'primary' if user.user_type == 'organization_owner' else 'secondary' }}">
+                                            {{ user.user_type.replace('_', ' ').title() }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{{ 'success' if user.is_active else 'danger' }}">
+                                            {{ 'Active' if user.is_active else 'Inactive' }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if user.last_login %}
+                                        {{ user.last_login.strftime('%Y-%m-%d %H:%M') }}
+                                        {% else %}
+                                        <span class="text-muted">Never</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ user.created_at.strftime('%Y-%m-%d') if user.created_at else 'N/A' }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted">No customer users found.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Developer Users Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-code text-warning"></i> System Developers
+                    </h5>
+                    <p class="text-muted mb-0">System developers and administrators</p>
+                </div>
+                <div class="card-body">
+                    {% if developer_users %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>User</th>
+                                    <th>Access Level</th>
+                                    <th>Status</th>
+                                    <th>Last Login</th>
+                                    <th>Created</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for user in developer_users %}
+                                <tr>
+                                    <td>
+                                        <div>
+                                            <strong>{{ user.full_name }}</strong>
+                                            <br>
+                                            <small class="text-muted">{{ user.username }}</small>
+                                            {% if user.email %}
+                                            <br>
+                                            <small class="text-info">{{ user.email }}</small>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-danger">System Developer</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{{ 'success' if user.is_active else 'danger' }}">
+                                            {{ 'Active' if user.is_active else 'Inactive' }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if user.last_login %}
+                                        {{ user.last_login.strftime('%Y-%m-%d %H:%M') }}
+                                        {% else %}
+                                        <span class="text-muted">Never</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ user.created_at.strftime('%Y-%m-%d') if user.created_at else 'N/A' }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted">No system developers found.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Account Information -->
     <div class="row">
         <div class="col-12">
             <div class="card">
                 <div class="card-header">
                     <h5 class="card-title mb-0">
-                        <i class="fas fa-info-circle text-info"></i> Account Information
+                        <i class="fas fa-info-circle text-info"></i> Your Account Information
                     </h5>
                 </div>
                 <div class="card-body">

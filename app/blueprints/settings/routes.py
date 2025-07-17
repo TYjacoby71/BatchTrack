@@ -338,7 +338,13 @@ def update_system_setting():
 @login_required
 def user_management():
     """User management page for profile and account settings"""
-    return render_template('settings/user_management.html')
+    # Get all users separated by type
+    customer_users = User.query.filter(User.user_type != 'developer').all()
+    developer_users = User.query.filter(User.user_type == 'developer').all()
+    
+    return render_template('settings/user_management.html',
+                         customer_users=customer_users,
+                         developer_users=developer_users)
 
 # System settings moved to admin section
 
