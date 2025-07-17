@@ -125,7 +125,7 @@
                     {% endif %}
 
                     {% if has_permission('organization.manage') %}
-                    <li><a class="dropdown-item" href="{{ url_for('settings.organization_dashboard') }}"><i class="fas fa-crown"></i> Organization Dashboard</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('organization.dashboard') }}"><i class="fas fa-crown"></i> Organization Dashboard</a></li>
                     {% endif %}
 
                     {% if has_role('developer') or is_organization_owner() %}
