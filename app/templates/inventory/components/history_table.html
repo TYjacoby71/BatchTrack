@@ -36,19 +36,18 @@
                                  <strong>SPL</strong> - Spoilage<br>
                                  <strong>TRS</strong> - Trash<br>
                                  <strong>DMG</strong> - Damaged<br>
-                                 <strong>EXP</strong> - Expired Disposal<br>
-                                 <strong>USE</strong> - Used
+                                 <strong>BCH</strong> - Batch<br>
+                                 <strong>RCN</strong> - Recount
                                </div>
                                <div class='col-6'>
-                                 <strong>BCH</strong> - Batch<br>
-                                 <strong>RCN</strong> - Recount<br>
                                  <strong>REF</strong> - Refunded<br>
                                  <strong>RTN</strong> - Returned<br>
                                  <strong>CST</strong> - Cost Override<br>
                                  <strong>ADD</strong> - Manual Addition<br>
                                  <strong>TST</strong> - Tester<br>
                                  <strong>GFT</strong> - Gift<br>
-                                 <strong>QFL</strong> - Quality Fail
+                                 <strong>QFL</strong> - Quality Fail<br>
+                                 <strong>Note:</strong> finished_batch shows batch label
                                </div>
                              </div>
                            </div>"
@@ -92,6 +91,10 @@
                           <a href="{{ url_for('inventory.view_inventory', id=item.id) }}#entry-{{ entry.fifo_reference_id }}">
                             {{ ref_entry.batch.label_code }}
                           </a>
+                        {% elif ref_entry and ref_entry.fifo_code %}
+                          <a href="{{ url_for('inventory.view_inventory', id=item.id) }}#entry-{{ entry.fifo_reference_id }}">
+                            {{ ref_entry.fifo_code }}
+                          </a>
                         {% elif ref_entry %}
                           <a href="{{ url_for('inventory.view_inventory', id=item.id) }}#entry-{{ entry.fifo_reference_id }}">
                             {{ get_change_type_prefix(ref_entry.change_type) }}-{{ int_to_base36(ref_entry.id).zfill(6) }}
@@ -106,7 +109,13 @@
                       {% endif %}
                     </td>
                     <td>
-                      {% if entry.batch %}
+                      {% if entry.change_type == 'finished_batch' and entry.batch %}
+                        {% if entry.batch.status == 'in_progress' %}
+                          <a href="{{ url_for('batches.view_batch_in_progress', batch_identifier=entry.batch.id) }}">{{ entry.batch.label_code }}</a>
+                        {% else %}
+                          <a href="{{ url_for('batches.view_batch', batch_identifier=entry.batch.id) }}">{{ entry.batch.label_code }}</a>
+                        {% endif %}
+                      {% elif entry.batch %}
                         {% if entry.batch.status == 'in_progress' %}
                           <a href="{{ url_for('batches.view_batch_in_progress', batch_identifier=entry.batch.id) }}">{{ entry.batch.label_code }}</a>
                         {% else %}
@@ -117,13 +126,9 @@
                           <a href="{{ url_for('inventory.view_inventory', id=item.id) }}#entry-{{ entry.id }}" class="text-decoration-none">
                             {{ entry.fifo_code }}
                           </a>
-                        {% elif entry.lot_number %}
-                          <a href="{{ url_for('inventory.view_inventory', id=item.id) }}#entry-{{ entry.id }}" class="text-decoration-none">
-                            {{ entry.lot_number }}
-                          </a>
                         {% else %}
                           <a href="{{ url_for('inventory.view_inventory', id=item.id) }}#entry-{{ entry.id }}" class="text-decoration-none">
-                            lot-{{ entry.id }}
+                            {{ get_change_type_prefix(entry.change_type) }}-{{ int_to_base36(entry.id).zfill(6) }}
                           </a>
                         {% endif %}
                       {% endif %}

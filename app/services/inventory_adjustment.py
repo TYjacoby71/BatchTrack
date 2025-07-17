@@ -133,7 +133,7 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
         if change_type == 'recount':
             # Recount is special - handle independently from FIFO sync validation
             return handle_recount_adjustment(item_id, quantity, notes, created_by, item_type)
-        elif change_type in ['spoil', 'trash', 'sold', 'sale', 'gift', 'sample', 'tester', 'quality_fail', 'expired_disposal', 'damaged', 'expired']:
+        elif change_type in ['spoil', 'trash', 'sold', 'sale', 'gift', 'sample', 'tester', 'quality_fail', 'damaged', 'expired']:
             qty_change = -abs(quantity)
         elif change_type == 'reserved':
             # Handle reservation creation - deduct from available inventory

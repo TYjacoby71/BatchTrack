@@ -22,8 +22,6 @@ def get_fifo_prefix(change_type, is_lot=False):
         'spoil': 'SPL',
         'trash': 'TRS',
         'damaged': 'DMG',
-        'expired_disposal': 'EXP',
-        'used': 'USE',
         'batch': 'BCH',
         'recount': 'RCN',
         'refunded': 'REF',
