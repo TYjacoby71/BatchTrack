@@ -111,14 +111,17 @@ class ExpirationService:
         """
         # Only process perishable items
         if not sku_entry.is_perishable:
+            logger.debug(f"SKU entry {sku_entry.id} is not perishable")
             return None
 
         # Get the inventory item for master shelf life
         inventory_item = InventoryItem.query.get(sku_entry.inventory_item_id)
         if not inventory_item:
+            logger.warning(f"No inventory item found for SKU entry {sku_entry.id}")
             return None
 
         master_shelf_life = inventory_item.shelf_life_days if inventory_item.is_perishable else None
+        logger.debug(f"SKU entry {sku_entry.id}: master_shelf_life = {master_shelf_life}")
         
         # If this entry is from a batch
         if sku_entry.batch_id:
@@ -132,12 +135,21 @@ class ExpirationService:
                     if master_shelf_life:
                         effective_shelf_life = max(batch.shelf_life_days, master_shelf_life)
                     
-                    return ExpirationService.calculate_expiration_date(start_date, effective_shelf_life)
+                    expiration_date = ExpirationService.calculate_expiration_date(start_date, effective_shelf_life)
+                    logger.debug(f"SKU entry {sku_entry.id} from batch {batch.id}: start_date={start_date}, shelf_life={effective_shelf_life}, expiration={expiration_date}")
+                    return expiration_date
+                else:
+                    logger.warning(f"Batch {batch.id} has no completion date")
+            else:
+                logger.debug(f"Batch {sku_entry.batch_id} not found or not perishable")
         
         # For manual entries, use the entry timestamp + master shelf life
         if master_shelf_life and sku_entry.timestamp:
-            return ExpirationService.calculate_expiration_date(sku_entry.timestamp, master_shelf_life)
+            expiration_date = ExpirationService.calculate_expiration_date(sku_entry.timestamp, master_shelf_life)
+            logger.debug(f"SKU entry {sku_entry.id} manual entry: timestamp={sku_entry.timestamp}, shelf_life={master_shelf_life}, expiration={expiration_date}")
+            return expiration_date
 
+        logger.debug(f"SKU entry {sku_entry.id}: No valid expiration calculation path found")
         return None
 
     @staticmethod
@@ -238,14 +250,21 @@ class ExpirationService:
         # Calculate expiration date using new hierarchy logic
         expiration_date = ExpirationService.get_effective_sku_expiration_date(sku_entry)
         
+        # Debug logging
+        logger.debug(f"Formatting SKU entry {sku_entry.id}: expiration_date = {expiration_date}")
+        
         # Get product info
         from ...models import Product, ProductVariant, ProductSKU
         sku = ProductSKU.query.filter_by(inventory_item_id=sku_entry.inventory_item_id).first()
         if not sku:
+            logger.warning(f"No SKU found for inventory_item_id {sku_entry.inventory_item_id}")
             return None
             
         product = Product.query.get(sku.product_id)
         variant = ProductVariant.query.get(sku.variant_id)
+        
+        # Ensure expiration_date is properly formatted for JSON serialization
+        formatted_expiration = expiration_date.isoformat() if expiration_date else None
         
         return {
             'inventory_item_id': sku_entry.inventory_item_id,
@@ -254,7 +273,7 @@ class ExpirationService:
             'size_label': sku.size_label if sku else 'Unknown Size',
             'quantity': sku_entry.remaining_quantity,
             'unit': sku_entry.unit,
-            'expiration_date': expiration_date,
+            'expiration_date': formatted_expiration,
             'history_id': sku_entry.id,
             'product_inv_id': sku_entry.id,
             'product_id': sku.product_id if sku else None,
