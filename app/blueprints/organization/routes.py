@@ -14,21 +14,32 @@ organization_bp = Blueprint('organization', __name__)
 def dashboard():
     """Organization dashboard for managing users, roles, and settings (organization owners only)"""
 
-    # Check if user is organization owner - developers can access for testing but normal team members cannot
-    if not (current_user.user_type == 'organization_owner' or 
-            current_user.is_organization_owner or 
-            current_user.user_type == 'developer'):
+    # Check if user is organization owner or developer in customer support mode
+    from flask import session
+    
+    is_org_owner = (current_user.user_type == 'organization_owner' or 
+                    current_user.is_organization_owner)
+    is_dev_with_org = (current_user.user_type == 'developer' and 
+                       session.get('dev_selected_org_id'))
+    
+    if not (is_org_owner or is_dev_with_org):
         abort(403)
 
-    # Get organization data
-    organization = current_user.organization
+    # Get organization data - for developers, use the selected organization
+    if current_user.user_type == 'developer' and session.get('dev_selected_org_id'):
+        from app.models import Organization
+        organization = Organization.query.get(session.get('dev_selected_org_id'))
+    else:
+        organization = current_user.organization
+    
     if not organization:
         flash('No organization found', 'error')
         return redirect(url_for('settings.index'))
 
     # Get users for this organization, explicitly excluding developers
+    org_id = organization.id
     users = User.query.filter(
-        User.organization_id == current_user.organization_id,
+        User.organization_id == org_id,
         User.user_type != 'developer'
     ).all()
 
