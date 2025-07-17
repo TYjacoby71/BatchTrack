@@ -395,6 +395,10 @@
                         <label class="form-label">Last Name</label>
                         <input type="text" class="form-control" x-model="inviteForm.last_name">
                     </div>
+                     <div class="mb-3">
+                        <label class="form-label">Phone Number</label>
+                        <input type="text" class="form-control" x-model="inviteForm.phone">
+                    </div>
                 </form>
             </div>
             <div class="modal-footer">
@@ -426,7 +430,8 @@ function orgDashboard() {
             email: '',
             role_id: '',
             first_name: '',
-            last_name: ''
+            last_name: '',
+            phone: ''
         },
 
         async inviteUser() {
@@ -477,14 +482,7 @@ function orgDashboard() {
             }
         },
 
-        resetInviteForm() {
-            this.inviteForm = {
-                email: '',
-                role_id: '',
-                first_name: '',
-                last_name: ''
-            };
-        },
+
 
         async updateOrgSettings() {
             try {
@@ -539,7 +537,8 @@ function orgDashboard() {
                 email: '',
                 role_id: '',
                 first_name: '',
-                last_name: ''
+                last_name: '',
+                phone: ''
             };
         },
 

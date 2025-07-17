@@ -49,12 +49,20 @@ def dashboard():
             permission_categories[category] = []
         permission_categories[category].append(perm)
 
+    # Get some basic metrics
+    total_batches = 0  # You can add actual batch count logic here if needed
+    pending_invites = 0  # You can add actual pending invites count here if needed
+    recent_activity = []  # You can add actual recent activity here if needed
+
     return render_template('settings/org_dashboard.html',
                          organization=organization,
                          users=users,
                          roles=roles,
                          permissions=permissions,
-                         permission_categories=permission_categories)
+                         permission_categories=permission_categories,
+                         total_batches=total_batches,
+                         pending_invites=pending_invites,
+                         recent_activity=recent_activity)
 
 @organization_bp.route('/invite-user', methods=['POST'])
 @login_required
@@ -72,6 +80,7 @@ def invite_user():
         role_id = data.get('role_id')
         first_name = data.get('first_name', '').strip()
         last_name = data.get('last_name', '').strip()
+        phone = data.get('phone', '').strip()
 
         if not email or not role_id:
             return jsonify({'success': False, 'error': 'Email and role are required'})
@@ -122,6 +131,7 @@ def invite_user():
             email=email,
             first_name=first_name,
             last_name=last_name,
+            phone=phone,
             role_id=role_id,
             organization_id=current_user.organization_id,
             is_active=True,
