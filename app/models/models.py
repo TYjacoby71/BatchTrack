@@ -22,16 +22,16 @@ class Organization(db.Model):
         return User.query.filter_by(organization_id=self.id).order_by(User.created_at).first()
 
     def can_add_users(self):
-        """Check if organization can add more users based on subscription (excluding developers)"""
-        non_dev_users = len([u for u in self.users if u.is_active and u.user_type != 'developer'])
+        """Check if organization can add more active users based on subscription (excluding developers)"""
+        active_non_dev_users = len([u for u in self.users if u.is_active and u.user_type != 'developer'])
         if self.subscription_tier == 'solo':
-            return non_dev_users < 1  # Solo only
+            return active_non_dev_users < 1  # Solo only
         elif self.subscription_tier == 'team':
-            return non_dev_users < 10  # Up to 10 users
+            return active_non_dev_users < 10  # Up to 10 active users
         elif self.subscription_tier == 'enterprise':
-            return True  # Unlimited for enterprise
+            return True  # Unlimited active users for enterprise
         else:
-            return non_dev_users < 1  # Default to solo limits
+            return active_non_dev_users < 1  # Default to solo limits
     
     def get_max_users(self):
         """Get maximum users allowed for subscription tier"""
