@@ -1,13 +1,11 @@
-
-from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash, abort
+from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for, current_app as app, abort
 from flask_login import login_required, current_user
-from ...extensions import db
-from ...models import User, Organization
-from ...utils.permissions import require_permission
-from ...models.role import Role
-from ...models.permission import Permission
-import re
+from werkzeug.security import generate_password_hash
 import secrets
+import re
+from app.models import User, Organization, Role, Permission
+from app.extensions import db
+from app.utils.permissions import require_permission
 
 organization_bp = Blueprint('organization', __name__)
 
@@ -49,12 +47,20 @@ def dashboard():
             permission_categories[category] = []
         permission_categories[category].append(perm)
 
+    # Get some basic metrics
+    total_batches = 0  # You can add actual batch count logic here if needed
+    pending_invites = 0  # You can add actual pending invites count here if needed
+    recent_activity = []  # You can add actual recent activity here if needed
+
     return render_template('settings/org_dashboard.html',
                          organization=organization,
                          users=users,
                          roles=roles,
                          permissions=permissions,
-                         permission_categories=permission_categories)
+                         permission_categories=permission_categories,
+                         total_batches=total_batches,
+                         pending_invites=pending_invites,
+                         recent_activity=recent_activity)
 
 @organization_bp.route('/invite-user', methods=['POST'])
 @login_required
@@ -63,7 +69,7 @@ def invite_user():
     """Invite a new user to the organization"""
     try:
         data = request.get_json()
-        
+
         if not data:
             return jsonify({'success': False, 'error': 'No data provided'})
 
@@ -72,6 +78,7 @@ def invite_user():
         role_id = data.get('role_id')
         first_name = data.get('first_name', '').strip()
         last_name = data.get('last_name', '').strip()
+        phone = data.get('phone', '').strip()
 
         if not email or not role_id:
             return jsonify({'success': False, 'error': 'Email and role are required'})
@@ -92,7 +99,7 @@ def invite_user():
         role = Role.query.filter_by(id=role_id).first()
         if not role:
             return jsonify({'success': False, 'error': 'Invalid role selected'})
-        
+
         if role.name == 'developer':
             return jsonify({'success': False, 'error': 'Cannot assign developer role to organization users'})
 
@@ -122,6 +129,7 @@ def invite_user():
             email=email,
             first_name=first_name,
             last_name=last_name,
+            phone=phone,
             role_id=role_id,
             organization_id=current_user.organization_id,
             is_active=True,
@@ -135,7 +143,7 @@ def invite_user():
 
         # TODO: In a real implementation, send email with login details
         # For now, we'll return the credentials directly
-        
+
         return jsonify({
             'success': True, 
             'message': f'User invited successfully! Login details - Username: {username}, Temporary password: {temp_password}',
@@ -157,13 +165,13 @@ def invite_user():
 @login_required
 def update_organization():
     """Update organization settings"""
-    
+
     # Check permissions
     if not (current_user.user_type == 'organization_owner' or 
             current_user.is_organization_owner or 
             current_user.user_type == 'developer'):
         return jsonify({'success': False, 'error': 'Insufficient permissions'})
-        
+
     try:
         data = request.get_json()
         organization = current_user.organization
@@ -186,13 +194,13 @@ def update_organization():
 @login_required
 def export_report(report_type):
     """Export various organization reports"""
-    
+
     # Check permissions - only org owners and developers can export
     if not (current_user.user_type == 'organization_owner' or 
             current_user.is_organization_owner or 
             current_user.user_type == 'developer'):
         abort(403)
-        
+
     try:
         if report_type == 'users':
             # Export users CSV - exclude developers from org exports
