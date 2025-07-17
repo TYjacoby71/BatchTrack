@@ -108,3 +108,4 @@ Avoids needing duplicate recipes for every scent variation
 Preserves the integrity and traceability of the base recipe
 
 Allows flexibility but avoids messiness of “augment later” logic
+
