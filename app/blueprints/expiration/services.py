@@ -261,8 +261,8 @@ class ExpirationService:
         if not batch or not batch.is_perishable or not batch.shelf_life_days:
             return None
 
-        # Use the batch's created timestamp (when it was finished/added) for expiration calculation
-        base_date = batch.created_at
+        # Use batch completion timestamp first, fall back to started timestamp
+        base_date = batch.completed_at or batch.started_at
         if not base_date:
             return None
 
