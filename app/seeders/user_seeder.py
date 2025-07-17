@@ -188,7 +188,7 @@ def update_existing_users_with_roles():
                 print(f"✅ Assigned organization owner role to {user.username}")
             elif user.user_type == 'team_member' and manager_role:
                 user.assign_role(manager_role)
-                print(f"✅ Assigned manager role to {user.username}")</updated>
+                print(f"✅ Assigned manager role to {user.username}")
 
         # Ensure is_active is set
         if not hasattr(user, 'is_active') or user.is_active is None:
