@@ -239,6 +239,27 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
 
             else:
                 # Use FIFO service for all additions - it routes to the correct history table
+                # Handle expiration data
+                timestamp = datetime.utcnow()
+                # Handle expiration data using ExpirationService
+                expiration_date = None
+                is_perishable_override = custom_expiration_date is not None or custom_shelf_life_days is not None
+
+                if is_perishable_override:
+                    is_perishable = True
+                    if custom_expiration_date:
+                        expiration_date = custom_expiration_date
+                    elif custom_shelf_life_days:
+                        from ..blueprints.expiration.services import ExpirationService
+                        expiration_date = ExpirationService.calculate_expiration_date(timestamp, custom_shelf_life_days)
+                elif item.is_perishable and item.shelf_life_days:
+                    is_perishable = True
+                    # Use ExpirationService to get proper expiration date considering batch hierarchy
+                    from ..blueprints.expiration.services import ExpirationService
+                    batch_id = None  # Will be set if this is from a batch operation
+                    expiration_date = ExpirationService.get_expiration_date_for_new_entry(item_id, batch_id)
+                else:
+                    is_perishable = False
                 FIFOService.add_fifo_entry(
                     inventory_item_id=item_id,
                     quantity=qty_change,

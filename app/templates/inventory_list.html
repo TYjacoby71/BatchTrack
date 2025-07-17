@@ -22,6 +22,18 @@
     <div class="collapse mb-3" id="ingredientsFilterSection">
       <div class="card card-body">
         <div class="row g-3">
+          <div class="col-md-3">
+            <div class="form-check">
+              <input type="checkbox" id="ingredientsShowArchived" class="form-check-input" 
+                     {{ 'checked' if show_archived else '' }} 
+                     onchange="toggleArchivedFilter('ingredients')">
+              <label class="form-check-label" for="ingredientsShowArchived">
+                Show Archived Inventory
+              </label>
+            </div>
+          </div>
+        </div>
+        <div class="row g-3">
           <div class="col-md-4">
             <input type="text" id="ingredientsNameFilter" class="form-control" placeholder="Search by name...">
           </div>
@@ -224,6 +236,7 @@
                 <th class="col-cost">Cost/Unit</th>
                 <th class="col-freshness">Freshness</th>
                 <th class="col-category">Category</th>
+                <th class="col-status">Status</th>
                 <th class="col-actions">Actions</th>
               </tr>
             </thead>
@@ -258,11 +271,19 @@
                   {% endif %}
                 </td>
                 <td class="col-category">{{ item.category.name if item.category else 'None' }}</td>
+                <td class="col-status">
+                  {% if item.is_archived %}
+                    <span class="badge bg-warning text-dark">Archived</span>
+                  {% else %}
+                    <span class="badge bg-success">Active</span>
+                  {% endif %}
+                </td>
                 <td class="col-actions">
                   <div class="action-dropdown">
-                    <button class="action-toggle" onclick="toggleActionMenu(this)">⋯</button>
+                    <button class="action-toggle {{ 'text-muted' if item.is_archived else '' }}" onclick="toggleActionMenu(this)">⋯</button>
                     <div class="action-menu">
-                      <a href="{{ url_for('inventory.view_inventory', id=item.id) }}" class="dropdown-item">View Details</a>
+                      <a href="{{ url_for('inventory.view_inventory', id=item.id) }}" 
+                         class="dropdown-item {{ 'text-muted' if item.is_archived else '' }}">View Details</a>
                       {% if not item.is_archived %}
                         <a href="{{ url_for('inventory.archive_inventory', id=item.id) }}" 
                            class="dropdown-item text-warning" 
@@ -311,6 +332,18 @@
     <!-- Filter Section for Containers -->
     <div class="collapse mb-3" id="containersFilterSection">
       <div class="card card-body">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <div class="form-check mb-2">
+              <input type="checkbox" id="containersShowArchived" class="form-check-input" 
+                     {{ 'checked' if show_archived else '' }} 
+                     onchange="toggleArchivedFilter('containers')">
+              <label class="form-check-label" for="containersShowArchived">
+                Show Archived Inventory
+              </label>
+            </div>
+          </div>
+        </div>
         <div class="row g-3">
           <div class="col-md-4">
             <input type="text" id="containersNameFilter" class="form-control" placeholder="Search by name...">
@@ -489,6 +522,7 @@
                 <th class="col-expired">Expired</th>
                 <th class="col-cost">Cost/Unit</th>
                 <th class="col-freshness">Freshness</th>
+                <th class="col-status">Status</th>
                 <th class="col-actions">Actions</th>
               </tr>
             </thead>
@@ -522,11 +556,19 @@
                     <span class="text-muted">Non-perishable</span>
                   {% endif %}
                 </td>
+                <td class="col-status">
+                  {% if item.is_archived %}
+                    <span class="badge bg-warning text-dark">Archived</span>
+                  {% else %}
+                    <span class="badge bg-success">Active</span>
+                  {% endif %}
+                </td>
                 <td class="col-actions">
                   <div class="action-dropdown">
-                    <button class="action-toggle" onclick="toggleActionMenu(this)">⋯</button>
+                    <button class="action-toggle {{ 'text-muted' if item.is_archived else '' }}" onclick="toggleActionMenu(this)">⋯</button>
                     <div class="action-menu">
-                      <a href="{{ url_for('inventory.view_inventory', id=item.id) }}" class="dropdown-item">View Details</a>
+                      <a href="{{ url_for('inventory.view_inventory', id=item.id) }}" 
+                         class="dropdown-item {{ 'text-muted' if item.is_archived else '' }}">View Details</a>
                       {% if not item.is_archived %}
                         <a href="{{ url_for('inventory.archive_inventory', id=item.id) }}" 
                            class="dropdown-item text-warning" 
@@ -700,6 +742,20 @@ function initTablePagination(tableType) {
     });
   });
 
+    const archivedCheckboxIngredients = document.getElementById('ingredientsShowArchived');
+    if (archivedCheckboxIngredients) {
+        archivedCheckboxIngredients.addEventListener('change', function() {
+            filterAndSort(); // Re-apply filters to update the view
+        });
+    }
+
+    const archivedCheckboxContainers = document.getElementById('containersShowArchived');
+    if (archivedCheckboxContainers) {
+        archivedCheckboxContainers.addEventListener('change', function() {
+            filterAndSort(); // Re-apply filters to update the view
+        });
+    }
+
   // Initial load
   updateTable();
 }
@@ -739,6 +795,26 @@ function toggleContainerForm() {
 function toggleActionMenu(button) {
   const menu = button.nextElementSibling;
   menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+}
+
+function toggleArchivedFilter(tableType) {
+    const tableId = tableType + 'Table';
+    const tableBodyId = tableType + 'TableBody';
+    const showArchived = document.getElementById(tableType + 'ShowArchived').checked;
+
+    const allRows = Array.from(document.querySelectorAll(`#${tableBodyId} tr`));
+
+    allRows.forEach(row => {
+        const isArchived = row.querySelector('.col-status .badge')?.textContent === 'Archived';
+
+        if (showArchived) {
+            row.style.display = ''; // Show all rows
+        } else if (isArchived) {
+            row.style.display = 'none'; // Hide archived rows
+        } else {
+            row.style.display = ''; // Show non-archived rows
+        }
+    });
 }
 
 // Close the dropdown menu if the user clicks outside of it
