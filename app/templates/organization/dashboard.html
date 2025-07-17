@@ -442,7 +442,7 @@
             <div class="modal-body p-4">
                 <form id="editUserForm">
                     <input type="hidden" id="editUserId">
-                    
+
                     <!-- User Info Section -->
                     <div class="row mb-4">
                         <div class="col-12">
@@ -543,11 +543,11 @@ function showMessage(message, type = 'success') {
         ${message}
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     `;
-    
+
     // Insert at top of container
     const container = document.querySelector('.container-fluid');
     container.insertBefore(alertDiv, container.firstChild);
-    
+
     // Auto dismiss after 5 seconds
     setTimeout(() => {
         if (alertDiv && alertDiv.parentNode) {
@@ -598,11 +598,11 @@ async function inviteUser() {
 
         if (result.success) {
             showMessage(result.message || 'User invited successfully', 'success');
-            
+
             // Close modal
             const modal = bootstrap.Modal.getInstance(document.getElementById('inviteUserModal'));
             modal.hide();
-            
+
             // Reset form
             document.getElementById('inviteUserForm').reset();
 
@@ -641,7 +641,7 @@ async function editUser(userId) {
 
         if (result.success) {
             const user = result.user;
-            
+
             // Populate form fields
             document.getElementById('editUserId').value = user.id;
             document.getElementById('editFirstName').value = user.first_name || '';
@@ -650,12 +650,12 @@ async function editUser(userId) {
             document.getElementById('editPhone').value = user.phone || '';
             document.getElementById('editRole').value = user.role_id || '';
             document.getElementById('editStatus').value = user.is_active.toString();
-            
+
             // Populate read-only fields
             document.getElementById('editUsername').textContent = user.username;
             document.getElementById('editLastLogin').textContent = user.last_login || 'Never';
             document.getElementById('editCreatedAt').textContent = user.created_at || 'Unknown';
-            
+
             // Show modal
             const modal = new bootstrap.Modal(document.getElementById('editUserModal'));
             modal.show();
@@ -693,11 +693,11 @@ async function updateUser() {
 
         if (result.success) {
             showMessage(result.message || 'User updated successfully', 'success');
-            
+
             // Close modal
             const modal = bootstrap.Modal.getInstance(document.getElementById('editUserModal'));
             modal.hide();
-            
+
             // Reload page to show changes
             setTimeout(() => window.location.reload(), 1000);
         } else {
@@ -740,7 +740,7 @@ async function toggleUserStatus(userId) {
 async function confirmDeleteUser() {
     const userId = document.getElementById('editUserId').value;
     const username = document.getElementById('editUsername').textContent;
-    
+
     if (!confirm(`Are you sure you want to permanently delete user "${username}"? This action cannot be undone and will remove all associated data.`)) {
         return;
     }
@@ -761,11 +761,11 @@ async function confirmDeleteUser() {
 
         if (result.success) {
             showMessage(result.message || 'User deleted successfully', 'success');
-            
+
             // Close modal
             const modal = bootstrap.Modal.getInstance(document.getElementById('editUserModal'));
             modal.hide();
-            
+
             // Reload page
             setTimeout(() => window.location.reload(), 1000);
         } else {

@@ -52,7 +52,7 @@ def dashboard():
     pending_invites = 0  # You can add actual pending invites count here if needed
     recent_activity = []  # You can add actual recent activity here if needed
 
-    return render_template('settings/org_dashboard.html',
+    return render_template('organization/dashboard.html',
                          organization=organization,
                          users=users,
                          roles=roles,
