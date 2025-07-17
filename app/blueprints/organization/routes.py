@@ -266,18 +266,4 @@ def add_user():
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)})
 
-@organization_bp.route('/management')
-@login_required
-@require_permission('organization.manage')
-def management():
-    """Organization management page (org owners only)"""
-    if not current_user.organization:
-        flash('No organization found', 'error')
-        return redirect(url_for('settings.index'))
-
-    organization = current_user.organization
-    users = User.query.filter_by(organization_id=organization.id).all()
-
-    return render_template('settings/organization.html', 
-                         organization=organization,
-                         users=users)
+# Management route removed - use dashboard instead
