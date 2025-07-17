@@ -33,40 +33,44 @@ def upgrade():
         sa.UniqueConstraint('user_id', 'role_id', 'organization_id', name='unique_user_role_org')
     )
     
-    # Add new columns to role table
-    op.add_column('role', sa.Column('is_system_role', sa.Boolean(), nullable=True))
-    op.add_column('role', sa.Column('created_by', sa.Integer(), nullable=True))
-    op.add_column('role', sa.Column('organization_id', sa.Integer(), nullable=True))
-    
-    # Add foreign key constraints
-    op.create_foreign_key(None, 'role', 'user', ['created_by'], ['id'])
-    op.create_foreign_key(None, 'role', 'organization', ['organization_id'], ['id'])
-    
-    # Add unique constraint for role name per organization
-    op.create_unique_constraint('unique_role_name_org', 'role', ['name', 'organization_id'])
+    # Use batch operations for SQLite compatibility
+    with op.batch_alter_table('role', schema=None) as batch_op:
+        batch_op.add_column(sa.Column('is_system_role', sa.Boolean(), nullable=True))
+        batch_op.add_column(sa.Column('created_by', sa.Integer(), nullable=True))
+        batch_op.add_column(sa.Column('organization_id', sa.Integer(), nullable=True))
+        batch_op.create_foreign_key('fk_role_created_by', 'user', ['created_by'], ['id'])
+        batch_op.create_foreign_key('fk_role_organization', 'organization', ['organization_id'], ['id'])
+        batch_op.create_unique_constraint('unique_role_name_org', ['name', 'organization_id'])
     
     # Add new column to permission table
-    op.add_column('permission', sa.Column('required_subscription_tier', sa.String(length=32), nullable=True))
+    with op.batch_alter_table('permission', schema=None) as batch_op:
+        batch_op.add_column(sa.Column('required_subscription_tier', sa.String(length=32), nullable=True))
     
     # Remove deprecated columns from user table
-    op.drop_column('user', 'role_id')
-    op.drop_column('user', 'subscription_class')
-    op.drop_column('user', 'is_owner')
+    with op.batch_alter_table('user', schema=None) as batch_op:
+        batch_op.drop_column('role_id')
+        batch_op.drop_column('subscription_class')
+        batch_op.drop_column('is_owner')
 
 def downgrade():
     # Add back deprecated columns
-    op.add_column('user', sa.Column('is_owner', sa.Boolean(), nullable=True))
-    op.add_column('user', sa.Column('subscription_class', sa.String(length=32), nullable=True))
-    op.add_column('user', sa.Column('role_id', sa.Integer(), nullable=False))
+    with op.batch_alter_table('user', schema=None) as batch_op:
+        batch_op.add_column(sa.Column('is_owner', sa.Boolean(), nullable=True))
+        batch_op.add_column(sa.Column('subscription_class', sa.String(length=32), nullable=True))
+        batch_op.add_column(sa.Column('role_id', sa.Integer(), nullable=False))
     
     # Remove new columns from permission table
-    op.drop_column('permission', 'required_subscription_tier')
+    with op.batch_alter_table('permission', schema=None) as batch_op:
+        batch_op.drop_column('required_subscription_tier')
     
     # Remove constraints and columns from role table
-    op.drop_constraint('unique_role_name_org', 'role', type_='unique')
-    op.drop_column('role', 'organization_id')
-    op.drop_column('role', 'created_by')
-    op.drop_column('role', 'is_system_role')
+    with op.batch_alter_table('role', schema=None) as batch_op:
+        batch_op.drop_constraint('unique_role_name_org', type_='unique')
+        batch_op.drop_constraint('fk_role_organization', type_='foreignkey')
+        batch_op.drop_constraint('fk_role_created_by', type_='foreignkey')
+        batch_op.drop_column('organization_id')
+        batch_op.drop_column('created_by')
+        batch_op.drop_column('is_system_role')
     
     # Drop user_role_assignment table
     op.drop_table('user_role_assignment')
