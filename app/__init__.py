@@ -53,25 +53,24 @@ def create_app():
     def enforce_developer_isolation():
         """Ensure developers can only access developer routes unless they have an org filter active"""
         if current_user.is_authenticated and current_user.user_type == 'developer':
-            # Allow access to developer routes, auth routes, and static files
-            allowed_prefixes = ['/developer/', '/auth/', '/static/', '/api/server-time']
+            # Allow access to developer routes
+            if request.path.startswith('/developer/'):
+                return None
 
-            # Check if accessing developer-allowed routes
-            if any(request.path.startswith(prefix) for prefix in allowed_prefixes):
-                return
+            # Allow access to auth routes (including logout)
+            if request.path.startswith('/auth/'):
+                return None
 
-            # Allow access to root paths
-            if request.path in ['/', '/logout']:
-                return
+            # If accessing non-developer routes, require organization selection
+            if not session.get('dev_selected_org_id'):
+                # Skip redirect for API routes and static files
+                if request.path.startswith('/api/') or request.path.startswith('/static/'):
+                    return None
 
-            # If developer has selected an organization, allow access to customer routes
-            if session.get('dev_selected_org_id'):
-                return
-
-            # Otherwise, redirect to developer dashboard
-            if request.path != '/developer/dashboard':
-                flash('Please select an organization to view customer data, or use the developer dashboard.', 'warning')
-                return redirect(url_for('developer.dashboard'))
+                # Otherwise, redirect to developer dashboard
+                if request.path != '/developer/dashboard':
+                    flash('Please select an organization to view customer data, or use the developer dashboard.', 'warning')
+                    return redirect(url_for('developer.dashboard'))
 
     # Register blueprints
     from .blueprints.auth import auth_bp
