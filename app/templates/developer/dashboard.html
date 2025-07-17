@@ -1,0 +1,282 @@
+
+{% extends 'layout.html' %}
+
+{% block title %}Developer Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h2 class="mb-2">
+                                <i class="fas fa-shield-alt text-danger"></i> 
+                                Developer System Dashboard
+                            </h2>
+                            <p class="text-muted mb-0">System administration and business operations</p>
+                        </div>
+                        <div>
+                            <a href="{{ url_for('developer.organizations') }}" class="btn btn-outline-primary me-2">
+                                <i class="fas fa-filter"></i> Customer Support
+                            </a>
+                            <a href="{{ url_for('developer.system_settings') }}" class="btn btn-outline-secondary">
+                                <i class="fas fa-cog"></i> System Settings
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card border-primary">
+                <div class="card-body text-center">
+                    <i class="fas fa-building fa-2x text-primary mb-2"></i>
+                    <h3 class="mb-1">{{ total_orgs }}</h3>
+                    <p class="text-muted mb-0">Total Organizations</p>
+                    <small class="text-success">{{ active_orgs }} active</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-success">
+                <div class="card-body text-center">
+                    <i class="fas fa-users fa-2x text-success mb-2"></i>
+                    <h3 class="mb-1">{{ total_users }}</h3>
+                    <p class="text-muted mb-0">Total Users</p>
+                    <small class="text-success">{{ active_users }} active</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-warning">
+                <div class="card-body text-center">
+                    <i class="fas fa-exclamation-triangle fa-2x text-warning mb-2"></i>
+                    <h3 class="mb-1">{{ problem_orgs|length }}</h3>
+                    <p class="text-muted mb-0">Need Attention</p>
+                    <small class="text-warning">Organizations with issues</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-info">
+                <div class="card-body text-center">
+                    <i class="fas fa-chart-line fa-2x text-info mb-2"></i>
+                    <h3 class="mb-1">{{ recent_orgs|length }}</h3>
+                    <p class="text-muted mb-0">New This Month</p>
+                    <small class="text-info">Recent signups</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Management Sections -->
+    <div class="row mb-4">
+        <!-- Organization Management -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-building"></i> Organization Management
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('developer.create_organization') }}" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Create New Organization
+                        </a>
+                        <a href="{{ url_for('developer.subscription_management') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-credit-card"></i> Manage Subscriptions
+                        </a>
+                        <a href="{{ url_for('developer.organizations') }}" class="btn btn-outline-info">
+                            <i class="fas fa-list"></i> View All Organizations
+                        </a>
+                    </div>
+                    
+                    <!-- Subscription Breakdown -->
+                    <hr>
+                    <h6>Subscription Tiers:</h6>
+                    {% for tier, count in subscription_stats %}
+                    <div class="d-flex justify-content-between">
+                        <span class="text-capitalize">{{ tier }}:</span>
+                        <span class="badge bg-secondary">{{ count }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- User Management -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-users"></i> User Management
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('developer.users') }}" class="btn btn-primary">
+                            <i class="fas fa-list"></i> Manage All Users
+                        </a>
+                        <button class="btn btn-outline-secondary" disabled>
+                            <i class="fas fa-user-plus"></i> Bulk User Operations
+                        </button>
+                        <button class="btn btn-outline-warning" disabled>
+                            <i class="fas fa-ban"></i> Manage Suspensions
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Business Operations -->
+    <div class="row mb-4">
+        <!-- Financial Management -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-dollar-sign"></i> Financial Operations
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-sm btn-outline-success" disabled>
+                            <i class="fas fa-percent"></i> Manage Discounts
+                        </button>
+                        <button class="btn btn-sm btn-outline-info" disabled>
+                            <i class="fas fa-handshake"></i> Commission Rates
+                        </button>
+                        <button class="btn btn-sm btn-outline-warning" disabled>
+                            <i class="fas fa-chart-bar"></i> Revenue Reports
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- System Operations -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-server"></i> System Operations
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('developer.system_settings') }}" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-cog"></i> System Settings
+                        </a>
+                        <button class="btn btn-sm btn-outline-secondary" disabled>
+                            <i class="fas fa-database"></i> Database Tools
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" disabled>
+                            <i class="fas fa-shield-alt"></i> Security Audit
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Customer Support -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-headset"></i> Customer Support
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('developer.organizations') }}" class="btn btn-sm btn-primary">
+                            <i class="fas fa-filter"></i> Filter by Organization
+                        </a>
+                        <button class="btn btn-sm btn-outline-info" disabled>
+                            <i class="fas fa-ticket-alt"></i> Support Tickets
+                        </button>
+                        <button class="btn btn-sm btn-outline-success" disabled>
+                            <i class="fas fa-comments"></i> Live Chat
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity & Issues -->
+    <div class="row">
+        <!-- Recent Organizations -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-clock"></i> Recent Organizations (Last 30 Days)
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% if recent_orgs %}
+                    <div class="list-group list-group-flush">
+                        {% for org in recent_orgs %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>{{ org.name }}</strong>
+                                <small class="text-muted d-block">{{ org.subscription_tier|title }}</small>
+                            </div>
+                            <div class="text-end">
+                                <small class="text-muted">{{ org.created_at.strftime('%m/%d') }}</small>
+                                <br>
+                                <a href="{{ url_for('developer.organization_detail', org_id=org.id) }}" 
+                                   class="btn btn-sm btn-outline-primary">View</a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted">No new organizations this month</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Problem Organizations -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-exclamation-triangle text-warning"></i> Organizations Needing Attention
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% if problem_orgs %}
+                    <div class="list-group list-group-flush">
+                        {% for org in problem_orgs %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>{{ org.name }}</strong>
+                                <small class="text-warning d-block">No active users</small>
+                            </div>
+                            <div>
+                                <a href="{{ url_for('developer.organization_detail', org_id=org.id) }}" 
+                                   class="btn btn-sm btn-warning">Review</a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-success">All organizations are healthy!</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

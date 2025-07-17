@@ -37,6 +37,13 @@ def seed_users():
             user.assign_role(manager_role)
         print(f"✅ Assigned role to existing user: {user.username} -> {user.user_type}")
 
+    # Ensure all developer users have no organization association
+    developer_users = User.query.filter(User.user_type == 'developer').all()
+    for dev_user in developer_users:
+        if dev_user.organization_id is not None:
+            print(f"⚠️  Removing organization association from developer: {dev_user.username}")
+            dev_user.organization_id = None
+
     db.session.commit()
 
     # Create developer user if it doesn't exist
@@ -167,14 +174,22 @@ def update_existing_users_with_roles():
                 user.user_type = 'team_member'
             updated = True
 
-        # Set role_id if missing (but skip developers - they don't use the role system)
-        if not user.role_id and user.user_type != 'developer':
-            if user.user_type == 'organization_owner' and org_owner_role:
-                user.role_id = org_owner_role.id
-            elif user.user_type == 'team_member':
-                # Assign manager role by default for team members
-                user.role_id = manager_role.id if manager_role else org_owner_role.id
-            updated = True
+        # Ensure developers have no organization association
+        if user.user_type == 'developer':
+            if user.organization_id is not None:
+                print(f"⚠️  Removing organization association from developer: {user.username}")
+                user.organization_id = None
+                updated = True
+            # Skip role assignment for developers
+        else:
+            # Set role_id if missing (but skip developers - they don't use the role system)
+            if not user.role_id:
+                if user.user_type == 'organization_owner' and org_owner_role:
+                    user.role_id = org_owner_role.id
+                elif user.user_type == 'team_member':
+                    # Assign manager role by default for team members
+                    user.role_id = manager_role.id if manager_role else org_owner_role.id
+                updated = True
 
         # Ensure is_active is set
         if not hasattr(user, 'is_active') or user.is_active is None:

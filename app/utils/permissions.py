@@ -6,6 +6,16 @@ def has_permission(permission_name):
     if not current_user.is_authenticated:
         return False
     
+    # If developer is viewing as customer, check customer permissions
+    if current_user.user_type == 'developer':
+        from flask import session
+        if session.get('dev_selected_org_id'):
+            # Developer has selected an org, so they can access customer features
+            return True
+        else:
+            # Developer without org selection can't access customer features
+            return False
+    
     return current_user.has_permission(permission_name)
 
 def has_role(role_name):

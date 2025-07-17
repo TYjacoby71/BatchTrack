@@ -1,0 +1,80 @@
+
+{% extends 'layout.html' %}
+
+{% block title %}Developer - Organizations{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">
+                        <i class="fas fa-code"></i> Developer Dashboard - Organizations
+                    </h4>
+                    {% if selected_org %}
+                    <p class="text-muted mb-0">Currently viewing: <strong>{{ selected_org.name }}</strong></p>
+                    {% else %}
+                    <p class="text-muted mb-0">No organization filter active - viewing all data</p>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    <!-- Organization Filter Controls -->
+                    <div class="row mb-4">
+                        <div class="col-md-8">
+                            <div class="btn-group" role="group">
+                                {% if selected_org %}
+                                <a href="{{ url_for('developer.clear_organization_filter') }}" class="btn btn-outline-secondary">
+                                    <i class="fas fa-times"></i> Clear Filter
+                                </a>
+                                {% endif %}
+                                <a href="{{ url_for('app_routes.dashboard') }}" class="btn btn-primary">
+                                    <i class="fas fa-tachometer-alt"></i> View Dashboard
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Organizations List -->
+                    <div class="row">
+                        {% for org in organizations %}
+                        <div class="col-md-6 col-lg-4 mb-3">
+                            <div class="card {% if selected_org and selected_org.id == org.id %}border-primary{% endif %}">
+                                <div class="card-body">
+                                    <h5 class="card-title">{{ org.name }}</h5>
+                                    <p class="card-text">
+                                        <small class="text-muted">
+                                            <i class="fas fa-layer-group"></i> {{ org.subscription_tier|title }}<br>
+                                            <i class="fas fa-users"></i> {{ org.users|length }} users<br>
+                                            <i class="fas fa-chart-line"></i> {{ org.active_users_count }} active
+                                        </small>
+                                    </p>
+                                    {% if selected_org and selected_org.id == org.id %}
+                                    <span class="badge badge-primary">
+                                        <i class="fas fa-eye"></i> Currently Viewing
+                                    </span>
+                                    {% else %}
+                                    <a href="{{ url_for('developer.select_organization', org_id=org.id) }}" 
+                                       class="btn btn-outline-primary btn-sm">
+                                        <i class="fas fa-search"></i> View Organization
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    {% if not organizations %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-building fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No organizations found</h5>
+                        <p class="text-muted">No organizations have been created in the system yet.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

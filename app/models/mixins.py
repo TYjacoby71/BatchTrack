@@ -11,8 +11,12 @@ class ScopedModelMixin:
         if not current_user.is_authenticated:
             return cls.query.filter(False)  # Return empty query if no user
 
-        # Developers can see all data across organizations
+        # Developers can see all data or filtered by selected organization
         if current_user.user_type == 'developer':
+            from flask import session
+            selected_org_id = session.get('dev_selected_org_id')
+            if selected_org_id:
+                return cls.query.filter(cls.organization_id == selected_org_id)
             return cls.query
 
         # Regular users see only their organization's data

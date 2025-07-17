@@ -1,2 +1,489 @@
+
 {% extends "layout.html" %}
-```
+
+{% block title %}Settings{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4" x-data="settingsData()">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2><i class="fas fa-cogs"></i> Settings</h2>
+                    <p class="text-muted mb-0">Manage your preferences and system configuration</p>
+                </div>
+                {% if is_org_owner %}
+                <a href="{{ url_for('organization.dashboard') }}" class="btn btn-outline-primary">
+                    <i class="fas fa-crown"></i> Organization Dashboard
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Navigation Tabs -->
+    <ul class="nav nav-tabs mb-4" id="settingsTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="profile-tab" data-bs-toggle="tab" data-bs-target="#profile" type="button" role="tab">
+                <i class="fas fa-user"></i> Profile
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="preferences-tab" data-bs-toggle="tab" data-bs-target="#preferences" type="button" role="tab">
+                <i class="fas fa-sliders-h"></i> Preferences
+            </button>
+        </li>
+        {% if has_permission('settings.edit') %}
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="system-tab" data-bs-toggle="tab" data-bs-target="#system" type="button" role="tab">
+                <i class="fas fa-server"></i> System
+            </button>
+        </li>
+        {% endif %}
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="inventory-tab" data-bs-toggle="tab" data-bs-target="#inventory" type="button" role="tab">
+                <i class="fas fa-boxes"></i> Inventory
+            </button>
+        </li>
+    </ul>
+
+    <!-- Settings Content -->
+    <div class="tab-content" id="settingsTabContent">
+        <!-- Profile Tab -->
+        <div class="tab-pane fade show active" id="profile" role="tabpanel">
+            <div class="row">
+                <div class="col-lg-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="fas fa-user-edit"></i> Profile Information</h5>
+                        </div>
+                        <div class="card-body">
+                            <form id="profileForm" @submit.prevent="saveProfile()">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">First Name</label>
+                                            <input type="text" class="form-control" x-model="profile.first_name" required>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">Last Name</label>
+                                            <input type="text" class="form-control" x-model="profile.last_name" required>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Email</label>
+                                    <input type="email" class="form-control" x-model="profile.email" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Phone</label>
+                                    <input type="tel" class="form-control" x-model="profile.phone">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Timezone</label>
+                                    <select class="form-select" name="timezone">
+                                        {% for tz in available_timezones %}
+                                        <option value="{{ tz }}" {% if current_user.timezone == tz %}selected{% endif %}>{{ tz }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save"></i> Save Changes
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="fas fa-lock"></i> Change Password</h5>
+                        </div>
+                        <div class="card-body">
+                            <form id="passwordForm" @submit.prevent="changePassword()">
+                                <div class="mb-3">
+                                    <label class="form-label">Current Password</label>
+                                    <input type="password" class="form-control" x-model="password.current" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">New Password</label>
+                                    <input type="password" class="form-control" x-model="password.new" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Confirm New Password</label>
+                                    <input type="password" class="form-control" x-model="password.confirm" required>
+                                </div>
+                                <button type="submit" class="btn btn-warning">
+                                    <i class="fas fa-key"></i> Change Password
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Preferences Tab -->
+        <div class="tab-pane fade" id="preferences" role="tabpanel">
+            <div class="row">
+                <div class="col-lg-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="fas fa-bell"></i> Alert Preferences</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label class="form-label">Maximum Dashboard Alerts</label>
+                                <input type="number" class="form-control" x-model.number="userPrefs.max_dashboard_alerts" min="1" max="50">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Expiration Warning Days</label>
+                                <input type="number" class="form-control" x-model.number="userPrefs.expiration_warning_days" min="1" max="365">
+                            </div>
+
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" x-model="userPrefs.show_expiration_alerts" @change="updatePreference('show_expiration_alerts', $event.target.checked)">
+                                <label class="form-check-label">Show Expiration Alerts</label>
+                            </div>
+
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" x-model="userPrefs.show_timer_alerts" @change="updatePreference('show_timer_alerts', $event.target.checked)">
+                                <label class="form-check-label">Show Timer Alerts</label>
+                            </div>
+
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" x-model="userPrefs.show_low_stock_alerts" @change="updatePreference('show_low_stock_alerts', $event.target.checked)">
+                                <label class="form-check-label">Show Low Stock Alerts</label>
+                            </div>
+
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" x-model="userPrefs.show_batch_alerts" @change="updatePreference('show_batch_alerts', $event.target.checked)">
+                                <label class="form-check-label">Show Batch Alerts</label>
+                            </div>
+
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" x-model="userPrefs.show_fault_alerts" @change="updatePreference('show_fault_alerts', $event.target.checked)">
+                                <label class="form-check-label">Show Fault Alerts</label>
+                            </div>
+
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" x-model="userPrefs.show_alert_badges" @change="updatePreference('show_alert_badges', $event.target.checked)">
+                                <label class="form-check-label">Show Alert Badges</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="fas fa-desktop"></i> Dashboard Preferences</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label class="form-label">Dashboard Layout</label>
+                                <select class="form-select" x-model="userPrefs.dashboard_layout" @change="updatePreference('dashboard_layout', $event.target.value)">
+                                    <option value="grid">Grid Layout</option>
+                                    <option value="list">List Layout</option>
+                                    <option value="compact">Compact Layout</option>
+                                </select>
+                            </div>
+
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" x-model="userPrefs.compact_view" @change="updatePreference('compact_view', $event.target.checked)">
+                                <label class="form-check-label">Compact View</label>
+                            </div>
+
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" x-model="userPrefs.show_quick_actions" @change="updatePreference('show_quick_actions', $event.target.checked)">
+                                <label class="form-check-label">Show Quick Actions</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- System Tab -->
+        {% if has_permission('settings.edit') %}
+        <div class="tab-pane fade" id="system" role="tabpanel">
+            <div class="row">
+                <div class="col-lg-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="fas fa-cogs"></i> System Settings</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label class="form-label">Items Per Page</label>
+                                <select class="form-select" x-model="systemSettings.system.per_page" @change="updateSystemSetting('system', 'per_page', $event.target.value)">
+                                    <option value="10">10</option>
+                                    <option value="25">25</option>
+                                    <option value="50">50</option>
+                                    <option value="100">100</option>
+                                </select>
+                            </div>
+
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" x-model="systemSettings.system.enable_csv_export" @change="updateSystemSetting('system', 'enable_csv_export', $event.target.checked)">
+                                <label class="form-check-label">Enable CSV Export</label>
+                            </div>
+
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" x-model="systemSettings.system.auto_save_forms" @change="updateSystemSetting('system', 'auto_save_forms', $event.target.checked)">
+                                <label class="form-check-label">Auto-save Forms</label>
+                            </div>
+
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" x-model="systemSettings.system.auto_backup" @change="updateSystemSetting('system', 'auto_backup', $event.target.checked)">
+                                <label class="form-check-label">Auto Backup</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="fas fa-bell"></i> Notification Settings</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" x-model="systemSettings.notifications.browser_notifications" @change="updateSystemSetting('notifications', 'browser_notifications', $event.target.checked)">
+                                <label class="form-check-label">Browser Notifications</label>
+                            </div>
+
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" x-model="systemSettings.notifications.email_alerts" @change="updateSystemSetting('notifications', 'email_alerts', $event.target.checked)">
+                                <label class="form-check-label">Email Alerts</label>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Alert Frequency</label>
+                                <select class="form-select" x-model="systemSettings.notifications.alert_frequency" @change="updateSystemSetting('notifications', 'alert_frequency', $event.target.value)">
+                                    <option value="real_time">Real Time</option>
+                                    <option value="hourly">Hourly</option>
+                                    <option value="daily">Daily</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Inventory Tab -->
+        <div class="tab-pane fade" id="inventory" role="tabpanel">
+            <div class="row">
+                <div class="col-12">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5><i class="fas fa-boxes"></i> Inventory Management</h5>
+                        <div class="btn-group">
+                            <a href="{{ url_for('settings.user_management') }}" class="btn btn-outline-primary">
+                                <i class="fas fa-users"></i> User Management
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-lg-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0"><i class="fas fa-layer-group"></i> Batch Management</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" x-model="systemSettings.batch_rules.require_timer_completion" @change="updateSystemSetting('batch_rules', 'require_timer_completion', $event.target.checked)">
+                                <label class="form-check-label">Require Timer Completion</label>
+                            </div>
+
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" x-model="systemSettings.batch_rules.allow_intermediate_tags" @change="updateSystemSetting('batch_rules', 'allow_intermediate_tags', $event.target.checked)">
+                                <label class="form-check-label">Allow Intermediate Tags</label>
+                            </div>
+
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" x-model="systemSettings.batch_rules.require_finish_confirmation" @change="updateSystemSetting('batch_rules', 'require_finish_confirmation', $event.target.checked)">
+                                <label class="form-check-label">Require Finish Confirmation</label>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Stuck Batch Hours</label>
+                                <input type="number" class="form-control" x-model.number="systemSettings.batch_rules.stuck_batch_hours" min="1" max="168" @change="updateSystemSetting('batch_rules', 'stuck_batch_hours', $event.target.value)">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0"><i class="fas fa-warehouse"></i> Inventory Settings</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" x-model="systemSettings.inventory.enable_fifo_tracking" @change="updateSystemSetting('inventory', 'enable_fifo_tracking', $event.target.checked)">
+                                <label class="form-check-label">Enable FIFO Tracking</label>
+                            </div>
+
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" x-model="systemSettings.inventory.show_expiration_dates" @change="updateSystemSetting('inventory', 'show_expiration_dates', $event.target.checked)">
+                                <label class="form-check-label">Show Expiration Dates</label>
+                            </div>
+
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" x-model="systemSettings.inventory.auto_calculate_costs" @change="updateSystemSetting('inventory', 'auto_calculate_costs', $event.target.checked)">
+                                <label class="form-check-label">Auto Calculate Costs</label>
+                            </div>
+
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" x-model="systemSettings.inventory.enable_barcode_scanning" @change="updateSystemSetting('inventory', 'enable_barcode_scanning', $event.target.checked)">
+                                <label class="form-check-label">Enable Barcode Scanning</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function settingsData() {
+    return {
+        userPrefs: {{ user_prefs | tojson }},
+        systemSettings: {{ system_settings | tojson }},
+        profile: {
+            first_name: '{{ current_user.first_name or "" }}',
+            last_name: '{{ current_user.last_name or "" }}',
+            email: '{{ current_user.email or "" }}',
+            phone: '{{ current_user.phone or "" }}'
+        },
+        password: {
+            current: '',
+            new: '',
+            confirm: ''
+        },
+
+        async saveProfile() {
+            try {
+                const response = await fetch('/settings/profile/save', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(this.profile)
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    this.showToast('Profile updated successfully', 'success');
+                } else {
+                    this.showToast(result.error || 'Failed to update profile', 'error');
+                }
+            } catch (error) {
+                this.showToast('Error updating profile', 'error');
+                console.error('Error:', error);
+            }
+        },
+
+        async changePassword() {
+            if (this.password.new !== this.password.confirm) {
+                this.showToast('New passwords do not match', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/settings/password/change', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(this.password)
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    this.showToast('Password changed successfully', 'success');
+                    this.password = { current: '', new: '', confirm: '' };
+                } else {
+                    this.showToast(result.error || 'Failed to change password', 'error');
+                }
+            } catch (error) {
+                this.showToast('Error changing password', 'error');
+                console.error('Error:', error);
+            }
+        },
+
+        async updatePreference(key, value) {
+            try {
+                const response = await fetch('/settings/update-user-preference', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ key, value })
+                });
+
+                const result = await response.json();
+                if (!result.success) {
+                    this.showToast(result.error || 'Failed to update preference', 'error');
+                }
+            } catch (error) {
+                this.showToast('Error updating preference', 'error');
+                console.error('Error:', error);
+            }
+        },
+
+        async updateSystemSetting(section, key, value) {
+            try {
+                const response = await fetch('/settings/update-system-setting', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ section, key, value })
+                });
+
+                const result = await response.json();
+                if (!result.success) {
+                    this.showToast(result.error || 'Failed to update setting', 'error');
+                }
+            } catch (error) {
+                this.showToast('Error updating setting', 'error');
+                console.error('Error:', error);
+            }
+        },
+
+        showToast(message, type = 'info') {
+            // Use Bootstrap toast or simple alert
+            if (typeof bootstrap !== 'undefined' && bootstrap.Toast) {
+                // Create Bootstrap toast
+                const toastElement = document.createElement('div');
+                toastElement.className = `toast align-items-center text-white bg-${type === 'error' ? 'danger' : type === 'success' ? 'success' : 'info'} border-0`;
+                toastElement.innerHTML = `
+                    <div class="d-flex">
+                        <div class="toast-body">${message}</div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                `;
+                document.body.appendChild(toastElement);
+                const toast = new bootstrap.Toast(toastElement);
+                toast.show();
+                setTimeout(() => toastElement.remove(), 5000);
+            } else {
+                alert(message);
+            }
+        }
+    }
+}
+</script>
+{% endblock %}
