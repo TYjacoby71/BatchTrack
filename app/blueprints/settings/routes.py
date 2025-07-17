@@ -340,12 +340,7 @@ def user_management():
     """User management page for profile and account settings"""
     return render_template('settings/user_management.html')
 
-@settings_bp.route('/system')
-@login_required
-@require_permission('system.admin')
-def system_settings():
-    """System settings page for advanced configuration (admin only)"""
-    return render_template('settings/system.html')
+# System settings moved to admin section
 
 # All organization-related routes have been moved to the organization blueprint
 # Settings blueprint now focuses only on user preferences and system settings
