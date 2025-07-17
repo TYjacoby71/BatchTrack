@@ -128,7 +128,7 @@ def create_app():
     with app.app_context():
         api_routes = [rule.rule for rule in app.url_map.iter_rules() if rule.rule.startswith('/api/')]
         print(f"Registered API routes: {api_routes}")
-        
+
         # Check for specific container route
         container_routes = [rule.rule for rule in app.url_map.iter_rules() if 'container' in rule.rule]
         print(f"Container routes found: {container_routes}")

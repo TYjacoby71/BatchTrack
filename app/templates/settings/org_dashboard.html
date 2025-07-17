@@ -444,7 +444,7 @@ function orgDashboard() {
             }
 
             try {
-                const response = await fetch('/settings/organization/invite-user', {
+                const response = await fetch('/organization/invite-user', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -459,14 +459,14 @@ function orgDashboard() {
                     this.showSuccessMessage(result.message || 'User invited successfully');
                     this.showInviteModal = false;
                     this.resetInviteForm();
-                    
+
                     // Show credentials if provided (development mode)
                     if (result.user_data && result.user_data.temp_password) {
                         setTimeout(() => {
                             alert(`Login Credentials:\nUsername: ${result.user_data.username}\nPassword: ${result.user_data.temp_password}\n\nPlease share these securely with the new user.`);
                         }, 500);
                     }
-                    
+
                     setTimeout(() => window.location.reload(), 2000);
                 } else {
                     this.showErrorMessage(result.error || 'Failed to send invite');
@@ -488,7 +488,7 @@ function orgDashboard() {
 
         async updateOrgSettings() {
             try {
-                const response = await fetch('/settings/organization/update', {
+                const response = await fetch('/organization/update', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -511,7 +511,7 @@ function orgDashboard() {
         },
 
         exportReport(type) {
-            window.open(`/settings/organization/export/${type}`, '_blank');
+            window.open(`/organization/export/${type}`, '_blank');
         },
 
         editUser(userId) {
