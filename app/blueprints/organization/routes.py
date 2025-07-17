@@ -64,8 +64,13 @@ def dashboard():
 
 @organization_bp.route('/invite-user', methods=['POST'])
 @login_required
-@require_permission('organization.manage')
 def invite_user():
+    """Invite a new user to the organization"""
+    # Check if user is organization owner - developers can access for testing but normal team members cannot
+    if not (current_user.user_type == 'organization_owner' or 
+            current_user.is_organization_owner or 
+            current_user.user_type == 'developer'):
+        return jsonify({'success': False, 'error': 'Insufficient permissions to invite users'})
     """Invite a new user to the organization"""
     try:
         data = request.get_json()
@@ -228,8 +233,13 @@ def export_report(report_type):
 
 @organization_bp.route('/add-user', methods=['POST'])
 @login_required
-@require_permission('organization.manage')
 def add_user():
+    """Add a new user to the organization (org owners only) - legacy endpoint"""
+    # Check if user is organization owner - developers can access for testing but normal team members cannot
+    if not (current_user.user_type == 'organization_owner' or 
+            current_user.is_organization_owner or 
+            current_user.user_type == 'developer'):
+        return jsonify({'success': False, 'error': 'Insufficient permissions to add users'})
     """Add a new user to the organization (org owners only) - legacy endpoint"""
     try:
         data = request.get_json()
