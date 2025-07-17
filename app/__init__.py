@@ -121,7 +121,7 @@ def create_app():
     app.register_blueprint(tag_manager_routes.tag_manager_bp, url_prefix='/tag_manager')
 
     # Register organization blueprint
-    from app.blueprints.organization.routes import organization_bp
+    from .blueprints.organization.routes import organization_bp
     app.register_blueprint(organization_bp, url_prefix='/organization')
 
     # Register API blueprint
