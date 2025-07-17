@@ -55,8 +55,68 @@
             <div class="navbar-nav me-auto">
                 <span class="navbar-text text-danger">
                     <i class="fas fa-shield-alt"></i> Developer Mode
+                    {% if session.get('dev_selected_org_id') %}
+                    <small class="text-primary">| Customer View Active</small>
+                    {% endif %}
                 </span>
             </div>
+            
+            <!-- Show both menus when developer is viewing an organization -->
+            {% if session.get('dev_selected_org_id') %}
+            <!-- Customer Menu (when developer is viewing as customer) -->
+            <ul class="navbar-nav mx-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#unitConverterModal">
+                        🧮 Converter
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <span class="nav-link" id="clock">🕐 Loading...</span>
+                </li>
+            </ul>
+            <div class="dropdown me-2">
+                <button class="btn btn-light dropdown-toggle" type="button" id="customerDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fas fa-user"></i> Customer Menu
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="customerDropdown">
+                    <!-- User Dashboard -->
+                    <li><a class="dropdown-item" href="{{ url_for('app_routes.dashboard') }}">User Dashboard</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('index') }}">Homepage</a></li>
+
+                    <li><hr class="dropdown-divider"></li>
+
+                    <!-- Core Features -->
+                    <li><a class="dropdown-item" href="{{ url_for('inventory.list_inventory') }}">Inventory</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('recipes.list_recipes') }}">Recipes</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('batches.list_batches') }}">Batches</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('products.product_list') }}">Products</a></li>
+
+                    <li><hr class="dropdown-divider"></li>
+
+                    <!-- Production Tools -->
+                    <li><a class="dropdown-item" href="{{ url_for('timers.list_timers') }}">Timer Management</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('bulk_stock.bulk_stock_check') }}">Production Log</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('faults.view_fault_log') }}">Fault Log</a></li>
+                    <li>
+                        <a class="dropdown-item d-flex justify-content-between align-items-center" href="{{ url_for('expiration.alerts') }}">
+                            Expiration Management
+                            <span id="expiration-badge" class="badge bg-danger" style="display: none;">0</span>
+                        </a>
+                    </li>
+                    <li><hr class="dropdown-divider"></li>
+
+                    <!-- Settings & Management -->
+                    <li><a class="dropdown-item" href="{{ url_for('settings.index') }}">Settings</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('tags.manage_tags') }}">Tag Manager</a></li>
+                    
+                    <!-- Auth Management -->
+                    <li><a class="dropdown-item" href="{{ url_for('auth.permissions') }}"><i class="fas fa-key"></i> Permissions</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('auth.roles') }}"><i class="fas fa-users-cog"></i> Roles</a></li>
+                </ul>
+            </div>
+            {% endif %}
+            
+            <!-- Developer Menu (always available) -->
             <div class="dropdown ms-auto">
                 <button class="btn btn-danger dropdown-toggle" type="button" id="devDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                     <i class="fas fa-code"></i> Developer Menu
