@@ -4,7 +4,8 @@ from flask_migrate import Migrate
 from .extensions import db
 from .models import User
 import os
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, session
+from flask_login import current_user
 
 
 def create_app():
@@ -47,6 +48,31 @@ def create_app():
         except (ValueError, TypeError):
             return None
 
+    # Developer isolation middleware
+    @app.before_request
+    def enforce_developer_isolation():
+        """Ensure developers can only access developer routes unless they have an org filter active"""
+        if current_user.is_authenticated and current_user.user_type == 'developer':
+            # Allow access to developer routes, auth routes, and static files
+            allowed_prefixes = ['/developer/', '/auth/', '/static/', '/api/server-time']
+
+            # Check if accessing developer-allowed routes
+            if any(request.path.startswith(prefix) for prefix in allowed_prefixes):
+                return
+
+            # Allow access to root paths
+            if request.path in ['/', '/logout']:
+                return
+
+            # If developer has selected an organization, allow access to customer routes
+            if session.get('dev_selected_org_id'):
+                return
+
+            # Otherwise, redirect to developer dashboard
+            if request.path != '/developer/dashboard':
+                flash('Please select an organization to view customer data, or use the developer dashboard.', 'warning')
+                return redirect(url_for('developer.dashboard'))
+
     # Register blueprints
     from .blueprints.auth import auth_bp
     from .blueprints.products import products_bp
@@ -57,9 +83,6 @@ def create_app():
     from .blueprints.batches.finish_batch import finish_batch_bp
     from .blueprints.batches.cancel_batch import cancel_batch_bp
     from .blueprints.batches.start_batch import start_batch_bp
-    from .blueprints.products import products_bp
-    from .blueprints.products.api import products_api_bp
-
     from .blueprints.api.stock_routes import stock_api_bp
     from .blueprints.api.ingredient_routes import ingredient_api_bp
     from .blueprints.conversion import conversion_bp

@@ -206,7 +206,7 @@ def select_organization(org_id):
     """Select an organization to view as developer (customer support)"""
     org = Organization.query.get_or_404(org_id)
     session['dev_selected_org_id'] = org_id
-    flash(f'Now viewing data for: {org.name}', 'success')
+    flash(f'Now viewing data for: {org.name} (Customer Support Mode)', 'info')
     return redirect(url_for('app_routes.dashboard'))
 
 @developer_bp.route('/clear-org-filter')

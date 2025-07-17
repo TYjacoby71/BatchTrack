@@ -1,0 +1,109 @@
+
+{% extends 'layout.html' %}
+
+{% block title %}System Settings - Developer{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="mb-0">
+                        <i class="fas fa-cogs text-primary"></i> System Settings
+                    </h3>
+                    <p class="text-muted mb-0">System-wide configuration and statistics</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- System Statistics -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card border-primary">
+                <div class="card-body text-center">
+                    <i class="fas fa-key fa-2x text-primary mb-2"></i>
+                    <h3 class="mb-1">{{ stats.total_permissions }}</h3>
+                    <p class="text-muted mb-0">Total Permissions</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-success">
+                <div class="card-body text-center">
+                    <i class="fas fa-users-cog fa-2x text-success mb-2"></i>
+                    <h3 class="mb-1">{{ stats.total_roles }}</h3>
+                    <p class="text-muted mb-0">Total Roles</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-info">
+                <div class="card-body text-center">
+                    <i class="fas fa-building fa-2x text-info mb-2"></i>
+                    <h3 class="mb-1">{{ stats.total_organizations }}</h3>
+                    <p class="text-muted mb-0">Organizations</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-warning">
+                <div class="card-body text-center">
+                    <i class="fas fa-users fa-2x text-warning mb-2"></i>
+                    <h3 class="mb-1">{{ stats.total_users }}</h3>
+                    <p class="text-muted mb-0">Total Users</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- System Management -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-database"></i> Database Management
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-outline-primary" disabled>
+                            <i class="fas fa-sync"></i> Database Backup
+                        </button>
+                        <button class="btn btn-outline-secondary" disabled>
+                            <i class="fas fa-broom"></i> Cleanup Old Data
+                        </button>
+                        <button class="btn btn-outline-warning" disabled>
+                            <i class="fas fa-chart-bar"></i> Performance Stats
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-shield-alt"></i> Security & Monitoring
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-outline-info" disabled>
+                            <i class="fas fa-eye"></i> System Logs
+                        </button>
+                        <button class="btn btn-outline-success" disabled>
+                            <i class="fas fa-chart-line"></i> Usage Analytics
+                        </button>
+                        <button class="btn btn-outline-danger" disabled>
+                            <i class="fas fa-exclamation-triangle"></i> Security Audit
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

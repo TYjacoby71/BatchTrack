@@ -45,10 +45,80 @@
     <div class="app-container">
     <nav class="navbar navbar-expand-lg navbar-light bg-light">
         <div class="container-fluid">
-            <a class="navbar-brand" href="{% if current_user.is_authenticated %}{{ url_for('app_routes.dashboard') }}{% else %}{{ url_for('index') }}{% endif %}">
+            <a class="navbar-brand" href="{% if current_user.is_authenticated %}{% if current_user.user_type == 'developer' %}{{ url_for('developer.dashboard') }}{% else %}{{ url_for('app_routes.dashboard') }}{% endif %}{% else %}{{ url_for('index') }}{% endif %}">
                 BatchTrack <small class="text-muted">(pre variant changes)</small>
             </a>
             {% if current_user.is_authenticated %}
+            
+            {% if current_user.user_type == 'developer' %}
+            <!-- Developer Navigation -->
+            <div class="navbar-nav me-auto">
+                <span class="navbar-text text-danger">
+                    <i class="fas fa-shield-alt"></i> Developer Mode
+                </span>
+            </div>
+            <div class="dropdown ms-auto">
+                <button class="btn btn-danger dropdown-toggle" type="button" id="devDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fas fa-code"></i> Developer Menu
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="devDropdown">
+                    <!-- Developer Dashboard -->
+                    <li><a class="dropdown-item" href="{{ url_for('developer.dashboard') }}">
+                        <i class="fas fa-tachometer-alt"></i> Developer Dashboard
+                    </a></li>
+                    
+                    <li><hr class="dropdown-divider"></li>
+                    
+                    <!-- System Management -->
+                    <li><h6 class="dropdown-header">System Management</h6></li>
+                    <li><a class="dropdown-item" href="{{ url_for('developer.create_organization') }}">
+                        <i class="fas fa-plus"></i> Create Organization
+                    </a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('developer.subscription_management') }}">
+                        <i class="fas fa-credit-card"></i> Subscription Management
+                    </a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('developer.users') }}">
+                        <i class="fas fa-users"></i> User Management
+                    </a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('developer.system_settings') }}">
+                        <i class="fas fa-cog"></i> System Settings
+                    </a></li>
+                    
+                    <li><hr class="dropdown-divider"></li>
+                    
+                    <!-- Customer Support -->
+                    <li><h6 class="dropdown-header">Customer Support</h6></li>
+                    <li><a class="dropdown-item" href="{{ url_for('developer.organizations') }}">
+                        <i class="fas fa-filter"></i> View as Customer
+                        {% if session.get('dev_selected_org_id') %}
+                        <span class="badge bg-primary ms-1">Active</span>
+                        {% endif %}
+                    </a></li>
+                    {% if session.get('dev_selected_org_id') %}
+                    <li><a class="dropdown-item" href="{{ url_for('developer.clear_organization_filter') }}">
+                        <i class="fas fa-times"></i> Clear Customer Filter
+                    </a></li>
+                    {% endif %}
+                    
+                    <li><hr class="dropdown-divider"></li>
+                    
+                    <!-- Auth Management -->
+                    <li><a class="dropdown-item" href="{{ url_for('auth.permissions') }}">
+                        <i class="fas fa-key"></i> Permissions
+                    </a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('auth.roles') }}">
+                        <i class="fas fa-users-cog"></i> Roles
+                    </a></li>
+                    
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </a></li>
+                </ul>
+            </div>
+            
+            {% else %}
+            <!-- Customer Navigation -->
             <div class="navbar-nav me-auto">
             </div>
             <ul class="navbar-nav mx-auto">
@@ -110,15 +180,7 @@
                     </li>
                     <li><hr class="dropdown-divider"></li>
 
-                    <!-- Admin Dashboards -->
-                    {% if is_developer() %}
-                    <li><a class="dropdown-item" href="#"><i class="fas fa-code"></i> Developer Dashboard</a></li>
-                    <li><a class="dropdown-item" href="#"><i class="fas fa-database"></i> System Administration</a></li>
-                    <li><a class="dropdown-item" href="#"><i class="fas fa-users"></i> All Organizations</a></li>
-                    {% endif %}
-
                     {% if has_role('developer') or has_role('organization_owner') or has_role('manager') %}
-                    <li><hr class="dropdown-divider"></li>
                     <li><h6 class="dropdown-header">Admin Tools</h6></li>
                     <li><a class="dropdown-item" href="{{ url_for('reservations.list_reservations') }}"><i class="fas fa-clock"></i> Reservations</a></li>
                     {% endif %}
@@ -139,21 +201,6 @@
                     <li><a class="dropdown-item" href="{{ url_for('tags.manage_tags') }}">Tag Manager</a></li>
                     {% endif %}
                     
-                    <!-- Developer Tools -->
-                    {% if current_user.user_type == 'developer' %}
-                    <li><hr class="dropdown-divider"></li>
-                    <li><h6 class="dropdown-header">Developer Tools</h6></li>
-                    <li><a class="dropdown-item" href="{{ url_for('developer.dashboard') }}">
-                        <i class="fas fa-shield-alt"></i> Developer Dashboard
-                    </a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('developer.organizations') }}">
-                        <i class="fas fa-building"></i> Customer Support
-                        {% if session.get('dev_selected_org_id') %}
-                        <span class="badge bg-primary ms-1">Filtered</span>
-                        {% endif %}
-                    </a></li>
-                    {% endif %}
-                    
                     <!-- Auth Management -->
                     {% if has_permission('system.admin') %}
                     <li><a class="dropdown-item" href="{{ url_for('auth.permissions') }}"><i class="fas fa-key"></i> Permissions</a></li>
@@ -167,6 +214,7 @@
                     <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}">Logout</a></li>
                 </ul>
             </div>
+            {% endif %}
 
             {% endif %}
         </div>
