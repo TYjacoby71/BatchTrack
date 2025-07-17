@@ -23,6 +23,17 @@
             <input type="hidden" name="output_type" value="ingredient">
             {% endif %}
 
+            <!-- Show current perishable settings from batch if available -->
+            {% if batch.is_perishable %}
+            <div class="alert alert-warning mb-3">
+              <small>
+                <i class="fas fa-clock me-1"></i>
+                This batch is marked as perishable with {{ batch.shelf_life_days }} day shelf life.
+                Products created will inherit these settings at the inventory item level.
+              </small>
+            </div>
+            {% endif %}
+
             <div class="form-group mb-3">
               <label for="final_quantity">Final Quantity</label>
               <input type="number" 

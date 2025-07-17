@@ -107,7 +107,9 @@ def api_archive_expired():
 def api_debug_expiration():
     """Debug endpoint to check expiration setup"""
     from ...models import ProductSKUHistory, InventoryItem
+    from ...models import db
     from sqlalchemy import and_
+    from flask_login import current_user
     
     # Get all SKU entries with remaining quantity
     sku_entries = db.session.query(ProductSKUHistory).join(

@@ -72,17 +72,21 @@ class ProductService:
             # Generate SKU code
             sku_code = ProductService.generate_sku_code(product.name, variant.name, size_label)
 
-            sku = ProductSKU(
+            # Create the ProductSKU entry
+            product_sku = ProductSKU(
                 product_id=product.id,
                 variant_id=variant.id,
                 size_label=size_label,
                 sku_code=sku_code,
-                unit=unit,
                 inventory_item_id=inventory_item.id,
+                unit=unit,
                 organization_id=current_user.organization_id,
                 created_by=current_user.id
             )
-            db.session.add(sku)
+
+            # Note: Perishable settings are managed at the inventory_item level
+            # and should be set separately when needed (e.g., during batch completion)
+            db.session.add(product_sku)
             db.session.flush()
 
         return sku
@@ -91,7 +95,7 @@ class ProductService:
     def get_product_summary_skus():
         """Get summary of all products with their total quantities"""
         from ..models import InventoryItem
-        
+
         product_summaries = db.session.query(
             Product.id.label('product_id'),
             Product.name.label('product_name'),
@@ -170,13 +174,13 @@ class ProductService:
             ProductVariant.name
         ).all()
 
-    
+
 
     @staticmethod
     def get_low_stock_skus(threshold_multiplier: float = 1.0):
         """Get SKUs that are low on stock"""
         from ..models import InventoryItem
-        
+
         return ProductSKU.query.join(InventoryItem, ProductSKU.inventory_item_id == InventoryItem.id).filter(
             InventoryItem.quantity <= ProductSKU.low_stock_threshold * threshold_multiplier,
             ProductSKU.is_active == True,
