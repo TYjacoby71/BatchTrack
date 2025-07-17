@@ -1,5 +1,5 @@
 
-from datetime import datetime, timedelta, date
+from datetime import datetime, timedelta, date, timezone
 from ...models import db, InventoryItem, InventoryHistory, ProductSKU, ProductSKUHistory, Batch
 from sqlalchemy import and_, or_
 from typing import List, Dict, Optional, Tuple
@@ -21,7 +21,11 @@ class ExpirationService:
         if isinstance(start_date, str):
             start_date = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
 
-        # Calculate expiration date maintaining the time component
+        # Ensure start_date is timezone-aware (convert to UTC if naive)
+        if start_date.tzinfo is None:
+            start_date = start_date.replace(tzinfo=timezone.utc)
+
+        # Calculate expiration date maintaining the timezone
         expiration_date = start_date + timedelta(days=shelf_life_days)
         return expiration_date
 
@@ -31,13 +35,18 @@ class ExpirationService:
         if not expiration_date:
             return None
         from ...utils.timezone_utils import TimezoneUtils
-        now = TimezoneUtils.now_naive()
+        
+        # Get current UTC time for consistent comparison
+        now_utc = TimezoneUtils.utc_now()
+        
+        # Convert expiration date to UTC if it has timezone info, otherwise assume UTC
+        if expiration_date.tzinfo:
+            expiration_utc = expiration_date.astimezone(timezone.utc)
+        else:
+            expiration_utc = expiration_date.replace(tzinfo=timezone.utc)
 
-        # Ensure expiration date is naive for consistent comparison
-        expiration_naive = expiration_date.replace(tzinfo=None) if expiration_date.tzinfo else expiration_date
-
-        # Use exact time difference calculation
-        time_diff_seconds = (expiration_naive - now).total_seconds()
+        # Use exact time difference calculation in UTC
+        time_diff_seconds = (expiration_utc - now_utc).total_seconds()
         return round(time_diff_seconds / 86400)
 
     @staticmethod
@@ -47,15 +56,25 @@ class ExpirationService:
             return None
 
         from ...utils.timezone_utils import TimezoneUtils
-        now = TimezoneUtils.now_naive()
+        from datetime import timezone
+        
+        # Get current UTC time for consistent comparison
+        now_utc = TimezoneUtils.utc_now()
 
-        # Ensure all timestamps are naive for consistent comparison
-        entry_naive = entry_date.replace(tzinfo=None) if entry_date.tzinfo else entry_date
-        expiration_naive = expiration_date.replace(tzinfo=None) if expiration_date.tzinfo else expiration_date
+        # Convert all dates to UTC for consistent calculation
+        if entry_date.tzinfo:
+            entry_utc = entry_date.astimezone(timezone.utc)
+        else:
+            entry_utc = entry_date.replace(tzinfo=timezone.utc)
+            
+        if expiration_date.tzinfo:
+            expiration_utc = expiration_date.astimezone(timezone.utc)
+        else:
+            expiration_utc = expiration_date.replace(tzinfo=timezone.utc)
 
-        # Calculate exact time progression
-        total_life_seconds = (expiration_naive - entry_naive).total_seconds()
-        time_remaining_seconds = (expiration_naive - now).total_seconds()
+        # Calculate exact time progression in UTC
+        total_life_seconds = (expiration_utc - entry_utc).total_seconds()
+        time_remaining_seconds = (expiration_utc - now_utc).total_seconds()
 
         if total_life_seconds <= 0:
             return 0.0
@@ -156,7 +175,10 @@ class ExpirationService:
     def _query_fifo_entries(expired=False, days_ahead: int = None):
         """Query FIFO entries based on expiration criteria - only perishable items"""
         from ...utils.timezone_utils import TimezoneUtils
-        now = TimezoneUtils.now_naive()
+        from datetime import timezone
+        
+        # Use UTC for all time comparisons
+        now_utc = TimezoneUtils.utc_now()
 
         base_filter = [
             InventoryHistory.is_perishable == True,  # Only perishable items
@@ -176,28 +198,34 @@ class ExpirationService:
             if not expiration_date:
                 continue
 
-            # Apply time-based filtering
-            if expired and expiration_date < now:
+            # Convert expiration date to UTC for comparison
+            if expiration_date.tzinfo:
+                expiration_utc = expiration_date.astimezone(timezone.utc)
+            else:
+                expiration_utc = expiration_date.replace(tzinfo=timezone.utc)
+
+            # Apply time-based filtering using UTC
+            if expired and expiration_utc < now_utc:
                 # Create entry object for compatibility
                 entry_obj = type('Entry', (), {
                     'inventory_item_id': entry.inventory_item_id,
                     'name': entry.inventory_item.name,
                     'remaining_quantity': entry.remaining_quantity,
                     'unit': entry.unit,
-                    'expiration_date': expiration_date,
+                    'expiration_date': expiration_date,  # Keep original for display
                     'fifo_id': entry.id,
                     'fifo_code': entry.fifo_code
                 })()
                 filtered_entries.append(entry_obj)
             elif days_ahead:
-                future_date = now + timedelta(days=days_ahead)
-                if now <= expiration_date <= future_date:
+                future_date_utc = now_utc + timedelta(days=days_ahead)
+                if now_utc <= expiration_utc <= future_date_utc:
                     entry_obj = type('Entry', (), {
                         'inventory_item_id': entry.inventory_item_id,
                         'name': entry.inventory_item.name,
                         'remaining_quantity': entry.remaining_quantity,
                         'unit': entry.unit,
-                        'expiration_date': expiration_date,
+                        'expiration_date': expiration_date,  # Keep original for display
                         'fifo_id': entry.id,
                         'fifo_code': entry.fifo_code
                     })()
@@ -210,8 +238,10 @@ class ExpirationService:
         """Query product SKU entries based on expiration criteria - only perishable items"""
         from ...utils.timezone_utils import TimezoneUtils
         from ...models import Product, ProductVariant, ProductSKU, ProductSKUHistory
+        from datetime import timezone
 
-        now = TimezoneUtils.now_naive()
+        # Use UTC for all time comparisons
+        now_utc = TimezoneUtils.utc_now()
 
         base_filter = [
             ProductSKUHistory.remaining_quantity > 0,
@@ -234,12 +264,18 @@ class ExpirationService:
             if not expiration_date:
                 continue
 
-            # Apply time-based filtering
-            if expired and expiration_date < now:
+            # Convert expiration date to UTC for comparison
+            if expiration_date.tzinfo:
+                expiration_utc = expiration_date.astimezone(timezone.utc)
+            else:
+                expiration_utc = expiration_date.replace(tzinfo=timezone.utc)
+
+            # Apply time-based filtering using UTC
+            if expired and expiration_utc < now_utc:
                 filtered_entries.append(sku_entry)
             elif days_ahead:
-                future_date = now + timedelta(days=days_ahead)
-                if now <= expiration_date <= future_date:
+                future_date_utc = now_utc + timedelta(days=days_ahead)
+                if now_utc <= expiration_utc <= future_date_utc:
                     filtered_entries.append(sku_entry)
 
         return filtered_entries
@@ -351,14 +387,23 @@ class ExpirationService:
 
         master_shelf_life = inventory_item.shelf_life_days
         from ...utils.timezone_utils import TimezoneUtils
-        now = TimezoneUtils.now_naive()
+        
+        # Use UTC for consistency in calculations
+        now_utc = TimezoneUtils.utc_now()
 
         # If this entry is from a batch
         if batch_id:
             batch = Batch.query.get(batch_id)
             if batch and batch.is_perishable and batch.shelf_life_days:
                 # Use batch completion date (completed_at) as the start date
-                start_date = batch.completed_at or now
+                start_date = batch.completed_at or now_utc
+                
+                # Ensure start_date is in UTC
+                if start_date.tzinfo is None:
+                    start_date = start_date.replace(tzinfo=timezone.utc)
+                elif start_date.tzinfo != timezone.utc:
+                    start_date = start_date.astimezone(timezone.utc)
+                
                 # Use the greater shelf life between batch and master
                 effective_shelf_life = batch.shelf_life_days
                 if master_shelf_life:
@@ -366,9 +411,9 @@ class ExpirationService:
                 
                 return ExpirationService.calculate_expiration_date(start_date, effective_shelf_life)
         
-        # For manual entries, use current time + master shelf life
+        # For manual entries, use current UTC time + master shelf life
         if master_shelf_life:
-            return ExpirationService.calculate_expiration_date(now, master_shelf_life)
+            return ExpirationService.calculate_expiration_date(now_utc, master_shelf_life)
 
         return None
 
@@ -376,8 +421,11 @@ class ExpirationService:
     def get_inventory_item_expiration_status(inventory_item_id: int):
         """Get expiration status for a specific inventory item"""
         from ...utils.timezone_utils import TimezoneUtils
-        now = TimezoneUtils.now_naive()
-        future_date = now + timedelta(days=7)
+        from datetime import timezone
+        
+        # Use UTC for all time comparisons
+        now_utc = TimezoneUtils.utc_now()
+        future_date_utc = now_utc + timedelta(days=7)
 
         # Get all FIFO entries for this item with organization scoping
         entries = db.session.query(InventoryHistory).join(InventoryItem).filter(
@@ -395,9 +443,15 @@ class ExpirationService:
         for entry in entries:
             expiration_date = ExpirationService.get_effective_expiration_date(entry)
             if expiration_date:
-                if expiration_date < now:
+                # Convert expiration date to UTC for comparison
+                if expiration_date.tzinfo:
+                    expiration_utc = expiration_date.astimezone(timezone.utc)
+                else:
+                    expiration_utc = expiration_date.replace(tzinfo=timezone.utc)
+                    
+                if expiration_utc < now_utc:
                     expired_entries.append(entry)
-                elif expiration_date <= future_date:
+                elif expiration_utc <= future_date_utc:
                     expiring_soon_entries.append(entry)
 
         return {

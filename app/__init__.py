@@ -120,6 +120,10 @@ def create_app():
     app.register_blueprint(fault_log_routes.fault_log_bp, url_prefix='/fault_log')
     app.register_blueprint(tag_manager_routes.tag_manager_bp, url_prefix='/tag_manager')
 
+    # Register organization blueprint
+    from app.blueprints.organization.routes import organization_bp
+    app.register_blueprint(organization_bp, url_prefix='/organization')
+
     # Register API blueprint
     from .blueprints.api import api_bp
     app.register_blueprint(api_bp)
@@ -128,7 +132,7 @@ def create_app():
     with app.app_context():
         api_routes = [rule.rule for rule in app.url_map.iter_rules() if rule.rule.startswith('/api/')]
         print(f"Registered API routes: {api_routes}")
-        
+
         # Check for specific container route
         container_routes = [rule.rule for rule in app.url_map.iter_rules() if 'container' in rule.rule]
         print(f"Container routes found: {container_routes}")

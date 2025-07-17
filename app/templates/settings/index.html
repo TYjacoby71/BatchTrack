@@ -127,7 +127,7 @@
                 </div>
                 <div class="card-body">
                     <p class="text-muted mb-3">Manage your organization users, roles, and settings</p>
-                    <a href="{{ url_for('settings.organization_dashboard') }}" class="btn btn-primary">
+                    <a href="{{ url_for('organization.dashboard') }}" class="btn btn-primary">
                         <i class="fas fa-users"></i> Open Organization Dashboard
                     </a>
                 </div>
@@ -714,7 +714,7 @@
                             <h6>Display Preferences</h6>
                             <div class="mb-3">
                                 <label for="items-per-page" class="form-label">Items per page</label>
-                                <select class="form-select" id="items-per-page"
+                                                               <select class="form-select" id="items-per-page"
                                         x-model="systemSettings.system.per_page"
                                         @change="updateSystemSetting('system', 'per_page', $event.target.value)">
                                     <option value="10">10 items</option>

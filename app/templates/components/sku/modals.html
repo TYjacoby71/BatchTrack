@@ -50,15 +50,15 @@
                         </div>
                         <div class="col-md-6">
                             <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="is_perishable" name="is_perishable" {{ 'checked' if sku.is_perishable else '' }}>
+                                <input class="form-check-input" type="checkbox" id="is_perishable" name="is_perishable" {{ 'checked' if sku.inventory_item and sku.inventory_item.is_perishable else '' }}>
                                 <label class="form-check-label" for="is_perishable">
                                     This SKU is perishable
                                 </label>
                             </div>
                         </div>
-                        <div class="col-md-6" id="shelfLifeGroup" style="{{ 'display: none;' if not sku.is_perishable else '' }}">
+                        <div class="col-md-6" id="shelfLifeGroup" style="{{ 'display: none;' if not (sku.inventory_item and sku.inventory_item.is_perishable) else '' }}">
                             <label class="form-label">Shelf Life (days)</label>
-                            <input type="number" name="shelf_life_days" id="shelf_life_days" class="form-control" value="{{ sku.shelf_life_days or '' }}" min="1" placeholder="Number of days">
+                            <input type="number" name="shelf_life_days" id="shelf_life_days" class="form-control" value="{{ sku.inventory_item.shelf_life_days if sku.inventory_item else '' }}" min="1" placeholder="Number of days">
                             <small class="text-muted">Will update expiration dates for all FIFO entries with remaining quantity</small>
                         </div>
                     </div>
