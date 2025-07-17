@@ -35,8 +35,14 @@ def dashboard():
     # Get organization-appropriate roles (exclude developer role)
     roles = Role.query.filter(Role.name != 'developer').all()
     for role in roles:
-        # Add assigned users count to each role
-        role.assigned_users = User.query.filter_by(role_id=role.id, organization_id=organization.id).all()
+        # Add assigned users count to each role using UserRoleAssignment
+        from app.models.user_role_assignment import UserRoleAssignment
+        assignments = UserRoleAssignment.query.filter_by(
+            role_id=role.id, 
+            organization_id=organization.id,
+            is_active=True
+        ).all()
+        role.assigned_users = [assignment.user for assignment in assignments]
 
     # Get permissions grouped by category
     permissions = Permission.query.all()
