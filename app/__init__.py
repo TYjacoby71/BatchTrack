@@ -120,6 +120,10 @@ def create_app():
     app.register_blueprint(fault_log_routes.fault_log_bp, url_prefix='/fault_log')
     app.register_blueprint(tag_manager_routes.tag_manager_bp, url_prefix='/tag_manager')
 
+    # Register organization blueprint
+    from .blueprints.organization import organization_bp
+    app.register_blueprint(organization_bp, url_prefix='/organization')
+
     # Register API blueprint
     from .blueprints.api import api_bp
     app.register_blueprint(api_bp)
