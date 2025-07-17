@@ -263,9 +263,6 @@ class ExpirationService:
         product = Product.query.get(sku.product_id)
         variant = ProductVariant.query.get(sku.variant_id)
         
-        # Ensure expiration_date is properly formatted for JSON serialization
-        formatted_expiration = expiration_date.isoformat() if expiration_date else None
-        
         return {
             'inventory_item_id': sku_entry.inventory_item_id,
             'product_name': product.name if product else 'Unknown Product',
@@ -273,7 +270,7 @@ class ExpirationService:
             'size_label': sku.size_label if sku else 'Unknown Size',
             'quantity': sku_entry.remaining_quantity,
             'unit': sku_entry.unit,
-            'expiration_date': formatted_expiration,
+            'expiration_date': expiration_date,  # Keep as datetime object for template calculations
             'history_id': sku_entry.id,
             'product_inv_id': sku_entry.id,
             'product_id': sku.product_id if sku else None,

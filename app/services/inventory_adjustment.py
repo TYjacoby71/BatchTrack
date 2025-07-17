@@ -276,6 +276,16 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
                     order_id=order_id
                 )
 
+        # For batch completions, ensure the inventory item inherits perishable settings
+        if change_type == 'finished_batch' and batch_id:
+            from ..models import Batch
+            batch = Batch.query.get(batch_id)
+            if batch and batch.is_perishable:
+                # Set perishable data at inventory_item level
+                item.is_perishable = True
+                item.shelf_life_days = batch.shelf_life_days
+                current_app.logger.info(f"Set inventory item {item.name} as perishable with {batch.shelf_life_days} day shelf life from batch {batch_id}")
+
         # Update inventory quantity with rounding
         rounded_qty_change = ConversionEngine.round_value(qty_change, 3)
         item.quantity = ConversionEngine.round_value(item.quantity + rounded_qty_change, 3)

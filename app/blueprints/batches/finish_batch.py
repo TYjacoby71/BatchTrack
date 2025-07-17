@@ -129,6 +129,11 @@ def _create_intermediate_ingredient(batch, final_quantity, output_unit, expirati
             db.session.add(inventory_item)
             db.session.flush()  # Ensure we get the ID
 
+        # Set perishable data at the inventory_item level from batch
+        if batch.is_perishable:
+            inventory_item.is_perishable = True
+            inventory_item.shelf_life_days = batch.shelf_life_days
+
         # Process inventory adjustment to add the intermediate ingredient
         success = process_inventory_adjustment(
             item_id=inventory_item.id,
@@ -324,6 +329,11 @@ def _create_container_sku(product, variant, container_item, quantity, batch, exp
             unit='count'  # Containers are always counted as individual units
         )
 
+        # Set perishable data at the inventory_item level from batch
+        if product_sku.inventory_item and batch.is_perishable:
+            product_sku.inventory_item.is_perishable = True
+            product_sku.inventory_item.shelf_life_days = batch.shelf_life_days
+
         # Add containers to inventory - quantity is number of containers
         success = process_inventory_adjustment(
             item_id=product_sku.inventory_item_id,
@@ -361,6 +371,11 @@ def _create_bulk_sku(product, variant, quantity, unit, expiration_date, batch, i
             size_label='Bulk',
             unit=unit  # Use the batch output unit
         )
+
+        # Set perishable data at the inventory_item level from batch
+        if bulk_sku.inventory_item and batch.is_perishable:
+            bulk_sku.inventory_item.is_perishable = True
+            bulk_sku.inventory_item.shelf_life_days = batch.shelf_life_days
 
         # Add bulk quantity to inventory with calculated unit cost
         success = process_inventory_adjustment(

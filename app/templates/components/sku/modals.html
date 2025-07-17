@@ -331,3 +331,27 @@ window.openInventoryActionModal = function(action) {
     }
 };
 </script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle perishable checkbox toggle for shelf life visibility
+    const perishableCheckbox = document.getElementById('is_perishable');
+    const shelfLifeGroup = document.getElementById('shelfLifeGroup');
+
+    if (perishableCheckbox) {
+        perishableCheckbox.addEventListener('change', function() {
+            const shelfLifeInput = document.getElementById('shelf_life_days');
+            if (this.checked) {
+                if (shelfLifeGroup) shelfLifeGroup.style.display = 'block';
+                if (shelfLifeInput) shelfLifeInput.required = true;
+            } else {
+                if (shelfLifeGroup) shelfLifeGroup.style.display = 'none';
+                if (shelfLifeInput) {
+                    shelfLifeInput.required = false;
+                    shelfLifeInput.value = '';
+                }
+            }
+        });
+    }
+});
+</script>

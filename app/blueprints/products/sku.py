@@ -75,18 +75,40 @@ def edit_sku(inventory_item_id):
                 # Update the underlying inventory item cost
                 sku.inventory_item.cost_per_unit = float(unit_cost)
 
-        # Handle perishable settings
-        sku.is_perishable = bool(request.form.get('is_perishable'))
-        if sku.is_perishable:
-            shelf_life_days = request.form.get('shelf_life_days')
-            if shelf_life_days:
-                sku.shelf_life_days = int(shelf_life_days)
+        # Handle perishable settings - update the underlying inventory item
+        if sku.inventory_item:
+            sku.inventory_item.is_perishable = bool(request.form.get('is_perishable'))
+            if sku.inventory_item.is_perishable:
+                shelf_life_days = request.form.get('shelf_life_days')
+                if shelf_life_days:
+                    sku.inventory_item.shelf_life_days = int(shelf_life_days)
 
-                # Update FIFO entries with expiration data using ExpirationService
-                from ...blueprints.expiration.services import ExpirationService
+                    # Update FIFO entries with expiration data using ExpirationService
+                    from ...blueprints.expiration.services import ExpirationService
+                    from ...models.product import ProductSKUHistory
+
+                    # Get all FIFO entries with remaining quantity for this SKU
+                    fifo_entries = ProductSKUHistory.query.filter(
+                        and_(
+                            ProductSKUHistory.inventory_item_id == sku.inventory_item_id,
+                            ProductSKUHistory.remaining_quantity > 0
+                        )
+                    ).all()
+
+                    # Update each FIFO entry with expiration data
+                    for entry in fifo_entries:
+                        entry.is_perishable = True
+                        entry.shelf_life_days = int(shelf_life_days)
+                        if entry.timestamp:
+                            entry.expiration_date = ExpirationService.calculate_expiration_date(
+                                entry.timestamp, int(shelf_life_days)
+                            )
+            else:
+                sku.inventory_item.shelf_life_days = None
+
+                # Clear expiration data from FIFO entries when marking as non-perishable
                 from ...models.product import ProductSKUHistory
 
-                # Get all FIFO entries with remaining quantity for this SKU
                 fifo_entries = ProductSKUHistory.query.filter(
                     and_(
                         ProductSKUHistory.inventory_item_id == sku.inventory_item_id,
@@ -94,31 +116,10 @@ def edit_sku(inventory_item_id):
                     )
                 ).all()
 
-                # Update each FIFO entry with expiration data
                 for entry in fifo_entries:
-                    entry.is_perishable = True
-                    entry.shelf_life_days = int(shelf_life_days)
-                    if entry.timestamp:
-                        entry.expiration_date = ExpirationService.calculate_expiration_date(
-                            entry.timestamp, int(shelf_life_days)
-                        )
-        else:
-            sku.shelf_life_days = None
-
-            # Clear expiration data from FIFO entries when marking as non-perishable
-            from ...models.product import ProductSKUHistory
-
-            fifo_entries = ProductSKUHistory.query.filter(
-                and_(
-                    ProductSKUHistory.inventory_item_id == sku.inventory_item_id,
-                    ProductSKUHistory.remaining_quantity > 0
-                )
-            ).all()
-
-            for entry in fifo_entries:
-                entry.is_perishable = False
-                entry.shelf_life_days = None
-                entry.expiration_date = None
+                    entry.is_perishable = False
+                    entry.shelf_life_days = None
+                    entry.expiration_date = None
 
         flash('SKU updated successfully. Expiration data updated for all FIFO entries.', 'success')
 
