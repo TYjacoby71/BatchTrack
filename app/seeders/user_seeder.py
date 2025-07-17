@@ -37,7 +37,7 @@ def seed_users():
             user.assign_role(manager_role)
         print(f"✅ Assigned role to existing user: {user.username} -> {user.user_type}")
 
-    db.session.commit()n.commit()
+    db.session.commit()
 
     # Create developer user if it doesn't exist
     if not User.query.filter_by(username='dev').first():
@@ -60,7 +60,7 @@ def seed_users():
         dev_user.user_type = 'developer'
         dev_user.organization_id = None  # Remove from customer organization
         dev_user.is_active = True
-        print(f"✅ Updated developer user with user_type: developer")ype and role")
+        print(f"✅ Updated developer user with user_type: developer")
 
     # Create organization owner (admin) user if it doesn't exist
     if not User.query.filter_by(username='admin').first():
@@ -167,11 +167,9 @@ def update_existing_users_with_roles():
                 user.user_type = 'team_member'
             updated = True
 
-        # Set role_id if missing
-        if not user.role_id:
-            if user.user_type == 'developer' and developer_role:
-                user.role_id = developer_role.id
-            elif user.user_type == 'organization_owner' and org_owner_role:
+        # Set role_id if missing (but skip developers - they don't use the role system)
+        if not user.role_id and user.user_type != 'developer':
+            if user.user_type == 'organization_owner' and org_owner_role:
                 user.role_id = org_owner_role.id
             elif user.user_type == 'team_member':
                 # Assign manager role by default for team members
