@@ -23,12 +23,10 @@ def index():
     user_prefs = {
         'max_dashboard_alerts': user_prefs_obj.max_dashboard_alerts,
         'show_expiration_alerts': user_prefs_obj.show_expiration_alerts,
-        'show_timer_alerts': user_prefs_obj.show_expiration_alerts,
         'show_timer_alerts': user_prefs_obj.show_timer_alerts,
         'show_low_stock_alerts': user_prefs_obj.show_low_stock_alerts,
         'show_batch_alerts': user_prefs_obj.show_batch_alerts,
         'show_fault_alerts': user_prefs_obj.show_fault_alerts,
-        'expiration_warning_days': user_prefs_obj.expiration_warning_days,
         'show_alert_badges': user_prefs_obj.show_alert_badges,
         'dashboard_layout': user_prefs_obj.dashboard_layout,
         'compact_view': user_prefs_obj.compact_view,
