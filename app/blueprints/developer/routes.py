@@ -148,14 +148,13 @@ def upgrade_organization(org_id):
 @login_required
 def users():
     """User management dashboard"""
-    page = request.args.get('page', 1, type=int)
-    per_page = 50
+    # Get all users separated by type
+    customer_users = User.query.filter(User.user_type != 'developer').all()
+    developer_users = User.query.filter(User.user_type == 'developer').all()
     
-    users = User.query.filter(User.user_type != 'developer').paginate(
-        page=page, per_page=per_page, error_out=False
-    )
-    
-    return render_template('developer/users.html', users=users)
+    return render_template('developer/users.html',
+                         customer_users=customer_users,
+                         developer_users=developer_users)
 
 @developer_bp.route('/users/<int:user_id>/toggle-active', methods=['POST'])
 @login_required

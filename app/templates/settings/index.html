@@ -46,11 +46,7 @@
                 <i class="fas fa-boxes"></i> Inventory
             </button>
         </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link" id="users-tab" data-bs-toggle="tab" data-bs-target="#users" type="button" role="tab">
-                <i class="fas fa-users"></i> User Management
-            </button>
-        </li>
+        
     </ul>
 
     <!-- Settings Content -->
@@ -354,32 +350,7 @@
             </div>
         </div>
 
-        <!-- User Management Tab -->
-        <div class="tab-pane fade" id="users" role="tabpanel">
-            <div class="row">
-                <div class="col-12">
-                    <div class="mb-3">
-                        <h5><i class="fas fa-users"></i> User Management</h5>
-                    </div>
-                </div>
-            </div>
-
-            <div class="row">
-                <div class="col-12">
-                    <div class="card">
-                        <div class="card-header">
-                            <h6 class="mb-0"><i class="fas fa-user-cog"></i> Manage Users</h6>
-                        </div>
-                        <div class="card-body">
-                            <p class="text-muted mb-3">Access the full user management interface to manage organization members, roles, and permissions.</p>
-                            <a href="{{ url_for('settings.user_management') }}" class="btn btn-primary">
-                                <i class="fas fa-users"></i> Open User Management
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        
     </div>
 </div>
 
