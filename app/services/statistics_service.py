@@ -8,7 +8,7 @@ class StatisticsService:
     
     @staticmethod
     def increment_user_batch_count(user_id, organization_id, status='started'):
-        """Increment batch count for user"""
+        """Increment batch count for user and organization"""
         try:
             user_stats = UserStats.get_or_create(user_id, organization_id)
             org_stats = OrganizationStats.get_or_create(organization_id)
@@ -16,7 +16,7 @@ class StatisticsService:
             # Update user stats
             user_stats.total_batches += 1
             
-            # Update organization stats
+            # Update organization stats - ensures proper scoping
             org_stats.total_batches += 1
             
             db.session.commit()
