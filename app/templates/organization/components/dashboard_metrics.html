@@ -1,4 +1,3 @@
-
 <!-- Dashboard Metrics Row -->
 <div class="row mb-4">
     <div class="col-md-3 mb-3">
@@ -9,14 +8,16 @@
             </div>
         </div>
     </div>
-    <div class="col-md-3 mb-3">
-        <div class="card text-center">
-            <div class="card-body">
-                <h3 class="text-success mb-1">{{ total_batches }}</h3>
-                <p class="text-muted mb-0">Total Batches</p>
+    <div class="col-md-3">
+                <div class="card border-primary">
+                    <div class="card-body text-center">
+                        <i class="fas fa-flask fa-2x text-primary mb-2"></i>
+                        <h3 class="mb-1">{{ org_stats.total_batches }}</h3>
+                        <p class="text-muted mb-0">Total Batches</p>
+                        <small class="text-success">{{ org_stats.completed_batches }} completed</small>
+                    </div>
+                </div>
             </div>
-        </div>
-    </div>
     <div class="col-md-3 mb-3">
         <div class="card text-center">
             <div class="card-body">

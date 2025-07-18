@@ -66,8 +66,17 @@ def dashboard():
             permission_categories[category] = []
         permission_categories[category].append(perm)
 
+    # Get organization statistics
+    from app.models.statistics import OrganizationStats
+    org_stats = OrganizationStats.get_or_create(organization.id)
+    
+    # Refresh stats if they're older than 1 hour
+    from datetime import datetime, timedelta
+    if org_stats.last_updated < TimezoneUtils.utc_now() - timedelta(hours=1):
+        org_stats.refresh_from_database()
+    
     # Get some basic metrics
-    total_batches = 0  # You can add actual batch count logic here if needed
+    total_batches = org_stats.total_batches
     pending_invites = 0  # You can add actual pending invites count here if needed
     recent_activity = []  # You can add actual recent activity here if needed
 
@@ -77,6 +86,7 @@ def dashboard():
                          roles=roles,
                          permissions=permissions,
                          permission_categories=permission_categories,
+                         org_stats=org_stats,
                          total_batches=total_batches,
                          pending_invites=pending_invites,
                          recent_activity=recent_activity)
