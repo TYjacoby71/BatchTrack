@@ -97,12 +97,16 @@ def index():
                 if key not in system_settings[section]:
                     system_settings[section][key] = value
 
-    available_timezones = TimezoneUtils.get_available_timezones()
-    return render_template('settings/index.html', 
+    # Get available timezones grouped by region
+    grouped_timezones = TimezoneUtils.get_grouped_timezones()
+
+    return render_template('settings/index.html',
                          user_prefs=user_prefs,
                          system_settings=system_settings,
+                         grouped_timezones=grouped_timezones,
                          is_org_owner=is_org_owner,
-                         available_timezones=available_timezones)
+                         has_permission=has_permission,
+                         TimezoneUtils=TimezoneUtils)
 
 @settings_bp.route('/api/user-preferences')
 @login_required
@@ -179,7 +183,7 @@ def save_profile():
     """Save user profile information"""
     try:
         data = request.get_json()
-        
+
         if not data:
             return jsonify({'error': 'No data received'}), 400
 
@@ -192,13 +196,13 @@ def save_profile():
         current_user.last_name = data.get('last_name', '').strip()
         current_user.email = data.get('email', '').strip()
         current_user.phone = data.get('phone', '').strip() if data.get('phone') else None
-        
+
         # Update timezone if provided
         if data.get('timezone'):
             current_user.timezone = data.get('timezone')
 
         db.session.commit()
-        
+
         return jsonify({
             'success': True, 
             'message': 'Profile updated successfully',
@@ -368,7 +372,7 @@ def user_management():
     # Get all users separated by type
     customer_users = User.query.filter(User.user_type != 'developer').all()
     developer_users = User.query.filter(User.user_type == 'developer').all()
-    
+
     return render_template('settings/user_management.html',
                          customer_users=customer_users,
                          developer_users=developer_users)
@@ -377,3 +381,4 @@ def user_management():
 
 # All organization-related routes have been moved to the organization blueprint
 # Settings blueprint now focuses only on user preferences and system settings
+```
