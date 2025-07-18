@@ -32,7 +32,7 @@ def dashboard():
         return redirect(url_for('developer.dashboard'))
     
     recipes = Recipe.scoped().all()
-    active_batch = Batch.query.filter_by(status='in_progress').first()
+    active_batch = Batch.scoped().filter_by(status='in_progress').first()
 
     # Get unified dashboard alerts with dismissed alerts from session
     dismissed_alerts = session.get('dismissed_alerts', [])

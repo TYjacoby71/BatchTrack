@@ -258,9 +258,6 @@ class RecipeIngredient(ScopedModelMixin, db.Model):
     unit = db.Column(db.String(32), nullable=False)
     notes = db.Column(db.Text)
     order_position = db.Column(db.Integer, default=0)
-    
-    # Organization scoping
-    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=False)
 
     inventory_item = db.relationship('InventoryItem', backref='recipe_usages')
 
@@ -277,10 +274,6 @@ class Recipe(ScopedModelMixin, db.Model):
     predicted_yield_unit = db.Column(db.String(50), default="oz")
     allowed_containers = db.Column(db.PickleType, default=list)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
-    
-    # Organization scoping
-    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=False)
-    
     parent = db.relationship('Recipe', remote_side=[id], backref='variations')
     recipe_ingredients = db.relationship('RecipeIngredient', backref='recipe', cascade="all, delete-orphan")
 

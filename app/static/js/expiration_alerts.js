@@ -1,35 +1,33 @@
+
 // Expiration alerts integration
 document.addEventListener('DOMContentLoaded', function() {
     loadExpirationSummary();
-
+    
     // Refresh every 5 minutes
     setInterval(loadExpirationSummary, 5 * 60 * 1000);
 });
 
-function loadExpirationSummary() {
-    fetch('/api/expiration-summary')
-        .then(response => response.json())
-        .then(data => {
-            updateExpirationSummary(data);
-        })
-        .catch(error => {
-            console.error('Failed to load expiration summary:', error);
-        });
+async function loadExpirationSummary() {
+    try {
+        const response = await fetch('/expiration/api/summary');
+        if (response.ok) {
+            const data = await response.json();
+            updateExpirationBadge(data.expired_total);
+        }
+    } catch (error) {
+        console.error('Failed to load expiration summary:', error);
+    }
 }
 
-function updateExpirationSummary(data) {
-    const container = document.getElementById('expiration-summary-container');
-    if (!container) return;
-
-    // Update summary counts with safe element access
-    const expiredCountEl = document.getElementById('expired-count');
-    const expiringSoonCountEl = document.getElementById('expiring-soon-count');
-
-    if (expiredCountEl) {
-        expiredCountEl.textContent = data.expired_count || 0;
-    }
-    if (expiringSoonCountEl) {
-        expiringSoonCountEl.textContent = data.expiring_soon_count || 0;
+function updateExpirationBadge(count) {
+    const badge = document.getElementById('expiration-badge');
+    if (badge) {
+        if (count > 0) {
+            badge.textContent = count;
+            badge.style.display = 'inline';
+        } else {
+            badge.style.display = 'none';
+        }
     }
 }
 

@@ -16,11 +16,8 @@ def check_stock():
 
         print(f"Stock check request - recipe_id: {recipe_id}, scale: {scale}, user org: {current_user.organization_id}")
 
-        # Use scoped query to ensure recipe belongs to current user's organization (skip for developers)
-        if current_user.user_type == 'developer':
-            recipe = Recipe.query.get(recipe_id)
-        else:
-            recipe = Recipe.scoped().filter_by(id=recipe_id).first()
+        # Use scoped query to ensure recipe belongs to current user's organization
+        recipe = Recipe.scoped().filter_by(id=recipe_id).first()
         if not recipe:
             print(f"Recipe {recipe_id} not found for organization {current_user.organization_id}")
             return jsonify({"error": "Recipe not found"}), 404
