@@ -90,9 +90,9 @@
                                         {% for group_name, timezones in grouped_timezones.items() %}
                                         {% if timezones %}
                                         <optgroup label="{{ group_name }}">
-                                            {% for tz in timezones %}
-                                            <option value="{{ tz }}" {% if current_user.timezone == tz %}selected{% endif %}>
-                                                {{ TimezoneUtils.format_timezone_display(tz) }}
+                                            {% for tz_tuple in timezones %}
+                                            <option value="{{ tz_tuple[0] }}" {% if current_user.timezone == tz_tuple[0] %}selected{% endif %}>
+                                                {{ tz_tuple[1] }}
                                             </option>
                                             {% endfor %}
                                         </optgroup>

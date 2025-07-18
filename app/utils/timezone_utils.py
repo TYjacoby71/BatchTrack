@@ -112,6 +112,11 @@ class TimezoneUtils:
         return tz_name.replace('_', ' ')
 
     @staticmethod
+    def format_timezone_display(tz_name: str) -> str:
+        """Public method to format timezone name for display - for template use"""
+        return TimezoneUtils._format_timezone_display(tz_name)
+
+    @staticmethod
     def validate_timezone(tz_name: str) -> bool:
         """Validate if timezone exists in pytz"""
         return tz_name in pytz.all_timezones
@@ -154,3 +159,68 @@ class TimezoneUtils:
             return f"{offset[:3]}:{offset[3:]}"
 
         return '+00:00'
+
+    @staticmethod
+    def utc_now() -> datetime:
+        """Get current UTC datetime - used as default for database timestamps"""
+        return datetime.utcnow()
+
+    @staticmethod
+    def to_user_timezone(dt: datetime, user_timezone: str = None) -> datetime:
+        """Convert UTC datetime to user's timezone"""
+        from flask_login import current_user
+        
+        if not dt:
+            return dt
+            
+        # Use provided timezone or current user's timezone
+        if not user_timezone and current_user and current_user.is_authenticated:
+            user_timezone = getattr(current_user, 'timezone', 'UTC')
+        
+        if not user_timezone:
+            user_timezone = 'UTC'
+            
+        if not TimezoneUtils.validate_timezone(user_timezone):
+            user_timezone = 'UTC'
+        
+        # Assume dt is UTC if no timezone info
+        if dt.tzinfo is None:
+            dt = pytz.UTC.localize(dt)
+        
+        user_tz = pytz.timezone(user_timezone)
+        return dt.astimezone(user_tz)
+
+    @staticmethod
+    def from_user_timezone(dt: datetime, user_timezone: str = None) -> datetime:
+        """Convert user timezone datetime to UTC"""
+        from flask_login import current_user
+        
+        if not dt:
+            return dt
+            
+        # Use provided timezone or current user's timezone
+        if not user_timezone and current_user and current_user.is_authenticated:
+            user_timezone = getattr(current_user, 'timezone', 'UTC')
+        
+        if not user_timezone:
+            user_timezone = 'UTC'
+            
+        if not TimezoneUtils.validate_timezone(user_timezone):
+            user_timezone = 'UTC'
+        
+        user_tz = pytz.timezone(user_timezone)
+        
+        # If datetime is naive, assume it's in user's timezone
+        if dt.tzinfo is None:
+            dt = user_tz.localize(dt)
+        
+        return dt.astimezone(pytz.UTC)
+
+    @staticmethod
+    def format_for_user(dt: datetime, format_string: str = '%Y-%m-%d %H:%M:%S', user_timezone: str = None) -> str:
+        """Format datetime in user's timezone"""
+        if not dt:
+            return ''
+            
+        user_dt = TimezoneUtils.to_user_timezone(dt, user_timezone)
+        return user_dt.strftime(format_string)
