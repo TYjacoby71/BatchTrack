@@ -1,0 +1,41 @@
+
+<!-- Reusable timezone selector component -->
+<!-- Usage: {% include 'components/timezone_selector.html' with context %} -->
+<!-- Requires: grouped_timezones and TimezoneUtils to be passed from route -->
+
+<div class="mb-3">
+    <label for="{{ field_id | default('timezone') }}" class="form-label">
+        {{ label | default('Timezone') }}
+        {% if required %}
+        <span class="text-danger">*</span>
+        {% endif %}
+    </label>
+    <select 
+        id="{{ field_id | default('timezone') }}" 
+        name="{{ field_name | default('timezone') }}" 
+        class="form-select {{ css_class | default('') }}"
+        {% if required %}required{% endif %}
+        {% if attrs %}{{ attrs | safe }}{% endif %}
+    >
+        {% if not required %}
+        <option value="">-- Select Timezone --</option>
+        {% endif %}
+        
+        {% for group_name, timezones in grouped_timezones.items() %}
+        {% if timezones %}
+        <optgroup label="{{ group_name }}">
+            {% for tz in timezones %}
+            <option value="{{ tz }}" 
+                {% if selected_timezone == tz %}selected{% endif %}>
+                {{ TimezoneUtils.format_timezone_display(tz) }}
+            </option>
+            {% endfor %}
+        </optgroup>
+        {% endif %}
+        {% endfor %}
+    </select>
+    
+    {% if help_text %}
+    <div class="form-text">{{ help_text }}</div>
+    {% endif %}
+</div>

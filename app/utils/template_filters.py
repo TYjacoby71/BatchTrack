@@ -50,6 +50,16 @@ def register_filters(app):
     def TimezoneUtils_global():
         """Make TimezoneUtils available globally in templates"""
         return TimezoneUtils
+    
+    @app.template_global()
+    def get_grouped_timezones():
+        """Get grouped timezones for dropdowns"""
+        return TimezoneUtils.get_grouped_timezones()
+    
+    @app.template_global()
+    def get_available_timezones():
+        """Get all available timezones"""
+        return TimezoneUtils.get_available_timezones()
 
     @app.template_global()
     def is_organization_owner():

@@ -197,9 +197,13 @@ def save_profile():
         current_user.email = data.get('email', '').strip()
         current_user.phone = data.get('phone', '').strip() if data.get('phone') else None
 
-        # Update timezone if provided
+        # Update timezone if provided and valid
         if data.get('timezone'):
-            current_user.timezone = data.get('timezone')
+            timezone = data.get('timezone')
+            if timezone in TimezoneUtils.get_available_timezones():
+                current_user.timezone = timezone
+            else:
+                return jsonify({'error': 'Invalid timezone selected'}), 400
 
         db.session.commit()
 
@@ -303,12 +307,14 @@ def bulk_update_containers():
 @login_required
 def update_timezone():
     timezone = request.form.get('timezone')
-    if timezone and timezone in TimezoneUtils.get_available_timezones():
+    available_timezones = TimezoneUtils.get_available_timezones()
+    
+    if timezone and timezone in available_timezones:
         current_user.timezone = timezone
         db.session.commit()
         flash('Timezone updated successfully', 'success')
     else:
-        flash('Invalid timezone selected', 'error')
+        flash(f'Invalid timezone selected. Please choose from the available options.', 'error')
     return redirect(url_for('settings.index'))
 
 @settings_bp.route('/update-user-preference', methods=['POST'])
