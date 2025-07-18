@@ -33,8 +33,10 @@ class DashboardAlertService:
         alerts = []
 
         # Get expiration data from combined service
+        from ..utils.settings import get_setting
+        expiration_days = get_setting('alerts.expiration_warning_days', 7)
         expiration_data = CombinedInventoryAlertService.get_expiration_alerts(
-            days_ahead=user_prefs.expiration_warning_days if user_prefs else 7
+            days_ahead=expiration_days
         )
 
         # CRITICAL: Expired items with remaining quantity
@@ -83,7 +85,7 @@ class DashboardAlertService:
                 'priority': 'HIGH',
                 'type': 'expiring_soon',
                 'title': 'Expiring Soon',
-                'message': f"{expiration_data['expiring_soon_total']} items expire within {user_prefs.expiration_warning_days} days",
+                'message': f"{expiration_data['expiring_soon_total']} items expire within {expiration_days} days",
                 'action_url': '/expiration/alerts',
                 'action_text': 'Plan Usage',
                 'dismissible': True
@@ -191,14 +193,10 @@ class DashboardAlertService:
         from flask_login import current_user
         from ..models.user_preferences import UserPreferences
 
-        # Get user preferences for expiration days
-        user_prefs = None
-        days_ahead = 7
-        if current_user and current_user.is_authenticated:
-            user_prefs = UserPreferences.get_for_user(current_user.id)
-            if user_prefs:
-                days_ahead = user_prefs.expiration_warning_days
-
+        # Get expiration warning days from settings
+        from ..utils.settings import get_setting
+        days_ahead = get_setting('alerts.expiration_warning_days', 7)
+        
         expiration_data = CombinedInventoryAlertService.get_expiration_alerts(days_ahead)
         stock_summary = CombinedInventoryAlertService.get_unified_stock_summary()
         stuck_batches = len(DashboardAlertService._get_stuck_batches())

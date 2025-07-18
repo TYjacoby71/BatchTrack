@@ -18,7 +18,6 @@ class UserPreferences(ScopedModelMixin, db.Model):
     show_low_stock_alerts = db.Column(db.Boolean, default=True)
     show_batch_alerts = db.Column(db.Boolean, default=True)
     show_fault_alerts = db.Column(db.Boolean, default=True)
-    expiration_warning_days = db.Column(db.Integer, default=3)
     show_alert_badges = db.Column(db.Boolean, default=True)
     
     # Display preferences
