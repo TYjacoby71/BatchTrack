@@ -1,10 +1,14 @@
 // Organization Dashboard JavaScript
 function organizationDashboard() {
+    // Get organization data from the page data
+    const orgData = window.organizationData || {};
+    const userData = window.currentUserData || {};
+    
     return {
         orgSettings: {
-            name: '{{ organization.name }}',
-            contact_email: '{{ organization.contact_email or current_user.email or "" }}',
-            timezone: '{{ organization.timezone or "America/New_York" }}'
+            name: orgData.name || (userData.first_name && userData.last_name ? `${userData.first_name} ${userData.last_name}` : userData.username || ''),
+            contact_email: orgData.contact_email || userData.email || '',
+            timezone: orgData.timezone || userData.timezone || 'America/New_York'
         },
 
         async updateOrgSettings() {
