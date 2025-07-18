@@ -64,11 +64,12 @@ For detailed development information, see:
 
 ## 🔒 Development Guardrails
 
-1. **Never bypass services** - All inventory changes must go through proper services
-2. **Always scope by organization** - Filter by `organization_id` unless you're a developer
-3. **No hardcoded permissions** - Use `has_permission(user, permission_name)`
+1. **NEVER bypass services** - All inventory changes must go through proper services
+2. **ALWAYS scope by organization** - Filter by `organization_id` unless you're a developer  
+3. **NO hardcoded permissions** - Use `has_permission(user, permission_name)`
 4. **Follow service authority** - Each service owns its domain completely
-5. **Consult documentation** - Use `/docs` folder as single source of truth
+5. **Reference FIFO lots consistently** - Use `fifo_code` (never just ID)
+6. **Update docs when adding services** - Maintain documentation accuracy
 
 ## 🐛 Current Issues
 

@@ -37,14 +37,20 @@ from flask_wtf.csrf import generate_csrf
 @admin_bp.route('/reset_database', methods=['POST'])
 @login_required
 def reset_database():
+    """Reset the entire database to initial state - DEVELOPERS ONLY"""
+    # CRITICAL: Only developers can reset database
+    if current_user.user_type != 'developer':
+        flash('Access denied: Developer access required', 'error')
+        return redirect(url_for('admin.cleanup_tools'))
+    
     if 'csrf_token' not in request.form:
         flash('Missing CSRF token', 'error')
         return redirect(url_for('admin.cleanup_tools'))
-    """Reset the entire database to initial state"""
+    
     try:
         # Store existing users
         existing_users = User.query.all()
-        user_data = [(u.username, u.password_hash, u.role) for u in existing_users]
+        user_data = [(u.username, u.password_hash, u.user_type, u.organization_id) for u in existing_users]
         
         # Drop all tables
         db.drop_all()
@@ -52,18 +58,21 @@ def reset_database():
         db.create_all()
         
         # Restore users
-        for username, password_hash, role in user_data:
-            user = User(username=username, password_hash=password_hash, role=role)
+        for username, password_hash, user_type, org_id in user_data:
+            user = User(username=username, password_hash=password_hash, user_type=user_type, organization_id=org_id)
             db.session.add(user)
         
         # Reseed initial data
-        from seeders.unit_seeder import seed_units
-        from seeders.ingredient_category_seeder import seed_categories
+        from app.seeders.unit_seeder import seed_units
+        from app.seeders.ingredient_category_seeder import seed_categories
+        from app.seeders.role_permission_seeder import seed_roles_and_permissions
         seed_units()
         seed_categories()
+        seed_roles_and_permissions()
         
         db.session.commit()
         flash('Database has been reset successfully while preserving user accounts.')
     except Exception as e:
+        db.session.rollback()
         flash(f'Error resetting database: {str(e)}', 'error')
     return redirect(url_for('admin.cleanup_tools'))

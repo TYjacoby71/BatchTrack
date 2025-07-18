@@ -1,182 +1,153 @@
+# Users & Permissions System
 
-# User & Permission System
+BatchTrack uses a **clear, hierarchical user and permission system** designed for multi-tenant SaaS. This guide explains how users, roles, and subscription tiers interact.
 
-**Complete guide to BatchTrack's multi-tenant user management**
+---
 
-## User Types
+## 1. User Types (Immutable)
 
-### Developer
-- **Scope**: System-wide access
-- **Organization**: Not assigned to any organization
-- **Permissions**: All permissions globally
-- **Purpose**: System administration and customer support
+User types are **hard-coded classifications**. They are NOT roles and should never be stored in the same table as roles.
 
-### Organization Owner
-- **Scope**: Single organization
-- **Organization**: Owns one organization
-- **Permissions**: All permissions available to their subscription tier
-- **Purpose**: Business owner, manages team and settings
+| User Type | Scope | Organization ID | Permissions | Purpose |
+|-----------|-------|------------------|------------|---------|
+| **Developer** | System-wide | **None** | All permissions globally | BatchTrack staff/admin only |
+| **Organization Owner** | Single organization | Required | All permissions available to their subscription tier | Business owner |
+| **Team Member** | Single organization | Required | Based on assigned roles | Staff invited by org owner |
 
-### Team Member
-- **Scope**: Single organization
-- **Organization**: Assigned to organization
-- **Permissions**: Based on assigned roles
-- **Purpose**: Production staff, managers, specialists
+✅ **Rules:**
+- Developers exist **outside the SaaS customer side**.  
+- Org Owners & Team Members always belong to an organization (`organization_id` required).  
+- Developers should never receive `organization_id`.  
 
-## Permission System
+---
 
-### Permission Categories
-- **alerts**: Alert management and configuration
-- **batches**: Production batch management
-- **inventory**: Stock management and adjustments
-- **products**: Product and recipe management
-- **reports**: Analytics and reporting
-- **settings**: Organization configuration
-- **users**: User and role management
+## 2. Roles
 
-### Subscription Tier Permissions
+Roles are **permission groupings** and are the bridge between users and permissions.
+
+| Role Type | Created By | Editable By | Notes |
+|-----------|------------|-------------|-------|
+| **System Roles** | Developers | No | Predefined defaults (e.g., "Production Manager") |
+| **Custom Roles** | Organization Owners | Yes | Scoped to their organization |
+
+### Default System Roles
+
+| Role | Permissions |
+|------|-------------|
+| **Production Manager** | `batch.start`, `batch.finish`, `inventory.adjust` |
+| **Inventory Specialist** | `inventory.restock`, `inventory.adjust`, `reports.view` |
+| **Viewer** | `reports.view` only |
+
+✅ **Organization owners automatically have ALL permissions available for their subscription tier.**
+
+---
+
+## 3. Permissions
+
+Permissions are **atomic actions** (never tied directly to user types).  
+Example categories:
+
+| Category | Example Permissions |
+|----------|---------------------|
+| **batches** | `batch.start`, `batch.finish`, `batch.cancel` |
+| **inventory** | `inventory.adjust`, `inventory.restock`, `inventory.view` |
+| **products** | `product.create`, `product.archive` |
+| **users** | `user.invite`, `user.assign_roles` |
+| **reports** | `reports.view`, `reports.export` |
+| **settings** | `settings.update`, `settings.manage_roles` |
+
+✅ **Never hardcode permissions** in routes — always check via:
+
+```python
+if has_permission(current_user, 'inventory.adjust'):
+    # allowed action
 ```
-Free Tier:
-- Basic production tracking
-- Limited inventory management
-- 1 user maximum
 
-Team Tier:
-- Full production features
-- Advanced inventory management
-- User management
-- Custom roles
-- 10 users maximum
+---
 
-Enterprise Tier:
-- All features
-- API access
-- Priority support
-- Unlimited users
-```
+## 4. Subscription Tiers
 
-## Role Management
+Subscription tiers determine which permissions can even be granted to users in that organization.
 
-### System Roles (Cannot be deleted)
-- **Production Manager**: Full batch and inventory access
-- **Inventory Specialist**: Stock management focus
-- **Viewer**: Read-only access to most features
+| Tier | Max Users | Features / Permission Categories |
+|------|-----------|----------------------------------|
+| **Free** | 1 active user | Basic production tracking, limited inventory |
+| **Team** | 10 active users | Full batch & inventory features, custom roles |
+| **Enterprise** | Unlimited | All features, API integration |
 
-### Custom Roles
-- Organization owners can create custom roles
-- Assign specific permissions from available categories
-- Must respect subscription tier limitations
+✅ **Inactive users do NOT count toward subscription limits.**
 
-## User Management Workflow
+---
 
-### Developer Support Mode
-1. Developer selects organization from dashboard
-2. Gains organization owner permissions for that org
-3. Can manage users, roles, and settings
-4. Actions logged for audit trail
+## 5. User Management Workflow
+
+### Developer Workflow
+1. Developer logs into developer dashboard (separate from SaaS UI).
+2. Can view or impersonate organizations for support.
+3. No `organization_id` is ever assigned.
 
 ### Organization Owner Workflow
-1. Access organization dashboard
-2. Create custom roles with specific permissions
-3. Invite users via email
-4. Assign roles to team members
-5. Monitor user activity and permissions
+1. Access Organization Dashboard.
+2. Create Custom Roles with available permissions.
+3. Invite team members (via email).
+4. Assign roles to team members.
 
-### Team Member Experience
-1. Receives invitation email
-2. Sets up account with temporary password
-3. Permissions determined by assigned roles
-4. Can only access features allowed by subscription tier
+### Team Member Workflow
+1. Accepts invitation and creates account.
+2. Only sees features they have permissions for.
 
-## Permission Checking
+---
 
-### Code Implementation
+## 6. Data Scoping Rules
+
+### Scoped Models
+All models except Developers are scoped by `organization_id`.
+
 ```python
-# Check specific permission
-if has_permission('manage_inventory'):
-    # Allow inventory management
+class ScopedModelMixin:
+    organization_id = db.Column(
+        db.Integer, db.ForeignKey('organization.id'), nullable=False
+    )
 
-# Check role
-if has_role('Production Manager'):
-    # Allow production management
-
-# Check subscription feature
-if has_subscription_feature('advanced_alerts'):
-    # Show advanced alert options
+    @classmethod
+    def for_organization(cls, org_id):
+        return cls.query.filter_by(organization_id=org_id)
 ```
 
-### Permission Inheritance
-- Developers: All permissions
-- Organization Owners: All permissions for their tier
-- Team Members: Only assigned role permissions
-- All permissions respect subscription tier limits
+### Developer Pattern
+Developers select an organization to view customer data but never modify their own user type.
 
-## Data Scoping Rules
-
-### Organization Isolation
-- All data filtered by `organization_id`
-- Users can only see their organization's data
-- Developers can switch between organizations
-
-### Developer Access
-- Can view any organization's data
-- Must select organization to access customer features
-- Actions logged for security and support
-
-## Security Considerations
-
-### Authentication
-- Flask-Login session management
-- Password hashing with Werkzeug
-- CSRF protection on all forms
-
-### Authorization
-- Permission checks on every protected route
-- Service-level permission validation
-- Template-level feature hiding
-
-### Audit Trail
-- User creation and role assignments logged
-- Permission changes tracked
-- Developer access actions recorded
-
-## Common Permission Patterns
-
-### Feature Gating
 ```python
-@require_permission('manage_batches')
-def create_batch():
-    # Only users with batch management permission
+if current_user.user_type == "developer":
+    data = Model.for_organization(selected_org_id)
+else:
+    data = Model.for_organization(current_user.organization_id)
 ```
 
-### Template Conditionals
+---
+
+## 7. Permission Checking
+
+### Route Example
+```python
+@require_permission('inventory.adjust')
+def adjust_inventory_route():
+    # Authorized only if user has permission
+```
+
+### Template Example
 ```html
-{% if has_permission('manage_users') %}
-    <button>Invite User</button>
+{% if has_permission('user.invite') %}
+<button class="btn btn-primary">Invite User</button>
 {% endif %}
 ```
 
-### Subscription Checks
-```python
-if user.organization.subscription_tier == 'enterprise':
-    # Enterprise-only features
-```
+---
 
-## Troubleshooting
+## 8. Best Practices
 
-### User Can't Access Feature
-1. Check user's assigned roles
-2. Verify role has required permission
-3. Confirm permission available for subscription tier
-4. Check if user is active
-
-### Permission Not Working
-1. Verify permission exists in database
-2. Check permission category assignment
-3. Confirm subscription tier requirements
-4. Validate role-permission associations
-
-### Organization Limits
-1. Check active user count vs subscription limit
-2. Verify user type exclusions (developers don't count)
-3. Review subscription tier capabilities
+✔ Developers NEVER receive roles or organization IDs.  
+✔ Always filter by `organization_id` for customer data.  
+✔ Org Owners always have all tier-allowed permissions (don't reassign manually).  
+✔ Only Team Members are role-limited.  
+✔ All permissions must be stored in DB, no hardcoding.
