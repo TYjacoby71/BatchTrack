@@ -1,5 +1,5 @@
 from flask import render_template, jsonify, request
-from flask_login import login_required
+from flask_login import login_required, current_user
 from .services import ExpirationService
 from . import expiration_bp
 
