@@ -177,21 +177,36 @@ def save_profile():
     """Save user profile information"""
     try:
         data = request.get_json()
+        
+        if not data:
+            return jsonify({'error': 'No data received'}), 400
+
+        # Validate required fields
+        if not data.get('first_name') or not data.get('last_name') or not data.get('email'):
+            return jsonify({'error': 'First name, last name, and email are required'}), 400
 
         # Update user profile fields
-        if 'first_name' in data:
-            current_user.first_name = data['first_name']
-        if 'last_name' in data:
-            current_user.last_name = data['last_name']
-        if 'email' in data:
-            current_user.email = data['email']
-        if 'phone' in data:
-            current_user.phone = data['phone']
+        current_user.first_name = data.get('first_name', '').strip()
+        current_user.last_name = data.get('last_name', '').strip()
+        current_user.email = data.get('email', '').strip()
+        current_user.phone = data.get('phone', '').strip() if data.get('phone') else None
 
         db.session.commit()
-        return jsonify({'success': True, 'message': 'Profile updated successfully'})
+        
+        return jsonify({
+            'success': True, 
+            'message': 'Profile updated successfully',
+            'user': {
+                'first_name': current_user.first_name,
+                'last_name': current_user.last_name,
+                'email': current_user.email,
+                'phone': current_user.phone
+            }
+        })
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        db.session.rollback()
+        print(f"Profile save error: {str(e)}")  # Debug logging
+        return jsonify({'error': f'Failed to update profile: {str(e)}'}), 500
 
 @settings_bp.route('/password/change', methods=['POST'])
 @login_required

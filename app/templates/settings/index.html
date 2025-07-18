@@ -65,19 +65,19 @@
                                 <div class="row">
                                     <div class="col-md-6">
                                         <div class="mb-3">
-                                            <label class="form-label">First Name</label>
+                                            <label class="form-label">First Name <span class="text-danger">*</span></label>
                                             <input type="text" class="form-control" x-model="profile.first_name" required>
                                         </div>
                                     </div>
                                     <div class="col-md-6">
                                         <div class="mb-3">
-                                            <label class="form-label">Last Name</label>
+                                            <label class="form-label">Last Name <span class="text-danger">*</span></label>
                                             <input type="text" class="form-control" x-model="profile.last_name" required>
                                         </div>
                                     </div>
                                 </div>
                                 <div class="mb-3">
-                                    <label class="form-label">Email</label>
+                                    <label class="form-label">Email <span class="text-danger">*</span></label>
                                     <input type="email" class="form-control" x-model="profile.email" required>
                                 </div>
                                 <div class="mb-3">
@@ -86,14 +86,15 @@
                                 </div>
                                 <div class="mb-3">
                                     <label class="form-label">Timezone</label>
-                                    <select class="form-select" name="timezone">
+                                    <select class="form-select" x-model="profile.timezone">
                                         {% for tz in available_timezones %}
                                         <option value="{{ tz }}" {% if current_user.timezone == tz %}selected{% endif %}>{{ tz }}</option>
                                         {% endfor %}
                                     </select>
                                 </div>
-                                <button type="submit" class="btn btn-primary">
-                                    <i class="fas fa-save"></i> Save Changes
+                                <button type="submit" class="btn btn-primary" :disabled="saving">
+                                    <i class="fas fa-save"></i> 
+                                    <span x-text="saving ? 'Saving...' : 'Save Changes'"></span>
                                 </button>
                             </form>
                         </div>
@@ -304,16 +305,37 @@ function settingsData() {
             first_name: '{{ current_user.first_name or "" }}',
             last_name: '{{ current_user.last_name or "" }}',
             email: '{{ current_user.email or "" }}',
-            phone: '{{ current_user.phone or "" }}'
+            phone: '{{ current_user.phone or "" }}',
+            timezone: '{{ current_user.timezone or "America/New_York" }}'
         },
         password: {
             current: '',
             new: '',
             confirm: ''
         },
+        saving: false,
 
         async saveProfile() {
+            if (this.saving) return;
+            
             try {
+                this.saving = true;
+                
+                // Validate required fields
+                if (!this.profile.first_name || !this.profile.last_name || !this.profile.email) {
+                    this.showToast('Please fill in all required fields', 'error');
+                    return;
+                }
+
+                // Validate email format
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(this.profile.email)) {
+                    this.showToast('Please enter a valid email address', 'error');
+                    return;
+                }
+
+                console.log('Saving profile:', this.profile); // Debug log
+
                 const response = await fetch('/settings/profile/save', {
                     method: 'POST',
                     headers: {
@@ -323,15 +345,27 @@ function settingsData() {
                     body: JSON.stringify(this.profile)
                 });
 
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
                 const result = await response.json();
+                console.log('Profile save result:', result); // Debug log
+                
                 if (result.success) {
                     this.showToast('Profile updated successfully', 'success');
+                    // Update the profile data with server response if available
+                    if (result.user) {
+                        Object.assign(this.profile, result.user);
+                    }
                 } else {
                     this.showToast(result.error || 'Failed to update profile', 'error');
                 }
             } catch (error) {
-                this.showToast('Error updating profile', 'error');
-                console.error('Error:', error);
+                this.showToast('Error updating profile: ' + error.message, 'error');
+                console.error('Profile save error:', error);
+            } finally {
+                this.saving = false;
             }
         },
 
