@@ -8,6 +8,7 @@ Create Date: 2025-07-18 23:10:00.000000
 """
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy import inspect
 
 # revision identifiers, used by Alembic.
 revision = 'drop_role_id_column'
@@ -16,19 +17,31 @@ branch_labels = None
 depends_on = None
 
 def upgrade():
-    # Use batch operations for SQLite compatibility
-    with op.batch_alter_table('user', schema=None) as batch_op:
-        # Try to drop the foreign key constraint first if it exists
-        try:
-            batch_op.drop_constraint('fk_user_role_id', type_='foreignkey')
-        except:
-            pass  # Constraint might not exist
-        
-        # Remove the role_id column if it exists
-        try:
-            batch_op.drop_column('role_id')
-        except:
-            pass  # Column might not exist
+    # Get connection and inspector to check current table structure
+    conn = op.get_bind()
+    inspector = inspect(conn)
+    
+    # Get existing columns and foreign keys
+    user_columns = [col['name'] for col in inspector.get_columns('user')]
+    user_foreign_keys = inspector.get_foreign_keys('user')
+    
+    # Only proceed if role_id column exists
+    if 'role_id' in user_columns:
+        # Use batch operations for SQLite compatibility
+        with op.batch_alter_table('user', schema=None) as batch_op:
+            # Try to drop any foreign key constraints related to role_id
+            for fk in user_foreign_keys:
+                if 'role_id' in fk.get('constrained_columns', []):
+                    try:
+                        batch_op.drop_constraint(fk['name'], type_='foreignkey')
+                    except:
+                        pass  # Constraint might not exist or already dropped
+            
+            # Remove the role_id column
+            try:
+                batch_op.drop_column('role_id')
+            except:
+                pass  # Column might not exist
 
 def downgrade():
     # Add the role_id column back if needed
