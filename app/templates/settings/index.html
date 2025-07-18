@@ -87,8 +87,16 @@
                                 <div class="mb-3">
                                     <label class="form-label">Timezone</label>
                                     <select class="form-select" x-model="profile.timezone">
-                                        {% for tz in available_timezones %}
-                                        <option value="{{ tz }}" {% if current_user.timezone == tz %}selected{% endif %}>{{ tz }}</option>
+                                        {% for group_name, timezones in grouped_timezones.items() %}
+                                        {% if timezones %}
+                                        <optgroup label="{{ group_name }}">
+                                            {% for tz in timezones %}
+                                            <option value="{{ tz }}" {% if current_user.timezone == tz %}selected{% endif %}>
+                                                {{ TimezoneUtils.format_timezone_display(tz) }}
+                                            </option>
+                                            {% endfor %}
+                                        </optgroup>
+                                        {% endif %}
                                         {% endfor %}
                                     </select>
                                 </div>

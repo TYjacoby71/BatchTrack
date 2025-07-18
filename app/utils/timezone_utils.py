@@ -75,17 +75,169 @@ class TimezoneUtils:
     
     @staticmethod
     def get_available_timezones():
-        """Get list of common timezones for user selection"""
-        return [
-            'US/Pacific',
-            'US/Mountain', 
-            'US/Central',
-            'US/Eastern',
-            'America/New_York',
-            'America/Chicago',
-            'America/Denver',
-            'America/Los_Angeles',
-            'Europe/London',
-            'Europe/Paris',
-            'UTC'
+        """Get comprehensive list of industry-standard timezones organized by region"""
+        # Get all pytz timezones and organize them by region
+        all_timezones = list(pytz.all_timezones)
+        
+        # Filter out deprecated and uncommon zones, organize by region
+        common_timezones = [
+            # UTC first
+            'UTC',
+            
+            # North America - Major Cities
+            'America/New_York',      # Eastern Time
+            'America/Chicago',       # Central Time  
+            'America/Denver',        # Mountain Time
+            'America/Los_Angeles',   # Pacific Time
+            'America/Phoenix',       # Arizona (no DST)
+            'America/Anchorage',     # Alaska
+            'America/Honolulu',      # Hawaii
+            'America/Toronto',       # Eastern Canada
+            'America/Vancouver',     # Pacific Canada
+            'America/Mexico_City',   # Central Mexico
+            'America/Tijuana',       # Pacific Mexico
+            
+            # South America
+            'America/Sao_Paulo',     # Brazil
+            'America/Buenos_Aires',  # Argentina
+            'America/Lima',          # Peru
+            'America/Bogota',        # Colombia
+            'America/Caracas',       # Venezuela
+            
+            # Europe
+            'Europe/London',         # UK/Ireland
+            'Europe/Paris',          # Central Europe
+            'Europe/Berlin',         # Germany
+            'Europe/Rome',           # Italy
+            'Europe/Madrid',         # Spain
+            'Europe/Amsterdam',      # Netherlands
+            'Europe/Brussels',       # Belgium
+            'Europe/Vienna',         # Austria
+            'Europe/Prague',         # Czech Republic
+            'Europe/Warsaw',         # Poland
+            'Europe/Stockholm',      # Sweden
+            'Europe/Oslo',           # Norway
+            'Europe/Helsinki',       # Finland
+            'Europe/Copenhagen',     # Denmark
+            'Europe/Dublin',         # Ireland
+            'Europe/Lisbon',         # Portugal
+            'Europe/Athens',         # Greece
+            'Europe/Istanbul',       # Turkey
+            'Europe/Moscow',         # Russia
+            'Europe/Kiev',           # Ukraine
+            'Europe/Zurich',         # Switzerland
+            
+            # Asia Pacific
+            'Asia/Tokyo',            # Japan
+            'Asia/Shanghai',         # China
+            'Asia/Hong_Kong',        # Hong Kong
+            'Asia/Singapore',        # Singapore
+            'Asia/Seoul',            # South Korea
+            'Asia/Bangkok',          # Thailand
+            'Asia/Jakarta',          # Indonesia
+            'Asia/Manila',           # Philippines
+            'Asia/Kuala_Lumpur',     # Malaysia
+            'Asia/Taipei',           # Taiwan
+            'Asia/Ho_Chi_Minh',      # Vietnam
+            'Asia/Mumbai',           # India
+            'Asia/Kolkata',          # India (same as Mumbai)
+            'Asia/Karachi',          # Pakistan
+            'Asia/Dhaka',            # Bangladesh
+            'Asia/Dubai',            # UAE
+            'Asia/Riyadh',           # Saudi Arabia
+            'Asia/Tehran',           # Iran
+            'Asia/Baghdad',          # Iraq
+            'Asia/Jerusalem',        # Israel
+            'Asia/Beirut',           # Lebanon
+            'Asia/Damascus',         # Syria
+            'Asia/Amman',            # Jordan
+            
+            # Australia & Oceania
+            'Australia/Sydney',      # Eastern Australia
+            'Australia/Melbourne',   # Victoria
+            'Australia/Brisbane',    # Queensland
+            'Australia/Perth',       # Western Australia
+            'Australia/Adelaide',    # South Australia
+            'Australia/Darwin',      # Northern Territory
+            'Pacific/Auckland',      # New Zealand
+            'Pacific/Honolulu',      # Hawaii
+            'Pacific/Fiji',          # Fiji
+            'Pacific/Guam',          # Guam
+            
+            # Africa
+            'Africa/Cairo',          # Egypt
+            'Africa/Lagos',          # Nigeria
+            'Africa/Nairobi',        # Kenya
+            'Africa/Johannesburg',   # South Africa
+            'Africa/Casablanca',     # Morocco
+            'Africa/Tunis',          # Tunisia
+            'Africa/Algiers',        # Algeria
+            'Africa/Accra',          # Ghana
+            'Africa/Addis_Ababa',    # Ethiopia
+            'Africa/Dar_es_Salaam',  # Tanzania
         ]
+        
+        # Verify all timezones exist in pytz
+        verified_timezones = []
+        for tz in common_timezones:
+            try:
+                pytz.timezone(tz)
+                verified_timezones.append(tz)
+            except pytz.UnknownTimeZoneError:
+                continue
+        
+        return verified_timezones
+    
+    @staticmethod
+    def get_grouped_timezones():
+        """Get timezones grouped by region for better UI organization"""
+        timezones = TimezoneUtils.get_available_timezones()
+        
+        groups = {
+            'UTC': [],
+            'North America': [],
+            'South America': [],
+            'Europe': [],
+            'Asia': [],
+            'Australia & Oceania': [],
+            'Africa': []
+        }
+        
+        for tz in timezones:
+            if tz == 'UTC':
+                groups['UTC'].append(tz)
+            elif tz.startswith('America/'):
+                if tz in ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles', 
+                         'America/Phoenix', 'America/Anchorage', 'America/Honolulu', 'America/Toronto', 
+                         'America/Vancouver', 'America/Mexico_City', 'America/Tijuana']:
+                    groups['North America'].append(tz)
+                else:
+                    groups['South America'].append(tz)
+            elif tz.startswith('Europe/'):
+                groups['Europe'].append(tz)
+            elif tz.startswith('Asia/'):
+                groups['Asia'].append(tz)
+            elif tz.startswith('Australia/') or tz.startswith('Pacific/'):
+                groups['Australia & Oceania'].append(tz)
+            elif tz.startswith('Africa/'):
+                groups['Africa'].append(tz)
+        
+        return groups
+    
+    @staticmethod
+    def format_timezone_display(tz_name):
+        """Format timezone name for display with current offset"""
+        try:
+            tz = pytz.timezone(tz_name)
+            now = datetime.now(tz)
+            offset = now.strftime('%z')
+            # Format offset as +/-HH:MM
+            if len(offset) == 5:
+                offset = offset[:3] + ':' + offset[3:]
+            
+            # Clean up timezone name for display
+            display_name = tz_name.replace('_', ' ').replace('/', ' - ')
+            
+            return f"{display_name} (UTC{offset})"
+        except:
+            return tz_name
