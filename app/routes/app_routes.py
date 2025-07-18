@@ -30,7 +30,12 @@ def dashboard():
     # Developer users should only access this dashboard when viewing an organization
     if current_user.user_type == 'developer' and not session.get('dev_selected_org_id'):
         return redirect(url_for('developer.dashboard'))
-    
+
+    # Regular users need an active organization
+    if current_user.user_type != 'developer' and (not current_user.organization or not current_user.organization.is_active):
+        flash('No active organization found. Please contact your administrator.', 'error')
+        return redirect(url_for('auth.logout'))
+
     recipes = Recipe.scoped().all()
     active_batch = Batch.query.filter_by(status='in_progress').first()
 
@@ -175,4 +180,3 @@ def api_dashboard_alerts():
         return jsonify(alert_data)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-
