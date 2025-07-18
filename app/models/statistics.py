@@ -148,34 +148,43 @@ class OrganizationStats(db.Model):
 
     def refresh_from_database(self):
         """Refresh statistics from current database state"""
-        from .models import Batch, User, InventoryItem, Product
+        try:
+            from .models import Batch, User, InventoryItem, Product, Recipe
+            
+            # Batch statistics - scoped by organization
+            batch_query = Batch.query.filter_by(organization_id=self.organization_id)
+            self.total_batches = batch_query.count()
+            self.completed_batches = batch_query.filter_by(status='completed').count()
+            self.failed_batches = batch_query.filter_by(status='failed').count()
+            self.cancelled_batches = batch_query.filter_by(status='cancelled').count()
 
-        # Batch statistics - scoped by organization
-        self.total_batches = Batch.query.filter_by(organization_id=self.organization_id).count()
-        self.completed_batches = Batch.query.filter_by(organization_id=self.organization_id, status='completed').count()
-        self.failed_batches = Batch.query.filter_by(organization_id=self.organization_id, status='failed').count()
-        self.cancelled_batches = Batch.query.filter_by(organization_id=self.organization_id, status='cancelled').count()
+            # User statistics - exclude developers from organization counts
+            self.total_users = User.query.filter_by(organization_id=self.organization_id).filter(User.user_type != 'developer').count()
+            self.active_users = User.query.filter_by(organization_id=self.organization_id, is_active=True).filter(User.user_type != 'developer').count()
 
-        # User statistics - exclude developers from organization counts
-        self.total_users = User.query.filter_by(organization_id=self.organization_id).filter(User.user_type != 'developer').count()
-        self.active_users = User.query.filter_by(organization_id=self.organization_id, is_active=True).filter(User.user_type != 'developer').count()
+            # Recipe statistics - scoped by organization
+            self.total_recipes = Recipe.query.filter_by(organization_id=self.organization_id).count()
 
-        # Recipe statistics - scoped by organization
-        from .models import Recipe
-        self.total_recipes = Recipe.query.filter_by(organization_id=self.organization_id).count()
+            # Inventory statistics - already scoped by organization
+            self.total_inventory_items = InventoryItem.query.filter_by(organization_id=self.organization_id).count()
+            total_value = db.session.query(func.sum(InventoryItem.quantity * InventoryItem.cost_per_unit))\
+                .filter_by(organization_id=self.organization_id).scalar()
+            self.total_inventory_value = total_value or 0.0
 
-        # Inventory statistics - already scoped by organization
-        self.total_inventory_items = InventoryItem.query.filter_by(organization_id=self.organization_id).count()
-        total_value = db.session.query(func.sum(InventoryItem.quantity * InventoryItem.cost_per_unit))\
-            .filter_by(organization_id=self.organization_id).scalar()
-        self.total_inventory_value = total_value or 0.0
+            # Product statistics - already scoped by organization
+            self.total_products = Product.query.filter_by(organization_id=self.organization_id).count()
+            # Note: ProductInventory calculation needs to be implemented when ProductInventory model is available
 
-        # Product statistics - already scoped by organization
-        self.total_products = Product.query.filter_by(organization_id=self.organization_id).count()
-        # Note: ProductInventory calculation needs to be implemented when ProductInventory model is available
-
-        self.last_updated = TimezoneUtils.utc_now()
-        db.session.commit()
+            self.last_updated = TimezoneUtils.utc_now()
+            db.session.commit()
+            
+        except Exception as e:
+            print(f"Error refreshing organization stats: {e}")
+            # Set default values if refresh fails
+            self.total_batches = 0
+            self.completed_batches = 0
+            self.failed_batches = 0
+            self.cancelled_batches = 0
 
     def get_monthly_stats(self, year=None, month=None):
         """Get statistics for a specific month"""

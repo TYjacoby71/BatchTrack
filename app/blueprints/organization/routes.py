@@ -83,6 +83,12 @@ def dashboard():
         # If no last_updated time, refresh anyway
         org_stats.refresh_from_database()
     
+    # Debug: Check batch count directly
+    from app.models.models import Batch
+    direct_batch_count = Batch.query.filter_by(organization_id=organization.id).count()
+    print(f"Direct batch count for org {organization.id}: {direct_batch_count}")
+    print(f"Stats batch count for org {organization.id}: {org_stats.total_batches}")
+    
     # Get some basic metrics
     total_batches = org_stats.total_batches
     pending_invites = 0  # You can add actual pending invites count here if needed
