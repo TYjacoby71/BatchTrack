@@ -214,38 +214,10 @@ def api_product_inventory_expiration(inventory_id):
 @expiration_bp.route('/alerts')
 @login_required
 def alerts():
+    """Display expiration alerts and management"""
     from ...services.combined_inventory_alerts import CombinedInventoryAlertService
     from ...utils.timezone_utils import TimezoneUtils
-
-    # Get user's expiration warning preference
-    days_ahead = 7  # Default
-    if current_user and current_user.is_authenticated:
-        from ...models.user_preferences import UserPreferences
-        user_prefs = UserPreferences.get_for_user(current_user.id)
-        if user_prefs:
-            days_ahead = 30  # Default to 30 days since expiration_warning_days was removed
-
-    # Get comprehensive expiration data
-    expiration_data = CombinedInventoryAlertService.get_expiration_alerts(days_ahead)
-
-    # Get timezone-aware current time for template calculations
-    user_now = TimezoneUtils.now()
-    user_today = user_now.date()
-
-    return render_template('expiration/alerts.html',
-                         expired_fifo_entries=expiration_data['expired_fifo_entries'],
-                         expired_products=expiration_data['expired_products'],
-                         expiring_fifo_entries=expiration_data['expiring_fifo_entries'],
-                         expiring_products=expiration_data['expiring_products'],
-                         days_ahead=days_ahead,
-                         user_now=user_now,
-                         user_today=user_today)
-@expiration_bp.route('/alerts')
-@login_required
-def expiration_alerts():
-    """Display expiration alerts and management"""
     from ...models.user_preferences import UserPreferences
-    from flask_login import current_user
 
     # Get user's expiration warning preference
     days_ahead = 7  # Default
@@ -255,11 +227,10 @@ def expiration_alerts():
             days_ahead = 30  # Default to 30 days since expiration_warning_days was removed
 
     # Get comprehensive expiration data
-    from ...services.combined_inventory_alerts import CombinedInventoryAlertService
     expiration_data = CombinedInventoryAlertService.get_expiration_alerts(days_ahead)
 
-    # For template compatibility, structure the data
-    expired_items = {
+    # For template compatibility, structure the data as expected by the template
+    expired = {
         'fifo_entries': expiration_data['expired_fifo_entries'],
         'product_inventory': expiration_data['expired_products']
     }
@@ -267,6 +238,17 @@ def expiration_alerts():
         'fifo_entries': expiration_data['expiring_fifo_entries'], 
         'product_inventory': expiration_data['expiring_products']
     }
+
+    # Get timezone-aware current time for template calculations
+    user_now = TimezoneUtils.now()
+    today = user_now.date()
+
+    return render_template('expiration/alerts.html',
+                         expired=expired,
+                         expiring_soon=expiring_soon,
+                         days_ahead=days_ahead,
+                         user_now=user_now,
+                         today=today)
 @expiration_bp.route('/api/expiration-summary')
 @login_required
 def expiration_summary():
