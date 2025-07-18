@@ -28,9 +28,6 @@ class Product(ScopedModelMixin, db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
 
-    # Organization scoping
-    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=False)
-
     # Marketplace integration (product-level)
     shopify_product_id = db.Column(db.String(64), nullable=True)
     etsy_shop_section_id = db.Column(db.String(64), nullable=True)
@@ -75,9 +72,6 @@ class ProductVariant(ScopedModelMixin, db.Model):
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
-
-    # Organization scoping
-    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=False)
 
     # Relationships
     product = db.relationship('Product', back_populates='variants')
@@ -137,9 +131,6 @@ class ProductSKU(ScopedModelMixin, db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
-
-    # Organization scoping
-    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=False)
 
     # SUPPLIER AND SOURCING
     supplier_name = db.Column(db.String(128), nullable=True)
@@ -348,9 +339,6 @@ class ProductSKUHistory(ScopedModelMixin, db.Model):
     notes = db.Column(db.Text, nullable=True)
     note = db.Column(db.Text, nullable=True)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
-
-    # Organization scoping
-    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=False)
 
     # POS integration
     order_id = db.Column(db.String(64), nullable=True)

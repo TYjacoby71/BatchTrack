@@ -68,34 +68,3 @@ api_bp.register_blueprint(ingredient_api_bp)
 api_bp.register_blueprint(container_api_bp)
 api_bp.register_blueprint(fifo_api_bp)
 api_bp.register_blueprint(reservation_api_bp)
-
-@api_bp.route('/server-time')
-def get_server_time():
-    """Get current server time"""
-    return jsonify({
-        'server_time': datetime.now().isoformat()
-    })
-
-@api_bp.route('/expiration-summary')
-@login_required
-def get_expiration_summary():
-    """Get expiration summary for dashboard"""
-    try:
-        from ..expiration.services import ExpirationService
-        service = ExpirationService()
-
-        # Get expiration summary
-        summary = service.get_expiration_summary()
-
-        return jsonify({
-            'expired_count': summary.get('expired_count', 0),
-            'expiring_soon_count': summary.get('expiring_soon_count', 0),
-            'total_items': summary.get('total_items', 0)
-        })
-    except Exception as e:
-        current_app.logger.error(f"Error in expiration summary: {str(e)}")
-        return jsonify({
-            'expired_count': 0,
-            'expiring_soon_count': 0,
-            'total_items': 0
-        })

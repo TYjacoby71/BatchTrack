@@ -57,9 +57,6 @@
                     <i class="fas fa-shield-alt"></i> Developer Mode
                     {% if session.get('dev_selected_org_id') %}
                     <small class="text-primary">| Customer View Active</small>
-                    <a href="{{ url_for('developer.clear_organization_filter') }}" class="btn btn-sm btn-outline-secondary ms-2">
-                        <i class="fas fa-times"></i> Clear Filter
-                    </a>
                     {% endif %}
                 </span>
             </div>
@@ -160,6 +157,11 @@
                         <span class="badge bg-primary ms-1">Active</span>
                         {% endif %}
                     </a></li>
+                    {% if session.get('dev_selected_org_id') %}
+                    <li><a class="dropdown-item" href="{{ url_for('developer.clear_organization_filter') }}">
+                        <i class="fas fa-times"></i> Clear Customer Filter
+                    </a></li>
+                    {% endif %}
                     
                     <li><hr class="dropdown-divider"></li>
                     

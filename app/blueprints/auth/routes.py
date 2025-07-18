@@ -77,9 +77,6 @@ def login():
                 user.last_login = TimezoneUtils.utc_now()
                 db.session.commit()
 
-                # Login the user first
-                login_user(user)
-                
                 # Redirect based on user type - developers go to their own dashboard
                 if user.user_type == 'developer':
                     return redirect(url_for('developer.dashboard'))
