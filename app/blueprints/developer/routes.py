@@ -80,25 +80,76 @@ def organizations():
 @developer_bp.route('/organizations/create', methods=['GET', 'POST'])
 @login_required
 def create_organization():
-    """Create new organization"""
+    """Create new organization with owner user"""
     if request.method == 'POST':
+        # Organization details
         name = request.form.get('name')
         subscription_tier = request.form.get('subscription_tier', 'free')
         
+        # User details
+        username = request.form.get('username')
+        email = request.form.get('email')
+        first_name = request.form.get('first_name')
+        last_name = request.form.get('last_name')
+        password = request.form.get('password')
+        phone = request.form.get('phone')
+        
+        # Validation
         if not name:
             flash('Organization name is required', 'error')
             return redirect(url_for('developer.create_organization'))
         
-        org = Organization(
-            name=name,
-            subscription_tier=subscription_tier,
-            is_active=True
-        )
-        db.session.add(org)
-        db.session.commit()
+        if not username:
+            flash('Username is required', 'error')
+            return redirect(url_for('developer.create_organization'))
+            
+        if not email:
+            flash('Email is required', 'error')
+            return redirect(url_for('developer.create_organization'))
+            
+        if not password:
+            flash('Password is required', 'error')
+            return redirect(url_for('developer.create_organization'))
         
-        flash(f'Organization "{name}" created successfully', 'success')
-        return redirect(url_for('developer.organization_detail', org_id=org.id))
+        # Check if username already exists
+        existing_user = User.query.filter_by(username=username).first()
+        if existing_user:
+            flash('Username already exists', 'error')
+            return redirect(url_for('developer.create_organization'))
+        
+        try:
+            # Create organization
+            org = Organization(
+                name=name,
+                subscription_tier=subscription_tier,
+                contact_email=email,
+                is_active=True
+            )
+            db.session.add(org)
+            db.session.flush()  # Get the ID
+            
+            # Create organization owner user
+            owner_user = User(
+                username=username,
+                email=email,
+                first_name=first_name,
+                last_name=last_name,
+                phone=phone,
+                organization_id=org.id,
+                user_type='organization_owner',
+                is_active=True
+            )
+            owner_user.set_password(password)
+            db.session.add(owner_user)
+            db.session.commit()
+            
+            flash(f'Organization "{name}" and owner user "{username}" created successfully', 'success')
+            return redirect(url_for('developer.organization_detail', org_id=org.id))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error creating organization: {str(e)}', 'error')
+            return redirect(url_for('developer.create_organization'))
     
     return render_template('developer/create_organization.html')
 

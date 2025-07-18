@@ -115,6 +115,88 @@ def dev_login():
         flash('Developer account not found. Please contact system administrator.', 'error')
         return redirect(url_for('auth.login'))
 
+@auth_bp.route('/signup', methods=['GET', 'POST'])
+def signup():
+    """Public signup route that creates organization and owner user"""
+    if current_user.is_authenticated:
+        return redirect(url_for('app_routes.dashboard'))
+    
+    if request.method == 'POST':
+        # Organization details
+        org_name = request.form.get('org_name')
+        
+        # User details
+        username = request.form.get('username')
+        email = request.form.get('email')
+        first_name = request.form.get('first_name')
+        last_name = request.form.get('last_name')
+        password = request.form.get('password')
+        confirm_password = request.form.get('confirm_password')
+        phone = request.form.get('phone')
+        
+        # Validation
+        if not org_name:
+            flash('Organization name is required', 'error')
+            return render_template('auth/signup.html')
+        
+        if not username:
+            flash('Username is required', 'error')
+            return render_template('auth/signup.html')
+            
+        if not email:
+            flash('Email is required', 'error')
+            return render_template('auth/signup.html')
+            
+        if not password:
+            flash('Password is required', 'error')
+            return render_template('auth/signup.html')
+            
+        if password != confirm_password:
+            flash('Passwords do not match', 'error')
+            return render_template('auth/signup.html')
+        
+        # Check if username already exists
+        existing_user = User.query.filter_by(username=username).first()
+        if existing_user:
+            flash('Username already exists', 'error')
+            return render_template('auth/signup.html')
+        
+        try:
+            # Create organization
+            org = Organization(
+                name=org_name,
+                subscription_tier='free',  # Default to free tier
+                contact_email=email,
+                is_active=True
+            )
+            db.session.add(org)
+            db.session.flush()  # Get the ID
+            
+            # Create organization owner user
+            owner_user = User(
+                username=username,
+                email=email,
+                first_name=first_name,
+                last_name=last_name,
+                phone=phone,
+                organization_id=org.id,
+                user_type='organization_owner',
+                is_active=True
+            )
+            owner_user.set_password(password)
+            db.session.add(owner_user)
+            db.session.commit()
+            
+            flash('Account created successfully! Please log in.', 'success')
+            return redirect(url_for('auth.login'))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error creating account: {str(e)}', 'error')
+            return render_template('auth/signup.html')
+    
+    return render_template('auth/signup.html')
+
 # Permission and Role Management Routes
 from .permissions import manage_permissions, manage_roles, create_role, update_role
 
