@@ -81,6 +81,41 @@ def dashboard():
                          pending_invites=pending_invites,
                          recent_activity=recent_activity)
 
+@organization_bp.route('/update-settings', methods=['POST'])
+@login_required
+def update_organization_settings():
+    """Update organization settings (organization owners only)"""
+    
+    # Check permissions - only organization owners can update
+    if not (current_user.user_type == 'organization_owner' or 
+            current_user.is_organization_owner):
+        return jsonify({'success': False, 'error': 'Insufficient permissions'})
+
+    try:
+        data = request.get_json()
+        organization = current_user.organization
+        
+        if not organization:
+            return jsonify({'success': False, 'error': 'No organization found'})
+        
+        # Update organization fields
+        if 'name' in data:
+            organization.name = data['name']
+        if 'contact_email' in data:
+            organization.contact_email = data['contact_email']
+        if 'timezone' in data:
+            organization.timezone = data['timezone']
+        if 'default_units' in data:
+            organization.default_units = data['default_units']
+        
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': 'Organization settings updated successfully'})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @organization_bp.route('/invite-user', methods=['POST'])
 @login_required
 def invite_user():
