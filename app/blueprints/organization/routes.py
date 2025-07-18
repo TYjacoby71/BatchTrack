@@ -3,9 +3,11 @@ from flask_login import login_required, current_user
 from werkzeug.security import generate_password_hash
 import secrets
 import re
+from datetime import timedelta
 from app.models import User, Organization, Role, Permission
 from app.extensions import db
 from app.utils.permissions import require_permission
+from app.utils.timezone_utils import TimezoneUtils
 
 organization_bp = Blueprint('organization', __name__)
 
@@ -72,8 +74,31 @@ def dashboard():
     
     # Refresh stats if they're older than 1 hour
     from datetime import datetime, timedelta
-    if org_stats.last_updated < TimezoneUtils.utc_now() - timedelta(hours=1):
+    if org_stats.last_updated:
+        # Convert naive datetime to UTC-aware for comparison
+        last_updated_utc = org_stats.last_updated.replace(tzinfo=TimezoneUtils.utc_now().tzinfo)
+        if last_updated_utc < TimezoneUtils.utc_now() - timedelta(hours=1):
+            org_stats.refresh_from_database()
+    else:
+        # If no last_updated time, refresh anyway
         org_stats.refresh_from_database()
+    
+    # Debug: Check batch count directly with both methods
+    from app.models.models import Batch
+    direct_batch_count_filterby = Batch.query.filter_by(organization_id=organization.id).count()
+    direct_batch_count_filter = Batch.query.filter(Batch.organization_id == organization.id).count()
+    print(f"Direct batch count (filter_by) for org {organization.id}: {direct_batch_count_filterby}")
+    print(f"Direct batch count (filter) for org {organization.id}: {direct_batch_count_filter}")
+    print(f"Stats batch count for org {organization.id}: {org_stats.total_batches}")
+    
+    # Debug: Check if refresh actually ran
+    print(f"Org stats last_updated: {org_stats.last_updated}")
+    print(f"Current time: {TimezoneUtils.utc_now()}")
+    
+    # Force refresh for debugging
+    print("Forcing stats refresh...")
+    org_stats.refresh_from_database()
+    print(f"After refresh - Stats batch count for org {organization.id}: {org_stats.total_batches}")
     
     # Get some basic metrics
     total_batches = org_stats.total_batches
