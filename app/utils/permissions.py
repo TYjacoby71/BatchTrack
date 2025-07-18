@@ -6,11 +6,19 @@ def has_permission(permission_name):
     if not current_user.is_authenticated:
         return False
     
-    # If developer is viewing as customer, check customer permissions
+    # If developer is viewing as customer, grant organization owner permissions
     if current_user.user_type == 'developer':
         from flask import session
         if session.get('dev_selected_org_id'):
-            # Developer has selected an org, so they can access customer features
+            # Developer in customer support mode gets organization owner permissions
+            # Check if the permission is available for the selected organization's tier
+            from app.models import Organization, Permission
+            org = Organization.query.get(session.get('dev_selected_org_id'))
+            if org:
+                permission = Permission.query.filter_by(name=permission_name).first()
+                if permission:
+                    return permission.is_available_for_tier(org.subscription_tier)
+                return True  # Default to True for unknown permissions
             return True
         else:
             # Developer without org selection can't access customer features
@@ -42,6 +50,12 @@ def is_organization_owner():
     """Check if current user is organization owner"""
     if not current_user.is_authenticated:
         return False
+    
+    # Developers in customer support mode act as organization owners
+    if current_user.user_type == 'developer':
+        from flask import session
+        return session.get('dev_selected_org_id') is not None
+    
     return current_user.user_type == 'organization_owner'
 
 def is_developer():

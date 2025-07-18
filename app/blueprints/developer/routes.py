@@ -11,7 +11,12 @@ developer_bp = Blueprint('developer', __name__, url_prefix='/developer')
 @developer_bp.before_request
 def require_developer():
     """Ensure only developers can access these routes"""
-    if not current_user.is_authenticated or current_user.user_type != 'developer':
+    if not current_user.is_authenticated:
+        flash('Developer access required', 'error')
+        return redirect(url_for('auth.login'))
+    
+    # Check if user is a developer
+    if current_user.user_type != 'developer':
         flash('Developer access required', 'error')
         return redirect(url_for('auth.login'))
 

@@ -1,4 +1,5 @@
 from flask import current_app
+from flask_login import current_user
 from .timezone_utils import TimezoneUtils
 from flask import Blueprint
 from datetime import datetime, timedelta
@@ -49,3 +50,26 @@ def register_filters(app):
     def TimezoneUtils_global():
         """Make TimezoneUtils available globally in templates"""
         return TimezoneUtils
+
+    @app.template_global()
+    def is_organization_owner():
+        """Template function to check if current user is organization owner"""
+        if not current_user.is_authenticated:
+            return False
+
+        # Developers in customer support mode act as organization owners
+        if current_user.user_type == 'developer':
+            from flask import session
+            return session.get('dev_selected_org_id') is not None
+
+        return current_user.user_type == 'organization_owner' or current_user.is_organization_owner
+
+    @app.template_global()
+    def has_permission(permission_name):
+        """Template function to check if current user has a specific permission"""
+        if not current_user.is_authenticated:
+            return False
+
+        # Use the centralized permission checking function
+        from app.utils.permissions import has_permission as check_permission
+        return check_permission(permission_name)
