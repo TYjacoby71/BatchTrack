@@ -99,10 +99,14 @@ def update_organization_settings():
             return jsonify({'success': False, 'error': 'No organization found'})
         
         # Update organization fields
-        if 'name' in data:
-            organization.name = data['name']
+        if 'name' in data and data['name'].strip():
+            organization.name = data['name'].strip()
+        
         if 'contact_email' in data:
-            organization.contact_email = data['contact_email']
+            # If contact_email is empty, use current user's email as default
+            contact_email = data['contact_email'].strip() if data['contact_email'] else current_user.email
+            organization.contact_email = contact_email
+        
         if 'timezone' in data:
             organization.timezone = data['timezone']
         
