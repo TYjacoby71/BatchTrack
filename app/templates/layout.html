@@ -241,6 +241,11 @@
                             <span id="expiration-badge" class="badge bg-danger" style="display: none;">0</span>
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('settings.index') }}#alerts">
+                            <i class="fas fa-bell"></i> Alert Settings
+                        </a>
+                    </li>
                     <li><hr class="dropdown-divider"></li>
 
                     {% if has_role('developer') or has_role('organization_owner') or has_role('manager') %}
