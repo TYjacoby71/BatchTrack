@@ -164,7 +164,8 @@ class OrganizationStats(db.Model):
     def refresh_from_database(self):
         """Refresh statistics from current database state"""
         try:
-            from .models import Batch, User, InventoryItem, Product, Recipe
+            from .models import Batch, User, InventoryItem, Recipe
+            from .product import Product
 
             # Batch statistics - use direct organization_id filtering since we're not in a request context
             # Note: We can't use Batch.scoped() here because it relies on current_user being available
