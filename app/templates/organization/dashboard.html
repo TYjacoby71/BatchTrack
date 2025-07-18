@@ -689,7 +689,10 @@ async function editUser(userId) {
             document.getElementById('editLastName').value = user.last_name || '';
             document.getElementById('editEmail').value = user.email || '';
             document.getElementById('editPhone').value = user.phone || '';
-            document.getElementById('editRole').value = user.role_id || '';
+            // Handle role assignment - user may have multiple roles, take the first one
+            const userRoles = user.role_assignments || [];
+            const activeRole = userRoles.find(assignment => assignment.is_active);
+            document.getElementById('editRole').value = activeRole ? activeRole.role_id : '';
             document.getElementById('editStatus').value = user.is_active.toString();
 
             // Populate read-only fields
