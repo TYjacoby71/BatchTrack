@@ -253,13 +253,13 @@ def view_batch_in_progress(batch_identifier):
         flash('This batch is no longer in progress and cannot be edited.', 'warning')
         return redirect(url_for('batches.view_batch', batch_identifier=batch_identifier))
 
-    # Find previous and next in-progress batches
-    prev_batch = Batch.query.filter(
+    # Find previous and next in-progress batches (use scoped queries)
+    prev_batch = Batch.scoped().filter(
         Batch.status == 'in_progress',
         Batch.id < batch.id
     ).order_by(Batch.id.desc()).first()
 
-    next_batch = Batch.query.filter(
+    next_batch = Batch.scoped().filter(
         Batch.status == 'in_progress',
         Batch.id > batch.id
     ).order_by(Batch.id.asc()).first()
