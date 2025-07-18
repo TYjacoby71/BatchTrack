@@ -104,6 +104,40 @@ def check_organizations():
     except Exception as e:
         print(f"❌ Error checking organizations: {e}")
 
+def fix_organization_limits():
+    """Temporarily increase organization user limits for testing"""
+    
+    try:
+        from app.models import Organization
+        from app.extensions import db
+        from app import create_app
+        
+        app = create_app()
+        
+        with app.app_context():
+            print("\n🔧 Fixing organization limits for testing...")
+            print("="*60)
+            
+            orgs = Organization.query.all()
+            
+            for org in orgs:
+                if org.subscription_tier == 'free':
+                    print(f"Upgrading {org.name} from 'free' to 'team' for testing")
+                    org.subscription_tier = 'team'  # Allows up to 10 users
+                    db.session.commit()
+                    print(f"✅ {org.name} can now have up to {org.get_max_users()} users")
+                else:
+                    print(f"{org.name} already has {org.subscription_tier} subscription")
+                    
+    except Exception as e:
+        print(f"❌ Error fixing organization limits: {e}")
+
 if __name__ == "__main__":
     check_roles()
     check_organizations()
+    
+    # Optionally fix organization limits
+    if len(sys.argv) > 1 and sys.argv[1] == "--fix-limits":
+        fix_organization_limits()
+        print("\nRe-checking organizations after limit fix:")
+        check_organizations()

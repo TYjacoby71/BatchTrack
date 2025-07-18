@@ -43,8 +43,10 @@ def dashboard():
         User.user_type != 'developer'
     ).all()
 
-    # Get organization-appropriate roles (exclude developer role)
-    roles = Role.query.filter(Role.name != 'developer').all()
+    # Get organization-appropriate roles (exclude developer and organization_owner roles)
+    roles = Role.query.filter(
+        Role.name.notin_(['developer', 'organization_owner'])
+    ).all()
     for role in roles:
         # Add assigned users count to each role using UserRoleAssignment
         from app.models.user_role_assignment import UserRoleAssignment
@@ -122,8 +124,8 @@ def invite_user():
         if not role:
             return jsonify({'success': False, 'error': 'Invalid role selected'})
 
-        if role.name == 'developer':
-            return jsonify({'success': False, 'error': 'Cannot assign developer role to organization users'})
+        if role.name in ['developer', 'organization_owner']:
+            return jsonify({'success': False, 'error': 'Cannot assign system or organization owner roles to invited users'})
 
         # Check if organization can add more users
         if not current_user.organization.can_add_users():
@@ -384,7 +386,7 @@ def update_user(user_id):
         if 'role_id' in data:
             # Validate role exists and is not developer role
             role = Role.query.filter_by(id=data['role_id']).first()
-            if role and role.name != 'developer':
+            if role and role.name not in ['developer', 'organization_owner']:
                 user.role_id = data['role_id']
         
         # Handle status changes - check subscription limits for activation
