@@ -267,3 +267,13 @@ def expiration_alerts():
         'fifo_entries': expiration_data['expiring_fifo_entries'], 
         'product_inventory': expiration_data['expiring_products']
     }
+@expiration_bp.route('/api/expiration-summary')
+@login_required
+def expiration_summary():
+    """Get summary of expiring inventory"""
+    try:
+        summary = ExpirationService.get_expiration_summary()
+        return jsonify(summary)
+    except Exception as e:
+        print(f"Expiration summary error: {e}")
+        return jsonify({'error': str(e), 'message': 'Failed to load expiration data'}), 500
