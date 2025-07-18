@@ -31,7 +31,7 @@ def api_summary():
         from ...models.user_preferences import UserPreferences
         user_prefs = UserPreferences.get_for_user(current_user.id)
         if user_prefs:
-            days_ahead = user_prefs.expiration_warning_days
+            days_ahead = 30  # Default to 30 days since expiration_warning_days was removed
 
     expiration_data = CombinedInventoryAlertService.get_expiration_alerts(days_ahead)
 
@@ -223,7 +223,7 @@ def alerts():
         from ...models.user_preferences import UserPreferences
         user_prefs = UserPreferences.get_for_user(current_user.id)
         if user_prefs:
-            days_ahead = user_prefs.expiration_warning_days
+            days_ahead = 30  # Default to 30 days since expiration_warning_days was removed
 
     # Get comprehensive expiration data
     expiration_data = CombinedInventoryAlertService.get_expiration_alerts(days_ahead)
@@ -252,7 +252,7 @@ def expiration_alerts():
     if current_user and current_user.is_authenticated:
         user_prefs = UserPreferences.get_for_user(current_user.id)
         if user_prefs:
-            days_ahead = user_prefs.expiration_warning_days
+            days_ahead = 30  # Default to 30 days since expiration_warning_days was removed
 
     # Get comprehensive expiration data
     from ...services.combined_inventory_alerts import CombinedInventoryAlertService

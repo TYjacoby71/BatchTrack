@@ -12,6 +12,7 @@ import json
 from . import settings_bp
 
 @settings_bp.route('/')
+@settings_bp.route('')
 @login_required
 def index():
     """Settings dashboard with organized sections"""
