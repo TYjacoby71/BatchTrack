@@ -114,6 +114,10 @@ def update_organization_settings():
 
         return jsonify({'success': True, 'message': 'Organization settings updated successfully'})
 
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @organization_bp.route('/users/<int:user_id>/edit', methods=['POST'])
 @login_required
 def edit_user(user_id):
