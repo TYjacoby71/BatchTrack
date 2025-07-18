@@ -152,7 +152,7 @@
                             <td>{{ batch.label_code }}</td>
                             <td>{{ batch.scale }}</td>
                             {% if 'timestamp' in visible_columns %}
-                            <td>{{ batch.started_at.strftime("%Y-%m-%d %H:%M") }}</td>
+                            <td>{{ TimezoneUtils.format_for_user(batch.started_at, '%Y-%m-%d %H:%M') }}</td>
                             {% endif %}
                             {% if 'completed_date' in visible_columns %}
                             <td>—</td>
@@ -179,7 +179,7 @@
                                 <h5 class="card-title">{{ batch.recipe.name }}</h5>
                                 <p class="card-text"><strong>Label:</strong> {{ batch.label_code }}</p>
                                 <p class="card-text"><strong>Scale:</strong> {{ batch.scale }}</p>
-                                <p class="card-text text-muted">{{ batch.started_at.strftime("%Y-%m-%d %H:%M") }}</p>
+                                <p class="card-text text-muted">{{ TimezoneUtils.format_for_user(batch.started_at, '%Y-%m-%d %H:%M') }}</p>
                                 <p class="card-text">
                                     <strong>Status:</strong> 
                                     <span class="badge bg-warning">In Progress</span>
@@ -258,16 +258,16 @@
                             <td>{{ batch.label_code }}</td>
                             <td>{{ batch.scale }}</td>
                             {% if 'timestamp' in visible_columns %}
-                            <td>{{ batch.started_at.strftime("%Y-%m-%d") }}</td>
+                            <td>{{ TimezoneUtils.format_for_user(batch.started_at, '%Y-%m-%d') }}</td>
                             {% endif %}
                             {% if 'completed_date' in visible_columns %}
                             <td>
                                 {% if batch.completed_at %}
-                                    {{ batch.completed_at.strftime("%Y-%m-%d") }}
+                                    {{ TimezoneUtils.format_for_user(batch.completed_at, '%Y-%m-%d') }}
                                 {% elif batch.failed_at %}
-                                    {{ batch.failed_at.strftime("%Y-%m-%d") }}
+                                    {{ TimezoneUtils.format_for_user(batch.failed_at, '%Y-%m-%d') }}
                                 {% elif batch.cancelled_at %}
-                                    {{ batch.cancelled_at.strftime("%Y-%m-%d") }}
+                                    {{ TimezoneUtils.format_for_user(batch.cancelled_at, '%Y-%m-%d') }}
                                 {% else %}
                                     —
                                 {% endif %}
