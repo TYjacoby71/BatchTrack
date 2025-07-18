@@ -46,7 +46,7 @@ def login():
 
             # Get email from form if provided
             email = request.form.get('email', '').strip()
-            
+
             # Create organization for new user
             new_org = Organization(
                 name=f"{username}'s Organization",
@@ -82,7 +82,7 @@ def login():
 
                 # Log the user in
                 login_user(user)
-                
+
                 # Update last login
                 user.last_login = TimezoneUtils.utc_now()
                 db.session.commit()
@@ -120,11 +120,11 @@ def signup():
     """Public signup route that creates organization and owner user"""
     if current_user.is_authenticated:
         return redirect(url_for('app_routes.dashboard'))
-    
+
     if request.method == 'POST':
         # Organization details
         org_name = request.form.get('org_name')
-        
+
         # User details
         username = request.form.get('username')
         email = request.form.get('email')
@@ -133,34 +133,34 @@ def signup():
         password = request.form.get('password')
         confirm_password = request.form.get('confirm_password')
         phone = request.form.get('phone')
-        
+
         # Validation
         if not org_name:
             flash('Organization name is required', 'error')
             return render_template('auth/signup.html')
-        
+
         if not username:
             flash('Username is required', 'error')
             return render_template('auth/signup.html')
-            
+
         if not email:
             flash('Email is required', 'error')
             return render_template('auth/signup.html')
-            
+
         if not password:
             flash('Password is required', 'error')
             return render_template('auth/signup.html')
-            
+
         if password != confirm_password:
             flash('Passwords do not match', 'error')
             return render_template('auth/signup.html')
-        
+
         # Check if username already exists
         existing_user = User.query.filter_by(username=username).first()
         if existing_user:
             flash('Username already exists', 'error')
             return render_template('auth/signup.html')
-        
+
         try:
             # Create organization
             org = Organization(
@@ -171,7 +171,7 @@ def signup():
             )
             db.session.add(org)
             db.session.flush()  # Get the ID
-            
+
             # Create organization owner user
             owner_user = User(
                 username=username,
@@ -186,15 +186,15 @@ def signup():
             owner_user.set_password(password)
             db.session.add(owner_user)
             db.session.commit()
-            
+
             flash('Account created successfully! Please log in.', 'success')
             return redirect(url_for('auth.login'))
-            
+
         except Exception as e:
             db.session.rollback()
             flash(f'Error creating account: {str(e)}', 'error')
             return render_template('auth/signup.html')
-    
+
     return render_template('auth/signup.html')
 
 # Permission and Role Management Routes
