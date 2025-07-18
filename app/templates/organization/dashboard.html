@@ -744,8 +744,13 @@ async function inviteUser() {
             // Reload page to show new user
             setTimeout(() => window.location.reload(), 2000);
         } else {
-            showMessage(result.error || 'Failed to send invite',```python
- 'danger');
+            showMessage(result.error || 'Failed to send invite', 'danger');
+        }
+    } catch (error) {
+        console.error('Invite error:', error);
+        showMessage('Failed to send invite', 'danger');
+    ```python
+'danger');
         }
     } catch (error) {
         console.error('Invite error:', error);
@@ -755,6 +760,34 @@ async function inviteUser() {
 
 function exportReport(type) {
     window.open(`/organization/export/${type}`, '_blank');
+}
+
+async function toggleUserStatus(userId) {
+    if (!confirm('Are you sure you want to change this user\'s status?')) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/organization/user/${userId}/toggle-status`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRFToken()
+            }
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showMessage(result.message || 'User status updated', 'success');
+            setTimeout(() => window.location.reload(), 1000);
+        } else {
+            showMessage(result.error ||'Failed to update user status', 'danger');
+        }
+    } catch (error) {
+        console.error('Toggle status error:', error);
+        showMessage('Failed to update user status', 'danger');
+    }
 }
 
 async function editUser(userId) {
@@ -841,34 +874,6 @@ async function updateUser() {
     }
 }
 
-async function toggleUserStatus(userId) {
-    if (!confirm('Are you sure you want to change this user\'s status?')) {
-        return;
-    }
-
-    try {
-        const response = await fetch(`/organization/user/${userId}/toggle-status`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCSRFToken()
-            }
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-            showMessage(result.message || 'User status updated', 'success');
-            setTimeout(() => window.location.reload(), 1000);
-        } else {
-            showMessage(result.error ||'Failed to update user status', 'danger');
-        }
-    } catch (error) {
-        console.error('Toggle status error:', error);
-        showMessage('Failed to update user status', 'danger');
-    }
-}
-
 async function confirmDeleteUser() {
     const userId = document.getElementById('editUserId').value;
     const username = document.getElementById('editUsername').textContent;
@@ -915,6 +920,13 @@ function viewUserActivity(userId) {
 
 function editRole(roleId) {
     showMessage('Role editing functionality coming soon', 'info');
+}
+
+function deleteRole(roleId) {
+    if (!confirm('Are you sure you want to delete this role?')) {
+        return;
+    }
+    showMessage('Role deletion functionality coming soon', 'info');
 }
 
 function viewAuditLog() {
