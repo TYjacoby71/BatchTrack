@@ -52,27 +52,42 @@ class UserStats(ScopedModelMixin, db.Model):
         from .models import Batch, Recipe, InventoryItem, InventoryHistory
         from .product import Product
 
-        # Batch statistics
-        user_batches = Batch.query.filter_by(created_by=self.user_id, organization_id=self.organization_id)
+        # Batch statistics - use explicit column references for consistency
+        user_batches = Batch.query.filter(
+            Batch.created_by == self.user_id,
+            Batch.organization_id == self.organization_id
+        )
         self.total_batches = user_batches.count()
-        self.completed_batches = user_batches.filter_by(status='completed').count()
-        self.failed_batches = user_batches.filter_by(status='failed').count()
-        self.cancelled_batches = user_batches.filter_by(status='cancelled').count()
+        self.completed_batches = user_batches.filter(Batch.status == 'completed').count()
+        self.failed_batches = user_batches.filter(Batch.status == 'failed').count()
+        self.cancelled_batches = user_batches.filter(Batch.status == 'cancelled').count()
 
-        # Recipe statistics
-        user_recipes = Recipe.query.filter_by(created_by=self.user_id, organization_id=self.organization_id)
+        # Recipe statistics - use explicit column references for consistency
+        user_recipes = Recipe.query.filter(
+            Recipe.created_by == self.user_id,
+            Recipe.organization_id == self.organization_id
+        )
         self.total_recipes = user_recipes.count()
         self.recipes_created = user_recipes.count()
 
-        # Inventory statistics
-        user_inventory = InventoryItem.query.filter_by(created_by=self.user_id, organization_id=self.organization_id)
+        # Inventory statistics - use explicit column references for consistency
+        user_inventory = InventoryItem.query.filter(
+            InventoryItem.created_by == self.user_id,
+            InventoryItem.organization_id == self.organization_id
+        )
         self.inventory_items_created = user_inventory.count()
 
-        user_adjustments = InventoryHistory.query.filter_by(created_by=self.user_id, organization_id=self.organization_id)
+        user_adjustments = InventoryHistory.query.filter(
+            InventoryHistory.created_by == self.user_id,
+            InventoryHistory.organization_id == self.organization_id
+        )
         self.inventory_adjustments = user_adjustments.count()
 
-        # Product statistics
-        user_products = Product.query.filter_by(created_by=self.user_id, organization_id=self.organization_id)
+        # Product statistics - use explicit column references for consistency
+        user_products = Product.query.filter(
+            Product.created_by == self.user_id,
+            Product.organization_id == self.organization_id
+        )
         self.products_created = user_products.count()
 
         self.last_updated = TimezoneUtils.utc_now()
@@ -224,6 +239,8 @@ class Leaderboard:
     @staticmethod
     def get_top_users_by_batches(organization_id=None, time_period='all_time', limit=10):
         """Get top users by batch count"""
+        from .models import User
+        
         query = db.session.query(
             UserStats.user_id,
             User.username,
@@ -245,6 +262,8 @@ class Leaderboard:
     @staticmethod
     def get_top_organizations_by_batches(time_period='all_time', limit=10):
         """Get top organizations by batch count"""
+        from .models import Organization
+        
         query = db.session.query(
             OrganizationStats.organization_id,
             Organization.name,
@@ -261,7 +280,7 @@ class Leaderboard:
         if not month:
             month = datetime.now().month
 
-        from .models import Batch
+        from .models import Batch, User, Organization
 
         # Get monthly batch counts by user
         monthly_stats = db.session.query(
