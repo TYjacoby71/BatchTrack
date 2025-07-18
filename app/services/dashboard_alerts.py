@@ -150,7 +150,18 @@ class DashboardAlertService:
                 })
 
         # MEDIUM: Active batches needing attention
-        active_batches = Batch.query.filter_by(status='in_progress').count()
+        if current_user and current_user.is_authenticated:
+            if current_user.organization_id:
+                active_batches = Batch.query.filter_by(
+                    status='in_progress',
+                    organization_id=current_user.organization_id
+                ).count()
+            else:
+                # Developer users see all batches
+                active_batches = Batch.query.filter_by(status='in_progress').count()
+        else:
+            active_batches = 0
+
         if active_batches > 0:
             alerts.append({
                 'priority': 'MEDIUM',
@@ -196,7 +207,7 @@ class DashboardAlertService:
         # Get expiration warning days from settings
         from ..utils.settings import get_setting
         days_ahead = get_setting('alerts.expiration_warning_days', 7)
-        
+
         expiration_data = CombinedInventoryAlertService.get_expiration_alerts(days_ahead)
         stock_summary = CombinedInventoryAlertService.get_unified_stock_summary()
         stuck_batches = len(DashboardAlertService._get_stuck_batches())
@@ -220,10 +231,16 @@ class DashboardAlertService:
     def _get_stuck_batches() -> List:
         """Get batches that have been in progress for more than 24 hours"""
         cutoff_time = datetime.utcnow() - timedelta(hours=24)
-        return Batch.query.filter(
+        query = Batch.query.filter(
             Batch.status == 'in_progress',
             Batch.started_at < cutoff_time
-        ).all()
+        )
+
+        # Apply organization scoping if user is authenticated
+        if current_user and current_user.is_authenticated and current_user.organization_id:
+            query = query.filter(Batch.organization_id == current_user.organization_id)
+
+        return query.all()
 
     @staticmethod
     def _get_recent_faults() -> int:
@@ -292,10 +309,16 @@ class DashboardAlertService:
         """Get count of batches missing required data"""
         try:
             # Batches that are finished but missing containers or labels
-            incomplete = Batch.query.filter(
+            query = Batch.query.filter(
                 Batch.status == 'finished',
                 Batch.final_yield.is_(None)
-            ).count()
+            )
+
+            # Apply organization scoping if user is authenticated
+            if current_user and current_user.is_authenticated and current_user.organization_id:
+                query = query.filter(Batch.organization_id == current_user.organization_id)
+
+            incomplete = query.count()
             return incomplete
         except:
             return 0

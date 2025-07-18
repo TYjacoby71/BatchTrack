@@ -31,7 +31,7 @@ def upgrade():
         with op.batch_alter_table('user', schema=None) as batch_op:
             # Try to drop any foreign key constraints related to role_id
             for fk in user_foreign_keys:
-                if 'role_id' in fk.get('constrained_columns', []):
+                if 'role_id' in fk.get('constrained_columns', []) and fk.get('name'):
                     try:
                         batch_op.drop_constraint(fk['name'], type_='foreignkey')
                     except:
