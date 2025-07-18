@@ -174,21 +174,6 @@
                         </div>
                     </div>
                 </div>
-
-                
-
-                            <div class="form-check mb-2">
-                                <input class="form-check-input" type="checkbox" x-model="userPrefs.compact_view" @change="updatePreference('compact_view', $event.target.checked)">
-                                <label class="form-check-label">Compact View</label>
-                            </div>
-
-                            <div class="form-check mb-2">
-                                <input class="form-check-input" type="checkbox" x-model="userPrefs.show_quick_actions" @change="updatePreference('show_quick_actions', $event.target.checked)">
-                                <label class="form-check-label">Show Quick Actions</label>
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
 
@@ -301,34 +286,7 @@
                     </div>
                 </div>
 
-                <div class="col-lg-6">
-                    <div class="card">
-                        <div class="card-header">
-                            <h6 class="mb-0"><i class="fas fa-warehouse"></i> Inventory Settings</h6>
-                        </div>
-                        <div class="card-body">
-                            <div class="form-check mb-2">
-                                <input class="form-check-input" type="checkbox" x-model="systemSettings.inventory.enable_fifo_tracking" @change="updateSystemSetting('inventory', 'enable_fifo_tracking', $event.target.checked)">
-                                <label class="form-check-label">Enable FIFO Tracking</label>
-                            </div>
-
-                            <div class="form-check mb-2">
-                                <input class="form-check-input" type="checkbox" x-model="systemSettings.inventory.show_expiration_dates" @change="updateSystemSetting('inventory', 'show_expiration_dates', $event.target.checked)">
-                                <label class="form-check-label">Show Expiration Dates</label>
-                            </div>
-
-                            <div class="form-check mb-2">
-                                <input class="form-check-input" type="checkbox" x-model="systemSettings.inventory.auto_calculate_costs" @change="updateSystemSetting('inventory', 'auto_calculate_costs', $event.target.checked)">
-                                <label class="form-check-label">Auto Calculate Costs</label>
-                            </div>
-
-                            <div class="form-check mb-2">
-                                <input class="form-check-input" type="checkbox" x-model="systemSettings.inventory.enable_barcode_scanning" @change="updateSystemSetting('inventory', 'enable_barcode_scanning', $event.target.checked)">
-                                <label class="form-check-label">Enable Barcode Scanning</label>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                
             </div>
         </div>
 
