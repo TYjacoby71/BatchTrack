@@ -669,7 +669,7 @@ function exportReport(type) {
     window.open(`/organization/export/${type}`, '_blank');
 }
 
-function editUser(userId) {
+async function editUser(userId) {
     try {
         const response = await fetch(`/organization/user/${userId}`, {
             method: 'GET',
