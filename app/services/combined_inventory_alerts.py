@@ -1,4 +1,3 @@
-
 from ..models import db, InventoryItem, ProductSKU
 from sqlalchemy import and_
 from typing import List, Dict
@@ -12,18 +11,18 @@ class CombinedInventoryAlertService:
         """Get comprehensive expiration alerts for both raw materials and products"""
         from flask_login import current_user
         from ..blueprints.expiration.services import ExpirationService
-        
+
         # Get expired and expiring items
         expired_items = ExpirationService.get_expired_inventory_items()
         expiring_items = ExpirationService.get_expiring_soon_items(days_ahead)
-        
+
         return {
             'expired_fifo_entries': expired_items.get('fifo_entries', []),
             'expired_products': expired_items.get('product_inventory', []),
             'expiring_fifo_entries': expiring_items.get('fifo_entries', []),
             'expiring_products': expiring_items.get('product_inventory', []),
             'expired_total': len(expired_items.get('fifo_entries', [])) + len(expired_items.get('product_inventory', [])),
-            'expiring_soon_total': len(expiring_items.get('fifo_entries', [])) + len(expiring_items.get('product_inventory', []))
+            'expiring_soon_total': len(expiring_items.get('fifo_entries', [])) + len(expiring_items.get('product_inventory', [])),
         }
 
     @staticmethod
@@ -97,7 +96,7 @@ class CombinedInventoryAlertService:
         """Get comprehensive summary of all inventory stock issues"""
         # Get raw material alerts
         low_stock_ingredients = CombinedInventoryAlertService.get_low_stock_ingredients()
-        
+
         # Get product alerts
         low_stock_skus = CombinedInventoryAlertService.get_low_stock_skus()
         out_of_stock_skus = CombinedInventoryAlertService.get_out_of_stock_skus()
@@ -120,7 +119,7 @@ class CombinedInventoryAlertService:
             # Raw materials
             'low_stock_ingredients': low_stock_ingredients,
             'low_stock_ingredients_count': len(low_stock_ingredients),
-            
+
             # Products
             'low_stock_skus': low_stock_skus,
             'out_of_stock_skus': out_of_stock_skus,
@@ -129,7 +128,7 @@ class CombinedInventoryAlertService:
             'low_stock_count': len(low_stock_skus),
             'out_of_stock_count': len(out_of_stock_skus),
             'affected_products_count': len(set(low_stock_products.keys()) | set(out_of_stock_products.keys())),
-            
+
             # Combined totals
             'total_low_stock_items': len(low_stock_ingredients) + len(low_stock_skus),
             'total_critical_items': len(out_of_stock_skus),
@@ -140,7 +139,7 @@ class CombinedInventoryAlertService:
     def get_product_stock_summary() -> Dict:
         """Backward compatibility method for product-specific alerts"""
         unified_summary = CombinedInventoryAlertService.get_unified_stock_summary()
-        
+
         # Return only product-related data for compatibility
         return {
             'low_stock_skus': unified_summary['low_stock_skus'],
