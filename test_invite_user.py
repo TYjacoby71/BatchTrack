@@ -43,8 +43,10 @@ def test_invite_user_backend():
                 print("⚠️  Organization has reached user limit - invite will fail")
                 print("This is expected behavior for testing")
             
-            # Get available roles (excluding developer role)
-            roles = Role.query.filter(Role.name != 'developer').all()
+            # Get available roles (excluding developer and organization_owner roles)
+            roles = Role.query.filter(
+                Role.name.notin_(['developer', 'organization_owner'])
+            ).all()
             
             if not roles:
                 print("❌ No assignable roles found")
@@ -83,7 +85,7 @@ def test_invite_user_backend():
             
             # Validate role
             role = Role.query.filter_by(id=test_data['role_id']).first()
-            role_valid = role and role.name != 'developer'
+            role_valid = role and role.name not in ['developer', 'organization_owner']
             print(f"  Role valid: {'✅' if role_valid else '❌'}")
             
             # Check subscription limits
@@ -196,7 +198,7 @@ def test_different_scenarios():
                 # Check role
                 if data.get('role_id'):
                     role = Role.query.filter_by(id=data['role_id']).first()
-                    role_valid = role and role.name != 'developer'
+                    role_valid = role and role.name not in ['developer', 'organization_owner']
                 else:
                     role_valid = False
                 
@@ -215,7 +217,7 @@ def test_different_scenarios():
                 elif user_exists:
                     result = "❌ User already exists"
                 elif not role_valid:
-                    result = "❌ Invalid role (developer role not allowed)"
+                    result = "❌ Invalid role (system or organization owner roles not allowed)"
                 elif not org.can_add_users():
                     result = "❌ Organization user limit reached"
                 else:
