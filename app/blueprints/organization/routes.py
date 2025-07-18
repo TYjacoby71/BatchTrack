@@ -113,6 +113,96 @@ def update_organization_settings():
         db.session.commit()
         
         return jsonify({'success': True, 'message': 'Organization settings updated successfully'})
+
+@organization_bp.route('/users/<int:user_id>/toggle-status', methods=['POST'])
+@login_required
+def toggle_user_status(user_id):
+    """Toggle user active status"""
+    if not current_user.is_organization_owner:
+        return jsonify({'success': False, 'error': 'Permission denied'}), 403
+    
+    user = User.query.filter_by(
+        id=user_id, 
+        organization_id=current_user.organization_id
+    ).first()
+    
+    if not user:
+        return jsonify({'success': False, 'error': 'User not found'}), 404
+    
+    # Don't allow deactivating yourself
+    if user.id == current_user.id:
+        return jsonify({'success': False, 'error': 'Cannot deactivate yourself'}), 400
+    
+    user.is_active = not user.is_active
+    db.session.commit()
+    
+    status = 'activated' if user.is_active else 'deactivated'
+    return jsonify({'success': True, 'message': f'User {status} successfully'})
+
+@organization_bp.route('/users/<int:user_id>/edit', methods=['POST'])
+@login_required
+def edit_user(user_id):
+    """Edit user details"""
+    if not current_user.is_organization_owner:
+        return jsonify({'success': False, 'error': 'Permission denied'}), 403
+    
+    user = User.query.filter_by(
+        id=user_id, 
+        organization_id=current_user.organization_id
+    ).first()
+    
+    if not user:
+        return jsonify({'success': False, 'error': 'User not found'}), 404
+    
+    data = request.get_json()
+    
+    # Update user fields
+    if 'first_name' in data:
+        user.first_name = data['first_name'].strip()
+    if 'last_name' in data:
+        user.last_name = data['last_name'].strip()
+    if 'email' in data:
+        user.email = data['email'].strip()
+    if 'phone' in data:
+        user.phone = data['phone'].strip()
+    
+    db.session.commit()
+    
+    return jsonify({'success': True, 'message': 'User updated successfully'})
+
+@organization_bp.route('/users/<int:user_id>/activity', methods=['GET'])
+@login_required
+def get_user_activity(user_id):
+    """Get user activity log"""
+    if not current_user.is_organization_owner:
+        return jsonify({'success': False, 'error': 'Permission denied'}), 403
+    
+    user = User.query.filter_by(
+        id=user_id, 
+        organization_id=current_user.organization_id
+    ).first()
+    
+    if not user:
+        return jsonify({'success': False, 'error': 'User not found'}), 404
+    
+    # For now, return basic activity info
+    # You can expand this to include actual activity tracking later
+    activity = [
+        {
+            'action': 'User Created',
+            'timestamp': user.created_at.isoformat() if user.created_at else None,
+            'details': 'User account was created'
+        }
+    ]
+    
+    if user.last_login:
+        activity.append({
+            'action': 'Last Login',
+            'timestamp': user.last_login.isoformat(),
+            'details': 'User logged into the system'
+        })
+    
+    return jsonify({'success': True, 'activity': activity})
         
     except Exception as e:
         db.session.rollback()
