@@ -165,7 +165,7 @@ class OrganizationStats(db.Model):
         """Refresh statistics from current database state"""
         try:
             from .models import Batch, User, InventoryItem, Product, Recipe
-            
+
             # Batch statistics - use direct organization_id filtering since we're not in a request context
             # Note: We can't use Batch.scoped() here because it relies on current_user being available
             batch_query = Batch.query.filter(Batch.organization_id == self.organization_id)
@@ -200,7 +200,7 @@ class OrganizationStats(db.Model):
 
             self.last_updated = TimezoneUtils.utc_now()
             db.session.commit()
-            
+
         except Exception as e:
             print(f"Error refreshing organization stats: {e}")
             import traceback
@@ -240,7 +240,7 @@ class Leaderboard:
     def get_top_users_by_batches(organization_id=None, time_period='all_time', limit=10):
         """Get top users by batch count"""
         from .models import User
-        
+
         query = db.session.query(
             UserStats.user_id,
             User.username,
@@ -263,7 +263,7 @@ class Leaderboard:
     def get_top_organizations_by_batches(time_period='all_time', limit=10):
         """Get top organizations by batch count"""
         from .models import Organization
-        
+
         query = db.session.query(
             OrganizationStats.organization_id,
             Organization.name,

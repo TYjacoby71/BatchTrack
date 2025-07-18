@@ -83,11 +83,22 @@ def dashboard():
         # If no last_updated time, refresh anyway
         org_stats.refresh_from_database()
     
-    # Debug: Check batch count directly
+    # Debug: Check batch count directly with both methods
     from app.models.models import Batch
-    direct_batch_count = Batch.query.filter_by(organization_id=organization.id).count()
-    print(f"Direct batch count for org {organization.id}: {direct_batch_count}")
+    direct_batch_count_filterby = Batch.query.filter_by(organization_id=organization.id).count()
+    direct_batch_count_filter = Batch.query.filter(Batch.organization_id == organization.id).count()
+    print(f"Direct batch count (filter_by) for org {organization.id}: {direct_batch_count_filterby}")
+    print(f"Direct batch count (filter) for org {organization.id}: {direct_batch_count_filter}")
     print(f"Stats batch count for org {organization.id}: {org_stats.total_batches}")
+    
+    # Debug: Check if refresh actually ran
+    print(f"Org stats last_updated: {org_stats.last_updated}")
+    print(f"Current time: {TimezoneUtils.utc_now()}")
+    
+    # Force refresh for debugging
+    print("Forcing stats refresh...")
+    org_stats.refresh_from_database()
+    print(f"After refresh - Stats batch count for org {organization.id}: {org_stats.total_batches}")
     
     # Get some basic metrics
     total_batches = org_stats.total_batches
