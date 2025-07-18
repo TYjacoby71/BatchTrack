@@ -5,6 +5,7 @@ from datetime import datetime
 from sqlalchemy import extract
 from ...services.unit_conversion import ConversionEngine
 from ...services.inventory_adjustment import process_inventory_adjustment
+from ...utils.timezone_utils import TimezoneUtils
 
 start_batch_bp = Blueprint('start_batch', __name__)
 
@@ -42,7 +43,8 @@ def start_batch():
         status='in_progress',
         notes=notes,
         created_by=current_user.id,
-        organization_id=current_user.organization_id
+        organization_id=current_user.organization_id,
+        started_at=TimezoneUtils.utc_now()  # Explicitly set the started time
     )
 
     db.session.add(batch)

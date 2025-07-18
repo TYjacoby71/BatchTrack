@@ -153,9 +153,11 @@ def list_batches():
 
     all_recipes = Recipe.query.order_by(Recipe.name).all()
     from ...models import InventoryItem
+    from ...utils.timezone_utils import TimezoneUtils
 
     return render_template('batches/batches_list.html',
         InventoryItem=InventoryItem, 
+        TimezoneUtils=TimezoneUtils,
         batches=all_batches,
         in_progress_batches=in_progress_batches,
         completed_batches=completed_batches,

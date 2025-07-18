@@ -367,7 +367,7 @@
                                 <h5 class="card-title">{{ batch.recipe.name }}</h5>
                                 <p class="card-text"><strong>Label:</strong> {{ batch.label_code }}</p>
                                 <p class="card-text"><strong>Scale:</strong> {{ batch.scale }}</p>
-                                <p class="card-text text-muted">{{ batch.started_at.strftime("%Y-%m-%d") }}</p>
+                                <p class="card-text text-muted">{{ TimezoneUtils.format_for_user(batch.started_at, '%Y-%m-%d') }}</p>
                                 <p class="card-text">
                                     <strong>Status:</strong> 
                                     <span class="badge {% if batch.status == 'completed' %}bg-success
