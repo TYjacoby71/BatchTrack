@@ -161,8 +161,8 @@
                                                 <br><small class="text-muted">{{ user.username }} • {{ user.email or 'No email' }}</small>
                                             </div>
                                         </td>
-                                        <td>
-                                            <span class="badge bg-secondary">{{ user.user_role.name if user.user_role else 'No Role' }}</span>
+                                        <td class="user-role">
+                                            {{ user.display_role }}
                                         </td>
                                         <td>
                                             {% if user.is_active %}
@@ -191,7 +191,7 @@
                                                     <i class="fas fa-user-check"></i>
                                                     {% endif %}
                                                 </button>
-                                                
+
                                             </div>
                                             {% else %}
                                             <span class="badge bg-info">Owner</span>
@@ -316,7 +316,7 @@
                                     <label class="form-label">Contact Email</label>
                                     <input type="email" class="form-control" x-model="orgSettings.contact_email" placeholder="{{ current_user.email }}">
                                 </div>
-                                
+
                             </div>
                         </div>
                         <button type="submit" class="btn btn-primary">
@@ -669,7 +669,7 @@ function exportReport(type) {
     window.open(`/organization/export/${type}`, '_blank');
 }
 
-async function editUser(userId) {
+function editUser(userId) {
     try {
         const response = await fetch(`/organization/user/${userId}`, {
             method: 'GET',
