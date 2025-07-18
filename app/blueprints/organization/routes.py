@@ -81,6 +81,52 @@ def dashboard():
                          pending_invites=pending_invites,
                          recent_activity=recent_activity)
 
+@organization_bp.route('/create-role', methods=['POST'])
+@login_required
+def create_role():
+    """Create a new organization role"""
+    # Check if user is organization owner or developer
+    if not (current_user.user_type == 'organization_owner' or 
+            current_user.is_organization_owner or 
+            current_user.user_type == 'developer'):
+        return jsonify({'success': False, 'error': 'Insufficient permissions'})
+    
+    try:
+        data = request.get_json()
+        
+        # Get organization
+        from flask import session
+        if current_user.user_type == 'developer' and session.get('dev_selected_org_id'):
+            from app.models import Organization
+            organization = Organization.query.get(session.get('dev_selected_org_id'))
+            org_id = organization.id
+        else:
+            org_id = current_user.organization_id
+        
+        # Create role
+        role = Role(
+            name=data['name'],
+            description=data.get('description'),
+            organization_id=org_id,
+            created_by=current_user.id,
+            is_system_role=False
+        )
+        
+        # Add permissions
+        permission_ids = data.get('permission_ids', [])
+        from app.models.permission import Permission
+        permissions = Permission.query.filter(Permission.id.in_(permission_ids)).all()
+        role.permissions = permissions
+        
+        db.session.add(role)
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': 'Role created successfully'})
+    
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)})
+
 @organization_bp.route('/update-settings', methods=['POST'])
 @login_required
 def update_organization_settings():

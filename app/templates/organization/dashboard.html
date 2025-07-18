@@ -208,37 +208,61 @@
                 <div class="tab-pane fade" id="roles" role="tabpanel">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h5 class="mb-0"><i class="fas fa-shield-alt"></i> Roles & Permissions</h5>
-                        <button class="btn btn-primary btn-sm" @click="showCreateRoleModal = true">
+                        <button class="btn btn-primary btn-sm" onclick="openCreateRoleModal()">
                             <i class="fas fa-plus"></i> Create Role
                         </button>
                     </div>
-                    <div class="row">
+                    <!-- System Roles -->
+                    <h6 class="text-muted mb-2">System Roles</h6>
+                    <div class="row mb-4">
                         {% for role in roles %}
-                        <div class="col-md-6 mb-3">
-                            <div class="card border">
-                                <div class="card-header d-flex justify-content-between align-items-center">
-                                    <h6 class="mb-0">{{ role.name }}</h6>
-                                    <span class="badge bg-secondary">{{ role.assigned_users|length }} users</span>
-                                </div>
+                        {% if role.is_system_role or role.organization_id is none %}
+                        <div class="col-md-4 mb-3">
+                            <div class="card border-info">
                                 <div class="card-body">
-                                    <p class="text-muted small mb-2">{{ role.description or 'No description' }}</p>
-                                    <div class="mb-2">
-                                        <small class="text-muted">Permissions:</small>
-                                        <div class="mt-1">
-                                            {% for permission in role.permissions[:3] %}
-                                            <span class="badge bg-light text-dark me-1">{{ permission.name }}</span>
-                                            {% endfor %}
-                                            {% if role.permissions|length > 3 %}
-                                            <span class="text-muted">+{{ role.permissions|length - 3 }} more</span>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                    <button class="btn btn-outline-primary btn-sm" onclick="editRole({{ role.id }})">
-                                        <i class="fas fa-edit"></i> Edit
-                                    </button>
+                                    <h6 class="card-title">
+                                        {{ role.name }}
+                                        <span class="badge bg-info ms-2">System</span>
+                                    </h6>
+                                    <p class="card-text small text-muted">{{ role.description or 'No description' }}</p>
+                                    <p class="card-text">
+                                        <strong>Users:</strong> {{ role.assigned_users|length }}
+                                    </p>
                                 </div>
                             </div>
                         </div>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+
+                    <!-- Organization Custom Roles -->
+                    <h6 class="text-muted mb-2">Custom Roles</h6>
+                    <div class="row" id="customRolesContainer">
+                        {% for role in roles %}
+                        {% if not role.is_system_role and role.organization_id %}
+                        <div class="col-md-4 mb-3">
+                            <div class="card border-success">
+                                <div class="card-body">
+                                    <h6 class="card-title">
+                                        {{ role.name }}
+                                        <span class="badge bg-success ms-2">Custom</span>
+                                    </h6>
+                                    <p class="card-text small text-muted">{{ role.description or 'No description' }}</p>
+                                    <p class="card-text">
+                                        <strong>Users:</strong> {{ role.assigned_users|length }}
+                                    </p>
+                                    <div class="d-flex gap-2">
+                                        <button class="btn btn-sm btn-outline-primary" onclick="editRole({{ role.id }})">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteRole({{ role.id }})">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
                         {% endfor %}
                     </div>
                 </div>
@@ -419,6 +443,69 @@
                 <button type="button" class="btn btn-primary" onclick="inviteUser()">
                     <i class="fas fa-paper-plane me-2"></i>Send Invite
                 </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Role Modal -->
+<div class="modal fade" id="createRoleModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Create New Role</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="createRoleForm">
+                    <div class="mb-3">
+                        <label for="roleName" class="form-label">Role Name</label>
+                        <input type="text" class="form-control" id="roleName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="roleDescription" class="form-label">Description</label>
+                        <textarea class="form-control" id="roleDescription" rows="2"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Permissions</label>
+                        <div class="row">
+                            {% for category, perms in permission_categories.items() %}
+                            <div class="col-md-6 mb-3">
+                                <div class="card">
+                                    <div class="card-header py-2">
+                                        <div class="form-check">
+                                            <input class="form-check-input category-checkbox" type="checkbox" 
+                                                   id="category_{{ category }}" 
+                                                   onchange="toggleCategoryPermissions('{{ category }}')">
+                                            <label class="form-check-label fw-bold" for="category_{{ category }}">
+                                                {{ category|title }}
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="card-body py-2">
+                                        {% for perm in perms %}
+                                        <div class="form-check form-check-sm">
+                                            <input class="form-check-input permission-checkbox category-{{ category }}" 
+                                                   type="checkbox" 
+                                                   value="{{ perm.id }}" 
+                                                   id="perm_{{ perm.id }}"
+                                                   onchange="updateCategoryCheckbox('{{ category }}')">
+                                            <label class="form-check-label small" for="perm_{{ perm.id }}">
+                                                {{ perm.name }}
+                                            </label>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="createRole()">Create Role</button>
             </div>
         </div>
     </div>
@@ -657,7 +744,8 @@ async function inviteUser() {
             // Reload page to show new user
             setTimeout(() => window.location.reload(), 2000);
         } else {
-            showMessage(result.error || 'Failed to send invite', 'danger');
+            showMessage(result.error || 'Failed to send invite',```python
+ 'danger');
         }
     } catch (error) {
         console.error('Invite error:', error);
@@ -840,6 +928,73 @@ document.addEventListener('DOMContentLoaded', function() {
         return new bootstrap.Tooltip(tooltipTriggerEl);
     });
 });
+
+function openCreateRoleModal() {
+    const modal = new bootstrap.Modal(document.getElementById('createRoleModal'));
+    modal.show();
+}
+
+async function createRole() {
+    const roleName = document.getElementById('roleName').value;
+    const roleDescription = document.getElementById('roleDescription').value;
+    const permissionCheckboxes = document.querySelectorAll('.permission-checkbox:checked');
+    const permissionIds = Array.from(permissionCheckboxes).map(cb => cb.value);
+
+    const roleData = {
+        name: roleName,
+        description: roleDescription,
+        permissions: permissionIds
+    };
+
+    try {
+        const response = await fetch('/organization/create-role', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRFToken()
+            },
+            body: JSON.stringify(roleData)
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showMessage(result.message || 'Role created successfully', 'success');
+
+            // Close modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('createRoleModal'));
+            modal.hide();
+
+            // Reset form
+            document.getElementById('createRoleForm').reset();
+
+            // Reload page to show new role
+            setTimeout(() => window.location.reload(), 1000);
+        } else {
+            showMessage(result.error || 'Failed to create role', 'danger');
+        }
+    } catch (error) {
+        console.error('Create role error:', error);
+        showMessage('Failed to create role', 'danger');
+    }
+}
+
+function toggleCategoryPermissions(category) {
+    const categoryCheckbox = document.getElementById(`category_${category}`);
+    const permissionCheckboxes = document.querySelectorAll(`.category-${category}`);
+
+    permissionCheckboxes.forEach(cb => {
+        cb.checked = categoryCheckbox.checked;
+    });
+}
+
+function updateCategoryCheckbox(category) {
+    const categoryCheckbox = document.getElementById(`category_${category}`);
+    const permissionCheckboxes = document.querySelectorAll(`.category-${category}`);
+    const checkedPermissions = Array.from(permissionCheckboxes).filter(cb => cb.checked);
+
+    categoryCheckbox.checked = checkedPermissions.length === permissionCheckboxes.length;
+}
 </script>
 {% endblock %}
 
