@@ -118,7 +118,6 @@ def get_user_preferences():
             'show_low_stock_alerts': user_prefs.show_low_stock_alerts,
             'show_batch_alerts': user_prefs.show_batch_alerts,
             'show_fault_alerts': user_prefs.show_fault_alerts,
-            'expiration_warning_days': user_prefs.expiration_warning_days,
             'show_alert_badges': user_prefs.show_alert_badges,
             'dashboard_layout': user_prefs.dashboard_layout,
             'compact_view': user_prefs.compact_view,
