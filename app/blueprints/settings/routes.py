@@ -387,4 +387,3 @@ def user_management():
 
 # All organization-related routes have been moved to the organization blueprint
 # Settings blueprint now focuses only on user preferences and system settings
-```
