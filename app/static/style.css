@@ -548,6 +548,11 @@ th:nth-child(9) { text-align: center; }
     margin: var(--space-2) 0;
     color: white;
     text-align: center;
+    min-height: 120px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
 }
 
 /* Toggle Switch Styles */
