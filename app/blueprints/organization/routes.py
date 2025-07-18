@@ -74,9 +74,12 @@ def dashboard():
     
     # Refresh stats if they're older than 1 hour
     from datetime import datetime, timedelta
-    if org_stats.last_updated and org_stats.last_updated < TimezoneUtils.utc_now() - timedelta(hours=1):
-        org_stats.refresh_from_database()
-    elif not org_stats.last_updated:
+    if org_stats.last_updated:
+        # Convert naive datetime to UTC-aware for comparison
+        last_updated_utc = org_stats.last_updated.replace(tzinfo=TimezoneUtils.utc_now().tzinfo)
+        if last_updated_utc < TimezoneUtils.utc_now() - timedelta(hours=1):
+            org_stats.refresh_from_database()
+    else:
         # If no last_updated time, refresh anyway
         org_stats.refresh_from_database()
     
