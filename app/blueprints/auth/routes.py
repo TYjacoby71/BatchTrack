@@ -80,6 +80,9 @@ def login():
                     flash('Account is inactive. Please contact administrator.')
                     return render_template('auth/login.html', form=form)
 
+                # Log the user in
+                login_user(user)
+                
                 # Update last login
                 user.last_login = TimezoneUtils.utc_now()
                 db.session.commit()
