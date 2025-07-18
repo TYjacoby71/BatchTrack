@@ -141,8 +141,10 @@ def update_user_preferences():
         user_prefs.updated_at = datetime.utcnow()
         db.session.commit()
 
+        flash('All preferences saved successfully', 'success')
         return jsonify({'success': True, 'message': 'Preferences updated successfully'})
     except Exception as e:
+        flash('Error saving preferences', 'error')
         return jsonify({'error': str(e)}), 500
 
 @settings_bp.route('/api/system-settings', methods=['POST'])
@@ -315,6 +317,7 @@ def update_user_preference():
         value = data.get('value')
 
         if not key:
+            flash('Preference key is required', 'error')
             return jsonify({'error': 'Preference key is required'}), 400
 
         # Get or create user preferences
@@ -324,12 +327,15 @@ def update_user_preference():
         if hasattr(user_prefs, key):
             setattr(user_prefs, key, value)
             db.session.commit()
+            flash('Preference saved successfully', 'success')
             return jsonify({'success': True})
         else:
+            flash('Invalid preference key', 'error')
             return jsonify({'error': 'Invalid preference key'}), 400
 
     except Exception as e:
         db.session.rollback()
+        flash('Error saving preference', 'error')
         return jsonify({'error': str(e)}), 500
 
 @settings_bp.route('/update-system-setting', methods=['POST'])
@@ -343,13 +349,16 @@ def update_system_setting():
         value = data.get('value')
 
         if not all([section, key]):
+            flash('Section and key are required', 'error')
             return jsonify({'error': 'Section and key are required'}), 400
 
         # For now, just return success - implement actual system settings storage later
         # This could be stored in a SystemSettings model or configuration file
+        flash('System setting saved successfully', 'success')
         return jsonify({'success': True})
 
     except Exception as e:
+        flash('Error saving system setting', 'error')
         return jsonify({'error': str(e)}), 500
 
 @settings_bp.route('/user-management')

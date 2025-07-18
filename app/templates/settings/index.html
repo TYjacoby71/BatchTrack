@@ -411,7 +411,8 @@ function settingsData() {
 
                 const result = await response.json();
                 if (result.success) {
-                    this.showToast('Preference saved successfully', 'success');
+                    // Reload page to show flash message
+                    window.location.reload();
                 } else {
                     this.showToast(result.error || 'Failed to save preference', 'error');
                 }
@@ -434,7 +435,8 @@ function settingsData() {
 
                 const result = await response.json();
                 if (result.success) {
-                    this.showToast('System setting saved successfully', 'success');
+                    // Reload page to show flash message
+                    window.location.reload();
                 } else {
                     this.showToast(result.error || 'Failed to save setting', 'error');
                 }
@@ -457,7 +459,8 @@ function settingsData() {
 
                 const result = await response.json();
                 if (result.success) {
-                    this.showToast('All preferences saved successfully', 'success');
+                    // Reload page to show flash message
+                    window.location.reload();
                 } else {
                     this.showToast(result.error || 'Failed to save preferences', 'error');
                 }
