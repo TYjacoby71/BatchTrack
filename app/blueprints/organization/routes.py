@@ -183,10 +183,6 @@ def get_user_activity(user_id):
 
     return jsonify({'success': True, 'activity': activity})
 
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'success': False, 'error': str(e)}), 500
-
 @organization_bp.route('/invite-user', methods=['POST'])
 @login_required
 def invite_user():
