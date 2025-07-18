@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = 'remove_user_role_id'
-down_revision = '6e0c5e2e1c48'
+down_revision = 'create_user_role_assignment'
 branch_labels = None
 depends_on = None
 
