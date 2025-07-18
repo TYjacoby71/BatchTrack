@@ -105,8 +105,6 @@ def update_organization_settings():
             organization.contact_email = data['contact_email']
         if 'timezone' in data:
             organization.timezone = data['timezone']
-        if 'default_units' in data:
-            organization.default_units = data['default_units']
         
         db.session.commit()
         
