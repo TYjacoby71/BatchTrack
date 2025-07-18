@@ -16,12 +16,12 @@ def dashboard():
 
     # Check if user is organization owner or developer in customer support mode
     from flask import session
-
+    
     is_org_owner = (current_user.user_type == 'organization_owner' or 
                     current_user.is_organization_owner)
     is_dev_with_org = (current_user.user_type == 'developer' and 
                        session.get('dev_selected_org_id'))
-
+    
     if not (is_org_owner or is_dev_with_org):
         abort(403)
 
@@ -31,7 +31,7 @@ def dashboard():
         organization = Organization.query.get(session.get('dev_selected_org_id'))
     else:
         organization = current_user.organization
-
+    
     if not organization:
         flash('No organization found', 'error')
         return redirect(url_for('settings.index'))
@@ -85,7 +85,7 @@ def dashboard():
 @login_required
 def update_organization_settings():
     """Update organization settings (organization owners only)"""
-
+    
     # Check permissions - only organization owners can update
     if not (current_user.user_type == 'organization_owner' or 
             current_user.is_organization_owner):
@@ -94,94 +94,29 @@ def update_organization_settings():
     try:
         data = request.get_json()
         organization = current_user.organization
-
+        
         if not organization:
             return jsonify({'success': False, 'error': 'No organization found'})
-
+        
         # Update organization fields
         if 'name' in data and data['name'].strip():
             organization.name = data['name'].strip()
-
+        
         if 'contact_email' in data:
             # If contact_email is empty, use current user's email as default
             contact_email = data['contact_email'].strip() if data['contact_email'] else current_user.email
             organization.contact_email = contact_email
-
+        
         if 'timezone' in data:
             organization.timezone = data['timezone']
-
+        
         db.session.commit()
-
+        
         return jsonify({'success': True, 'message': 'Organization settings updated successfully'})
-
+        
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 500
-
-@organization_bp.route('/users/<int:user_id>/edit', methods=['POST'])
-@login_required
-def edit_user(user_id):
-    """Edit user details"""
-    if not current_user.is_organization_owner:
-        return jsonify({'success': False, 'error': 'Permission denied'}), 403
-
-    user = User.query.filter_by(
-        id=user_id, 
-        organization_id=current_user.organization_id
-    ).first()
-
-    if not user:
-        return jsonify({'success': False, 'error': 'User not found'}), 404
-
-    data = request.get_json()
-
-    # Update user fields
-    if 'first_name' in data:
-        user.first_name = data['first_name'].strip()
-    if 'last_name' in data:
-        user.last_name = data['last_name'].strip()
-    if 'email' in data:
-        user.email = data['email'].strip()
-    if 'phone' in data:
-        user.phone = data['phone'].strip()
-
-    db.session.commit()
-
-    return jsonify({'success': True, 'message': 'User updated successfully'})
-
-@organization_bp.route('/users/<int:user_id>/activity', methods=['GET'])
-@login_required
-def get_user_activity(user_id):
-    """Get user activity log"""
-    if not current_user.is_organization_owner:
-        return jsonify({'success': False, 'error': 'Permission denied'}), 403
-
-    user = User.query.filter_by(
-        id=user_id, 
-        organization_id=current_user.organization_id
-    ).first()
-
-    if not user:
-        return jsonify({'success': False, 'error': 'User not found'}), 404
-
-    # For now, return basic activity info
-    # You can expand this to include actual activity tracking later
-    activity = [
-        {
-            'action': 'User Created',
-            'timestamp': user.created_at.isoformat() if user.created_at else None,
-            'details': 'User account was created'
-        }
-    ]
-
-    if user.last_login:
-        activity.append({
-            'action': 'Last Login',
-            'timestamp': user.last_login.isoformat(),
-            'details': 'User logged into the system'
-        })
-
-    return jsonify({'success': True, 'activity': activity})
 
 @organization_bp.route('/invite-user', methods=['POST'])
 @login_required
@@ -411,7 +346,7 @@ def add_user():
 @login_required
 def get_user(user_id):
     """Get user details for editing (organization owners only)"""
-
+    
     # Check permissions - only organization owners can access
     if not (current_user.user_type == 'organization_owner' or 
             current_user.is_organization_owner):
@@ -423,10 +358,10 @@ def get_user(user_id):
             id=user_id, 
             organization_id=current_user.organization_id
         ).first()
-
+        
         if not user:
             return jsonify({'success': False, 'error': 'User not found'})
-
+        
         # Don't allow editing of developers or other org owners (except self)
         if user.user_type in ['developer', 'organization_owner'] and user.id != current_user.id:
             return jsonify({'success': False, 'error': 'Cannot edit system users or other organization owners'})
@@ -454,7 +389,7 @@ def get_user(user_id):
 @login_required
 def update_user(user_id):
     """Update user details (organization owners only)"""
-
+    
     # Check permissions - only organization owners can update
     if not (current_user.user_type == 'organization_owner' or 
             current_user.is_organization_owner):
@@ -462,16 +397,16 @@ def update_user(user_id):
 
     try:
         data = request.get_json()
-
+        
         # Get user from same organization
         user = User.query.filter_by(
             id=user_id, 
             organization_id=current_user.organization_id
         ).first()
-
+        
         if not user:
             return jsonify({'success': False, 'error': 'User not found'})
-
+        
         # Don't allow editing of developers or other org owners (except self)
         if user.user_type in ['developer', 'organization_owner'] and user.id != current_user.id:
             return jsonify({'success': False, 'error': 'Cannot edit system users or other organization owners'})
@@ -490,7 +425,7 @@ def update_user(user_id):
             role = Role.query.filter_by(id=data['role_id']).first()
             if role and role.name not in ['developer', 'organization_owner']:
                 user.role_id = data['role_id']
-
+        
         # Handle status changes - check subscription limits for activation
         if 'is_active' in data:
             new_status = data['is_active']
@@ -511,11 +446,15 @@ def update_user(user_id):
             'message': f'User {user.full_name} updated successfully'
         })
 
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)})
+
 @organization_bp.route('/user/<int:user_id>/toggle-status', methods=['POST'])
 @login_required
 def toggle_user_status(user_id):
     """Toggle user active/inactive status (organization owners only)"""
-
+    
     # Check permissions - only organization owners can toggle status
     if not (current_user.user_type == 'organization_owner' or 
             current_user.is_organization_owner):
@@ -527,20 +466,20 @@ def toggle_user_status(user_id):
             id=user_id, 
             organization_id=current_user.organization_id
         ).first()
-
+        
         if not user:
             return jsonify({'success': False, 'error': 'User not found'})
-
+        
         # Don't allow toggling status of developers, org owners, or self
         if user.user_type in ['developer', 'organization_owner']:
             return jsonify({'success': False, 'error': 'Cannot change status of system users or organization owners'})
-
+        
         if user.id == current_user.id:
             return jsonify({'success': False, 'error': 'Cannot change your own status'})
 
         # Toggle status
         new_status = not user.is_active
-
+        
         # If activating, check subscription limits
         if new_status and not user.is_active:
             if not current_user.organization.can_add_users():
@@ -550,7 +489,7 @@ def toggle_user_status(user_id):
                     'success': False, 
                     'error': f'Cannot activate user. Organization has reached user limit ({current_count}/{max_users}) for {current_user.organization.subscription_tier} subscription'
                 })
-
+        
         user.is_active = new_status
         db.session.commit()
 
@@ -568,7 +507,7 @@ def toggle_user_status(user_id):
 @login_required
 def delete_user(user_id):
     """Delete user permanently (organization owners only)"""
-
+    
     # Check permissions - only organization owners can delete
     if not (current_user.user_type == 'organization_owner' or 
             current_user.is_organization_owner):
@@ -580,20 +519,20 @@ def delete_user(user_id):
             id=user_id, 
             organization_id=current_user.organization_id
         ).first()
-
+        
         if not user:
             return jsonify({'success': False, 'error': 'User not found'})
-
+        
         # Don't allow deleting developers, org owners, or self
         if user.user_type in ['developer', 'organization_owner']:
             return jsonify({'success': False, 'error': 'Cannot delete system users or organization owners'})
-
+        
         if user.id == current_user.id:
             return jsonify({'success': False, 'error': 'Cannot delete yourself'})
 
         username = user.username
         full_name = user.full_name
-
+        
         # Delete the user
         db.session.delete(user)
         db.session.commit()
