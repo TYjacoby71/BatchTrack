@@ -68,6 +68,7 @@ class User(UserMixin, db.Model):
     created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
     last_login = db.Column(db.DateTime, nullable=True)
     timezone = db.Column(db.String(64), default='America/New_York')
+    # role_id removed - using UserRoleAssignment table instead
 
     def set_password(self, password):
         from werkzeug.security import generate_password_hash
