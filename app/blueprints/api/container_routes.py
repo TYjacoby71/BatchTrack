@@ -39,11 +39,14 @@ def available_containers(recipe_id):
     try:
         scale = float(request.args.get('scale', '1.0'))
 
-        # Scoped query to current user's organization
-        recipe = Recipe.query.filter_by(
-            id=recipe_id,
-            organization_id=current_user.organization_id
-        ).first()
+        # Scoped query to current user's organization (skip for developers)
+        if current_user.user_type == 'developer':
+            recipe = Recipe.query.get(recipe_id)
+        else:
+            recipe = Recipe.query.filter_by(
+                id=recipe_id,
+                organization_id=current_user.organization_id
+            ).first()
         if not recipe:
             return jsonify({"error": "Recipe not found"}), 404
 
@@ -55,11 +58,18 @@ def available_containers(recipe_id):
 
         in_stock = []
 
-        # Filter containers for this organization only
-        containers_query = InventoryItem.query.filter_by(
-            type='container',
-            organization_id=current_user.organization_id
-        )
+        # Filter containers for this organization only (skip for developers)
+        if current_user.user_type == 'developer':
+            # For developers, get containers from the recipe's organization
+            containers_query = InventoryItem.query.filter_by(
+                type='container',
+                organization_id=recipe.organization_id
+            )
+        else:
+            containers_query = InventoryItem.query.filter_by(
+                type='container',
+                organization_id=current_user.organization_id
+            )
 
         print(f"Found {containers_query.count()} containers for organization {current_user.organization_id}")
         print(f"Recipe allowed containers: {allowed_container_ids}")
@@ -104,10 +114,22 @@ def available_containers(recipe_id):
 def get_available_containers():
     """Get all available containers with stock information"""
     try:
-        containers = InventoryItem.query.filter_by(
-            type='container',
-            organization_id=current_user.organization_id
-        ).all()
+        if current_user.user_type == 'developer':
+            # For developers viewing customer data, use the selected organization
+            from flask import session
+            org_id = session.get('dev_selected_org_id')
+            if org_id:
+                containers = InventoryItem.query.filter_by(
+                    type='container',
+                    organization_id=org_id
+                ).all()
+            else:
+                containers = []
+        else:
+            containers = InventoryItem.query.filter_by(
+                type='container',
+                organization_id=current_user.organization_id
+            ).all()
 
         container_data = []
         for container in containers:
