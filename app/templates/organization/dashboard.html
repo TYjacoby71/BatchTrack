@@ -1,3 +1,4 @@
+html
 {% extends "layout.html" %}
 {% block content %}
 <div class="container-fluid">
@@ -530,6 +531,50 @@
 </div>
 
 <script>
+function organizationDashboard() {
+    return {
+        orgSettings: {
+            name: '{{ organization.name }}',
+            contact_email: '{{ organization.contact_email or "" }}',
+            timezone: '{{ organization.timezone or "America/New_York" }}',
+            default_units: '{{ organization.default_units or "imperial" }}'
+        },
+
+        async updateOrgSettings() {
+            try {
+                const response = await fetch('/organization/update-settings', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(this.orgSettings)
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    this.showToast('Organization settings updated successfully', 'success');
+                } else {
+                    this.showToast(result.error || 'Failed to update settings', 'error');
+                }
+            } catch (error) {
+                this.showToast('Error updating settings', 'error');
+                console.error('Error:', error);
+            }
+        },
+
+        showToast(message, type = 'info') {
+            // Create a simple toast notification
+            const toast = document.createElement('div');
+            toast.className = `alert alert-${type === 'error' ? 'danger' : type === 'success' ? 'success' : 'info'} position-fixed`;
+            toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+            toast.textContent = message;
+
+            document.body.appendChild(toast);
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        },
+        
 // Global functions for organization dashboard
 function getCSRFToken() {
     const tokenMeta = document.querySelector('meta[name=csrf-token]');
@@ -716,6 +761,7 @@ async function toggleUserStatus(userId) {
 
     try {
         const response = await fetch(`/organization/user/${userId}/toggle-status`, {
+```html
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -787,6 +833,7 @@ function editRole(roleId) {
 
 function viewAuditLog() {
     showMessage('Audit log functionality coming soon', 'info');
+}
 }
 </script>
 {% endblock %}

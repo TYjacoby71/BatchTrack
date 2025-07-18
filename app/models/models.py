@@ -7,6 +7,9 @@ from ..utils.timezone_utils import TimezoneUtils
 class Organization(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(128), nullable=False)
+    contact_email = db.Column(db.String(256))
+    timezone = db.Column(db.String(64), default='America/New_York')
+    default_units = db.Column(db.String(32), default='imperial')
     subscription_tier = db.Column(db.String(32), default='free')
     created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
     is_active = db.Column(db.Boolean, default=True)
