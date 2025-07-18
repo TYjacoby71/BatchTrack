@@ -1,5 +1,5 @@
-from flask import current_user
 from flask import current_app
+from flask_login import current_user
 from .timezone_utils import TimezoneUtils
 from flask import Blueprint
 from datetime import datetime, timedelta
