@@ -24,11 +24,11 @@ def upgrade():
 
     with op.batch_alter_table('role', schema=None) as batch_op:
         batch_op.create_unique_constraint('unique_role_name_org', ['name', 'organization_id'])
-        batch_op.create_foreign_key(None, 'user', ['created_by'], ['id'])
-        batch_op.create_foreign_key(None, 'organization', ['organization_id'], ['id'])
+        batch_op.create_foreign_key('fk_role_created_by', 'user', ['created_by'], ['id'])
+        batch_op.create_foreign_key('fk_role_organization_id', 'organization', ['organization_id'], ['id'])
 
     with op.batch_alter_table('user', schema=None) as batch_op:
-        batch_op.drop_constraint(None, type_='foreignkey')
+        batch_op.drop_constraint('fk_user_role_id', type_='foreignkey')
         batch_op.drop_column('role_id')
         batch_op.drop_column('is_owner')
         batch_op.drop_column('subscription_class')
@@ -56,11 +56,11 @@ def downgrade():
         batch_op.add_column(sa.Column('subscription_class', sa.VARCHAR(length=32), nullable=True))
         batch_op.add_column(sa.Column('is_owner', sa.BOOLEAN(), nullable=True))
         batch_op.add_column(sa.Column('role_id', sa.INTEGER(), nullable=False))
-        batch_op.create_foreign_key(None, 'role', ['role_id'], ['id'])
+        batch_op.create_foreign_key('fk_user_role_id', 'role', ['role_id'], ['id'])
 
     with op.batch_alter_table('role', schema=None) as batch_op:
-        batch_op.drop_constraint(None, type_='foreignkey')
-        batch_op.drop_constraint(None, type_='foreignkey')
+        batch_op.drop_constraint('fk_role_organization_id', type_='foreignkey')
+        batch_op.drop_constraint('fk_role_created_by', type_='foreignkey')
         batch_op.drop_constraint('unique_role_name_org', type_='unique')
 
     with op.batch_alter_table('organization', schema=None) as batch_op:
