@@ -190,6 +190,10 @@ def save_profile():
         current_user.last_name = data.get('last_name', '').strip()
         current_user.email = data.get('email', '').strip()
         current_user.phone = data.get('phone', '').strip() if data.get('phone') else None
+        
+        # Update timezone if provided
+        if data.get('timezone'):
+            current_user.timezone = data.get('timezone')
 
         db.session.commit()
         
@@ -200,7 +204,8 @@ def save_profile():
                 'first_name': current_user.first_name,
                 'last_name': current_user.last_name,
                 'email': current_user.email,
-                'phone': current_user.phone
+                'phone': current_user.phone,
+                'timezone': current_user.timezone
             }
         })
     except Exception as e:
