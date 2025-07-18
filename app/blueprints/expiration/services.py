@@ -323,7 +323,9 @@ class ExpirationService:
         )
 
         # Get expired product inventory
-        product_query = ProductSKUHistory.query.join(InventoryItem).filter(
+        product_query = ProductSKUHistory.query.join(
+            InventoryItem, ProductSKUHistory.inventory_item_id == InventoryItem.id
+        ).filter(
             ProductSKUHistory.expiration_date < today,
             ProductSKUHistory.remaining_quantity > 0,
             ProductSKUHistory.is_perishable == True
@@ -368,7 +370,9 @@ class ExpirationService:
         )
 
         # Get product inventory expiring soon
-        product_query = ProductSKUHistory.query.join(InventoryItem).filter(
+        product_query = ProductSKUHistory.query.join(
+            InventoryItem, ProductSKUHistory.inventory_item_id == InventoryItem.id
+        ).filter(
             ProductSKUHistory.expiration_date.between(today, cutoff_date),
             ProductSKUHistory.remaining_quantity > 0,
             ProductSKUHistory.is_perishable == True
