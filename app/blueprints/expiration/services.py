@@ -312,8 +312,35 @@ class ExpirationService:
     @staticmethod
     def get_expired_inventory_items() -> Dict:
         """Get all expired inventory items across the system"""
-        expired_fifo = ExpirationService._query_fifo_entries(expired=True)
-        expired_skus = ExpirationService._query_sku_entries(expired=True)
+        from flask_login import current_user
+        today = datetime.now().date()
+
+        # Get expired FIFO entries
+        fifo_query = InventoryHistory.query.join(InventoryItem).filter(
+            InventoryHistory.expiration_date < today,
+            InventoryHistory.remaining_quantity > 0,
+            InventoryHistory.is_perishable == True
+        )
+
+        # Get expired product inventory
+        product_query = ProductSKUHistory.query.join(InventoryItem).filter(
+            ProductSKUHistory.expiration_date < today,
+            ProductSKUHistory.remaining_quantity > 0,
+            ProductSKUHistory.is_perishable == True
+        )
+
+        # Apply organization scoping
+        if current_user and current_user.is_authenticated:
+            if current_user.organization_id:
+                fifo_query = fifo_query.filter(InventoryItem.organization_id == current_user.organization_id)
+                product_query = product_query.filter(InventoryItem.organization_id == current_user.organization_id)
+            # Developer users without organization_id see all data
+        else:
+            # If not authenticated, return empty results
+            return {'fifo_entries': [], 'product_inventory': []}
+
+        expired_fifo = fifo_query.all()
+        expired_skus = product_query.all()
 
         expired_products = []
         for sku in expired_skus:
@@ -329,8 +356,36 @@ class ExpirationService:
     @staticmethod
     def get_expiring_soon_items(days_ahead: int = 7) -> Dict:
         """Get items expiring within specified days"""
-        expiring_fifo = ExpirationService._query_fifo_entries(days_ahead=days_ahead)
-        expiring_skus = ExpirationService._query_sku_entries(days_ahead=days_ahead)
+        from flask_login import current_user
+        today = datetime.now().date()
+        cutoff_date = today + timedelta(days=days_ahead)
+
+        # Get FIFO entries expiring soon
+        fifo_query = InventoryHistory.query.join(InventoryItem).filter(
+            InventoryHistory.expiration_date.between(today, cutoff_date),
+            InventoryHistory.remaining_quantity > 0,
+            InventoryHistory.is_perishable == True
+        )
+
+        # Get product inventory expiring soon
+        product_query = ProductSKUHistory.query.join(InventoryItem).filter(
+            ProductSKUHistory.expiration_date.between(today, cutoff_date),
+            ProductSKUHistory.remaining_quantity > 0,
+            ProductSKUHistory.is_perishable == True
+        )
+
+        # Apply organization scoping
+        if current_user and current_user.is_authenticated:
+            if current_user.organization_id:
+                fifo_query = fifo_query.filter(InventoryItem.organization_id == current_user.organization_id)
+                product_query = product_query.filter(InventoryItem.organization_id == current_user.organization_id)
+            # Developer users without organization_id see all data
+        else:
+            # If not authenticated, return empty results
+            return {'fifo_entries': [], 'product_inventory': []}
+
+        expiring_fifo = fifo_query.all()
+        expiring_skus = product_query.all()
 
         expiring_products = []
         for sku in expiring_skus:

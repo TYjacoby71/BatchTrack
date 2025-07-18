@@ -37,8 +37,14 @@ class CombinedInventoryAlertService:
                 ~InventoryItem.type.in_(['product', 'product-reserved'])
             )
         )
-        if current_user and current_user.is_authenticated and current_user.organization_id:
-            query = query.filter(InventoryItem.organization_id == current_user.organization_id)
+        # Apply organization scoping
+        if current_user and current_user.is_authenticated:
+            if current_user.organization_id:
+                query = query.filter(InventoryItem.organization_id == current_user.organization_id)
+            # Developer users without organization_id see all data
+        else:
+            # If not authenticated, return empty result
+            return []
         return query.all()
 
     @staticmethod
@@ -54,8 +60,14 @@ class CombinedInventoryAlertService:
                 ProductSKU.is_active == True
             )
         )
-        if current_user and current_user.is_authenticated and current_user.organization_id:
-            query = query.filter(ProductSKU.organization_id == current_user.organization_id)
+        # Apply organization scoping
+        if current_user and current_user.is_authenticated:
+            if current_user.organization_id:
+                query = query.filter(ProductSKU.organization_id == current_user.organization_id)
+            # Developer users without organization_id see all data
+        else:
+            # If not authenticated, return empty result
+            return []
         return query.all()
 
     @staticmethod
@@ -70,8 +82,14 @@ class CombinedInventoryAlertService:
                 ProductSKU.is_active == True
             )
         )
-        if current_user and current_user.is_authenticated and current_user.organization_id:
-            query = query.filter(ProductSKU.organization_id == current_user.organization_id)
+        # Apply organization scoping
+        if current_user and current_user.is_authenticated:
+            if current_user.organization_id:
+                query = query.filter(ProductSKU.organization_id == current_user.organization_id)
+            # Developer users without organization_id see all data
+        else:
+            # If not authenticated, return empty result
+            return []
         return query.all()
 
     @staticmethod
