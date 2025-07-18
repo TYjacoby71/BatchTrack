@@ -181,10 +181,10 @@
                                         <td>
                                             {% if user.id != current_user.id %}
                                             <div class="btn-group btn-group-sm">
-                                                <button class="btn btn-outline-primary" onclick="editUser({{ user.id }})">
+                                                <button class="btn btn-outline-primary" onclick="editUser({{ user.id }})" title="Edit user details and permissions">
                                                     <i class="fas fa-edit"></i>
                                                 </button>
-                                                <button class="btn btn-outline-warning" onclick="toggleUserStatus({{ user.id }})">
+                                                <button class="btn btn-outline-warning" onclick="toggleUserStatus({{ user.id }})" title="{% if user.is_active %}Disable user account{% else %}Enable user account{% endif %}">
                                                     {% if user.is_active %}
                                                     <i class="fas fa-user-slash"></i>
                                                     {% else %}
@@ -829,6 +829,14 @@ function editRole(roleId) {
 function viewAuditLog() {
     showMessage('Audit log functionality coming soon', 'info');
 }
+
+// Initialize Bootstrap tooltips
+document.addEventListener('DOMContentLoaded', function() {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
 </script>
 {% endblock %}
 
