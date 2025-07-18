@@ -1,4 +1,3 @@
-html
 {% extends "layout.html" %}
 {% block content %}
 <div class="container-fluid">
@@ -316,13 +315,7 @@ html
                                     <label class="form-label">Contact Email</label>
                                     <input type="email" class="form-control" x-model="orgSettings.contact_email">
                                 </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Default Units</label>
-                                    <select class="form-select" x-model="orgSettings.default_units">
-                                        <option value="imperial">Imperial (oz, lb, etc.)</option>
-                                        <option value="metric">Metric (g, kg, etc.)</option>
-                                    </select>
-                                </div>
+                                
                             </div>
                         </div>
                         <button type="submit" class="btn btn-primary">
@@ -574,7 +567,7 @@ function organizationDashboard() {
                 toast.remove();
             }, 3000);
         },
-        
+
 // Global functions for organization dashboard
 function getCSRFToken() {
     const tokenMeta = document.querySelector('meta[name=csrf-token]');
@@ -761,7 +754,6 @@ async function toggleUserStatus(userId) {
 
     try {
         const response = await fetch(`/organization/user/${userId}/toggle-status`, {
-```html
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -775,7 +767,7 @@ async function toggleUserStatus(userId) {
             showMessage(result.message || 'User status updated', 'success');
             setTimeout(() => window.location.reload(), 1000);
         } else {
-            showMessage(result.error || 'Failed to update user status', 'danger');
+            showMessage(result.error ||'Failed to update user status', 'danger');
         }
     } catch (error) {
         console.error('Toggle status error:', error);
