@@ -44,17 +44,24 @@ def login():
                 flash('Username already exists')
                 return render_template('auth/login.html', form=form)
 
+            # Get email from form if provided
+            email = request.form.get('email', '').strip()
+            
             # Create organization for new user
-            new_org = Organization(name=f"{username}'s Organization")
+            new_org = Organization(
+                name=f"{username}'s Organization",
+                contact_email=email if email else None  # Set organization email to user's email
+            )
             db.session.add(new_org)
             db.session.flush()  # Get the ID
 
             # Create new user as organization owner
             new_user = User(
                 username=username,
+                email=email if email else None,  # Set user email
                 organization_id=new_org.id,
-                role='organization_owner',
-                is_owner=True  # First user in organization is always the owner
+                user_type='organization_owner',  # Use user_type instead of role
+                is_active=True
             )
             new_user.set_password(password)
             db.session.add(new_user)

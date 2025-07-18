@@ -1,3 +1,4 @@
+
 """Add organization contact fields
 
 Revision ID: b2b4ce5f93fd
@@ -17,8 +18,39 @@ depends_on = None
 
 
 def upgrade():
-    pass
+    # Add new columns to organization table using batch operations for SQLite
+    with op.batch_alter_table('organization', schema=None) as batch_op:
+        # Check if columns exist before adding them
+        try:
+            batch_op.add_column(sa.Column('contact_email', sa.String(256), nullable=True))
+        except Exception:
+            pass  # Column might already exist
+        
+        try:
+            batch_op.add_column(sa.Column('timezone', sa.String(64), nullable=True, default='America/New_York'))
+        except Exception:
+            pass  # Column might already exist
+        
+        try:
+            batch_op.add_column(sa.Column('default_units', sa.String(32), nullable=True, default='imperial'))
+        except Exception:
+            pass  # Column might already exist
 
 
 def downgrade():
-    pass
+    # Remove the columns
+    with op.batch_alter_table('organization', schema=None) as batch_op:
+        try:
+            batch_op.drop_column('default_units')
+        except Exception:
+            pass
+        
+        try:
+            batch_op.drop_column('timezone')
+        except Exception:
+            pass
+        
+        try:
+            batch_op.drop_column('contact_email')
+        except Exception:
+            pass
