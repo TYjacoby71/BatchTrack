@@ -374,4 +374,3 @@ def adjust_batch_container(batch_id, container_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'message': str(e)}), 500
-
