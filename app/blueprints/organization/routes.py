@@ -245,8 +245,11 @@ def invite_user():
         if role.name in ['developer', 'organization_owner']:
             return jsonify({'success': False, 'error': 'Cannot assign system or organization owner roles to invited users'})
 
-        # Check if organization can add more users
-        if not current_user.organization.can_add_users():
+        # Check if user should be added as inactive due to subscription limits
+        force_inactive = data.get('force_inactive', False)
+        will_be_inactive = force_inactive or not current_user.organization.can_add_users()
+        
+        if not current_user.organization.can_add_users() and not force_inactive:
             current_count = current_user.organization.active_users_count
             max_users = current_user.organization.get_max_users()
             return jsonify({
@@ -265,7 +268,7 @@ def invite_user():
         # Create new user with temporary password
         temp_password = secrets.token_urlsafe(12)
 
-        # Create new user
+        # Create new user (inactive if subscription limit reached)
         new_user = User(
             username=username,
             email=email,
@@ -274,7 +277,7 @@ def invite_user():
             phone=phone,
             role_id=role_id,
             organization_id=current_user.organization_id,
-            is_active=True,
+            is_active=not will_be_inactive,  # Inactive if subscription limit reached
             user_type='team_member',
             is_owner=False
         )
@@ -286,15 +289,20 @@ def invite_user():
         # TODO: In a real implementation, send email with login details
         # For now, we'll return the credentials directly
 
+        status_message = "User invited successfully!"
+        if will_be_inactive:
+            status_message += " User added as inactive due to subscription limits."
+            
         return jsonify({
             'success': True, 
-            'message': f'User invited successfully! Login details - Username: {username}, Temporary password: {temp_password}',
+            'message': f'{status_message} Login details - Username: {username}, Temporary password: {temp_password}',
             'user_data': {
                 'username': username,
                 'email': email,
                 'full_name': new_user.full_name,
                 'role': role.name,
-                'temp_password': temp_password  # Remove this in production
+                'temp_password': temp_password,  # Remove this in production
+                'is_active': new_user.is_active
             }
         })
 

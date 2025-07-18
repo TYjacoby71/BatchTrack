@@ -1,4 +1,3 @@
-
 // Organization Dashboard JavaScript
 function organizationDashboard() {
     return {
@@ -70,31 +69,105 @@ function showMessage(message, type = 'success') {
 }
 
 // User management functions
+function openInviteModal() {
+    // Check if organization can add more users
+    const currentUsers = parseInt(document.querySelector('[data-current-users]')?.dataset.currentUsers || '0');
+    const maxUsers = parseInt(document.querySelector('[data-max-users]')?.dataset.maxUsers || '1');
+    const subscriptionTier = document.querySelector('[data-subscription-tier]')?.dataset.subscriptionTier || 'solo';
+
+    if (currentUsers >= maxUsers && maxUsers !== Infinity) {
+        // Show warning modal about subscription limits
+        const warningHtml = `
+            <div class="modal fade" id="subscriptionLimitModal" tabindex="-1">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header bg-warning text-dark">
+                            <h5 class="modal-title">
+                                <i class="fas fa-exclamation-triangle me-2"></i>Subscription Limit Reached
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p>Your organization has reached the user limit for the <strong>${subscriptionTier}</strong> subscription tier (${currentUsers}/${maxUsers} users).</p>
+                            <p>You can still invite new users, but they will be added as <strong>inactive</strong> until you:</p>
+                            <ul>
+                                <li>Deactivate another user to free up a seat, or</li>
+                                <li>Upgrade your subscription tier</li>
+                            </ul>
+                            <p><strong>Would you like to continue with adding an inactive user?</strong></p>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-warning" onclick="proceedWithInactiveUser()">
+                                Add Inactive User
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Remove existing modal if present
+        const existingModal = document.getElementById('subscriptionLimitModal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+
+        // Add new modal to body
+        document.body.insertAdjacentHTML('beforeend', warningHtml);
+        const warningModal = new bootstrap.Modal(document.getElementById('subscriptionLimitModal'));
+        warningModal.show();
+    } else {
+        const modal = new bootstrap.Modal(document.getElementById('inviteUserModal'));
+        modal.show();
+    }
+}
+
+function proceedWithInactiveUser() {
+    // Close warning modal and open invite modal
+    const warningModal = bootstrap.Modal.getInstance(document.getElementById('subscriptionLimitModal'));
+    warningModal.hide();
+
+    // Set flag to indicate this will be an inactive user
+    document.getElementById('inviteUserModal').dataset.addAsInactive = 'true';
+
+    // Show notice in invite modal
+    const noticeHtml = `
+        <div class="alert alert-warning border-0 mb-3" id="inactiveUserNotice">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <strong>Note:</strong> This user will be added as <strong>inactive</strong> due to subscription limits.
+        </div>
+    `;
+
+    const modalBody = document.querySelector('#inviteUserModal .modal-body');
+    const existingNotice = document.getElementById('inactiveUserNotice');
+    if (existingNotice) {
+        existingNotice.remove();
+    }
+    modalBody.insertAdjacentHTML('afterbegin', noticeHtml);
+
+    const modal = new bootstrap.Modal(document.getElementById('inviteUserModal'));
+    modal.show();
+}
+
 async function inviteUser() {
-    const email = document.getElementById('inviteEmail').value;
-    const roleId = document.getElementById('inviteRole').value;
-    const firstName = document.getElementById('inviteFirstName').value;
-    const lastName = document.getElementById('inviteLastName').value;
-    const phone = document.getElementById('invitePhone').value;
-
-    if (!email || !roleId || !firstName || !lastName) {
-        showMessage('Email, role, first name, and last name are required', 'danger');
-        return;
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-        showMessage('Please enter a valid email address', 'danger');
-        return;
-    }
+    const form = document.getElementById('inviteUserForm');
+    const formData = new FormData(form);
 
     const inviteData = {
-        email: email,
-        role_id: roleId,
-        first_name: firstName,
-        last_name: lastName,
-        phone: phone
+        email: document.getElementById('inviteEmail').value.trim(),
+        first_name: document.getElementById('inviteFirstName').value.trim(),
+        last_name: document.getElementById('inviteLastName').value.trim(),
+        role_id: document.getElementById('inviteRole').value,
+        phone: document.getElementById('invitePhone').value.trim(),
+        // Check if this should be added as inactive due to subscription limits
+        force_inactive: document.getElementById('inviteUserModal').dataset.addAsInactive === 'true'
     };
+
+    if (!inviteData.email || !inviteData.first_name || !inviteData.last_name || !inviteData.role_id) {
+        showMessage('Please fill in all required fields', 'danger');
+        return;
+    }
 
     try {
         const response = await fetch('/organization/invite-user', {
@@ -109,14 +182,27 @@ async function inviteUser() {
         const result = await response.json();
 
         if (result.success) {
-            showMessage(result.message || 'User invited successfully', 'success');
+            let message = result.message || 'User invited successfully';
+            if (inviteData.force_inactive) {
+                message += ' (User added as inactive due to subscription limits)';
+            }
+            showMessage(message, 'success');
+
             const modal = bootstrap.Modal.getInstance(document.getElementById('inviteUserModal'));
             modal.hide();
             document.getElementById('inviteUserForm').reset();
 
+            // Clean up the modal state
+            delete document.getElementById('inviteUserModal').dataset.addAsInactive;
+            const inactiveNotice = document.getElementById('inactiveUserNotice');
+            if (inactiveNotice) {
+                inactiveNotice.remove();
+            }
+
             if (result.user_data && result.user_data.temp_password) {
+                const statusText = inviteData.force_inactive ? ' (Account is inactive - activate when a seat becomes available)' : '';
                 setTimeout(() => {
-                    alert(`Login Credentials:\nUsername: ${result.user_data.username}\nPassword: ${result.user_data.temp_password}\n\nPlease share these securely with the new user.`);
+                    alert(`Login Credentials:\nUsername: ${result.user_data.username}\nPassword: ${result.user_data.temp_password}${statusText}\n\nPlease share these securely with the new user.`);
                 }, 500);
             }
 
@@ -177,7 +263,7 @@ async function editUser(userId) {
             document.getElementById('editLastName').value = user.last_name || '';
             document.getElementById('editEmail').value = user.email || '';
             document.getElementById('editPhone').value = user.phone || '';
-            
+
             const userRoles = user.role_assignments || [];
             const activeRole = userRoles.find(assignment => assignment.is_active);
             document.getElementById('editRole').value = activeRole ? activeRole.role_id : '';
