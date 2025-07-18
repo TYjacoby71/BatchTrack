@@ -1,0 +1,100 @@
+
+<!-- Edit User Modal -->
+<div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="editUserModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title" id="editUserModalLabel">
+                    <i class="fas fa-user-edit me-2"></i>Edit User
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="editUserForm">
+                    <input type="hidden" id="editUserId">
+
+                    <!-- User Info Section -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-muted mb-3">User Information</h6>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="editFirstName" class="form-label fw-bold">First Name</label>
+                            <input type="text" class="form-control" id="editFirstName" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="editLastName" class="form-label fw-bold">Last Name</label>
+                            <input type="text" class="form-control" id="editLastName" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="editEmail" class="form-label fw-bold">Email</label>
+                            <input type="email" class="form-control" id="editEmail">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="editPhone" class="form-label fw-bold">Phone</label>
+                            <input type="tel" class="form-control" id="editPhone">
+                        </div>
+                    </div>
+
+                    <!-- Role & Status Section -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-muted mb-3">Role & Status</h6>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="editRole" class="form-label fw-bold">Role</label>
+                            <select class="form-select" id="editRole" required>
+                                <option value="">Select Role</option>
+                                {% for role in roles %}
+                                <option value="{{ role.id }}">{{ role.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="editStatus" class="form-label fw-bold">Status</label>
+                            <select class="form-select" id="editStatus" required>
+                                <option value="true">Active</option>
+                                <option value="false">Inactive</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Account Info -->
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <div class="alert alert-light border">
+                                <h6 class="mb-2">Account Information</h6>
+                                <p class="mb-1"><strong>Username:</strong> <span id="editUsername"></span></p>
+                                <p class="mb-1"><strong>Last Login:</strong> <span id="editLastLogin"></span></p>
+                                <p class="mb-0"><strong>Created:</strong> <span id="editCreatedAt"></span></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Danger Zone -->
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="alert alert-danger border-danger">
+                                <h6 class="text-danger mb-2">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>Danger Zone
+                                </h6>
+                                <p class="mb-3 small">Permanent actions that cannot be undone.</p>
+                                <button type="button" class="btn btn-outline-danger btn-sm" onclick="confirmDeleteUser()">
+                                    <i class="fas fa-trash me-2"></i>Delete User Permanently
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Cancel
+                </button>
+                <button type="button" class="btn btn-warning" onclick="updateUser()">
+                    <i class="fas fa-save me-2"></i>Save Changes
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

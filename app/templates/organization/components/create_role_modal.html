@@ -1,0 +1,63 @@
+
+<!-- Create Role Modal -->
+<div class="modal fade" id="createRoleModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Create New Role</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="createRoleForm">
+                    <div class="mb-3">
+                        <label for="roleName" class="form-label">Role Name</label>
+                        <input type="text" class="form-control" id="roleName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="roleDescription" class="form-label">Description</label>
+                        <textarea class="form-control" id="roleDescription" rows="2"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Permissions</label>
+                        <div class="row">
+                            {% for category, perms in permission_categories.items() %}
+                            <div class="col-md-6 mb-3">
+                                <div class="card">
+                                    <div class="card-header py-2">
+                                        <div class="form-check">
+                                            <input class="form-check-input category-checkbox" type="checkbox" 
+                                                   id="category_{{ category }}" 
+                                                   onchange="toggleCategoryPermissions('{{ category }}')">
+                                            <label class="form-check-label fw-bold" for="category_{{ category }}">
+                                                {{ category|title }}
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="card-body py-2">
+                                        {% for perm in perms %}
+                                        <div class="form-check form-check-sm">
+                                            <input class="form-check-input permission-checkbox category-{{ category }}" 
+                                                   type="checkbox" 
+                                                   value="{{ perm.id }}" 
+                                                   id="perm_{{ perm.id }}"
+                                                   onchange="updateCategoryCheckbox('{{ category }}')">
+                                            <label class="form-check-label small" for="perm_{{ perm.id }}">
+                                                {{ perm.name }}
+                                            </label>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="createRole()">Create Role</button>
+            </div>
+        </div>
+    </div>
+</div>
