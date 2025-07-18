@@ -151,28 +151,36 @@ class OrganizationStats(db.Model):
         try:
             from .models import Batch, User, InventoryItem, Product, Recipe
             
-            # Batch statistics - scoped by organization
-            batch_query = Batch.query.filter_by(organization_id=self.organization_id)
+            # Batch statistics - use direct organization_id filtering since we're not in a request context
+            # Note: We can't use Batch.scoped() here because it relies on current_user being available
+            batch_query = Batch.query.filter(Batch.organization_id == self.organization_id)
             self.total_batches = batch_query.count()
-            self.completed_batches = batch_query.filter_by(status='completed').count()
-            self.failed_batches = batch_query.filter_by(status='failed').count()
-            self.cancelled_batches = batch_query.filter_by(status='cancelled').count()
+            self.completed_batches = batch_query.filter(Batch.status == 'completed').count()
+            self.failed_batches = batch_query.filter(Batch.status == 'failed').count()
+            self.cancelled_batches = batch_query.filter(Batch.status == 'cancelled').count()
 
             # User statistics - exclude developers from organization counts
-            self.total_users = User.query.filter_by(organization_id=self.organization_id).filter(User.user_type != 'developer').count()
-            self.active_users = User.query.filter_by(organization_id=self.organization_id, is_active=True).filter(User.user_type != 'developer').count()
+            self.total_users = User.query.filter(
+                User.organization_id == self.organization_id,
+                User.user_type != 'developer'
+            ).count()
+            self.active_users = User.query.filter(
+                User.organization_id == self.organization_id,
+                User.is_active == True,
+                User.user_type != 'developer'
+            ).count()
 
             # Recipe statistics - scoped by organization
-            self.total_recipes = Recipe.query.filter_by(organization_id=self.organization_id).count()
+            self.total_recipes = Recipe.query.filter(Recipe.organization_id == self.organization_id).count()
 
             # Inventory statistics - already scoped by organization
-            self.total_inventory_items = InventoryItem.query.filter_by(organization_id=self.organization_id).count()
+            self.total_inventory_items = InventoryItem.query.filter(InventoryItem.organization_id == self.organization_id).count()
             total_value = db.session.query(func.sum(InventoryItem.quantity * InventoryItem.cost_per_unit))\
-                .filter_by(organization_id=self.organization_id).scalar()
+                .filter(InventoryItem.organization_id == self.organization_id).scalar()
             self.total_inventory_value = total_value or 0.0
 
             # Product statistics - already scoped by organization
-            self.total_products = Product.query.filter_by(organization_id=self.organization_id).count()
+            self.total_products = Product.query.filter(Product.organization_id == self.organization_id).count()
             # Note: ProductInventory calculation needs to be implemented when ProductInventory model is available
 
             self.last_updated = TimezoneUtils.utc_now()
@@ -180,6 +188,8 @@ class OrganizationStats(db.Model):
             
         except Exception as e:
             print(f"Error refreshing organization stats: {e}")
+            import traceback
+            print(f"Full traceback: {traceback.format_exc()}")
             # Set default values if refresh fails
             self.total_batches = 0
             self.completed_batches = 0
