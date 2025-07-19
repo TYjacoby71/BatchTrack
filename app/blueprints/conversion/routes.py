@@ -150,23 +150,40 @@ def manage_units():
                 flash("This custom unit already has a mapping.", "warning")
                 return redirect(url_for('conversion_bp.manage_units'))
 
-            # Calculate the conversion factor to base unit
-            # If 1 bucket = 1 gallon, and 1 gallon = 3785.41 ml, then bucket conversion_factor = 3785.41
-            base_conversion_factor = conversion_factor * comparable_unit_obj.conversion_factor
-
-            mapping = CustomUnitMapping(
-                from_unit=custom_unit,
-                to_unit=comparable_unit,
-                conversion_factor=conversion_factor,
-                notes=f"1 {custom_unit} = {conversion_factor} {comparable_unit}",
-                created_by=current_user.id if current_user.is_authenticated else None,
-                organization_id=current_user.organization_id if current_user.is_authenticated else None
-            )
-            db.session.add(mapping)
-
-            # Mark the custom unit as mapped and update its conversion factor
-            custom_unit_obj.is_mapped = True
-            custom_unit_obj.conversion_factor = base_conversion_factor
+            # For cross-type mappings (e.g., count to volume/weight), don't calculate base conversion
+            # Instead, store the direct relationship in the mapping
+            if custom_unit_obj.type != comparable_unit_obj.type:
+                # Cross-type mapping - store direct relationship only
+                mapping = CustomUnitMapping(
+                    from_unit=custom_unit,
+                    to_unit=comparable_unit,
+                    conversion_factor=conversion_factor,
+                    notes=f"1 {custom_unit} = {conversion_factor} {comparable_unit} (cross-type)",
+                    created_by=current_user.id if current_user.is_authenticated else None,
+                    organization_id=current_user.organization_id if current_user.is_authenticated else None
+                )
+                db.session.add(mapping)
+                
+                # Mark as mapped but don't set conversion_factor for cross-type
+                custom_unit_obj.is_mapped = True
+                # Leave conversion_factor as None for cross-type mappings
+            else:
+                # Same-type mapping - calculate base conversion factor
+                base_conversion_factor = conversion_factor * comparable_unit_obj.conversion_factor
+                
+                mapping = CustomUnitMapping(
+                    from_unit=custom_unit,
+                    to_unit=comparable_unit,
+                    conversion_factor=conversion_factor,
+                    notes=f"1 {custom_unit} = {conversion_factor} {comparable_unit}",
+                    created_by=current_user.id if current_user.is_authenticated else None,
+                    organization_id=current_user.organization_id if current_user.is_authenticated else None
+                )
+                db.session.add(mapping)
+                
+                # Mark as mapped and set conversion factor for same-type
+                custom_unit_obj.is_mapped = True
+                custom_unit_obj.conversion_factor = base_conversion_factor
             db.session.commit()
             flash("Custom mapping added successfully.", "success")
             return redirect(url_for('conversion_bp.manage_units'))

@@ -36,7 +36,7 @@ class ConversionEngine:
                 used_density = None
                 converted = None
 
-                # 1. Custom Mapping (including compound)
+                # 1. Custom Mapping (including compound and cross-type)
                 def find_conversion_path(start, end, visited=None):
                     if visited is None:
                         visited = set()
@@ -45,11 +45,38 @@ class ConversionEngine:
                     if start in visited:
                         return None
                     visited.add(start)
-                    mappings = CustomUnitMapping.query.filter_by(from_unit=start).all()
-                    for mapping in mappings:
+                    
+                    # Check direct mappings (both directions)
+                    forward_mappings = CustomUnitMapping.query.filter_by(from_unit=start).all()
+                    reverse_mappings = CustomUnitMapping.query.filter_by(to_unit=start).all()
+                    
+                    # Try forward mappings
+                    for mapping in forward_mappings:
+                        if mapping.to_unit == end:
+                            return [mapping]
                         path = find_conversion_path(mapping.to_unit, end, visited.copy())
                         if path is not None:
                             return [mapping] + path
+                    
+                    # Try reverse mappings (with inverted conversion factor)
+                    for mapping in reverse_mappings:
+                        if mapping.from_unit == end:
+                            # Create a reverse mapping object
+                            reverse_mapping = type('obj', (object,), {
+                                'from_unit': mapping.to_unit,
+                                'to_unit': mapping.from_unit,
+                                'conversion_factor': 1.0 / mapping.conversion_factor
+                            })()
+                            return [reverse_mapping]
+                        path = find_conversion_path(mapping.from_unit, end, visited.copy())
+                        if path is not None:
+                            reverse_mapping = type('obj', (object,), {
+                                'from_unit': mapping.to_unit,
+                                'to_unit': mapping.from_unit,
+                                'conversion_factor': 1.0 / mapping.conversion_factor
+                            })()
+                            return [reverse_mapping] + path
+                    
                     return None
 
                 conversion_path = find_conversion_path(from_unit, to_unit)

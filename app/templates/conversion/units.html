@@ -42,6 +42,29 @@
               {% endif %}
             </div>
           </td>
+          <td>
+            {% if unit.is_custom %}
+              {% if unit.is_mapped %}
+                {% set custom_mappings = mappings | selectattr('from_unit', 'equalto', unit.name) | list %}
+                {% if custom_mappings %}
+                  {% set mapping = custom_mappings[0] %}
+                  {% set from_unit_obj = units | selectattr('name', 'equalto', mapping.from_unit) | first %}
+                  {% set to_unit_obj = units | selectattr('name', 'equalto', mapping.to_unit) | first %}
+                  {% if from_unit_obj and to_unit_obj and from_unit_obj.type != to_unit_obj.type %}
+                    <span class="badge bg-info">Cross-type mapped</span>
+                  {% else %}
+                    <span class="badge bg-success">Mapped</span>
+                  {% endif %}
+                {% else %}
+                  <span class="badge bg-success">Mapped</span>
+                {% endif %}
+              {% else %}
+                <span class="badge bg-warning">Unmapped</span>
+              {% endif %}
+            {% else %}
+              <span class="badge bg-secondary">Standard</span>
+            {% endif %}
+          </td>
         </tr>
       {% endfor %}
     </tbody>
@@ -133,32 +156,60 @@
     </div>
   </form>
 
+  <!-- Current Mappings -->
+<div class="card p-3 mt-3">
+  <h4>Current Custom Mappings</h4>
   {% if mappings %}
-  <table class="table table-sm mt-3">
-    <thead>
-      <tr>
-        <th>Custom Unit</th>
-        <th>Conversion Factor to Base</th>
-        <th>Base Unit</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for mapping in mappings %}
-      <tr>
-        <td>{{ mapping.unit_name }}</td>
-        <td>{{ "%.6f"|format(mapping.conversion_factor) }}</td>
-        <td>{{ mapping.base_unit }}</td>
-        <td>
-          <form method="POST" action="{{ url_for('conversion_bp.delete_mapping', mapping_id=mapping.id) }}" style="display:inline;">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" class="btn btn-sm btn-danger">Delete</button>
-          </form>
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+    <table class="table table-sm">
+      <thead>
+        <tr>
+          <th>From Unit (Type)</th>
+          <th>To Unit (Type)</th>
+          <th>Conversion Factor</th>
+          <th>Mapping Type</th>
+          <th>Notes</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for mapping in mappings %}
+        {% set from_unit_obj = units | selectattr('name', 'equalto', mapping.from_unit) | first %}
+        {% set to_unit_obj = units | selectattr('name', 'equalto', mapping.to_unit) | first %}
+        <tr>
+          <td>
+            {{ mapping.from_unit }}
+            {% if from_unit_obj %}
+              <small class="text-muted">({{ from_unit_obj.type }})</small>
+            {% endif %}
+          </td>
+          <td>
+            {{ mapping.to_unit }}
+            {% if to_unit_obj %}
+              <small class="text-muted">({{ to_unit_obj.type }})</small>
+            {% endif %}
+          </td>
+          <td>{{ mapping.conversion_factor }}</td>
+          <td>
+            {% if from_unit_obj and to_unit_obj and from_unit_obj.type != to_unit_obj.type %}
+              <span class="badge bg-info">Cross-type</span>
+            {% else %}
+              <span class="badge bg-success">Same-type</span>
+            {% endif %}
+          </td>
+          <td>{{ mapping.notes or '-' }}</td>
+          <td>
+            <form method="POST" action="{{ url_for('conversion_bp.delete_mapping', mapping_id=mapping.id) }}" class="d-inline" onsubmit="return confirm('Are you sure?');">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="text-muted">No custom mappings defined yet.</p>
   {% endif %}
+</div>
 </div>
 {% endblock %}
