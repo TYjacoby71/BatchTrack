@@ -16,6 +16,10 @@ def list_inventory():
     show_archived = request.args.get('show_archived') == 'true'
     query = InventoryItem.query
 
+    # Add organization scoping
+    if current_user.organization_id:
+        query = query.filter_by(organization_id=current_user.organization_id)
+
     # Exclude product and product-reserved items from inventory management
     query = query.filter(~InventoryItem.type.in_(['product', 'product-reserved']))
 
@@ -80,7 +84,11 @@ def view_inventory(id):
     per_page = 5
     fifo_filter = request.args.get('fifo') == 'true'
 
-    item = InventoryItem.query.get_or_404(id)
+    # Get scoped inventory item
+    query = InventoryItem.query
+    if current_user.organization_id:
+        query = query.filter_by(organization_id=current_user.organization_id)
+    item = query.filter_by(id=id).first_or_404()
 
     # Calculate freshness and expired quantities for this item (same as list_inventory)
     from ...blueprints.expiration.services import ExpirationService

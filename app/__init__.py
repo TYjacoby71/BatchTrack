@@ -301,7 +301,7 @@ def create_app():
     # Add timezone utilities to template context
     from .utils.timezone_utils import TimezoneUtils
     app.jinja_env.globals['TimezoneUtils'] = TimezoneUtils
-    app.jinja_env.globals['current_time'] = TimezoneUtils.now
+    app.jinja_env.globals['current_time'] = TimezoneUtils.utc_now
 
     from .management import register_commands
     register_commands(app)

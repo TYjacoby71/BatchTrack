@@ -8,7 +8,6 @@ class Organization(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(128), nullable=False)
     contact_email = db.Column(db.String(256))
-    timezone = db.Column(db.String(64), default='America/New_York')
     subscription_tier = db.Column(db.String(32), default='free')
     created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
     is_active = db.Column(db.Boolean, default=True)
@@ -67,7 +66,7 @@ class User(UserMixin, db.Model):
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
     last_login = db.Column(db.DateTime, nullable=True)
-    timezone = db.Column(db.String(64), default='America/New_York')
+    timezone = db.Column(db.String(64), default='UTC')
     # role_id removed - using UserRoleAssignment table instead
 
     def set_password(self, password):

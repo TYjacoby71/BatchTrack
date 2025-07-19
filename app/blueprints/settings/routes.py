@@ -200,7 +200,7 @@ def save_profile():
         # Update timezone if provided and valid
         if data.get('timezone'):
             timezone = data.get('timezone')
-            if timezone in TimezoneUtils.get_available_timezones():
+            if TimezoneUtils.validate_timezone(timezone):
                 current_user.timezone = timezone
             else:
                 return jsonify({'error': 'Invalid timezone selected'}), 400
@@ -307,9 +307,8 @@ def bulk_update_containers():
 @login_required
 def update_timezone():
     timezone = request.form.get('timezone')
-    available_timezones = TimezoneUtils.get_available_timezones()
     
-    if timezone and timezone in available_timezones:
+    if timezone and TimezoneUtils.validate_timezone(timezone):
         current_user.timezone = timezone
         db.session.commit()
         flash('Timezone updated successfully', 'success')
@@ -387,4 +386,3 @@ def user_management():
 
 # All organization-related routes have been moved to the organization blueprint
 # Settings blueprint now focuses only on user preferences and system settings
-```
