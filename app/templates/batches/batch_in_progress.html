@@ -99,9 +99,7 @@
                 <h5 class="mb-0"><i class="fas fa-clock me-2"></i>Batch Timers</h5>
             </div>
             <div class="card-body">
-                {% with timers=timers, now=now %}
-                    {% include 'components/batch/timer_component.html' %}
-                {% endwith %}
+                {% include 'components/batch/timer_component.html' %}
             </div>
         </div>
 
