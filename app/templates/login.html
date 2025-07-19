@@ -1,131 +1,85 @@
-
 {% extends 'layout.html' %}
 
+{% block title %}Sign Up - BatchTrack{% endblock %}
+
 {% block content %}
-<div class="container-fluid vh-100 d-flex align-items-center justify-content-center bg-light">
-    <div class="row w-100 justify-content-center">
-        <div class="col-md-6 col-lg-4">
-            <div class="card shadow-lg border-0">
-                <div class="card-header bg-primary text-white text-center py-4">
-                    <h3 class="mb-0">
-                        <i class="fas fa-flask me-2"></i>
-                        BatchTrack
-                    </h3>
-                    <p class="mb-0 opacity-75">Production Management System</p>
-                </div>
-                <div class="card-body p-5">
-                    <!-- Toggle between Login and Register -->
-                    <div class="text-center mb-4">
-                        <div class="btn-group w-100" role="group">
-                            <button type="button" class="btn btn-outline-primary" id="loginTab" onclick="showLogin()">Login</button>
-                            <button type="button" class="btn btn-outline-primary" id="registerTab" onclick="showRegister()">Register</button>
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="card">
+                <div class="card-header">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <h4 class="mb-0">
+                                <i class="fas fa-user-plus"></i> 
+                                {{ current_offer.name if current_offer else "Create Account" }}
+                            </h4>
+                        </div>
+                        <div class="col-auto">
+                            {% if current_offer %}
+                            <span class="badge bg-success fs-6">
+                                {{ current_offer.days }} Days FREE
+                            </span>
+                            {% endif %}
                         </div>
                     </div>
-
-                    <!-- Login Form -->
-                    <div id="loginForm">
-                        <form method="post" action="{{ url_for('login') }}">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <input type="hidden" name="form_type" value="login">
-                            
-                            <div class="mb-3">
-                                <label for="login_username" class="form-label">
-                                    <i class="fas fa-user me-1"></i>Username
-                                </label>
-                                <input type="text" id="login_username" name="username" class="form-control form-control-lg" placeholder="Enter your username" required>
-                            </div>
-                            
-                            <div class="mb-4">
-                                <label for="login_password" class="form-label">
-                                    <i class="fas fa-lock me-1"></i>Password
-                                </label>
-                                <input type="password" id="login_password" name="password" class="form-control form-control-lg" placeholder="Enter your password" required>
-                            </div>
-                            
-                            <button type="submit" class="btn btn-primary btn-lg w-100 mb-3">
-                                <i class="fas fa-sign-in-alt me-2"></i>Login
-                            </button>
-                        </form>
-                    </div>
-
-                    <!-- Register Form -->
-                    <div id="registerForm" style="display: none;">
-                        <form method="post" action="{{ url_for('login') }}">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <input type="hidden" name="form_type" value="register">
-                            
-                            <div class="mb-3">
-                                <label for="register_username" class="form-label">
-                                    <i class="fas fa-user me-1"></i>Username
-                                </label>
-                                <input type="text" id="register_username" name="username" class="form-control form-control-lg" placeholder="Choose a username" required>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label for="register_password" class="form-label">
-                                    <i class="fas fa-lock me-1"></i>Password
-                                </label>
-                                <input type="password" id="register_password" name="password" class="form-control form-control-lg" placeholder="Choose a password" required>
-                            </div>
-                            
-                            <div class="mb-4">
-                                <label for="confirm_password" class="form-label">
-                                    <i class="fas fa-lock me-1"></i>Confirm Password
-                                </label>
-                                <input type="password" id="confirm_password" name="confirm_password" class="form-control form-control-lg" placeholder="Confirm your password" required>
-                            </div>
-                            
-                            <button type="submit" class="btn btn-success btn-lg w-100 mb-3">
-                                <i class="fas fa-user-plus me-2"></i>Create Account
-                            </button>
-                        </form>
-                    </div>
-
-                    <!-- Dev Login Button -->
-                    <div class="text-center">
-                        <a href="/dev-login" class="btn btn-outline-secondary btn-sm">
-                            <i class="fas fa-code me-1"></i>Developer Access
-                        </a>
-                    </div>
                 </div>
-                
-                <!-- Flash Messages -->
-                {% with messages = get_flashed_messages() %}
-                    {% if messages %}
-                        <div class="card-footer">
-                            {% for message in messages %}
-                                <div class="alert alert-danger mb-0">
-                                    <i class="fas fa-exclamation-triangle me-2"></i>{{ message }}
-                                </div>
-                            {% endfor %}
+                <div class="card-body">
+                    <!-- Trial Offer Banner -->
+                    {% if current_offer %}
+                    <div class="alert alert-success mb-4">
+                        <div class="row align-items-center">
+                            <div class="col">
+                                <i class="fas fa-gift me-2"></i>
+                                <strong>{{ current_offer.name }}:</strong> 
+                                {{ current_offer.days }} days of full access to all features.
+                                {% if current_offer.requires_billing %}
+                                A payment method is required but you won't be charged until your trial ends.
+                                {% endif %}
+                            </div>
                         </div>
+                    </div>
                     {% endif %}
-                {% endwith %}
-            </div>
-        </div>
-    </div>
-</div>
 
-<script>
-function showLogin() {
-    document.getElementById('loginForm').style.display = 'block';
-    document.getElementById('registerForm').style.display = 'none';
-    document.getElementById('loginTab').classList.add('btn-primary');
-    document.getElementById('loginTab').classList.remove('btn-outline-primary');
-    document.getElementById('registerTab').classList.add('btn-outline-primary');
-    document.getElementById('registerTab').classList.remove('btn-primary');
-}
+                    <form method="POST" id="signupForm">
+                        <!-- Hidden fields for tracking -->
+                        <input type="hidden" name="signup_source" value="{{ signup_source }}">
+                        {% if referral_code %}
+                        <input type="hidden" name="referral_code" value="{{ referral_code }}">
+                        {% endif %}
 
-function showRegister() {
-    document.getElementById('loginForm').style.display = 'none';
-    document.getElementById('registerForm').style.display = 'block';
-    document.getElementById('registerTab').classList.add('btn-primary');
-    document.getElementById('registerTab').classList.remove('btn-outline-primary');
-    document.getElementById('loginTab').classList.add('btn-outline-primary');
-    document.getElementById('loginTab').classList.remove('btn-primary');
-}
+                        <!-- Promo Code Section -->
+                        <div class="mb-4">
+                            <div class="row align-items-end">
+                                <div class="col-md-8">
+                                    <label for="promo_code" class="form-label">Promo Code (Optional)</label>
+                                    <input type="text" class="form-control" id="promo_code" name="promo_code" 
+                                           value="{{ promo_code or (form_data.promo_code if form_data else '') }}"
+                                           placeholder="Enter promo code for additional savings">
+                                </div>
+                                <div class="col-md-4">
+                                    <button type="button" class="btn btn-outline-primary" onclick="validatePromoCode()">
+                                        Apply Code
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="promoMessage" class="mt-2"></div>
+                        </div>
 
-// Initialize with login form showing
-showLogin();
-</script>
-{% endblock %}
+                        <div class="row">
+                            <!-- Left Column - Organization & Account -->
+                            <div class="col-md-6">
+                                <div class="mb-4">
+                                    <h5 class="text-muted">Organization Details</h5>
+                                    <div class="mb-3">
+                                        <label for="org_name" class="form-label">Organization Name *</label>
+                                        <input type="text" class="form-control" id="org_name" name="org_name" required 
+                                               value="{{ form_data.org_name if form_data else '' }}"
+                                               placeholder="Your Company Name">
+                                    </div>
+                                </div>
+
+                                <hr class="my-4">
+                                <h5 class="text-muted">Your Account Details</h5>
+
+                                <div class="mb-3">
