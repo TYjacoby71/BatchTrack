@@ -135,9 +135,9 @@ class ConversionEngine:
                             converted *= mapping.conversion_factor
                         conversion_type = 'custom_cross_type'
                     else:
-                        raise ValueError(f"Cannot convert {from_u.type} to {to_u.type} without a custom mapping")
+                        raise ValueError(f"Cannot convert {from_unit} ({from_u.type}) to {to_unit} ({to_u.type}) without a custom mapping. Go to Unit Manager to create a mapping.")
                 else:
-                    raise ValueError(f"Cannot convert {from_u.type} to {to_u.type} without a custom mapping")
+                    raise ValueError(f"Cannot convert {from_unit} ({from_u.type}) to {to_unit} ({to_u.type}) without a custom mapping. Go to Unit Manager to create a mapping.")
 
                 # Log it only if user is authenticated and has organization
                 if current_user and current_user.is_authenticated and current_user.organization_id:
