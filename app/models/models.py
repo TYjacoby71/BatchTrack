@@ -12,15 +12,12 @@ class Organization(db.Model):
     created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
     is_active = db.Column(db.Boolean, default=True)
     
-    # Trial and billing information
-    trial_end_date = db.Column(db.DateTime, nullable=True)
+    # Basic signup tracking (keep these for analytics)
     signup_source = db.Column(db.String(64), nullable=True)  # homepage_trial, webinar, etc.
     promo_code = db.Column(db.String(32), nullable=True)
     referral_code = db.Column(db.String(32), nullable=True)
-    billing_info = db.Column(db.JSON, nullable=True)  # Encrypted billing details
-    stripe_customer_id = db.Column(db.String(128), nullable=True)  # For payment processing
-    subscription_status = db.Column(db.String(32), default='trial')  # trial, active, past_due, cancelled
-    next_billing_date = db.Column(db.DateTime, nullable=True)
+    
+    # Move billing to separate Subscription model for flexibility
     
     users = db.relationship('User', backref='organization')
 
@@ -37,12 +34,13 @@ class Organization(db.Model):
     def can_add_users(self):
         """Check if organization can add more active users based on subscription (excluding developers)"""
         active_non_dev_users = len([u for u in self.users if u.is_active and u.user_type != 'developer'])
-        if self.subscription_tier == 'solo':
+        effective_tier = self.effective_subscription_tier
+        if effective_tier == 'solo':
             return active_non_dev_users < 1  # Solo only
-        elif self.subscription_tier == 'team':
+        elif effective_tier == 'team':
             return active_non_dev_users < 10  # Up to 10 active users
-        elif self.subscription_tier == 'enterprise':
-            return True  # Unlimited active users for enterprise
+        elif effective_tier in ['enterprise', 'exempt']:
+            return True  # Unlimited active users for enterprise/exempt
         else:
             return active_non_dev_users < 1  # Default to solo limits
 
@@ -51,18 +49,37 @@ class Organization(db.Model):
         tier_limits = {
             'solo': 1,
             'team': 10,
-            'enterprise': float('inf')
+            'enterprise': float('inf'),
+            'exempt': float('inf')
         }
-        return tier_limits.get(self.subscription_tier, 1)
+        effective_tier = self.effective_subscription_tier
+        return tier_limits.get(effective_tier, 1)
+
+    @property
+    def effective_subscription_tier(self):
+        """Get the effective subscription tier (from subscription or fallback to organization tier)"""
+        # Try to get from subscription model first
+        try:
+            from .subscription import Subscription
+            subscription = Subscription.query.filter_by(organization_id=self.id).first()
+            if subscription and subscription.status == 'active':
+                return subscription.tier
+        except (ImportError, AttributeError):
+            pass
+        
+        # Fallback to organization subscription_tier
+        return self.subscription_tier or 'free'
 
     def get_subscription_features(self):
         """Get features available for subscription tier"""
         features = {
             'solo': ['basic_production', 'inventory_tracking', 'recipe_management'],
             'team': ['basic_production', 'inventory_tracking', 'recipe_management', 'user_management', 'advanced_alerts', 'batch_tracking'],
-            'enterprise': ['all_features', 'api_access', 'custom_integrations', 'priority_support']
+            'enterprise': ['all_features', 'api_access', 'custom_integrations', 'priority_support'],
+            'exempt': ['all_features', 'api_access', 'custom_integrations', 'priority_support', 'exempt_access']
         }
-        return features.get(self.subscription_tier, features['solo'])
+        effective_tier = self.effective_subscription_tier
+        return features.get(effective_tier, features['solo'])
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
