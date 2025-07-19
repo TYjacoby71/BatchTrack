@@ -3,6 +3,9 @@ import logging
 from logging.handlers import RotatingFileHandler
 import os
 
+# Set up logger for this module
+logger = logging.getLogger(__name__)
+
 def setup_logging(app):
     if not os.path.exists('logs'):
         os.makedirs('logs')
@@ -17,35 +20,68 @@ def setup_logging(app):
     app.logger.info('BatchTrack startup')
 
 def get_global_unit_list():
-    """Get comprehensive list of all units in system
+    """Get list of all active units, including both standard and organization-specific custom units"""
+    logger.info("Getting global unit list")
 
-    Returns list of unit names for use in templates and forms.
-    Includes both standard units and custom organization units.
-    """
     try:
         from flask_login import current_user
         from ..models import Unit
 
-        # Build query for units user can access
+        # Base query for active units
         query = Unit.query.filter_by(is_active=True)
 
-        if current_user and current_user.is_authenticated and current_user.organization_id:
-            # Show standard units + organization's custom units
-            query = query.filter(
-                (Unit.is_custom == False) | 
-                (Unit.organization_id == current_user.organization_id)
-            )
+        # If user is authenticated, include their organization's custom units
+        if current_user and current_user.is_authenticated:
+            if current_user.organization_id:
+                # Regular user: show standard units + their org's custom units
+                query = query.filter(
+                    (Unit.is_custom == False) | 
+                    (Unit.organization_id == current_user.organization_id)
+                )
+            elif current_user.user_type == 'developer':
+                # Developer: check for selected organization
+                from flask import session
+                selected_org_id = session.get('dev_selected_org_id')
+                if selected_org_id:
+                    query = query.filter(
+                        (Unit.is_custom == False) | 
+                        (Unit.organization_id == selected_org_id)
+                    )
+                # Otherwise show all units for system-wide developer access
+            else:
+                # User without organization: only show standard units
+                query = query.filter(Unit.is_custom == False)
         else:
-            # Only show standard units for unauthenticated users
-            query = query.filter_by(is_custom=False)
+            # Unauthenticated: only show standard units
+            query = query.filter(Unit.is_custom == False)
 
-        units = query.all()
-        return [unit.name for unit in units]
+        # Order by type and name for consistent display
+        units = query.order_by(Unit.type, Unit.name).all()
+
+        if not units:
+            logger.warning("No units found, creating fallback units")
+            # Create fallback units if none exist
+            fallback_units = [
+                FallbackUnit('oz', 'oz', 'weight'),
+                FallbackUnit('g', 'g', 'weight'),
+                FallbackUnit('lb', 'lb', 'weight'),
+                FallbackUnit('ml', 'ml', 'volume'),
+                FallbackUnit('fl oz', 'fl oz', 'volume'),
+                FallbackUnit('count', 'count', 'count')
+            ]
+            return fallback_units
+
+        return units
 
     except Exception as e:
-        current_app.logger.error(f"Error getting unit list: {str(e)}")
-        # Return basic fallback units
-        return ['g', 'kg', 'oz', 'lb', 'ml', 'l', 'fl oz', 'cup', 'tsp', 'tbsp', 'count']
+        logger.error(f"Error getting global unit list: {e}")
+        # Return fallback units on error
+        return [
+            FallbackUnit('oz', 'oz', 'weight'),
+            FallbackUnit('g', 'g', 'weight'),
+            FallbackUnit('count', 'count', 'count')
+        ]
+
 def validate_density_requirements(from_unit, to_unit, ingredient=None):
     """
     Validates density requirements for unit conversions

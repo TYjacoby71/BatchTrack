@@ -20,7 +20,20 @@ def archive_zeroed_inventory():
     """Archive all inventory entries with zero quantity"""
     try:
         from ...models import InventoryItem
-        zero_rows = InventoryItem.query.filter(InventoryItem.quantity <= 0).all()
+        from flask_login import current_user
+        
+        # Apply organization scoping
+        query = InventoryItem.query.filter(InventoryItem.quantity <= 0)
+        if current_user.is_authenticated and current_user.organization_id:
+            query = query.filter(InventoryItem.organization_id == current_user.organization_id)
+        elif current_user.user_type == 'developer':
+            # Developers can clean up system-wide or selected org
+            from flask import session
+            selected_org_id = session.get('dev_selected_org_id')
+            if selected_org_id:
+                query = query.filter(InventoryItem.organization_id == selected_org_id)
+        
+        zero_rows = query.all()
         count = len(zero_rows)
         for row in zero_rows:
             db.session.delete(row)

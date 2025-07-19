@@ -84,15 +84,27 @@ def new_recipe():
             flash('An unexpected error occurred', 'error')
             db.session.rollback()
 
+    # Get scoped ingredients
+    ingredients_query = InventoryItem.query.order_by(InventoryItem.name)
+    if current_user.organization_id:
+        ingredients_query = ingredients_query.filter_by(organization_id=current_user.organization_id)
+    all_ingredients = ingredients_query.all()
+
     # Get all units for dropdowns
     units = Unit.query.filter_by(is_active=True).order_by(Unit.type, Unit.name).all()
     inventory_units = get_global_unit_list()
-    return render_template('recipe_form.html', recipe=None, all_ingredients=InventoryItem.query.all(), inventory_units=inventory_units, units=units)
+    return render_template('recipe_form.html', recipe=None, all_ingredients=all_ingredients, inventory_units=inventory_units, units=units)
 
 @recipes_bp.route('/')
 @login_required
 def list_recipes():
-    recipes = Recipe.query.filter_by(parent_id=None).all()
+    query = Recipe.query.filter_by(parent_id=None)
+    
+    # Apply organization scoping
+    if current_user.organization_id:
+        query = query.filter_by(organization_id=current_user.organization_id)
+    
+    recipes = query.all()
     inventory_units = get_global_unit_list()
     return render_template('recipe_list.html', recipes=recipes, inventory_units=inventory_units)
 
@@ -100,7 +112,13 @@ def list_recipes():
 @login_required
 def view_recipe(recipe_id):
     try:
-        recipe = Recipe.query.get_or_404(recipe_id)
+        query = Recipe.query.filter_by(id=recipe_id)
+        
+        # Apply organization scoping
+        if current_user.organization_id:
+            query = query.filter_by(organization_id=current_user.organization_id)
+            
+        recipe = query.first_or_404()
         inventory_units = get_global_unit_list()
         if not inventory_units:
             flash("Warning: No units found in system", "warning")
@@ -342,12 +360,18 @@ def clone_recipe(recipe_id):
             allowed_containers=original.allowed_containers.copy() if original.allowed_containers else []
         )
 
+        # Get scoped ingredients  
+        ingredients_query = InventoryItem.query.order_by(InventoryItem.name)
+        if current_user.organization_id:
+            ingredients_query = ingredients_query.filter_by(organization_id=current_user.organization_id)
+        all_ingredients = ingredients_query.all()
+
         # Get all units for dropdowns
         units = Unit.query.filter_by(is_active=True).order_by(Unit.type, Unit.name).all()
 
         return render_template('recipe_form.html',
                             recipe=new_recipe,
-                            all_ingredients=InventoryItem.query.all(),
+                            all_ingredients=all_ingredients,
                             is_clone=True,
                             ingredient_prefill=ingredients,
                             inventory_units=get_global_unit_list(),
@@ -411,7 +435,12 @@ def edit_recipe(recipe_id):
     from ...models import Batch
     existing_batches = Batch.query.filter_by(recipe_id=recipe.id).count()
 
-    all_ingredients = InventoryItem.query.order_by(InventoryItem.name).all()
+    # Get scoped ingredients
+    ingredients_query = InventoryItem.query.order_by(InventoryItem.name)
+    if current_user.organization_id:
+        ingredients_query = ingredients_query.filter_by(organization_id=current_user.organization_id)
+    all_ingredients = ingredients_query.all()
+    
     inventory_units = get_global_unit_list()
     # Get all units for dropdowns
     units = Unit.query.filter_by(is_active=True).order_by(Unit.type, Unit.name).all()
