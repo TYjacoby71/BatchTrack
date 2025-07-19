@@ -120,7 +120,12 @@
             {% endfor %}
           {% else %}
             <tr>
-              <td colspan="5" class="text-center text-muted">No timers found for this batch</td>
+              <td colspan="5" class="text-center text-muted">
+                No timers found for this batch
+                {% if batch %}
+                  <small class="d-block text-muted">Batch ID: {{ batch.id }}, Org: {{ batch.organization_id }}</small>
+                {% endif %}
+              </td>
             </tr>
           {% endif %}
         </tbody>

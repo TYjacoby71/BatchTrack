@@ -12,22 +12,19 @@ class TimerService:
     def create_timer(batch_id: int, duration_seconds: int, description: str = None) -> BatchTimer:
         """Create a new timer for a batch"""
         try:
+            # Get organization from the batch first
+            batch = Batch.query.get(batch_id)
+            if not batch:
+                raise ValueError("Batch not found")
+                
             timer = BatchTimer(
                 batch_id=batch_id,
                 start_time=TimezoneUtils.utc_now(),
                 duration_seconds=duration_seconds,
                 status='active',
-                name=description or "Timer"
+                name=description or "Timer",
+                organization_id=batch.organization_id  # Always use batch's organization
             )
-            
-            # Set organization if user is authenticated
-            if current_user and current_user.is_authenticated:
-                timer.organization_id = current_user.organization_id
-            else:
-                # Get organization from the batch
-                batch = Batch.query.get(batch_id)
-                if batch and batch.organization_id:
-                    timer.organization_id = batch.organization_id
                 
             db.session.add(timer)
             db.session.commit()
