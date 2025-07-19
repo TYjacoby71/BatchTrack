@@ -315,6 +315,21 @@ def view_batch_in_progress(batch_identifier):
                     'original_used': container_usage.quantity_used or 0
                 })
 
+    # Get timers for this batch with organization scoping
+    from ..models import BatchTimer
+    from datetime import timedelta
+    from ..utils.timezone_utils import TimezoneUtils
+    
+    timers_query = BatchTimer.query.filter_by(batch_id=batch.id)
+    if current_user.organization_id:
+        timers_query = timers_query.filter_by(organization_id=current_user.organization_id)
+    
+    timers = timers_query.all()
+    now = TimezoneUtils.utc_now()
+    
+    # Check for active timers
+    has_active_timers = any(timer.status == 'active' for timer in timers)
+
     return render_template('batches/batch_in_progress.html',
                          batch=batch,
                          units=units,
@@ -325,7 +340,11 @@ def view_batch_in_progress(batch_identifier):
                          products=products,
                          container_breakdown=container_breakdown,
                          prev_batch=prev_batch,
-                         next_batch=next_batch)
+                         next_batch=next_batch,
+                         timers=timers,
+                         now=now,
+                         has_active_timers=has_active_timers,
+                         timedelta=timedelta)
 
 batches_bp.register_blueprint(start_batch_bp, url_prefix='/batches')
 batches_bp.register_blueprint(cancel_batch_bp, url_prefix='/batches')
