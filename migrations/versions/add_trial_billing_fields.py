@@ -11,8 +11,8 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import sqlite
 
 # revision identifiers, used by Alembic.
-revision = 'add_trial_billing'
-down_revision = 'b2b4ce5f93fd'  # Replace with your latest migration
+revision = 'add_trial_billing_fields'
+down_revision = 'b2b4ce5f93fd'
 branch_labels = None
 depends_on = None
 
