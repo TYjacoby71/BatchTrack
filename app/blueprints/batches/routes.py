@@ -319,12 +319,17 @@ def view_batch_in_progress(batch_identifier):
     from datetime import timedelta
     from ...utils.timezone_utils import TimezoneUtils
     
-    timers_query = BatchTimer.query.filter_by(batch_id=batch.id)
-    if current_user.organization_id:
-        timers_query = timers_query.filter_by(organization_id=current_user.organization_id)
+    # Query timers - match batch organization, not user organization
+    timers_query = BatchTimer.query.filter_by(batch_id=batch.id, organization_id=batch.organization_id)
     
     timers = timers_query.all()
     now = TimezoneUtils.utc_now()
+    
+    # Debug: Log timer data
+    print(f"DEBUG: Found {len(timers)} timers for batch {batch.id} (org: {batch.organization_id})")
+    print(f"DEBUG: User org: {current_user.organization_id if current_user.is_authenticated else 'None'}")
+    for timer in timers:
+        print(f"DEBUG: Timer {timer.id}: name='{timer.name}', status='{timer.status}', duration={timer.duration_seconds}s, org={timer.organization_id}")
     
     # Check for active timers
     has_active_timers = any(timer.status == 'active' for timer in timers)

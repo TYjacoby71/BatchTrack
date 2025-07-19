@@ -71,51 +71,63 @@
           </tr>
         </thead>
         <tbody>
-          {% for timer in timers %}
-          {% if timer.batch_id == batch.id and timer.status in ['active', 'completed'] %}
-          <tr>
-            <td>{{ timer.name }}</td>
-            <td>{{ timer.duration_seconds // 60 }}m {{ timer.duration_seconds % 60 }}s</td>
-            <td>
-              {% if timer.start_time %}
-                {% if timer.status == 'completed' %}
-                  {% if timer.end_time and (timer.end_time - timer.start_time).total_seconds() < timer.duration_seconds %}
-                    User Ended
+          {% if timers %}
+            {% for timer in timers %}
+            <tr>
+              <td>{{ timer.name or 'Timer' }}</td>
+              <td>{{ (timer.duration_seconds // 60) }}:{{ '%02d'|format(timer.duration_seconds % 60) }}</td>
+              <td>
+                {% if timer.start_time %}
+                  {% if timer.status == 'completed' %}
+                    {% if timer.end_time and (timer.end_time - timer.start_time).total_seconds() < timer.duration_seconds %}
+                      User Ended
+                    {% else %}
+                      Expired
+                    {% endif %}
                   {% else %}
-                    Expired
+                    {% set remaining_seconds = ((timer.start_time + timedelta(seconds=timer.duration_seconds)) - now).total_seconds()|int %}
+                    {% if remaining_seconds <= 0 %}
+                      Expired
+                    {% else %}
+                      {{ (remaining_seconds // 60) }}:{{ '%02d'|format(remaining_seconds % 60) }}
+                    {% endif %}
                   {% endif %}
                 {% else %}
-                  {{ ((timer.start_time + timedelta(seconds=timer.duration_seconds)) - now).total_seconds()|int }}s
+                  Not Started
                 {% endif %}
-              {% else %}
-                Not Started
-              {% endif %}
-            </td>
-            <td>
-              {% if timer.status == 'active' %}
-                {% set remaining_seconds = ((timer.start_time + timedelta(seconds=timer.duration_seconds)) - now).total_seconds()|int %}
-                {% if remaining_seconds <= 0 %}
-                  <span class="badge bg-danger">Expired</span>
+              </td>
+              <td>
+                {% if timer.status == 'active' %}
+                  {% set remaining_seconds = ((timer.start_time + timedelta(seconds=timer.duration_seconds)) - now).total_seconds()|int %}
+                  {% if remaining_seconds <= 0 %}
+                    <span class="badge bg-danger">Expired</span>
+                  {% else %}
+                    <span class="badge bg-success">Active</span>
+                  {% endif %}
+                {% elif timer.status == 'completed' %}
+                  <span class="badge bg-secondary">Completed</span>
                 {% else %}
-                  <span class="badge bg-success">Active</span>
+                  <span class="badge bg-warning">{{ timer.status|title }}</span>
                 {% endif %}
-              {% elif timer.status == 'completed' %}
-                <span class="badge bg-secondary">Completed</span>
-              {% elif timer.status == 'paused' %}
-                <span class="badge bg-warning">Paused</span>
-              {% elif timer.status == 'expired' %}
-                <span class="badge bg-danger">Expired</span>
-              {% endif %}
-            </td>
-            <td>
-              {% if timer.status == 'active' %}
-                <button class="btn btn-sm btn-success" onclick="completeTimer({{ timer.id }})">Complete</button>
-              {% endif %}
-              <button class="btn btn-sm btn-danger" onclick="deleteTimer({{ timer.id }})">Delete</button>
-            </td>
-          </tr>
+              </td>
+              <td>
+                {% if timer.status == 'active' %}
+                  <button class="btn btn-sm btn-success me-1" onclick="completeTimer({{ timer.id }})">Complete</button>
+                {% endif %}
+                <button class="btn btn-sm btn-danger" onclick="deleteTimer({{ timer.id }})">Delete</button>
+              </td>
+            </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="5" class="text-center text-muted">
+                No timers found for this batch
+                {% if batch %}
+                  <small class="d-block text-muted">Batch ID: {{ batch.id }}, Org: {{ batch.organization_id }}</small>
+                {% endif %}
+              </td>
+            </tr>
           {% endif %}
-          {% endfor %}
         </tbody>
       </table>
     </div>
