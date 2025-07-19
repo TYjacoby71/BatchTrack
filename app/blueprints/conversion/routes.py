@@ -129,9 +129,19 @@ def manage_units():
                 flash("Only custom units can be mapped.", "danger")
                 return redirect(url_for('conversion_bp.manage_units'))
 
+            # Allow cross-type mapping only for specific cases
             if custom_unit_obj.type != comparable_unit_obj.type:
-                flash("Units must be the same type.", "danger")
-                return redirect(url_for('conversion_bp.manage_units'))
+                # Allow volume ↔ weight with density
+                if {'volume', 'weight'} <= {custom_unit_obj.type, comparable_unit_obj.type}:
+                    pass  # This is allowed
+                # Allow count ↔ volume/weight for custom units (user-defined relationships)
+                elif custom_unit_obj.type == 'count' and comparable_unit_obj.type in ['volume', 'weight']:
+                    pass  # This is allowed - user knows their apple size
+                elif comparable_unit_obj.type == 'count' and custom_unit_obj.type in ['volume', 'weight']:
+                    pass  # This is allowed - reverse direction
+                else:
+                    flash("This type of unit conversion is not supported.", "danger")
+                    return redirect(url_for('conversion_bp.manage_units'))
 
             existing = CustomUnitMapping.query.filter_by(
                 unit_name=custom_unit
