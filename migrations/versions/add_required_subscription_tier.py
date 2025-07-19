@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = 'add_required_subscription_tier'
-down_revision = 'fix_developer_users'
+down_revision = 'add_organization_settings_fields'
 branch_labels = None
 depends_on = None
 
