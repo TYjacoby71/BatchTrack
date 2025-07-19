@@ -2,7 +2,7 @@
 {% block content %}
 
 <div class="text-center mb-4">
-  <h2>Hi {{ current_user.username or 'there' }}, what do you want to do?</h2>
+  <h2>Hi {{ current_user.first_name or current_user.username or 'there' }}, what do you want to do?</h2>
 </div>
 
 <div class="text-center mb-4">
