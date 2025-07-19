@@ -75,6 +75,7 @@
                                         <th>Expires Time</th>
                                         <th>ID</th>
                                         <th>Days Left</th>
+                                        <th>Action</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -91,6 +92,11 @@
                                             <span class="badge bg-danger">
                                                 EXPIRED
                                             </span>
+                                        </td>
+                                        <td>
+                                            <button class="btn btn-outline-danger btn-sm" onclick="markAsExpired('fifo', {{ item.fifo_id }})">
+                                                <i class="fas fa-clock"></i> Mark Expired
+                                            </button>
                                         </td>
                                     </tr>
                                     {% endif %}
@@ -211,6 +217,7 @@
                                         <th>Expires Time</th>
                                         <th>ID</th>
                                         <th>Days Left</th>
+                                        <th>Action</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -219,9 +226,8 @@
                                     <tr>
                                         <td>
                                             <strong>{{ item.product_name }}</strong>
-                                            <br><small class="text-muted">{{ item.variant_name }} - {{ item.size_label }}</small>
                                         </td>
-                                        <td><strong>{{ item.quantity }} {{ item.unit }}</strong></td>
+                                        <td>{{ item.quantity }} {{ item.unit }}</td>
                                         <td>
                                             {% if item.lot_number %}
                                                 <a href="{{ url_for('sku.view_sku', inventory_item_id=item.inventory_item_id) }}" class="text-decoration-none">
@@ -238,6 +244,11 @@
                                             <span class="badge bg-danger">
                                                 EXPIRED
                                             </span>
+                                        </td>
+                                        <td>
+                                            <button class="btn btn-outline-danger btn-sm" onclick="markAsExpired('product', {{ item.product_inv_id }})">
+                                                <i class="fas fa-clock"></i> Mark Expired
+                                            </button>
                                         </td>
                                     </tr>
                                     {% endif %}
