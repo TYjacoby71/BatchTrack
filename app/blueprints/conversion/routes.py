@@ -155,9 +155,11 @@ def manage_units():
             base_conversion_factor = conversion_factor * comparable_unit_obj.conversion_factor
 
             mapping = CustomUnitMapping(
-                unit_name=custom_unit,
-                conversion_factor=base_conversion_factor,
-                base_unit=custom_unit_obj.base_unit
+                from_unit=custom_unit,
+                to_unit=comparable_unit,
+                multiplier=conversion_factor,
+                notes=f"1 {custom_unit} = {conversion_factor} {comparable_unit}",
+                created_by=current_user.id if current_user.is_authenticated else None
             )
             db.session.add(mapping)
 
