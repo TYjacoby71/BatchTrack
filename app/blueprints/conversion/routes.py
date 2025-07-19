@@ -144,7 +144,7 @@ def manage_units():
                     return redirect(url_for('conversion_bp.manage_units'))
 
             existing = CustomUnitMapping.query.filter_by(
-                unit_name=custom_unit
+                from_unit=custom_unit
             ).first()
             if existing:
                 flash("This custom unit already has a mapping.", "warning")
