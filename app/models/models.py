@@ -8,9 +8,20 @@ class Organization(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(128), nullable=False)
     contact_email = db.Column(db.String(256))
-    subscription_tier = db.Column(db.String(32), default='free')
+    subscription_tier = db.Column(db.String(32), default='free')  # free, trial, solo, team, enterprise
     created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
     is_active = db.Column(db.Boolean, default=True)
+    
+    # Trial and billing information
+    trial_end_date = db.Column(db.DateTime, nullable=True)
+    signup_source = db.Column(db.String(64), nullable=True)  # homepage_trial, webinar, etc.
+    promo_code = db.Column(db.String(32), nullable=True)
+    referral_code = db.Column(db.String(32), nullable=True)
+    billing_info = db.Column(db.JSON, nullable=True)  # Encrypted billing details
+    stripe_customer_id = db.Column(db.String(128), nullable=True)  # For payment processing
+    subscription_status = db.Column(db.String(32), default='trial')  # trial, active, past_due, cancelled
+    next_billing_date = db.Column(db.DateTime, nullable=True)
+    
     users = db.relationship('User', backref='organization')
 
     @property
