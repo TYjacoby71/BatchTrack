@@ -327,5 +327,15 @@ def create_app():
                 # Only redirect if we're not already on an HTTPS URL
                 if request.url.startswith('http://'):
                     return redirect(request.url.replace('http://', 'https://'), code=301)
+    
+    # Add security headers for HTTPS
+    @app.after_request
+    def add_security_headers(response):
+        if os.environ.get('REPLIT_DEPLOYMENT') == 'true':
+            response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+            response.headers['X-Content-Type-Options'] = 'nosniff'
+            response.headers['X-Frame-Options'] = 'DENY'
+            response.headers['X-XSS-Protection'] = '1; mode=block'
+        return response
 
     return app
