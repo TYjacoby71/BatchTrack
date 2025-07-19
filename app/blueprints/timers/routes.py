@@ -19,7 +19,7 @@ def list_timers():
         query = query.filter(Batch.organization_id == current_user.organization_id)
     active_batches = query.all()
 
-    return render_template('timers/timer_list.html', 
+    return render_template('timer_list.html', 
                          timer_summary=timer_summary,
                          active_timers=active_timers,
                          timers=active_timers,  # For template compatibility
