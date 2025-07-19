@@ -303,7 +303,7 @@
                                     <label class="form-label">Organization Name</label>
                                     <input type="text" class="form-control" x-model="orgSettings.name" required>
                                 </div>
-                                
+
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
@@ -355,6 +355,36 @@
         </div>
     </div>
 </div>
+<div class="container-fluid">
+    <!-- Header Card -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="mb-2"><i class="fas fa-crown text-warning"></i> Organization Dashboard</h2>
+                    <p class="text-muted mb-0">Administrative control for {{ current_user.organization.name }}</p>
+                </div>
+                
+                <div class="metric-item">
+                            <span class="metric-value">{{ current_user.organization.effective_subscription_tier.title() }}</span>
+                            <span class="metric-label">Plan</span>
+                        </div>
+                    </div>
+                    {% if has_permission(current_user, 'manage_billing') %}
+                    <div class="billing-actions" style="margin-top: 15px;">
+                        <a href="{{ url_for('billing.upgrade') }}" class="btn btn-primary btn-sm">
+                            {% if current_user.organization.effective_subscription_tier == 'free' %}
+                                Upgrade Plan
+                            {% else %}
+                                Manage Billing
+                            {% endif %}
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
 
 <!-- Include Modal Components -->
 {% include 'organization/components/invite_user_modal.html' %}

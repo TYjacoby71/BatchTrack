@@ -1,6 +1,6 @@
 
 import stripe
-from flask import render_template, request, jsonify, redirect, url_for, flash
+from flask import render_template, request, jsonify, redirect, url_for, flash, current_app
 from flask_login import login_required, current_user
 from . import billing_bp
 from ...services.stripe_service import StripeService
