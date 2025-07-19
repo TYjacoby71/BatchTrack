@@ -23,7 +23,7 @@ def list_timers():
                          timer_summary=timer_summary,
                          active_timers=active_timers,
                          timers=active_timers,  # For template compatibility
-                         active_batches=[{'id': b.id, 'recipe_name': b.recipe_name} for b in active_batches])
+                         active_batches=[{'id': b.id, 'recipe_name': getattr(b.recipe, 'name', 'Unknown Recipe')} for b in active_batches])
 
 @timers_bp.route('/api/create-timer', methods=['POST'])
 @timers_bp.route('/create', methods=['POST'])

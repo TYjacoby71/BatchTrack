@@ -176,7 +176,13 @@ def create_variation(recipe_id):
                 flash('Label prefix is required and cannot be empty.', 'error')
                 # Get all units for dropdowns
                 units = Unit.query.filter_by(is_active=True).order_by(Unit.type, Unit.name).all()
-                all_ingredients = InventoryItem.query.order_by(InventoryItem.name).all()
+                
+                # Get scoped ingredients
+                ingredients_query = InventoryItem.query.order_by(InventoryItem.name)
+                if current_user.organization_id:
+                    ingredients_query = ingredients_query.filter_by(organization_id=current_user.organization_id)
+                all_ingredients = ingredients_query.all()
+
                 inventory_units = get_global_unit_list()
                 return render_template('recipe_form.html',
                                      recipe=new_variation,
@@ -195,7 +201,12 @@ def create_variation(recipe_id):
                 flash(f'Label prefix "{label_prefix}" is already used by recipe "{existing_recipe.name}". Please choose a different prefix.', 'error')
                 # Get all units for dropdowns
                 units = Unit.query.filter_by(is_active=True).order_by(Unit.type, Unit.name).all()
-                all_ingredients = InventoryItem.query.order_by(InventoryItem.name).all()
+                # Get scoped ingredients
+                ingredients_query = InventoryItem.query.order_by(InventoryItem.name)
+                if current_user.organization_id:
+                    ingredients_query = ingredients_query.filter_by(organization_id=current_user.organization_id)
+                all_ingredients = ingredients_query.all()
+
                 inventory_units = get_global_unit_list()
                 return render_template('recipe_form.html',
                                      recipe=new_variation,
@@ -247,7 +258,12 @@ def create_variation(recipe_id):
                 db.session.rollback()
 
 
-        all_ingredients = InventoryItem.query.order_by(InventoryItem.name).all()
+        # Get scoped ingredients
+        ingredients_query = InventoryItem.query.order_by(InventoryItem.name)
+        if current_user.organization_id:
+            ingredients_query = ingredients_query.filter_by(organization_id=current_user.organization_id)
+        all_ingredients = ingredients_query.all()
+
         # Get all units for dropdowns
         units = Unit.query.filter_by(is_active=True).order_by(Unit.type, Unit.name).all()
         inventory_units = get_global_unit_list()

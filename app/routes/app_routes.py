@@ -31,8 +31,15 @@ def dashboard():
     if current_user.user_type == 'developer' and not session.get('dev_selected_org_id'):
         return redirect(url_for('developer.dashboard'))
     
-    recipes = Recipe.scoped().all()
-    active_batch = Batch.scoped().filter_by(status='in_progress').first()
+    recipes_query = Recipe.query
+    if current_user.organization_id:
+        recipes_query = recipes_query.filter_by(organization_id=current_user.organization_id)
+    recipes = recipes_query.all()
+    
+    batch_query = Batch.query.filter_by(status='in_progress')
+    if current_user.organization_id:
+        batch_query = batch_query.filter_by(organization_id=current_user.organization_id)
+    active_batch = batch_query.first()
 
     # Get unified dashboard alerts with dismissed alerts from session
     dismissed_alerts = session.get('dismissed_alerts', [])
