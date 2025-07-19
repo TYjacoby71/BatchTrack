@@ -326,6 +326,11 @@ def view_batch_in_progress(batch_identifier):
     timers = timers_query.all()
     now = TimezoneUtils.utc_now()
     
+    # Debug: Log timer data
+    print(f"DEBUG: Found {len(timers)} timers for batch {batch.id}")
+    for timer in timers:
+        print(f"DEBUG: Timer {timer.id}: name='{timer.name}', status='{timer.status}', duration={timer.duration_seconds}s")
+    
     # Check for active timers
     has_active_timers = any(timer.status == 'active' for timer in timers)
 
