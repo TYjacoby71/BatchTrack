@@ -7,7 +7,20 @@ import json
 from ..models import Unit
 from ..services.unit_conversion import ConversionEngine
 from ..utils.unit_utils import get_global_unit_list
-from ..utils.timezone_utils import TimezoneUtils
+
+def register_template_filters(app):
+    """Register all template filters"""
+    
+    @app.template_filter('user_timezone')
+    def user_timezone_filter(dt, format='%Y-%m-%d %H:%M'):
+        """Convert UTC datetime to user's timezone and format it"""
+        if not dt:
+            return ''
+        try:
+            user_dt = TimezoneUtils.to_user_timezone(dt)
+            return user_dt.strftime(format)
+        except:
+            return dt.strftime(format) if dt else ''
 
 def register_filters(app):
     """Register custom template filters"""

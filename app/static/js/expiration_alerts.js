@@ -102,3 +102,17 @@ function showAlert(type, message) {
 
     setTimeout(() => alertDiv.remove(), 5000);
 }
+
+// Safe data initialization
+function safeJsonParse(data, fallback = {}) {
+    try {
+        return typeof data === 'string' ? JSON.parse(data) : data;
+    } catch {
+        return fallback;
+    }
+}
+
+// Initialize with safe defaults
+const today = new Date();
+window.expirationData = window.expirationData || {};
+window.productData = window.productData || {};
