@@ -370,7 +370,7 @@
                             <span class="metric-label">Plan</span>
                         </div>
                     </div>
-                    {% if has_permission(current_user, 'manage_billing') %}
+                    {% if has_permission('manage_billing') %}
                     <div class="billing-actions" style="margin-top: 15px;">
                         <a href="{{ url_for('billing.upgrade') }}" class="btn btn-primary btn-sm">
                             {% if current_user.organization.effective_subscription_tier == 'free' %}
