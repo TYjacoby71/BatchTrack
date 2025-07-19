@@ -255,7 +255,7 @@ def create_app():
                 return redirect(url_for('developer.dashboard'))
             else:
                 return redirect(url_for('app_routes.dashboard'))
-        return redirect(url_for('auth.login'))
+        return redirect(url_for('homepage'))
 
     @app.route('/homepage')
     def homepage():
