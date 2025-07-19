@@ -306,10 +306,16 @@ class DashboardAlertService:
     def _get_product_inventory_issues() -> int:
         """Get count of products with inventory issues"""
         try:
-            # SKUs with zero or negative inventory
-            issues = ProductSKU.query.filter(
-                ProductSKU.current_quantity <= 0
-            ).count()
+            from ..models.product import ProductSKU
+            
+            # SKUs with zero or negative inventory - with organization scoping
+            query = ProductSKU.query.filter(ProductSKU.current_quantity <= 0)
+            
+            # Apply organization scoping if user is authenticated
+            if current_user and current_user.is_authenticated and current_user.organization_id:
+                query = query.filter(ProductSKU.organization_id == current_user.organization_id)
+            
+            issues = query.count()
             return issues
         except:
             return 0

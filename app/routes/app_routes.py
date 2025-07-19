@@ -30,12 +30,12 @@ def dashboard():
     # Developer users should only access this dashboard when viewing an organization
     if current_user.user_type == 'developer' and not session.get('dev_selected_org_id'):
         return redirect(url_for('developer.dashboard'))
-    
+
     recipes_query = Recipe.query
     if current_user.organization_id:
         recipes_query = recipes_query.filter_by(organization_id=current_user.organization_id)
     recipes = recipes_query.all()
-    
+
     batch_query = Batch.query.filter_by(status='in_progress')
     if current_user.organization_id:
         batch_query = batch_query.filter_by(organization_id=current_user.organization_id)
@@ -183,3 +183,44 @@ def api_dashboard_alerts():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+from flask import Blueprint
+app_routes = Blueprint('app_routes', __name__)
+
+@app_routes.route('/fault-log')
+@login_required
+def view_fault_log():
+    try:
+        import json
+        import os
+        from datetime import datetime
+        from flask_login import current_user
+
+        fault_file = 'faults.json'
+        faults = []
+
+        if os.path.exists(fault_file):
+            with open(fault_file, 'r') as f:
+                all_faults = json.load(f)
+
+                # Filter faults by organization unless user is developer
+                if current_user.user_type == 'developer':
+                    # Developers can see all faults or filtered by selected org
+                    from flask import session
+                    selected_org_id = session.get('dev_selected_org_id')
+                    if selected_org_id:
+                        faults = [f for f in all_faults if f.get('organization_id') == selected_org_id]
+                    else:
+                        faults = all_faults
+                elif current_user.organization_id:
+                    # Regular users only see their organization's faults
+                    faults = [f for f in all_faults if f.get('organization_id') == current_user.organization_id]
+                else:
+                    faults = []
+
+        # Sort by timestamp, newest first
+        faults.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
+
+        return render_template('fault_log.html', faults=faults)
+    except Exception as e:
+        flash(f'Error loading fault log: {str(e)}', 'error')
+        return render_template('fault_log.html', faults=[])
