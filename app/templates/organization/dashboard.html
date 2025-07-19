@@ -47,7 +47,7 @@
         <div class="card-body">
             <div class="row">
                 <div class="col-md-3 mb-2">
-                    <button class="btn btn-primary btn-sm w-100" data-bs-toggle="modal" data-bs-target="#inviteUserModal">
+                    <button class="btn btn-primary btn-sm" onclick="openInviteModal()">
                         <i class="fas fa-user-plus"></i> Invite User
                     </button>
                 </div>
@@ -114,7 +114,7 @@
                         <h5 class="mb-0"><i class="fas fa-users"></i> User Management</h5>
                         <div class="d-flex align-items-center gap-3">
                             <small class="text-muted">Organization users only (system developers excluded)</small>
-                            <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#inviteUserModal">
+                            <button class="btn btn-primary btn-sm" onclick="openInviteModal()">
                                 <i class="fas fa-user-plus"></i> Invite User
                             </button>
                         </div>
@@ -364,7 +364,7 @@
                     <h2 class="mb-2"><i class="fas fa-crown text-warning"></i> Organization Dashboard</h2>
                     <p class="text-muted mb-0">Administrative control for {{ current_user.organization.name }}</p>
                 </div>
-                
+
                 <div class="metric-item">
                             <span class="metric-value">{{ current_user.organization.effective_subscription_tier.title() }}</span>
                             <span class="metric-label">Plan</span>
