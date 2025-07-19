@@ -86,7 +86,7 @@
                                         <td>{{ "%.1f"|format(item.remaining_quantity) }} {{ item.unit }}</td>
                                         <td>
                                             {% if item.lot_number %}
-                                                <a href="{{ url_for('inventory.view', inventory_item_id=item.inventory_item_id) }}" class="text-decoration-none">
+                                                <a href="{{ url_for('inventory.view_inventory', id=item.inventory_item_id) }}" class="text-decoration-none">
                                                     {{ item.fifo_code or item.lot_number or ('LOT-' + item.fifo_id|string) }}
                                                 </a>
                                             {% else %}
@@ -156,7 +156,7 @@
                                         <td>{{ "%.1f"|format(item.remaining_quantity) }} {{ item.unit }}</td>
                                         <td>
                                             {% if item.lot_number %}
-                                                <a href="{{ url_for('inventory.view', inventory_item_id=item.inventory_item_id) }}" class="text-decoration-none">
+                                                <a href="{{ url_for('inventory.view_inventory', id=item.inventory_item_id) }}" class="text-decoration-none">
                                                     {{ item.fifo_code or item.lot_number or ('LOT-' + item.fifo_id|string) }}
                                                 </a>
                                             {% else %}
