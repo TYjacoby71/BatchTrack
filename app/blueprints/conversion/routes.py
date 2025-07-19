@@ -157,9 +157,10 @@ def manage_units():
             mapping = CustomUnitMapping(
                 from_unit=custom_unit,
                 to_unit=comparable_unit,
-                multiplier=conversion_factor,
+                conversion_factor=conversion_factor,
                 notes=f"1 {custom_unit} = {conversion_factor} {comparable_unit}",
-                created_by=current_user.id if current_user.is_authenticated else None
+                created_by=current_user.id if current_user.is_authenticated else None,
+                organization_id=current_user.organization_id if current_user.is_authenticated else None
             )
             db.session.add(mapping)
 
@@ -248,7 +249,8 @@ def add_mapping():
     mapping = CustomUnitMapping(
         from_unit=data['from_unit'],
         to_unit=data['to_unit'],
-        multiplier=float(data['multiplier'])
+        conversion_factor=float(data['multiplier']),
+        organization_id=current_user.organization_id if current_user.is_authenticated else None
     )
 
     db.session.add(mapping)

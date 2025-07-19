@@ -56,7 +56,7 @@ class ConversionEngine:
                 if conversion_path:
                     converted = amount
                     for mapping in conversion_path:
-                        converted *= mapping.multiplier
+                        converted *= mapping.conversion_factor
                     conversion_type = 'custom_compound' if len(conversion_path) > 1 else 'custom'
 
                 # 2. Direct (same unit)
@@ -105,7 +105,7 @@ class ConversionEngine:
                     if conversion_path:
                         converted = amount
                         for mapping in conversion_path:
-                            converted *= mapping.multiplier
+                            converted *= mapping.conversion_factor
                         conversion_type = 'custom_cross_type'
                     else:
                         raise ValueError(f"Cannot convert {from_u.type} to {to_u.type} without a custom mapping")
