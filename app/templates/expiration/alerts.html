@@ -83,7 +83,7 @@
                                     <tr>
                                         <td>{{ item.ingredient_name or 'Unknown Ingredient' }}</td>
                                         <td>{{ "%.1f"|format(item.remaining_quantity) }} {{ item.unit }}</td>
-                                        <td>{{ item.lot_number or '-' }}</td>
+                                        <td>{{ item.fifo_code or item.lot_number or ('LOT-' + item.fifo_id|string) }}</td>
                                         <td>{{ item.expiration_date.strftime('%Y-%m-%d') if item.expiration_date else '-' }}</td>
                                         <td>{{ item.expiration_time or '00:00:00' }}</td>
                                         <td><small class="text-muted">#{{ item.fifo_id }}</small></td>
@@ -140,7 +140,7 @@
                                     <tr>
                                         <td>{{ item.ingredient_name or 'Unknown Ingredient' }}</td>
                                         <td>{{ "%.1f"|format(item.remaining_quantity) }} {{ item.unit }}</td>
-                                        <td>{{ item.lot_number or '-' }}</td>
+                                        <td>{{ item.fifo_code or item.lot_number or ('LOT-' + item.fifo_id|string) }}</td>
                                         <td>{{ item.expiration_date.strftime('%Y-%m-%d') }}</td>
                                         <td>{{ item.expiration_time or '00:00:00' }}</td>
                                         <td><small class="text-muted">#{{ item.fifo_id }}</small></td>
@@ -225,7 +225,7 @@
                                         <td>
                                             {% if item.lot_number %}
                                                 <a href="{{ url_for('sku.view_sku', inventory_item_id=item.inventory_item_id) }}" class="text-decoration-none">
-                                                    {{ item.lot_number }}
+                                                    {{ item.lot_number or ('LOT-' + item.product_inv_id|string) }}
                                                 </a>
                                             {% else %}
                                                 <span class="text-muted">-</span>
@@ -293,7 +293,7 @@
                                         <td>
                                             {% if item.lot_number %}
                                                 <a href="{{ url_for('sku.view_sku', inventory_item_id=item.inventory_item_id) }}" class="text-decoration-none">
-                                                    {{ item.lot_number }}
+                                                    {{ item.lot_number or ('LOT-' + item.product_inv_id|string) }}
                                                 </a>
                                             {% else %}
                                                 <span class="text-muted">-</span>
@@ -397,3 +397,8 @@ async function markAsExpired(type, id) {
 }
 </script>
 {% endblock %}
+<script>
+    // Initialize data - properly escape JSON
+    const expirationData = {{ expiration_data | tojson }};
+    const productData = {{ product_data | tojson }};
+</script>

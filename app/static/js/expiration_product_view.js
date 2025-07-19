@@ -1,16 +1,19 @@
-/**
- * Batch-aware expiration management for product views
- */
+// Product-specific expiration functionality
+document.addEventListener('DOMContentLoaded', function() {
+    // Load expiration data for any elements with data-inventory-id
+    const expirationElements = document.querySelectorAll('[data-inventory-id]');
+    expirationElements.forEach(element => {
+        const inventoryId = element.getAttribute('data-inventory-id');
+        const containerId = element.id;
+        if (inventoryId && containerId) {
+            loadExpirationData(inventoryId, containerId);
+        }
+    });
+});
 
 function loadExpirationData(inventoryId, containerId) {
-    // Use centralized expiration service endpoint
     fetch(`/expiration/api/product-inventory/${inventoryId}/expiration`)
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            return response.json();
-        })
+        .then(response => response.ok ? response.json() : Promise.reject(response))
         .then(data => {
             const container = document.getElementById(containerId);
             if (!container) return;
@@ -49,32 +52,4 @@ function loadExpirationData(inventoryId, containerId) {
                 container.innerHTML = '<span class="text-muted">Error loading expiration</span>';
             }
         });
-}
-
-// Auto-load expiration data for elements with data-inventory-id
-document.addEventListener('DOMContentLoaded', function() {
-    // Only run if we're on a page that actually has expiration elements
-    const expirationElements = document.querySelectorAll('[data-inventory-id]');
-    if (expirationElements.length === 0) {
-        return; // Exit early if no expiration elements found
-    }
-
-    expirationElements.forEach(element => {
-        const inventoryId = element.getAttribute('data-inventory-id');
-        const containerId = element.id;
-        if (inventoryId && containerId) {
-            loadExpirationData(inventoryId, containerId);
-        }
-    });
-});
-
-// Check if we're on a product view page
-if (window.location.pathname.includes('/products/') && window.location.pathname.includes('/view')) {
-    document.addEventListener('DOMContentLoaded', function() {
-        // Only run expiration check on product view pages if the page has the required elements
-        const productContainer = document.querySelector('[data-product-id]');
-        if (productContainer) {
-            checkProductExpiration();
-        }
-    });
 }

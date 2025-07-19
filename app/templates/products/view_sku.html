@@ -88,13 +88,13 @@ function getCSRFToken() {
     if (tokenMeta) {
         return tokenMeta.getAttribute('content');
     }
-    
+
     // Fallback: try to find it in forms
     const csrfInput = document.querySelector('input[name=csrf_token]');
     if (csrfInput) {
         return csrfInput.value;
     }
-    
+
     return '';
 }
 
@@ -307,22 +307,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
 ```html
 <div class="card">
-    <div class="card-body">
-        <h5 class="card-title">{{ sku.product_name }} - {{ sku.variant_name }} - {{ sku.size_label }}</h5>
-        <p class="card-text">
-            <strong>SKU:</strong> {{ sku.sku }}<br>
-            <strong>Retail Price:</strong> ${{ "%.2f"|format(sku.retail_price or 0) }}<br>
-            <strong>Unit Cost:</strong> ${{ "%.2f"|format(sku.unit_cost or 0) }}<br>
-            <strong>Quantity:</strong>
-            <strong>{{ "%.1f"|format(sku.quantity or 0) }}</strong>
-        </p>
-    </div>
-</div>
-</original>
-```
-
-```html
-<div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">SKU Details</h5>
                         <div>
@@ -345,4 +329,3 @@ document.addEventListener('DOMContentLoaded', function() {
         </p>
     </div>
 </div>
-</original>

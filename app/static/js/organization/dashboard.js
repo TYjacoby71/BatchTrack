@@ -7,8 +7,7 @@ function organizationDashboard() {
     return {
         orgSettings: {
             name: orgData.name || (userData.first_name && userData.last_name ? `${userData.first_name} ${userData.last_name}` : userData.username || ''),
-            contact_email: orgData.contact_email || userData.email || '',
-            timezone: orgData.timezone || userData.timezone || 'America/New_York'
+            contact_email: orgData.contact_email || userData.email || ''
         },
 
         async updateOrgSettings() {

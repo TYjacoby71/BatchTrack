@@ -200,30 +200,21 @@ class ExpirationService:
             if not expiration_date:
                 continue
 
-            # Convert expiration date to UTC for comparison
-            if expiration_date.tzinfo:
-                expiration_utc = expiration_date.astimezone(timezone.utc)
-            else:
-                expiration_utc = expiration_date.replace(tzinfo=timezone.utc)
+            # Ensure both dates are timezone-aware for comparison
+            try:
+                # Convert expiration date to UTC for comparison
+                if expiration_date.tzinfo:
+                    expiration_utc = expiration_date.astimezone(timezone.utc)
+                else:
+                    expiration_utc = expiration_date.replace(tzinfo=timezone.utc)
 
-            # Apply time-based filtering using UTC
-            if expired and expiration_utc < now_utc:
-                # Create entry object for compatibility
-                entry_obj = type('Entry', (), {
-                    'inventory_item_id': entry.inventory_item_id,
-                    'ingredient_name': entry.inventory_item.name,
-                    'remaining_quantity': entry.remaining_quantity,
-                    'unit': entry.unit,
-                    'expiration_date': expiration_date,  # Keep original for display
-                    'fifo_id': entry.id,
-                    'fifo_code': entry.fifo_code,
-                    'lot_number': entry.fifo_code,
-                    'expiration_time': '00:00:00'
-                })()
-                filtered_entries.append(entry_obj)
-            elif days_ahead:
-                future_date_utc = now_utc + timedelta(days=days_ahead)
-                if now_utc <= expiration_utc <= future_date_utc:
+                # Ensure now_utc is timezone-aware
+                if now_utc.tzinfo is None:
+                    now_utc = now_utc.replace(tzinfo=timezone.utc)
+
+                # Apply time-based filtering using UTC
+                if expired and expiration_utc < now_utc:
+                    # Create entry object for compatibility
                     entry_obj = type('Entry', (), {
                         'inventory_item_id': entry.inventory_item_id,
                         'ingredient_name': entry.inventory_item.name,
@@ -236,6 +227,24 @@ class ExpirationService:
                         'expiration_time': '00:00:00'
                     })()
                     filtered_entries.append(entry_obj)
+                elif days_ahead:
+                    future_date_utc = now_utc + timedelta(days=days_ahead)
+                    if now_utc <= expiration_utc <= future_date_utc:
+                        entry_obj = type('Entry', (), {
+                            'inventory_item_id': entry.inventory_item_id,
+                            'ingredient_name': entry.inventory_item.name,
+                            'remaining_quantity': entry.remaining_quantity,
+                            'unit': entry.unit,
+                            'expiration_date': expiration_date,  # Keep original for display
+                            'fifo_id': entry.id,
+                            'fifo_code': entry.fifo_code,
+                            'lot_number': entry.fifo_code,
+                            'expiration_time': '00:00:00'
+                        })()
+                        filtered_entries.append(entry_obj)
+            except (TypeError, ValueError) as e:
+                logger.warning(f"Timezone comparison error for entry {entry.id}: {e}")
+                continue
 
         return filtered_entries
 
@@ -270,19 +279,27 @@ class ExpirationService:
             if not expiration_date:
                 continue
 
-            # Convert expiration date to UTC for comparison
-            if expiration_date.tzinfo:
-                expiration_utc = expiration_date.astimezone(timezone.utc)
-            else:
-                expiration_utc = expiration_date.replace(tzinfo=timezone.utc)
+            try:
+                # Convert expiration date to UTC for comparison
+                if expiration_date.tzinfo:
+                    expiration_utc = expiration_date.astimezone(timezone.utc)
+                else:
+                    expiration_utc = expiration_date.replace(tzinfo=timezone.utc)
 
-            # Apply time-based filtering using UTC
-            if expired and expiration_utc < now_utc:
-                filtered_entries.append(sku_entry)
-            elif days_ahead:
-                future_date_utc = now_utc + timedelta(days=days_ahead)
-                if now_utc <= expiration_utc <= future_date_utc:
+                # Ensure now_utc is timezone-aware
+                if now_utc.tzinfo is None:
+                    now_utc = now_utc.replace(tzinfo=timezone.utc)
+
+                # Apply time-based filtering using UTC
+                if expired and expiration_utc < now_utc:
                     filtered_entries.append(sku_entry)
+                elif days_ahead:
+                    future_date_utc = now_utc + timedelta(days=days_ahead)
+                    if now_utc <= expiration_utc <= future_date_utc:
+                        filtered_entries.append(sku_entry)
+            except (TypeError, ValueError) as e:
+                logger.warning(f"Timezone comparison error for SKU entry {sku_entry.id}: {e}")
+                continue
 
         return filtered_entries
 
@@ -315,99 +332,44 @@ class ExpirationService:
                 'product_inv_id': sku_entry.id,
                 'product_id': sku.product_id if sku else None,
                 'variant_id': sku.variant_id if sku else None,
-                'lot_number': f"LOT-{sku_entry.id}"
+                'lot_number': sku_entry.fifo_code or f"LOT-{sku_entry.id}"
             }
 
     @staticmethod
     def get_expired_inventory_items() -> Dict:
-        """Get all expired inventory items across the system"""
-        from flask_login import current_user
-        today = datetime.now().date()
+        """Get all expired inventory items across the system using dynamic expiration calculation"""
+        # Use the same logic as the private methods but for expired items
+        expired_fifo_entries = ExpirationService._query_fifo_entries(expired=True)
+        expired_sku_entries = ExpirationService._query_sku_entries(expired=True)
 
-        # Get expired FIFO entries
-        fifo_query = InventoryHistory.query.join(InventoryItem).filter(
-            InventoryHistory.expiration_date < today,
-            InventoryHistory.remaining_quantity > 0,
-            InventoryHistory.is_perishable == True
-        )
-
-        # Get expired product inventory
-        product_query = ProductSKUHistory.query.join(
-            InventoryItem, ProductSKUHistory.inventory_item_id == InventoryItem.id
-        ).filter(
-            ProductSKUHistory.expiration_date < today,
-            ProductSKUHistory.remaining_quantity > 0,
-            ProductSKUHistory.is_perishable == True
-        )
-
-        # Apply organization scoping
-        if current_user and current_user.is_authenticated:
-            if current_user.organization_id:
-                fifo_query = fifo_query.filter(InventoryItem.organization_id == current_user.organization_id)
-                product_query = product_query.filter(InventoryItem.organization_id == current_user.organization_id)
-            # Developer users without organization_id see all data
-        else:
-            # If not authenticated, return empty results
-            return {'fifo_entries': [], 'product_inventory': []}
-
-        expired_fifo = fifo_query.all()
-        expired_skus = product_query.all()
-
+        # Format SKU entries for consistency
         expired_products = []
-        for sku in expired_skus:
+        for sku in expired_sku_entries:
             formatted = ExpirationService._format_sku_entry(sku)
             if formatted:
                 expired_products.append(formatted)
 
         return {
-            'fifo_entries': expired_fifo,
+            'fifo_entries': expired_fifo_entries,
             'product_inventory': expired_products
         }
 
     @staticmethod
     def get_expiring_soon_items(days_ahead: int = 7) -> Dict:
-        """Get items expiring within specified days"""
-        from flask_login import current_user
-        today = datetime.now().date()
-        cutoff_date = today + timedelta(days=days_ahead)
+        """Get items expiring within specified days using dynamic expiration calculation"""
+        # Use the same logic as the private methods but for expiring soon items
+        expiring_fifo_entries = ExpirationService._query_fifo_entries(days_ahead=days_ahead)
+        expiring_sku_entries = ExpirationService._query_sku_entries(days_ahead=days_ahead)
 
-        # Get FIFO entries expiring soon
-        fifo_query = InventoryHistory.query.join(InventoryItem).filter(
-            InventoryHistory.expiration_date.between(today, cutoff_date),
-            InventoryHistory.remaining_quantity > 0,
-            InventoryHistory.is_perishable == True
-        )
-
-        # Get product inventory expiring soon
-        product_query = ProductSKUHistory.query.join(
-            InventoryItem, ProductSKUHistory.inventory_item_id == InventoryItem.id
-        ).filter(
-            ProductSKUHistory.expiration_date.between(today, cutoff_date),
-            ProductSKUHistory.remaining_quantity > 0,
-            ProductSKUHistory.is_perishable == True
-        )
-
-        # Apply organization scoping
-        if current_user and current_user.is_authenticated:
-            if current_user.organization_id:
-                fifo_query = fifo_query.filter(InventoryItem.organization_id == current_user.organization_id)
-                product_query = product_query.filter(InventoryItem.organization_id == current_user.organization_id)
-            # Developer users without organization_id see all data
-        else:
-            # If not authenticated, return empty results
-            return {'fifo_entries': [], 'product_inventory': []}
-
-        expiring_fifo = fifo_query.all()
-        expiring_skus = product_query.all()
-
+        # Format SKU entries for consistency
         expiring_products = []
-        for sku in expiring_skus:
+        for sku in expiring_sku_entries:
             formatted = ExpirationService._format_sku_entry(sku)
             if formatted:
                 expiring_products.append(formatted)
 
         return {
-            'fifo_entries': expiring_fifo,
+            'fifo_entries': expiring_fifo_entries,
             'product_inventory': expiring_products
         }
 
