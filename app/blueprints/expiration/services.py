@@ -29,9 +29,11 @@ class ExpirationService:
         # Calculate expiration date maintaining the timezone
         expiration_date = start_date + timedelta(days=shelf_life_days)
         
-        # Ensure the result is timezone-aware
+        # The result should inherit timezone from start_date, but ensure it's UTC
         if expiration_date.tzinfo is None:
             expiration_date = expiration_date.replace(tzinfo=timezone.utc)
+        elif expiration_date.tzinfo != timezone.utc:
+            expiration_date = expiration_date.astimezone(timezone.utc)
             
         return expiration_date
 
