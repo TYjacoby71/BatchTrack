@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = 'create_user_role_assignment'
-down_revision = 'f6a9b50d9a17'
+down_revision = 'add_required_subscription_tier'
 branch_labels = None
 depends_on = None
 
