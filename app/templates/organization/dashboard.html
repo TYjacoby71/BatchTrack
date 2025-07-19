@@ -390,6 +390,13 @@
 {% include 'organization/components/invite_user_modal.html' %}
 {% include 'organization/components/edit_user_modal.html' %}
 {% include 'organization/components/create_role_modal.html' %}
+
+<script>
+function openInviteModal() {
+    var modal = new bootstrap.Modal(document.getElementById('inviteUserModal'));
+    modal.show();
+}
+</script>
 {% endblock %}
 
 {% block scripts %}
