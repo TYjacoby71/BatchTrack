@@ -20,6 +20,13 @@ def create_app():
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(instance_path, 'batchtrack.db')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['UPLOAD_FOLDER'] = 'static/product_images'
+    
+    # Force HTTPS in production
+    if not app.debug and os.environ.get('REPLIT_DEPLOYMENT'):
+        app.config['PREFERRED_URL_SCHEME'] = 'https'
+        app.config['SESSION_COOKIE_SECURE'] = True
+        app.config['SESSION_COOKIE_HTTPONLY'] = True
+        app.config['PERMANENT_SESSION_LIFETIME'] = 1800  # 30 minutes
 
     # Initialize extensions
     db.init_app(app)
@@ -309,5 +316,12 @@ def create_app():
 
     from .management import register_commands
     register_commands(app)
+
+    # Force HTTPS redirect in production
+    @app.before_request
+    def force_https():
+        if not app.debug and os.environ.get('REPLIT_DEPLOYMENT'):
+            if not request.is_secure and request.headers.get('X-Forwarded-Proto') != 'https':
+                return redirect(request.url.replace('http://', 'https://'), code=301)
 
     return app
