@@ -85,7 +85,7 @@
                                         <td>{{ "%.1f"|format(item.remaining_quantity) }} {{ item.unit }}</td>
                                         <td>{{ item.fifo_code or item.lot_number or ('LOT-' + item.fifo_id|string) }}</td>
                                         <td>{{ item.expiration_date.strftime('%Y-%m-%d') if item.expiration_date else '-' }}</td>
-                                        <td>{{ item.expiration_time or '00:00:00' }}</td>
+                                        <td>{{ item.expiration_date.strftime('%H:%M:%S') if item.expiration_date else '00:00:00' }}</td>
                                         <td><small class="text-muted">#{{ item.fifo_id }}</small></td>
                                         <td>
                                             <span class="badge bg-danger">
@@ -142,7 +142,7 @@
                                         <td>{{ "%.1f"|format(item.remaining_quantity) }} {{ item.unit }}</td>
                                         <td>{{ item.fifo_code or item.lot_number or ('LOT-' + item.fifo_id|string) }}</td>
                                         <td>{{ item.expiration_date.strftime('%Y-%m-%d') }}</td>
-                                        <td>{{ item.expiration_time or '00:00:00' }}</td>
+                                        <td>{{ item.expiration_date.strftime('%H:%M:%S') if item.expiration_date else '00:00:00' }}</td>
                                         <td><small class="text-muted">#{{ item.fifo_id }}</small></td>
                                         <td>
                                             <span class="badge bg-warning text-dark">
