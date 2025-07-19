@@ -211,12 +211,14 @@ class ExpirationService:
                 # Create entry object for compatibility
                 entry_obj = type('Entry', (), {
                     'inventory_item_id': entry.inventory_item_id,
-                    'name': entry.inventory_item.name,
+                    'ingredient_name': entry.inventory_item.name,
                     'remaining_quantity': entry.remaining_quantity,
                     'unit': entry.unit,
                     'expiration_date': expiration_date,  # Keep original for display
                     'fifo_id': entry.id,
-                    'fifo_code': entry.fifo_code
+                    'fifo_code': entry.fifo_code,
+                    'lot_number': entry.fifo_code,
+                    'expiration_time': '00:00:00'
                 })()
                 filtered_entries.append(entry_obj)
             elif days_ahead:
@@ -224,12 +226,14 @@ class ExpirationService:
                 if now_utc <= expiration_utc <= future_date_utc:
                     entry_obj = type('Entry', (), {
                         'inventory_item_id': entry.inventory_item_id,
-                        'name': entry.inventory_item.name,
+                        'ingredient_name': entry.inventory_item.name,
                         'remaining_quantity': entry.remaining_quantity,
                         'unit': entry.unit,
                         'expiration_date': expiration_date,  # Keep original for display
                         'fifo_id': entry.id,
-                        'fifo_code': entry.fifo_code
+                        'fifo_code': entry.fifo_code,
+                        'lot_number': entry.fifo_code,
+                        'expiration_time': '00:00:00'
                     })()
                     filtered_entries.append(entry_obj)
 

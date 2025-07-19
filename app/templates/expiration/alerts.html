@@ -82,7 +82,7 @@
                                     {% if item.expiration_date %}
                                     <tr>
                                         <td>{{ item.ingredient_name or 'Unknown Ingredient' }}</td>
-                                        <td>{{ "%.1f"|format(item.quantity) }} {{ item.unit }}</td>
+                                        <td>{{ "%.1f"|format(item.remaining_quantity) }} {{ item.unit }}</td>
                                         <td>{{ item.lot_number or '-' }}</td>
                                         <td>{{ item.expiration_date.strftime('%Y-%m-%d') if item.expiration_date else '-' }}</td>
                                         <td>{{ item.expiration_time or '00:00:00' }}</td>
@@ -139,7 +139,7 @@
                                     {% set days_left = ((item.expiration_date.replace(tzinfo=None) - user_now.replace(tzinfo=None)).days) %}
                                     <tr>
                                         <td>{{ item.ingredient_name or 'Unknown Ingredient' }}</td>
-                                        <td>{{ "%.1f"|format(item.quantity) }} {{ item.unit }}</td>
+                                        <td>{{ "%.1f"|format(item.remaining_quantity) }} {{ item.unit }}</td>
                                         <td>{{ item.lot_number or '-' }}</td>
                                         <td>{{ item.expiration_date.strftime('%Y-%m-%d') }}</td>
                                         <td>{{ item.expiration_time or '00:00:00' }}</td>
