@@ -22,9 +22,10 @@
         .confirm-token,
         [name="csrf_token"],
         [name="confirm_token"],
-        form > .csrf_token,
-        form > .confirm-token,
-        .token-field {
+        form > input[name="csrf_token"],
+        form > input[name="confirm_token"],
+        .token-field,
+        .csrf_token {
             display: none !important;
             visibility: hidden !important;
             opacity: 0 !important;
@@ -33,6 +34,11 @@
             position: absolute !important;
             left: -9999px !important;
             pointer-events: none !important;
+            overflow: hidden !important;
+            clip: rect(0,0,0,0) !important;
+            border: 0 !important;
+            margin: -1px !important;
+            padding: 0 !important;
         }
 
         .app-container {
