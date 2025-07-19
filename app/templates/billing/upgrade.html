@@ -1,0 +1,107 @@
+
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="container">
+    <h2>Upgrade Your Subscription</h2>
+    
+    <div class="current-plan">
+        <h3>Current Plan: {{ current_tier.title() }}</h3>
+    </div>
+    
+    <div class="pricing-cards">
+        <div class="pricing-card">
+            <h3>Solo</h3>
+            <p class="price">$29/month</p>
+            <ul>
+                <li>Up to 5 users</li>
+                <li>Full batch tracking</li>
+                <li>Basic inventory management</li>
+                <li>Email support</li>
+            </ul>
+            {% if current_tier != 'solo' %}
+            <a href="{{ url_for('billing.checkout', tier='solo') }}" class="btn btn-primary">
+                {% if current_tier == 'free' %}Upgrade to Solo{% else %}Switch to Solo{% endif %}
+            </a>
+            {% else %}
+            <button class="btn btn-secondary" disabled>Current Plan</button>
+            {% endif %}
+        </div>
+        
+        <div class="pricing-card featured">
+            <h3>Team</h3>
+            <p class="price">$79/month</p>
+            <ul>
+                <li>Up to 10 users</li>
+                <li>Advanced batch tracking</li>
+                <li>Full inventory management</li>
+                <li>Custom roles & permissions</li>
+                <li>Priority support</li>
+            </ul>
+            {% if current_tier != 'team' %}
+            <a href="{{ url_for('billing.checkout', tier='team') }}" class="btn btn-primary">
+                {% if current_tier in ['free', 'solo'] %}Upgrade to Team{% else %}Switch to Team{% endif %}
+            </a>
+            {% else %}
+            <button class="btn btn-secondary" disabled>Current Plan</button>
+            {% endif %}
+        </div>
+        
+        <div class="pricing-card">
+            <h3>Enterprise</h3>
+            <p class="price">$199/month</p>
+            <ul>
+                <li>Unlimited users</li>
+                <li>All features included</li>
+                <li>API access</li>
+                <li>Custom integrations</li>
+                <li>Phone & email support</li>
+            </ul>
+            {% if current_tier != 'enterprise' %}
+            <a href="{{ url_for('billing.checkout', tier='enterprise') }}" class="btn btn-primary">
+                Upgrade to Enterprise
+            </a>
+            {% else %}
+            <button class="btn btn-secondary" disabled>Current Plan</button>
+            {% endif %}
+        </div>
+    </div>
+    
+    {% if current_tier != 'free' %}
+    <div class="cancel-section">
+        <h3>Need to Cancel?</h3>
+        <button id="cancel-subscription" class="btn btn-danger">Cancel Subscription</button>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const cancelBtn = document.getElementById('cancel-subscription');
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', function() {
+            if (confirm('Are you sure you want to cancel your subscription? This action cannot be undone.')) {
+                fetch('/billing/cancel-subscription', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert('Failed to cancel subscription. Please try again.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred. Please try again.');
+                });
+            }
+        });
+    }
+});
+</script>
+{% endblock %}
