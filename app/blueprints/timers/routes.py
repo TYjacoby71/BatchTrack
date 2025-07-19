@@ -1,4 +1,3 @@
-
 from flask import render_template, jsonify, request, flash, redirect, url_for
 from flask_login import login_required, current_user
 from . import timers_bp
@@ -12,7 +11,7 @@ def list_timers():
     """Display all timers with management interface"""
     timer_summary = TimerService.get_timer_summary()
     active_timers = TimerService.get_active_timers()
-    
+
     # Get active batches for the dropdown
     query = Batch.query.filter_by(status='in_progress')
     if current_user and current_user.is_authenticated and current_user.organization_id:
@@ -115,14 +114,14 @@ def delete_timer(timer_id):
     try:
         from ...models import BatchTimer
         timer = BatchTimer.query.get_or_404(timer_id)
-        
+
         # Check organization access
         if current_user.organization_id and timer.organization_id != current_user.organization_id:
             return jsonify({'error': 'Access denied'}), 403
-            
+
         db.session.delete(timer)
         db.session.commit()
-        
+
         return jsonify({'success': True, 'message': 'Timer deleted'})
 
     except Exception as e:
@@ -200,6 +199,71 @@ def api_timer_summary():
     try:
         summary = TimerService.get_timer_summary()
         return jsonify(summary)
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@timers_bp.route('/api/cancel/<int:timer_id>', methods=['POST'])
+@login_required
+def cancel_timer(timer_id):
+    """Cancel a timer"""
+    try:
+        from ...models import BatchTimer
+        timer = BatchTimer.query.get_or_404(timer_id)
+
+        # Check organization access
+        if current_user.organization_id and timer.organization_id != current_user.organization_id:
+            return jsonify({'error': 'Access denied'}), 403
+
+        timer.status = 'cancelled'
+        timer.end_time = TimezoneUtils.utc_now()
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'message': f'Timer "{timer.name}" cancelled'
+        })
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@timers_bp.route('/api/complete-expired', methods=['POST'])
+@login_required
+def complete_expired_timers():
+    """Manually trigger completion of expired timers"""
+    try:
+        completed_count = TimerService.complete_expired_timers()
+
+        return jsonify({
+            'success': True,
+            'message': f'Completed {completed_count} expired timers',
+            'completed_count': completed_count
+        })
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@timers_bp.route('/api/check-expired')
+@login_required
+def check_expired_timers():
+    """Check for expired timers without completing them"""
+    try:
+        expired_timers = TimerService.get_expired_timers()
+
+        # Filter by organization for non-developer users
+        if current_user.organization_id:
+            expired_timers = [t for t in expired_timers if t.organization_id == current_user.organization_id]
+
+        return jsonify({
+            'expired_count': len(expired_timers),
+            'expired_timers': [{
+                'id': timer.id,
+                'name': timer.name,
+                'batch_id': timer.batch_id,
+                'start_time': timer.start_time.isoformat() if timer.start_time else None,
+                'duration_seconds': timer.duration_seconds
+            } for timer in expired_timers]
+        })
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500

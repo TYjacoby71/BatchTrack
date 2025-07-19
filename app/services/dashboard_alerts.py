@@ -268,8 +268,12 @@ class DashboardAlertService:
 
     @staticmethod
     def _get_timer_alerts() -> Dict:
-        """Get timer-related alerts"""
+        """Get timer-related alerts and auto-complete expired timers"""
         try:
+            # Auto-complete expired timers first
+            from ..services.timer_service import TimerService
+            TimerService.complete_expired_timers()
+            
             # Use BatchTimer model which exists in your system
             from ..models import BatchTimer
             from ..utils.timezone_utils import TimezoneUtils

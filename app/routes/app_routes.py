@@ -224,3 +224,35 @@ def view_fault_log():
     except Exception as e:
         flash(f'Error loading fault log: {str(e)}', 'error')
         return render_template('fault_log.html', faults=[])
+
+@app_routes_bp.route('/api/server-time')
+def get_server_time():
+    """Get current server time in UTC and user's timezone, also auto-complete expired timers"""
+    from flask_login import current_user
+    from ..utils.timezone_utils import TimezoneUtils
+    from ..services.timer_service import TimerService
+
+    # Auto-complete expired timers on each server time request
+    # This provides a lightweight way to keep timers updated
+    try:
+        TimerService.complete_expired_timers()
+    except Exception as e:
+        # Don't let timer errors break the time endpoint
+        print(f"Timer auto-completion error: {e}")
+
+    server_utc = TimezoneUtils.utc_now()
+
+    # If user is logged in, also provide their local time
+    user_time = None
+    if current_user and current_user.is_authenticated:
+        user_timezone = getattr(current_user, 'timezone', 'UTC')
+        try:
+            user_time = TimezoneUtils.convert_to_timezone(server_utc, user_timezone)
+        except:
+            user_time = server_utc  # Fallback to UTC if conversion fails
+
+    return jsonify({
+        'server_utc': server_utc.isoformat(),
+        'user_time': user_time.isoformat() if user_time else server_utc.isoformat(),
+        'timestamp': server_utc.timestamp()
+    })
