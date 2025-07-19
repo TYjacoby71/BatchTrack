@@ -179,7 +179,14 @@ def add_inventory():
         quantity = float(request.form.get('quantity', 0))
         unit = request.form.get('unit')
         item_type = request.form.get('type', 'ingredient')  # 'ingredient', 'container', or 'product'
-        cost_per_unit = float(request.form.get('cost_per_unit', 0))
+        # Handle cost entry type
+        cost_entry_type = request.form.get('cost_entry_type', 'per_unit')
+        cost_input = float(request.form.get('cost_per_unit', 0))
+        
+        if cost_entry_type == 'total' and quantity > 0:
+            cost_per_unit = cost_input / quantity
+        else:
+            cost_per_unit = cost_input
         low_stock_threshold = float(request.form.get('low_stock_threshold', 0))
         is_perishable = request.form.get('is_perishable') == 'on'
         expiration_date = None
