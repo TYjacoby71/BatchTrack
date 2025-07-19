@@ -3,6 +3,9 @@ import logging
 from logging.handlers import RotatingFileHandler
 import os
 
+# Set up logger for this module
+logger = logging.getLogger(__name__)
+
 def setup_logging(app):
     if not os.path.exists('logs'):
         os.makedirs('logs')
