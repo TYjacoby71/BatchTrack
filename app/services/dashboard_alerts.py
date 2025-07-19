@@ -271,14 +271,25 @@ class DashboardAlertService:
         """Get timer-related alerts"""
         try:
             # Use BatchTimer model which exists in your system
-            from models import BatchTimer
-            active_timers = BatchTimer.query.filter_by(status='active').all()
+            from ..models import BatchTimer
+            from ..utils.timezone_utils import TimezoneUtils
+            
+            # Get active timers with organization scoping
+            query = BatchTimer.query.filter_by(status='active')
+            
+            # Apply organization scoping if user is authenticated
+            if current_user and current_user.is_authenticated and current_user.organization_id:
+                query = query.filter(BatchTimer.organization_id == current_user.organization_id)
+            
+            active_timers = query.all()
             expired_timers = []
+
+            current_time = TimezoneUtils.utc_now()
 
             for timer in active_timers:
                 if timer.start_time and timer.duration_seconds:
                     end_time = timer.start_time + timedelta(seconds=timer.duration_seconds)
-                    if datetime.utcnow() > end_time:
+                    if current_time > end_time:
                         expired_timers.append(timer)
 
             return {
@@ -286,8 +297,9 @@ class DashboardAlertService:
                 'expired_timers': expired_timers,
                 'active_count': len(active_timers)
             }
-        except (ImportError, AttributeError):
-            # Fallback if BatchTimer doesn't exist
+        except (ImportError, AttributeError) as e:
+            # Fallback if BatchTimer doesn't exist or import fails
+            print(f"Timer alerts error: {e}")
             return {'expired_count': 0, 'expired_timers': [], 'active_count': 0}
 
     @staticmethod

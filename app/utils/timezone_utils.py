@@ -166,6 +166,29 @@ class TimezoneUtils:
         return datetime.utcnow()
 
     @staticmethod
+    def now() -> datetime:
+        """Get current datetime in user's timezone"""
+        from flask_login import current_user
+        
+        utc_now = datetime.utcnow()
+        
+        # Get user's timezone
+        user_timezone = 'UTC'
+        if current_user and current_user.is_authenticated:
+            user_timezone = getattr(current_user, 'timezone', 'UTC')
+        
+        return TimezoneUtils.to_user_timezone(utc_now, user_timezone)
+
+    @staticmethod
+    def get_user_timezone() -> str:
+        """Get current user's timezone"""
+        from flask_login import current_user
+        
+        if current_user and current_user.is_authenticated:
+            return getattr(current_user, 'timezone', 'UTC')
+        return 'UTC'
+
+    @staticmethod
     def to_user_timezone(dt: datetime, user_timezone: str = None) -> datetime:
         """Convert UTC datetime to user's timezone"""
         from flask_login import current_user

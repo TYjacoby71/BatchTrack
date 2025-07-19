@@ -1,108 +1,153 @@
-
-from flask import render_template, redirect, url_for, flash, request, jsonify
-from datetime import datetime, timedelta
-from flask_login import login_required
-from ...models import db, BatchTimer, Batch
-from datetime import datetime
+from flask import render_template, jsonify, request, flash, redirect, url_for
+from flask_login import login_required, current_user
 from . import timers_bp
+from ...services.timer_service import TimerService
+from ...models import db, Batch
 
-@timers_bp.route('/list')
+@timers_bp.route('/timer_list')
 @login_required
-def list_timers():
-    from datetime import timedelta
-    timers = BatchTimer.query.all()
-    active_batches = Batch.query.filter_by(status='in_progress').all()
-    
-    timer_data = [{
-        'id': t.id,
-        'batch_id': t.batch_id,
-        'name': t.name,
-        'duration_seconds': int(t.duration_seconds),
-        'start_time': t.start_time.replace(tzinfo=None).isoformat() if t.start_time else None,
-        'end_time': t.end_time.replace(tzinfo=None).isoformat() if t.end_time else None,
-        'status': t.status
-    } for t in timers]
-    
-    active_batch_data = [{
-        'id': b.id,
-        'recipe_name': b.recipe.name if b.recipe else None
-    } for b in active_batches]
-    
-    return render_template('timer_list.html', 
-                         timers=timer_data,
-                         active_batches=active_batch_data,
-                         now=datetime.utcnow())
+def timer_list():
+    """Display all timers with management interface"""
+    timer_summary = TimerService.get_timer_summary()
+    active_timers = TimerService.get_active_timers()
 
-@timers_bp.route('/create', methods=['POST'])
+    return render_template('timers/timer_list.html', 
+                         timer_summary=timer_summary,
+                         active_timers=active_timers)
+
+@timers_bp.route('/api/create-timer', methods=['POST'])
 @login_required
-def create_timer():
+def api_create_timer():
+    """Create a new timer for a batch"""
     data = request.get_json()
+
+    batch_id = data.get('batch_id')
+    duration_seconds = data.get('duration_seconds')
+    description = data.get('description', '')
+
+    if not batch_id or not duration_seconds:
+        return jsonify({'error': 'Batch ID and duration are required'}), 400
+
     try:
-        duration = int(data.get('duration_seconds', 0))
-        if duration <= 0:
-            return jsonify({'status': 'error', 'message': 'Invalid duration'}), 400
-            
-        batch_id = data.get('batch_id')
-        batch_id = int(batch_id) if batch_id else None
-            
-        timer = BatchTimer(
-            name=data.get('name'),
-            duration_seconds=duration,
-            batch_id=batch_id,
-            start_time=datetime.utcnow(),
-            status='active'
-        )
-        db.session.add(timer)
-        db.session.commit()
-        return jsonify({'status': 'success', 'timer_id': timer.id})
+        # Verify batch exists and user has access
+        batch = Batch.query.get(batch_id)
+        if not batch:
+            return jsonify({'error': 'Batch not found'}), 404
+
+        if current_user.organization_id and batch.organization_id != current_user.organization_id:
+            return jsonify({'error': 'Access denied'}), 403
+
+        timer = TimerService.create_timer(batch_id, duration_seconds, description)
+
+        return jsonify({
+            'success': True,
+            'timer_id': timer.id,
+            'message': 'Timer created successfully'
+        })
+
     except Exception as e:
-        db.session.rollback()
-        return jsonify({'status': 'error', 'message': str(e)}), 500
-    return jsonify({'status': 'success', 'timer_id': timer.id})
+        return jsonify({'error': str(e)}), 500
 
-@timers_bp.route('/complete/<int:timer_id>', methods=['POST'])
+@timers_bp.route('/api/timer-status/<int:timer_id>')
 @login_required
-def complete_timer(timer_id):
-    timer = BatchTimer.query.get_or_404(timer_id)
-    now = datetime.utcnow()
-    
-    # Check if timer is expired
-    if timer.start_time and timer.duration_seconds:
-        time_diff = (now - timer.start_time).total_seconds()
-        is_expired = time_diff >= timer.duration_seconds
-    else:
-        is_expired = False
-        
-    if timer.status == 'active':
-        timer.status = 'completed'
-        timer.end_time = now
-        db.session.commit()
-        return jsonify({'status': 'success', 'end_time': now.isoformat()})
-    return jsonify({'status': 'error', 'message': 'Timer already completed'})
+def api_timer_status(timer_id):
+    """Get current timer status"""
+    try:
+        status = TimerService.get_timer_status(timer_id)
+        if 'error' in status:
+            return jsonify(status), 404
 
-@timers_bp.route('/delete/<int:timer_id>', methods=['POST'])
-@login_required
-def delete_timer(timer_id):
-    timer = BatchTimer.query.get_or_404(timer_id)
-    db.session.delete(timer)
-    db.session.commit()
-    return jsonify({'status': 'success'})
+        return jsonify(status)
 
-@timers_bp.route('/status/<int:timer_id>', methods=['POST'])
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@timers_bp.route('/api/stop-timer/<int:timer_id>', methods=['POST'])
 @login_required
-def update_timer_status(timer_id):
-    timer = BatchTimer.query.get_or_404(timer_id)
-    data = request.get_json()
-    now = datetime.utcnow()
-    
-    if data.get('status') == 'completed':
-        timer.status = 'completed'
-        timer.end_time = now
-        db.session.commit()
-        return jsonify({'status': 'success', 'end_time': now.isoformat()})
-    elif data.get('status') == 'active':
-        timer.status = 'active'
-        db.session.commit()
-        return jsonify({'status': 'success'})
-    
-    return jsonify({'status': 'error', 'message': 'Invalid status'})
+def api_stop_timer(timer_id):
+    """Stop an active timer"""
+    try:
+        success = TimerService.stop_timer(timer_id)
+        if success:
+            return jsonify({'success': True, 'message': 'Timer stopped'})
+        else:
+            return jsonify({'error': 'Failed to stop timer'}), 400
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@timers_bp.route('/api/pause-timer/<int:timer_id>', methods=['POST'])
+@login_required
+def api_pause_timer(timer_id):
+    """Pause an active timer"""
+    try:
+        success = TimerService.pause_timer(timer_id)
+        if success:
+            return jsonify({'success': True, 'message': 'Timer paused'})
+        else:
+            return jsonify({'error': 'Failed to pause timer'}), 400
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@timers_bp.route('/api/resume-timer/<int:timer_id>', methods=['POST'])
+@login_required
+def api_resume_timer(timer_id):
+    """Resume a paused timer"""
+    try:
+        success = TimerService.resume_timer(timer_id)
+        if success:
+            return jsonify({'success': True, 'message': 'Timer resumed'})
+        else:
+            return jsonify({'error': 'Failed to resume timer'}), 400
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@timers_bp.route('/api/batch-timers/<int:batch_id>')
+@login_required
+def api_batch_timers(batch_id):
+    """Get all timers for a specific batch"""
+    try:
+        timers = TimerService.get_batch_timers(batch_id)
+        return jsonify({'timers': timers})
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@timers_bp.route('/api/expired-timers')
+@login_required
+def api_expired_timers():
+    """Get all expired timers"""
+    try:
+        expired_timers = TimerService.get_expired_timers()
+        return jsonify({'expired_timers': expired_timers})
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@timers_bp.route('/api/auto-expire-timers', methods=['POST'])
+@login_required
+def api_auto_expire_timers():
+    """Automatically expire overdue timers"""
+    try:
+        count = TimerService.auto_expire_timers()
+        return jsonify({
+            'success': True,
+            'expired_count': count,
+            'message': f'Marked {count} timers as expired'
+        })
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@timers_bp.route('/api/timer-summary')
+@login_required
+def api_timer_summary():
+    """Get timer statistics summary"""
+    try:
+        summary = TimerService.get_timer_summary()
+        return jsonify(summary)
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
