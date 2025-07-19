@@ -399,6 +399,6 @@ async function markAsExpired(type, id) {
 {% endblock %}
 <script>
     // Initialize data - properly escape JSON
-    const expirationData = {{ expiration_data | tojson }};
-    const productData = {{ product_data | tojson }};
+    const expirationData = {{ expiration_data | tojson | safe }};
+    const productData = {{ product_data | tojson | safe }};
 </script>
