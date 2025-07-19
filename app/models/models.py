@@ -12,15 +12,12 @@ class Organization(db.Model):
     created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
     is_active = db.Column(db.Boolean, default=True)
     
-    # Trial and billing information
-    trial_end_date = db.Column(db.DateTime, nullable=True)
+    # Basic signup tracking (keep these for analytics)
     signup_source = db.Column(db.String(64), nullable=True)  # homepage_trial, webinar, etc.
     promo_code = db.Column(db.String(32), nullable=True)
     referral_code = db.Column(db.String(32), nullable=True)
-    billing_info = db.Column(db.JSON, nullable=True)  # Encrypted billing details
-    stripe_customer_id = db.Column(db.String(128), nullable=True)  # For payment processing
-    subscription_status = db.Column(db.String(32), default='trial')  # trial, active, past_due, cancelled
-    next_billing_date = db.Column(db.DateTime, nullable=True)
+    
+    # Move billing to separate Subscription model for flexibility
     
     users = db.relationship('User', backref='organization')
 
