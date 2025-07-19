@@ -55,6 +55,21 @@ class Organization(db.Model):
         effective_tier = self.effective_subscription_tier
         return tier_limits.get(effective_tier, 1)
 
+    @property
+    def effective_subscription_tier(self):
+        """Get the effective subscription tier (from subscription or fallback to organization tier)"""
+        # Try to get from subscription model first
+        try:
+            from .subscription import Subscription
+            subscription = Subscription.query.filter_by(organization_id=self.id).first()
+            if subscription and subscription.status == 'active':
+                return subscription.tier
+        except (ImportError, AttributeError):
+            pass
+        
+        # Fallback to organization subscription_tier
+        return self.subscription_tier or 'free'
+
     def get_subscription_features(self):
         """Get features available for subscription tier"""
         features = {

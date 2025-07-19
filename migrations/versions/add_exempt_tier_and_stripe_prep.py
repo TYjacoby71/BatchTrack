@@ -17,36 +17,45 @@ branch_labels = None
 depends_on = None
 
 def upgrade():
-    # Add missing columns to organization table if they don't exist
-    try:
-        with op.batch_alter_table('organization', schema=None) as batch_op:
-            batch_op.add_column(sa.Column('signup_source', sa.String(64), nullable=True))
-            batch_op.add_column(sa.Column('promo_code', sa.String(32), nullable=True))
-            batch_op.add_column(sa.Column('referral_code', sa.String(32), nullable=True))
-    except Exception as e:
-        print(f"Columns may already exist: {e}")
-    
-    # Add trial_tier column to subscription table if it doesn't exist
-    try:
-        with op.batch_alter_table('subscription', schema=None) as batch_op:
-            batch_op.add_column(sa.Column('trial_tier', sa.String(32), nullable=True))
-    except Exception as e:
-        print(f"Column may already exist: {e}")
-    
-    # Create subscription for organization 1 if it doesn't exist
+    # Get current table info to check existing columns
     connection = op.get_bind()
+    inspector = sa.inspect(connection)
     
-    # Check if organization 1 exists and has no subscription
-    org_result = connection.execute(sa.text("SELECT id FROM organization WHERE id = 1")).fetchone()
-    if org_result:
-        sub_result = connection.execute(sa.text("SELECT id FROM subscription WHERE organization_id = 1")).fetchone()
-        if not sub_result:
-            # Create exempt subscription for organization 1
-            connection.execute(sa.text("""
-                INSERT INTO subscription (organization_id, tier, status, created_at, updated_at, notes)
-                VALUES (1, 'exempt', 'active', :now, :now, 'Reserved organization for owner and testing')
-            """), {"now": datetime.utcnow()})
-            print("Created exempt subscription for organization 1")
+    # Check organization table columns
+    org_columns = [col['name'] for col in inspector.get_columns('organization')]
+    
+    # Add missing columns to organization table
+    with op.batch_alter_table('organization', schema=None) as batch_op:
+        if 'signup_source' not in org_columns:
+            batch_op.add_column(sa.Column('signup_source', sa.String(64), nullable=True))
+            print("Added signup_source column")
+        if 'promo_code' not in org_columns:
+            batch_op.add_column(sa.Column('promo_code', sa.String(32), nullable=True))
+            print("Added promo_code column")
+        if 'referral_code' not in org_columns:
+            batch_op.add_column(sa.Column('referral_code', sa.String(32), nullable=True))
+            print("Added referral_code column")
+    
+    # Check subscription table exists and add trial_tier column
+    tables = inspector.get_table_names()
+    if 'subscription' in tables:
+        sub_columns = [col['name'] for col in inspector.get_columns('subscription')]
+        if 'trial_tier' not in sub_columns:
+            with op.batch_alter_table('subscription', schema=None) as batch_op:
+                batch_op.add_column(sa.Column('trial_tier', sa.String(32), nullable=True))
+                print("Added trial_tier column to subscription")
+    
+        # Create subscription for organization 1 if it doesn't exist
+        org_result = connection.execute(sa.text("SELECT id FROM organization WHERE id = 1")).fetchone()
+        if org_result:
+            sub_result = connection.execute(sa.text("SELECT id FROM subscription WHERE organization_id = 1")).fetchone()
+            if not sub_result:
+                # Create exempt subscription for organization 1
+                connection.execute(sa.text("""
+                    INSERT INTO subscription (organization_id, tier, status, created_at, updated_at, notes)
+                    VALUES (1, 'exempt', 'active', :now, :now, 'Reserved organization for owner and testing')
+                """), {"now": datetime.utcnow()})
+                print("Created exempt subscription for organization 1")
 
 def downgrade():
     # Remove trial_tier column
