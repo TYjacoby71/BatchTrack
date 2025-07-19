@@ -84,7 +84,15 @@
                                     <tr>
                                         <td>{{ item.ingredient_name or 'Unknown Ingredient' }}</td>
                                         <td>{{ "%.1f"|format(item.remaining_quantity) }} {{ item.unit }}</td>
-                                        <td>{{ item.fifo_code or item.lot_number or ('LOT-' + item.fifo_id|string) }}</td>
+                                        <td>
+                                            {% if item.lot_number %}
+                                                <a href="{{ url_for('inventory.view', inventory_item_id=item.inventory_item_id) }}" class="text-decoration-none">
+                                                    {{ item.fifo_code or item.lot_number or ('LOT-' + item.fifo_id|string) }}
+                                                </a>
+                                            {% else %}
+                                                <span class="text-muted">{{ item.fifo_code or ('LOT-' + item.fifo_id|string) }}</span>
+                                            {% endif %}
+                                        </td>
                                         <td>{{ item.expiration_date.strftime('%Y-%m-%d') if item.expiration_date else '-' }}</td>
                                         <td>{{ item.expiration_date.strftime('%H:%M:%S') if item.expiration_date else '00:00:00' }}</td>
                                         <td><small class="text-muted">#{{ item.fifo_id }}</small></td>
@@ -146,7 +154,15 @@
                                     <tr>
                                         <td>{{ item.ingredient_name or 'Unknown Ingredient' }}</td>
                                         <td>{{ "%.1f"|format(item.remaining_quantity) }} {{ item.unit }}</td>
-                                        <td>{{ item.fifo_code or item.lot_number or ('LOT-' + item.fifo_id|string) }}</td>
+                                        <td>
+                                            {% if item.lot_number %}
+                                                <a href="{{ url_for('inventory.view', inventory_item_id=item.inventory_item_id) }}" class="text-decoration-none">
+                                                    {{ item.fifo_code or item.lot_number or ('LOT-' + item.fifo_id|string) }}
+                                                </a>
+                                            {% else %}
+                                                <span class="text-muted">{{ item.fifo_code or ('LOT-' + item.fifo_id|string) }}</span>
+                                            {% endif %}
+                                        </td>
                                         <td>{{ item.expiration_date.strftime('%Y-%m-%d') }}</td>
                                         <td>{{ item.expiration_date.strftime('%H:%M:%S') if item.expiration_date else '00:00:00' }}</td>
                                         <td><small class="text-muted">#{{ item.fifo_id }}</small></td>
