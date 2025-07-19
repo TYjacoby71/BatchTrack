@@ -2,7 +2,7 @@ from ..models import db, Recipe, InventoryItem, InventoryHistory
 from sqlalchemy import or_
 from app.services.unit_conversion import ConversionEngine
 from flask_login import current_user
-from datetime import datetime
+from datetime import datetime, timezone
 
 def universal_stock_check(recipe, scale=1.0, flex_mode=False):
     """Universal Stock Check Service (USCS) - Ingredients Only"""
@@ -32,16 +32,39 @@ def universal_stock_check(recipe, scale=1.0, flex_mode=False):
         print(f"  - Ingredient belongs to user, proceeding with stock check")
         needed_amount = recipe_ingredient.quantity * scale
 
-        # Get current inventory details - exclude expired FIFO entries
-        today = datetime.now().date()
-        available_fifo_entries = InventoryHistory.query.filter(
+        # Get current inventory details - exclude expired FIFO entries using dynamic expiration
+        from ..blueprints.expiration.services import ExpirationService
+        from ..utils.timezone_utils import TimezoneUtils
+        
+        all_fifo_entries = InventoryHistory.query.filter(
             InventoryHistory.inventory_item_id == ingredient.id,
-            InventoryHistory.remaining_quantity > 0,
-            or_(
-                InventoryHistory.expiration_date == None,  # Non-perishable items
-                InventoryHistory.expiration_date >= today  # Non-expired perishable items
-            )
+            InventoryHistory.remaining_quantity > 0
         ).all()
+
+        # Filter out expired entries using dynamic expiration calculation
+        now_utc = TimezoneUtils.utc_now()
+        available_fifo_entries = []
+        
+        for entry in all_fifo_entries:
+            if not entry.is_perishable:
+                # Non-perishable items are always available
+                available_fifo_entries.append(entry)
+            else:
+                # Check if perishable item is expired using dynamic calculation
+                expiration_date = ExpirationService.get_effective_expiration_date(entry)
+                if expiration_date:
+                    # Convert to UTC for comparison
+                    if expiration_date.tzinfo:
+                        expiration_utc = expiration_date.astimezone(timezone.utc)
+                    else:
+                        expiration_utc = expiration_date.replace(tzinfo=timezone.utc)
+                    
+                    # Only include if not expired
+                    if expiration_utc >= now_utc:
+                        available_fifo_entries.append(entry)
+                else:
+                    # If no expiration date can be calculated, include it
+                    available_fifo_entries.append(entry)
 
         # Sum up available quantity from non-expired entries
         available = sum(entry.remaining_quantity for entry in available_fifo_entries)
