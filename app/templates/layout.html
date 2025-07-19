@@ -113,7 +113,7 @@
 
                     <!-- Settings & Management -->
                     <li><a class="dropdown-item" href="{{ url_for('settings.index') }}">Settings</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('tags.manage_tags') }}">Tag Manager</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('tag_manager.tag_manager') }}">Tag Manager</a></li>
 
                     <!-- Auth Management -->
                     <li><a class="dropdown-item" href="{{ url_for('auth.permissions') }}"><i class="fas fa-key"></i> Permissions</a></li>
@@ -264,7 +264,7 @@
                     <li><a class="dropdown-item" href="{{ url_for('settings.index') }}">Settings</a></li>
                     {% endif %}
                     {% if has_permission('tags.manage') %}
-                    <li><a class="dropdown-item" href="{{ url_for('tags.manage_tags') }}">Tag Manager</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('tag_manager.tag_manager') }}">Tag Manager</a></li>
                     {% endif %}
 
                     <!-- Auth Management -->
