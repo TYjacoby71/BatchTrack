@@ -43,6 +43,10 @@ def universal_stock_check(recipe, scale=1.0, flex_mode=False):
 
         # Filter out expired entries using dynamic expiration calculation
         now_utc = TimezoneUtils.utc_now()
+        # Ensure now_utc is timezone-aware for consistent comparison
+        if now_utc.tzinfo is None:
+            now_utc = now_utc.replace(tzinfo=timezone.utc)
+        
         available_fifo_entries = []
         
         for entry in all_fifo_entries:
