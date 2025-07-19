@@ -1,6 +1,6 @@
 from flask import render_template, request, redirect, url_for, flash, jsonify, session
 from flask_login import login_required, current_user
-from ...models import db, Batch, Recipe, InventoryItem, BatchIngredient, BatchContainer, BatchTimer, ExtraBatchIngredient, ExtraBatchContainer, InventoryHistory
+from ...models import db, Batch, Recipe, InventoryItem, BatchIngredient, BatchContainer, ExtraBatchIngredient, ExtraBatchContainer, InventoryHistory, BatchTimer
 from datetime import datetime, timedelta
 from ...utils import get_setting
 from sqlalchemy import extract, func
@@ -315,6 +315,20 @@ def view_batch_in_progress(batch_identifier):
                     'original_used': container_usage.quantity_used or 0
                 })
 
+    # Get timers for this batch with organization scoping
+    from datetime import timedelta
+    from ...utils.timezone_utils import TimezoneUtils
+    
+    timers_query = BatchTimer.query.filter_by(batch_id=batch.id)
+    if current_user.organization_id:
+        timers_query = timers_query.filter_by(organization_id=current_user.organization_id)
+    
+    timers = timers_query.all()
+    now = TimezoneUtils.utc_now()
+    
+    # Check for active timers
+    has_active_timers = any(timer.status == 'active' for timer in timers)
+
     return render_template('batches/batch_in_progress.html',
                          batch=batch,
                          units=units,
@@ -325,7 +339,11 @@ def view_batch_in_progress(batch_identifier):
                          products=products,
                          container_breakdown=container_breakdown,
                          prev_batch=prev_batch,
-                         next_batch=next_batch)
+                         next_batch=next_batch,
+                         timers=timers,
+                         now=now,
+                         has_active_timers=has_active_timers,
+                         timedelta=timedelta)
 
 batches_bp.register_blueprint(start_batch_bp, url_prefix='/batches')
 batches_bp.register_blueprint(cancel_batch_bp, url_prefix='/batches')

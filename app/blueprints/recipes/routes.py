@@ -1,7 +1,3 @@
-The code has been modified to filter ingredients in recipe routes to exclude product type inventory items.
-```
-
-```python
 from flask import render_template, request, redirect, url_for, flash, jsonify, current_app
 from flask_login import login_required, current_user
 from ...models import db, Recipe, RecipeIngredient, InventoryItem, Unit
