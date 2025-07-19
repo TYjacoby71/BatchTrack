@@ -208,11 +208,19 @@
           </div>
         </div>
         <div class="col-md-2">
-          <label class="form-label">Cost/Unit</label>
+          <label class="form-label">Cost Entry Type</label>
+          <select name="cost_entry_type" class="form-select" id="addIngredientCostType" onchange="updateAddIngredientCostHelp()">
+            <option value="per_unit">Per Unit Cost</option>
+            <option value="total">Total Cost</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Cost</label>
           <div class="input-group">
             <span class="input-group-text">$</span>
-            <input type="number" step="0.01" name="cost_per_unit" class="form-control" required>
+            <input type="number" step="0.01" name="cost_per_unit" class="form-control" id="addIngredientCost" required>
           </div>
+          <small class="form-text text-muted" id="addIngredientCostHelp">Enter cost per unit</small>
         </div>
         <div class="col-auto">
           <button type="submit" class="btn btn-success">Save</button>
@@ -409,8 +417,16 @@
           <input type="number" step="1" name="quantity" class="form-control" required>
         </div>
         <div class="col">
-          <label class="form-label">Cost/Unit</label>
-          <input type="number" step="0.01" name="cost_per_unit" class="form-control" required>
+          <label class="form-label">Cost Entry Type</label>
+          <select name="cost_entry_type" class="form-select" id="addContainerCostType" onchange="updateAddContainerCostHelp()">
+            <option value="per_unit">Per Unit Cost</option>
+            <option value="total">Total Cost</option>
+          </select>
+        </div>
+        <div class="col">
+          <label class="form-label">Cost</label>
+          <input type="number" step="0.01" name="cost_per_unit" class="form-control" id="addContainerCost" required>
+          <small class="form-text text-muted" id="addContainerCostHelp">Enter cost per container</small>
         </div>
         <div class="col-auto">
           <button type="submit" class="btn btn-success">Save</button>
@@ -816,6 +832,46 @@ function toggleArchivedFilter(tableType) {
         }
     });
 }
+
+function updateAddIngredientCostHelp() {
+    const costType = document.getElementById('addIngredientCostType').value;
+    const helpText = document.getElementById('addIngredientCostHelp');
+    const quantityInput = document.querySelector('#addIngredientForm input[name="quantity"]');
+    const quantity = parseFloat(quantityInput?.value) || 1;
+
+    if (costType === 'per_unit') {
+        helpText.textContent = 'Enter cost per unit';
+    } else if (costType === 'total') {
+        helpText.textContent = `Enter total cost (will be divided by ${quantity} units)`;
+    }
+}
+
+function updateAddContainerCostHelp() {
+    const costType = document.getElementById('addContainerCostType').value;
+    const helpText = document.getElementById('addContainerCostHelp');
+    const quantityInput = document.querySelector('#addContainerForm input[name="quantity"]');
+    const quantity = parseFloat(quantityInput?.value) || 1;
+
+    if (costType === 'per_unit') {
+        helpText.textContent = 'Enter cost per container';
+    } else if (costType === 'total') {
+        helpText.textContent = `Enter total cost (will be divided by ${quantity} containers)`;
+    }
+}
+
+// Add event listeners for quantity changes to update help text
+document.addEventListener('DOMContentLoaded', function() {
+    const ingredientQtyInput = document.querySelector('#addIngredientForm input[name="quantity"]');
+    const containerQtyInput = document.querySelector('#addContainerForm input[name="quantity"]');
+    
+    if (ingredientQtyInput) {
+        ingredientQtyInput.addEventListener('input', updateAddIngredientCostHelp);
+    }
+    
+    if (containerQtyInput) {
+        containerQtyInput.addEventListener('input', updateAddContainerCostHelp);
+    }
+});
 
 // Close the dropdown menu if the user clicks outside of it
 window.onclick = function(event) {

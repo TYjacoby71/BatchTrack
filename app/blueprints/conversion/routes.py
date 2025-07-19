@@ -97,7 +97,8 @@ def manage_units():
                     conversion_factor=1.0,
                     is_custom=True,
                     is_mapped=False,  # Start as unmapped
-                    user_id=current_user.id if current_user.is_authenticated else None
+                    created_by=current_user.id if current_user.is_authenticated else None,
+                    organization_id=current_user.organization_id if current_user.is_authenticated else None
                 )
                 db.session.add(new_unit)
                 db.session.commit()
@@ -128,12 +129,22 @@ def manage_units():
                 flash("Only custom units can be mapped.", "danger")
                 return redirect(url_for('conversion_bp.manage_units'))
 
+            # Allow cross-type mapping only for specific cases
             if custom_unit_obj.type != comparable_unit_obj.type:
-                flash("Units must be the same type.", "danger")
-                return redirect(url_for('conversion_bp.manage_units'))
+                # Allow volume ↔ weight with density
+                if {'volume', 'weight'} <= {custom_unit_obj.type, comparable_unit_obj.type}:
+                    pass  # This is allowed
+                # Allow count ↔ volume/weight for custom units (user-defined relationships)
+                elif custom_unit_obj.type == 'count' and comparable_unit_obj.type in ['volume', 'weight']:
+                    pass  # This is allowed - user knows their apple size
+                elif comparable_unit_obj.type == 'count' and custom_unit_obj.type in ['volume', 'weight']:
+                    pass  # This is allowed - reverse direction
+                else:
+                    flash("This type of unit conversion is not supported.", "danger")
+                    return redirect(url_for('conversion_bp.manage_units'))
 
             existing = CustomUnitMapping.query.filter_by(
-                unit_name=custom_unit
+                from_unit=custom_unit
             ).first()
             if existing:
                 flash("This custom unit already has a mapping.", "warning")
@@ -144,9 +155,12 @@ def manage_units():
             base_conversion_factor = conversion_factor * comparable_unit_obj.conversion_factor
 
             mapping = CustomUnitMapping(
-                unit_name=custom_unit,
-                conversion_factor=base_conversion_factor,
-                base_unit=custom_unit_obj.base_unit
+                from_unit=custom_unit,
+                to_unit=comparable_unit,
+                conversion_factor=conversion_factor,
+                notes=f"1 {custom_unit} = {conversion_factor} {comparable_unit}",
+                created_by=current_user.id if current_user.is_authenticated else None,
+                organization_id=current_user.organization_id if current_user.is_authenticated else None
             )
             db.session.add(mapping)
 
@@ -235,7 +249,8 @@ def add_mapping():
     mapping = CustomUnitMapping(
         from_unit=data['from_unit'],
         to_unit=data['to_unit'],
-        multiplier=float(data['multiplier'])
+        conversion_factor=float(data['multiplier']),
+        organization_id=current_user.organization_id if current_user.is_authenticated else None
     )
 
     db.session.add(mapping)

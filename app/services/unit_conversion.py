@@ -56,7 +56,7 @@ class ConversionEngine:
                 if conversion_path:
                     converted = amount
                     for mapping in conversion_path:
-                        converted *= mapping.multiplier
+                        converted *= mapping.conversion_factor
                     conversion_type = 'custom_compound' if len(conversion_path) > 1 else 'custom'
 
                 # 2. Direct (same unit)
@@ -98,6 +98,17 @@ class ConversionEngine:
 
                     conversion_type = 'density'
 
+                # 5. Check for custom cross-type mappings (e.g., count ↔ volume/weight)
+                elif from_u.is_custom or to_u.is_custom:
+                    # Try to find a custom mapping path
+                    conversion_path = find_conversion_path(from_unit, to_unit)
+                    if conversion_path:
+                        converted = amount
+                        for mapping in conversion_path:
+                            converted *= mapping.conversion_factor
+                        conversion_type = 'custom_cross_type'
+                    else:
+                        raise ValueError(f"Cannot convert {from_u.type} to {to_u.type} without a custom mapping")
                 else:
                     raise ValueError(f"Cannot convert {from_u.type} to {to_u.type} without a custom mapping")
 
