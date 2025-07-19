@@ -200,30 +200,21 @@ class ExpirationService:
             if not expiration_date:
                 continue
 
-            # Convert expiration date to UTC for comparison
-            if expiration_date.tzinfo:
-                expiration_utc = expiration_date.astimezone(timezone.utc)
-            else:
-                expiration_utc = expiration_date.replace(tzinfo=timezone.utc)
+            # Ensure both dates are timezone-aware for comparison
+            try:
+                # Convert expiration date to UTC for comparison
+                if expiration_date.tzinfo:
+                    expiration_utc = expiration_date.astimezone(timezone.utc)
+                else:
+                    expiration_utc = expiration_date.replace(tzinfo=timezone.utc)
 
-            # Apply time-based filtering using UTC
-            if expired and expiration_utc < now_utc:
-                # Create entry object for compatibility
-                entry_obj = type('Entry', (), {
-                    'inventory_item_id': entry.inventory_item_id,
-                    'ingredient_name': entry.inventory_item.name,
-                    'remaining_quantity': entry.remaining_quantity,
-                    'unit': entry.unit,
-                    'expiration_date': expiration_date,  # Keep original for display
-                    'fifo_id': entry.id,
-                    'fifo_code': entry.fifo_code,
-                    'lot_number': entry.fifo_code,
-                    'expiration_time': '00:00:00'
-                })()
-                filtered_entries.append(entry_obj)
-            elif days_ahead:
-                future_date_utc = now_utc + timedelta(days=days_ahead)
-                if now_utc <= expiration_utc <= future_date_utc:
+                # Ensure now_utc is timezone-aware
+                if now_utc.tzinfo is None:
+                    now_utc = now_utc.replace(tzinfo=timezone.utc)
+
+                # Apply time-based filtering using UTC
+                if expired and expiration_utc < now_utc:
+                    # Create entry object for compatibility
                     entry_obj = type('Entry', (), {
                         'inventory_item_id': entry.inventory_item_id,
                         'ingredient_name': entry.inventory_item.name,
@@ -236,6 +227,24 @@ class ExpirationService:
                         'expiration_time': '00:00:00'
                     })()
                     filtered_entries.append(entry_obj)
+                elif days_ahead:
+                    future_date_utc = now_utc + timedelta(days=days_ahead)
+                    if now_utc <= expiration_utc <= future_date_utc:
+                        entry_obj = type('Entry', (), {
+                            'inventory_item_id': entry.inventory_item_id,
+                            'ingredient_name': entry.inventory_item.name,
+                            'remaining_quantity': entry.remaining_quantity,
+                            'unit': entry.unit,
+                            'expiration_date': expiration_date,  # Keep original for display
+                            'fifo_id': entry.id,
+                            'fifo_code': entry.fifo_code,
+                            'lot_number': entry.fifo_code,
+                            'expiration_time': '00:00:00'
+                        })()
+                        filtered_entries.append(entry_obj)
+            except (TypeError, ValueError) as e:
+                logger.warning(f"Timezone comparison error for entry {entry.id}: {e}")
+                continue
 
         return filtered_entries
 
@@ -270,19 +279,27 @@ class ExpirationService:
             if not expiration_date:
                 continue
 
-            # Convert expiration date to UTC for comparison
-            if expiration_date.tzinfo:
-                expiration_utc = expiration_date.astimezone(timezone.utc)
-            else:
-                expiration_utc = expiration_date.replace(tzinfo=timezone.utc)
+            try:
+                # Convert expiration date to UTC for comparison
+                if expiration_date.tzinfo:
+                    expiration_utc = expiration_date.astimezone(timezone.utc)
+                else:
+                    expiration_utc = expiration_date.replace(tzinfo=timezone.utc)
 
-            # Apply time-based filtering using UTC
-            if expired and expiration_utc < now_utc:
-                filtered_entries.append(sku_entry)
-            elif days_ahead:
-                future_date_utc = now_utc + timedelta(days=days_ahead)
-                if now_utc <= expiration_utc <= future_date_utc:
+                # Ensure now_utc is timezone-aware
+                if now_utc.tzinfo is None:
+                    now_utc = now_utc.replace(tzinfo=timezone.utc)
+
+                # Apply time-based filtering using UTC
+                if expired and expiration_utc < now_utc:
                     filtered_entries.append(sku_entry)
+                elif days_ahead:
+                    future_date_utc = now_utc + timedelta(days=days_ahead)
+                    if now_utc <= expiration_utc <= future_date_utc:
+                        filtered_entries.append(sku_entry)
+            except (TypeError, ValueError) as e:
+                logger.warning(f"Timezone comparison error for SKU entry {sku_entry.id}: {e}")
+                continue
 
         return filtered_entries
 
