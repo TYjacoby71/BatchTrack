@@ -17,7 +17,7 @@ class TimerService:
                 start_time=TimezoneUtils.utc_now(),
                 duration_seconds=duration_seconds,
                 status='active',
-                description=description
+                name=description or "Timer"
             )
             
             # Set organization if user is authenticated
@@ -104,7 +104,7 @@ class TimerService:
             'elapsed_seconds': int(elapsed_seconds),
             'remaining_seconds': int(remaining_seconds),
             'is_expired': is_expired,
-            'description': timer.description
+            'description': timer.name
         }
 
     @staticmethod
