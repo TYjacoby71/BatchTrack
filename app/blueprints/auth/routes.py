@@ -121,6 +121,10 @@ def signup():
     if current_user.is_authenticated:
         return redirect(url_for('app_routes.dashboard'))
 
+    # Get signup source from query parameters
+    signup_source = request.args.get('source', 'direct')
+    referral_code = request.args.get('ref')
+
     if request.method == 'POST':
         # Organization details
         org_name = request.form.get('org_name')
@@ -137,29 +141,41 @@ def signup():
         # Validation
         if not org_name:
             flash('Organization name is required', 'error')
-            return render_template('auth/signup.html')
+            return render_template('auth/signup.html', 
+                         signup_source=signup_source,
+                         referral_code=referral_code)
 
         if not username:
             flash('Username is required', 'error')
-            return render_template('auth/signup.html')
+            return render_template('auth/signup.html', 
+                         signup_source=signup_source,
+                         referral_code=referral_code)
 
         if not email:
             flash('Email is required', 'error')
-            return render_template('auth/signup.html')
+            return render_template('auth/signup.html', 
+                         signup_source=signup_source,
+                         referral_code=referral_code)
 
         if not password:
             flash('Password is required', 'error')
-            return render_template('auth/signup.html')
+            return render_template('auth/signup.html', 
+                         signup_source=signup_source,
+                         referral_code=referral_code)
 
         if password != confirm_password:
             flash('Passwords do not match', 'error')
-            return render_template('auth/signup.html')
+            return render_template('auth/signup.html', 
+                         signup_source=signup_source,
+                         referral_code=referral_code)
 
         # Check if username already exists
         existing_user = User.query.filter_by(username=username).first()
         if existing_user:
             flash('Username already exists', 'error')
-            return render_template('auth/signup.html')
+            return render_template('auth/signup.html', 
+                         signup_source=signup_source,
+                         referral_code=referral_code)
 
         try:
             # Create organization
@@ -193,9 +209,34 @@ def signup():
         except Exception as e:
             db.session.rollback()
             flash(f'Error creating account: {str(e)}', 'error')
-            return render_template('auth/signup.html')
+            return render_template('auth/signup.html', 
+                         signup_source=signup_source,
+                         referral_code=referral_code)
 
-    return render_template('auth/signup.html')
+    return render_template('auth/signup.html', 
+                         signup_source=signup_source,
+                         referral_code=referral_code)
+
+# Multiple Signup Entry Points
+@auth_bp.route('/free-trial')
+def free_trial():
+    """Homepage free trial signup entry point"""
+    return redirect(url_for('auth.signup', source='homepage_trial'))
+
+@auth_bp.route('/webinar-signup')
+def webinar_signup():
+    """Webinar signup entry point"""
+    return redirect(url_for('auth.signup', source='webinar'))
+
+@auth_bp.route('/partner-signup/<partner_code>')
+def partner_signup(partner_code):
+    """Partner/affiliate signup entry point"""
+    return redirect(url_for('auth.signup', source='partner', ref=partner_code))
+
+@auth_bp.route('/demo-signup')
+def demo_signup():
+    """Demo request signup entry point"""
+    return redirect(url_for('auth.signup', source='demo_request'))
 
 # Permission and Role Management Routes
 from .permissions import manage_permissions, manage_roles, create_role, update_role

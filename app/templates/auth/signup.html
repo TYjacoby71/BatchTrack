@@ -10,11 +10,28 @@
             <div class="card">
                 <div class="card-header">
                     <h4 class="mb-0">
-                        <i class="fas fa-user-plus"></i> Create Your BatchTrack Account
+                        <i class="fas fa-user-plus"></i> 
+                        {% if signup_source == 'homepage_trial' %}
+                            Start Your Free Trial
+                        {% elif signup_source == 'webinar' %}
+                            Join BatchTrack - Webinar Special
+                        {% elif signup_source == 'demo_request' %}
+                            Request Your Demo Account
+                        {% elif signup_source == 'partner' %}
+                            Partner Signup - Special Offer
+                        {% else %}
+                            Create Your BatchTrack Account
+                        {% endif %}
                     </h4>
                 </div>
                 <div class="card-body">
                     <form method="POST">
+                        <!-- Hidden fields for tracking -->
+                        <input type="hidden" name="signup_source" value="{{ signup_source }}">
+                        {% if referral_code %}
+                        <input type="hidden" name="referral_code" value="{{ referral_code }}">
+                        {% endif %}
+                        
                         <div class="mb-4">
                             <h5 class="text-muted">Organization Details</h5>
                             <div class="mb-3">
@@ -86,7 +103,17 @@
 
                         <div class="alert alert-info">
                             <i class="fas fa-info-circle"></i>
-                            <strong>Getting Started:</strong> You'll be signed up for our free tier. You can upgrade anytime from your dashboard.
+                            {% if signup_source == 'homepage_trial' %}
+                                <strong>Free Trial:</strong> Get 14 days of full access to all features. No credit card required.
+                            {% elif signup_source == 'webinar' %}
+                                <strong>Webinar Attendee:</strong> Enjoy 30 days free access as a thank you for attending!
+                            {% elif signup_source == 'demo_request' %}
+                                <strong>Demo Account:</strong> We'll set up a personalized demo with sample data for your review.
+                            {% elif signup_source == 'partner' %}
+                                <strong>Partner Special:</strong> Exclusive partner pricing available after signup.
+                            {% else %}
+                                <strong>Getting Started:</strong> You'll be signed up for our free tier. You can upgrade anytime from your dashboard.
+                            {% endif %}
                         </div>
 
                         <div class="d-flex gap-2">
