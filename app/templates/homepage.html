@@ -140,7 +140,7 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="btn btn-cta text-white ms-2" href="#signup">Get Started</a>
+                        <a class="btn btn-cta text-white ms-2" href="{{ url_for('auth.signup', source='homepage_trial') }}">Get Started</a>
                     </li>
                 </ul>
             </div>
@@ -153,7 +153,7 @@
             <h1 class="display-4 fw-bold mb-4 text-dark">Production & Inventory Management Made Simple</h1>
             <p class="lead mb-4 text-muted">Track batches, manage inventory, and scale your production with BatchTrack's powerful FIFO system and real-time insights.</p>
             <div class="d-flex justify-content-center gap-3 flex-wrap">
-                <a href="#signup" class="btn btn-primary btn-lg px-4">Start Free Trial</a>
+                <a href="{{ url_for('auth.signup', source='homepage_trial') }}" class="btn btn-primary btn-lg px-4">Start Free Trial</a>
                 <a href="#demo" class="btn btn-outline-primary btn-lg px-4">Watch Demo</a>
             </div>
         </div>
@@ -228,7 +228,7 @@
                     <p class="mb-0">Join thousands of makers who trust BatchTrack for their inventory management.</p>
                 </div>
                 <div class="col-lg-4 text-lg-end">
-                    <a href="#signup" class="btn btn-light btn-lg">Start Your Free Trial</a>
+                    <a href="{{ url_for('auth.signup', source='homepage_trial') }}" class="btn btn-light btn-lg">Start Your Free Trial</a>
                 </div>
             </div>
         </div>
@@ -381,7 +381,7 @@
             <h2 class="fw-bold mb-4">Transform Your Production Process Today</h2>
             <p class="lead mb-4">Join the growing community of makers who have streamlined their operations with BatchTrack</p>
             <div class="d-flex justify-content-center gap-3 flex-wrap">
-                <a href="#signup" class="btn btn-light btn-lg px-4">Get Started Free</a>
+                <a href="{{ url_for('auth.signup', source='homepage_trial') }}" class="btn btn-light btn-lg px-4">Get Started Free</a>
                 <a href="#contact" class="btn btn-outline-light btn-lg px-4">Contact Sales</a>
             </div>
         </div>
@@ -443,7 +443,7 @@
                         <li class="mb-2"><i class="fas fa-check text-success me-2"></i> 30-day free trial</li>
                         <li class="mb-2"><i class="fas fa-check text-success me-2"></i> Cancel anytime</li>
                     </ul>
-                    <a href="#signup" class="btn btn-cta btn-lg text-white">Start Your Free Trial</a>
+                    <a href="{{ url_for('auth.signup', source='homepage_trial') }}" class="btn btn-cta btn-lg text-white">Start Your Free Trial</a>
                 </div>
             </div>
         </div>
