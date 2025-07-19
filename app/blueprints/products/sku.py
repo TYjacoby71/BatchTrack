@@ -39,7 +39,7 @@ def view_sku(inventory_item_id):
                          total_quantity=total_quantity,
                          get_global_unit_list=get_global_unit_list,
                          fifo_filter=request.args.get('fifo', 'false').lower() == 'true',
-                         now=TimezoneUtils.now(),
+                         now=TimezoneUtils.now().replace(tzinfo=None),  # Use naive datetime for template comparisons
                          timedelta=timedelta,
                          TimezoneUtils=TimezoneUtils)
 

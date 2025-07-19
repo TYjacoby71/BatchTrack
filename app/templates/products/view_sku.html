@@ -169,7 +169,12 @@ async function markAsExpired(type, id) {
 
             <!-- Expired Items Alert Section -->
             {% set expired_entries = history|selectattr('expiration_date')|selectattr('remaining_quantity', '>', 0)|list %}
-            {% set expired_entries = expired_entries|selectattr('expiration_date', '<', now)|list %}
+            {% set expired_entries = [] %}
+            {% for entry in history if entry.expiration_date and entry.remaining_quantity > 0 %}
+                {% if entry.expiration_date.replace(tzinfo=None) < now %}
+                    {% set _ = expired_entries.append(entry) %}
+                {% endif %}
+            {% endfor %}
             {% if expired_entries %}
             <div class="card mb-4">
                 <div class="card-header bg-danger text-white">
