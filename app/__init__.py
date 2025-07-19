@@ -22,11 +22,12 @@ def create_app():
     app.config['UPLOAD_FOLDER'] = 'static/product_images'
     
     # Force HTTPS in production
-    if not app.debug and os.environ.get('REPLIT_DEPLOYMENT'):
+    if os.environ.get('REPLIT_DEPLOYMENT') == 'true':
         app.config['PREFERRED_URL_SCHEME'] = 'https'
         app.config['SESSION_COOKIE_SECURE'] = True
         app.config['SESSION_COOKIE_HTTPONLY'] = True
         app.config['PERMANENT_SESSION_LIFETIME'] = 1800  # 30 minutes
+        app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
     # Initialize extensions
     db.init_app(app)
@@ -320,8 +321,11 @@ def create_app():
     # Force HTTPS redirect in production
     @app.before_request
     def force_https():
-        if not app.debug and os.environ.get('REPLIT_DEPLOYMENT'):
+        if os.environ.get('REPLIT_DEPLOYMENT') == 'true':
+            # Check if the request is not secure and not already HTTPS
             if not request.is_secure and request.headers.get('X-Forwarded-Proto') != 'https':
-                return redirect(request.url.replace('http://', 'https://'), code=301)
+                # Only redirect if we're not already on an HTTPS URL
+                if request.url.startswith('http://'):
+                    return redirect(request.url.replace('http://', 'https://'), code=301)
 
     return app
