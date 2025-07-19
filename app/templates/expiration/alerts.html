@@ -81,19 +81,11 @@
                                     {% for item in expired.fifo_entries %}
                                     {% if item.expiration_date %}
                                     <tr>
-                                        <td><strong>{{ item.name }}</strong></td>
-                                        <td><strong>{{ item.remaining_quantity }} {{ item.unit }}</strong></td>
-                                        <td>
-                                            {% if item.fifo_code %}
-                                                <a href="{{ url_for('inventory.view_inventory', id=item.inventory_item_id) }}" class="text-decoration-none">
-                                                    {{ item.fifo_code }}
-                                                </a>
-                                            {% else %}
-                                                <span class="text-muted">-</span>
-                                            {% endif %}
-                                        </td>
-                                        <td>{{ item.expiration_date.strftime('%Y-%m-%d') }}</td>
-                                        <td>{{ item.expiration_date.strftime('%H:%M:%S') }}</td>
+                                        <td>{{ item.ingredient_name or 'Unknown Ingredient' }}</td>
+                                        <td>{{ "%.1f"|format(item.quantity) }} {{ item.unit }}</td>
+                                        <td>{{ item.lot_number or '-' }}</td>
+                                        <td>{{ item.expiration_date.strftime('%Y-%m-%d') if item.expiration_date else '-' }}</td>
+                                        <td>{{ item.expiration_time or '00:00:00' }}</td>
                                         <td><small class="text-muted">#{{ item.fifo_id }}</small></td>
                                         <td>
                                             <span class="badge bg-danger">
@@ -146,19 +138,11 @@
                                     {% if item.expiration_date %}
                                     {% set days_left = ((item.expiration_date.replace(tzinfo=None) - user_now.replace(tzinfo=None)).days) %}
                                     <tr>
-                                        <td><strong>{{ item.name }}</strong></td>
-                                        <td><strong>{{ item.remaining_quantity }} {{ item.unit }}</strong></td>
-                                        <td>
-                                            {% if item.fifo_code %}
-                                                <a href="{{ url_for('inventory.view_inventory', id=item.inventory_item_id) }}" class="text-decoration-none">
-                                                    {{ item.fifo_code }}
-                                                </a>
-                                            {% else %}
-                                                <span class="text-muted">-</span>
-                                            {% endif %}
-                                        </td>
+                                        <td>{{ item.ingredient_name or 'Unknown Ingredient' }}</td>
+                                        <td>{{ "%.1f"|format(item.quantity) }} {{ item.unit }}</td>
+                                        <td>{{ item.lot_number or '-' }}</td>
                                         <td>{{ item.expiration_date.strftime('%Y-%m-%d') }}</td>
-                                        <td>{{ item.expiration_date.strftime('%H:%M:%S') }}</td>
+                                        <td>{{ item.expiration_time or '00:00:00' }}</td>
                                         <td><small class="text-muted">#{{ item.fifo_id }}</small></td>
                                         <td>
                                             <span class="badge bg-warning text-dark">

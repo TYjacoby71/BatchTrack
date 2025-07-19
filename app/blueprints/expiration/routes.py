@@ -218,6 +218,7 @@ def alerts():
     from ...services.combined_inventory_alerts import CombinedInventoryAlertService
     from ...utils.timezone_utils import TimezoneUtils
     from ...models.user_preferences import UserPreferences
+    import logging
 
     # Get user's expiration warning preference
     days_ahead = 7  # Default
