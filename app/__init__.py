@@ -116,6 +116,10 @@ def create_app():
     from .blueprints.api.reservation_routes import reservation_api_bp
     app.register_blueprint(reservation_bp, url_prefix='/reservations')
     app.register_blueprint(reservation_api_bp)
+    
+    # Register billing blueprint
+    from .blueprints.billing import billing_bp
+    app.register_blueprint(billing_bp, url_prefix='/billing')
 
     # Register all blueprints
     app.register_blueprint(auth_bp, url_prefix='/auth')

@@ -35,21 +35,29 @@
             </div>
           </div>
           {% endif %}
-          
+
           <!-- Calculate totals from size groups -->
           {% set ns = namespace(bulk_quantity=0, packaged_quantity=0, total_cost=0, total_value=0) %}
           {% set size_count = size_groups|length %}
-          
+
           {% for group_key, group in size_groups.items() %}
             {% if group.size_label == 'Bulk' %}
               {% set ns.bulk_quantity = ns.bulk_quantity + group.total_quantity %}
             {% else %}
               {% set ns.packaged_quantity = ns.packaged_quantity + group.total_quantity %}
             {% endif %}
-            
+
             {% for sku in group.skus %}
               {% if sku.inventory_item and sku.inventory_item.quantity > 0 %}
                 {% if sku.inventory_item.cost_per_unit %}
+                  {% set ns.total_cost = ns.total_cost + (sku.inventory_item.quantity * sku.inventory_item.cost_per_unit) %}
+                {% endif %}
+                {% if sku.price %}
+                  {% set ns.total_value = ns.total_value + (sku.inventory_item.quantity * sku.price) %}
+                {% endif %}
+              {% endif %}
+            {% endfor %}
+          {% endfor %}
                   {% set ns.total_cost = ns.total_cost + (sku.inventory_item.cost_per_unit * sku.inventory_item.quantity) %}
                 {% endif %}
                 {% if sku.retail_price %}
@@ -58,7 +66,7 @@
               {% endif %}
             {% endfor %}
           {% endfor %}
-          
+
           <!-- Display metrics -->
           <div class="row g-3">
             <div class="col-md-6 col-lg-3">
@@ -252,7 +260,7 @@
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
         {% if size_groups %}
-        <a href="{{ url_for('sku.view_sku', inventory_item_id=size_groups[size_groups.keys()|first].skus[0].inventory_item_id) }}" class="btn btn-primary">
+        <a href="/products/{{ product.id }}" class="btn btn-primary">
           Go to Item Management
         </a>
         {% endif %}
@@ -301,7 +309,6 @@ document.addEventListener('DOMContentLoaded', function() {
             form.submit();
         }
     };
-
 });
 </script>
 {% endblock %}

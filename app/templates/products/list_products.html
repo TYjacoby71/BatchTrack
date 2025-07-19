@@ -172,8 +172,7 @@
               {% for product in products %}
               <tr class="product-row">
                 <td>
-
-                  <a href="{{ url_for('products.view_product', product_id=product.id) }}" class="text-decoration-none">
+                  <a href="/products/{{ product.id }}" class="text-decoration-none">
                     <strong>{{ product.name }}</strong>
                   </a>
                 </td>
@@ -415,8 +414,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Edit product function
 function editProduct(productId) {
-  // Navigate to edit product page or open modal
-  window.location.href = `/products/${productId}#edit`;
+  window.location.href = `/products/${productId}/edit`;
 }
 
 // Edit variation function
