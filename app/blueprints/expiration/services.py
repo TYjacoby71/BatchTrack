@@ -200,11 +200,13 @@ class ExpirationService:
             if not expiration_date:
                 continue
 
-            # Convert expiration date to UTC for comparison
-            if expiration_date.tzinfo:
+            # Ensure expiration date is timezone-aware for comparison
+            if expiration_date.tzinfo is None:
+                expiration_utc = expiration_date.replace(tzinfo=timezone.utc)
+            elif expiration_date.tzinfo != timezone.utc:
                 expiration_utc = expiration_date.astimezone(timezone.utc)
             else:
-                expiration_utc = expiration_date.replace(tzinfo=timezone.utc)
+                expiration_utc = expiration_date
 
             # Apply time-based filtering using UTC
             if expired and expiration_utc < now_utc:
@@ -270,11 +272,13 @@ class ExpirationService:
             if not expiration_date:
                 continue
 
-            # Convert expiration date to UTC for comparison
-            if expiration_date.tzinfo:
+            # Ensure expiration date is timezone-aware for comparison
+            if expiration_date.tzinfo is None:
+                expiration_utc = expiration_date.replace(tzinfo=timezone.utc)
+            elif expiration_date.tzinfo != timezone.utc:
                 expiration_utc = expiration_date.astimezone(timezone.utc)
             else:
-                expiration_utc = expiration_date.replace(tzinfo=timezone.utc)
+                expiration_utc = expiration_date
 
             # Apply time-based filtering using UTC
             if expired and expiration_utc < now_utc:
@@ -323,10 +327,10 @@ class ExpirationService:
         """Get all expired inventory items across the system"""
         # Use the new _query_fifo_entries method for proper formatting
         expired_fifo_entries = ExpirationService._query_fifo_entries(expired=True)
-        
+
         # Get expired product SKU entries
         expired_sku_entries = ExpirationService._query_sku_entries(expired=True)
-        
+
         expired_products = []
         for sku in expired_sku_entries:
             formatted = ExpirationService._format_sku_entry(sku)
@@ -343,10 +347,10 @@ class ExpirationService:
         """Get items expiring within specified days"""
         # Use the new _query_fifo_entries method for proper formatting
         expiring_fifo_entries = ExpirationService._query_fifo_entries(days_ahead=days_ahead)
-        
+
         # Get expiring product SKU entries
         expiring_sku_entries = ExpirationService._query_sku_entries(days_ahead=days_ahead)
-        
+
         expiring_products = []
         for sku in expiring_sku_entries:
             formatted = ExpirationService._format_sku_entry(sku)
