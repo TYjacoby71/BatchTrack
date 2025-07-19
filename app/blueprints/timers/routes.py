@@ -4,7 +4,14 @@ from . import timers_bp
 from ...services.timer_service import TimerService
 from ...models import db, Batch
 
+@timers_bp.route('/list_timers')
+@login_required
+def list_timers():
+    """Alias route for timer list to match layout template"""
+    return redirect(url_for('timers.timer_list'))
+
 @timers_bp.route('/timer_list')
+@timers_bp.route('/list_timers')  # Add alias for layout template
 @login_required
 def timer_list():
     """Display all timers with management interface"""
