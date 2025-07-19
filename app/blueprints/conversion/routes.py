@@ -97,7 +97,8 @@ def manage_units():
                     conversion_factor=1.0,
                     is_custom=True,
                     is_mapped=False,  # Start as unmapped
-                    user_id=current_user.id if current_user.is_authenticated else None
+                    created_by=current_user.id if current_user.is_authenticated else None,
+                    organization_id=current_user.organization_id if current_user.is_authenticated else None
                 )
                 db.session.add(new_unit)
                 db.session.commit()
