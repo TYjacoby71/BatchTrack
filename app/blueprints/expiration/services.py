@@ -28,6 +28,11 @@ class ExpirationService:
 
         # Calculate expiration date maintaining the timezone
         expiration_date = start_date + timedelta(days=shelf_life_days)
+        
+        # Ensure the result is timezone-aware
+        if expiration_date.tzinfo is None:
+            expiration_date = expiration_date.replace(tzinfo=timezone.utc)
+            
         return expiration_date
 
     @staticmethod
