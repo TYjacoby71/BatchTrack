@@ -80,6 +80,11 @@ function updateChangeType(selectElement) {
     }
 }
 
+function getSelectedChangeType() {
+    const changeTypeSelect = document.getElementById('change_type');
+    return changeTypeSelect ? changeTypeSelect.value : 'adjustment';
+}
+
 // Function to handle quantity input changes
 function handleQuantityChange() {
     const quantity = parseFloat(document.getElementById('quantity').value) || 0;
