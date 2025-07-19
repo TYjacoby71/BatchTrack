@@ -620,6 +620,10 @@ document.addEventListener('DOMContentLoaded', function() {
   // Initialize pagination for both tables
   initTablePagination('ingredients');
   initTablePagination('containers');
+
+  // Load filter settings from localStorage
+  loadFilterSettings('ingredients');
+  loadFilterSettings('containers');
 });
 
 function initTablePagination(tableType) {
@@ -630,13 +634,17 @@ function initTablePagination(tableType) {
   const nameFilterId = tableType + 'NameFilter';
   const sortFilterId = tableType + 'SortFilter';
   const perPageId = tableType + 'PerPage';
+  const archivedCheckboxId = tableType + 'ShowArchived';
 
   let currentPage = 1;
   let itemsPerPage = 20;
   let allRows = Array.from(document.querySelectorAll(`#${tableBodyId} tr`));
   let filteredRows = [...allRows];
+  let nameFilterValue = '';
+  let sortFilterValue = 'name_asc';
+  let showArchivedValue = false;
 
-  function updateTable() {
+function updateTable() {
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
     const visibleRows = filteredRows.slice(startIndex, endIndex);
@@ -701,18 +709,25 @@ function initTablePagination(tableType) {
   }
 
   function filterAndSort() {
-    const nameFilter = document.getElementById(nameFilterId).value.toLowerCase();
-    const sortFilter = document.getElementById(sortFilterId).value;
+    nameFilterValue = document.getElementById(nameFilterId).value.toLowerCase();
+    sortFilterValue = document.getElementById(sortFilterId).value;
+    showArchivedValue = document.getElementById(archivedCheckboxId).checked;
+
 
     // Filter by name
     filteredRows = allRows.filter(row => {
       const name = row.dataset.name || '';
-      return name.includes(nameFilter);
+      const isArchived = row.querySelector('.col-status .badge')?.textContent === 'Archived';
+
+      const nameMatch = name.includes(nameFilterValue);
+      const archivedMatch = showArchivedValue || !isArchived;
+
+      return nameMatch && archivedMatch;
     });
 
     // Sort
     filteredRows.sort((a, b) => {
-      const [field, direction] = sortFilter.split('_');
+      const [field, direction] = sortFilterValue.split('_');
       let aVal, bVal;
 
       if (field === 'name') {
@@ -735,6 +750,38 @@ function initTablePagination(tableType) {
 
     currentPage = 1;
     updateTable();
+    saveFilterSettings(tableType);
+  }
+
+  function loadFilterSettings(tableType) {
+    const savedSettings = localStorage.getItem(tableType + 'FilterSettings');
+    if (savedSettings) {
+      const settings = JSON.parse(savedSettings);
+      currentPage = settings.currentPage || 1;
+      itemsPerPage = settings.itemsPerPage || 20;
+      nameFilterValue = settings.nameFilterValue || '';
+      sortFilterValue = settings.sortFilterValue || 'name_asc';
+      showArchivedValue = settings.showArchivedValue || false;
+
+      document.getElementById(nameFilterId).value = nameFilterValue;
+      document.getElementById(sortFilterId).value = sortFilterValue;
+      document.getElementById(perPageId).value = itemsPerPage;
+      document.getElementById(archivedCheckboxId).checked = showArchivedValue;
+
+      // Manually trigger the filter and sort after loading settings
+      filterAndSort();
+    }
+  }
+
+  function saveFilterSettings(tableType) {
+    const settings = {
+      currentPage: currentPage,
+      itemsPerPage: parseInt(document.getElementById(perPageId).value),
+      nameFilterValue: document.getElementById(nameFilterId).value,
+      sortFilterValue: document.getElementById(sortFilterId).value,
+      showArchivedValue: document.getElementById(archivedCheckboxId).checked
+    };
+    localStorage.setItem(tableType + 'FilterSettings', JSON.stringify(settings));
   }
 
   // Event listeners
@@ -743,6 +790,7 @@ function initTablePagination(tableType) {
     itemsPerPage = parseInt(this.value);
     currentPage = 1;
     updateTable();
+    saveFilterSettings(tableType);
   });
 
   // Column visibility toggle
@@ -755,6 +803,7 @@ function initTablePagination(tableType) {
       columnElements.forEach(el => {
         el.style.display = isVisible ? '' : 'none';
       });
+      saveFilterSettings(tableType);
     });
   });
 
@@ -863,11 +912,11 @@ function updateAddContainerCostHelp() {
 document.addEventListener('DOMContentLoaded', function() {
     const ingredientQtyInput = document.querySelector('#addIngredientForm input[name="quantity"]');
     const containerQtyInput = document.querySelector('#addContainerForm input[name="quantity"]');
-    
+
     if (ingredientQtyInput) {
         ingredientQtyInput.addEventListener('input', updateAddIngredientCostHelp);
     }
-    
+
     if (containerQtyInput) {
         containerQtyInput.addEventListener('input', updateAddContainerCostHelp);
     }

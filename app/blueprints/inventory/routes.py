@@ -12,37 +12,63 @@ from . import inventory_bp
 @inventory_bp.route('/')
 @login_required
 def list_inventory():
-    inventory_type = request.args.get('type')
-    show_archived = request.args.get('show_archived') == 'true'
-    query = InventoryItem.query
+    from ...models.user_preferences import UserPreference
 
-    # Add organization scoping
+    page = request.args.get('page', 1, type=int)
+    per_page = 50  # Number of items per page
+
+    # Base query with organization filtering
+    query = InventoryItem.query
     if current_user.organization_id:
         query = query.filter_by(organization_id=current_user.organization_id)
 
-    # Exclude product and product-reserved items from inventory management
-    query = query.filter(~InventoryItem.type.in_(['product', 'product-reserved']))
+    # Get filters from request or user preferences
+    search = request.args.get('search', '').strip()
+    type_filter = request.args.get('type', '')
+    category_filter = request.args.get('category', '')
 
-    # Filter by archived status unless show_archived is true
-    if not show_archived:
-        query = query.filter(InventoryItem.is_archived != True)
+    # If no filters in request, load from user preferences
+    if not any([search, type_filter, category_filter]):
+        user_prefs = UserPreference.get_preferences(current_user.id, 'inventory_filters')
+        if user_prefs:
+            search = user_prefs.get('search', '')
+            type_filter = user_prefs.get('type', '')
+            category_filter = user_prefs.get('category', '')
+    else:
+        # Save current filters to user preferences
+        filter_prefs = {
+            'search': search,
+            'type': type_filter,
+            'category': category_filter
+        }
+        UserPreference.set_preference(current_user.id, 'inventory_filters', filter_prefs)
 
-    if inventory_type:
-        query = query.filter_by(type=inventory_type)
-    
-    # Order by archived status (active items first) then by name
-    query = query.order_by(InventoryItem.is_archived.asc(), InventoryItem.name.asc())
-    inventory_items = query.all()
+    # Apply filters
+    if search:
+        query = query.filter(InventoryItem.name.ilike(f'%{search}%'))
+
+    if type_filter:
+        query = query.filter(InventoryItem.type == type_filter)
+
+    if category_filter:
+        query = query.filter(InventoryItem.category_id == category_filter)
+
+    # Order by name and paginate
+    query = query.order_by(InventoryItem.name)
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+    items = pagination.items
+
+    # Fetch additional data for rendering
     units = get_global_unit_list()
     categories = IngredientCategory.query.all()
-    total_value = sum(item.quantity * item.cost_per_unit for item in inventory_items)
+    total_value = sum(item.quantity * item.cost_per_unit for item in items)
 
     # Calculate freshness and expired quantities for each item
     from ...blueprints.expiration.services import ExpirationService
     from datetime import datetime
     from sqlalchemy import and_
 
-    for item in inventory_items:
+    for item in items:
         item.freshness_percent = ExpirationService.get_weighted_average_freshness(item.id)
 
         # Calculate expired quantity using temporary attributes instead of properties
@@ -62,14 +88,19 @@ def list_inventory():
             item.temp_expired_quantity = 0
             item.temp_available_quantity = item.quantity
 
-    return render_template('inventory_list.html', 
-                         inventory_items=inventory_items,
-                         items=inventory_items,  # Template expects 'items'
+    # Get inventory types for dropdown
+    inventory_types = db.session.query(InventoryItem.type).distinct().all()
+    inventory_types = [i[0] for i in inventory_types if i[0] not in ['product', 'product-reserved']]
+
+    return render_template('inventory_list.html',
+                         items=items,
+                         pagination=pagination,
                          categories=categories,
-                         total_value=total_value,
-                         units=units,
-                         show_archived=show_archived,
-                         get_global_unit_list=get_global_unit_list)
+                         total_items=query.count(),
+                         inventory_types=inventory_types,
+                         current_search=search,
+                         current_type=type_filter,
+                         current_category=category_filter)
 @inventory_bp.route('/set-columns', methods=['POST'])
 @login_required
 def set_column_visibility():
@@ -144,7 +175,7 @@ def view_inventory(id):
             )
         ).order_by(InventoryHistory.expiration_date.asc()).all()
         expired_total = sum(float(entry.remaining_quantity) for entry in expired_entries)
-    
+
     from ...utils.timezone_utils import TimezoneUtils
     return render_template('inventory/view.html',
                          abs=abs,
@@ -182,7 +213,7 @@ def add_inventory():
         # Handle cost entry type
         cost_entry_type = request.form.get('cost_entry_type', 'per_unit')
         cost_input = float(request.form.get('cost_per_unit', 0))
-        
+
         if cost_entry_type == 'total' and quantity > 0:
             cost_per_unit = cost_input / quantity
         else:
