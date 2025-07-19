@@ -1,3 +1,11 @@
+` tags.
+
+```text
+The provided change replaces a templated URL with a hardcoded one, likely to avoid issues with HTML entity encoding or dynamic URL generation.
+```
+
+```
+<replit_final_file>
 // Get CSRF token from meta tag
 function getCSRFToken() {
   return document.querySelector('meta[name="csrf-token"]')?.content;

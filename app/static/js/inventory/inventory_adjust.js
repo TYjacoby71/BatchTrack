@@ -12,23 +12,23 @@ document.addEventListener('DOMContentLoaded', function() {
     adjustmentForms.forEach(form => {
         form.addEventListener('submit', function(e) {
             console.log('Adjustment form submitted');
-            
+
             // Validate required fields
             const quantity = form.querySelector('input[name="quantity"]');
             const changeType = form.querySelector('input[name="change_type"]:checked');
-            
+
             if (!quantity || !quantity.value) {
                 e.preventDefault();
                 alert('Please enter a quantity');
                 return false;
             }
-            
+
             if (!changeType) {
                 e.preventDefault();
                 alert('Please select a change type');
                 return false;
             }
-            
+
             console.log('Form validation passed, submitting...');
         });
     });
@@ -66,7 +66,7 @@ function updateChangeType(selectElement) {
     // Update expiration section visibility based on change type
     const expirationSection = document.getElementById('expirationOverrideSection');
     const selectedValue = selectElement ? selectElement.value : getSelectedChangeType();
-    
+
     if (expirationSection) {
         if (selectedValue === 'restock') {
             expirationSection.style.display = 'block';
