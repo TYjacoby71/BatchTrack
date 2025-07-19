@@ -27,6 +27,7 @@
                 </thead>
                 <tbody>
                     {% for entry in history %}
+                    {% if not fifo_filter or entry.remaining_quantity > 0 %}
                     <tr>
                         <td>
                             {% if entry.timestamp %}
@@ -174,7 +175,7 @@
                                 {% set exp_time = entry.expiration_date.strftime('%H:%M') %}
                                 {% set is_expired = entry.expiration_date < now %}
                                 {% set days_until = (entry.expiration_date.date() - now.date()).days %}
-                                
+
                                 <span class="badge 
                                     {% if is_expired %}
                                         bg-danger
@@ -235,6 +236,7 @@
                             {% endif %}
                         </td>
                     </tr>
+                    {% endif %}
                     {% endfor %}
                 </tbody>
             </table>
