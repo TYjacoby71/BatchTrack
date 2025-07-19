@@ -34,12 +34,13 @@ class Organization(db.Model):
     def can_add_users(self):
         """Check if organization can add more active users based on subscription (excluding developers)"""
         active_non_dev_users = len([u for u in self.users if u.is_active and u.user_type != 'developer'])
-        if self.subscription_tier == 'solo':
+        effective_tier = self.effective_subscription_tier
+        if effective_tier == 'solo':
             return active_non_dev_users < 1  # Solo only
-        elif self.subscription_tier == 'team':
+        elif effective_tier == 'team':
             return active_non_dev_users < 10  # Up to 10 active users
-        elif self.subscription_tier == 'enterprise':
-            return True  # Unlimited active users for enterprise
+        elif effective_tier in ['enterprise', 'exempt']:
+            return True  # Unlimited active users for enterprise/exempt
         else:
             return active_non_dev_users < 1  # Default to solo limits
 
@@ -48,18 +49,22 @@ class Organization(db.Model):
         tier_limits = {
             'solo': 1,
             'team': 10,
-            'enterprise': float('inf')
+            'enterprise': float('inf'),
+            'exempt': float('inf')
         }
-        return tier_limits.get(self.subscription_tier, 1)
+        effective_tier = self.effective_subscription_tier
+        return tier_limits.get(effective_tier, 1)
 
     def get_subscription_features(self):
         """Get features available for subscription tier"""
         features = {
             'solo': ['basic_production', 'inventory_tracking', 'recipe_management'],
             'team': ['basic_production', 'inventory_tracking', 'recipe_management', 'user_management', 'advanced_alerts', 'batch_tracking'],
-            'enterprise': ['all_features', 'api_access', 'custom_integrations', 'priority_support']
+            'enterprise': ['all_features', 'api_access', 'custom_integrations', 'priority_support'],
+            'exempt': ['all_features', 'api_access', 'custom_integrations', 'priority_support', 'exempt_access']
         }
-        return features.get(self.subscription_tier, features['solo'])
+        effective_tier = self.effective_subscription_tier
+        return features.get(effective_tier, features['solo'])
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)

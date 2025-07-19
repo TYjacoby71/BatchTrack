@@ -238,18 +238,7 @@ def signup():
                 signup_source=signup_source,
                 promo_code=entered_promo if entered_promo else None,
                 referral_code=referral_code,
-                # Store encrypted billing info (in production, use proper encryption)
-                billing_info={
-                    'card_last_4': card_number[-4:] if card_number else None,
-                    'card_exp_month': card_exp_month,
-                    'card_exp_year': card_exp_year,
-                    'billing_name': billing_name,
-                    'billing_address': billing_address,
-                    'billing_city': billing_city,
-                    'billing_state': billing_state,
-                    'billing_zip': billing_zip,
-                    'billing_country': billing_country
-                }
+                # Billing will be handled by Stripe - no local storage needed
             )
             db.session.add(org)
             db.session.flush()  # Get the ID

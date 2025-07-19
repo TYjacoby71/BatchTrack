@@ -9,7 +9,7 @@ class Subscription(db.Model):
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=False)
     
     # Core subscription info
-    tier = db.Column(db.String(32), default='free')  # free, solo, team, enterprise
+    tier = db.Column(db.String(32), default='free')  # free, solo, team, enterprise, exempt
     status = db.Column(db.String(32), default='active')  # active, trialing, past_due, canceled, paused
     
     # Flexible period management
@@ -51,6 +51,8 @@ class Subscription(db.Model):
         """Check if subscription allows access"""
         if self.status == 'canceled':
             return False
+        if self.tier == 'exempt':  # Exempt tier always has access
+            return True
         if self.is_trial:
             return True
         return self.status in ['active', 'trialing']
@@ -58,6 +60,8 @@ class Subscription(db.Model):
     @property
     def effective_tier(self):
         """Get the tier considering trial status"""
+        if self.tier == 'exempt':
+            return 'enterprise'  # Exempt accounts get enterprise features
         if self.is_trial and self.trial_tier:
             return self.trial_tier
         return self.tier

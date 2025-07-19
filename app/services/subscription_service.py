@@ -76,3 +76,38 @@ class SubscriptionService:
             return 'free'
             
         return subscription.effective_tier
+    
+    @staticmethod
+    def create_exempt_subscription(organization, reason="Exempt account"):
+        """Create an exempt subscription for gifted accounts"""
+        subscription = Subscription(
+            organization_id=organization.id,
+            tier='exempt',
+            status='active',
+            notes=f"Exempt subscription: {reason}"
+        )
+        
+        db.session.add(subscription)
+        db.session.commit()
+        return subscription
+    
+    @staticmethod
+    def is_reserved_organization(org_id):
+        """Check if organization is reserved for owner/testing"""
+        return org_id == 1  # Organization 1 is reserved
+    
+    @staticmethod
+    def setup_reserved_organization():
+        """Set up organization 1 as reserved for owner"""
+        from ..models import Organization
+        
+        org = Organization.query.get(1)
+        if org and not hasattr(org, 'subscription') or not org.subscription:
+            # Create exempt subscription for org 1
+            subscription = SubscriptionService.create_exempt_subscription(
+                org, 
+                "Reserved organization for owner/testing"
+            )
+            logger.info(f"Created exempt subscription for reserved organization {org.id}")
+            return subscription
+        return None
