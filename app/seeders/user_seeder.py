@@ -200,4 +200,3 @@ def update_existing_users_with_roles():
 
     db.session.commit()
     print("✅ Existing users updated with database roles and user_type")
-```
