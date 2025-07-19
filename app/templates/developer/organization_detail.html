@@ -48,7 +48,7 @@
                 </div>
                 <div class="card-body">
                     <form method="POST" action="{{ url_for('developer.edit_organization', org_id=organization.id) }}">
-                        {{ csrf_token() }}
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                         <div class="mb-3">
                             <label for="name" class="form-label">Name</label>
                             <input type="text" class="form-control" id="name" name="name" value="{{ organization.name }}">
@@ -85,7 +85,7 @@
                     <h6>Quick Actions</h6>
                     <div class="d-grid gap-2">
                         <form method="POST" action="{{ url_for('developer.upgrade_organization', org_id=organization.id) }}" class="d-inline">
-                            {{ csrf_token() }}
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                             <div class="input-group">
                                 <select class="form-select" name="tier">
                                     <option value="solo">Upgrade to Solo</option>

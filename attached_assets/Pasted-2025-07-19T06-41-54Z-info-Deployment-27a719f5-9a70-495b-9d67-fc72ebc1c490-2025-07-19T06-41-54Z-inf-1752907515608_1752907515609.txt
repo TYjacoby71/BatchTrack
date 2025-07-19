@@ -1,0 +1,57 @@
+2025-07-19T06:41:54Z info: Deployment: 27a719f5-9a70-495b-9d67-fc72ebc1c490
+2025-07-19T06:41:54Z info: Build: 1c063dd4-2cf0-4b0e-93dc-ce76bb7610f9
+2025-07-19T06:41:54Z info: Connecting to builder
+2025-07-19T06:41:55Z info: Builder connected
+2025-07-19T06:41:56Z info: Installing packages
+2025-07-19T06:41:56Z info: Skipping Build as no Build command set
+2025-07-19T06:41:56Z info: Pushing pid1 binary layer...
+2025-07-19T06:41:58Z info: Pushing Repl layer...
+2025-07-19T06:41:58Z info: Pushing hosting layer...
+2025-07-19T06:41:58Z info: Retrieved cached nix layer
+2025-07-19T06:41:58Z info: Created hosting layer
+2025-07-19T06:41:58Z info: Created pid1 binary layer
+2025-07-19T06:42:13Z info: Created Repl layer
+2025-07-19T06:42:13Z info: Pushing Repl (cache) layer...
+2025-07-19T06:42:14Z info: Created Repl (cache) layer
+2025-07-19T06:42:14Z info: Pushed image manifest
+2025-07-19T06:42:15Z info: Pushed soci index manifest
+2025-07-19T06:41:54Z info: Deployment: 27a719f5-9a70-495b-9d67-fc72ebc1c490
+2025-07-19T06:41:54Z info: Build: 1c063dd4-2cf0-4b0e-93dc-ce76bb7610f9
+2025-07-19T06:41:54Z info: Connecting to builder
+2025-07-19T06:41:55Z info: Builder connected
+2025-07-19T06:41:56Z info: Installing packages
+2025-07-19T06:41:56Z info: Skipping Build as no Build command set
+2025-07-19T06:41:56Z info: Pushing pid1 binary layer...
+2025-07-19T06:41:58Z info: Pushing Repl layer...
+2025-07-19T06:41:58Z info: Pushing hosting layer...
+2025-07-19T06:41:58Z info: Retrieved cached nix layer
+2025-07-19T06:41:58Z info: Created hosting layer
+2025-07-19T06:41:58Z info: Created pid1 binary layer
+2025-07-19T06:42:13Z info: Created Repl layer
+2025-07-19T06:42:13Z info: Pushing Repl (cache) layer...
+2025-07-19T06:42:14Z info: Created Repl (cache) layer
+2025-07-19T06:42:14Z info: Pushed image manifest
+2025-07-19T06:42:15Z info: Pushed soci index manifest
+2025-07-19T06:42:18Z info: Creating Autoscale service
+forwarding local port 5000 to external port 80 (mapped as 1104)
+starting up user application
+2025-07-19T06:42:37Z info: Waiting for service to be ready
+ * Running on http://127.0.0.1:5000
+Container routes found: ['/settings/bulk-update-containers', '/api/debug-containers', '/api/available-containers/<int:recipe_id>', '/api/containers/available', '/api/batches/<int:batch_id>/containers', '/api/batches/<int:batch_id>/containers/<int:container_id>', '/api/batches/<int:batch_id>/containers/<int:container_id>/adjust']
+2025-07-19 06:42:34,658 INFO:  * Debugger PIN: 707-280-217
+[2025-07-19 06:42:33,698] INFO in unit_utils: BatchTrack startup
+ * Serving Flask app 'app'
+2025-07-19 06:42:33,813 INFO: Press CTRL+C to quit
+ * Debug mode: on
+[2025-07-19 06:42:34,637] INFO in unit_utils: BatchTrack startup
+Registered API routes: ['/api/reservations/create', '/api/reservations/release/<int:reservation_id>', '/api/reservations/convert-to-sale/<int:reservation_id>', '/api/reservations/expire-old', '/api/products/<int:product_id>/variants', '/api/dismiss-alert', '/api/dashboard-alerts', '/api/server-time', '/api/server-time', '/api/dismiss-alert', '/api/dashboard-alerts', '/api/check-stock', '/api/categories', '/api/ingredient/<int:id>/density', '/api/debug-containers', '/api/available-containers/<int:recipe_id>', '/api/containers/available', '/api/batches/<int:batch_id>/containers', '/api/batches/<int:batch_id>/containers/<int:container_id>', '/api/batches/<int:batch_id>/containers/<int:container_id>/adjust', '/api/api/fifo-details/<int:inventory_id>', '/api/api/batch-inventory-summary/<int:batch_id>', '/api/api/reservations/create', '/api/api/reservations/release/<int:reservation_id>', '/api/api/reservations/convert-to-sale/<int:reservation_id>', '/api/api/reservations/expire-old']
+ * Running on all addresses (0.0.0.0)
+Container routes found: ['/settings/bulk-update-containers', '/api/debug-containers', '/api/available-containers/<int:recipe_id>', '/api/containers/available', '/api/batches/<int:batch_id>/containers', '/api/batches/<int:batch_id>/containers/<int:container_id>', '/api/batches/<int:batch_id>/containers/<int:container_id>/adjust']
+Registered API routes: ['/api/reservations/create', '/api/reservations/release/<int:reservation_id>', '/api/reservations/convert-to-sale/<int:reservation_id>', '/api/reservations/expire-old', '/api/products/<int:product_id>/variants', '/api/dismiss-alert', '/api/dashboard-alerts', '/api/server-time', '/api/server-time', '/api/dismiss-alert', '/api/dashboard-alerts', '/api/check-stock', '/api/categories', '/api/ingredient/<int:id>/density', '/api/debug-containers', '/api/available-containers/<int:recipe_id>', '/api/containers/available', '/api/batches/<int:batch_id>/containers', '/api/batches/<int:batch_id>/containers/<int:container_id>', '/api/batches/<int:batch_id>/containers/<int:container_id>/adjust', '/api/api/fifo-details/<int:inventory_id>', '/api/api/batch-inventory-summary/<int:batch_id>', '/api/api/reservations/create', '/api/api/reservations/release/<int:reservation_id>', '/api/api/reservations/convert-to-sale/<int:reservation_id>', '/api/api/reservations/expire-old']
+2025-07-19 06:42:34,655 WARNING:  * Debugger is active!
+2025-07-19 06:42:33,813 INFO: WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+2025-07-19 06:42:33,816 INFO:  * Restarting with stat
+2025-07-19 06:42:34,959 INFO: 127.0.0.1 - - [19/Jul/2025 06:42:34] "GET / HTTP/1.1" 302 -
+ * Running on http://169.254.8.1:5000
+2025-07-19 06:42:35,187 INFO: 127.0.0.1 - - [19/Jul/2025 06:42:35] "GET /auth/login HTTP/1.1" 200 -
+2025-07-19T06:42:39Z info: Deployment successful
