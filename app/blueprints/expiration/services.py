@@ -28,13 +28,6 @@ class ExpirationService:
 
         # Calculate expiration date maintaining the timezone
         expiration_date = start_date + timedelta(days=shelf_life_days)
-        
-        # The result should inherit timezone from start_date, but ensure it's UTC
-        if expiration_date.tzinfo is None:
-            expiration_date = expiration_date.replace(tzinfo=timezone.utc)
-        elif expiration_date.tzinfo != timezone.utc:
-            expiration_date = expiration_date.astimezone(timezone.utc)
-            
         return expiration_date
 
     @staticmethod
@@ -121,10 +114,6 @@ class ExpirationService:
                 # Use batch completion date (completed_at) as the start date
                 start_date = batch.completed_at
                 if start_date:
-                    # Ensure start_date is timezone-aware
-                    if start_date.tzinfo is None:
-                        start_date = start_date.replace(tzinfo=timezone.utc)
-                    
                     # Use the greater shelf life between batch and master
                     effective_shelf_life = batch.shelf_life_days
                     if master_shelf_life:
@@ -134,12 +123,7 @@ class ExpirationService:
 
         # For manual entries, use the entry timestamp + master shelf life
         if master_shelf_life and fifo_entry.timestamp:
-            # Ensure timestamp is timezone-aware
-            timestamp = fifo_entry.timestamp
-            if timestamp.tzinfo is None:
-                timestamp = timestamp.replace(tzinfo=timezone.utc)
-            
-            return ExpirationService.calculate_expiration_date(timestamp, master_shelf_life)
+            return ExpirationService.calculate_expiration_date(fifo_entry.timestamp, master_shelf_life)
 
         return None
 
@@ -169,10 +153,6 @@ class ExpirationService:
                 # Use batch completion date (completed_at) as the start date
                 start_date = batch.completed_at
                 if start_date:
-                    # Ensure start_date is timezone-aware
-                    if start_date.tzinfo is None:
-                        start_date = start_date.replace(tzinfo=timezone.utc)
-                    
                     # Use the greater shelf life between batch and master
                     effective_shelf_life = batch.shelf_life_days
                     if master_shelf_life:
@@ -187,12 +167,7 @@ class ExpirationService:
 
         # For manual entries, use the entry timestamp + master shelf life
         if master_shelf_life and sku_entry.timestamp:
-            # Ensure timestamp is timezone-aware
-            timestamp = sku_entry.timestamp
-            if timestamp.tzinfo is None:
-                timestamp = timestamp.replace(tzinfo=timezone.utc)
-            
-            expiration_date = ExpirationService.calculate_expiration_date(timestamp, master_shelf_life)
+            expiration_date = ExpirationService.calculate_expiration_date(sku_entry.timestamp, master_shelf_life)
             return expiration_date
 
         logger.debug(f"SKU entry {sku_entry.id}: No valid expiration calculation path found")
@@ -225,25 +200,21 @@ class ExpirationService:
             if not expiration_date:
                 continue
 
-            # Ensure expiration date is timezone-aware for comparison
-            if expiration_date.tzinfo is None:
-                expiration_utc = expiration_date.replace(tzinfo=timezone.utc)
-            elif expiration_date.tzinfo != timezone.utc:
+            # Convert expiration date to UTC for comparison
+            if expiration_date.tzinfo:
                 expiration_utc = expiration_date.astimezone(timezone.utc)
             else:
-                expiration_utc = expiration_date
+                expiration_utc = expiration_date.replace(tzinfo=timezone.utc)
 
             # Apply time-based filtering using UTC
             if expired and expiration_utc < now_utc:
-                # Create entry object for template compatibility
+                # Create entry object for compatibility
                 entry_obj = type('Entry', (), {
                     'inventory_item_id': entry.inventory_item_id,
-                    'ingredient_name': entry.inventory_item.name,
-                    'quantity': entry.remaining_quantity,  # Template expects 'quantity'
+                    'name': entry.inventory_item.name,
+                    'remaining_quantity': entry.remaining_quantity,
                     'unit': entry.unit,
-                    'lot_number': entry.fifo_code or f"#{entry.id}",
                     'expiration_date': expiration_date,  # Keep original for display
-                    'expiration_time': expiration_date.strftime('%H:%M:%S') if expiration_date else '00:00:00',
                     'fifo_id': entry.id,
                     'fifo_code': entry.fifo_code
                 })()
@@ -253,12 +224,10 @@ class ExpirationService:
                 if now_utc <= expiration_utc <= future_date_utc:
                     entry_obj = type('Entry', (), {
                         'inventory_item_id': entry.inventory_item_id,
-                        'ingredient_name': entry.inventory_item.name,
-                        'quantity': entry.remaining_quantity,  # Template expects 'quantity'
+                        'name': entry.inventory_item.name,
+                        'remaining_quantity': entry.remaining_quantity,
                         'unit': entry.unit,
-                        'lot_number': entry.fifo_code or f"#{entry.id}",
                         'expiration_date': expiration_date,  # Keep original for display
-                        'expiration_time': expiration_date.strftime('%H:%M:%S') if expiration_date else '00:00:00',
                         'fifo_id': entry.id,
                         'fifo_code': entry.fifo_code
                     })()
@@ -297,13 +266,11 @@ class ExpirationService:
             if not expiration_date:
                 continue
 
-            # Ensure expiration date is timezone-aware for comparison
-            if expiration_date.tzinfo is None:
-                expiration_utc = expiration_date.replace(tzinfo=timezone.utc)
-            elif expiration_date.tzinfo != timezone.utc:
+            # Convert expiration date to UTC for comparison
+            if expiration_date.tzinfo:
                 expiration_utc = expiration_date.astimezone(timezone.utc)
             else:
-                expiration_utc = expiration_date
+                expiration_utc = expiration_date.replace(tzinfo=timezone.utc)
 
             # Apply time-based filtering using UTC
             if expired and expiration_utc < now_utc:
@@ -350,40 +317,93 @@ class ExpirationService:
     @staticmethod
     def get_expired_inventory_items() -> Dict:
         """Get all expired inventory items across the system"""
-        # Use the new _query_fifo_entries method for proper formatting
-        expired_fifo_entries = ExpirationService._query_fifo_entries(expired=True)
+        from flask_login import current_user
+        today = datetime.now().date()
 
-        # Get expired product SKU entries
-        expired_sku_entries = ExpirationService._query_sku_entries(expired=True)
+        # Get expired FIFO entries
+        fifo_query = InventoryHistory.query.join(InventoryItem).filter(
+            InventoryHistory.expiration_date < today,
+            InventoryHistory.remaining_quantity > 0,
+            InventoryHistory.is_perishable == True
+        )
+
+        # Get expired product inventory
+        product_query = ProductSKUHistory.query.join(
+            InventoryItem, ProductSKUHistory.inventory_item_id == InventoryItem.id
+        ).filter(
+            ProductSKUHistory.expiration_date < today,
+            ProductSKUHistory.remaining_quantity > 0,
+            ProductSKUHistory.is_perishable == True
+        )
+
+        # Apply organization scoping
+        if current_user and current_user.is_authenticated:
+            if current_user.organization_id:
+                fifo_query = fifo_query.filter(InventoryItem.organization_id == current_user.organization_id)
+                product_query = product_query.filter(InventoryItem.organization_id == current_user.organization_id)
+            # Developer users without organization_id see all data
+        else:
+            # If not authenticated, return empty results
+            return {'fifo_entries': [], 'product_inventory': []}
+
+        expired_fifo = fifo_query.all()
+        expired_skus = product_query.all()
 
         expired_products = []
-        for sku in expired_sku_entries:
+        for sku in expired_skus:
             formatted = ExpirationService._format_sku_entry(sku)
             if formatted:
                 expired_products.append(formatted)
 
         return {
-            'fifo_entries': expired_fifo_entries,
+            'fifo_entries': expired_fifo,
             'product_inventory': expired_products
         }
 
     @staticmethod
     def get_expiring_soon_items(days_ahead: int = 7) -> Dict:
         """Get items expiring within specified days"""
-        # Use the new _query_fifo_entries method for proper formatting
-        expiring_fifo_entries = ExpirationService._query_fifo_entries(days_ahead=days_ahead)
+        from flask_login import current_user
+        today = datetime.now().date()
+        cutoff_date = today + timedelta(days=days_ahead)
 
-        # Get expiring product SKU entries
-        expiring_sku_entries = ExpirationService._query_sku_entries(days_ahead=days_ahead)
+        # Get FIFO entries expiring soon
+        fifo_query = InventoryHistory.query.join(InventoryItem).filter(
+            InventoryHistory.expiration_date.between(today, cutoff_date),
+            InventoryHistory.remaining_quantity > 0,
+            InventoryHistory.is_perishable == True
+        )
+
+        # Get product inventory expiring soon
+        product_query = ProductSKUHistory.query.join(
+            InventoryItem, ProductSKUHistory.inventory_item_id == InventoryItem.id
+        ).filter(
+            ProductSKUHistory.expiration_date.between(today, cutoff_date),
+            ProductSKUHistory.remaining_quantity > 0,
+            ProductSKUHistory.is_perishable == True
+        )
+
+        # Apply organization scoping
+        if current_user and current_user.is_authenticated:
+            if current_user.organization_id:
+                fifo_query = fifo_query.filter(InventoryItem.organization_id == current_user.organization_id)
+                product_query = product_query.filter(InventoryItem.organization_id == current_user.organization_id)
+            # Developer users without organization_id see all data
+        else:
+            # If not authenticated, return empty results
+            return {'fifo_entries': [], 'product_inventory': []}
+
+        expiring_fifo = fifo_query.all()
+        expiring_skus = product_query.all()
 
         expiring_products = []
-        for sku in expiring_sku_entries:
+        for sku in expiring_skus:
             formatted = ExpirationService._format_sku_entry(sku)
             if formatted:
                 expiring_products.append(formatted)
 
         return {
-            'fifo_entries': expiring_fifo_entries,
+            'fifo_entries': expiring_fifo,
             'product_inventory': expiring_products
         }
 

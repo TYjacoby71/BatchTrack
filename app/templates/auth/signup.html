@@ -1,3 +1,140 @@
+
+<old_str>
+{% extends 'layout.html' %}
+
+{% block title %}Sign Up - BatchTrack{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">
+                        <i class="fas fa-user-plus"></i> 
+                        {% if signup_source == 'homepage_trial' %}
+                            Start Your Free Trial
+                        {% elif signup_source == 'webinar' %}
+                            Join BatchTrack - Webinar Special
+                        {% elif signup_source == 'demo_request' %}
+                            Request Your Demo Account
+                        {% elif signup_source == 'partner' %}
+                            Partner Signup - Special Offer
+                        {% else %}
+                            Create Your BatchTrack Account
+                        {% endif %}
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <!-- Hidden fields for tracking -->
+                        <input type="hidden" name="signup_source" value="{{ signup_source }}">
+                        {% if referral_code %}
+                        <input type="hidden" name="referral_code" value="{{ referral_code }}">
+                        {% endif %}
+                        
+                        <div class="mb-4">
+                            <h5 class="text-muted">Organization Details</h5>
+                            <div class="mb-3">
+                                <label for="org_name" class="form-label">Organization Name *</label>
+                                <input type="text" class="form-control" id="org_name" name="org_name" required 
+                                       placeholder="Your Company Name">
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+                        <h5 class="text-muted">Your Account Details</h5>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="username" class="form-label">Username *</label>
+                                    <input type="text" class="form-control" id="username" name="username" required
+                                           placeholder="Choose a username">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="email" class="form-label">Email Address *</label>
+                                    <input type="email" class="form-control" id="email" name="email" required
+                                           placeholder="your@email.com">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="first_name" class="form-label">First Name</label>
+                                    <input type="text" class="form-control" id="first_name" name="first_name"
+                                           placeholder="First Name">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="last_name" class="form-label">Last Name</label>
+                                    <input type="text" class="form-control" id="last_name" name="last_name"
+                                           placeholder="Last Name">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="password" class="form-label">Password *</label>
+                                    <input type="password" class="form-control" id="password" name="password" required
+                                           placeholder="Create a secure password">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="confirm_password" class="form-label">Confirm Password *</label>
+                                    <input type="password" class="form-control" id="confirm_password" name="confirm_password" required
+                                           placeholder="Confirm your password">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="phone" class="form-label">Phone Number</label>
+                            <input type="tel" class="form-control" id="phone" name="phone"
+                                   placeholder="Your phone number">
+                        </div>
+
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i>
+                            {% if signup_source == 'homepage_trial' %}
+                                <strong>Free Trial:</strong> Get 14 days of full access to all features. No credit card required.
+                            {% elif signup_source == 'webinar' %}
+                                <strong>Webinar Attendee:</strong> Enjoy 30 days free access as a thank you for attending!
+                            {% elif signup_source == 'demo_request' %}
+                                <strong>Demo Account:</strong> We'll set up a personalized demo with sample data for your review.
+                            {% elif signup_source == 'partner' %}
+                                <strong>Partner Special:</strong> Exclusive partner pricing available after signup.
+                            {% else %}
+                                <strong>Getting Started:</strong> You'll be signed up for our free tier. You can upgrade anytime from your dashboard.
+                            {% endif %}
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-user-plus"></i> Create Account
+                            </button>
+                            <a href="{{ url_for('auth.login') }}" class="btn btn-secondary">
+                                <i class="fas fa-sign-in-alt"></i> Already have an account? Login
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+</old_str>
+<new_str>
 {% extends 'layout.html' %}
 
 {% block title %}Sign Up - BatchTrack{% endblock %}
@@ -65,7 +202,7 @@
                             </div>
                             <div id="promoMessage" class="mt-2"></div>
                         </div>
-
+                        
                         <div class="row">
                             <!-- Left Column - Organization & Account -->
                             <div class="col-md-6">
@@ -81,7 +218,7 @@
 
                                 <hr class="my-4">
                                 <h5 class="text-muted">Your Account Details</h5>
-
+                                
                                 <div class="mb-3">
                                     <label for="username" class="form-label">Username *</label>
                                     <input type="text" class="form-control" id="username" name="username" required
@@ -302,12 +439,12 @@ function formatCardNumber(input) {
 function validatePromoCode() {
     const promoCode = document.getElementById('promo_code').value.trim().toUpperCase();
     const messageDiv = document.getElementById('promoMessage');
-
+    
     if (!promoCode) {
         messageDiv.innerHTML = '';
         return;
     }
-
+    
     // Simple validation - in production, this would be an AJAX call
     const validCodes = {
         'WELCOME20': '20% off for 3 months',
@@ -315,7 +452,7 @@ function validatePromoCode() {
         'WEBINAR50': '50% off first 2 months',
         'PARTNER25': '25% off for 6 months'
     };
-
+    
     if (validCodes[promoCode]) {
         messageDiv.innerHTML = `<div class="alert alert-success small"><i class="fas fa-check-circle me-1"></i> Valid! ${validCodes[promoCode]}</div>`;
     } else {
@@ -331,3 +468,5 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 {% endblock %}
+
+</new_str>
