@@ -1,3 +1,4 @@
+
 from flask import render_template, jsonify, request, flash, redirect, url_for
 from flask_login import login_required, current_user
 from . import timers_bp
@@ -5,24 +6,27 @@ from ...services.timer_service import TimerService
 from ...models import db, Batch
 
 @timers_bp.route('/list_timers')
+@timers_bp.route('/timer_list')
 @login_required
 def list_timers():
-    """Alias route for timer list to match layout template"""
-    return redirect(url_for('timers.timer_list'))
-
-@timers_bp.route('/timer_list')
-@timers_bp.route('/list_timers')  # Add alias for layout template
-@login_required
-def timer_list():
     """Display all timers with management interface"""
     timer_summary = TimerService.get_timer_summary()
     active_timers = TimerService.get_active_timers()
+    
+    # Get active batches for the dropdown
+    query = Batch.query.filter_by(status='in_progress')
+    if current_user and current_user.is_authenticated and current_user.organization_id:
+        query = query.filter(Batch.organization_id == current_user.organization_id)
+    active_batches = query.all()
 
     return render_template('timers/timer_list.html', 
                          timer_summary=timer_summary,
-                         active_timers=active_timers)
+                         active_timers=active_timers,
+                         timers=active_timers,  # For template compatibility
+                         active_batches=[{'id': b.id, 'recipe_name': b.recipe_name} for b in active_batches])
 
 @timers_bp.route('/api/create-timer', methods=['POST'])
+@timers_bp.route('/create', methods=['POST'])
 @login_required
 def api_create_timer():
     """Create a new timer for a batch"""
@@ -30,7 +34,7 @@ def api_create_timer():
 
     batch_id = data.get('batch_id')
     duration_seconds = data.get('duration_seconds')
-    description = data.get('description', '')
+    description = data.get('description', data.get('name', ''))
 
     if not batch_id or not duration_seconds:
         return jsonify({'error': 'Batch ID and duration are required'}), 400
@@ -48,6 +52,7 @@ def api_create_timer():
 
         return jsonify({
             'success': True,
+            'status': 'success',
             'timer_id': timer.id,
             'message': 'Timer created successfully'
         })
@@ -70,15 +75,42 @@ def api_timer_status(timer_id):
         return jsonify({'error': str(e)}), 500
 
 @timers_bp.route('/api/stop-timer/<int:timer_id>', methods=['POST'])
+@timers_bp.route('/complete/<int:timer_id>', methods=['POST'])
 @login_required
 def api_stop_timer(timer_id):
-    """Stop an active timer"""
+    """Stop/complete an active timer"""
     try:
         success = TimerService.stop_timer(timer_id)
         if success:
-            return jsonify({'success': True, 'message': 'Timer stopped'})
+            # Get the updated timer for response
+            timer_status = TimerService.get_timer_status(timer_id)
+            return jsonify({
+                'success': True, 
+                'message': 'Timer completed',
+                'end_time': timer_status.get('end_time')
+            })
         else:
             return jsonify({'error': 'Failed to stop timer'}), 400
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@timers_bp.route('/delete/<int:timer_id>', methods=['POST'])
+@login_required
+def delete_timer(timer_id):
+    """Delete a timer"""
+    try:
+        from ...models import BatchTimer
+        timer = BatchTimer.query.get_or_404(timer_id)
+        
+        # Check organization access
+        if current_user.organization_id and timer.organization_id != current_user.organization_id:
+            return jsonify({'error': 'Access denied'}), 403
+            
+        db.session.delete(timer)
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': 'Timer deleted'})
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
