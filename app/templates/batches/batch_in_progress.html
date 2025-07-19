@@ -408,6 +408,58 @@ document.addEventListener('DOMContentLoaded', function() {
 let currentContainerId = null;
 let currentContainerItemId = null;
 let currentQuantity = 0;
+
+// Timer management functions
+function startTimer(name, duration) {
+    fetch(`/timers/api/start`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCSRFToken()
+        },
+        body: JSON.stringify({
+            batch_id: {{ batch.id }},
+            name: name,
+            duration_minutes: duration
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Error starting timer: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        console.error('Timer error:', error);
+        alert('Network error occurred');
+    });
+}
+
+// Auto-complete expired timers and refresh display
+function checkAndCompleteExpiredTimers() {
+    fetch('/timers/api/complete-expired', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCSRFToken()
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && data.completed_count > 0) {
+            // Reload page if any timers were completed
+            location.reload();
+        }
+    })
+    .catch(error => {
+        console.error('Timer completion error:', error);
+    });
+}
+
+// Check for expired timers every 30 seconds
+setInterval(checkAndCompleteExpiredTimers, 30000);
 </script>
 
 {% endblock %}
