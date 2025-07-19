@@ -46,9 +46,20 @@ class ConversionEngine:
                         return None
                     visited.add(start)
                     
-                    # Check direct mappings (both directions)
-                    forward_mappings = CustomUnitMapping.query.filter_by(from_unit=start).all()
-                    reverse_mappings = CustomUnitMapping.query.filter_by(to_unit=start).all()
+                    # Check direct mappings (both directions) with organization scoping
+                    if current_user and current_user.is_authenticated and current_user.organization_id:
+                        forward_mappings = CustomUnitMapping.query.filter_by(
+                            from_unit=start, 
+                            organization_id=current_user.organization_id
+                        ).all()
+                        reverse_mappings = CustomUnitMapping.query.filter_by(
+                            to_unit=start, 
+                            organization_id=current_user.organization_id
+                        ).all()
+                    else:
+                        # For unauthenticated users or developers, check all mappings
+                        forward_mappings = CustomUnitMapping.query.filter_by(from_unit=start).all()
+                        reverse_mappings = CustomUnitMapping.query.filter_by(to_unit=start).all()
                     
                     # Try forward mappings
                     for mapping in forward_mappings:

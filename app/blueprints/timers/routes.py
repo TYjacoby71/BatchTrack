@@ -30,16 +30,26 @@ def list_timers():
 @login_required
 def api_create_timer():
     """Create a new timer for a batch"""
-    data = request.get_json()
-
-    batch_id = data.get('batch_id')
-    duration_seconds = data.get('duration_seconds')
-    description = data.get('description', data.get('name', ''))
-
-    if not batch_id or not duration_seconds:
-        return jsonify({'error': 'Batch ID and duration are required'}), 400
-
     try:
+        # Handle both JSON and form data
+        if request.is_json:
+            data = request.get_json()
+        else:
+            data = request.form.to_dict()
+
+        batch_id = data.get('batch_id')
+        duration_seconds = data.get('duration_seconds')
+        description = data.get('description', data.get('name', ''))
+
+        if not batch_id or not duration_seconds:
+            return jsonify({'error': 'Batch ID and duration are required'}), 400
+
+        try:
+            batch_id = int(batch_id)
+            duration_seconds = int(duration_seconds)
+        except ValueError:
+            return jsonify({'error': 'Invalid batch ID or duration'}), 400
+
         # Verify batch exists and user has access
         batch = Batch.query.get(batch_id)
         if not batch:
@@ -58,6 +68,9 @@ def api_create_timer():
         })
 
     except Exception as e:
+        import traceback
+        print(f"Timer creation error: {str(e)}")
+        print(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
 
 @timers_bp.route('/api/timer-status/<int:timer_id>')

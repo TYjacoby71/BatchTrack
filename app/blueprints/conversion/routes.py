@@ -192,7 +192,22 @@ def manage_units():
             return redirect(url_for('conversion_bp.manage_units'))
 
     units = get_global_unit_list()
-    mappings = CustomUnitMapping.query.all()
+    
+    # Get mappings scoped by organization
+    if current_user and current_user.is_authenticated:
+        if current_user.user_type == 'developer':
+            # Developers can see all mappings or filtered by selected org
+            from flask import session
+            selected_org_id = session.get('dev_selected_org_id')
+            if selected_org_id:
+                mappings = CustomUnitMapping.query.filter_by(organization_id=selected_org_id).all()
+            else:
+                mappings = CustomUnitMapping.query.all()
+        else:
+            # Regular users see only their organization's mappings
+            mappings = CustomUnitMapping.query.filter_by(organization_id=current_user.organization_id).all()
+    else:
+        mappings = []
 
     units_by_type = {}
     for unit in units:
@@ -208,7 +223,22 @@ def manage_units():
 
 @conversion_bp.route('/mappings/<int:mapping_id>/delete', methods=['POST'])
 def delete_mapping(mapping_id):
-    mapping = CustomUnitMapping.query.get_or_404(mapping_id)
+    # Get mapping with organization scoping
+    if current_user.user_type == 'developer':
+        from flask import session
+        selected_org_id = session.get('dev_selected_org_id')
+        if selected_org_id:
+            mapping = CustomUnitMapping.query.filter_by(
+                id=mapping_id, 
+                organization_id=selected_org_id
+            ).first_or_404()
+        else:
+            mapping = CustomUnitMapping.query.get_or_404(mapping_id)
+    else:
+        mapping = CustomUnitMapping.query.filter_by(
+            id=mapping_id,
+            organization_id=current_user.organization_id
+        ).first_or_404()
     try:
         db.session.delete(mapping)
         db.session.commit()

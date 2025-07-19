@@ -1,3 +1,7 @@
+The code has been modified to filter ingredients in recipe routes to exclude product type inventory items.
+```
+
+```python
 from flask import render_template, request, redirect, url_for, flash, jsonify, current_app
 from flask_login import login_required, current_user
 from ...models import db, Recipe, RecipeIngredient, InventoryItem, Unit
@@ -84,8 +88,10 @@ def new_recipe():
             flash('An unexpected error occurred', 'error')
             db.session.rollback()
 
-    # Get scoped ingredients
-    ingredients_query = InventoryItem.query.order_by(InventoryItem.name)
+    # Get scoped ingredients (exclude product types)
+    ingredients_query = InventoryItem.query.filter(
+        ~InventoryItem.type.in_(['product', 'product-reserved'])
+    ).order_by(InventoryItem.name)
     if current_user.organization_id:
         ingredients_query = ingredients_query.filter_by(organization_id=current_user.organization_id)
     all_ingredients = ingredients_query.all()
@@ -99,11 +105,11 @@ def new_recipe():
 @login_required
 def list_recipes():
     query = Recipe.query.filter_by(parent_id=None)
-    
+
     # Apply organization scoping
     if current_user.organization_id:
         query = query.filter_by(organization_id=current_user.organization_id)
-    
+
     recipes = query.all()
     inventory_units = get_global_unit_list()
     return render_template('recipe_list.html', recipes=recipes, inventory_units=inventory_units)
@@ -113,11 +119,11 @@ def list_recipes():
 def view_recipe(recipe_id):
     try:
         query = Recipe.query.filter_by(id=recipe_id)
-        
+
         # Apply organization scoping
         if current_user.organization_id:
             query = query.filter_by(organization_id=current_user.organization_id)
-            
+
         recipe = query.first_or_404()
         inventory_units = get_global_unit_list()
         if not inventory_units:
@@ -194,9 +200,11 @@ def create_variation(recipe_id):
                 flash('Label prefix is required and cannot be empty.', 'error')
                 # Get all units for dropdowns
                 units = Unit.query.filter_by(is_active=True).order_by(Unit.type, Unit.name).all()
-                
-                # Get scoped ingredients
-                ingredients_query = InventoryItem.query.order_by(InventoryItem.name)
+
+                # Get scoped ingredients (exclude product types)
+                ingredients_query = InventoryItem.query.filter(
+                    ~InventoryItem.type.in_(['product', 'product-reserved'])
+                ).order_by(InventoryItem.name)
                 if current_user.organization_id:
                     ingredients_query = ingredients_query.filter_by(organization_id=current_user.organization_id)
                 all_ingredients = ingredients_query.all()
@@ -219,8 +227,10 @@ def create_variation(recipe_id):
                 flash(f'Label prefix "{label_prefix}" is already used by recipe "{existing_recipe.name}". Please choose a different prefix.', 'error')
                 # Get all units for dropdowns
                 units = Unit.query.filter_by(is_active=True).order_by(Unit.type, Unit.name).all()
-                # Get scoped ingredients
-                ingredients_query = InventoryItem.query.order_by(InventoryItem.name)
+                # Get scoped ingredients (exclude product types)
+                ingredients_query = InventoryItem.query.filter(
+                    ~InventoryItem.type.in_(['product', 'product-reserved'])
+                ).order_by(InventoryItem.name)
                 if current_user.organization_id:
                     ingredients_query = ingredients_query.filter_by(organization_id=current_user.organization_id)
                 all_ingredients = ingredients_query.all()
@@ -276,8 +286,10 @@ def create_variation(recipe_id):
                 db.session.rollback()
 
 
-        # Get scoped ingredients
-        ingredients_query = InventoryItem.query.order_by(InventoryItem.name)
+        # Get scoped ingredients (exclude product types)
+        ingredients_query = InventoryItem.query.filter(
+            ~InventoryItem.type.in_(['product', 'product-reserved'])
+        ).order_by(InventoryItem.name)
         if current_user.organization_id:
             ingredients_query = ingredients_query.filter_by(organization_id=current_user.organization_id)
         all_ingredients = ingredients_query.all()
@@ -360,8 +372,10 @@ def clone_recipe(recipe_id):
             allowed_containers=original.allowed_containers.copy() if original.allowed_containers else []
         )
 
-        # Get scoped ingredients  
-        ingredients_query = InventoryItem.query.order_by(InventoryItem.name)
+        # Get scoped ingredients (exclude product types)
+        ingredients_query = InventoryItem.query.filter(
+            ~InventoryItem.type.in_(['product', 'product-reserved'])
+        ).order_by(InventoryItem.name)
         if current_user.organization_id:
             ingredients_query = ingredients_query.filter_by(organization_id=current_user.organization_id)
         all_ingredients = ingredients_query.all()
@@ -435,12 +449,14 @@ def edit_recipe(recipe_id):
     from ...models import Batch
     existing_batches = Batch.query.filter_by(recipe_id=recipe.id).count()
 
-    # Get scoped ingredients
-    ingredients_query = InventoryItem.query.order_by(InventoryItem.name)
+    # Get scoped ingredients (exclude product types)
+    ingredients_query = InventoryItem.query.filter(
+        ~InventoryItem.type.in_(['product', 'product-reserved'])
+    ).order_by(InventoryItem.name)
     if current_user.organization_id:
         ingredients_query = ingredients_query.filter_by(organization_id=current_user.organization_id)
     all_ingredients = ingredients_query.all()
-    
+
     inventory_units = get_global_unit_list()
     # Get all units for dropdowns
     units = Unit.query.filter_by(is_active=True).order_by(Unit.type, Unit.name).all()
@@ -451,6 +467,14 @@ def edit_recipe(recipe_id):
             label_prefix = request.form.get('label_prefix', '').strip()
             if not label_prefix:
                 flash('Label prefix is required and cannot be empty.', 'error')
+                # Get scoped ingredients for error display (exclude product types)
+                ingredients_query = InventoryItem.query.filter(
+                    ~InventoryItem.type.in_(['product', 'product-reserved'])
+                ).order_by(InventoryItem.name)
+                if current_user.organization_id:
+                    ingredients_query = ingredients_query.filter_by(organization_id=current_user.organization_id)
+                all_ingredients = ingredients_query.all()
+
                 return render_template('recipe_form.html', 
                                      recipe=recipe,
                                      all_ingredients=all_ingredients,
@@ -466,6 +490,14 @@ def edit_recipe(recipe_id):
             ).first()
             if existing_recipe:
                 flash(f'Label prefix "{label_prefix}" is already used by recipe "{existing_recipe.name}". Please choose a different prefix.', 'error')
+                # Get scoped ingredients for error display (exclude product types)
+                ingredients_query = InventoryItem.query.filter(
+                    ~InventoryItem.type.in_(['product', 'product-reserved'])
+                ).order_by(InventoryItem.name)
+                if current_user.organization_id:
+                    ingredients_query = ingredients_query.filter_by(organization_id=current_user.organization_id)
+                all_ingredients = ingredients_query.all()
+
                 return render_template('recipe_form.html', 
                                      recipe=recipe,
                                      all_ingredients=all_ingredients,

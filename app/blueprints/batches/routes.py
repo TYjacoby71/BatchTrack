@@ -1,7 +1,7 @@
 from flask import render_template, request, redirect, url_for, flash, jsonify, session
 from flask_login import login_required, current_user
 from ...models import db, Batch, Recipe, InventoryItem, BatchIngredient, BatchContainer, BatchTimer, ExtraBatchIngredient, ExtraBatchContainer, InventoryHistory
-from datetime import datetime
+from datetime import datetime, timedelta
 from ...utils import get_setting
 from sqlalchemy import extract, func
 from ...services.unit_conversion import ConversionEngine
@@ -278,7 +278,6 @@ def view_batch_in_progress(batch_identifier):
     recipe = batch.recipe  # Use the relationship
 
     # Get units for dropdown
-    from datetime import datetime, timedelta
     from ...utils.unit_utils import get_global_unit_list
     units = get_global_unit_list()
 
@@ -297,7 +296,7 @@ def view_batch_in_progress(batch_identifier):
 
     # Get products for finish batch modal - use Product model
     from ...models import Product
-    
+
     # Get active products for the organization
     products = Product.query.filter_by(
         is_active=True,

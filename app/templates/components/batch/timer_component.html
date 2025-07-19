@@ -1,4 +1,3 @@
-
 <div x-data="{ 
   showTimerForm: false,
   showTimerList: true,
@@ -93,17 +92,26 @@
               {% endif %}
             </td>
             <td>
-              <span class="badge {% if timer.status == 'completed' %}bg-success{% else %}bg-primary{% endif %}">
-                {{ timer.status|title }}
-              </span>
+              {% if timer.status == 'active' %}
+                {% set remaining_seconds = ((timer.start_time + timedelta(seconds=timer.duration_seconds)) - now).total_seconds()|int %}
+                {% if remaining_seconds <= 0 %}
+                  <span class="badge bg-danger">Expired</span>
+                {% else %}
+                  <span class="badge bg-success">Active</span>
+                {% endif %}
+              {% elif timer.status == 'completed' %}
+                <span class="badge bg-secondary">Completed</span>
+              {% elif timer.status == 'paused' %}
+                <span class="badge bg-warning">Paused</span>
+              {% elif timer.status == 'expired' %}
+                <span class="badge bg-danger">Expired</span>
+              {% endif %}
             </td>
             <td>
-              {% if timer.status != 'completed' %}
-              <form method="POST" action="{{ url_for('timers.complete_timer', timer_id=timer.id) }}" class="d-inline">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" class="btn btn-sm btn-success">Complete</button>
-              </form>
+              {% if timer.status == 'active' %}
+                <button class="btn btn-sm btn-success" onclick="completeTimer({{ timer.id }})">Complete</button>
               {% endif %}
+              <button class="btn btn-sm btn-danger" onclick="deleteTimer({{ timer.id }})">Delete</button>
             </td>
           </tr>
           {% endif %}
