@@ -115,7 +115,3 @@ function safeJsonParse(data, fallback = {}) {
 // Initialize with safe defaults - avoid global variable conflicts
 window.expirationData = window.expirationData || {};
 window.productData = window.productData || {};
-
-// Get today's date for comparison
-const today = new Date();
-today.setHours(0, 0, 0, 0);
