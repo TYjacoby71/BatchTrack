@@ -1,6 +1,6 @@
 from flask import render_template, request, redirect, url_for, flash, jsonify, session
 from flask_login import login_required, current_user
-from ...models import db, Batch, Recipe, InventoryItem, BatchIngredient, BatchContainer, BatchTimer, ExtraBatchIngredient, ExtraBatchContainer, InventoryHistory
+from ...models import db, Batch, Recipe, InventoryItem, BatchIngredient, BatchContainer, ExtraBatchIngredient, ExtraBatchContainer, InventoryHistory, BatchTimer
 from datetime import datetime, timedelta
 from ...utils import get_setting
 from sqlalchemy import extract, func
@@ -316,9 +316,8 @@ def view_batch_in_progress(batch_identifier):
                 })
 
     # Get timers for this batch with organization scoping
-    from ..models import BatchTimer
     from datetime import timedelta
-    from ..utils.timezone_utils import TimezoneUtils
+    from ...utils.timezone_utils import TimezoneUtils
     
     timers_query = BatchTimer.query.filter_by(batch_id=batch.id)
     if current_user.organization_id:
