@@ -295,11 +295,6 @@
                     <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#finishBatchModal">
                         <i class="fas fa-check"></i> Complete Batch
                     </button>
-                    {% if has_active_timers %}
-                        <a href="{{ url_for('batches.force_finish_batch', batch_id=batch.id) }}" class="btn btn-sm btn-outline-danger">
-                            <i class="fas fa-bolt"></i> Force Finish
-                        </a>
-                    {% endif %}
                 </div>
             </div>
         </div>
