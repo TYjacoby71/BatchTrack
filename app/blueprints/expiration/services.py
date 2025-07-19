@@ -332,7 +332,7 @@ class ExpirationService:
                 'product_inv_id': sku_entry.id,
                 'product_id': sku.product_id if sku else None,
                 'variant_id': sku.variant_id if sku else None,
-                'lot_number': f"LOT-{sku_entry.id}"
+                'lot_number': sku_entry.fifo_code or f"LOT-{sku_entry.id}"
             }
 
     @staticmethod
