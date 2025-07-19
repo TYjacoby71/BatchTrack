@@ -15,6 +15,7 @@ from .permission import Permission, role_permission
 from .user_role_assignment import UserRoleAssignment
 from .user_preferences import *
 from .statistics import UserStats, OrganizationStats, Leaderboard
+from .subscription import Subscription
 
 # Re-export everything for convenience
 __all__ = [
@@ -24,6 +25,6 @@ __all__ = [
     'ExtraBatchIngredient', 'InventoryItem', 'BatchInventoryLog', 'Tag',
     'Product', 'ProductVariant', 'ProductSKU', 'ProductSKUHistory', 'Reservation', 
     'Role', 'Permission', 'role_permission', 'UserRoleAssignment', 'UserStats', 
-    'OrganizationStats', 'Leaderboard',
+    'OrganizationStats', 'Leaderboard', 'Subscription',
     '*'
 ]
