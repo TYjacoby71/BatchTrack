@@ -114,6 +114,10 @@ class ExpirationService:
                 # Use batch completion date (completed_at) as the start date
                 start_date = batch.completed_at
                 if start_date:
+                    # Ensure start_date is timezone-aware
+                    if start_date.tzinfo is None:
+                        start_date = start_date.replace(tzinfo=timezone.utc)
+                    
                     # Use the greater shelf life between batch and master
                     effective_shelf_life = batch.shelf_life_days
                     if master_shelf_life:
@@ -123,7 +127,12 @@ class ExpirationService:
 
         # For manual entries, use the entry timestamp + master shelf life
         if master_shelf_life and fifo_entry.timestamp:
-            return ExpirationService.calculate_expiration_date(fifo_entry.timestamp, master_shelf_life)
+            # Ensure timestamp is timezone-aware
+            timestamp = fifo_entry.timestamp
+            if timestamp.tzinfo is None:
+                timestamp = timestamp.replace(tzinfo=timezone.utc)
+            
+            return ExpirationService.calculate_expiration_date(timestamp, master_shelf_life)
 
         return None
 
@@ -153,6 +162,10 @@ class ExpirationService:
                 # Use batch completion date (completed_at) as the start date
                 start_date = batch.completed_at
                 if start_date:
+                    # Ensure start_date is timezone-aware
+                    if start_date.tzinfo is None:
+                        start_date = start_date.replace(tzinfo=timezone.utc)
+                    
                     # Use the greater shelf life between batch and master
                     effective_shelf_life = batch.shelf_life_days
                     if master_shelf_life:
@@ -167,7 +180,12 @@ class ExpirationService:
 
         # For manual entries, use the entry timestamp + master shelf life
         if master_shelf_life and sku_entry.timestamp:
-            expiration_date = ExpirationService.calculate_expiration_date(sku_entry.timestamp, master_shelf_life)
+            # Ensure timestamp is timezone-aware
+            timestamp = sku_entry.timestamp
+            if timestamp.tzinfo is None:
+                timestamp = timestamp.replace(tzinfo=timezone.utc)
+            
+            expiration_date = ExpirationService.calculate_expiration_date(timestamp, master_shelf_life)
             return expiration_date
 
         logger.debug(f"SKU entry {sku_entry.id}: No valid expiration calculation path found")
