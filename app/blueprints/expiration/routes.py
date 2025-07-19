@@ -241,6 +241,9 @@ def alerts():
 
     # Get timezone-aware current time for template calculations
     user_now = TimezoneUtils.now()
+    # Convert to naive datetime for template calculations to avoid timezone mixing
+    if user_now.tzinfo is not None:
+        user_now = user_now.replace(tzinfo=None)
     today = user_now.date()
 
     return render_template('expiration/alerts.html',
