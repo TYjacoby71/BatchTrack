@@ -63,7 +63,21 @@ function updateChangeTypeHandler(selectElement) {
 }
 
 function updateChangeType(selectElement) {
-
+    // Update expiration section visibility based on change type
+    const expirationSection = document.getElementById('expirationOverrideSection');
+    const selectedValue = selectElement ? selectElement.value : getSelectedChangeType();
+    
+    if (expirationSection) {
+        if (selectedValue === 'restock') {
+            expirationSection.style.display = 'block';
+        } else {
+            expirationSection.style.display = 'none';
+            const expirationCheckbox = document.getElementById('override_expiration');
+            const shelfLifeField = document.getElementById('shelfLifeField');
+            if (expirationCheckbox) expirationCheckbox.checked = false;
+            if (shelfLifeField) shelfLifeField.style.display = 'none';
+        }
+    }
 }
 
 // Function to handle quantity input changes

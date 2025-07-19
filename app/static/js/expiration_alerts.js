@@ -112,7 +112,6 @@ function safeJsonParse(data, fallback = {}) {
     }
 }
 
-// Initialize with safe defaults
-const currentDate = new Date();
+// Initialize with safe defaults - avoid global variable conflicts
 window.expirationData = window.expirationData || {};
 window.productData = window.productData || {};

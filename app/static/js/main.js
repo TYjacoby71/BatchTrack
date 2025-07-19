@@ -203,30 +203,18 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 
-document.addEventListener('DOMContentLoaded', function() {
-    // Initialize tooltips only if bootstrap is available
-    if (typeof bootstrap !== 'undefined') {
-        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-            return new bootstrap.Tooltip(tooltipTriggerEl);
-        });
-
-        // Initialize any modals that need JS
-        const modals = document.querySelectorAll('.modal');
-        modals.forEach(modal => {
-            new bootstrap.Modal(modal);
-        });
-    }
-});
+// Remove duplicate DOMContentLoaded - already handled above
 
 // Unit filtering function (kept separate as it's called from HTML)
-window.filterUnits = function() {
-  const filter = document.getElementById('unitFilter');
-  if (!filter) return;
+window.filterUnits = function(filterValue) {
+  const filter = filterValue || document.getElementById('unitFilter')?.value || 'all';
   const unitCards = document.querySelectorAll('.card.mb-3');
 
   unitCards.forEach(card => {
-    const type = card.querySelector('h5').textContent.toLowerCase();
-    card.style.display = filter === 'all' || filter === type ? '' : 'none';
+    const typeElement = card.querySelector('h5');
+    if (typeElement) {
+      const type = typeElement.textContent.toLowerCase();
+      card.style.display = filter === 'all' || filter === type ? '' : 'none';
+    }
   });
 }
