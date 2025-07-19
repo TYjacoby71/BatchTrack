@@ -1,4 +1,3 @@
-
 """Add required_subscription_tier column to permission table
 
 Revision ID: add_required_subscription_tier
@@ -19,7 +18,7 @@ def upgrade():
     # Add required_subscription_tier column to permission table
     with op.batch_alter_table('permission', schema=None) as batch_op:
         batch_op.add_column(sa.Column('required_subscription_tier', sa.String(length=32), nullable=True, default='free'))
-    
+
     # Update existing permissions to have default tier
     op.execute("UPDATE permission SET required_subscription_tier = 'free' WHERE required_subscription_tier IS NULL")
 

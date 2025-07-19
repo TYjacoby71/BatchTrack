@@ -1,4 +1,3 @@
-
 """fix_developer_users
 
 Revision ID: fix_developer_users

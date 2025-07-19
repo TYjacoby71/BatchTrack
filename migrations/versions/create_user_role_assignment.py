@@ -1,4 +1,3 @@
-
 """Create user role assignment table
 
 Revision ID: create_user_role_assignment
@@ -32,7 +31,7 @@ def upgrade():
         sa.PrimaryKeyConstraint('id'),
         sa.UniqueConstraint('user_id', 'role_id', 'organization_id', name='unique_user_role_org')
     )
-    
+
     # Use batch operations for SQLite compatibility
     with op.batch_alter_table('role', schema=None) as batch_op:
         batch_op.add_column(sa.Column('is_system_role', sa.Boolean(), nullable=True))
@@ -41,11 +40,11 @@ def upgrade():
         batch_op.create_foreign_key('fk_role_created_by', 'user', ['created_by'], ['id'])
         batch_op.create_foreign_key('fk_role_organization', 'organization', ['organization_id'], ['id'])
         batch_op.create_unique_constraint('unique_role_name_org', ['name', 'organization_id'])
-    
+
     # Add new column to permission table
     with op.batch_alter_table('permission', schema=None) as batch_op:
         batch_op.add_column(sa.Column('required_subscription_tier', sa.String(length=32), nullable=True))
-    
+
     # Remove deprecated columns from user table
     with op.batch_alter_table('user', schema=None) as batch_op:
         batch_op.drop_column('role_id')
@@ -58,11 +57,11 @@ def downgrade():
         batch_op.add_column(sa.Column('is_owner', sa.Boolean(), nullable=True))
         batch_op.add_column(sa.Column('subscription_class', sa.String(length=32), nullable=True))
         batch_op.add_column(sa.Column('role_id', sa.Integer(), nullable=False))
-    
+
     # Remove new columns from permission table
     with op.batch_alter_table('permission', schema=None) as batch_op:
         batch_op.drop_column('required_subscription_tier')
-    
+
     # Remove constraints and columns from role table
     with op.batch_alter_table('role', schema=None) as batch_op:
         batch_op.drop_constraint('unique_role_name_org', type_='unique')
@@ -71,6 +70,6 @@ def downgrade():
         batch_op.drop_column('organization_id')
         batch_op.drop_column('created_by')
         batch_op.drop_column('is_system_role')
-    
+
     # Drop user_role_assignment table
     op.drop_table('user_role_assignment')

@@ -12,7 +12,7 @@ from sqlalchemy.dialects import sqlite
 
 # revision identifiers, used by Alembic.
 revision = 'add_trial_billing'
-down_revision = 'zzz_final_consolidation'  # Replace with your latest migration
+down_revision = 'b2b4ce5f93fd'  # Replace with your latest migration
 branch_labels = None
 depends_on = None
 
