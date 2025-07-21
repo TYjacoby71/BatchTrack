@@ -75,9 +75,30 @@ def manage_units():
                     flash('Unit name and type are required', 'error')
                     return redirect(url_for('conversion_bp.manage_units'))
 
-                existing = Unit.query.filter_by(name=name).first()
+                # Check for existing unit with same name in the same organization
+                if current_user.user_type == 'developer':
+                    # For developers, check within selected organization or globally
+                    from flask import session
+                    selected_org_id = session.get('dev_selected_org_id')
+                    if selected_org_id:
+                        existing = Unit.query.filter_by(name=name, organization_id=selected_org_id).first()
+                    else:
+                        existing = Unit.query.filter_by(name=name).first()
+                else:
+                    # For regular users, check within their organization only
+                    existing = Unit.query.filter(
+                        Unit.name == name,
+                        ((Unit.is_custom == True) & (Unit.organization_id == current_user.organization_id)) |
+                        (Unit.is_custom == False)
+                    ).first()
+                
                 if existing:
-                    flash('Unit already exists', 'error')
+                    if existing.is_custom and existing.organization_id == current_user.organization_id:
+                        flash('A custom unit with this name already exists in your organization', 'error')
+                    elif not existing.is_custom:
+                        flash('A standard unit with this name already exists', 'error')
+                    else:
+                        flash('Unit name not available', 'error')
                     return redirect(url_for('conversion_bp.manage_units'))
 
                 # Set base unit and multiplier based on type
