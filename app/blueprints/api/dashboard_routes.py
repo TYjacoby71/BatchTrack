@@ -1,7 +1,7 @@
 
 from flask import Blueprint, jsonify
 from flask_login import login_required, current_user
-from app.services.dashboard_alerts import DashboardAlertsService
+from app.services.dashboard_alerts import DashboardAlertService
 from app.utils.permissions import require_permission
 
 dashboard_api_bp = Blueprint('dashboard_api', __name__, url_prefix='/api')
@@ -15,7 +15,7 @@ def get_dashboard_alerts():
         if not org_id:
             return jsonify({'success': False, 'error': 'No organization associated with user'}), 400
             
-        alerts = DashboardAlertsService.get_alerts_for_organization(org_id)
+        alerts = DashboardAlertService.get_dashboard_alerts()
         
         return jsonify({
             'success': True,
@@ -41,7 +41,12 @@ def dismiss_alert():
         if not alert_id:
             return jsonify({'success': False, 'error': 'Alert ID required'}), 400
             
-        success = DashboardAlertsService.dismiss_alert(alert_id, current_user.organization_id)
+        # Session-based dismissal (alerts are dismissed in session)
+        from flask import session
+        if 'dismissed_alerts' not in session:
+            session['dismissed_alerts'] = []
+        session['dismissed_alerts'].append(alert_id)
+        success = True
         
         if success:
             return jsonify({'success': True, 'message': 'Alert dismissed successfully'})
