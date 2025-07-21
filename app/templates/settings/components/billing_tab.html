@@ -1,0 +1,132 @@
+
+<div class="row">
+    <div class="col-12">
+        <div class="mb-3">
+            <h5><i class="fas fa-credit-card"></i> Subscription Management</h5>
+            <p class="text-muted">Manage your subscription plan and billing settings</p>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-info-circle"></i> Current Plan</h6>
+            </div>
+            <div class="card-body">
+                <h5 class="text-primary">{{ current_user.organization.effective_subscription_tier.title() }}</h5>
+                <p class="text-muted">{{ current_user.organization.active_users_count }}/{{ current_user.organization.get_max_users() }} users</p>
+                
+                <h6 class="mt-3">Available Features:</h6>
+                <ul class="list-unstyled">
+                    {% for feature in current_user.organization.get_subscription_features() %}
+                    <li><i class="fas fa-check text-success me-2"></i>{{ feature|replace('_', ' ')|title }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card border-primary">
+            <div class="card-header bg-primary text-white">
+                <h6 class="mb-0"><i class="fas fa-arrow-up"></i> Upgrade Available</h6>
+            </div>
+            <div class="card-body text-center">
+                <p>Get more users, features, and integrations</p>
+                <a href="{{ url_for('billing.upgrade') }}" class="btn btn-primary">
+                    <i class="fas fa-external-link-alt"></i> View Upgrade Options
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-history"></i> Quick Upgrade Options</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <div class="upgrade-option">
+                            <h6>Solo - $29/month</h6>
+                            <ul class="small">
+                                <li>Up to 5 users</li>
+                                <li>Full batch tracking</li>
+                                <li>Email support</li>
+                            </ul>
+                            {% if current_user.organization.effective_subscription_tier != 'solo' %}
+                            <a href="{{ url_for('billing.checkout', tier='solo') }}" class="btn btn-sm btn-outline-primary">
+                                {% if current_user.organization.effective_subscription_tier == 'free' %}Upgrade{% else %}Switch{% endif %}
+                            </a>
+                            {% else %}
+                            <span class="badge bg-secondary">Current Plan</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4 mb-3">
+                        <div class="upgrade-option">
+                            <h6>Team - $79/month</h6>
+                            <ul class="small">
+                                <li>Up to 10 users</li>
+                                <li>Advanced features</li>
+                                <li>Custom roles</li>
+                            </ul>
+                            {% if current_user.organization.effective_subscription_tier != 'team' %}
+                            <a href="{{ url_for('billing.checkout', tier='team') }}" class="btn btn-sm btn-outline-primary">
+                                {% if current_user.organization.effective_subscription_tier in ['free', 'solo'] %}Upgrade{% else %}Switch{% endif %}
+                            </a>
+                            {% else %}
+                            <span class="badge bg-secondary">Current Plan</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4 mb-3">
+                        <div class="upgrade-option">
+                            <h6>Enterprise - $199/month</h6>
+                            <ul class="small">
+                                <li>Unlimited users</li>
+                                <li>All features</li>
+                                <li>API access</li>
+                            </ul>
+                            {% if current_user.organization.effective_subscription_tier != 'enterprise' %}
+                            <a href="{{ url_for('billing.checkout', tier='enterprise') }}" class="btn btn-sm btn-outline-primary">
+                                Upgrade
+                            </a>
+                            {% else %}
+                            <span class="badge bg-secondary">Current Plan</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.upgrade-option {
+    padding: 15px;
+    border: 1px solid #e0e0e0;
+    border-radius: 5px;
+    text-align: center;
+    height: 100%;
+}
+
+.upgrade-option h6 {
+    color: #333;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.upgrade-option ul {
+    text-align: left;
+    margin-bottom: 15px;
+}
+</style>

@@ -1,0 +1,52 @@
+
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-bell"></i> Alert Preferences</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Maximum Dashboard Alerts</label>
+                    <input type="number" class="form-control" x-model.number="userPrefs.max_dashboard_alerts" min="1" max="50" @change="updatePreference('max_dashboard_alerts', $event.target.value)">
+                </div>
+
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" x-model="userPrefs.show_expiration_alerts" @change="updatePreference('show_expiration_alerts', $event.target.checked)">
+                    <label class="form-check-label">Show Expiration Alerts</label>
+                </div>
+
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" x-model="userPrefs.show_timer_alerts" @change="updatePreference('show_timer_alerts', $event.target.checked)">
+                    <label class="form-check-label">Show Timer Alerts</label>
+                </div>
+
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" x-model="userPrefs.show_low_stock_alerts" @change="updatePreference('show_low_stock_alerts', $event.target.checked)">
+                    <label class="form-check-label">Show Low Stock Alerts</label>
+                </div>
+
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" x-model="userPrefs.show_batch_alerts" @change="updatePreference('show_batch_alerts', $event.target.checked)">
+                    <label class="form-check-label">Show Batch Alerts</label>
+                </div>
+
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" x-model="userPrefs.show_fault_alerts" @change="updatePreference('show_fault_alerts', $event.target.checked)">
+                    <label class="form-check-label">Show Fault Alerts</label>
+                </div>
+
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" x-model="userPrefs.show_alert_badges" @change="updatePreference('show_alert_badges', $event.target.checked)">
+                    <label class="form-check-label">Show Alert Badges</label>
+                </div>
+
+                <div class="mt-3">
+                    <button type="button" class="btn btn-primary" @click="saveAllPreferences()">
+                        <i class="fas fa-save"></i> Save All Preferences
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

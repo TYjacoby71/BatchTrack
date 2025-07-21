@@ -1,0 +1,61 @@
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h5 class="mb-0"><i class="fas fa-shield-alt"></i> Roles & Permissions</h5>
+    <button class="btn btn-primary btn-sm" onclick="openCreateRoleModal()">
+        <i class="fas fa-plus"></i> Create Role
+    </button>
+</div>
+
+<!-- System Roles -->
+<h6 class="text-muted mb-2">System Roles</h6>
+<div class="row mb-4">
+    {% for role in roles %}
+    {% if role.is_system_role or role.organization_id is none %}
+    <div class="col-md-4 mb-3">
+        <div class="card border-info">
+            <div class="card-body">
+                <h6 class="card-title">
+                    {{ role.name }}
+                    <span class="badge bg-info ms-2">System</span>
+                </h6>
+                <p class="card-text small text-muted">{{ role.description or 'No description' }}</p>
+                <p class="card-text">
+                    <strong>Users:</strong> {{ role.assigned_users|length }}
+                </p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    {% endfor %}
+</div>
+
+<!-- Organization Custom Roles -->
+<h6 class="text-muted mb-2">Custom Roles</h6>
+<div class="row" id="customRolesContainer">
+    {% for role in roles %}
+    {% if not role.is_system_role and role.organization_id %}
+    <div class="col-md-4 mb-3">
+        <div class="card border-success">
+            <div class="card-body">
+                <h6 class="card-title">
+                    {{ role.name }}
+                    <span class="badge bg-success ms-2">Custom</span>
+                </h6>
+                <p class="card-text small text-muted">{{ role.description or 'No description' }}</p>
+                <p class="card-text">
+                    <strong>Users:</strong> {{ role.assigned_users|length }}
+                </p>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-sm btn-outline-primary" onclick="editRole({{ role.id }})">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="deleteRole({{ role.id }})">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    {% endfor %}
+</div>

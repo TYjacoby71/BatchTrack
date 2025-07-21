@@ -1,0 +1,70 @@
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h5 class="mb-0"><i class="fas fa-users"></i> User Management</h5>
+    <div class="d-flex align-items-center gap-3">
+        <small class="text-muted">Organization users only (system developers excluded)</small>
+        <button class="btn btn-primary btn-sm" onclick="openInviteModal()">
+            <i class="fas fa-user-plus"></i> Invite User
+        </button>
+    </div>
+</div>
+<div class="table-responsive">
+    <table class="table table-hover">
+        <thead>
+            <tr>
+                <th>User</th>
+                <th>Role</th>
+                <th>Status</th>
+                <th>Last Login</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user in users %}
+                <tr>
+                    <td>
+                        <div>
+                            <strong>{{ user.full_name }}</strong>
+                            <br><small class="text-muted">{{ user.username }} • {{ user.email or 'No email' }}</small>
+                        </div>
+                    </td>
+                    <td class="user-role">
+                        {{ user.display_role }}
+                    </td>
+                    <td>
+                        {% if user.is_active %}
+                            <span class="badge bg-success">Active</span>
+                        {% else %}
+                            <span class="badge bg-warning">Disabled</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if user.last_login %}
+                            {{ user.last_login.strftime('%Y-%m-%d %H:%M') }}
+                        {% else %}
+                            <span class="text-muted">Never</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if user.id != current_user.id %}
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-primary" onclick="editUser({{ user.id }})" title="Edit user details and permissions">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-outline-warning" onclick="toggleUserStatus({{ user.id }})" title="{% if user.is_active %}Disable user account{% else %}Enable user account{% endif %}">
+                                {% if user.is_active %}
+                                <i class="fas fa-user-slash"></i>
+                                {% else %}
+                                <i class="fas fa-user-check"></i>
+                                {% endif %}
+                            </button>
+                        </div>
+                        {% else %}
+                        <span class="badge bg-info">Owner</span>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>

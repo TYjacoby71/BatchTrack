@@ -1,0 +1,45 @@
+
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-chart-line"></i> Activity Reports</h6>
+            </div>
+            <div class="card-body">
+                <div class="list-group list-group-flush">
+                    <a href="#" class="list-group-item list-group-item-action" onclick="exportReport('batches')">
+                        <i class="fas fa-flask me-2"></i> Batch History Report
+                    </a>
+                    <a href="#" class="list-group-item list-group-item-action" onclick="exportReport('inventory')">
+                        <i class="fas fa-boxes me-2"></i> Inventory Movement Report
+                    </a>
+                    <a href="#" class="list-group-item list-group-item-action" onclick="exportReport('users')">
+                        <i class="fas fa-users me-2"></i> User Activity Report
+                    </a>
+                    <a href="#" class="list-group-item list-group-item-action" onclick="exportReport('products')">
+                        <i class="fas fa-shopping-bag me-2"></i> Product Performance Report
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-history"></i> Recent Activity</h6>
+            </div>
+            <div class="card-body">
+                <div class="list-group list-group-flush">
+                    {% for activity in recent_activity %}
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between">
+                            <small><strong>{{ activity.user }}</strong> {{ activity.action }}</small>
+                            <small class="text-muted">{{ activity.timestamp }}</small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
