@@ -84,13 +84,14 @@ def is_developer():
 
 def require_permission(permission):
     """Decorator for permission checking"""
+    from functools import wraps
     def decorator(f):
+        @wraps(f)
         def wrapper(*args, **kwargs):
             if not has_permission(permission):
                 from flask import abort
                 abort(403)
             return f(*args, **kwargs)
-        wrapper.__name__ = f.__name__
         return wrapper
     return decorator
 

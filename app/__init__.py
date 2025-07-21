@@ -20,7 +20,7 @@ def create_app():
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(instance_path, 'batchtrack.db')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['UPLOAD_FOLDER'] = 'static/product_images'
-    
+
     # Force HTTPS in production
     if os.environ.get('REPLIT_DEPLOYMENT') == 'true':
         app.config['PREFERRED_URL_SCHEME'] = 'https'
@@ -124,7 +124,7 @@ def create_app():
     from .blueprints.api.reservation_routes import reservation_api_bp
     app.register_blueprint(reservation_bp, url_prefix='/reservations')
     app.register_blueprint(reservation_api_bp)
-    
+
     # Register billing blueprint
     from .blueprints.billing import billing_bp
     app.register_blueprint(billing_bp, url_prefix='/billing')
@@ -172,6 +172,13 @@ def create_app():
     # Register API blueprint
     from .blueprints.api import api_bp
     app.register_blueprint(api_bp)
+
+    # Register dashboard and unit API blueprints
+    from .blueprints.api.dashboard_routes import dashboard_api_bp  # Import dashboard API blueprint
+    from .blueprints.api.unit_routes import unit_api_bp  # Import unit API blueprint
+    app.register_blueprint(stock_api_bp)
+    app.register_blueprint(dashboard_api_bp)
+    app.register_blueprint(unit_api_bp)
 
     # Ensure all API routes are loaded
     with app.app_context():
@@ -327,7 +334,7 @@ def create_app():
                 # Only redirect if we're not already on an HTTPS URL
                 if request.url.startswith('http://'):
                     return redirect(request.url.replace('http://', 'https://'), code=301)
-    
+
     # Add security headers for HTTPS
     @app.after_request
     def add_security_headers(response):
