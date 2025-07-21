@@ -257,12 +257,11 @@ def signup():
             owner_user.set_password(password)
             db.session.add(owner_user)
             
-            # Create trial subscription
+            # Create pending subscription (will be activated by Stripe)
             from ...services.subscription_service import SubscriptionService
-            SubscriptionService.create_trial_subscription(
+            SubscriptionService.create_pending_subscription(
                 organization=org,
-                trial_days=30,
-                trial_tier='team'
+                selected_tier='team'  # What they want to try
             )
             
             db.session.commit()
