@@ -27,6 +27,15 @@ def dashboard():
     if not (is_org_owner or is_dev_with_org):
         abort(403)
 
+    # Check subscription tier - only team+ tiers get organization dashboard
+    if current_user.user_type != 'developer':
+        organization = current_user.organization
+        if organization:
+            effective_tier = organization.effective_subscription_tier
+            if effective_tier in ['free', 'solo']:
+                flash('Organization Dashboard is available for Team and Enterprise plans only. Upgrade to access advanced user and role management features.', 'info')
+                return redirect(url_for('settings.index'))
+
     # Get organization data - for developers, use the selected organization
     if current_user.user_type == 'developer' and session.get('dev_selected_org_id'):
         from app.models import Organization
