@@ -121,6 +121,26 @@ def get_user_permissions():
 
     return list(permissions)
 
+def get_subscription_tier_permissions(subscription_tier):
+    """Get all permissions available for a subscription tier"""
+    from app.models.permission import Permission
+    return [perm.name for perm in Permission.get_permissions_for_tier(subscription_tier)]
+
+def user_has_permission_through_roles(user, permission_name):
+    """Check if user has permission through their assigned roles"""
+    if not user.organization_id:
+        return False
+        
+    roles = user.get_active_roles()
+    for role in roles:
+        if role.has_permission(permission_name):
+            # Also check if the permission is available for the organization's tier
+            from app.models.permission import Permission
+            permission = Permission.query.filter_by(name=permission_name).first()
+            if permission and permission.is_available_for_tier(user.organization.subscription_tier):
+                return True
+    return False
+
 def get_available_roles_for_user(user=None):
     """Get roles that can be assigned to a user"""
     if not user:
