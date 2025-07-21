@@ -343,9 +343,15 @@
                                 </div>
                                 <div class="card-body text-center">
                                     <p>Get more users, features, and integrations</p>
-                                    <button class="btn btn-outline-primary">
+                                    {% if has_permission(current_user, 'manage_billing') %}
+                                    <a href="{{ url_for('billing.upgrade') }}" class="btn btn-outline-primary">
                                         <i class="fas fa-arrow-up"></i> Upgrade Plan
+                                    </a>
+                                    {% else %}
+                                    <button class="btn btn-outline-secondary" disabled>
+                                        <i class="fas fa-lock"></i> Contact Admin
                                     </button>
+                                    {% endif %}
                                 </div>
                             </div>
                         </div>
@@ -365,21 +371,19 @@
                     <p class="text-muted mb-0">Administrative control for {{ current_user.organization.name }}</p>
                 </div>
 
-                <div class="metric-item">
-                            <span class="metric-value">{{ current_user.organization.effective_subscription_tier.title() }}</span>
-                            <span class="metric-label">Plan</span>
-                        </div>
-                    </div>
-                    {% if has_permission('manage_billing') %}
-                    <div class="billing-actions" style="margin-top: 15px;">
-                        <a href="{{ url_for('billing.upgrade') }}" class="btn btn-primary btn-sm">
-                            {% if current_user.organization.effective_subscription_tier == 'free' %}
-                                Upgrade Plan
-                            {% else %}
-                                Manage Billing
-                            {% endif %}
-                        </a>
-                    </div>
+                <div class="d-flex gap-2">
+                    <a href="{{ url_for('settings.index') }}" class="btn btn-outline-secondary btn-sm">
+                        <i class="fas fa-arrow-left"></i> Back to Settings
+                    </a>
+                    {% if has_permission(current_user, 'manage_billing') %}
+                    <a href="{{ url_for('billing.upgrade') }}" class="btn btn-primary btn-sm">
+                        <i class="fas fa-credit-card"></i>
+                        {% if current_user.organization.effective_subscription_tier == 'free' %}
+                            Upgrade Plan
+                        {% else %}
+                            Manage Billing
+                        {% endif %}
+                    </a>
                     {% endif %}
                 </div>
             </div>

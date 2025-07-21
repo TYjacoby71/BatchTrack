@@ -6,7 +6,7 @@ import re
 from datetime import timedelta
 from app.models import User, Organization, Role, Permission
 from app.extensions import db
-from app.utils.permissions import require_permission
+from app.utils.permissions import require_permission, has_permission
 from app.utils.timezone_utils import TimezoneUtils
 
 organization_bp = Blueprint('organization', __name__)
@@ -114,7 +114,8 @@ def dashboard():
                          org_stats=org_stats,
                          total_batches=total_batches,
                          pending_invites=pending_invites,
-                         recent_activity=recent_activity)
+                         recent_activity=recent_activity,
+                         has_permission=has_permission)
 
 @organization_bp.route('/create-role', methods=['POST'])
 @login_required
