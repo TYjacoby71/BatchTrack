@@ -136,42 +136,6 @@
         </div>
     </div>
 </div>
-<div class="container-fluid">
-    <!-- Header Card -->
-    <div class="card mb-4">
-        <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h2 class="mb-2"><i class="fas fa-crown text-warning"></i> Organization Dashboard</h2>
-                    <p class="text-muted mb-0">Administrative control for {{ current_user.organization.name }}</p>
-                </div>
-
-                <div class="d-flex gap-2">
-                    <a href="{{ url_for('settings.index') }}" class="btn btn-outline-secondary btn-sm">
-                        <i class="fas fa-arrow-left"></i> Back to Settings
-                    </a>
-                    {% if has_permission(current_user, 'manage_billing') %}
-                    <a href="{{ url_for('billing.upgrade') }}" class="btn btn-primary btn-sm">
-                        <i class="fas fa-credit-card"></i>
-                        {% if current_user.organization.effective_subscription_tier in ['free', 'solo'] %}
-                            Upgrade Plan
-                        {% else %}
-                            Manage Billing
-                        {% endif %}
-                    </a>
-                    {% endif %}
-                </div>
-                
-                {% if current_user.organization.effective_subscription_tier in ['free', 'solo'] %}
-                <div class="alert alert-info mt-3">
-                    <i class="fas fa-info-circle"></i> 
-                    <strong>Note:</strong> Advanced organization management features are available with Team and Enterprise plans. 
-                    <a href="{{ url_for('billing.upgrade') }}" class="alert-link">Upgrade now</a> to access user management, custom roles, and more.
-                </div>
-                {% endif %}
-            </div>
-        </div>
-    </div>
 
 <!-- Include Modal Components -->
 {% include 'organization/components/invite_user_modal.html' %}
