@@ -230,11 +230,9 @@ class Unit(db.Model):
     # Add unique constraints
     __table_args__ = (
         # Standard units (is_custom=False) must have unique names globally
-        db.Index('ix_unit_standard_unique', 'name', unique=True, 
-                postgresql_where=db.text('is_custom = false')),
-        # Custom units must have unique names within organization
-        db.UniqueConstraint('name', 'organization_id', name='_unit_name_org_uc',
-                           postgresql_where=db.text('is_custom = true')),
+        db.Index('ix_unit_standard_unique', 'name', unique=True),
+        # Custom units must have unique names within organization  
+        db.UniqueConstraint('name', 'organization_id', name='_unit_name_org_uc'),
     )
 
     @classmethod
