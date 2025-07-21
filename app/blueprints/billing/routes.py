@@ -22,8 +22,9 @@ def upgrade():
     return render_template('billing/upgrade.html', current_tier=current_tier)
 
 @billing_bp.route('/checkout/<tier>')
+@billing_bp.route('/checkout/<tier>/<billing_cycle>')
 @login_required
-def checkout(tier):
+def checkout(tier, billing_cycle='monthly'):
     """Create Stripe checkout session and redirect"""
     if not has_permission(current_user, 'manage_billing'):
         flash('You do not have permission to manage billing.', 'error')
@@ -33,9 +34,15 @@ def checkout(tier):
         flash('Invalid subscription tier.', 'error')
         return redirect(url_for('billing.upgrade'))
     
+    if billing_cycle not in ['monthly', 'yearly']:
+        billing_cycle = 'monthly'
+    
+    # Construct price key
+    price_key = f"{tier}_{billing_cycle}" if billing_cycle != 'monthly' else tier
+    
     # Create checkout session
     try:
-        session = StripeService.create_checkout_session(current_user.organization, tier)
+        session = StripeService.create_checkout_session(current_user.organization, price_key)
         
         if not session:
             flash('Failed to create checkout session. Please try again.', 'error')
