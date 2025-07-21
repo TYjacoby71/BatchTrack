@@ -1,4 +1,3 @@
-
 # BatchTrack Services Documentation
 
 ## Service Overview
@@ -66,9 +65,16 @@ adjust_inventory(
 - Integrates with FIFO service for deductions
 - Maintains cost tracking and audit trails
 
-### 3. Unit Conversion Service (`app/services/unit_conversion.py`)
+### 3. Unit Conversion Service
 
-**Authority:** All unit conversions and custom unit mappings
+**Class:** `ConversionEngine`
+**Location:** `app/services/unit_conversion.py`
+
+Handles all unit conversions with support for:
+- Direct conversions (same unit type)
+- Cross-type conversions (volume ↔ weight using density)
+- Custom unit mappings
+- Compound conversion paths
 
 **Key Functions:**
 - `convert_units(amount, from_unit_id, to_unit_id, ingredient_id=None)`
@@ -274,10 +280,10 @@ def test_batch_production_flow():
     # Test full batch production with services
     availability = check_recipe_availability(recipe.id)
     assert availability.can_make
-    
+
     batch = start_batch(recipe.id, scale_factor=1.0)
     assert batch.status == "in_progress"
-    
+
     finished_batch = finish_batch(batch.id, actual_yield=500)
     assert finished_batch.status == "completed"
 ```

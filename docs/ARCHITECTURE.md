@@ -1,4 +1,3 @@
-
 # BatchTrack Architecture Guide
 
 ## System Overview
@@ -157,6 +156,16 @@ Subscription Tier → Available Features → User Limits → Team Members → Ac
 - Multiple organizations
 - Concurrent user scenarios
 - Database query performance
+
+## Service Layer Architecture
+
+### Core Services
+
+- **FIFO Service** (`FifoService`) - Manages first-in-first-out inventory deduction
+- **Inventory Adjustment Service** (`InventoryAdjustmentService`) - Handles all inventory modifications
+- **Unit Conversion Service** (`ConversionEngine`) - Manages unit conversions and mappings
+- **Stock Check Service** (`universal_stock_check`) - Validates ingredient availability
+- **Dashboard Alerts Service** (`DashboardAlertService`) - Generates contextual alerts
 
 ---
 
