@@ -121,9 +121,6 @@ class StripeService:
             metadata = stripe_subscription.get('metadata', {})
             if 'tier' in metadata:
                 subscription.tier = metadata['tier']
-                # If trialing, keep the trial_tier for feature access
-                if subscription.status == 'trialing':
-                    subscription.trial_tier = metadata['tier']
             
             db.session.commit()
             logger.info(f"Updated subscription {subscription.id} with Stripe data (status: {subscription.status})")

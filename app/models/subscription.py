@@ -20,7 +20,6 @@ class Subscription(db.Model):
     # Trial handling (managed by Stripe)
     trial_start = db.Column(db.DateTime, nullable=True)
     trial_end = db.Column(db.DateTime, nullable=True)
-    trial_tier = db.Column(db.String(32), nullable=True)  # What tier they're trialing
     
     # Payment processor integration
     stripe_subscription_id = db.Column(db.String(128), nullable=True)
@@ -60,8 +59,6 @@ class Subscription(db.Model):
         """Get the tier considering trial status"""
         if self.tier == 'exempt':
             return 'enterprise'  # Exempt accounts get enterprise features
-        if self.status == 'trialing' and self.trial_tier:
-            return self.trial_tier
         return self.tier
     
     def extend_trial(self, days, reason=None):

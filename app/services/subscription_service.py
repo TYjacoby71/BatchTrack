@@ -17,7 +17,6 @@ class SubscriptionService:
             organization_id=organization.id,
             tier='free',  # Will be updated by Stripe webhook
             status='pending',  # Waiting for Stripe checkout
-            trial_tier=selected_tier,  # What they selected to try
             notes=f"Pending Stripe subscription for {selected_tier} tier"
         )
         
@@ -45,9 +44,7 @@ class SubscriptionService:
         if subscription.tier == 'exempt':
             return 'enterprise'  # Exempt accounts get enterprise features
             
-        # During Stripe trials, use the trial tier
-        if subscription.status == 'trialing' and subscription.trial_tier:
-            return subscription.trial_tier
+        # During Stripe trials, user gets the tier they're paying for
             
         return subscription.tier
     
