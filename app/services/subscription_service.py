@@ -8,22 +8,16 @@ import logging
 logger = logging.getLogger(__name__)
 
 class SubscriptionService:
-    """Service for managing flexible subscriptions"""
+    """Service for managing Stripe-based subscriptions"""
     
     @staticmethod
-    def create_trial_subscription(organization, trial_days=30, trial_tier='team'):
-        """Create a new trial subscription"""
-        trial_end = TimezoneUtils.utc_now() + timedelta(days=trial_days)
-        
+    def create_pending_subscription(organization, selected_tier='team'):
+        """Create a pending subscription that will be activated by Stripe"""
         subscription = Subscription(
             organization_id=organization.id,
-            tier='free',  # Base tier
-            status='trialing',
-            trial_start=TimezoneUtils.utc_now(),
-            trial_end=trial_end,
-            trial_days_remaining=trial_days,
-            trial_tier=trial_tier,  # What they get during trial
-            notes=f"Trial created for {trial_days} days"
+            tier='free',  # Will be updated by Stripe webhook
+            status='pending',  # Waiting for Stripe checkout
+            notes=f"Pending Stripe subscription for {selected_tier} tier"
         )
         
         db.session.add(subscription)
@@ -31,51 +25,28 @@ class SubscriptionService:
         return subscription
     
     @staticmethod
-    def extend_trial(organization, days, reason="Manual extension"):
-        """Extend trial period"""
-        subscription = organization.subscription
-        if not subscription:
-            return False
-            
-        return subscription.extend_trial(days, reason)
-    
-    @staticmethod
-    def add_comp_time(organization, months, reason="Comp time"):
-        """Add complimentary months"""
-        subscription = organization.subscription
-        if not subscription:
-            return False
-            
-        subscription.add_comp_months(months, reason)
-        return True
-    
-    @staticmethod
-    def apply_discount(organization, percent, end_date=None, reason="Discount applied"):
-        """Apply percentage discount"""
-        subscription = organization.subscription
-        if not subscription:
-            return False
-            
-        subscription.apply_discount(percent, end_date, reason)
-        return True
-    
-    @staticmethod
     def check_access(organization):
-        """Check if organization has access based on subscription"""
+        """Check if organization has access based on Stripe subscription"""
         subscription = organization.subscription
         if not subscription:
             return False
             
-        return subscription.is_active
+        # Only active and trialing statuses from Stripe allow access
+        return subscription.status in ['active', 'trialing']
     
     @staticmethod
     def get_effective_tier(organization):
-        """Get the effective subscription tier"""
+        """Get the effective subscription tier from Stripe data"""
         subscription = organization.subscription
         if not subscription:
             return 'free'
             
-        return subscription.effective_tier
+        if subscription.tier == 'exempt':
+            return 'enterprise'  # Exempt accounts get enterprise features
+            
+        # During Stripe trials, user gets the tier they're paying for
+            
+        return subscription.tier
     
     @staticmethod
     def create_exempt_subscription(organization, reason="Exempt account"):
@@ -102,7 +73,7 @@ class SubscriptionService:
         from ..models import Organization
         
         org = Organization.query.get(1)
-        if org and not hasattr(org, 'subscription') or not org.subscription:
+        if org and (not hasattr(org, 'subscription') or not org.subscription):
             # Create exempt subscription for org 1
             subscription = SubscriptionService.create_exempt_subscription(
                 org, 
@@ -111,3 +82,25 @@ class SubscriptionService:
             logger.info(f"Created exempt subscription for reserved organization {org.id}")
             return subscription
         return None
+    
+    @staticmethod
+    def get_subscription_status(organization):
+        """Get subscription status information"""
+        subscription = organization.subscription
+        if not subscription:
+            return {
+                'has_subscription': False,
+                'status': 'none',
+                'tier': 'free',
+                'is_active': False
+            }
+        
+        return {
+            'has_subscription': True,
+            'status': subscription.status,
+            'tier': subscription.effective_tier,
+            'is_active': subscription.is_active,
+            'stripe_subscription_id': subscription.stripe_subscription_id,
+            'current_period_end': subscription.current_period_end,
+            'next_billing_date': subscription.next_billing_date
+        }

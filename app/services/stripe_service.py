@@ -97,22 +97,33 @@ class StripeService:
                 logger.error(f"No subscription found for customer {customer_id}")
                 return False
             
-            # Update subscription
+            # Update subscription with Stripe data
             subscription.stripe_subscription_id = subscription_id
-            subscription.status = 'active'
-            subscription.current_period_start = TimezoneUtils.utc_now()
+            subscription.status = stripe_subscription['status']  # 'trialing' or 'active'
+            subscription.current_period_start = TimezoneUtils.from_timestamp(
+                stripe_subscription['current_period_start']
+            )
             subscription.current_period_end = TimezoneUtils.from_timestamp(
                 stripe_subscription['current_period_end']
             )
             subscription.next_billing_date = subscription.current_period_end
             
-            # Set tier based on metadata or price
+            # Handle trial information from Stripe
+            if stripe_subscription.get('trial_end'):
+                subscription.trial_start = TimezoneUtils.from_timestamp(
+                    stripe_subscription.get('trial_start', stripe_subscription['current_period_start'])
+                )
+                subscription.trial_end = TimezoneUtils.from_timestamp(
+                    stripe_subscription['trial_end']
+                )
+            
+            # Set tier based on metadata
             metadata = stripe_subscription.get('metadata', {})
             if 'tier' in metadata:
                 subscription.tier = metadata['tier']
             
             db.session.commit()
-            logger.info(f"Updated subscription {subscription.id} with Stripe data")
+            logger.info(f"Updated subscription {subscription.id} with Stripe data (status: {subscription.status})")
             return True
             
         except Exception as e:

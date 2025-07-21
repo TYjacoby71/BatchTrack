@@ -17,10 +17,9 @@ class Subscription(db.Model):
     current_period_end = db.Column(db.DateTime, nullable=True)
     next_billing_date = db.Column(db.DateTime, nullable=True)
     
-    # Trial handling
+    # Trial handling (managed by Stripe)
     trial_start = db.Column(db.DateTime, nullable=True)
     trial_end = db.Column(db.DateTime, nullable=True)
-    trial_days_remaining = db.Column(db.Integer, nullable=True)
     
     # Payment processor integration
     stripe_subscription_id = db.Column(db.String(128), nullable=True)
@@ -41,10 +40,8 @@ class Subscription(db.Model):
     
     @property
     def is_trial(self):
-        """Check if currently in trial period"""
-        if not self.trial_end:
-            return False
-        return TimezoneUtils.utc_now() < self.trial_end
+        """Check if currently in trial period (from Stripe)"""
+        return self.status == 'trialing'
     
     @property
     def is_active(self):
@@ -62,8 +59,6 @@ class Subscription(db.Model):
         """Get the tier considering trial status"""
         if self.tier == 'exempt':
             return 'enterprise'  # Exempt accounts get enterprise features
-        if self.is_trial and self.trial_tier:
-            return self.trial_tier
         return self.tier
     
     def extend_trial(self, days, reason=None):
