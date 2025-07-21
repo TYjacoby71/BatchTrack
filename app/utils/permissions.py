@@ -32,7 +32,7 @@ def has_permission(user_or_permission_name, permission_name=None):
     # Organization owners have all permissions for their subscription tier
     if user.user_type == 'organization_owner':
         # Check if permission is available for their subscription tier
-        from app.models.models import Permission
+        from app.models.permission import Permission
         perm_obj = Permission.query.filter_by(name=permission).first()
         if perm_obj:
             # Get user's organization subscription tier
@@ -102,12 +102,12 @@ def get_user_permissions():
 
     if current_user.user_type == 'developer':
         # Developers get all permissions
-        from ..models.permission import Permission
+        from app.models.permission import Permission
         return [perm.name for perm in Permission.query.filter_by(is_active=True).all()]
 
     if current_user.user_type == 'organization_owner':
         # Organization owners get all permissions available to their subscription tier
-        from ..models.permission import Permission
+        from app.models.permission import Permission
         available_perms = Permission.get_permissions_for_tier(current_user.organization.subscription_tier)
         return [perm.name for perm in available_perms]
 
