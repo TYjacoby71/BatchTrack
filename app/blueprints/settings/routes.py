@@ -23,6 +23,7 @@ def index():
     user_prefs = {
         'max_dashboard_alerts': user_prefs_obj.max_dashboard_alerts,
         'show_expiration_alerts': user_prefs_obj.show_expiration_alerts,
+        'show_timer_alerts': user_prefs_obj.show_expiration_alerts,
         'show_timer_alerts': user_prefs_obj.show_timer_alerts,
         'show_low_stock_alerts': user_prefs_obj.show_low_stock_alerts,
         'show_batch_alerts': user_prefs_obj.show_batch_alerts,
@@ -100,13 +101,17 @@ def index():
     # Get available timezones grouped by region
     grouped_timezones = TimezoneUtils.get_grouped_timezones()
 
+    from ...services.pricing_service import PricingService
+    pricing_data = PricingService.get_pricing_data()
+
     return render_template('settings/index.html',
                          user_prefs=user_prefs,
                          system_settings=system_settings,
                          grouped_timezones=grouped_timezones,
                          is_org_owner=is_org_owner,
                          has_permission=has_permission,
-                         TimezoneUtils=TimezoneUtils)
+                         TimezoneUtils=TimezoneUtils,
+                         pricing_data=pricing_data)
 
 @settings_bp.route('/api/user-preferences')
 @login_required
@@ -307,7 +312,7 @@ def bulk_update_containers():
 @login_required
 def update_timezone():
     timezone = request.form.get('timezone')
-    
+
     if timezone and TimezoneUtils.validate_timezone(timezone):
         current_user.timezone = timezone
         db.session.commit()
