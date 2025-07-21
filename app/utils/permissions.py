@@ -34,15 +34,16 @@ def has_permission(user_or_permission_name, permission_name=None):
         # Check if permission is available for their subscription tier
         from app.models.permission import Permission
         perm_obj = Permission.query.filter_by(name=permission).first()
-        if perm_obj:
-            # Get user's organization subscription tier
-            if user.organization:
-                tier_permissions = get_subscription_tier_permissions(user.organization.subscription_tier)
-                return permission in tier_permissions
+        if perm_obj and user.organization:
+            return perm_obj.is_available_for_tier(user.organization.subscription_tier)
         return False
 
     # Team members: check through role assignments
-    return user_has_permission_through_roles(user, permission)
+    roles = user.get_active_roles()
+    for role in roles:
+        if role.has_permission(permission):
+            return True
+    return False
 
 def has_role(role_name):
     """Check if current user has specific role"""
