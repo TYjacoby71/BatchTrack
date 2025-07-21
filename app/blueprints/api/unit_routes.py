@@ -1,7 +1,7 @@
 
 from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
-from app.services.unit_conversion import UnitConversionService
+from app.services.unit_conversion import ConversionEngine
 from app.utils.unit_utils import get_global_unit_list
 from app.models.models import Unit
 
@@ -50,9 +50,10 @@ def convert_units():
         if not from_unit or not to_unit:
             return jsonify({'success': False, 'error': 'Invalid unit ID'}), 400
             
-        converted_quantity = UnitConversionService.convert_units(
+        result = ConversionEngine.convert_units(
             quantity, from_unit.name, to_unit.name, ingredient_id
         )
+        converted_quantity = result['converted_value']
         
         conversion_factor = converted_quantity / quantity if quantity != 0 else 0
         
