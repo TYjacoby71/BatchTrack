@@ -149,7 +149,7 @@ def universal_stock_check(recipe, scale=1.0, flex_mode=False):
         'all_ok': all_ok
     }
 
-from app.models.models import Ingredient, InventoryItem, Recipe, RecipeIngredient
+from app.models.models import InventoryItem, Recipe, RecipeIngredient
 from app.services.unit_conversion import convert_units
 from flask_login import current_user
 
