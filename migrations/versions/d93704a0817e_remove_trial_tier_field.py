@@ -1,3 +1,4 @@
+
 """remove_trial_tier_field
 
 Revision ID: d93704a0817e
@@ -68,8 +69,7 @@ def upgrade():
         batch_op.create_foreign_key(None, 'user', ['created_by'], ['id'])
         batch_op.create_foreign_key(None, 'organization', ['organization_id'], ['id'])
 
-    with op.batch_alter_table('subscription', schema=None) as batch_op:
-        batch_op.drop_column('trial_days_remaining')
+    # Skip subscription table changes - trial_days_remaining was already removed in fd6ec9059553
 
     with op.batch_alter_table('tag', schema=None) as batch_op:
         batch_op.add_column(sa.Column('created_at', sa.DateTime(), nullable=True))
@@ -122,8 +122,7 @@ def downgrade():
                nullable=True)
         batch_op.drop_column('created_at')
 
-    with op.batch_alter_table('subscription', schema=None) as batch_op:
-        batch_op.add_column(sa.Column('trial_days_remaining', sa.INTEGER(), nullable=True))
+    # Skip subscription table changes
 
     with op.batch_alter_table('role', schema=None) as batch_op:
         batch_op.drop_constraint(None, type_='foreignkey')
