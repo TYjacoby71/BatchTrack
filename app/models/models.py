@@ -11,14 +11,14 @@ class Organization(db.Model):
     subscription_tier = db.Column(db.String(32), default='free')  # free, trial, solo, team, enterprise
     created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
     is_active = db.Column(db.Boolean, default=True)
-    
+
     # Basic signup tracking (keep these for analytics)
     signup_source = db.Column(db.String(64), nullable=True)  # homepage_trial, webinar, etc.
     promo_code = db.Column(db.String(32), nullable=True)
     referral_code = db.Column(db.String(32), nullable=True)
-    
+
     # Move billing to separate Subscription model for flexibility
-    
+
     users = db.relationship('User', backref='organization')
 
     @property
@@ -66,7 +66,7 @@ class Organization(db.Model):
                 return subscription.tier
         except (ImportError, AttributeError):
             pass
-        
+
         # Fallback to organization subscription_tier
         return self.subscription_tier or 'free'
 
@@ -215,7 +215,7 @@ class User(UserMixin, db.Model):
 
 class Unit(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(64), unique=True, nullable=False)
+    name = db.Column(db.String(64), nullable=False)
     symbol = db.Column(db.String(16), nullable=False)
     type = db.Column(db.String(32), nullable=False)  # weight, volume, count, etc.
     base_unit = db.Column(db.String(64), nullable=True)  # For conversions
@@ -226,6 +226,14 @@ class Unit(db.Model):
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)  # Only for custom units
     created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
+
+    # Add unique constraints
+    __table_args__ = (
+        # Standard units (is_custom=False) must have unique names globally
+        db.Index('ix_unit_standard_unique', 'name', unique=True),
+        # Custom units must have unique names within organization  
+        db.UniqueConstraint('name', 'organization_id', name='_unit_name_org_uc'),
+    )
 
     @classmethod
     def scoped(cls):
@@ -534,7 +542,7 @@ class Tag(ScopedModelMixin, db.Model):
     is_active = db.Column(db.Boolean, default=True)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
-    
+
     # Add unique constraint per organization
     __table_args__ = (
         db.UniqueConstraint('name', 'organization_id', name='_tag_name_org_uc'),

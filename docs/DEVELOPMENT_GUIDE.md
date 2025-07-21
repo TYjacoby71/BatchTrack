@@ -1,4 +1,3 @@
-
 # Development Guide
 
 **How to safely extend BatchTrack while maintaining system integrity**
@@ -38,7 +37,7 @@
 # Always include organization scoping
 class NewModel(ScopedModelMixin, db.Model):
     __tablename__ = 'new_model'
-    
+
     id = db.Column(db.Integer, primary_key=True)
     organization_id = db.Column(db.Integer, 
                                db.ForeignKey('organization.id'), 
@@ -56,7 +55,7 @@ class NewFeatureService:
         # Always validate organization access
         if not current_user.can_access_organization(organization_id):
             raise PermissionError("Access denied")
-        
+
         # Use existing services for related operations
         if needs_inventory_change:
             return InventoryAdjustmentService.adjust_stock(...)
@@ -66,14 +65,13 @@ class NewFeatureService:
 ```python
 @blueprint.route('/new-feature', methods=['POST'])
 @login_required
-@require_permission('new_feature_permission')
 def new_feature():
     # Always validate and scope data
     org_id = get_current_organization_id()
-    
+
     # Use service for business logic
     result = NewFeatureService.process_action(org_id, request.json)
-    
+
     return jsonify(result)
 ```
 
@@ -163,11 +161,11 @@ async function apiCall(endpoint, data = {}) {
         },
         body: JSON.stringify(data)
     });
-    
+
     if (!response.ok) {
         throw new Error(`API call failed: ${response.statusText}`);
     }
-    
+
     return response.json();
 }
 
@@ -204,11 +202,11 @@ def test_service_respects_organization_scoping():
     # Create test organizations
     org1 = create_test_organization()
     org2 = create_test_organization()
-    
+
     # Create data in each org
     item1 = create_test_item(organization_id=org1.id)
     item2 = create_test_item(organization_id=org2.id)
-    
+
     # Service should only return org1's data
     result = ServiceClass.get_items(org1.id)
     assert item1.id in [r.id for r in result]
@@ -219,14 +217,14 @@ def test_service_respects_organization_scoping():
 ```python
 def test_permission_enforcement():
     user = create_test_user(permissions=['view_batches'])
-    
+
     with app.test_client() as client:
         login_user(client, user)
-        
+
         # Should succeed - user has permission
         response = client.get('/batches')
         assert response.status_code == 200
-        
+
         # Should fail - user lacks permission
         response = client.post('/batches/new')
         assert response.status_code == 403
@@ -326,3 +324,29 @@ if has_permission('admin_access'):
 - Test thoroughly in development environment
 - Follow established patterns and conventions
 - Document any new patterns or approaches
+
+## Permission System
+
+Use the permission decorator to protect routes:
+
+```python
+from app.utils.permissions import has_permission
+
+@app.route('/admin/users')
+@login_required
+def manage_users():
+    if not has_permission(current_user, 'manage_users'):
+        abort(403)
+    return render_template('admin/users.html')
+```
+
+Or use the new decorator (available in recent versions):
+
+```python
+from app.utils.permissions import require_permission_decorator
+
+@app.route('/admin/users')
+@login_required
+@require_permission_decorator('manage_users')
+def manage_users():
+    return render_template('admin/users.html')

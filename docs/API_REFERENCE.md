@@ -1,36 +1,104 @@
-
 # API Reference
 
-**Complete REST API documentation for BatchTrack**
+This document provides a comprehensive reference for all API endpoints available in BatchTrack.
 
 ## Authentication
 
-All API endpoints require authentication via Flask-Login session. Include CSRF token for POST/PUT/DELETE requests.
+All API endpoints require user authentication via Flask-Login session cookies.
 
-```javascript
-headers: {
-    'Content-Type': 'application/json',
-    'X-CSRFToken': document.querySelector('[name=csrf_token]').value
+## Dashboard APIs
+
+### Get Dashboard Alerts
+```
+GET /api/dashboard-alerts
+```
+
+Returns active alerts for the current user's organization using `DashboardAlertService.get_dashboard_alerts()`.
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "priority": "HIGH|MEDIUM|LOW",
+      "type": "low_stock|expiring_items|active_batches|incomplete_batches",
+      "title": "Alert Title",
+      "message": "Alert description",
+      "action_url": "/path/to/action",
+      "action_text": "Action Button Text",
+      "dismissible": true
+    }
+  ]
 }
 ```
 
-## Response Format
+### Dismiss Alert
+```
+POST /api/dismiss-alert
+```
 
-### Success Response
+Dismisses a specific alert for the current session (session-based dismissal).
+
+**Request Body:**
 ```json
 {
-    "success": true,
-    "data": { ... },
-    "message": "Optional success message"
+  "alert_id": "alert_identifier"
 }
 ```
 
-### Error Response
+## Unit Conversion APIs
+
+### Get Available Units
+```
+GET /api/units
+```
+
+Returns all available units for the current user using `get_global_unit_list()`.
+
+**Response:**
 ```json
 {
-    "success": false,
-    "error": "Error description",
-    "details": { ... }
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "name": "gram",
+      "symbol": "g",
+      "unit_type": "weight",
+      "base_unit": true
+    }
+  ]
+}
+```
+
+### Convert Units
+```
+POST /api/convert-units
+```
+
+Converts a quantity from one unit to another using `ConversionEngine.convert_units()`.
+
+**Request Body:**
+```json
+{
+  "from_unit_id": 1,
+  "to_unit_id": 2,
+  "quantity": 100,
+  "ingredient_id": 5
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "converted_quantity": 100.0,
+    "from_unit": "g",
+    "to_unit": "oz",
+    "conversion_factor": 0.035274
+  }
 }
 ```
 
@@ -496,7 +564,7 @@ class BatchTrackAPI {
         this.baseURL = baseURL;
         this.csrfToken = csrfToken;
     }
-    
+
     async checkStock(ingredients) {
         const response = await fetch(`${this.baseURL}/api/check-stock`, {
             method: 'POST',
@@ -506,7 +574,7 @@ class BatchTrackAPI {
             },
             body: JSON.stringify({ items: ingredients })
         });
-        
+
         return response.json();
     }
 }
@@ -521,11 +589,10 @@ class BatchTrackAPI:
         self.base_url = base_url
         self.session = requests.Session()
         self.session.cookies.update(session_cookies)
-    
+
     def check_stock(self, ingredients):
         response = self.session.post(
             f"{self.base_url}/api/check-stock",
             json={"items": ingredients}
         )
         return response.json()
-```

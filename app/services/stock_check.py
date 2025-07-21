@@ -35,7 +35,7 @@ def universal_stock_check(recipe, scale=1.0, flex_mode=False):
         # Get current inventory details - exclude expired FIFO entries using dynamic expiration
         from ..blueprints.expiration.services import ExpirationService
         from ..utils.timezone_utils import TimezoneUtils
-        
+
         all_fifo_entries = InventoryHistory.query.filter(
             InventoryHistory.inventory_item_id == ingredient.id,
             InventoryHistory.remaining_quantity > 0
@@ -46,9 +46,9 @@ def universal_stock_check(recipe, scale=1.0, flex_mode=False):
         # Ensure now_utc is timezone-aware for consistent comparison
         if now_utc.tzinfo is None:
             now_utc = now_utc.replace(tzinfo=timezone.utc)
-        
+
         available_fifo_entries = []
-        
+
         for entry in all_fifo_entries:
             if not entry.is_perishable:
                 # Non-perishable items are always available
@@ -62,7 +62,7 @@ def universal_stock_check(recipe, scale=1.0, flex_mode=False):
                         expiration_utc = expiration_date.astimezone(timezone.utc)
                     else:
                         expiration_utc = expiration_date.replace(tzinfo=timezone.utc)
-                    
+
                     # Only include if not expired
                     if expiration_utc >= now_utc:
                         available_fifo_entries.append(entry)
@@ -148,3 +148,144 @@ def universal_stock_check(recipe, scale=1.0, flex_mode=False):
         'stock_check': results,
         'all_ok': all_ok
     }
+
+from app.models.models import InventoryItem, Recipe, RecipeIngredient
+from flask_login import current_user
+
+
+def check_ingredient_availability(ingredient_id, required_amount, unit_id):
+    """
+    Check if sufficient inventory exists for an ingredient
+    """
+    try:
+        # Get available inventory for the ingredient
+        if current_user and current_user.organization_id:
+            inventory_items = InventoryItem.query.filter_by(
+                ingredient_id=ingredient_id,
+                organization_id=current_user.organization_id
+            ).all()
+        else:
+            return {
+                'available': False,
+                'error': 'No organization context'
+            }
+
+        # Calculate total available quantity
+        total_available = sum(item.quantity for item in inventory_items if item.quantity > 0)
+
+        if total_available >= required_amount:
+            return {
+                'available': True,
+                'shortage': 0,
+                'available_quantity': total_available
+            }
+        else:
+            return {
+                'available': False,
+                'shortage': required_amount - total_available,
+                'available_quantity': total_available
+            }
+
+    except Exception as e:
+        return {
+            'available': False,
+            'error': str(e)
+        }
+
+
+def check_recipe_availability(recipe_id, scale_factor=1.0):
+    """
+    Check if recipe can be made with current inventory
+    """
+    try:
+        if not current_user or not current_user.organization_id:
+            return {
+                'can_make': False,
+                'error': 'No organization context'
+            }
+
+        recipe = Recipe.query.filter_by(
+            id=recipe_id,
+            organization_id=current_user.organization_id
+        ).first()
+
+        if not recipe:
+            return {
+                'can_make': False,
+                'error': 'Recipe not found'
+            }
+
+        results = []
+        can_make = True
+
+        for recipe_ingredient in recipe.recipe_ingredients:
+            required_amount = recipe_ingredient.quantity * scale_factor
+            availability = check_ingredient_availability(
+                recipe_ingredient.ingredient_id,
+                required_amount,
+                recipe_ingredient.unit_id
+            )
+
+            results.append({
+                'ingredient_id': recipe_ingredient.ingredient_id,
+                'ingredient_name': recipe_ingredient.ingredient.name,
+                'required_amount': required_amount,
+                'available_amount': availability.get('available_quantity', 0),
+                'shortage': availability.get('shortage', 0),
+                'available': availability.get('available', False)
+            })
+
+            if not availability.get('available', False):
+                can_make = False
+
+        return {
+            'can_make': can_make,
+            'ingredients': results,
+            'scale_factor': scale_factor
+        }
+
+    except Exception as e:
+        return {
+            'can_make': False,
+            'error': str(e)
+        }
+
+
+def get_available_inventory_summary():
+    """
+    Get summary of available inventory across all ingredients
+    """
+    try:
+        if not current_user or not current_user.organization_id:
+            return {
+                'success': False,
+                'error': 'No organization context'
+            }
+
+        inventory_items = InventoryItem.query.filter_by(
+            organization_id=current_user.organization_id
+        ).all()
+
+        summary = {}
+        for item in inventory_items:
+            ingredient_id = item.ingredient_id
+            if ingredient_id not in summary:
+                summary[ingredient_id] = {
+                    'ingredient_name': item.ingredient.name,
+                    'total_quantity': 0,
+                    'lot_count': 0
+                }
+
+            summary[ingredient_id]['total_quantity'] += item.quantity
+            summary[ingredient_id]['lot_count'] += 1
+
+        return {
+            'success': True,
+            'inventory': list(summary.values())
+        }
+
+    except Exception as e:
+        return {
+            'success': False,
+            'error': str(e)
+        }

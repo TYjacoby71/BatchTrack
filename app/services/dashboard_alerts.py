@@ -39,8 +39,8 @@ class DashboardAlertService:
             days_ahead=expiration_days
         )
 
-        # CRITICAL: Expired items with remaining quantity
-        if expiration_data['expired_total'] > 0:
+        # CRITICAL: Expired items with remaining quantity - only if enabled
+        if user_prefs and user_prefs.show_expiration_alerts and expiration_data['expired_total'] > 0:
             alerts.append({
                 'priority': 'CRITICAL',
                 'type': 'expired_inventory',
@@ -149,29 +149,30 @@ class DashboardAlertService:
                     'dismissible': True
                 })
 
-        # MEDIUM: Active batches needing attention
-        if current_user and current_user.is_authenticated:
-            if current_user.organization_id:
-                active_batches = Batch.query.filter_by(
-                    status='in_progress',
-                    organization_id=current_user.organization_id
-                ).count()
+        # MEDIUM: Active batches needing attention - only if enabled
+        if user_prefs and user_prefs.show_batch_alerts:
+            if current_user and current_user.is_authenticated:
+                if current_user.organization_id:
+                    active_batches = Batch.query.filter_by(
+                        status='in_progress',
+                        organization_id=current_user.organization_id
+                    ).count()
+                else:
+                    # Developer users see all batches
+                    active_batches = Batch.query.filter_by(status='in_progress').count()
             else:
-                # Developer users see all batches
-                active_batches = Batch.query.filter_by(status='in_progress').count()
-        else:
-            active_batches = 0
+                active_batches = 0
 
-        if active_batches > 0:
-            alerts.append({
-                'priority': 'MEDIUM',
-                'type': 'active_batches',
-                'title': 'Active Batches',
-                'message': f"{active_batches} batches in progress",
-                'action_url': '/batches/',
-                'action_text': 'View Batches',
-                'dismissible': True
-            })
+            if active_batches > 0:
+                alerts.append({
+                    'priority': 'MEDIUM',
+                    'type': 'active_batches',
+                    'title': 'Active Batches',
+                    'message': f"{active_batches} batches in progress",
+                    'action_url': '/batches/',
+                    'action_text': 'View Batches',
+                    'dismissible': True
+                })
 
         # MEDIUM: Incomplete batches
         incomplete_batches = DashboardAlertService._get_incomplete_batches()

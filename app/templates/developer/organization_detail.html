@@ -80,22 +80,7 @@
                         </button>
                     </form>
 
-                    <hr>
-
-                    <h6>Quick Actions</h6>
-                    <div class="d-grid gap-2">
-                        <form method="POST" action="{{ url_for('developer.upgrade_organization', org_id=organization.id) }}" class="d-inline">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                            <div class="input-group">
-                                <select class="form-select" name="tier">
-                                    <option value="solo">Upgrade to Solo</option>
-                                    <option value="team">Upgrade to Team</option>
-                                    <option value="enterprise">Upgrade to Enterprise</option>
-                                </select>
-                                <button type="submit" class="btn btn-success">Upgrade</button>
-                            </div>
-                        </form>
-                    </div>
+                    
                 </div>
             </div>
 
