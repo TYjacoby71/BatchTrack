@@ -71,7 +71,7 @@ def dashboard():
     # Get organization statistics
     from app.models.statistics import OrganizationStats
     org_stats = OrganizationStats.get_or_create(organization.id)
-    
+
     # Refresh stats if they're older than 1 hour
     from datetime import datetime, timedelta
     if org_stats.last_updated:
@@ -82,7 +82,7 @@ def dashboard():
     else:
         # If no last_updated time, refresh anyway
         org_stats.refresh_from_database()
-    
+
     # Debug: Check batch count directly with both methods
     from app.models.models import Batch
     direct_batch_count_filterby = Batch.query.filter_by(organization_id=organization.id).count()
@@ -90,16 +90,16 @@ def dashboard():
     print(f"Direct batch count (filter_by) for org {organization.id}: {direct_batch_count_filterby}")
     print(f"Direct batch count (filter) for org {organization.id}: {direct_batch_count_filter}")
     print(f"Stats batch count for org {organization.id}: {org_stats.total_batches}")
-    
+
     # Debug: Check if refresh actually ran
     print(f"Org stats last_updated: {org_stats.last_updated}")
     print(f"Current time: {TimezoneUtils.utc_now()}")
-    
+
     # Force refresh for debugging
     print("Forcing stats refresh...")
     org_stats.refresh_from_database()
     print(f"After refresh - Stats batch count for org {organization.id}: {org_stats.total_batches}")
-    
+
     # Get some basic metrics
     total_batches = org_stats.total_batches
     pending_invites = 0  # You can add actual pending invites count here if needed
@@ -125,10 +125,10 @@ def create_role():
             current_user.is_organization_owner or 
             current_user.user_type == 'developer'):
         return jsonify({'success': False, 'error': 'Insufficient permissions'})
-    
+
     try:
         data = request.get_json()
-        
+
         # Get organization
         from flask import session
         if current_user.user_type == 'developer' and session.get('dev_selected_org_id'):
@@ -137,7 +137,7 @@ def create_role():
             org_id = organization.id
         else:
             org_id = current_user.organization_id
-        
+
         # Create role
         role = Role(
             name=data['name'],
@@ -146,18 +146,18 @@ def create_role():
             created_by=current_user.id,
             is_system_role=False
         )
-        
+
         # Add permissions
         permission_ids = data.get('permission_ids', [])
         from app.models.permission import Permission
         permissions = Permission.query.filter(Permission.id.in_(permission_ids)).all()
         role.permissions = permissions
-        
+
         db.session.add(role)
         db.session.commit()
-        
+
         return jsonify({'success': True, 'message': 'Role created successfully'})
-    
+
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)})
@@ -248,7 +248,7 @@ def invite_user():
         # Check if user should be added as inactive due to subscription limits
         force_inactive = data.get('force_inactive', False)
         will_be_inactive = force_inactive or not current_user.organization.can_add_users()
-        
+
         if not current_user.organization.can_add_users() and not force_inactive:
             current_count = current_user.organization.active_users_count
             max_users = current_user.organization.get_max_users()
@@ -292,7 +292,7 @@ def invite_user():
         status_message = "User invited successfully!"
         if will_be_inactive:
             status_message += " User added as inactive due to subscription limits."
-            
+
         return jsonify({
             'success': True, 
             'message': f'{status_message} Login details - Username: {username}, Temporary password: {temp_password}',
@@ -632,3 +632,52 @@ def delete_user(user_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)})
+
+@organization_bp.route('/roles', methods=['POST'])
+@login_required
+@require_permission('organization.manage_roles')
+def create_role():
+    """Create a new organization role"""
+    from app.models import Role, Permission
+
+    try:
+        data = request.get_json()
+
+        # Validate required fields
+        if not data.get('name'):
+            return jsonify({'success': False, 'error': 'Role name is required'})
+
+        # Check if role name already exists in organization
+        existing_role = Role.query.filter_by(
+            name=data['name'],
+            organization_id=current_user.organization_id
+        ).first()
+
+        if existing_role:
+            return jsonify({'success': False, 'error': 'Role name already exists'})
+
+        # Create new role
+        role = Role(
+            name=data['name'],
+            description=data.get('description', ''),
+            organization_id=current_user.organization_id,
+            created_by=current_user.id
+        )
+
+        # Add permissions
+        if data.get('permission_ids'):
+            permissions = Permission.query.filter(
+                Permission.id.in_(data['permission_ids']),
+                Permission.is_active == True
+            ).all()
+            role.permissions = permissions
+
+        db.session.add(role)
+        db.session.commit()
+
+        return jsonify({'success': True, 'message': 'Role created successfully'})
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error creating role: {e}")
+        return jsonify({'success': False, 'error': 'Failed to create role'})

@@ -42,7 +42,11 @@
                                                    id="perm_{{ perm.id }}"
                                                    onchange="updateCategoryCheckbox('{{ category }}')">
                                             <label class="form-check-label small" for="perm_{{ perm.id }}">
-                                                {{ perm.name }}
+                                                <code>{{ perm.name }}</code>
+                                                <span class="badge bg-info ms-1">{{ perm.required_subscription_tier }}</span>
+                                                {% if perm.description %}
+                                                <div class="text-muted small">{{ perm.description }}</div>
+                                                {% endif %}
                                             </label>
                                         </div>
                                         {% endfor %}
@@ -61,3 +65,72 @@
         </div>
     </div>
 </div>
+
+<script>
+function toggleCategoryPermissions(category) {
+    const categoryCheckbox = document.getElementById(`category_${category}`);
+    const permissionCheckboxes = document.querySelectorAll(`.permission-checkbox.category-${category}`);
+    
+    permissionCheckboxes.forEach(checkbox => {
+        checkbox.checked = categoryCheckbox.checked;
+    });
+}
+
+function updateCategoryCheckbox(category) {
+    const categoryCheckbox = document.getElementById(`category_${category}`);
+    const permissionCheckboxes = document.querySelectorAll(`.permission-checkbox.category-${category}`);
+    
+    const checkedCount = Array.from(permissionCheckboxes).filter(cb => cb.checked).length;
+    const totalCount = permissionCheckboxes.length;
+    
+    if (checkedCount === 0) {
+        categoryCheckbox.checked = false;
+        categoryCheckbox.indeterminate = false;
+    } else if (checkedCount === totalCount) {
+        categoryCheckbox.checked = true;
+        categoryCheckbox.indeterminate = false;
+    } else {
+        categoryCheckbox.checked = false;
+        categoryCheckbox.indeterminate = true;
+    }
+}
+
+function createRole() {
+    const form = document.getElementById('createRoleForm');
+    const formData = new FormData(form);
+    
+    const selectedPermissions = Array.from(document.querySelectorAll('.permission-checkbox:checked'))
+        .map(cb => parseInt(cb.value));
+    
+    const data = {
+        name: document.getElementById('roleName').value,
+        description: document.getElementById('roleDescription').value,
+        permission_ids: selectedPermissions
+    };
+    
+    fetch('/organization/roles', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCSRFToken()
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            location.reload();
+        } else {
+            alert(result.error || 'Failed to create role');
+        }
+    })
+    .catch(error => {
+        console.error('Error creating role:', error);
+        alert('Failed to create role');
+    });
+}
+
+function getCSRFToken() {
+    return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+}
+</script>
