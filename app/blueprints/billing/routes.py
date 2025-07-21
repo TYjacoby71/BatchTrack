@@ -34,10 +34,15 @@ def checkout(tier):
         return redirect(url_for('billing.upgrade'))
     
     # Create checkout session
-    session = StripeService.create_checkout_session(current_user.organization, tier)
-    
-    if not session:
-        flash('Failed to create checkout session. Please try again.', 'error')
+    try:
+        session = StripeService.create_checkout_session(current_user.organization, tier)
+        
+        if not session:
+            flash('Failed to create checkout session. Please try again.', 'error')
+            return redirect(url_for('billing.upgrade'))
+    except Exception as e:
+        logger.error(f"Checkout error for org {current_user.organization.id}: {str(e)}")
+        flash('Payment system temporarily unavailable. Please try again later.', 'error')
         return redirect(url_for('billing.upgrade'))
     
     return redirect(session.url)

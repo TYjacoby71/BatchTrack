@@ -257,10 +257,13 @@ def signup():
             owner_user.set_password(password)
             db.session.add(owner_user)
             
-            # In production, you would:
-            # 1. Create customer in payment processor (Stripe, etc.)
-            # 2. Store payment method securely
-            # 3. Set up subscription with trial period
+            # Create trial subscription
+            from ...services.subscription_service import SubscriptionService
+            SubscriptionService.create_trial_subscription(
+                organization=org,
+                trial_days=30,
+                trial_tier='team'
+            )
             
             db.session.commit()
 
