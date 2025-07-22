@@ -54,6 +54,31 @@ def seed_users():
         elif user.user_type == 'team_member' and manager_role:
             user.assign_role(manager_role)
             print(f"✅ Assigned role to existing user: {user.username} -> {user.user_type}")
+    
+    # Also handle users with is_organization_owner flag (for backward compatibility)
+    org_owner_flagged_users = User.query.filter_by(is_organization_owner=True).all()
+    fixed_count = 0
+    
+    for user in org_owner_flagged_users:
+        if user.user_type != 'developer':  # Skip developers
+            # Check if user already has organization owner role
+            has_org_owner_role = any(
+                assignment.role and assignment.role.name == 'organization_owner' 
+                for assignment in user.role_assignments if assignment.is_active
+            )
+            
+            if not has_org_owner_role:
+                if system_org_owner_role:
+                    user.assign_role(system_org_owner_role)
+                    fixed_count += 1
+                    print(f"✅ Fixed organization owner role for flagged user: {user.username}")
+                elif org_owner_role:
+                    user.assign_role(org_owner_role)
+                    fixed_count += 1
+                    print(f"✅ Fixed legacy organization owner role for flagged user: {user.username}")
+    
+    if fixed_count > 0:
+        print(f"✅ Fixed {fixed_count} organization owner users with missing roles")
 
     # Ensure all developer users have no organization association
     developer_users = User.query.filter(User.user_type == 'developer').all()
