@@ -162,14 +162,13 @@ def seed_users():
         admin_user = User(
             username='admin',
             password_hash=generate_password_hash('admin'),
-            role_id=org_owner_role.id,
             first_name='Jacob',
             last_name='Boulette',
             email='jacobboulette@outlook.com',
             phone='775-934-5968',
             organization_id=org.id,
-            is_owner=True,
-            user_type='organization_owner',  # Add user_type
+            user_type='customer',  # Everyone is customer type now
+            is_organization_owner=True,  # This flag determines ownership
             is_active=True
         )
         db.session.add(admin_user)
@@ -177,26 +176,23 @@ def seed_users():
     else:
         # Update existing admin user with missing fields
         admin_user = User.query.filter_by(username='admin').first()
-        if not admin_user.user_type:
-            admin_user.user_type = 'organization_owner'
-            admin_user.role_id = org_owner_role.id
-            admin_user.is_owner = True
+        admin_user.user_type = 'customer'  # Update to customer type
+        admin_user.is_organization_owner = True  # Set the ownership flag
         admin_user.is_active = True  # Ensure user is active
-        print(f"✅ Updated admin user with user_type and role")
+        print(f"✅ Updated admin user with user_type=customer and is_organization_owner=True")
 
     # Create a sample manager user if it doesn't exist
     if not User.query.filter_by(username='manager').first() and manager_role:
         manager_user = User(
             username='manager',
             password_hash=generate_password_hash('manager123'),
-            role_id=manager_role.id,
             first_name='Sample',
             last_name='Manager',
             email='manager@example.com',
             phone='555-0124',
             organization_id=org.id,
-            is_owner=False,
-            user_type='team_member',  # Add user_type
+            user_type='customer',  # Everyone is customer type now
+            is_organization_owner=False,  # Not an organization owner
             is_active=True
         )
         db.session.add(manager_user)
@@ -204,25 +200,23 @@ def seed_users():
     else:
         if User.query.filter_by(username='manager').first():
             manager_user = User.query.filter_by(username='manager').first()
-            if not manager_user.user_type:
-                manager_user.user_type = 'team_member'
-                manager_user.role_id = manager_role.id if manager_role else manager_user.role_id
+            manager_user.user_type = 'customer'  # Update to customer type
+            manager_user.is_organization_owner = False  # Not an owner
             manager_user.is_active = True  # Ensure user is active
-            print(f"✅ Updated manager user with user_type")
+            print(f"✅ Updated manager user with user_type=customer")
 
     # Create sample operator user if it doesn't exist
     if not User.query.filter_by(username='operator').first() and operator_role:
         operator_user = User(
             username='operator',
             password_hash=generate_password_hash('operator123'),
-            role_id=operator_role.id,
             first_name='Sample',
             last_name='Operator',
             email='operator@example.com',
             phone='555-0125',
             organization_id=org.id,
-            is_owner=False,
-            user_type='team_member',  # Add user_type
+            user_type='customer',  # Everyone is customer type now
+            is_organization_owner=False,  # Not an organization owner
             is_active=True
         )
         db.session.add(operator_user)
@@ -230,11 +224,10 @@ def seed_users():
     else:
         if User.query.filter_by(username='operator').first():
             operator_user = User.query.filter_by(username='operator').first()
-            if not operator_user.user_type:
-                operator_user.user_type = 'team_member'
-                operator_user.role_id = operator_role.id if operator_role else operator_user.role_id
+            operator_user.user_type = 'customer'  # Update to customer type
+            operator_user.is_organization_owner = False  # Not an owner
             operator_user.is_active = True  # Ensure user is active
-            print(f"✅ Updated operator user with user_type")
+            print(f"✅ Updated operator user with user_type=customer")
 
     db.session.commit()
     print("✅ User seeding completed")
@@ -256,10 +249,16 @@ def update_existing_users_with_roles():
         if not hasattr(user, 'user_type') or not user.user_type:
             if user.username == 'dev':
                 user.user_type = 'developer'
-            elif user.is_owner:
-                user.user_type = 'organization_owner'
             else:
-                user.user_type = 'team_member'
+                user.user_type = 'customer'  # Everyone else is customer type
+            updated = True
+        
+        # Set is_organization_owner flag if missing
+        if not hasattr(user, 'is_organization_owner') or user.is_organization_owner is None:
+            if user.username == 'admin':
+                user.is_organization_owner = True
+            elif user.user_type != 'developer':
+                user.is_organization_owner = False
             updated = True
 
         # Ensure developers have no organization association
