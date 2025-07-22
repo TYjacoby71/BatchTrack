@@ -13,7 +13,12 @@ class StripeService:
     @staticmethod
     def initialize_stripe():
         """Initialize Stripe with API key"""
-        stripe.api_key = current_app.config['STRIPE_SECRET_KEY']
+        stripe_key = current_app.config.get('STRIPE_SECRET_KEY')
+        if not stripe_key:
+            logger.warning("Stripe secret key not configured")
+            return False
+        stripe.api_key = stripe_key
+        return True
     
     @staticmethod
     def create_customer(organization):

@@ -12,13 +12,17 @@ class PricingService:
     @staticmethod
     def get_pricing_data():
         """Get pricing data from Stripe for all tiers"""
-        StripeService.initialize_stripe()
-        
+        # Default pricing data
         pricing_data = {
             'solo': {'price': '$29', 'features': ['Up to 5 users', 'Full batch tracking', 'Email support']},
             'team': {'price': '$79', 'features': ['Up to 10 users', 'Advanced features', 'Custom roles']},
             'enterprise': {'price': '$199', 'features': ['Unlimited users', 'All features', 'API access']}
         }
+        
+        # Only try to fetch from Stripe if properly configured
+        if not StripeService.initialize_stripe():
+            logger.info("Stripe not configured, using default pricing data")
+            return pricing_data
         
         try:
             # Get price IDs from config
