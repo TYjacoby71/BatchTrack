@@ -127,7 +127,7 @@ def create_app():
 
     # Register billing blueprint
     from .blueprints.billing import billing_bp
-    app.register_blueprint(billing_bp, url_prefix='/billing')
+    app.register_blueprint(billing_bp)
 
     # Register all blueprints
     app.register_blueprint(auth_bp, url_prefix='/auth')
