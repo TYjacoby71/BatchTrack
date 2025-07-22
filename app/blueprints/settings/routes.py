@@ -187,49 +187,71 @@ def update_system_settings():
 def save_profile():
     try:
         print(f"Profile save request from user: {current_user.id}")
-        print(f"Form data: {dict(request.form)}")
+        
+        # Handle both JSON and form data
+        if request.is_json:
+            data = request.get_json()
+            first_name = data.get('first_name', '').strip()
+            last_name = data.get('last_name', '').strip()
+            email = data.get('email', '').strip()
+            phone = data.get('phone', '').strip()
+            timezone = data.get('timezone', current_user.timezone)
+        else:
+            first_name = request.form.get('first_name', '').strip()
+            last_name = request.form.get('last_name', '').strip()
+            email = request.form.get('email', '').strip()
+            phone = request.form.get('phone', '').strip()
+            timezone = request.form.get('timezone', current_user.timezone)
 
-        # Validate input data
-        first_name = request.form.get('first_name', '').strip()
-        last_name = request.form.get('last_name', '').strip()
-        phone = request.form.get('phone', '').strip()
+        print(f"Parsed data - First: '{first_name}', Last: '{last_name}', Email: '{email}', Phone: '{phone}'")
 
-        print(f"Parsed data - First: '{first_name}', Last: '{last_name}', Phone: '{phone}'")
+        # Validate required fields
+        if not first_name or not last_name or not email:
+            error_msg = 'First name, last name, and email are required'
+            if request.is_json:
+                return jsonify({'success': False, 'error': error_msg}), 400
+            flash(error_msg, 'error')
+            return redirect(request.referrer or url_for('settings.index'))
 
         # Update user fields
         current_user.first_name = first_name
         current_user.last_name = last_name
+        current_user.email = email
         current_user.phone = phone
+        current_user.timezone = timezone
 
         # Commit changes
         print("Attempting to save to database...")
         db.session.commit()
         print("Database save successful")
 
-        flash('Profile updated successfully!', 'success')
-
-        # Determine redirect target
-        redirect_url = request.referrer or url_for('settings.index')
-        if current_user.user_type == 'developer':
-            redirect_url = url_for('developer.dashboard')
-
-        print(f"Redirecting to: {redirect_url}")
-        return redirect(redirect_url)
+        if request.is_json:
+            return jsonify({'success': True, 'message': 'Profile updated successfully'})
+        else:
+            flash('Profile updated successfully!', 'success')
+            # Determine redirect target
+            redirect_url = request.referrer or url_for('settings.index')
+            if current_user.user_type == 'developer':
+                redirect_url = url_for('developer.dashboard')
+            return redirect(redirect_url)
 
     except Exception as e:
         print(f"Error in profile save: {str(e)}")
-        print(f"Exception type: {type(e)}")
         import traceback
         traceback.print_exc()
 
         db.session.rollback()
-        flash(f'Error updating profile: {str(e)}', 'error')
-
-        # Safe fallback redirect
-        if current_user.user_type == 'developer':
-            return redirect(url_for('developer.dashboard'))
+        error_msg = f'Error updating profile: {str(e)}'
+        
+        if request.is_json:
+            return jsonify({'success': False, 'error': error_msg}), 500
         else:
-            return redirect(url_for('settings.index'))
+            flash(error_msg, 'error')
+            # Safe fallback redirect
+            if current_user.user_type == 'developer':
+                return redirect(url_for('developer.dashboard'))
+            else:
+                return redirect(url_for('settings.index'))
 
 @settings_bp.route('/password/change', methods=['POST'])
 @login_required

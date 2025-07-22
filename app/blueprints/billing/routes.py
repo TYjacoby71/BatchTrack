@@ -72,7 +72,16 @@ def upgrade():
     return render_template('billing/upgrade.html',
                          organization=organization,
                          tiers=available_tiers,
-                         current_tier=current_tier)
+                         current_tier=current_tier,
+                         pricing_data=available_tiers,
+                         subscription_details={
+                             'status': organization.subscription.status if organization.subscription else 'inactive',
+                             'next_billing_date': organization.subscription.next_billing_date if organization.subscription else None,
+                             'amount': None,
+                             'interval': 'monthly',
+                             'trial_end': organization.subscription.trial_end if organization.subscription else None,
+                             'cancel_at_period_end': False
+                         })
 
 logger = logging.getLogger(__name__)
 
