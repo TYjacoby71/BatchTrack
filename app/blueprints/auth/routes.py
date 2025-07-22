@@ -30,81 +30,40 @@ def login():
             flash('Please provide both username and password')
             return render_template('auth/login.html', form=form)
 
-        if form_type == 'register':
-            # Handle registration
-            confirm_password = request.form.get('confirm_password')
+        # Handle login only (registration removed - use dedicated signup flow)
+        user = User.query.filter_by(username=username).first()
 
-            if password != confirm_password:
-                flash('Passwords do not match')
+        if user and user.check_password(password):
+            # Ensure user is active
+            if not user.is_active:
+                flash('Account is inactive. Please contact administrator.')
                 return render_template('auth/login.html', form=form)
 
-            # Check if username already exists
-            existing_user = User.query.filter_by(username=username).first()
-            if existing_user:
-                flash('Username already exists')
-                return render_template('auth/login.html', form=form)
+            # Log the user in
+            login_user(user)
 
-            # Get email from form if provided
-            email = request.form.get('email', '').strip()
-
-            # Create organization for new user
-            new_org = Organization(
-                name=f"{username}'s Organization",
-                contact_email=email if email else None  # Set organization email to user's email
-            )
-            db.session.add(new_org)
-            db.session.flush()  # Get the ID
-
-            # Create new user as organization owner
-            new_user = User(
-                username=username,
-                email=email if email else None,  # Set user email
-                organization_id=new_org.id,
-                user_type='organization_owner',  # Use user_type instead of role
-                is_active=True
-            )
-            new_user.set_password(password)
-            db.session.add(new_user)
+            # Update last login
+            user.last_login = TimezoneUtils.utc_now()
             db.session.commit()
 
-            flash('Account created successfully! Please log in.')
-            return render_template('auth/login.html', form=form)
-
-        else:
-            # Handle login
-            user = User.query.filter_by(username=username).first()
-
-            if user and user.check_password(password):
-                # Ensure user is active
-                if not user.is_active:
-                    flash('Account is inactive. Please contact administrator.')
-                    return render_template('auth/login.html', form=form)
-
-                # Log the user in
-                login_user(user)
-
-                # Update last login
-                user.last_login = TimezoneUtils.utc_now()
-                db.session.commit()
-
-                # Redirect based on user type - developers go to their own dashboard
-                if user.user_type == 'developer':
-                    return redirect(url_for('developer.dashboard'))
-                else:
-                    return redirect(url_for('app_routes.dashboard'))
+            # Redirect based on user type - developers go to their own dashboard
+            if user.user_type == 'developer':
+                return redirect(url_for('developer.dashboard'))
             else:
-                flash('Invalid username or password')
-                return render_template('auth/login.html', form=form)
+                return redirect(url_for('app_routes.dashboard'))
+        else:
+            flash('Invalid username or password')
+            return render_template('auth/login.html', form=form)
 
     return render_template('auth/login.html', form=form)
 
 @auth_bp.route('/logout')
 def logout():
     from flask import session
-    
+
     # Clear developer customer view session if present
     session.pop('dev_selected_org_id', None)
-    
+
     logout_user()
     return redirect(url_for('homepage'))
 
@@ -139,7 +98,7 @@ def signup():
         'partner': {'days': 30, 'name': 'Partner Offer', 'requires_billing': True},
         'direct': {'days': 14, 'name': 'Free Trial', 'requires_billing': True}
     }
-    
+
     current_offer = trial_offers.get(signup_source, trial_offers['direct'])
 
     if request.method == 'POST':
@@ -154,7 +113,7 @@ def signup():
         password = request.form.get('password')
         confirm_password = request.form.get('confirm_password')
         phone = request.form.get('phone')
-        
+
         # Billing details (required for trial)
         card_number = request.form.get('card_number', '').replace(' ', '').replace('-', '')
         card_exp_month = request.form.get('card_exp_month')
@@ -166,7 +125,7 @@ def signup():
         billing_state = request.form.get('billing_state')
         billing_zip = request.form.get('billing_zip')
         billing_country = request.form.get('billing_country')
-        
+
         # Promo code
         entered_promo = request.form.get('promo_code', '').strip().upper()
 
@@ -230,20 +189,20 @@ def signup():
 
         try:
             from datetime import datetime, timedelta
-            
+            from ...services.stripe_service import StripeService
+            from ...models.subscription import Subscription
+
             # Create organization with trial details
             trial_end_date = datetime.utcnow() + timedelta(days=current_offer['days'])
-            
+
             org = Organization(
                 name=org_name,
-                subscription_tier='trial',  # Start with trial
+                subscription_tier='team',  # Trial gets team features
                 contact_email=email,
                 is_active=True,
-                trial_end_date=trial_end_date,
                 signup_source=signup_source,
                 promo_code=entered_promo if entered_promo else None,
-                referral_code=referral_code,
-                # Billing will be handled by Stripe - no local storage needed
+                referral_code=referral_code
             )
             db.session.add(org)
             db.session.flush()  # Get the ID
@@ -261,14 +220,67 @@ def signup():
             )
             owner_user.set_password(password)
             db.session.add(owner_user)
-            
-            # Create pending subscription (will be activated by Stripe)
-            from ...services.subscription_service import SubscriptionService
-            SubscriptionService.create_pending_subscription(
-                organization=org,
-                selected_tier='team'  # What they want to try
-            )
-            
+            db.session.flush()
+
+            # Create Stripe customer and subscription with trial
+            if current_offer['requires_billing']:
+                try:
+                    stripe_service = StripeService()
+
+                    # Create Stripe customer
+                    customer = stripe_service.create_customer(
+                        email=email,
+                        name=f"{first_name} {last_name}".strip() or username,
+                        organization_name=org_name,
+                        phone=phone
+                    )
+
+                    # Get selected tier from form (default to team)
+                    selected_tier = request.form.get('selected_tier', 'team')
+
+                    # Create subscription record
+                    subscription = Subscription(
+                        organization_id=org.id,
+                        tier=selected_tier,
+                        status='trialing',
+                        trial_start=datetime.utcnow(),
+                        trial_end=trial_end_date,
+                        stripe_customer_id=customer.id
+                    )
+                    db.session.add(subscription)
+
+                    # Store payment method (for post-trial billing)
+                    if card_number:
+                        stripe_service.create_payment_method(
+                            customer_id=customer.id,
+                            card_number=card_number,
+                            exp_month=card_exp_month,
+                            exp_year=card_exp_year,
+                            cvc=card_cvc
+                        )
+
+                except Exception as stripe_error:
+                    # Fall back to local trial if Stripe fails
+                    subscription = Subscription(
+                        organization_id=org.id,
+                        tier='team',
+                        status='trialing',
+                        trial_start=datetime.utcnow(),
+                        trial_end=trial_end_date
+                    )
+                    db.session.add(subscription)
+                    flash(f'Trial created successfully (payment processing in test mode)', 'info')
+            else:
+                # Free trial without payment info
+                subscription = Subscription(
+                    organization_id=org.id,
+                    tier='team',
+                    status='trialing',
+                    trial_start=datetime.utcnow(),
+                    trial_end=trial_end_date
+                )
+                db.session.add(subscription)
+
             db.session.commit()
 
             flash(f'Welcome! Your {current_offer["days"]}-day free trial has started. No charges until {trial_end_date.strftime("%B %d, %Y")}.', 'success')
@@ -302,7 +314,7 @@ def _validate_credit_card(card_number, exp_month, exp_year, cvc):
         return False
     if len(cvc) < 3 or len(cvc) > 4:
         return False
-    
+
     # Luhn algorithm for card validation
     def luhn_checksum(card_num):
         def digits_of(n):
@@ -314,14 +326,14 @@ def _validate_credit_card(card_number, exp_month, exp_year, cvc):
         for d in even_digits:
             checksum += sum(digits_of(d*2))
         return checksum % 10
-    
+
     return luhn_checksum(card_number) == 0
 
 def _validate_promo_code(promo_code, signup_source):
     """Validate promo codes and return discount info"""
     if not promo_code:
         return None
-        
+
     # Define available promo codes
     promo_codes = {
         'WELCOME20': {'discount_percent': 20, 'valid_for_months': 3, 'description': '20% off for 3 months'},
@@ -329,20 +341,20 @@ def _validate_promo_code(promo_code, signup_source):
         'WEBINAR50': {'discount_percent': 50, 'valid_for_months': 2, 'description': '50% off first 2 months'},
         'PARTNER25': {'discount_percent': 25, 'valid_for_months': 6, 'description': '25% off for 6 months'}
     }
-    
+
     # Source-specific promo validation
     source_promos = {
         'webinar': ['WEBINAR50', 'WELCOME20'],
         'partner': ['PARTNER25', 'WELCOME20'],
         'homepage_trial': ['WELCOME20', 'TRIAL30']
     }
-    
+
     if promo_code in promo_codes:
         # Check if promo is valid for this signup source
         valid_promos = source_promos.get(signup_source, list(promo_codes.keys()))
         if promo_code in valid_promos:
             return promo_codes[promo_code]
-    
+
     return None
 
 # Multiple Signup Entry Points
