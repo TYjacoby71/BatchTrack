@@ -1,3 +1,4 @@
+
 <div class="row">
     <div class="col-12">
         <div class="mb-3">
@@ -32,16 +33,10 @@
             <div class="card-header bg-primary text-white">
                 <h6 class="mb-0"><i class="fas fa-arrow-up"></i> Upgrade Available</h6>
             </div>
-            <div class="card-body text-center">
-                <p>Get more users, features, and integrations</p>
-                <a href="{{ url_for('billing.upgrade') }}" class="btn btn-primary">
-                    <i class="fas fa-external-link-alt"></i> View Upgrade Options
-                </a>
+            <div class="card-body">
+                <p>Unlock more features and users with our premium plans.</p>
+                <a href="{{ url_for('billing.upgrade') }}" class="btn btn-light">View All Plans</a>
             </div>
         </div>
     </div>
 </div>
-
-
-{% if has_permission('organization.manage_billing') or current_user.user_type == 'organization_owner' %}
-{% endif %}
