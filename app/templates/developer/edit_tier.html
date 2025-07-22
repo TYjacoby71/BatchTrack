@@ -37,6 +37,41 @@
                         <div class="mb-3">
                             <label for="user_limit" class="form-label">User Limit</label>
                             <input type="number" class="form-control" id="user_limit" name="user_limit" 
+                                   value="{{ tier.user_limit if tier.user_limit != -1 else '' }}" 
+                                   placeholder="Leave empty for unlimited (exempt only)">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="stripe_lookup_key" class="form-label">Stripe Lookup Key</label>
+                            <input type="text" class="form-control" id="stripe_lookup_key" name="stripe_lookup_key" 
+                                   value="{{ tier.get('stripe_lookup_key', '') }}" 
+                                   placeholder="e.g. team-plan">
+                        </div>
+                        
+                        <!-- Visibility Controls -->
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="is_customer_facing" name="is_customer_facing"
+                                       {% if tier.get('is_customer_facing', True) %}checked{% endif %}>
+                                <label class="form-check-label" for="is_customer_facing">
+                                    Customer Facing (visible to customers)
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="is_available" name="is_available"
+                                       {% if tier.get('is_available', True) %}checked{% endif %}>
+                                <label class="form-check-label" for="is_available">
+                                    Available (tier is active)
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="user_limit" class="form-label">User Limit</label>
+                            <input type="number" class="form-control" id="user_limit" name="user_limit" 
                                    value="{{ tier.user_limit }}" min="1"
                                    {% if tier_key != 'exempt' %}max="1000"{% endif %}>
                             <small class="form-text text-muted">
@@ -215,7 +250,59 @@
                     </div>
                 </div>
             </div>
+            
+            <!-- Permissions & Features -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Permissions & Features</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Permissions</label>
+                            <div class="form-text mb-2">Select permissions for this tier:</div>
+                            <div class="permissions-grid" style="max-height: 300px; overflow-y: auto; border: 1px solid #dee2e6; padding: 10px;">
+                                {% for permission in permissions %}
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="permissions" 
+                                           value="{{ permission.name }}" id="perm_{{ permission.id }}"
+                                           {% if permission.name in tier.get('permissions', []) %}checked{% endif %}>
+                                    <label class="form-check-label small" for="perm_{{ permission.id }}">
+                                        <strong>{{ permission.name }}</strong>
+                                        {% if permission.description %}
+                                        <br><small class="text-muted">{{ permission.description }}</small>
+                                        {% endif %}
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="fallback_features" class="form-label">Fallback Features</label>
+                            <div class="form-text mb-2">One feature per line (used when Stripe sync unavailable):</div>
+                            <textarea class="form-control" id="fallback_features" name="fallback_features" 
+                                      rows="5" placeholder="Feature 1&#10;Feature 2&#10;Feature 3">{{ tier.get('fallback_features', []) | join('\n') }}</textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body text-end">
+                        <a href="{{ url_for('developer.subscription_tiers.manage_tiers') }}" class="btn btn-secondary me-2">
+                            Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Update Tier
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
     </form>
 </div>
-{% endblock %}
+{% endblock %}k %}
