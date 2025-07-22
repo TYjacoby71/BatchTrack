@@ -10,15 +10,20 @@ class TimestampMixin:
 
 
 class ScopedModelMixin:
-    """Adds organization scoping to models"""
-    organization_id = db.Column(db.Integer, 
-                               db.ForeignKey('organization.id'), 
-                               nullable=False)
+    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=False)
 
     @classmethod
     def for_organization(cls, org_id):
-        """Get all records for a specific organization"""
         return cls.query.filter_by(organization_id=org_id)
+
+    @classmethod
+    def for_current_user(cls):
+        """Get records scoped to current user's effective organization (handles developer customer view)"""
+        from app.utils.permissions import get_effective_organization_id
+        org_id = get_effective_organization_id()
+        if org_id:
+            return cls.query.filter_by(organization_id=org_id)
+        return cls.query.filter(cls.organization_id.is_(None))  # Return empty results if no org
 
     @classmethod
     def scoped(cls):
