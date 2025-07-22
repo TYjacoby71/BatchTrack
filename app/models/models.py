@@ -144,9 +144,9 @@ class User(UserMixin, db.Model):
 
     def has_permission(self, permission_name):
         """Check if user has a specific permission through any of their roles"""
-        # Developers have all permissions
+        # Developers check their developer roles
         if self.user_type == 'developer':
-            return True
+            return self.has_developer_permission(permission_name)
 
         # All users (including organization owners) check their assigned roles
         roles = self.get_active_roles()
@@ -158,6 +158,28 @@ class User(UserMixin, db.Model):
                 if permission and permission.is_available_for_tier(self.organization.subscription_tier):
                     return True
 
+        return False
+
+    def has_developer_permission(self, permission_name):
+        """Check if developer user has a specific developer permission"""
+        if self.user_type != 'developer':
+            return False
+            
+        # Get developer role assignments for this user
+        from .developer_role import DeveloperRole
+        from .user_role_assignment import UserRoleAssignment
+        
+        # Check if user has any developer roles assigned
+        assignments = UserRoleAssignment.query.filter_by(
+            user_id=self.id,
+            is_active=True
+        ).all()
+        
+        for assignment in assignments:
+            if assignment.role and hasattr(assignment.role, 'category') and assignment.role.category in ['developer', 'admin', 'system']:
+                if assignment.role.has_permission(permission_name):
+                    return True
+        
         return False
 
     def assign_role(self, role, assigned_by=None):

@@ -1,25 +1,29 @@
-
 from datetime import datetime
 from ..extensions import db
 from .mixins import ScopedModelMixin
 
-class UserRoleAssignment(ScopedModelMixin, db.Model):
-    """Many-to-many relationship between users and roles with assignment tracking"""
+class UserRoleAssignment(db.Model):
     __tablename__ = 'user_role_assignment'
-    
+
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    role_id = db.Column(db.Integer, db.ForeignKey('role.id'), nullable=False)
-    assigned_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
-    assigned_at = db.Column(db.DateTime, default=datetime.utcnow)
+    role_id = db.Column(db.Integer, db.ForeignKey('role.id'), nullable=True)  # Organization role
+    developer_role_id = db.Column(db.Integer, db.ForeignKey('developer_role.id'), nullable=True)  # Developer role
+    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)
     is_active = db.Column(db.Boolean, default=True)
-    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=False)
-    
+    assigned_at = db.Column(db.DateTime, default=datetime.utcnow)
+    assigned_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+
     # Relationships
     user = db.relationship('User', foreign_keys=[user_id], backref='role_assignments')
-    role = db.relationship('Role', backref='user_assignments')
+    role = db.relationship('Role', backref='user_assignments')  # Organization role
+    developer_role = db.relationship('DeveloperRole', backref='user_assignments')  # Developer role
     assigner = db.relationship('User', foreign_keys=[assigned_by])
-    
-    __table_args__ = (
-        db.UniqueConstraint('user_id', 'role_id', 'organization_id', name='unique_user_role_org'),
-    )
+    organization = db.relationship('Organization')
+
+    @property
+    def active_role(self):
+        """Get the active role (either organization or developer role)"""
+        if self.developer_role_id:
+            return self.developer_role
+        return self.role
