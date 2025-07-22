@@ -4,7 +4,7 @@ from werkzeug.security import generate_password_hash
 
 def seed_users():
     """Seed default users into the database"""
-    
+
     # Import Role at top of function to avoid scope issues
     from app.models.role import Role
     from ..models.developer_role import DeveloperRole
@@ -95,24 +95,35 @@ def seed_users():
         dev_user.organization_id = None  # Remove from customer organization
         dev_user.is_active = True
 
-        # Ensure dev user has system_admin role
-        system_admin_role = DeveloperRole.query.filter_by(name='system_admin').first()
-        if system_admin_role:
-            existing_assignment = UserRoleAssignment.query.filter_by(
-                user_id=dev_user.id,
-                developer_role_id=system_admin_role.id,
-                is_active=True
-            ).first()
+        # Create developer user with system_admin role
+        print("✅ Assigned system_admin role to existing dev user")
+        dev_user = User.query.filter_by(username='dev').first()
+        if dev_user:
+            dev_user.user_type = 'developer'
+            print("✅ Updated developer user with user_type: developer")
 
-            if not existing_assignment:
-                assignment = UserRoleAssignment(
+            # Get system_admin developer role
+            system_admin_role = DeveloperRole.query.filter_by(name='system_admin').first()
+            if system_admin_role:
+                # Check if assignment already exists
+                existing_assignment = UserRoleAssignment.query.filter_by(
                     user_id=dev_user.id,
-                    developer_role_id=system_admin_role.id,
-                    organization_id=None,
-                    is_active=True
-                )
-                db.session.add(assignment)
-                print(f"✅ Assigned system_admin role to existing dev user")
+                    developer_role_id=system_admin_role.id
+                ).first()
+
+                if not existing_assignment:
+                    assignment = UserRoleAssignment(
+                        user_id=dev_user.id,
+                        role_id=None,  # Explicitly set to None for developer roles
+                        developer_role_id=system_admin_role.id,
+                        organization_id=None,
+                        is_active=True
+                    )
+                    db.session.add(assignment)
+
+            # Commit developer user changes before proceeding
+            db.session.commit()
+
 
         print(f"✅ Updated developer user with user_type: developer")
 
