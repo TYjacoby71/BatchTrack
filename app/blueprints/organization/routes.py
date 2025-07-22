@@ -258,16 +258,17 @@ def invite_user():
             first_name=first_name,
             last_name=last_name,
             phone=phone,
-            role_id=role_id,
             organization_id=current_user.organization_id,
             is_active=not will_be_inactive,  # Inactive if subscription limit reached
-            user_type='team_member',
-            is_owner=False
+            user_type='team_member'
         )
         new_user.set_password(temp_password)
 
         db.session.add(new_user)
         db.session.commit()
+
+        # Assign role using the new role assignment system
+        new_user.assign_role(role, assigned_by=current_user)
 
         # TODO: In a real implementation, send email with login details
         # For now, we'll return the credentials directly
