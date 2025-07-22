@@ -13,16 +13,25 @@ TIERS_CONFIG_FILE = 'subscription_tiers.json'
 
 def load_tiers_config():
     """Load subscription tiers from JSON file"""
-    if os.path.exists(TIERS_CONFIG_FILE):
-        with open(TIERS_CONFIG_FILE, 'r') as f:
-            return json.load(f)
-    return {
+    # Default system tiers
+    default_tiers = {
+        'free': {
+            'name': 'Free Plan',
+            'feature_groups': ['dashboard', 'inventory'],
+            'stripe_lookup_key': '',
+            'user_limit': 1,
+            'fallback_features': ['Basic features', '1 user only', 'Community support'],
+            'stripe_features': [],
+            'stripe_price_monthly': 'Free',
+            'stripe_price_yearly': 'Free',
+            'last_synced': None
+        },
         'solo': {
             'name': 'Solo Plan',
             'feature_groups': ['dashboard', 'inventory', 'batches'],
             'stripe_lookup_key': 'solo-plan',
-            'user_limit': 5,
-            'fallback_features': ['Up to 5 users', 'Full batch tracking', 'Email support'],
+            'user_limit': 1,
+            'fallback_features': ['Up to 1 user', 'Full batch tracking', 'Email support'],
             'stripe_features': [],
             'stripe_price_monthly': None,
             'stripe_price_yearly': None,
@@ -49,8 +58,30 @@ def load_tiers_config():
             'stripe_price_monthly': None,
             'stripe_price_yearly': None,
             'last_synced': None
+        },
+        'exempt': {
+            'name': 'Exempt Plan',
+            'feature_groups': ['dashboard', 'inventory', 'batches', 'products', 'user_management', 'api_access', 'advanced_features', 'developer_access'],
+            'stripe_lookup_key': '',
+            'user_limit': -1,
+            'fallback_features': ['Unlimited users', 'All features', 'Developer access', 'No billing required'],
+            'stripe_features': [],
+            'stripe_price_monthly': 'Exempt',
+            'stripe_price_yearly': 'Exempt',
+            'last_synced': None
         }
     }
+    
+    if os.path.exists(TIERS_CONFIG_FILE):
+        with open(TIERS_CONFIG_FILE, 'r') as f:
+            loaded_tiers = json.load(f)
+            # Merge with default tiers, keeping any customizations
+            for tier_key, tier_data in default_tiers.items():
+                if tier_key not in loaded_tiers:
+                    loaded_tiers[tier_key] = tier_data
+            return loaded_tiers
+    
+    return default_tiers
 
 def save_tiers_config(tiers):
     """Save subscription tiers to JSON file"""
@@ -159,6 +190,11 @@ def edit_tier(tier_key):
 @login_required
 def delete_tier(tier_key):
     """Delete a subscription tier"""
+    # Prevent deletion of system tiers
+    if tier_key in ['free', 'exempt']:
+        flash(f'Cannot delete system tier: {tier_key}', 'error')
+        return redirect(url_for('developer.subscription_tiers.manage_tiers'))
+        
     tiers = load_tiers_config()
     
     if tier_key not in tiers:

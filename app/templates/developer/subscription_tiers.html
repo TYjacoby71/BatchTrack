@@ -101,13 +101,26 @@
                        class="btn btn-outline-primary btn-sm">
                         <i class="fas fa-edit"></i> Edit
                     </a>
-                     <button class="btn btn-outline-success btn-sm" onclick="syncTier('{{ tier_key }}')">
-                        <i class="fas fa-sync"></i> Sync from Stripe
-                    </button>
-                    <button class="btn btn-outline-danger btn-sm" 
-                            onclick="confirmDelete('{{ tier_key }}', '{{ tier_data.name }}')">
-                        <i class="fas fa-trash"></i> Delete
-                    </button>
+                     {% if tier_data.stripe_lookup_key %}
+                        <button class="btn btn-outline-success btn-sm" onclick="syncTier('{{ tier_key }}')">
+                            <i class="fas fa-sync"></i> Sync from Stripe
+                        </button>
+                    {% else %}
+                        <button class="btn btn-outline-secondary btn-sm" disabled title="No Stripe lookup key configured">
+                            <i class="fas fa-sync"></i> No Sync Available
+                        </button>
+                    {% endif %}
+                    
+                    {% if tier_key not in ['free', 'exempt'] %}
+                        <button class="btn btn-outline-danger btn-sm" 
+                                onclick="confirmDelete('{{ tier_key }}', '{{ tier_data.name }}')">
+                            <i class="fas fa-trash"></i> Delete
+                        </button>
+                    {% else %}
+                        <button class="btn btn-outline-secondary btn-sm" disabled title="System tier cannot be deleted">
+                            <i class="fas fa-lock"></i> Protected
+                        </button>
+                    {% endif %}
                   
                     <form id="deleteForm{{ tier_key }}" method="post" action="{{ url_for('developer.subscription_tiers.delete_tier', tier_key=tier_key) }}" style="display: none;">
                         <!-- Hidden form for delete action -->
