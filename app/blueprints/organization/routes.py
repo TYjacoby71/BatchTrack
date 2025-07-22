@@ -36,7 +36,68 @@ def dashboard():
     from ...services.pricing_service import PricingService
     pricing_data = PricingService.get_pricing_data()
 
-    return render_template('organization/dashboard.html', pricing_data=pricing_data)
+    # Get organization data
+    organization = current_user.organization
+
+    # Get organization statistics
+    from app.models import Batch
+    completed_batches = Batch.query.filter_by(
+        organization_id=current_user.organization_id,
+        status='completed'
+    ).count()
+
+    failed_batches = Batch.query.filter_by(
+        organization_id=current_user.organization_id,
+        status='failed'
+    ).count()
+
+    org_stats = {
+        'completed_batches': completed_batches,
+        'failed_batches': failed_batches
+    }
+
+    # Count pending invites (inactive users)
+    pending_invites = User.query.filter_by(
+        organization_id=current_user.organization_id,
+        is_active=False,
+        user_type='team_member'
+    ).count()
+
+    # Get permission categories for role creation modal
+    from app.models.permission import Permission
+    permissions = Permission.query.filter_by(is_active=True).all()
+    permission_categories = {}
+    for perm in permissions:
+        category = perm.category or 'general'
+        if category not in permission_categories:
+            permission_categories[category] = []
+        permission_categories[category].append(perm)
+
+    # Get roles for the roles tab  
+    roles = Role.get_organization_roles(current_user.organization_id)
+
+    # Get users for the user management tab (exclude developers from organization view)
+    users = User.query.filter(
+        User.organization_id == current_user.organization_id,
+        User.user_type != 'developer'
+    ).order_by(User.created_at.desc()).all()
+
+    # Debug: Print to console to verify data
+    print(f"Permission categories: {list(permission_categories.keys())}")
+    print(f"Total permissions: {len(permissions)}")
+    print(f"Roles count: {len(roles)}")
+    print(f"Users count: {len(users)}")
+
+    return render_template(
+        'organization/dashboard.html', 
+        pricing_data=pricing_data,
+        organization=organization,
+        org_stats=org_stats,
+        pending_invites=pending_invites,
+        permission_categories=permission_categories,
+        roles=roles,
+        users=users
+    )
 
 @organization_bp.route('/create-role', methods=['POST'])
 @login_required
@@ -197,16 +258,17 @@ def invite_user():
             first_name=first_name,
             last_name=last_name,
             phone=phone,
-            role_id=role_id,
             organization_id=current_user.organization_id,
             is_active=not will_be_inactive,  # Inactive if subscription limit reached
-            user_type='team_member',
-            is_owner=False
+            user_type='team_member'
         )
         new_user.set_password(temp_password)
 
         db.session.add(new_user)
         db.session.commit()
+
+        # Assign role using the new role assignment system
+        new_user.assign_role(role, assigned_by=current_user)
 
         # TODO: In a real implementation, send email with login details
         # For now, we'll return the credentials directly
