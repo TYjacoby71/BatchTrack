@@ -14,16 +14,22 @@ organization_bp = Blueprint('organization', __name__)
 @organization_bp.route('/dashboard')
 @login_required
 def dashboard():
-    """Organization management dashboard"""
-    # Check permissions - only team and enterprise tiers get org dashboard
-    if not has_permission(current_user, 'manage_organization'):
-        flash('You do not have permission to access the organization dashboard.', 'error')
+    """Organization dashboard - restricted to organization owners and managers"""
+    if not current_user.organization:
+        flash('You must belong to an organization to access this page.', 'error')
         return redirect(url_for('settings.index'))
 
-    # Also check subscription tier
-    if current_user.organization.effective_subscription_tier in ['free', 'solo']:
-        flash('Organization dashboard is available with Team and Enterprise plans.', 'info')
-        return redirect(url_for('settings.index'))
+    # Organization owners automatically have access
+    if current_user.user_type == 'organization_owner':
+        pass  # Allow access
+    # Team members need specific permission
+    elif current_user.user_type == 'team_member' and not has_permission(current_user, 'manage_organization'):
+        flash('Access denied. You do not have permission to access the organization dashboard.', 'error')
+        return redirect(url_for('app_routes.user_dashboard'))
+    # Developers with selected organization
+    elif current_user.user_type == 'developer' and not session.get('dev_selected_org_id'):
+        flash('Please select an organization to manage.', 'error')
+        return redirect(url_for('developer.organizations'))
 
     from ...services.pricing_service import PricingService
     pricing_data = PricingService.get_pricing_data()
@@ -276,8 +282,7 @@ def export_report(report_type):
         elif report_type == 'batches':
             flash('Batch export functionality coming soon', 'info')
         elif report_type == 'inventory':
-            flash('Inventory export functionality coming soon', 'info')
-        elif report_type == 'products':
+            flash('Inventory export functionality coming soon', 'info')        elif report_type == 'products':
             flash('Product export functionality coming soon', 'info')
         elif report_type == 'activity':
             flash('Activity export functionality coming soon', 'info')
@@ -447,10 +452,6 @@ def update_user(user_id):
             'message': f'User {user.full_name} updated successfully'
         })
 
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'success': False, 'error': str(e)})
-
 @organization_bp.route('/user/<int:user_id>/toggle-status', methods=['POST'])
 @login_required
 def toggle_user_status(user_id):
@@ -499,10 +500,6 @@ def toggle_user_status(user_id):
             'success': True, 
             'message': f'User {user.full_name} {status_text} successfully'
         })
-
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'success': False, 'error': str(e)})
 
 @organization_bp.route('/user/<int:user_id>', methods=['DELETE'])
 @login_required
