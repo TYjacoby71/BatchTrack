@@ -129,3 +129,88 @@ def get_available_roles_for_user(user=None):
 
     from ..models.role import Role
     return Role.get_organization_roles(user.organization_id)
+
+class UserTypeManager:
+    """Manage user types and role assignments"""
+    
+    USER_TYPES = {
+        'developer': None,  # Developers don't get roles - they have all permissions by user_type
+        'organization_owner': 'organization_owner', 
+        'team_member': 'manager'  # Default team members get manager role
+    }
+    
+    @staticmethod
+    def assign_role_by_user_type(user):
+        """Assign appropriate role based on user type and organization subscription"""
+        if user.user_type == 'developer':
+            # Developers don't get roles - they have all permissions by user_type
+            return None
+        elif user.user_type == 'organization_owner':
+            role = Role.query.filter_by(name='organization_owner').first()
+        else:  # team_member
+            # Assign role based on organization subscription
+            if user.organization and user.organization.subscription_tier == 'solo':
+                role = Role.query.filter_by(name='operator').first()  # Limited for solo
+            else:
+                role = Role.query.filter_by(name='manager').first()  # Full access for team/enterprise
+        
+        if role:
+            user.assign_role(role)
+        
+        return role
+    
+    @staticmethod
+    def can_user_access_feature(feature_name):
+        """Check if current user can access a feature based on subscription"""
+        if not current_user.is_authenticated:
+            return False
+        
+        # Developers can access everything
+        if current_user.user_type == 'developer':
+            return True
+        
+        org_features = current_user.organization.get_subscription_features()
+        return feature_name in org_features or 'all_features' in org_features
+    
+    @staticmethod
+    def get_user_type_display_name(user_type):
+        """Get human-readable name for user type"""
+        names = {
+            'developer': 'System Developer',
+            'organization_owner': 'Organization Owner',
+            'team_member': 'Team Member'
+        }
+        return names.get(user_type, 'Team Member')
+    
+    @staticmethod
+    def create_organization_with_owner(org_name, owner_username, owner_email, subscription_tier='solo'):
+        """Create new organization with owner user"""
+        from ..models import Organization, User, Role
+        from ..extensions import db
+        
+        # Create organization
+        org = Organization(
+            name=org_name,
+            subscription_tier=subscription_tier
+        )
+        db.session.add(org)
+        db.session.flush()  # Get org.id
+        
+        # Create owner user
+        owner = User(
+            username=owner_username,
+            email=owner_email,
+            organization_id=org.id,
+            user_type='organization_owner'
+        )
+        db.session.add(owner)
+        db.session.flush()  # Get user.id
+        
+        # Assign organization owner system role
+        org_owner_role = Role.query.filter_by(name='organization_owner', is_system_role=True).first()
+        if org_owner_role:
+            owner.assign_role(org_owner_role)
+        
+        db.session.commit()
+        
+        return org, owner

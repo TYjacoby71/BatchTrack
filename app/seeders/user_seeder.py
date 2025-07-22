@@ -28,14 +28,23 @@ def seed_users():
         print("❌ Required roles not found. Please run 'flask seed-roles-permissions' first.")
         return
 
+    # Get organization owner system role
+    from app.models.role import Role
+    system_org_owner_role = Role.query.filter_by(name='organization_owner', is_system_role=True).first()
+    
     # Assign all users proper roles based on their user types (excluding developers)
     all_users = User.query.filter(User.user_type != 'developer').all()
     for user in all_users:
-        if user.user_type == 'organization_owner' and org_owner_role:
-            user.assign_role(org_owner_role)
+        if user.user_type == 'organization_owner':
+            if system_org_owner_role:
+                user.assign_role(system_org_owner_role)
+                print(f"✅ Assigned system organization owner role to: {user.username}")
+            elif org_owner_role:
+                user.assign_role(org_owner_role)
+                print(f"✅ Assigned legacy organization owner role to: {user.username}")
         elif user.user_type == 'team_member' and manager_role:
             user.assign_role(manager_role)
-        print(f"✅ Assigned role to existing user: {user.username} -> {user.user_type}")
+            print(f"✅ Assigned role to existing user: {user.username} -> {user.user_type}")
 
     # Ensure all developer users have no organization association
     developer_users = User.query.filter(User.user_type == 'developer').all()
