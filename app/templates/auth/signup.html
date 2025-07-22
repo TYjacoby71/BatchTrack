@@ -105,25 +105,36 @@
                         <input type="hidden" name="referral_code" value="{{ referral_code }}">
                         {% endif %}
 
-                        <!-- Promo Code Section -->
+                        <!-- Hidden field for selected tier -->
+                        <input type="hidden" name="selected_tier" id="selectedTier" value="team">
+
+                        <!-- Name fields -->
+                        <div class="row mb-3"></div>
+
+                        <!-- Tier Selection -->
                         <div class="mb-4">
-                            <div class="row align-items-end">
-                                <div class="col-md-8">
-                                    <label for="promo_code" class="form-label">Promo Code (Optional)</label>
-                                    <input type="text" class="form-control" id="promo_code" name="promo_code" 
-                                           value="{{ promo_code or (form_data.promo_code if form_data else '') }}"
-                                           placeholder="Enter promo code for additional savings">
+                            <label class="form-label">Choose Your Plan</label>
+                            <div class="row">
+                                {% for tier_key, tier_data in pricing_data.items() %}
+                                <div class="col-md-4 mb-3">
+                                    <div class="card tier-option h-100" data-tier="{{ tier_key }}" style="cursor: pointer; transition: all 0.3s;">
+                                        <div class="card-body text-center">
+                                            <h5 class="card-title">{{ tier_data.name }}</h5>
+                                            <div class="h4 text-primary">${{ "%.0f"|format(tier_data.price_monthly) }}<small class="text-muted">/mo</small></div>
+                                            <div class="text-muted mb-3">{{ tier_data.user_limit }} user{{ 's' if tier_data.user_limit != 1 else '' }}</div>
+                                            <ul class="list-unstyled small">
+                                                {% for feature in tier_data.features[:3] %}
+                                                <li><i class="fas fa-check text-success me-1"></i>{{ feature }}</li>
+                                                {% endfor %}
+                                            </ul>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="col-md-4">
-                                    <button type="button" class="btn btn-outline-primary" onclick="validatePromoCode()">
-                                        Apply Code
-                                    </button>
-                                </div>
+                                {% endfor %}
                             </div>
-                            <div id="promoMessage" class="mt-2"></div>
                         </div>
 
-                        <div class="row">
+                        <div class="row mb-3">
                             <!-- Left Column - Organization & Account -->
                             <div class="col-md-6">
                                 <div class="mb-4">
@@ -395,33 +406,33 @@ document.addEventListener('DOMContentLoaded', function() {
 document.addEventListener('DOMContentLoaded', function() {
     const tierOptions = document.querySelectorAll('.tier-option');
     const selectedTierInput = document.getElementById('selected_tier');
-    
+
     tierOptions.forEach(option => {
         option.addEventListener('click', function() {
             // Remove active class from all
             tierOptions.forEach(opt => opt.classList.remove('border-success', 'bg-light'));
-            
+
             // Add active class to selected
             this.classList.add('border-success', 'bg-light');
-            
+
             // Update hidden input
             selectedTierInput.value = this.dataset.tier;
-            
+
             // Update payment visibility
             updatePaymentSection();
         });
     });
-    
+
     // Set initial selection (team is pre-selected)
     const defaultTier = document.querySelector('[data-tier="team"]');
     if (defaultTier) {
         defaultTier.classList.add('border-success', 'bg-light');
     }
-    
+
     function updatePaymentSection() {
         const tier = selectedTierInput.value;
         const paymentSection = document.querySelector('.col-md-6:has(h5:contains("Payment"))');
-        
+
         // All tiers except free require payment
         if (paymentSection) {
             paymentSection.style.display = tier === 'free' ? 'none' : 'block';
