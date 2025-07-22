@@ -87,13 +87,11 @@ def update_system_role(role_id):
     try:
         role = Role.query.filter_by(id=role_id, is_system_role=True).first_or_404()
         
-        # Don't allow editing organization_owner role
-        if role.name == 'organization_owner':
-            return jsonify({'success': False, 'error': 'Cannot edit organization_owner system role'})
-        
         data = request.get_json()
         
-        role.name = data.get('name', role.name)
+        # Allow editing name and description for all roles except organization_owner name
+        if role.name != 'organization_owner':
+            role.name = data.get('name', role.name)
         role.description = data.get('description', role.description)
         
         # Update permissions
@@ -117,10 +115,7 @@ def delete_system_role(role_id):
     try:
         role = Role.query.filter_by(id=role_id, is_system_role=True).first_or_404()
         
-        # Don't allow deleting organization_owner role
-        if role.name == 'organization_owner':
-            return jsonify({'success': False, 'error': 'Cannot delete organization_owner system role'})
-        
+        # Allow deletion of any system role (with warning for organization_owner)
         db.session.delete(role)
         db.session.commit()
         
