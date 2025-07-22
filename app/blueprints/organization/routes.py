@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for, current_app as app, abort
+from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for, current_app as app, abort, session
 from flask_login import login_required, current_user
 from werkzeug.security import generate_password_hash
 import secrets
@@ -43,11 +43,21 @@ def dashboard():
     # Get pending invites count (placeholder for now)
     pending_invites = 0
 
+    # Get permissions grouped by category for role creation modal
+    from app.models.permission import Permission
+    from collections import defaultdict
+    
+    all_permissions = Permission.query.filter_by(is_active=True).all()
+    permission_categories = defaultdict(list)
+    for perm in all_permissions:
+        permission_categories[perm.category or 'general'].append(perm)
+
     return render_template('organization/dashboard.html', 
                          organization=current_user.organization,
                          pricing_data=pricing_data,
                          org_stats=org_stats,
-                         pending_invites=pending_invites)
+                         pending_invites=pending_invites,
+                         permission_categories=dict(permission_categories))
 
 @organization_bp.route('/create-role', methods=['POST'])
 @login_required
