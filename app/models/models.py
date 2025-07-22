@@ -111,7 +111,7 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(120), nullable=True)
     phone = db.Column(db.String(20), nullable=True)
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)
-    user_type = db.Column(db.String(32), default='team_member')  # 'developer', 'organization_owner', 'team_member'
+    user_type = db.Column(db.String(32), default='customer')  # 'developer', 'customer'
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
     last_login = db.Column(db.DateTime, nullable=True)
@@ -143,8 +143,9 @@ class User(UserMixin, db.Model):
 
     @property
     def is_organization_owner(self):
-        """Check if user is the owner of their organization"""
-        return self.user_type == 'organization_owner'
+        """Check if user has organization owner role"""
+        roles = self.get_active_roles()
+        return any(role.name == 'organization_owner' for role in roles)
 
     def get_active_roles(self):
         """Get all active roles for this user"""
