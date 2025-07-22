@@ -24,4 +24,3 @@ flask-bcrypt
 bcrypt
 pytz
 stripe
-gunicorn==21.2.0
