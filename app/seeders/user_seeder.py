@@ -182,13 +182,12 @@ def update_existing_users_with_roles():
                 updated = True
             # Skip role assignment for developers
         else:
-            # Assign roles using the new role assignment system
-            if user.user_type == 'organization_owner' and org_owner_role:
-                user.assign_role(org_owner_role)
-                print(f"✅ Assigned organization owner role to {user.username}")
-            elif user.user_type == 'team_member' and manager_role:
+            # Only assign roles to team members (organization owners get permissions through user_type)
+            if user.user_type == 'team_member' and manager_role:
                 user.assign_role(manager_role)
                 print(f"✅ Assigned manager role to {user.username}")
+            elif user.user_type == 'organization_owner':
+                print(f"✅ Organization owner {user.username} gets permissions through user_type (no role needed)")
 
         # Ensure is_active is set
         if not hasattr(user, 'is_active') or user.is_active is None:
