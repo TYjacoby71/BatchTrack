@@ -281,31 +281,34 @@ async function inviteUser() {
 }
 
 async function toggleUserStatus(userId) {
-    if (!confirm('Are you sure you want to change this user\'s status?')) {
-        return;
-    }
+    // Show custom confirmation modal instead of native confirm
+    showConfirmModal(
+        'Confirm Status Change',
+        'Are you sure you want to change this user\'s status?',
+        async () => {
+            try {
+                const response = await fetch(`/organization/user/${userId}/toggle-status`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCSRFToken()
+                    }
+                });
 
-    try {
-        const response = await fetch(`/organization/user/${userId}/toggle-status`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCSRFToken()
+                const result = await response.json();
+
+                if (result.success) {
+                    showMessage(result.message || 'User status updated', 'success');
+                    setTimeout(() => window.location.reload(), 1000);
+                } else {
+                    showMessage(result.error || 'Failed to update user status', 'danger');
+                }
+            } catch (error) {
+                console.error('Toggle status error:', error);
+                showMessage('Failed to update user status', 'danger');
             }
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-            showMessage(result.message || 'User status updated', 'success');
-            setTimeout(() => window.location.reload(), 1000);
-        } else {
-            showMessage(result.error || 'Failed to update user status', 'danger');
         }
-    } catch (error) {
-        console.error('Toggle status error:', error);
-        showMessage('Failed to update user status', 'danger');
-    }
+    );
 }
 
 async function editUser(userId) {
@@ -389,36 +392,44 @@ async function confirmDeleteUser() {
     const userId = document.getElementById('editUserId').value;
     const username = document.getElementById('editUsername').textContent;
 
-    if (!confirm(`Are you sure you want to permanently delete user "${username}"? This action cannot be undone and will remove all associated data.`)) {
-        return;
-    }
+    // Show first confirmation modal
+    showConfirmModal(
+        'Delete User',
+        `Are you sure you want to permanently delete user "${username}"? This action cannot be undone and will remove all associated data.`,
+        () => {
+            // Show second confirmation modal
+            showConfirmModal(
+                'Final Warning',
+                'This is your final warning. This will permanently delete the user and all their data. Are you absolutely sure?',
+                async () => {
+                    try {
+                        const response = await fetch(`/organization/user/${userId}`, {
+                            method: 'DELETE',
+                            headers: {
+                                'X-CSRFToken': getCSRFToken()
+                            }
+                        });
 
-    if (!confirm('This is your final warning. This will permanently delete the user and all their data. Are you absolutely sure?')) {
-        return;
-    }
+                        const result = await response.json();
 
-    try {
-        const response = await fetch(`/organization/user/${userId}`, {
-            method: 'DELETE',
-            headers: {
-                'X-CSRFToken': getCSRFToken()
-            }
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-            showMessage(result.message || 'User deleted successfully', 'success');
-            const modal = bootstrap.Modal.getInstance(document.getElementById('editUserModal'));
-            modal.hide();
-            setTimeout(() => window.location.reload(), 1000);
-        } else {
-            showMessage(result.error || 'Failed to delete user', 'danger');
-        }
-    } catch (error) {
-        console.error('Delete user error:', error);
-        showMessage('Failed to delete user', 'danger');
-    }
+                        if (result.success) {
+                            showMessage(result.message || 'User deleted successfully', 'success');
+                            const modal = bootstrap.Modal.getInstance(document.getElementById('editUserModal'));
+                            modal.hide();
+                            setTimeout(() => window.location.reload(), 1000);
+                        } else {
+                            showMessage(result.error || 'Failed to delete user', 'danger');
+                        }
+                    } catch (error) {
+                        console.error('Delete user error:', error);
+                        showMessage('Failed to delete user', 'danger');
+                    }
+                },
+                'danger'
+            );
+        },
+        'warning'
+    );
 }
 
 // Role management functions
@@ -493,10 +504,13 @@ function editRole(roleId) {
 }
 
 function deleteRole(roleId) {
-    if (!confirm('Are you sure you want to delete this role?')) {
-        return;
-    }
-    showMessage('Role deletion functionality coming soon', 'info');
+    showConfirmModal(
+        'Delete Role',
+        'Are you sure you want to delete this role?',
+        () => {
+            showMessage('Role deletion functionality coming soon', 'info');
+        }
+    );
 }
 
 function viewAuditLog() {
@@ -505,6 +519,59 @@ function viewAuditLog() {
 
 function viewUserActivity(userId) {
     showMessage('User activity view functionality coming soon', 'info');
+}
+
+// Custom confirm modal function to replace native confirm dialogs
+function showConfirmModal(title, message, onConfirm, variant = 'primary') {
+    const modalId = 'customConfirmModal';
+    const modalHtml = `
+        <div class="modal fade" id="${modalId}" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header bg-${variant === 'danger' ? 'danger' : variant === 'warning' ? 'warning' : 'primary'} text-white">
+                        <h5 class="modal-title">
+                            <i class="fas fa-${variant === 'danger' ? 'exclamation-triangle' : variant === 'warning' ? 'exclamation-triangle' : 'question-circle'} me-2"></i>${title}
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>${message}</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-${variant === 'danger' ? 'danger' : variant === 'warning' ? 'warning' : 'primary'}" id="confirmButton">
+                            ${variant === 'danger' ? 'Delete' : 'Confirm'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Remove existing modal if present
+    const existingModal = document.getElementById(modalId);
+    if (existingModal) {
+        existingModal.remove();
+    }
+
+    // Add new modal to body
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    const modal = new bootstrap.Modal(document.getElementById(modalId));
+    
+    // Add event listener for confirm button
+    document.getElementById('confirmButton').addEventListener('click', () => {
+        modal.hide();
+        if (onConfirm) {
+            onConfirm();
+        }
+    });
+
+    // Clean up when modal is closed
+    document.getElementById(modalId).addEventListener('hidden.bs.modal', function() {
+        this.remove();
+    });
+
+    modal.show();
 }
 
 // Initialize Bootstrap tooltips
