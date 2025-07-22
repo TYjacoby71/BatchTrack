@@ -31,7 +31,7 @@ def seed_users():
     # Get organization owner system role
     from app.models.role import Role
     system_org_owner_role = Role.query.filter_by(name='organization_owner', is_system_role=True).first()
-    
+
     # Assign all users proper roles based on their user types (excluding developers)
     all_users = User.query.filter(User.user_type != 'developer').all()
     for user in all_users:
@@ -70,11 +70,11 @@ def seed_users():
         )
         db.session.add(developer_user)
         db.session.flush()  # Get the user ID
-        
+
         # Assign system_admin developer role
         from ..models.developer_role import DeveloperRole
         from ..models.user_role_assignment import UserRoleAssignment
-        
+
         system_admin_role = DeveloperRole.query.filter_by(name='system_admin').first()
         if system_admin_role:
             assignment = UserRoleAssignment(
@@ -85,7 +85,7 @@ def seed_users():
             )
             db.session.add(assignment)
             print(f"✅ Assigned system_admin role to dev user")
-        
+
         print(f"✅ Created developer user: dev/dev123 (no organization)")
     else:
         # Update existing developer user
@@ -93,11 +93,11 @@ def seed_users():
         dev_user.user_type = 'developer'
         dev_user.organization_id = None  # Remove from customer organization
         dev_user.is_active = True
-        
+
         # Ensure dev user has system_admin role
         from ..models.developer_role import DeveloperRole
         from ..models.user_role_assignment import UserRoleAssignment
-        
+
         system_admin_role = DeveloperRole.query.filter_by(name='system_admin').first()
         if system_admin_role:
             existing_assignment = UserRoleAssignment.query.filter_by(
@@ -105,7 +105,7 @@ def seed_users():
                 developer_role_id=system_admin_role.id,
                 is_active=True
             ).first()
-            
+
             if not existing_assignment:
                 assignment = UserRoleAssignment(
                     user_id=dev_user.id,
@@ -115,7 +115,7 @@ def seed_users():
                 )
                 db.session.add(assignment)
                 print(f"✅ Assigned system_admin role to existing dev user")
-        
+
         print(f"✅ Updated developer user with user_type: developer")
 
     # Create organization owner (admin) user if it doesn't exist
