@@ -43,18 +43,4 @@ class ScopedModelMixin:
         # Regular users only see their organization's data
         return cls.query.filter_by(organization_id=current_user.organization_id)
 
-    @classmethod
-    def for_current_user(cls):
-        """Get records for current user's organization"""
-        if current_user and current_user.is_authenticated:
-            if current_user.user_type == 'developer':
-                # Developers need to select organization context
-                from flask import session
-                selected_org = session.get('dev_selected_org_id')
-                if selected_org:
-                    return cls.for_organization(selected_org)
-                else:
-                    return cls.query.filter(False)  # Return empty query
-            else:
-                return cls.for_organization(current_user.organization_id)
-        return cls.query.filter(False)  # Return empty query if no user
+    

@@ -243,6 +243,22 @@ def view_batch_in_progress(batch_identifier):
     if not isinstance(batch_identifier, int):
         batch_identifier = int(batch_identifier)
 
+    print(f"DEBUG: Looking for batch {batch_identifier}")
+    print(f"DEBUG: Current user: {current_user.username}, type: {current_user.user_type}")
+    
+    # Check if developer is in customer view
+    if current_user.user_type == 'developer':
+        from flask import session
+        selected_org = session.get('dev_selected_org_id')
+        print(f"DEBUG: Developer selected org: {selected_org}")
+        
+        # Check if batch exists for this organization
+        batch_exists = Batch.query.filter_by(id=batch_identifier).first()
+        if batch_exists:
+            print(f"DEBUG: Batch {batch_identifier} exists, org: {batch_exists.organization_id}")
+        else:
+            print(f"DEBUG: Batch {batch_identifier} does not exist in database")
+
     # Use scoped query to ensure user can only access their organization's batches
     batch = Batch.scoped().filter_by(id=batch_identifier).first_or_404()
 
