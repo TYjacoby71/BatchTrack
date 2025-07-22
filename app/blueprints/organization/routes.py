@@ -36,7 +36,40 @@ def dashboard():
     from ...services.pricing_service import PricingService
     pricing_data = PricingService.get_pricing_data()
 
-    return render_template('organization/dashboard.html', pricing_data=pricing_data)
+    # Get organization data
+    organization = current_user.organization
+    
+    # Get organization statistics
+    from app.models import Batch
+    completed_batches = Batch.query.filter_by(
+        organization_id=current_user.organization_id,
+        status='completed'
+    ).count()
+    
+    failed_batches = Batch.query.filter_by(
+        organization_id=current_user.organization_id,
+        status='failed'
+    ).count()
+    
+    org_stats = {
+        'completed_batches': completed_batches,
+        'failed_batches': failed_batches
+    }
+    
+    # Count pending invites (inactive users)
+    pending_invites = User.query.filter_by(
+        organization_id=current_user.organization_id,
+        is_active=False,
+        user_type='team_member'
+    ).count()
+
+    return render_template(
+        'organization/dashboard.html', 
+        pricing_data=pricing_data,
+        organization=organization,
+        org_stats=org_stats,
+        pending_invites=pending_invites
+    )
 
 @organization_bp.route('/create-role', methods=['POST'])
 @login_required
