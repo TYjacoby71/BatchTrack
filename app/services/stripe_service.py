@@ -49,9 +49,24 @@ class StripeService:
     @staticmethod
     def create_checkout_session(organization, tier):
         """Create a Stripe checkout session for subscription"""
+        # Check if tier is stripe-ready
+        from ..blueprints.developer.subscription_tiers import load_tiers_config
+        tiers_config = load_tiers_config()
+        tier_data = tiers_config.get(tier, {})
+        
+        if not tier_data.get('is_stripe_ready', False):
+            logger.info(f"Tier {tier} not stripe-ready, will use development mode")
+            return None
+        
         StripeService.initialize_stripe()
         
-        price_id = current_app.config['STRIPE_PRICE_IDS'].get(tier)
+        # Try to get price ID from tier config first
+        price_id = tier_data.get('stripe_price_id_monthly')
+        
+        # Fallback to hardcoded config if not found in tier
+        if not price_id:
+            price_id = current_app.config.get('STRIPE_PRICE_IDS', {}).get(tier)
+        
         if not price_id:
             logger.error(f"No Stripe price ID configured for tier: {tier}")
             return None

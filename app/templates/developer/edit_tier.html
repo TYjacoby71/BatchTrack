@@ -61,12 +61,21 @@
 
                         <div class="mb-3">
                             <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="is_available" name="is_available"
-                                       {% if tier.get('is_available', True) %}checked{% endif %}>
+                                <input class="form-check-input" type="checkbox" id="is_available" name="is_available" 
+                                   {% if tier.get('is_available', True) %}checked{% endif %}>
                                 <label class="form-check-label" for="is_available">
-                                    Available (tier is active)
+                                    Available for use
                                 </label>
                             </div>
+                        </div>
+
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="is_stripe_ready" name="is_stripe_ready" 
+                                   {% if tier.get('is_stripe_ready', False) %}checked{% endif %}>
+                            <label class="form-check-label" for="is_stripe_ready">
+                                <i class="fab fa-stripe"></i> Stripe Ready/Production Mode
+                            </label>
+                            <small class="form-text text-muted">When checked, uses real Stripe integration. When unchecked, uses development simulation mode.</small>
                         </div>
                     </div>
                 </div>
@@ -385,36 +394,36 @@ const featureGroupPermissions = {
 document.addEventListener('DOMContentLoaded', function() {
     const featureGroupCheckboxes = document.querySelectorAll('input[name="feature_groups"]');
     const permissionCheckboxes = document.querySelectorAll('input[name="permissions"]');
-    
+
     // Function to update feature group status based on permissions
     function updateFeatureGroupStatus() {
         featureGroupCheckboxes.forEach(checkbox => {
             const featureGroup = checkbox.value;
             const permissions = featureGroupPermissions[featureGroup] || [];
-            
+
             if (permissions.length === 0) {
                 checkbox.checked = false;
                 return;
             }
-            
+
             // Check if all permissions for this feature group are selected
             const checkedPermissions = permissions.filter(permissionName => {
                 const permissionCheckbox = document.querySelector(`input[name="permissions"][value="${permissionName}"]`);
                 return permissionCheckbox && permissionCheckbox.checked;
             });
-            
+
             // Feature group is checked if at least 50% of its permissions are checked
             checkbox.checked = checkedPermissions.length >= Math.ceil(permissions.length * 0.5);
         });
     }
-    
+
     // Handle feature group changes
     featureGroupCheckboxes.forEach(checkbox => {
         checkbox.addEventListener('change', function() {
             const featureGroup = this.value;
             const permissions = featureGroupPermissions[featureGroup] || [];
             const isChecked = this.checked;
-            
+
             permissions.forEach(permissionName => {
                 const permissionCheckbox = document.querySelector(`input[name="permissions"][value="${permissionName}"]`);
                 if (permissionCheckbox) {
@@ -423,14 +432,14 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     });
-    
+
     // Handle permission changes to update feature groups
     permissionCheckboxes.forEach(checkbox => {
         checkbox.addEventListener('change', function() {
             updateFeatureGroupStatus();
         });
     });
-    
+
     // Initialize feature group status on page load
     updateFeatureGroupStatus();
 });
