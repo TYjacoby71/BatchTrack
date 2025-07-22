@@ -289,27 +289,98 @@ function getCSRFToken() {
     return document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 }
 
-// Feature group to permissions mapping
+// Feature group to permissions mapping - comprehensive mapping based on actual permission names
 const featureGroupPermissions = {
-    'basic_dashboard': ['dashboard.view'],
-    'full_dashboard': ['dashboard.view', 'dashboard.admin'],
-    'limited_inventory': ['inventory.view'],
-    'full_inventory': ['inventory.view', 'inventory.create', 'inventory.edit', 'inventory.delete'],
-    'batch_production': ['batches.view', 'batches.create', 'batches.edit'],
-    'recipe_management': ['recipes.view', 'recipes.create', 'recipes.edit'],
-    'product_catalog': ['products.view', 'products.create', 'products.edit'],
-    'team_management': ['users.manage', 'roles.manage'],
-    'basic_reports': ['reports.view'],
-    'advanced_reports': ['reports.view', 'reports.export'],
-    'api_access': ['api.access'],
-    'integrations': ['integrations.manage'],
-    'system_admin': ['system.admin']
+    'basic_dashboard': [
+        'dashboard.view'
+    ],
+    'full_dashboard': [
+        'dashboard.view', 
+        'dashboard.admin'
+    ],
+    'limited_inventory': [
+        'inventory.view'
+    ],
+    'full_inventory': [
+        'inventory.view', 
+        'inventory.create', 
+        'inventory.edit', 
+        'inventory.delete',
+        'inventory.adjust',
+        'inventory.fifo'
+    ],
+    'batch_production': [
+        'batches.view', 
+        'batches.create', 
+        'batches.edit',
+        'batches.start',
+        'batches.finish',
+        'batches.cancel'
+    ],
+    'recipe_management': [
+        'recipes.view', 
+        'recipes.create', 
+        'recipes.edit',
+        'recipes.delete'
+    ],
+    'product_catalog': [
+        'products.view', 
+        'products.create', 
+        'products.edit',
+        'products.delete'
+    ],
+    'team_management': [
+        'users.manage', 
+        'roles.manage',
+        'organization.manage'
+    ],
+    'basic_reports': [
+        'reports.view'
+    ],
+    'advanced_reports': [
+        'reports.view', 
+        'reports.export',
+        'reports.advanced'
+    ],
+    'api_access': [
+        'api.access'
+    ],
+    'integrations': [
+        'integrations.manage'
+    ],
+    'system_admin': [
+        'system.admin'
+    ]
 };
 
-// Handle feature group checkboxes to automatically check/uncheck related permissions
+// Handle feature group checkboxes and bidirectional sync
 document.addEventListener('DOMContentLoaded', function() {
     const featureGroupCheckboxes = document.querySelectorAll('input[name="feature_groups"]');
+    const permissionCheckboxes = document.querySelectorAll('input[name="permissions"]');
     
+    // Function to update feature group status based on permissions
+    function updateFeatureGroupStatus() {
+        featureGroupCheckboxes.forEach(checkbox => {
+            const featureGroup = checkbox.value;
+            const permissions = featureGroupPermissions[featureGroup] || [];
+            
+            if (permissions.length === 0) {
+                checkbox.checked = false;
+                return;
+            }
+            
+            // Check if all permissions for this feature group are selected
+            const checkedPermissions = permissions.filter(permissionName => {
+                const permissionCheckbox = document.querySelector(`input[name="permissions"][value="${permissionName}"]`);
+                return permissionCheckbox && permissionCheckbox.checked;
+            });
+            
+            // Feature group is checked if at least 50% of its permissions are checked
+            checkbox.checked = checkedPermissions.length >= Math.ceil(permissions.length * 0.5);
+        });
+    }
+    
+    // Handle feature group changes
     featureGroupCheckboxes.forEach(checkbox => {
         checkbox.addEventListener('change', function() {
             const featureGroup = this.value;
@@ -324,6 +395,16 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     });
+    
+    // Handle permission changes to update feature groups
+    permissionCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            updateFeatureGroupStatus();
+        });
+    });
+    
+    // Initialize feature group status on page load
+    updateFeatureGroupStatus();
 });
 </script>
 {% endblock %}
