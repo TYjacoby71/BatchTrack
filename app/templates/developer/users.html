@@ -55,7 +55,7 @@
                                             <div class="mb-3">
                                                 <label class="form-label">Role</label>
                                                 <input type="text" class="form-control" 
-                                                       value="{{ current_user.user_role.name if current_user.user_role else 'No Role Assigned' }}" readonly>
+                                                       value="{% set active_roles = current_user.get_active_roles() %}{{ active_roles[0].name if active_roles else 'No Role Assigned' }}" readonly>
                                             </div>
                                         </div>
                                     </div>
@@ -198,7 +198,14 @@
                                                         </div>
                                                     </td>
                                                     <td>
-                                                        <span class="badge bg-danger">System Developer</span>
+                                                        {% set user_roles = user.get_active_roles() %}
+                                                        {% if user_roles %}
+                                                            {% for role in user_roles %}
+                                                            <span class="badge bg-danger">{{ role.name }}</span>
+                                                            {% endfor %}
+                                                        {% else %}
+                                                            <span class="badge bg-secondary">No Role Assigned</span>
+                                                        {% endif %}
                                                     </td>
                                                     <td>
                                                         <span class="badge bg-{{ 'success' if user.is_active else 'danger' }}">
