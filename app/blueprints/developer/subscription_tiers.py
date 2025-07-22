@@ -13,14 +13,27 @@ TIERS_CONFIG_FILE = 'subscription_tiers.json'
 
 def load_tiers_config():
     """Load subscription tiers from JSON file"""
-    # Default system tiers
+    # Default system tiers with proper permission mapping
     default_tiers = {
         'free': {
             'name': 'Free Plan',
-            'feature_groups': ['dashboard', 'inventory'],
+            'permissions': [
+                'dashboard.view',
+                'inventory.view',
+                'inventory.add_manual_stock',
+                'inventory.view_history'
+            ],
+            'feature_groups': ['basic_dashboard', 'limited_inventory'],
             'stripe_lookup_key': '',
             'user_limit': 1,
-            'fallback_features': ['Basic features', '1 user only', 'Community support'],
+            'is_customer_facing': False,  # Internal only
+            'is_available': True,
+            'fallback_features': [
+                'View inventory levels',
+                'Manual stock adjustments only',
+                '1 user maximum',
+                'Community support only'
+            ],
             'stripe_features': [],
             'stripe_price_monthly': 'Free',
             'stripe_price_yearly': 'Free',
@@ -28,10 +41,27 @@ def load_tiers_config():
         },
         'solo': {
             'name': 'Solo Plan',
-            'feature_groups': ['dashboard', 'inventory', 'batches'],
+            'permissions': [
+                'dashboard.view',
+                'inventory.view', 'inventory.add_manual_stock', 'inventory.view_history', 'inventory.adjust',
+                'batches.view', 'batches.create', 'batches.edit', 'batches.finish', 'batches.cancel',
+                'recipes.view', 'recipes.create', 'recipes.edit',
+                'conversion.units',
+                'expiration.view_alerts'
+            ],
+            'feature_groups': ['full_dashboard', 'full_inventory', 'batch_production', 'recipe_management'],
             'stripe_lookup_key': 'solo-plan',
             'user_limit': 1,
-            'fallback_features': ['Up to 1 user', 'Full batch tracking', 'Email support'],
+            'is_customer_facing': True,
+            'is_available': True,
+            'fallback_features': [
+                'Complete batch tracking with FIFO',
+                'Recipe management and scaling',
+                'Expiration alerts and freshness tracking',
+                'Unit conversion tools',
+                '1 user account',
+                'Email support'
+            ],
             'stripe_features': [],
             'stripe_price_monthly': None,
             'stripe_price_yearly': None,
@@ -39,10 +69,30 @@ def load_tiers_config():
         },
         'team': {
             'name': 'Team Plan', 
-            'feature_groups': ['dashboard', 'inventory', 'batches', 'products', 'user_management'],
+            'permissions': [
+                'dashboard.view',
+                'inventory.view', 'inventory.add_manual_stock', 'inventory.view_history', 'inventory.adjust',
+                'batches.view', 'batches.create', 'batches.edit', 'batches.finish', 'batches.cancel',
+                'recipes.view', 'recipes.create', 'recipes.edit',
+                'products.view', 'products.create', 'products.edit', 'products.manage_variants',
+                'organization.manage_users', 'organization.manage_roles',
+                'conversion.units',
+                'expiration.view_alerts',
+                'reports.basic'
+            ],
+            'feature_groups': ['full_dashboard', 'full_inventory', 'batch_production', 'recipe_management', 'product_catalog', 'team_management', 'basic_reports'],
             'stripe_lookup_key': 'team-plan',
             'user_limit': 10,
-            'fallback_features': ['Up to 10 users', 'Advanced features', 'Custom roles'],
+            'is_customer_facing': True,
+            'is_available': True,
+            'fallback_features': [
+                'Everything in Solo Plan',
+                'Product catalog with variants',
+                'Team collaboration (up to 10 users)',
+                'Custom role management',
+                'Basic reporting and analytics',
+                'Priority email support'
+            ],
             'stripe_features': [],
             'stripe_price_monthly': None,
             'stripe_price_yearly': None,
@@ -50,10 +100,34 @@ def load_tiers_config():
         },
         'enterprise': {
             'name': 'Enterprise Plan',
-            'feature_groups': ['dashboard', 'inventory', 'batches', 'products', 'user_management', 'api_access', 'advanced_features'],
+            'permissions': [
+                'dashboard.view',
+                'inventory.view', 'inventory.add_manual_stock', 'inventory.view_history', 'inventory.adjust',
+                'batches.view', 'batches.create', 'batches.edit', 'batches.finish', 'batches.cancel',
+                'recipes.view', 'recipes.create', 'recipes.edit',
+                'products.view', 'products.create', 'products.edit', 'products.manage_variants',
+                'organization.manage_users', 'organization.manage_roles', 'organization.view_settings',
+                'conversion.units',
+                'expiration.view_alerts',
+                'reports.basic', 'reports.advanced',
+                'api.access',
+                'integrations.pos', 'integrations.accounting'
+            ],
+            'feature_groups': ['full_dashboard', 'full_inventory', 'batch_production', 'recipe_management', 'product_catalog', 'team_management', 'advanced_reports', 'api_access', 'integrations'],
             'stripe_lookup_key': 'enterprise-plan',
             'user_limit': -1,
-            'fallback_features': ['Unlimited users', 'All features', 'API access'],
+            'is_customer_facing': True,
+            'is_available': True,
+            'fallback_features': [
+                'Everything in Team Plan',
+                'Unlimited users and organizations',
+                'Advanced reporting and analytics',
+                'API access for integrations',
+                'POS system integration',
+                'Accounting software integration',
+                'Dedicated account manager',
+                'Priority phone support'
+            ],
             'stripe_features': [],
             'stripe_price_monthly': None,
             'stripe_price_yearly': None,
@@ -61,10 +135,32 @@ def load_tiers_config():
         },
         'exempt': {
             'name': 'Exempt Plan',
-            'feature_groups': ['dashboard', 'inventory', 'batches', 'products', 'user_management', 'api_access', 'advanced_features', 'developer_access'],
+            'permissions': [
+                'dashboard.view',
+                'inventory.view', 'inventory.add_manual_stock', 'inventory.view_history', 'inventory.adjust',
+                'batches.view', 'batches.create', 'batches.edit', 'batches.finish', 'batches.cancel',
+                'recipes.view', 'recipes.create', 'recipes.edit',
+                'products.view', 'products.create', 'products.edit', 'products.manage_variants',
+                'organization.manage_users', 'organization.manage_roles', 'organization.view_settings',
+                'conversion.units',
+                'expiration.view_alerts',
+                'reports.basic', 'reports.advanced',
+                'api.access',
+                'integrations.pos', 'integrations.accounting',
+                'system.admin', 'system.debug'
+            ],
+            'feature_groups': ['full_dashboard', 'full_inventory', 'batch_production', 'recipe_management', 'product_catalog', 'team_management', 'advanced_reports', 'api_access', 'integrations', 'system_admin'],
             'stripe_lookup_key': '',
             'user_limit': -1,
-            'fallback_features': ['Unlimited users', 'All features', 'Developer access', 'No billing required'],
+            'is_customer_facing': False,  # Internal only
+            'is_available': True,
+            'fallback_features': [
+                'All Enterprise features',
+                'System administration access',
+                'Debug and developer tools',
+                'No billing requirements',
+                'Special exemption status'
+            ],
             'stripe_features': [],
             'stripe_price_monthly': 'Exempt',
             'stripe_price_yearly': 'Exempt',
@@ -129,8 +225,11 @@ def create_tier():
         new_tier = {
             'name': tier_name,
             'permissions': permissions,
+            'feature_groups': request.form.getlist('feature_groups'),
             'stripe_lookup_key': request.form.get('stripe_lookup_key', ''),
             'user_limit': user_limit,
+            'is_customer_facing': request.form.get('is_customer_facing') == 'on',
+            'is_available': request.form.get('is_available') == 'on',
             'fallback_features': fallback_features,
             'stripe_features': [],
             'stripe_price_monthly': None,
@@ -162,6 +261,7 @@ def edit_tier(tier_key):
         
         # Update tier data
         tier['name'] = request.form.get('tier_name', tier['name'])
+        tier['permissions'] = request.form.getlist('permissions')
         tier['feature_groups'] = request.form.getlist('feature_groups')
         tier['stripe_lookup_key'] = request.form.get('stripe_lookup_key', '')
         
@@ -170,6 +270,10 @@ def edit_tier(tier_key):
         if user_limit == -1 and tier_key != 'exempt':
             user_limit = 1
         tier['user_limit'] = user_limit
+        
+        # Update visibility controls
+        tier['is_customer_facing'] = request.form.get('is_customer_facing') == 'on'
+        tier['is_available'] = request.form.get('is_available') == 'on'
         
         tier['fallback_features'] = [f.strip() for f in request.form.get('fallback_features', '').split('\n') if f.strip()]
         
@@ -283,3 +387,13 @@ def sync_tier(tier_key):
 def api_get_tiers():
     """API endpoint to get current tiers configuration"""
     return jsonify(load_tiers_config())
+
+@subscription_tiers_bp.route('/api/customer-tiers')
+def api_get_customer_tiers():
+    """API endpoint to get customer-facing tiers only"""
+    all_tiers = load_tiers_config()
+    customer_tiers = {
+        key: tier for key, tier in all_tiers.items() 
+        if tier.get('is_customer_facing', True) and tier.get('is_available', True)
+    }
+    return jsonify(customer_tiers)

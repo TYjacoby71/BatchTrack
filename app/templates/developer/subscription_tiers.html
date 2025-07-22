@@ -25,8 +25,10 @@
     <!-- Existing Tiers -->
     <div class="row">
         {% for tier_key, tier_data in tiers.items() %}
-        <div class="col-lg-4 mb-4">
-            <div class="card h-100">
+        <div class="col-md-6 col-lg-4 mb-4 tier-card" 
+             data-is-customer-facing="{{ tier_data.get('is_customer_facing', True) | lower }}"
+             data-is-available="{{ tier_data.get('is_available', True) | lower }}">
+            <div class="card h-100 {% if not tier_data.get('is_customer_facing', True) %}border-secondary{% endif %}">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">{{ tier_data.name }}</h5>
                     <div>
@@ -112,7 +114,7 @@
                             <i class="fas fa-sync"></i> No Sync Available
                         </button>
                     {% endif %}
-                    
+
                     {% if tier_key not in ['free', 'exempt'] %}
                         <button class="btn btn-outline-danger btn-sm" 
                                 onclick="confirmDelete('{{ tier_key }}', '{{ tier_data.name }}')">
@@ -123,7 +125,7 @@
                             <i class="fas fa-lock"></i> Protected
                         </button>
                     {% endif %}
-                  
+
                     <form id="deleteForm{{ tier_key }}" method="post" action="{{ url_for('developer.subscription_tiers.delete_tier', tier_key=tier_key) }}" style="display: none;">
                         <!-- Hidden form for delete action -->
                     </form>
@@ -181,14 +183,54 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 <form id="deleteForm" method="post" style="display: inline;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                     <button type="submit" class="btn btn-danger">Delete Tier</button>
                 </form>
             </div>
         </div>
     </div>
-</div>
+</div></div>
 
 <script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add toggle for internal tiers if needed in the future
+    const showInternalToggle = document.getElementById('showInternalTiers');
+    if (showInternalToggle) {
+        showInternalToggle.addEventListener('change', function() {
+            const showInternal = this.checked;
+            const tierCards = document.querySelectorAll('.tier-card');
+
+            tierCards.forEach(card => {
+                const isCustomerFacing = card.getAttribute('data-is-customer-facing') === 'true';
+                if (!isCustomerFacing && !showInternal) {
+                    card.style.display = 'none';
+                } else {
+                    card.style.display = 'block';
+                }
+            });
+        });
+    }
+});
+
+function confirmDelete(tierKey, tierName) {
+    const deleteModal = document.getElementById('deleteModal');
+    if (deleteModal) {
+        document.getElementById('tierName').textContent = tierName;
+        const deleteForm = document.getElementById('deleteForm');
+        deleteForm.action = `/developer/subscription-tiers/delete/${tierKey}`;
+        const modal = new bootstrap.Modal(deleteModal);
+        modal.show();
+    } else {
+        // Fallback to simple confirm
+        if (confirm(`Are you sure you want to delete the "${tierName}" tier? This cannot be undone.`)) {
+            const form = document.getElementById('deleteForm' + tierKey);
+            if (form) {
+                form.submit();
+            }
+        }
+    }
+}
+
 function syncTier(tierKey) {
     if (confirm(`Sync ${tierKey} tier with Stripe? This will update pricing and features.`)) {
         fetch(`{{ url_for('developer.subscription_tiers.sync_tier', tier_key='TIER_KEY') }}`.replace('TIER_KEY', tierKey), {
@@ -209,12 +251,6 @@ function syncTier(tierKey) {
         .catch(error => {
             alert('Sync failed: ' + error);
         });
-    }
-}
-
-function confirmDelete(tierKey, tierName) {
-    if (confirm(`Are you sure you want to delete the "${tierName}" tier? This cannot be undone.`)) {
-        document.getElementById('deleteForm' + tierKey).submit();
     }
 }
 </script>

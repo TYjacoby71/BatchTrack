@@ -57,26 +57,15 @@ class ExpirationService:
             return None
 
         from ...utils.timezone_utils import TimezoneUtils
-        from datetime import timezone
 
         try:
             # Get current UTC time for consistent comparison
             now_utc = TimezoneUtils.utc_now()
 
-            # Convert all dates to UTC for consistent calculation
-            if entry_date.tzinfo:
-                entry_utc = entry_date.astimezone(timezone.utc)
-            else:
-                entry_utc = entry_date.replace(tzinfo=timezone.utc)
-
-            if expiration_date.tzinfo:
-                expiration_utc = expiration_date.astimezone(timezone.utc)
-            else:
-                expiration_utc = expiration_date.replace(tzinfo=timezone.utc)
-
-            # Calculate exact time progression in UTC
-            total_life_seconds = (expiration_utc - entry_utc).total_seconds()
-            time_remaining_seconds = (expiration_utc - now_utc).total_seconds()
+            # Work entirely in UTC - no timezone conversions needed for math
+            # Calculate exact time progression
+            total_life_seconds = (expiration_date - entry_date).total_seconds()
+            time_remaining_seconds = (expiration_date - now_utc).total_seconds()
 
             if total_life_seconds <= 0:
                 return 0.0
@@ -85,8 +74,8 @@ class ExpirationService:
             life_remaining_percent = max(0.0, (time_remaining_seconds / total_life_seconds) * 100)
             return min(100.0, life_remaining_percent)
         except (TypeError, AttributeError) as e:
-            # Handle cases where timezone conversion fails
-            logger.warning(f"Timezone conversion error in get_life_remaining_percent: {e}")
+            # Handle cases where date calculation fails
+            logger.warning(f"Date calculation error in get_life_remaining_percent: {e}")
             return None
 
     @staticmethod
@@ -488,12 +477,13 @@ class ExpirationService:
     @staticmethod
     def get_weighted_average_freshness(inventory_item_id: int) -> Optional[float]:
         """Calculate weighted average freshness for an inventory item based on FIFO entries"""
-        # Get all FIFO entries with remaining quantity - organization scoping handled by InventoryHistory model
-        entries = db.session.query(InventoryHistory).filter(
+        # Get all FIFO entries with remaining quantity - with explicit organization scoping for security
+        entries = db.session.query(InventoryHistory).join(InventoryItem).filter(
             and_(
                 InventoryHistory.inventory_item_id == inventory_item_id,
                 InventoryHistory.remaining_quantity > 0,
-                InventoryHistory.is_perishable == True
+                InventoryHistory.is_perishable == True,
+                InventoryItem.organization_id == current_user.organization_id if current_user.is_authenticated and current_user.organization_id else True
             )
         ).all()
 

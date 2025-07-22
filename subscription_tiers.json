@@ -15,7 +15,10 @@
     "stripe_features": [],
     "stripe_price_monthly": "Free",
     "stripe_price_yearly": "Free",
-    "last_synced": null
+    "last_synced": null,
+    "permissions": [],
+    "is_customer_facing": false,
+    "is_available": true
   },
   "solo": {
     "name": "Solo Plan",
