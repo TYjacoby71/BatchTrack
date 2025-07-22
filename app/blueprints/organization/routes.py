@@ -33,6 +33,9 @@ def dashboard():
 
     from ...services.pricing_service import PricingService
     pricing_data = PricingService.get_pricing_data()
+    
+    # Get subscription details for billing tab
+    subscription_details = PricingService.get_subscription_details(current_user.organization)
 
     # Get organization data
     organization = current_user.organization
@@ -89,6 +92,7 @@ def dashboard():
     return render_template(
         'organization/dashboard.html', 
         pricing_data=pricing_data,
+        subscription_details=subscription_details,
         organization=organization,
         org_stats=org_stats,
         pending_invites=pending_invites,
