@@ -81,7 +81,7 @@ def upgrade():
     
     # Now make required columns NOT NULL and add constraints
     with op.batch_alter_table('user', schema=None) as batch_op:
-        batch_op.alter_column('password', nullable=False)
+        # Keep password nullable for now
         batch_op.alter_column('fs_uniquifier', nullable=False)
         batch_op.alter_column('email',
                existing_type=sa.VARCHAR(length=120),
