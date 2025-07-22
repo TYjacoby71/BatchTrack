@@ -86,7 +86,9 @@ def dashboard():
         pricing_data=pricing_data,
         organization=organization,
         org_stats=org_stats,
-        pending_invites=pending_invites
+        pending_invites=pending_invites,
+        permission_categories=permission_categories,
+        roles=roles
     )
 
 @organization_bp.route('/create-role', methods=['POST'])
