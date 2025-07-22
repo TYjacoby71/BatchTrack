@@ -1,8 +1,8 @@
 
 """Add is_organization_owner flag to users
 
-Revision ID: add_org_owner_flag
-Revises: 
+Revision ID: add_is_organization_owner_flag
+Revises: consolidate_all_heads_final
 Create Date: 2025-01-22
 
 """
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 from sqlalchemy import text
 
 # revision identifiers
-revision = 'add_org_owner_flag'
+revision = 'add_is_organization_owner_flag'
 down_revision = 'consolidate_all_heads_final'
 branch_labels = None
 depends_on = None
