@@ -24,4 +24,3 @@ flask-bcrypt
 bcrypt
 pytz
 stripe
-Flask-Mail

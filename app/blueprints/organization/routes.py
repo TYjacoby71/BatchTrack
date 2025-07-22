@@ -185,75 +185,115 @@ def update_organization_settings():
 @organization_bp.route('/invite-user', methods=['POST'])
 @login_required
 def invite_user():
-    """Invite a new user with email verification"""
-    if not current_user.has_permission('organization.manage_users'):
-        return jsonify({'success': False, 'message': 'Permission denied'}), 403
-
-    data = request.get_json()
-    email = data.get('email', '').strip()
-    first_name = data.get('first_name', '').strip()
-    last_name = data.get('last_name', '').strip()
-    role_ids = data.get('role_ids', [])
-
-    if not email:
-        return jsonify({'success': False, 'message': 'Email is required'}), 400
-
-    # Check if user already exists
-    existing_user = User.query.filter_by(email=email).first()
-    if existing_user:
-        return jsonify({'success': False, 'message': 'User with this email already exists'}), 400
-
-    # Check if organization can add more users
-    if not current_user.organization.can_add_users():
-        max_users = current_user.organization.get_max_users()
-        return jsonify({
-            'success': False, 
-            'message': f'Organization has reached maximum user limit ({max_users} users)'
-        }), 400
-
+    """Invite a new user to the organization"""
+    # Check if user is organization owner - developers can access for testing but normal team members cannot
+    if not (current_user.user_type == 'organization_owner' or 
+            current_user.is_organization_owner or 
+            current_user.user_type == 'developer'):
+        return jsonify({'success': False, 'error': 'Insufficient permissions to invite users'})
+    """Invite a new user to the organization"""
     try:
-        from flask_security import user_datastore
-        from flask_security.utils import send_confirmation_instructions
-        import secrets
+        data = request.get_json()
 
-        # Generate a temporary password
+        if not data:
+            return jsonify({'success': False, 'error': 'No data provided'})
+
+        # Validate required fields
+        email = data.get('email', '').strip()
+        role_id = data.get('role_id')
+        first_name = data.get('first_name', '').strip()
+        last_name = data.get('last_name', '').strip()
+        phone = data.get('phone', '').strip()
+
+        if not email or not role_id:
+            return jsonify({'success': False, 'error': 'Email and role are required'})
+
+        # Validate email format
+        email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        if not re.match(email_pattern, email):
+            return jsonify({'success': False, 'error': 'Invalid email format'})
+
+        # Check if user already exists (by email or username)
+        existing_user = User.query.filter(
+            (User.email == email) | (User.username == email)
+        ).first()
+        if existing_user:
+            return jsonify({'success': False, 'error': 'User with this email already exists'})
+
+        # Validate role exists and is not developer role
+        role = Role.query.filter_by(id=role_id).first()
+        if not role:
+            return jsonify({'success': False, 'error': 'Invalid role selected'})
+
+        if role.name in ['developer', 'organization_owner']:
+            return jsonify({'success': False, 'error': 'Cannot assign system or organization owner roles to invited users'})
+
+        # Check if user should be added as inactive due to subscription limits
+        force_inactive = data.get('force_inactive', False)
+        will_be_inactive = force_inactive or not current_user.organization.can_add_users()
+
+        if not current_user.organization.can_add_users() and not force_inactive:
+            current_count = current_user.organization.active_users_count
+            max_users = current_user.organization.get_max_users()
+            return jsonify({
+                'success': False, 
+                'error': f'Organization has reached user limit ({current_count}/{max_users}) for {current_user.organization.subscription_tier} subscription'
+            })
+
+        # Generate a unique username from email
+        username = email.split('@')[0]
+        counter = 1
+        original_username = username
+        while User.query.filter_by(username=username).first():
+            username = f"{original_username}{counter}"
+            counter += 1
+
+        # Create new user with temporary password
         temp_password = secrets.token_urlsafe(12)
 
-        # Create user with email verification required
-        new_user = user_datastore.create_user(
-            username=email.split('@')[0],  # Use email prefix as username
+        # Create new user (inactive if subscription limit reached)
+        new_user = User(
+            username=username,
             email=email,
-            password=temp_password,
             first_name=first_name,
             last_name=last_name,
+            phone=phone,
             organization_id=current_user.organization_id,
-            user_type='team_member',
-            active=True,
-            confirmed_at=None  # Requires email confirmation
+            is_active=not will_be_inactive,  # Inactive if subscription limit reached
+            user_type='team_member'
         )
+        new_user.set_password(temp_password)
 
-        # Assign roles if provided
-        if role_ids:
-            from ...models import Role
-            for role_id in role_ids:
-                role = Role.query.get(role_id)
-                if role and role.organization_id == current_user.organization_id:
-                    new_user.assign_role(role, current_user)
-
+        db.session.add(new_user)
         db.session.commit()
 
-        # Send confirmation email
-        send_confirmation_instructions(new_user)
+        # Assign role using the new role assignment system
+        new_user.assign_role(role, assigned_by=current_user)
+
+        # TODO: In a real implementation, send email with login details
+        # For now, we'll return the credentials directly
+
+        status_message = "User invited successfully!"
+        if will_be_inactive:
+            status_message += " User added as inactive due to subscription limits."
 
         return jsonify({
-            'success': True,
-            'message': f'Invitation sent to {email}. They will need to confirm their email and set a password.',
-            'user_id': new_user.id
+            'success': True, 
+            'message': f'{status_message} Login details - Username: {username}, Temporary password: {temp_password}',
+            'user_data': {
+                'username': username,
+                'email': email,
+                'full_name': new_user.full_name,
+                'role': role.name,
+                'temp_password': temp_password,  # Remove this in production
+                'is_active': new_user.is_active
+            }
         })
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'success': False, 'message': f'Error creating user: {str(e)}'}), 500
+        print(f"Error inviting user: {str(e)}")  # For debugging
+        return jsonify({'success': False, 'error': f'Failed to invite user: {str(e)}'})
 
 @organization_bp.route('/update', methods=['POST'])
 @login_required
@@ -613,4 +653,3 @@ def restore_user(user_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)})
-
