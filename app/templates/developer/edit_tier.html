@@ -258,6 +258,9 @@
 </div>
 {% endblock %}
 
+{% endblock %}
+
+{% block scripts %}
 <script>
 function selectAllPermissions() {
     document.querySelectorAll('.permission-checkbox').forEach(checkbox => {
@@ -289,4 +292,39 @@ function getCSRFToken() {
 }
 
 // Feature group to permissions mapping
+const featureGroupPermissions = {
+    'basic_dashboard': ['dashboard.view'],
+    'full_dashboard': ['dashboard.view', 'dashboard.admin'],
+    'limited_inventory': ['inventory.view'],
+    'full_inventory': ['inventory.view', 'inventory.create', 'inventory.edit', 'inventory.delete'],
+    'batch_production': ['batches.view', 'batches.create', 'batches.edit'],
+    'recipe_management': ['recipes.view', 'recipes.create', 'recipes.edit'],
+    'product_catalog': ['products.view', 'products.create', 'products.edit'],
+    'team_management': ['users.manage', 'roles.manage'],
+    'basic_reports': ['reports.view'],
+    'advanced_reports': ['reports.view', 'reports.export'],
+    'api_access': ['api.access'],
+    'integrations': ['integrations.manage'],
+    'system_admin': ['system.admin']
+};
+
+// Handle feature group checkboxes to automatically check/uncheck related permissions
+document.addEventListener('DOMContentLoaded', function() {
+    const featureGroupCheckboxes = document.querySelectorAll('input[name="feature_groups"]');
+    
+    featureGroupCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const featureGroup = this.value;
+            const permissions = featureGroupPermissions[featureGroup] || [];
+            const isChecked = this.checked;
+            
+            permissions.forEach(permissionName => {
+                const permissionCheckbox = document.querySelector(`input[name="permissions"][value="${permissionName}"]`);
+                if (permissionCheckbox) {
+                    permissionCheckbox.checked = isChecked;
+                }
+            });
+        });
+    });
+});
 </script>
