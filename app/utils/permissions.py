@@ -25,25 +25,24 @@ def has_permission(user_or_permission_name, permission_name=None):
     if not user.is_authenticated:
         return False
 
-    # Developers have all permissions globally
+    # Developers have all permissions
     if user.user_type == 'developer':
         return True
 
-    # Organization owners get all permissions available to their subscription tier
+    # Organization owners have all permissions for their subscription tier
     if user.user_type == 'organization_owner':
+        # Check if permission is available for their subscription tier
         from app.models.permission import Permission
-        if user.organization:
-            tier_permissions = Permission.get_permissions_for_tier(user.organization.subscription_tier)
-            return any(perm.name == permission for perm in tier_permissions)
+        perm_obj = Permission.query.filter_by(name=permission).first()
+        if perm_obj and user.organization:
+            return perm_obj.is_available_for_tier(user.organization.subscription_tier)
         return False
 
-    # Team members check permissions through role assignments
-    if user.user_type == 'team_member':
-        roles = user.get_active_roles()
-        for role in roles:
-            if role.has_permission(permission):
-                return True
-
+    # Team members: check through role assignments
+    roles = user.get_active_roles()
+    for role in roles:
+        if role.has_permission(permission):
+            return True
     return False
 
 def has_role(role_name):

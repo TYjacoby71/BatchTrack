@@ -43,7 +43,6 @@ def seed_permissions():
         {'name': 'organization.manage_users', 'description': 'Manage organization users', 'category': 'organization', 'tier': 'team'},
         {'name': 'organization.manage_roles', 'description': 'Manage organization roles', 'category': 'organization', 'tier': 'team'},
         {'name': 'organization.manage_billing', 'description': 'Manage billing', 'category': 'organization', 'tier': 'team'},
-        {'name': 'manage_organization', 'description': 'Manage organization', 'category': 'organization', 'tier': 'team'},
 
         # Reporting permissions
         {'name': 'reports.view', 'description': 'View reports', 'category': 'reports', 'tier': 'team'},
@@ -129,7 +128,7 @@ def seed_system_roles():
                 'inventory.view', 'inventory.edit', 'inventory.adjust', 'inventory.reserve', 'inventory.delete',
                 'products.view', 'products.edit', 'products.create', 'products.delete',
                 'recipes.view', 'recipes.create', 'recipes.edit', 'recipes.delete',
-                'manage_organization', 'organization.view', 'organization.edit', 'organization.manage_users', 'organization.manage_roles', 'organization.manage_billing',
+                'organization.view', 'organization.edit', 'organization.manage_users', 'organization.manage_roles', 'organization.manage_billing',
                 'reports.view', 'reports.export', 'reports.advanced',
                 'api.access', 'api.admin'
             ]
