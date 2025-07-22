@@ -309,7 +309,7 @@ const featureGroupPermissions = {
         'inventory.adjust',
         'inventory.fifo',
         'inventory.reserve',
-        'inventory.view_cost'
+        'inventory.view_costs'
     ],
     'batch_production': [
         'batches.view', 
@@ -318,7 +318,7 @@ const featureGroupPermissions = {
         'batches.start',
         'batches.finish',
         'batches.cancel',
-        'batches.view_cost'
+        'batches.view_costs'
     ],
     'recipe_management': [
         'recipes.view', 
@@ -328,7 +328,8 @@ const featureGroupPermissions = {
         'recipes.scale',
         'recipes.duplicate',
         'recipes.import',
-        'recipes.export'
+        'recipes.export',
+        'recipes.plan_production'
     ],
     'product_catalog': [
         'products.view', 
@@ -338,14 +339,18 @@ const featureGroupPermissions = {
         'products.manage_variants',
         'products.manage_pricing',
         'products.export',
-        'products.import'
+        'products.import',
+        'products.sales_tracking'
     ],
     'team_management': [
         'users.manage', 
         'roles.manage',
-        'organization.manage',
-        'organization.billing',
-        'organization.settings'
+        'organization.view',
+        'organization.edit',
+        'organization.manage_users',
+        'organization.manage_roles',
+        'organization.manage_billing',
+        'organization.view_audit_logs'
     ],
     'basic_reports': [
         'reports.view'
@@ -360,7 +365,7 @@ const featureGroupPermissions = {
         'api.access',
         'api.read',
         'api.write',
-        'integrations.webhook'
+        'integrations.api_access'
     ],
     'integrations': [
         'integrations.manage',
