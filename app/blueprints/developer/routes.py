@@ -248,7 +248,8 @@ def delete_organization(org_id):
             db.session.delete(batch)
         
         # 4. Delete inventory and FIFO lots
-        from app.models import InventoryItem, FIFOLot
+        from app.models import InventoryItem
+        from app.models.models import FIFOLot
         inventory_items = InventoryItem.query.filter_by(organization_id=org_id).all()
         for item in inventory_items:
             # Delete associated FIFO lots
