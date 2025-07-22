@@ -38,30 +38,48 @@ def dashboard():
 
     # Get organization data
     organization = current_user.organization
-    
+
     # Get organization statistics
     from app.models import Batch
     completed_batches = Batch.query.filter_by(
         organization_id=current_user.organization_id,
         status='completed'
     ).count()
-    
+
     failed_batches = Batch.query.filter_by(
         organization_id=current_user.organization_id,
         status='failed'
     ).count()
-    
+
     org_stats = {
         'completed_batches': completed_batches,
         'failed_batches': failed_batches
     }
-    
+
     # Count pending invites (inactive users)
     pending_invites = User.query.filter_by(
         organization_id=current_user.organization_id,
         is_active=False,
         user_type='team_member'
     ).count()
+
+    # Get permission categories for role creation modal
+    from app.models.permission import Permission
+    permissions = Permission.query.filter_by(is_active=True).all()
+    permission_categories = {}
+    for perm in permissions:
+        category = perm.category or 'general'
+        if category not in permission_categories:
+            permission_categories[category] = []
+        permission_categories[category].append(perm)
+
+    # Get roles for the roles tab  
+    roles = Role.get_organization_roles(current_user.organization_id)
+
+    # Debug: Print to console to verify data
+    print(f"Permission categories: {list(permission_categories.keys())}")
+    print(f"Total permissions: {len(permissions)}")
+    print(f"Roles count: {len(roles)}")
 
     return render_template(
         'organization/dashboard.html', 
