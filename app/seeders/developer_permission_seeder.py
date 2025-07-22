@@ -5,6 +5,9 @@ from ..extensions import db
 
 def seed_developer_permissions():
     """Seed developer/system permissions"""
+    # Import Permission model to copy all application permissions
+    from ..models.permission import Permission
+    
     developer_permissions = [
         # System administration
         {'name': 'system.admin', 'description': 'Full system administration', 'category': 'system'},
@@ -29,6 +32,15 @@ def seed_developer_permissions():
         {'name': 'admin.system_health', 'description': 'View system health metrics', 'category': 'admin'},
         {'name': 'admin.backup_restore', 'description': 'Backup and restore operations', 'category': 'admin'},
     ]
+    
+    # Add all application permissions to developer permissions system
+    app_permissions = Permission.query.all()
+    for app_perm in app_permissions:
+        developer_permissions.append({
+            'name': f'app.{app_perm.name}',
+            'description': f'[App Permission] {app_perm.description}',
+            'category': 'application'
+        })
     
     for perm_data in developer_permissions:
         existing = DeveloperPermission.query.filter_by(name=perm_data['name']).first()
