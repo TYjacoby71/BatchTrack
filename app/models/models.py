@@ -472,6 +472,12 @@ class InventoryItem(ScopedModelMixin, db.Model):
 
     category = db.relationship('IngredientCategory', backref='inventory_items')
 
+    def belongs_to_user(self):
+        """Check if this record belongs to the current user's organization"""
+        if not current_user.is_authenticated:
+            return False
+        return self.organization_id == current_user.organization_id
+
     @property
     def available_quantity(self):
         """Get non-expired quantity available for use"""
@@ -539,3 +545,4 @@ class Tag(ScopedModelMixin, db.Model):
     __table_args__ = (
         db.UniqueConstraint('name', 'organization_id', name='_tag_name_org_uc'),
     )
+    
