@@ -488,13 +488,12 @@ class ExpirationService:
     @staticmethod
     def get_weighted_average_freshness(inventory_item_id: int) -> Optional[float]:
         """Calculate weighted average freshness for an inventory item based on FIFO entries"""
-        # Get all FIFO entries with remaining quantity
-        entries = db.session.query(InventoryHistory).join(InventoryItem).filter(
+        # Get all FIFO entries with remaining quantity - organization scoping handled by InventoryHistory model
+        entries = db.session.query(InventoryHistory).filter(
             and_(
                 InventoryHistory.inventory_item_id == inventory_item_id,
                 InventoryHistory.remaining_quantity > 0,
-                InventoryHistory.is_perishable == True,
-                InventoryItem.organization_id == current_user.organization_id if current_user.is_authenticated and current_user.organization_id else True
+                InventoryHistory.is_perishable == True
             )
         ).all()
 
