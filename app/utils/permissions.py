@@ -21,16 +21,46 @@ def has_permission(user_or_permission_name, permission_name=None):
     if user.user_type == 'developer':
         return True
 
+    # First check subscription tier permissions
+    tier_has_permission = _has_tier_permission(user, permission)
+    print(f"DEBUG: Permission check for {user.username} - {permission}")
+    print(f"DEBUG: Tier: {user.organization.effective_subscription_tier if user.organization else 'None'}")
+    print(f"DEBUG: Tier has permission: {tier_has_permission}")
+    
+    if not tier_has_permission:
+        return False
+
     # Check through assigned roles for all user types (including org owners)
     try:
         roles = user.get_active_roles() if hasattr(user, 'get_active_roles') else []
+        print(f"DEBUG: User roles: {[role.name for role in roles]}")
         for role in roles:
             if hasattr(role, 'has_permission') and role.has_permission(permission):
+                print(f"DEBUG: Role {role.name} has permission {permission}")
                 return True
     except Exception as e:
         print(f"Error checking user roles: {e}")
 
+    print(f"DEBUG: Permission {permission} denied for user {user.username}")
     return False
+
+def _has_tier_permission(user, permission_name):
+    """Check if user's subscription tier allows this permission"""
+    if not user.organization:
+        return False
+
+    # Get organization's effective subscription tier (handles subscription model fallback)
+    current_tier = user.organization.effective_subscription_tier
+
+    # Import here to avoid circular import
+    from app.blueprints.developer.subscription_tiers import load_tiers_config
+
+    # Get tier permissions
+    tiers_config = load_tiers_config()
+    tier_data = tiers_config.get(current_tier, {})
+    tier_permissions = tier_data.get('permissions', [])
+
+    return permission_name in tier_permissions
 
 def has_role(role_name):
     """Check if current user has specific role"""

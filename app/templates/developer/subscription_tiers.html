@@ -251,10 +251,6 @@ function syncTier(tierKey) {
         alert('Sync failed: Network error');
     });
 }
-</script>
-
-function syncTier(tierKey) {
-    if (confirm(`Sync ${tierKey} tier with Stripe? This will update pricing and features.`)) {
         fetch(`{{ url_for('developer.subscription_tiers.sync_tier', tier_key='TIER_KEY') }}`.replace('TIER_KEY', tierKey), {
             method: 'POST',
             headers: {
