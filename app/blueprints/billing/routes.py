@@ -1,6 +1,7 @@
 from flask import render_template, request, jsonify, redirect, url_for, flash, current_app
 from flask_login import login_required, current_user
 from . import billing_bp
+from ...extensions import csrf
 import logging
 import stripe
 
@@ -154,10 +155,47 @@ def cancel_subscription():
         return jsonify({'error': 'Failed to cancel subscription'}), 500
 
 @billing_bp.route('/webhooks/stripe', methods=['POST'])
+@csrf.exempt
 def stripe_webhook():
     """Handle Stripe webhooks"""
     payload = request.get_data()
     sig_header = request.headers.get('Stripe-Signature')
+    
+    logger.info(f"Webhook received - Signature: {sig_header[:20] if sig_header else 'None'}...")
+    logger.info(f"Payload size: {len(payload)} bytes")
+    
+    # Check if webhook secret is configured
+    webhook_secret = current_app.config.get('STRIPE_WEBHOOK_SECRET')
+    if not webhook_secret:
+        logger.error("STRIPE_WEBHOOK_SECRET not configured - webhook cannot be verified")
+        return jsonify({'error': 'Webhook secret not configured'}), 500
+    
+    try:
+        event = stripe.Webhook.construct_event(
+            payload, sig_header, webhook_secret
+        )
+        logger.info(f"Webhook event verified successfully: {event['type']}")
+    except ValueError as e:
+        logger.error(f"Invalid payload in Stripe webhook: {str(e)}")
+        return jsonify({'error': 'Invalid payload'}), 400
+    except stripe.error.SignatureVerificationError as e:
+        logger.error(f"Invalid signature in Stripe webhook: {str(e)}")
+        return jsonify({'error': 'Invalid signature'}), 400
+
+    # Handle the event
+    if event['type'] == 'customer.subscription.created':
+        success = StripeService.handle_subscription_created(event['data']['object'])
+        logger.info(f"Subscription created event handled: {success}")
+    elif event['type'] == 'customer.subscription.updated':
+        success = StripeService.handle_subscription_updated(event['data']['object'])
+        logger.info(f"Subscription updated event handled: {success}")
+    elif event['type'] == 'customer.subscription.deleted':
+        # Handle subscription cancellation
+        logger.info("Subscription deleted event received")
+    else:
+        logger.info(f"Unhandled Stripe webhook event: {event['type']}")
+
+    return jsonify({'status': 'success'})
 
 
 @billing_bp.route('/dev/activate/<tier>')

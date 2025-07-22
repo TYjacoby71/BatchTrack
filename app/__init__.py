@@ -37,6 +37,9 @@ def create_app():
     from .extensions import csrf
     csrf.init_app(app)
 
+    # Exempt Stripe webhooks from CSRF protection
+    csrf.exempt('billing.stripe_webhook')
+
     # Configure Flask-Login
     login_manager = LoginManager()
     login_manager.init_app(app)
@@ -197,11 +200,11 @@ def create_app():
         # Check for specific container route
         container_routes = [rule.rule for rule in app.url_map.iter_rules() if 'container' in rule.rule]
         print(f"Container routes found: {container_routes}")
-        
+
         # Debug billing routes
         billing_routes = [rule.rule for rule in app.url_map.iter_rules() if 'billing' in rule.rule]
         print(f"Billing routes found: {billing_routes}")
-        
+
         # Debug all registered endpoints
         all_endpoints = [(rule.rule, rule.endpoint) for rule in app.url_map.iter_rules()]
         billing_endpoints = [ep for ep in all_endpoints if 'billing' in ep[1]]
