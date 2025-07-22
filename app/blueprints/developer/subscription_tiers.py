@@ -13,41 +13,75 @@ TIERS_CONFIG_FILE = 'subscription_tiers.json'
 
 def load_tiers_config():
     """Load subscription tiers from JSON file"""
-    if os.path.exists(TIERS_CONFIG_FILE):
-        with open(TIERS_CONFIG_FILE, 'r') as f:
-            return json.load(f)
-    return {
+    # Default system tiers
+    default_tiers = {
+        'free': {
+            'name': 'Free Plan',
+            'feature_groups': ['dashboard', 'inventory'],
+            'stripe_lookup_key': '',
+            'user_limit': 1,
+            'fallback_features': ['Basic features', '1 user only', 'Community support'],
+            'stripe_features': [],
+            'stripe_price_monthly': 'Free',
+            'stripe_price_yearly': 'Free',
+            'last_synced': None
+        },
         'solo': {
             'name': 'Solo Plan',
-            'permissions': ['dashboard.view', 'batches.view', 'batches.create'],
-            'features': ['Up to 5 users', 'Full batch tracking', 'Email support'],
-            'stripe_price_id': '',
-            'stripe_yearly_price_id': '',
-            'user_limit': 5,
-            'price_display': '$29',
-            'price_yearly_display': '$290'
+            'feature_groups': ['dashboard', 'inventory', 'batches'],
+            'stripe_lookup_key': 'solo-plan',
+            'user_limit': 1,
+            'fallback_features': ['Up to 1 user', 'Full batch tracking', 'Email support'],
+            'stripe_features': [],
+            'stripe_price_monthly': None,
+            'stripe_price_yearly': None,
+            'last_synced': None
         },
         'team': {
             'name': 'Team Plan', 
-            'permissions': ['dashboard.view', 'batches.view', 'batches.create', 'organization.manage_users'],
-            'features': ['Up to 10 users', 'Advanced features', 'Custom roles'],
-            'stripe_price_id': '',
-            'stripe_yearly_price_id': '',
+            'feature_groups': ['dashboard', 'inventory', 'batches', 'products', 'user_management'],
+            'stripe_lookup_key': 'team-plan',
             'user_limit': 10,
-            'price_display': '$79',
-            'price_yearly_display': '$790'
+            'fallback_features': ['Up to 10 users', 'Advanced features', 'Custom roles'],
+            'stripe_features': [],
+            'stripe_price_monthly': None,
+            'stripe_price_yearly': None,
+            'last_synced': None
         },
         'enterprise': {
             'name': 'Enterprise Plan',
-            'permissions': ['dashboard.view', 'batches.view', 'batches.create', 'organization.manage_users', 'api.access'],
-            'features': ['Unlimited users', 'All features', 'API access'],
-            'stripe_price_id': '',
-            'stripe_yearly_price_id': '',
+            'feature_groups': ['dashboard', 'inventory', 'batches', 'products', 'user_management', 'api_access', 'advanced_features'],
+            'stripe_lookup_key': 'enterprise-plan',
             'user_limit': -1,
-            'price_display': '$199',
-            'price_yearly_display': '$1990'
+            'fallback_features': ['Unlimited users', 'All features', 'API access'],
+            'stripe_features': [],
+            'stripe_price_monthly': None,
+            'stripe_price_yearly': None,
+            'last_synced': None
+        },
+        'exempt': {
+            'name': 'Exempt Plan',
+            'feature_groups': ['dashboard', 'inventory', 'batches', 'products', 'user_management', 'api_access', 'advanced_features', 'developer_access'],
+            'stripe_lookup_key': '',
+            'user_limit': -1,
+            'fallback_features': ['Unlimited users', 'All features', 'Developer access', 'No billing required'],
+            'stripe_features': [],
+            'stripe_price_monthly': 'Exempt',
+            'stripe_price_yearly': 'Exempt',
+            'last_synced': None
         }
     }
+    
+    if os.path.exists(TIERS_CONFIG_FILE):
+        with open(TIERS_CONFIG_FILE, 'r') as f:
+            loaded_tiers = json.load(f)
+            # Merge with default tiers, keeping any customizations
+            for tier_key, tier_data in default_tiers.items():
+                if tier_key not in loaded_tiers:
+                    loaded_tiers[tier_key] = tier_data
+            return loaded_tiers
+    
+    return default_tiers
 
 def save_tiers_config(tiers):
     """Save subscription tiers to JSON file"""
@@ -85,17 +119,23 @@ def create_tier():
         
         # Get form data
         permissions = request.form.getlist('permissions')
-        features = [f.strip() for f in request.form.get('features', '').split('\n') if f.strip()]
+        fallback_features = [f.strip() for f in request.form.get('fallback_features', '').split('\n') if f.strip()]
+        
+        user_limit = int(request.form.get('user_limit', 1))
+        # Only exempt tier can have unlimited users (-1)
+        if user_limit == -1 and tier_key != 'exempt':
+            user_limit = 1
         
         new_tier = {
             'name': tier_name,
             'permissions': permissions,
-            'features': features,
-            'stripe_price_id': request.form.get('stripe_price_id', ''),
-            'stripe_yearly_price_id': request.form.get('stripe_yearly_price_id', ''),
-            'user_limit': int(request.form.get('user_limit', 1)),
-            'price_display': request.form.get('price_display', '$0'),
-            'price_yearly_display': request.form.get('price_yearly_display', '$0')
+            'stripe_lookup_key': request.form.get('stripe_lookup_key', ''),
+            'user_limit': user_limit,
+            'fallback_features': fallback_features,
+            'stripe_features': [],
+            'stripe_price_monthly': None,
+            'stripe_price_yearly': None,
+            'last_synced': None
         }
         
         tiers[tier_key] = new_tier
@@ -122,13 +162,16 @@ def edit_tier(tier_key):
         
         # Update tier data
         tier['name'] = request.form.get('tier_name', tier['name'])
-        tier['permissions'] = request.form.getlist('permissions')
-        tier['features'] = [f.strip() for f in request.form.get('features', '').split('\n') if f.strip()]
-        tier['stripe_price_id'] = request.form.get('stripe_price_id', '')
-        tier['stripe_yearly_price_id'] = request.form.get('stripe_yearly_price_id', '')
-        tier['user_limit'] = int(request.form.get('user_limit', 1))
-        tier['price_display'] = request.form.get('price_display', '$0')
-        tier['price_yearly_display'] = request.form.get('price_yearly_display', '$0')
+        tier['feature_groups'] = request.form.getlist('feature_groups')
+        tier['stripe_lookup_key'] = request.form.get('stripe_lookup_key', '')
+        
+        user_limit = int(request.form.get('user_limit', 1))
+        # Only exempt tier can have unlimited users (-1)
+        if user_limit == -1 and tier_key != 'exempt':
+            user_limit = 1
+        tier['user_limit'] = user_limit
+        
+        tier['fallback_features'] = [f.strip() for f in request.form.get('fallback_features', '').split('\n') if f.strip()]
         
         save_tiers_config(tiers)
         
@@ -147,6 +190,11 @@ def edit_tier(tier_key):
 @login_required
 def delete_tier(tier_key):
     """Delete a subscription tier"""
+    # Prevent deletion of system tiers
+    if tier_key in ['free', 'exempt']:
+        flash(f'Cannot delete system tier: {tier_key}', 'error')
+        return redirect(url_for('developer.subscription_tiers.manage_tiers'))
+        
     tiers = load_tiers_config()
     
     if tier_key not in tiers:
@@ -159,6 +207,76 @@ def delete_tier(tier_key):
     
     flash(f'Subscription tier "{tier_name}" deleted successfully', 'success')
     return redirect(url_for('developer.subscription_tiers.manage_tiers'))
+
+@subscription_tiers_bp.route('/sync/<tier_key>', methods=['POST'])
+@login_required
+def sync_tier(tier_key):
+    """Sync a tier with Stripe pricing and features"""
+    import stripe
+    from datetime import datetime
+    
+    tiers = load_tiers_config()
+    
+    if tier_key not in tiers:
+        return jsonify({'error': 'Tier not found'}), 404
+    
+    tier = tiers[tier_key]
+    lookup_key = tier.get('stripe_lookup_key')
+    
+    if not lookup_key:
+        return jsonify({'error': 'No Stripe lookup key configured'}), 400
+    
+    try:
+        # Initialize Stripe
+        stripe_key = os.environ.get('STRIPE_SECRET_KEY')
+        if not stripe_key:
+            return jsonify({'error': 'Stripe secret key not configured in secrets'}), 400
+        
+        stripe.api_key = stripe_key
+        
+        # Find products by lookup key
+        products = stripe.Product.list(lookup_keys=[lookup_key], limit=1)
+        
+        if not products.data:
+            return jsonify({'error': f'No Stripe product found with lookup key: {lookup_key}'}), 404
+        
+        product = products.data[0]
+        
+        # Get prices for this product
+        prices = stripe.Price.list(product=product.id)
+        
+        monthly_price = None
+        yearly_price = None
+        
+        for price in prices.data:
+            if price.recurring and price.recurring.interval == 'month':
+                monthly_price = f"${price.unit_amount // 100}"
+            elif price.recurring and price.recurring.interval == 'year':
+                yearly_price = f"${price.unit_amount // 100}"
+        
+        # Get features from product metadata
+        features = []
+        if product.metadata.get('features'):
+            features = [f.strip() for f in product.metadata['features'].split(',')]
+        
+        # Update tier with Stripe data
+        tier['stripe_features'] = features
+        tier['stripe_price_monthly'] = monthly_price
+        tier['stripe_price_yearly'] = yearly_price
+        tier['last_synced'] = datetime.now().isoformat()
+        
+        save_tiers_config(tiers)
+        
+        return jsonify({
+            'success': True,
+            'tier': tier,
+            'message': f'Successfully synced {tier["name"]} with Stripe'
+        })
+        
+    except stripe.error.StripeError as e:
+        return jsonify({'error': f'Stripe error: {str(e)}'}), 400
+    except Exception as e:
+        return jsonify({'error': f'Sync failed: {str(e)}'}), 500
 
 @subscription_tiers_bp.route('/api/tiers')
 @login_required 

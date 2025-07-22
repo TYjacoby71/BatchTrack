@@ -1,0 +1,110 @@
+{
+  "free": {
+    "name": "Free Plan",
+    "feature_groups": [
+      "dashboard",
+      "inventory"
+    ],
+    "stripe_lookup_key": "",
+    "user_limit": 1,
+    "fallback_features": [
+      "Basic features",
+      "1 user only",
+      "Community support"
+    ],
+    "stripe_features": [],
+    "stripe_price_monthly": "Free",
+    "stripe_price_yearly": "Free",
+    "last_synced": null
+  },
+  "solo": {
+    "name": "Solo Plan",
+    "feature_groups": [
+      "dashboard",
+      "inventory",
+      "batches",
+      "products",
+      "advanced_features"
+    ],
+    "stripe_lookup_key": "batchtrack_solo_monthly",
+    "user_limit": 1,
+    "fallback_features": [
+      "Up to 1 user",
+      "Full batch tracking",
+      "Email support"
+    ],
+    "stripe_features": [],
+    "stripe_price_monthly": null,
+    "stripe_price_yearly": null,
+    "last_synced": null
+  },
+  "team": {
+    "name": "Team Plan",
+    "feature_groups": [
+      "dashboard",
+      "inventory",
+      "batches",
+      "products",
+      "user_management"
+    ],
+    "stripe_lookup_key": "team-plan",
+    "user_limit": 10,
+    "fallback_features": [
+      "Up to 10 users",
+      "Advanced features",
+      "Custom roles"
+    ],
+    "stripe_features": [],
+    "stripe_price_monthly": null,
+    "stripe_price_yearly": null,
+    "last_synced": null
+  },
+  "enterprise": {
+    "name": "Enterprise Plan",
+    "feature_groups": [
+      "dashboard",
+      "inventory",
+      "batches",
+      "products",
+      "user_management",
+      "api_access",
+      "advanced_features"
+    ],
+    "stripe_lookup_key": "enterprise-plan",
+    "user_limit": -1,
+    "fallback_features": [
+      "Unlimited users",
+      "All features",
+      "API access"
+    ],
+    "stripe_features": [],
+    "stripe_price_monthly": null,
+    "stripe_price_yearly": null,
+    "last_synced": null
+  },
+  "exempt": {
+    "name": "Exempt Plan",
+    "feature_groups": [
+      "dashboard",
+      "inventory",
+      "batches",
+      "products",
+      "user_management",
+      "api_access",
+      "advanced_features",
+      "developer_access"
+    ],
+    "stripe_lookup_key": "",
+    "user_limit": -1,
+    "fallback_features": [
+      "Unlimited users",
+      "All features",
+      "Developer access",
+      "No billing required"
+    ],
+    "stripe_features": [],
+    "stripe_price_monthly": "Exempt",
+    "stripe_price_yearly": "Exempt",
+    "last_synced": null
+  }
+}
