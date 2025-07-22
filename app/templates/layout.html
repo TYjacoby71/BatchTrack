@@ -146,8 +146,8 @@
                     <li><a class="dropdown-item" href="{{ url_for('developer.create_organization') }}">
                         <i class="fas fa-plus"></i> Create Organization
                     </a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('developer.subscription_management') }}">
-                        <i class="fas fa-credit-card"></i> Subscription Management
+                    <li><a class="dropdown-item" href="{{ url_for('developer.subscription_tiers.manage_tiers') }}">
+                        <i class="fas fa-layer-group text-primary"></i> Subscription Tiers
                     </a></li>
                     <li><a class="dropdown-item" href="{{ url_for('developer.users') }}">
                         <i class="fas fa-users"></i> User Management
@@ -319,6 +319,7 @@
     <!-- Bootstrap Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <!-- Custom scripts -->
+    <script src="{{ url_for('static', filename='style.css') }}">style.css</script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     <script src="{{ url_for('static', filename='js/utils/utils.js') }}"></script>
     <script src="{{ url_for('static', filename='js/inventory/inventory_adjust.js') }}"></script>
