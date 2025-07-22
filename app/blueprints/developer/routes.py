@@ -270,10 +270,15 @@ def delete_organization(org_id):
         from app.models.subscription import Subscription
         Subscription.query.filter_by(organization_id=org_id).delete()
         
-        # 8. Delete users (this should be last due to foreign key references)
+        # 8. Delete user preferences first, then users
+        from app.models.user_preferences import UserPreferences
+        
         org_users = User.query.filter_by(organization_id=org_id).all()
         for user in org_users:
             if user.user_type != 'developer':  # Don't delete developer accounts
+                # Delete user preferences first
+                UserPreferences.query.filter_by(user_id=user.id).delete()
+                # Then delete the user
                 db.session.delete(user)
         
         # 9. Finally delete the organization
