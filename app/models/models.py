@@ -80,7 +80,7 @@ class Organization(db.Model):
         }
         effective_tier = self.effective_subscription_tier
         return features.get(effective_tier, features['solo'])
-    
+
     def get_pricing_data(self):
         """Get dynamic pricing data from Stripe"""
         try:
@@ -104,7 +104,7 @@ class User(UserMixin, db.Model):
     last_login = db.Column(db.DateTime, nullable=True)
     timezone = db.Column(db.String(64), default='UTC')
     # role_id removed - using UserRoleAssignment table instead
-    
+
     # Soft delete fields
     deleted_at = db.Column(db.DateTime, nullable=True)
     deleted_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
@@ -134,23 +134,34 @@ class User(UserMixin, db.Model):
         return self.user_type == 'organization_owner'
 
     def get_active_roles(self):
-        """Get all active roles assigned to this user"""
-        from .user_role_assignment import UserRoleAssignment
-        assignments = UserRoleAssignment.query.filter_by(
-            user_id=self.id,
-            is_active=True
-        ).all()
-        
-        roles = []
-        for assignment in assignments:
-            # For organization roles
-            if assignment.role_id and assignment.role and assignment.role.is_active:
-                roles.append(assignment.role)
-            # For developer roles
-            elif assignment.developer_role_id and assignment.developer_role and assignment.developer_role.is_active:
-                roles.append(assignment.developer_role)
-        
-        return roles
+        """Get all active roles for this user"""
+        try:
+            from .user_role_assignment import UserRoleAssignment
+            from .role import Role
+            from .developer_role import DeveloperRole
+
+            assignments = UserRoleAssignment.query.filter_by(
+                user_id=self.id,
+                is_active=True
+            ).all()
+
+            roles = []
+            for assignment in assignments:
+                if assignment.role_id:
+                    # Organization role
+                    role = Role.query.get(assignment.role_id)
+                    if role and role.is_active:
+                        roles.append(role)
+                elif assignment.developer_role_id:
+                    # Developer role
+                    dev_role = DeveloperRole.query.get(assignment.developer_role_id)
+                    if dev_role and dev_role.is_active:
+                        roles.append(dev_role)
+
+            return roles
+        except Exception as e:
+            print(f"Error getting active roles for user {self.id}: {e}")
+            return []
 
     def has_permission(self, permission_name):
         """Check if user has a specific permission through any of their roles"""
@@ -174,20 +185,20 @@ class User(UserMixin, db.Model):
         """Check if developer user has a specific developer permission"""
         if self.user_type != 'developer':
             return False
-            
+
         # Get developer role assignments for this user
         from .user_role_assignment import UserRoleAssignment
-        
+
         # Check if user has any developer roles assigned
         assignments = UserRoleAssignment.query.filter_by(
             user_id=self.id,
             is_active=True
         ).filter(UserRoleAssignment.developer_role_id.isnot(None)).all()
-        
+
         for assignment in assignments:
             if assignment.developer_role and assignment.developer_role.has_permission(permission_name):
                 return True
-        
+
         return False
 
     def assign_role(self, role, assigned_by=None):
@@ -237,13 +248,13 @@ class User(UserMixin, db.Model):
         self.deleted_at = TimezoneUtils.utc_now()
         if deleted_by_user:
             self.deleted_by = deleted_by_user.id
-        
+
         # Deactivate all role assignments
         from .user_role_assignment import UserRoleAssignment
         assignments = UserRoleAssignment.query.filter_by(user_id=self.id).all()
         for assignment in assignments:
             assignment.is_active = False
-        
+
         db.session.commit()
 
     def restore(self, restored_by_user=None):
@@ -617,4 +628,3 @@ class Tag(ScopedModelMixin, db.Model):
     __table_args__ = (
         db.UniqueConstraint('name', 'organization_id', name='_tag_name_org_uc'),
     )
-    

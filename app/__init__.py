@@ -283,15 +283,38 @@ def create_app():
     # Seeders are available via CLI commands: flask seed-all, flask init-db
     # No automatic seeding on startup to improve performance
 
-    # Register permission template functions
+    # Register template globals for permissions
     from .utils.permissions import has_permission, has_role, has_subscription_feature, is_organization_owner, is_developer
-    app.jinja_env.globals.update(
-        has_permission=has_permission,
-        has_role=has_role,
-        has_subscription_feature=has_subscription_feature,
-        is_organization_owner=is_organization_owner,
-        is_developer=is_developer
-    )
+
+    def template_has_permission(permission_name):
+        """Template helper for permission checking"""
+        try:
+            return has_permission(permission_name)
+        except Exception as e:
+            print(f"Permission check error for {permission_name}: {e}")
+            return False
+
+    def template_has_role(role_name):
+        """Template helper for role checking"""
+        try:
+            return has_role(role_name)
+        except Exception as e:
+            print(f"Role check error for {role_name}: {e}")
+            return False
+
+    def template_is_org_owner():
+        """Template helper for organization owner check"""
+        try:
+            return is_organization_owner()
+        except Exception as e:
+            print(f"Org owner check error: {e}")
+            return False
+
+    app.jinja_env.globals['has_permission'] = template_has_permission
+    app.jinja_env.globals['has_role'] = template_has_role
+    app.jinja_env.globals['has_subscription_feature'] = has_subscription_feature
+    app.jinja_env.globals['is_organization_owner'] = template_is_org_owner
+    app.jinja_env.globals['is_developer'] = is_developer
 
     # Add units to global context for dropdowns
     @app.context_processor
