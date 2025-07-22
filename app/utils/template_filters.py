@@ -113,10 +113,34 @@ def register_filters(app):
 
     @app.template_global()
     def has_permission(permission_name):
-        """Template function to check if current user has a specific permission"""
-        if not current_user.is_authenticated:
+        """Template function to check if current user has permission"""
+        if not current_user or not current_user.is_authenticated:
             return False
+        from app.utils import permissions as permission_utils
+        return permission_utils.has_permission(current_user, permission_name)
 
-        # Use the centralized permission checking function
-        from app.utils.permissions import has_permission as check_permission
-        return check_permission(permission_name)
+    @app.template_global()
+    def has_tier_permission(permission_name):
+        """Template function to check if current user's subscription tier allows permission"""
+        if not current_user or not current_user.is_authenticated:
+            return False
+        from app.utils import permissions as permission_utils
+        return permission_utils._has_tier_permission(current_user, permission_name)
+
+    @app.template_global()
+    def get_current_tier():
+        """Template function to get current user's subscription tier"""
+        if not current_user or not current_user.is_authenticated or not current_user.organization:
+            return 'free'
+        return current_user.organization.effective_subscription_tier
+
+    @app.template_global()
+    def get_tier_features(tier_key=None):
+        """Template function to get features for a subscription tier"""
+        if not tier_key:
+            tier_key = get_current_tier()
+
+        from app.blueprints.developer.subscription_tiers import load_tiers_config
+        tiers_config = load_tiers_config()
+        tier_data = tiers_config.get(tier_key, {})
+        return tier_data.get('fallback_features', [])

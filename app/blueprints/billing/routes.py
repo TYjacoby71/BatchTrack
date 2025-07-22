@@ -1,4 +1,3 @@
-import stripe
 from flask import render_template, request, jsonify, redirect, url_for, flash, current_app
 from flask_login import login_required, current_user
 from . import billing_bp
@@ -6,26 +5,76 @@ from ...services.stripe_service import StripeService
 from ...services.subscription_service import SubscriptionService
 from ...utils.permissions import require_permission, has_permission
 import logging
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask_login import login_required, current_user
+from app.models import db, Organization, Permission
+from app.utils.permissions import require_permission
+from app.blueprints.developer.subscription_tiers import load_tiers_config
 
-logger = logging.getLogger(__name__)
+billing_bp = Blueprint('billing', __name__, url_prefix='/billing')
+
+def get_tier_permissions(tier_key):
+    """Get all permissions for a subscription tier"""
+    tiers_config = load_tiers_config()
+    tier_data = tiers_config.get(tier_key, {})
+    permission_names = tier_data.get('permissions', [])
+
+    # Get actual permission objects
+    permissions = Permission.query.filter(Permission.name.in_(permission_names)).all()
+    return permissions
+
+def user_has_tier_permission(user, permission_name):
+    """Check if user has permission based on their subscription tier"""
+    if user.user_type == 'developer':
+        return True  # Developers have all permissions
+
+    if not user.organization:
+        return False
+
+    # Get organization's subscription tier
+    current_tier = user.organization.effective_subscription_tier
+
+    # Get tier permissions
+    tiers_config = load_tiers_config()
+    tier_data = tiers_config.get(current_tier, {})
+    tier_permissions = tier_data.get('permissions', [])
+
+    return permission_name in tier_permissions
 
 @billing_bp.route('/upgrade')
-@login_required
+@login_required 
 def upgrade():
-    # Check if user has billing permission or is organization owner
-    if not (has_permission(current_user, 'organization.manage_billing') or current_user.user_type == 'organization_owner'):
-        flash('You do not have permission to access billing information.', 'error')
-        return redirect(url_for('organization.dashboard'))
+    """Show subscription upgrade options"""
+    organization = current_user.organization
+    if not organization:
+        flash('No organization found', 'error')
+        return redirect(url_for('app_routes.dashboard'))
 
-    from ...services.pricing_service import PricingService
-    current_tier = SubscriptionService.get_effective_tier(current_user.organization)
-    pricing_data = PricingService.get_pricing_data()
-    subscription_details = PricingService.get_subscription_details(current_user.organization)
+    # Load tier configuration
+    tiers_config = load_tiers_config()
 
-    return render_template('billing/upgrade.html', 
-                         current_tier=current_tier, 
-                         pricing_data=pricing_data,
-                         subscription_details=subscription_details)
+    # Filter for customer-facing and active tiers only
+    customer_facing = request.args.get('customer_facing', 'true').lower() == 'true'
+    active = request.args.get('active', 'true').lower() == 'true'
+
+    available_tiers = {}
+    for tier_key, tier_data in tiers_config.items():
+        # Apply filters
+        if customer_facing and not tier_data.get('is_customer_facing', True):
+            continue
+        if active and not tier_data.get('is_available', True):
+            continue
+
+        available_tiers[tier_key] = tier_data
+
+    current_tier = organization.effective_subscription_tier
+
+    return render_template('billing/upgrade.html',
+                         organization=organization,
+                         tiers=available_tiers,
+                         current_tier=current_tier)
+
+logger = logging.getLogger(__name__)
 
 @billing_bp.route('/checkout/<tier>')
 @billing_bp.route('/checkout/<tier>/<billing_cycle>')
@@ -39,7 +88,7 @@ def checkout(tier, billing_cycle='monthly'):
     # Validate tier is customer-facing and available
     from ...services.pricing_service import PricingService
     available_tiers = PricingService.get_pricing_data()
-    
+
     if tier not in available_tiers:
         flash('Invalid or unavailable subscription tier.', 'error')
         return redirect(url_for('billing.upgrade'))
