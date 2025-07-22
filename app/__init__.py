@@ -89,34 +89,37 @@ def create_app():
 
     # Register blueprints
     from .blueprints.auth import auth_bp
-    from .blueprints.products import products_bp
-    from .blueprints.products.api import products_api_bp
-    from .blueprints.recipes import recipes_bp
-    from .blueprints.inventory import inventory_bp
+    from .blueprints.admin import admin_bp
+    from .blueprints.api import api_bp
     from .blueprints.batches import batches_bp
-    from .blueprints.batches.finish_batch import finish_batch_bp
-    from .blueprints.batches.cancel_batch import cancel_batch_bp
-    from .blueprints.batches.start_batch import start_batch_bp
-    from .blueprints.api.stock_routes import stock_api_bp
-    from .blueprints.api.ingredient_routes import ingredient_api_bp
+    from .blueprints.billing import billing_bp
     from .blueprints.conversion import conversion_bp
+    from .blueprints.developer.routes import developer_bp
     from .blueprints.expiration import expiration_bp
+    from .blueprints.inventory import inventory_bp
+    from .blueprints.organization.routes import organization_bp
+    from .blueprints.products import products_bp
+    from .blueprints.quick_add import quick_add_bp
+    from .blueprints.recipes import recipes_bp
     from .blueprints.settings import settings_bp
     from .blueprints.timers import timers_bp
-    from .blueprints.quick_add import quick_add_bp
-    from .blueprints.admin import admin_bp
     from .routes import app_routes
-    from .blueprints.fifo import fifo_bp
-    from .blueprints.batches.add_extra import add_extra_bp
-    from .routes import bulk_stock_routes
-    from .routes import fault_log_routes
-    from .routes import tag_manager_routes
-    # Register admin blueprints
-    from .blueprints.admin.admin_routes import admin_bp
-    app.register_blueprint(admin_bp)
 
-    # Register developer blueprint
-    from .blueprints.developer.routes import developer_bp
+    app.register_blueprint(auth_bp, url_prefix='/auth')
+    app.register_blueprint(admin_bp, url_prefix='/admin')
+    app.register_blueprint(api_bp, url_prefix='/api')
+    app.register_blueprint(batches_bp, url_prefix='/batches')
+    app.register_blueprint(billing_bp, url_prefix='/billing')
+    app.register_blueprint(conversion_bp, url_prefix='/conversion')
+    app.register_blueprint(developer_bp, url_prefix='/developer')
+    app.register_blueprint(expiration_bp, url_prefix='/expiration')
+    app.register_blueprint(inventory_bp, url_prefix='/inventory')
+    app.register_blueprint(organization_bp, url_prefix='/organization')
+    app.register_blueprint(products_bp, url_prefix='/products')
+    app.register_blueprint(quick_add_bp, url_prefix='/quick-add')
+    app.register_blueprint(recipes_bp, url_prefix='/recipes')
+    app.register_blueprint(settings_bp, url_prefix='/settings')
+    app.register_blueprint(timers_bp, url_prefix='/timers')
     app.register_blueprint(developer_bp)
 
     # Register reservation blueprints (now under products)
