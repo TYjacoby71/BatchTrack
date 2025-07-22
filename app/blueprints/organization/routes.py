@@ -76,10 +76,17 @@ def dashboard():
     # Get roles for the roles tab  
     roles = Role.get_organization_roles(current_user.organization_id)
 
+    # Get users for the user management tab (exclude developers from organization view)
+    users = User.query.filter(
+        User.organization_id == current_user.organization_id,
+        User.user_type != 'developer'
+    ).order_by(User.created_at.desc()).all()
+
     # Debug: Print to console to verify data
     print(f"Permission categories: {list(permission_categories.keys())}")
     print(f"Total permissions: {len(permissions)}")
     print(f"Roles count: {len(roles)}")
+    print(f"Users count: {len(users)}")
 
     return render_template(
         'organization/dashboard.html', 
@@ -88,7 +95,8 @@ def dashboard():
         org_stats=org_stats,
         pending_invites=pending_invites,
         permission_categories=permission_categories,
-        roles=roles
+        roles=roles,
+        users=users
     )
 
 @organization_bp.route('/create-role', methods=['POST'])
