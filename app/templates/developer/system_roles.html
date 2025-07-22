@@ -658,6 +658,59 @@ function saveDeveloperUser() {
 function editDeveloperUserRole(userId, username) {
     document.getElementById('editDeveloperUserRoleModalTitle').textContent = `Edit Role for ${username}`;
     document.getElementById('editDeveloperUserId').value = userId;
+    
+    // Load current role
+    fetch(`/developer/developer-users/${userId}/role`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.current_role_id) {
+                document.getElementById('editDeveloperUserRole').value = data.current_role_id;
+            } else {
+                document.getElementById('editDeveloperUserRole').value = '';
+            }
+            new bootstrap.Modal(document.getElementById('editDeveloperUserRoleModal')).show();
+        })
+        .catch(error => {
+            console.error('Error loading user role:', error);
+            alert('Failed to load user role');
+        });
+}
+
+function saveEditDeveloperUserRole() {
+    const userId = document.getElementById('editDeveloperUserId').value;
+    const roleId = document.getElementById('editDeveloperUserRole').value;
+    
+    const data = {
+        developer_role_id: roleId || null
+    };
+    
+    fetch(`/developer/developer-users/${userId}/role`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCSRFToken()
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            location.reload();
+        } else {
+            alert(result.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error updating user role:', error);
+        alert('Failed to update user role');
+    });
+}
+
+function getCSRFToken() {
+    return document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+}
+</script>it Role for ${username}`;
+    document.getElementById('editDeveloperUserId').value = userId;
     new bootstrap.Modal(document.getElementById('editDeveloperUserRoleModal')).show();
 }
 
