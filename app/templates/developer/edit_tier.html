@@ -19,7 +19,7 @@
     </div>
 
     <form method="post">
-        {{ csrf_token() }}
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
         <div class="row mt-4">
             <!-- Basic Information -->
             <div class="col-md-6">
@@ -37,8 +37,15 @@
                         <div class="mb-3">
                             <label for="user_limit" class="form-label">User Limit</label>
                             <input type="number" class="form-control" id="user_limit" name="user_limit" 
-                                   value="{{ tier.user_limit }}" min="-1">
-                            <small class="form-text text-muted">Use -1 for unlimited users</small>
+                                   value="{{ tier.user_limit }}" min="1"
+                                   {% if tier_key != 'exempt' %}max="1000"{% endif %}>
+                            <small class="form-text text-muted">
+                                {% if tier_key == 'exempt' %}
+                                    Use -1 for unlimited users (exempt tier only)
+                                {% else %}
+                                    Enter maximum number of users for this tier
+                                {% endif %}
+                            </small>
                         </div>
                     </div>
                 </div>

@@ -90,11 +90,16 @@ def create_tier():
         permissions = request.form.getlist('permissions')
         fallback_features = [f.strip() for f in request.form.get('fallback_features', '').split('\n') if f.strip()]
         
+        user_limit = int(request.form.get('user_limit', 1))
+        # Only exempt tier can have unlimited users (-1)
+        if user_limit == -1 and tier_key != 'exempt':
+            user_limit = 1
+        
         new_tier = {
             'name': tier_name,
             'permissions': permissions,
             'stripe_lookup_key': request.form.get('stripe_lookup_key', ''),
-            'user_limit': int(request.form.get('user_limit', 1)),
+            'user_limit': user_limit,
             'fallback_features': fallback_features,
             'stripe_features': [],
             'stripe_price_monthly': None,
@@ -128,7 +133,13 @@ def edit_tier(tier_key):
         tier['name'] = request.form.get('tier_name', tier['name'])
         tier['feature_groups'] = request.form.getlist('feature_groups')
         tier['stripe_lookup_key'] = request.form.get('stripe_lookup_key', '')
-        tier['user_limit'] = int(request.form.get('user_limit', 1))
+        
+        user_limit = int(request.form.get('user_limit', 1))
+        # Only exempt tier can have unlimited users (-1)
+        if user_limit == -1 and tier_key != 'exempt':
+            user_limit = 1
+        tier['user_limit'] = user_limit
+        
         tier['fallback_features'] = [f.strip() for f in request.form.get('fallback_features', '').split('\n') if f.strip()]
         
         save_tiers_config(tiers)
