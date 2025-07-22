@@ -1,4 +1,3 @@
-
 {% extends 'layout.html' %}
 
 {% block title %}Edit Subscription Tier - Developer{% endblock %}
@@ -20,7 +19,7 @@
 
     <form method="post">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-        
+
         <div class="row mt-4">
             <!-- Basic Information -->
             <div class="col-md-6">
@@ -258,3 +257,34 @@
     </form>
 </div>
 {% endblock %}
+
+<script>
+function selectAllPermissions() {
+    document.querySelectorAll('.permission-checkbox').forEach(checkbox => {
+        checkbox.checked = true;
+    });
+}
+
+function deselectAllPermissions() {
+    document.querySelectorAll('.permission-checkbox').forEach(checkbox => {
+        checkbox.checked = false;
+    });
+}
+
+function toggleCategoryPermissions(categoryName) {
+    const categoryCheckboxes = document.querySelectorAll(`.permission-checkbox[data-category="${categoryName}"]`);
+    const allChecked = Array.from(categoryCheckboxes).every(checkbox => checkbox.checked);
+
+    categoryCheckboxes.forEach(checkbox => {
+        checkbox.checked = !allChecked;
+    });
+}
+
+function updatePricing() {
+updatePricing();
+});
+
+function getCSRFToken() {
+    return document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+}
+</script>

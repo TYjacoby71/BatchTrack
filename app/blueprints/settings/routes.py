@@ -185,48 +185,51 @@ def update_system_settings():
 @settings_bp.route('/profile/save', methods=['POST'])
 @login_required
 def save_profile():
-    """Save user profile information"""
     try:
-        data = request.get_json()
+        print(f"Profile save request from user: {current_user.id}")
+        print(f"Form data: {dict(request.form)}")
 
-        if not data:
-            return jsonify({'error': 'No data received'}), 400
+        # Validate input data
+        first_name = request.form.get('first_name', '').strip()
+        last_name = request.form.get('last_name', '').strip()
+        phone = request.form.get('phone', '').strip()
 
-        # Validate required fields
-        if not data.get('first_name') or not data.get('last_name') or not data.get('email'):
-            return jsonify({'error': 'First name, last name, and email are required'}), 400
+        print(f"Parsed data - First: '{first_name}', Last: '{last_name}', Phone: '{phone}'")
 
-        # Update user profile fields
-        current_user.first_name = data.get('first_name', '').strip()
-        current_user.last_name = data.get('last_name', '').strip()
-        current_user.email = data.get('email', '').strip()
-        current_user.phone = data.get('phone', '').strip() if data.get('phone') else None
+        # Update user fields
+        current_user.first_name = first_name
+        current_user.last_name = last_name
+        current_user.phone = phone
 
-        # Update timezone if provided and valid
-        if data.get('timezone'):
-            timezone = data.get('timezone')
-            if TimezoneUtils.validate_timezone(timezone):
-                current_user.timezone = timezone
-            else:
-                return jsonify({'error': 'Invalid timezone selected'}), 400
-
+        # Commit changes
+        print("Attempting to save to database...")
         db.session.commit()
+        print("Database save successful")
 
-        return jsonify({
-            'success': True, 
-            'message': 'Profile updated successfully',
-            'user': {
-                'first_name': current_user.first_name,
-                'last_name': current_user.last_name,
-                'email': current_user.email,
-                'phone': current_user.phone,
-                'timezone': current_user.timezone
-            }
-        })
+        flash('Profile updated successfully!', 'success')
+
+        # Determine redirect target
+        redirect_url = request.referrer or url_for('settings.index')
+        if current_user.user_type == 'developer':
+            redirect_url = url_for('developer.dashboard')
+
+        print(f"Redirecting to: {redirect_url}")
+        return redirect(redirect_url)
+
     except Exception as e:
+        print(f"Error in profile save: {str(e)}")
+        print(f"Exception type: {type(e)}")
+        import traceback
+        traceback.print_exc()
+
         db.session.rollback()
-        print(f"Profile save error: {str(e)}")  # Debug logging
-        return jsonify({'error': f'Failed to update profile: {str(e)}'}), 500
+        flash(f'Error updating profile: {str(e)}', 'error')
+
+        # Safe fallback redirect
+        if current_user.user_type == 'developer':
+            return redirect(url_for('developer.dashboard'))
+        else:
+            return redirect(url_for('settings.index'))
 
 @settings_bp.route('/password/change', methods=['POST'])
 @login_required
