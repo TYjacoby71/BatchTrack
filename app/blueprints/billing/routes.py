@@ -127,8 +127,12 @@ def checkout(tier, billing_cycle='monthly'):
                 success = StripeService.simulate_subscription_success(current_user.organization, tier)
                 if success:
                     mode_reason = "Development Mode" if not is_stripe_ready else "Webhook not configured"
-                    flash(f'{mode_reason}: Simulated {tier} subscription activated!', 'success')
-                    return redirect(url_for('organization.dashboard'))
+                    flash(f'{mode_reason}: Simulated {tier.title()} subscription activated!', 'success')
+                    # Redirect to settings billing tab instead of organization dashboard
+                    return redirect(url_for('settings.index') + '#billing')
+                else:
+                    flash('Failed to activate subscription in development mode.', 'error')
+                    return redirect(url_for('billing.upgrade'))
             
             flash('Failed to create checkout session. Please try again.', 'error')
             return redirect(url_for('billing.upgrade'))
@@ -136,8 +140,13 @@ def checkout(tier, billing_cycle='monthly'):
         logger.error(f"Checkout error for org {current_user.organization.id}: {str(e)}")
         
         # Fallback for development
-        if not current_app.config.get('STRIPE_WEBHOOK_SECRET'):
-            flash('Development Mode: Stripe not configured. Contact admin for subscription setup.', 'warning')
+        if not is_stripe_ready:
+            success = StripeService.simulate_subscription_success(current_user.organization, tier)
+            if success:
+                flash(f'Development Mode: {tier.title()} subscription activated!', 'success')
+                return redirect(url_for('settings.index') + '#billing')
+            else:
+                flash('Failed to activate subscription in development mode.', 'error')
         else:
             flash('Payment system temporarily unavailable. Please try again later.', 'error')
         return redirect(url_for('billing.upgrade'))
