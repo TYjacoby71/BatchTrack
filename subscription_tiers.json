@@ -22,9 +22,7 @@
   },
   "solo": {
     "name": "Solo Plan",
-    "feature_groups": [
-      "basic_dashboard"
-    ],
+    "feature_groups": [],
     "stripe_lookup_key": "batchtrack_solo_monthly",
     "user_limit": 1,
     "fallback_features": [
