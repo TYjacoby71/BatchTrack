@@ -31,9 +31,28 @@ with app.app_context():
             print(f"   Organization Tier: {admin_user.organization.subscription_tier}")
             print(f"   Effective Tier: {admin_user.organization.effective_subscription_tier}")
         
-        # Check permissions
-        has_manage_org = admin_user.has_permission('manage_organization')
-        print(f"   Has 'manage_organization' permission: {has_manage_org}")
+        # Check permissions with correct names from the seeder
+        permissions_to_check = [
+            'organization.view',
+            'organization.edit', 
+            'organization.manage_users',
+            'organization.manage_roles',
+            'organization.manage_billing'
+        ]
+        
+        print("\n   Permission Check Results:")
+        for perm in permissions_to_check:
+            has_perm = admin_user.has_permission(perm)
+            print(f"     {perm}: {has_perm}")
+        
+        # Check what permissions are available for exempt tier
+        from app.models.permission import Permission
+        exempt_permissions = Permission.get_permissions_for_tier('exempt')
+        print(f"\n   Total permissions available for exempt tier: {len(exempt_permissions)}")
+        
+        # Show organization permissions specifically
+        org_perms = [p for p in exempt_permissions if p.name.startswith('organization.')]
+        print(f"   Organization permissions for exempt tier: {[p.name for p in org_perms]}")
         
         # Fix if needed
         needs_fix = False
