@@ -82,7 +82,7 @@ class Organization(db.Model):
         effective_tier = self.effective_subscription_tier
         return features.get(effective_tier, features['solo'])
 
-class User(UserMixin, SecurityUserMixin, db.Model):
+class User(SecurityUserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(64), unique=True, nullable=False)
     password = db.Column(db.String(128), nullable=False)  # Flask-Security-Too uses 'password' not 'password_hash'
@@ -99,6 +99,9 @@ class User(UserMixin, SecurityUserMixin, db.Model):
     
     # Flask-Security-Too email confirmation fields
     confirmed_at = db.Column(db.DateTime)
+    
+    # Flask-Security-Too uniquifier field (required as of 4.0.0)
+    fs_uniquifier = db.Column(db.String(255), unique=True, nullable=False)
     
     # Flask-Security-Too roles relationship
     roles = db.relationship('FlaskRole', secondary='roles_users', backref=db.backref('users', lazy='dynamic'))
