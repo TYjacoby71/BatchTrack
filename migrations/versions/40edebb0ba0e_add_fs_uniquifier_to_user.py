@@ -58,12 +58,31 @@ def upgrade():
         batch_op.create_unique_constraint('_unit_name_org_uc', ['name', 'organization_id'])
         batch_op.create_index('ix_unit_standard_unique', ['name'], unique=True)
 
+    # First, add nullable columns
     with op.batch_alter_table('user', schema=None) as batch_op:
-        batch_op.add_column(sa.Column('password', sa.String(length=128), nullable=False))
+        batch_op.add_column(sa.Column('password', sa.String(length=128), nullable=True))
         batch_op.add_column(sa.Column('active', sa.Boolean(), nullable=True))
         batch_op.add_column(sa.Column('last_login_at', sa.DateTime(), nullable=True))
         batch_op.add_column(sa.Column('confirmed_at', sa.DateTime(), nullable=True))
-        batch_op.add_column(sa.Column('fs_uniquifier', sa.String(length=255), nullable=False))
+        batch_op.add_column(sa.Column('fs_uniquifier', sa.String(length=255), nullable=True))
+    
+    # Migrate data from old columns to new columns
+    bind = op.get_bind()
+    import uuid
+    # Copy password_hash to password and generate fs_uniquifier for existing users
+    bind.execute(sa.text("UPDATE user SET password = password_hash WHERE password_hash IS NOT NULL"))
+    bind.execute(sa.text("UPDATE user SET active = is_active WHERE is_active IS NOT NULL"))
+    # Generate unique fs_uniquifier for existing users
+    result = bind.execute(sa.text("SELECT id FROM user WHERE fs_uniquifier IS NULL"))
+    for row in result:
+        unique_id = str(uuid.uuid4())
+        bind.execute(sa.text("UPDATE user SET fs_uniquifier = :unique_id WHERE id = :user_id"), 
+                    {"unique_id": unique_id, "user_id": row[0]})
+    
+    # Now make required columns NOT NULL and add constraints
+    with op.batch_alter_table('user', schema=None) as batch_op:
+        batch_op.alter_column('password', nullable=False)
+        batch_op.alter_column('fs_uniquifier', nullable=False)
         batch_op.alter_column('email',
                existing_type=sa.VARCHAR(length=120),
                nullable=False)
