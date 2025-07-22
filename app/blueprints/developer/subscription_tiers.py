@@ -39,6 +39,7 @@ def get_default_tier_permissions():
             'products.view',
             'products.create',
             'products.edit',
+            'organization.manage_billing',
             'alerts.view',
             'alerts.dismiss',
             'reports.view'
