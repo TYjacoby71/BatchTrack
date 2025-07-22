@@ -46,11 +46,11 @@ def upgrade():
     )
     
     # Add constraint that either role_id OR developer_role_id must be set (but not both)
-    op.create_check_constraint(
-        'ck_user_role_assignment_role_xor',
-        'user_role_assignment',
-        '(role_id IS NOT NULL AND developer_role_id IS NULL) OR (role_id IS NULL AND developer_role_id IS NOT NULL)'
-    )
+    with op.batch_alter_table('user_role_assignment', schema=None) as batch_op:
+        batch_op.create_check_constraint(
+            'ck_user_role_assignment_role_xor',
+            '(role_id IS NOT NULL AND developer_role_id IS NULL) OR (role_id IS NULL AND developer_role_id IS NOT NULL)'
+        )
     
     # Restore existing data
     if existing_data:
@@ -72,8 +72,9 @@ def upgrade():
 
 
 def downgrade():
-    # Remove the check constraint
-    op.drop_constraint('ck_user_role_assignment_role_xor', 'user_role_assignment', type_='check')
+    # Remove the check constraint using batch mode
+    with op.batch_alter_table('user_role_assignment', schema=None) as batch_op:
+        batch_op.drop_constraint('ck_user_role_assignment_role_xor', type_='check')
     
     # Recreate table with old constraints (role_id NOT NULL)
     connection = op.get_bind()
