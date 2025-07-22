@@ -157,15 +157,12 @@
                                     <td>{{ user.full_name }}</td>
                                     <td>{{ user.email or 'N/A' }}</td>
                                     <td>
-                                        <select class="form-select" onchange="updateDeveloperUserRole({{ user.id }}, this.value, '{{ user.username }}')">
-                                            <option value="">No role</option>
-                                            {% for role in developer_roles %}
-                                            <option value="{{ role.id }}" 
-                                                {% if user.get_active_roles() and user.get_active_roles()[0].id == role.id %}selected{% endif %}>
-                                                {{ role.name }}
-                                            </option>
-                                            {% endfor %}
-                                        </select>
+                                        {% set current_role = user.get_active_roles()[0] if user.get_active_roles() else None %}
+                                        {% if current_role %}
+                                            <span class="badge bg-success">{{ current_role.name }}</span>
+                                        {% else %}
+                                            <span class="text-muted">No role</span>
+                                        {% endif %}
                                     </td>
                                     <td>{{ user.created_at.strftime('%Y-%m-%d') }}</td>
                                     <td>
@@ -733,35 +730,6 @@ function getCSRFToken() {
     return tokenMeta ? tokenMeta.getAttribute('content') : '';
 }
 
-function updateDeveloperUserRole(userId, roleId, username) {
-        fetch(`/developer/developer-users/${userId}/role`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCSRFToken()
-            },
-            body: JSON.stringify({
-                developer_role_id: roleId || null
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                // Show success message
-                showAlert('success', data.message);
-                // Optional: reload page after a short delay to show the message
-                setTimeout(() => {
-                    location.reload();
-                }, 1500);
-            } else {
-                showAlert('danger', 'Error: ' + data.error);
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            showAlert('danger', 'Network error occurred');
-        });
-    }
 
     function showAlert(type, message) {
         // Create alert element
