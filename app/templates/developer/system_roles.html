@@ -680,11 +680,15 @@ function saveEditDeveloperUserRole() {
     const userId = document.getElementById('editDeveloperUserId').value;
     const roleId = document.getElementById('editDeveloperUserRole').value;
     
+    console.log('Saving developer user role:', { userId, roleId });
+    
     const data = {
         developer_role_id: roleId || null
     };
     
-    fetch(`/developer/developer-users/${userId}/role`, {
+    const modal = bootstrap.Modal.getInstance(document.getElementById('editDeveloperUserRoleModal'));
+    
+    debugFetch(`/developer/developer-users/${userId}/role`, {
         method: 'PUT',
         headers: {
             'Content-Type': 'application/json',
@@ -692,27 +696,52 @@ function saveEditDeveloperUserRole() {
         },
         body: JSON.stringify(data)
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        return response.json();
+    })
     .then(result => {
+        console.log('Save result:', result);
         if (result.success) {
+            modal.hide();
             location.reload();
         } else {
-            alert(result.error);
+            alert(result.error || 'Unknown error occurred');
         }
     })
     .catch(error => {
         console.error('Error updating user role:', error);
-        alert('Failed to update user role');
+        alert(`Failed to update user role: ${error.message}`);
     });
 }
 
 function getCSRFToken() {
     return document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 }
-</script>it Role for ${username}`;
-    document.getElementById('editDeveloperUserId').value = userId;
-    new bootstrap.Modal(document.getElementById('editDeveloperUserRoleModal')).show();
+
+// Add debugging for network errors
+window.addEventListener('unhandledrejection', function(event) {
+    console.error('Unhandled promise rejection:', event.reason);
+    alert('Network error occurred. Check console for details.');
+});
+
+// Add debugging for fetch errors
+function debugFetch(url, options) {
+    console.log('Making request to:', url, 'with options:', options);
+    return fetch(url, options)
+        .then(response => {
+            console.log('Response status:', response.status);
+            console.log('Response headers:', [...response.headers.entries()]);
+            return response;
+        })
+        .catch(error => {
+            console.error('Fetch error:', error);
+            throw error;
+        });
 }
+</script>
 
 function saveDeveloperUserRole() {
     const userId = document.getElementById('editDeveloperUserId').value;
