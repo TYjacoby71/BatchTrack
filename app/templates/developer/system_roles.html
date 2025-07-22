@@ -1,4 +1,3 @@
-
 {% extends "layout.html" %}
 {% block content %}
 <div class="container-fluid">
@@ -37,7 +36,7 @@
                             <i class="fas fa-plus"></i> Create System Role
                         </button>
                     </div>
-                    
+
                     <div class="row">
                         {% for role in roles %}
                         <div class="col-md-6 mb-3">
@@ -90,7 +89,7 @@
                             <i class="fas fa-plus"></i> Create Developer Role
                         </button>
                     </div>
-                    
+
                     <div class="row">
                         {% for role in developer_roles %}
                         <div class="col-md-6 mb-3">
@@ -138,7 +137,7 @@
                             <i class="fas fa-plus"></i> Create Developer User
                         </button>
                     </div>
-                    
+
                     <div class="table-responsive">
                         <table class="table table-striped">
                             <thead>
@@ -158,11 +157,9 @@
                                     <td>{{ user.full_name }}</td>
                                     <td>{{ user.email or 'N/A' }}</td>
                                     <td>
-                                        {% set dev_roles = user.get_active_roles() %}
-                                        {% if dev_roles %}
-                                            {% for role in dev_roles %}
-                                            <span class="badge bg-success">{{ role.name }}</span>
-                                            {% endfor %}
+                                        {% set current_role = user.get_active_roles()[0] if user.get_active_roles() else None %}
+                                        {% if current_role %}
+                                            <span class="badge bg-success">{{ current_role.name }}</span>
                                         {% else %}
                                             <span class="text-muted">No role</span>
                                         {% endif %}
@@ -412,10 +409,10 @@ function saveSystemRole() {
         permission_ids: Array.from(document.querySelectorAll('#systemPermissionsList input:checked'))
             .map(cb => parseInt(cb.value))
     };
-    
+
     const url = roleId ? `/developer/system-roles/${roleId}` : '/developer/system-roles';
     const method = roleId ? 'PUT' : 'POST';
-    
+
     fetch(url, {
         method: method,
         headers: {
@@ -444,11 +441,11 @@ function loadSystemPermissions(selectedIds = []) {
         .then(data => {
             const container = document.getElementById('systemPermissionsList');
             container.innerHTML = '';
-            
+
             Object.entries(data.categories).forEach(([category, permissions]) => {
                 const categoryDiv = document.createElement('div');
                 categoryDiv.className = 'mb-3';
-                
+
                 const categoryHeader = document.createElement('div');
                 categoryHeader.className = 'd-flex justify-content-between align-items-center';
                 categoryHeader.innerHTML = `
@@ -459,7 +456,7 @@ function loadSystemPermissions(selectedIds = []) {
                     </div>
                 `;
                 categoryDiv.appendChild(categoryHeader);
-                
+
                 permissions.forEach(perm => {
                     const permDiv = document.createElement('div');
                     permDiv.className = 'form-check ms-3';
@@ -474,7 +471,7 @@ function loadSystemPermissions(selectedIds = []) {
                     `;
                     categoryDiv.appendChild(permDiv);
                 });
-                
+
                 container.appendChild(categoryDiv);
             });
         })
@@ -547,10 +544,10 @@ function saveDeveloperRole() {
         permission_ids: Array.from(document.querySelectorAll('#developerPermissionsList input:checked'))
             .map(cb => parseInt(cb.value))
     };
-    
+
     const url = roleId ? `/developer/developer-roles/${roleId}` : '/developer/developer-roles';
     const method = roleId ? 'PUT' : 'POST';
-    
+
     fetch(url, {
         method: method,
         headers: {
@@ -579,11 +576,11 @@ function loadDeveloperPermissions(selectedIds = []) {
         .then(data => {
             const container = document.getElementById('developerPermissionsList');
             container.innerHTML = '';
-            
+
             Object.entries(data.categories).forEach(([category, permissions]) => {
                 const categoryDiv = document.createElement('div');
                 categoryDiv.className = 'mb-3';
-                
+
                 const categoryHeader = document.createElement('div');
                 categoryHeader.className = 'd-flex justify-content-between align-items-center';
                 categoryHeader.innerHTML = `
@@ -594,7 +591,7 @@ function loadDeveloperPermissions(selectedIds = []) {
                     </div>
                 `;
                 categoryDiv.appendChild(categoryHeader);
-                
+
                 permissions.forEach(perm => {
                     const permDiv = document.createElement('div');
                     permDiv.className = 'form-check ms-3';
@@ -608,7 +605,7 @@ function loadDeveloperPermissions(selectedIds = []) {
                     `;
                     categoryDiv.appendChild(permDiv);
                 });
-                
+
                 container.appendChild(categoryDiv);
             });
         })
@@ -635,7 +632,7 @@ function saveDeveloperUser() {
         email: document.getElementById('developerUserEmail').value,
         developer_role_id: document.getElementById('developerUserRole').value || null
     };
-    
+
     fetch('/developer/developer-users', {
         method: 'POST',
         headers: {
@@ -669,7 +666,7 @@ function saveDeveloperUserRole() {
     const data = {
         developer_role_id: document.getElementById('editDeveloperUserRole').value || null
     };
-    
+
     fetch(`/developer/developer-users/${userId}/role`, {
         method: 'PUT',
         headers: {
@@ -732,5 +729,27 @@ function getCSRFToken() {
     const tokenMeta = document.querySelector('meta[name=csrf-token]');
     return tokenMeta ? tokenMeta.getAttribute('content') : '';
 }
+
+
+    function showAlert(type, message) {
+        // Create alert element
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+        alertDiv.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+
+        // Insert at top of page
+        const container = document.querySelector('.container-fluid');
+        container.insertBefore(alertDiv, container.firstChild);
+
+        // Auto-dismiss after 3 seconds
+        setTimeout(() => {
+            if (alertDiv.parentNode) {
+                alertDiv.remove();
+            }
+        }, 3000);
+    }
 </script>
 {% endblock %}
