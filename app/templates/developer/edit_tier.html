@@ -19,6 +19,7 @@
     </div>
 
     <form method="post">
+        {{ csrf_token() }}
         <div class="row mt-4">
             <!-- Basic Information -->
             <div class="col-md-6">
@@ -117,32 +118,77 @@
                 </div>
             </div>
 
-            <!-- Permissions -->
+            <!-- Feature Groups -->
             <div class="col-md-6">
                 <div class="card">
                     <div class="card-header">
-                        <h5 class="mb-0">Permissions</h5>
+                        <h5 class="mb-0">Feature Groups</h5>
                     </div>
                     <div class="card-body" style="max-height: 400px; overflow-y: auto;">
-                        {% set current_category = '' %}
-                        {% for permission in permissions %}
-                            {% if permission.category != current_category %}
-                                {% set current_category = permission.category %}
-                                <h6 class="mt-3 mb-2 text-primary">{{ current_category|title }}</h6>
-                            {% endif %}
-                            
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" 
-                                       id="perm_{{ permission.id }}" name="permissions" value="{{ permission.name }}"
-                                       {% if permission.name in tier.permissions %}checked{% endif %}>
-                                <label class="form-check-label" for="perm_{{ permission.id }}">
-                                    <strong>{{ permission.name }}</strong>
-                                    {% if permission.description %}
-                                        <br><small class="text-muted">{{ permission.description }}</small>
-                                    {% endif %}
-                                </label>
-                            </div>
-                        {% endfor %}
+                        <p class="text-muted small mb-3">Select the main feature groups available for this tier:</p>
+                        
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="feature_dashboard" name="feature_groups" value="dashboard"
+                                   {% if 'dashboard' in tier.get('feature_groups', []) %}checked{% endif %}>
+                            <label class="form-check-label" for="feature_dashboard">
+                                <strong>Dashboard & Analytics</strong>
+                                <br><small class="text-muted">Basic dashboard, metrics, and reporting</small>
+                            </label>
+                        </div>
+                        
+                        <div class="form-check mt-3">
+                            <input class="form-check-input" type="checkbox" id="feature_inventory" name="feature_groups" value="inventory"
+                                   {% if 'inventory' in tier.get('feature_groups', []) %}checked{% endif %}>
+                            <label class="form-check-label" for="feature_inventory">
+                                <strong>Inventory Management</strong>
+                                <br><small class="text-muted">Stock tracking, adjustments, and alerts</small>
+                            </label>
+                        </div>
+                        
+                        <div class="form-check mt-3">
+                            <input class="form-check-input" type="checkbox" id="feature_batches" name="feature_groups" value="batches"
+                                   {% if 'batches' in tier.get('feature_groups', []) %}checked{% endif %}>
+                            <label class="form-check-label" for="feature_batches">
+                                <strong>Batch Production</strong>
+                                <br><small class="text-muted">Recipe management, batch tracking, and costing</small>
+                            </label>
+                        </div>
+                        
+                        <div class="form-check mt-3">
+                            <input class="form-check-input" type="checkbox" id="feature_products" name="feature_groups" value="products"
+                                   {% if 'products' in tier.get('feature_groups', []) %}checked{% endif %}>
+                            <label class="form-check-label" for="feature_products">
+                                <strong>Product Management</strong>
+                                <br><small class="text-muted">SKU management, variants, and reservations</small>
+                            </label>
+                        </div>
+                        
+                        <div class="form-check mt-3">
+                            <input class="form-check-input" type="checkbox" id="feature_users" name="feature_groups" value="user_management"
+                                   {% if 'user_management' in tier.get('feature_groups', []) %}checked{% endif %}>
+                            <label class="form-check-label" for="feature_users">
+                                <strong>User Management</strong>
+                                <br><small class="text-muted">Team member management and role assignments</small>
+                            </label>
+                        </div>
+                        
+                        <div class="form-check mt-3">
+                            <input class="form-check-input" type="checkbox" id="feature_api" name="feature_groups" value="api_access"
+                                   {% if 'api_access' in tier.get('feature_groups', []) %}checked{% endif %}>
+                            <label class="form-check-label" for="feature_api">
+                                <strong>API Access</strong>
+                                <br><small class="text-muted">REST API for integrations and automation</small>
+                            </label>
+                        </div>
+                        
+                        <div class="form-check mt-3">
+                            <input class="form-check-input" type="checkbox" id="feature_advanced" name="feature_groups" value="advanced_features"
+                                   {% if 'advanced_features' in tier.get('feature_groups', []) %}checked{% endif %}>
+                            <label class="form-check-label" for="feature_advanced">
+                                <strong>Advanced Features</strong>
+                                <br><small class="text-muted">FIFO tracking, expiration management, advanced alerts</small>
+                            </label>
+                        </div>
                     </div>
                 </div>
             </div>

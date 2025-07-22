@@ -19,7 +19,7 @@ def load_tiers_config():
     return {
         'solo': {
             'name': 'Solo Plan',
-            'permissions': ['dashboard.view', 'batches.view', 'batches.create'],
+            'feature_groups': ['dashboard', 'inventory', 'batches'],
             'stripe_lookup_key': 'solo-plan',
             'user_limit': 5,
             'fallback_features': ['Up to 5 users', 'Full batch tracking', 'Email support'],
@@ -30,7 +30,7 @@ def load_tiers_config():
         },
         'team': {
             'name': 'Team Plan', 
-            'permissions': ['dashboard.view', 'batches.view', 'batches.create', 'organization.manage_users'],
+            'feature_groups': ['dashboard', 'inventory', 'batches', 'products', 'user_management'],
             'stripe_lookup_key': 'team-plan',
             'user_limit': 10,
             'fallback_features': ['Up to 10 users', 'Advanced features', 'Custom roles'],
@@ -41,7 +41,7 @@ def load_tiers_config():
         },
         'enterprise': {
             'name': 'Enterprise Plan',
-            'permissions': ['dashboard.view', 'batches.view', 'batches.create', 'organization.manage_users', 'api.access'],
+            'feature_groups': ['dashboard', 'inventory', 'batches', 'products', 'user_management', 'api_access', 'advanced_features'],
             'stripe_lookup_key': 'enterprise-plan',
             'user_limit': -1,
             'fallback_features': ['Unlimited users', 'All features', 'API access'],
@@ -126,7 +126,7 @@ def edit_tier(tier_key):
         
         # Update tier data
         tier['name'] = request.form.get('tier_name', tier['name'])
-        tier['permissions'] = request.form.getlist('permissions')
+        tier['feature_groups'] = request.form.getlist('feature_groups')
         tier['stripe_lookup_key'] = request.form.get('stripe_lookup_key', '')
         tier['user_limit'] = int(request.form.get('user_limit', 1))
         tier['fallback_features'] = [f.strip() for f in request.form.get('fallback_features', '').split('\n') if f.strip()]

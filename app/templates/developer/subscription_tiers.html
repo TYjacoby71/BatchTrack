@@ -85,13 +85,13 @@
                     </div>
 
                     <div class="mt-3">
-                        <h6>Local Permissions:</h6>
+                        <h6>Feature Groups:</h6>
                         <div class="small">
-                            {% for permission in tier_data.permissions[:3] %}
-                                <span class="badge bg-secondary me-1">{{ permission }}</span>
+                            {% for feature in tier_data.get('feature_groups', [])[:3] %}
+                                <span class="badge bg-info me-1">{{ feature.replace('_', ' ').title() }}</span>
                             {% endfor %}
-                            {% if tier_data.permissions|length > 3 %}
-                                <span class="badge bg-light text-dark">+{{ tier_data.permissions|length - 3 }} more</span>
+                            {% if tier_data.get('feature_groups', [])|length > 3 %}
+                                <span class="badge bg-light text-dark">+{{ tier_data.get('feature_groups', [])|length - 3 }} more</span>
                             {% endif %}
                         </div>
                     </div>
