@@ -501,6 +501,10 @@ def toggle_user_status(user_id):
             'message': f'User {user.full_name} {status_text} successfully'
         })
 
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)})
+
 @organization_bp.route('/user/<int:user_id>', methods=['DELETE'])
 @login_required
 def delete_user(user_id):
