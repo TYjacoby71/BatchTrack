@@ -1,6 +1,7 @@
 from flask import Flask
 from flask_login import LoginManager
 from flask_migrate import Migrate
+from flask_security import Security, SQLAlchemyUserDatastore
 from .extensions import db
 from .models import User
 import os
