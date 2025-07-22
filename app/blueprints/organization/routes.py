@@ -63,7 +63,7 @@ def dashboard():
         user_type='team_member'
     ).count()
 
-    # Get permission categories for role creation modal
+    # Get permission categories for role creation modal (all permissions are now organization permissions)
     from app.models.permission import Permission
     permissions = Permission.query.filter_by(is_active=True).all()
     permission_categories = {}

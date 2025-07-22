@@ -1,4 +1,3 @@
-
 """Models package - imports all models for the application"""
 from ..extensions import db
 from .mixins import ScopedModelMixin
@@ -16,6 +15,8 @@ from .user_role_assignment import UserRoleAssignment
 from .user_preferences import *
 from .statistics import UserStats, OrganizationStats, Leaderboard
 from .subscription import Subscription
+from .developer_permission import DeveloperPermission
+from .developer_role import DeveloperRole
 
 # Re-export everything for convenience
 __all__ = [
@@ -25,6 +26,6 @@ __all__ = [
     'ExtraBatchIngredient', 'InventoryItem', 'BatchInventoryLog', 'Tag',
     'Product', 'ProductVariant', 'ProductSKU', 'ProductSKUHistory', 'Reservation', 
     'Role', 'Permission', 'role_permission', 'UserRoleAssignment', 'UserStats', 
-    'OrganizationStats', 'Leaderboard', 'Subscription',
+    'OrganizationStats', 'Leaderboard', 'Subscription', 'DeveloperPermission', 'DeveloperRole',
     '*'
 ]
