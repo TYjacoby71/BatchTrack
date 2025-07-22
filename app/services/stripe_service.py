@@ -212,23 +212,50 @@ class StripeService:
     def simulate_subscription_success(organization, tier='team'):
         """Simulate successful subscription for development/testing"""
         from flask import current_app
+        from datetime import timedelta
+        from ..models import Subscription
         
-        if current_app.config.get('STRIPE_WEBHOOK_SECRET'):
-            # Production mode - require real webhooks
+        logger.info(f"Simulating subscription for org {organization.id}, tier: {tier}")
+        
+        # Allow simulation if webhook secret is not configured OR if tier is not stripe-ready
+        from ..blueprints.developer.subscription_tiers import load_tiers_config
+        tiers_config = load_tiers_config()
+        tier_data = tiers_config.get(tier, {})
+        is_stripe_ready = tier_data.get('is_stripe_ready', False)
+        
+        if current_app.config.get('STRIPE_WEBHOOK_SECRET') and is_stripe_ready:
+            # Production mode with stripe-ready tier - require real webhooks
+            logger.info(f"Production mode with stripe-ready tier {tier} - requiring real webhooks")
             return False
             
-        # Development mode - simulate webhook data
+        # Development mode or non-stripe-ready tier - simulate webhook data
         subscription = organization.subscription
         if not subscription:
-            return False
-            
-        # Simulate successful subscription creation
-        subscription.status = 'active'
-        subscription.tier = tier
-        subscription.current_period_start = TimezoneUtils.utc_now()
-        subscription.current_period_end = TimezoneUtils.utc_now() + timedelta(days=30)
+            logger.info(f"Creating new subscription record for organization {organization.id}")
+            # Create a new subscription record
+            subscription = Subscription(
+                organization_id=organization.id,
+                status='active',
+                tier=tier,
+                current_period_start=TimezoneUtils.utc_now(),
+                current_period_end=TimezoneUtils.utc_now() + timedelta(days=30)
+            )
+            db.session.add(subscription)
+        else:
+            logger.info(f"Updating existing subscription for organization {organization.id}")
+            # Update existing subscription
+            subscription.status = 'active'
+            subscription.tier = tier
+            subscription.current_period_start = TimezoneUtils.utc_now()
+            subscription.current_period_end = TimezoneUtils.utc_now() + timedelta(days=30)
+        
         subscription.next_billing_date = subscription.current_period_end
         
-        db.session.commit()
-        logger.info(f"Simulated subscription activation for org {organization.id} (dev mode)")
-        return True
+        try:
+            db.session.commit()
+            logger.info(f"Successfully simulated subscription activation for org {organization.id}, tier: {tier}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to simulate subscription for org {organization.id}: {str(e)}")
+            db.session.rollback()
+            return False
