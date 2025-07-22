@@ -91,11 +91,10 @@
       "products",
       "user_management",
       "api_access",
-      "advanced_features",
-      "developer_access"
+      "advanced_features"
     ],
     "stripe_lookup_key": "",
-    "user_limit": -1,
+    "user_limit": 50,
     "fallback_features": [
       "Unlimited users",
       "All features",
