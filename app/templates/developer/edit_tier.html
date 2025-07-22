@@ -43,40 +43,38 @@
                 </div>
             </div>
 
-            <!-- Pricing Information -->
+            <!-- Stripe Configuration -->
             <div class="col-md-6">
                 <div class="card">
                     <div class="card-header">
-                        <h5 class="mb-0">Pricing Information</h5>
+                        <h5 class="mb-0">Stripe Integration</h5>
                     </div>
                     <div class="card-body">
                         <div class="mb-3">
-                            <label for="stripe_price_id" class="form-label">Stripe Monthly Price ID</label>
-                            <input type="text" class="form-control" id="stripe_price_id" name="stripe_price_id"
-                                   value="{{ tier.stripe_price_id }}">
+                            <label for="stripe_lookup_key" class="form-label">Stripe Lookup Key *</label>
+                            <input type="text" class="form-control" id="stripe_lookup_key" name="stripe_lookup_key"
+                                   value="{{ tier.stripe_lookup_key or '' }}" 
+                                   placeholder="e.g., solo-plan, team-plan">
+                            <small class="form-text text-muted">
+                                This should match the lookup key in your Stripe product configuration.
+                                <br>Used to sync pricing and features from Stripe.
+                            </small>
                         </div>
                         
-                        <div class="mb-3">
-                            <label for="stripe_yearly_price_id" class="form-label">Stripe Yearly Price ID</label>
-                            <input type="text" class="form-control" id="stripe_yearly_price_id" name="stripe_yearly_price_id"
-                                   value="{{ tier.stripe_yearly_price_id }}">
+                        <div class="alert alert-info">
+                            <h6><i class="fas fa-info-circle"></i> Stripe Configuration</h6>
+                            <p class="mb-2">Configure your Stripe secrets in the <a href="/secrets" target="_blank">Secrets tab</a>:</p>
+                            <ul class="mb-0">
+                                <li><code>STRIPE_SECRET_KEY</code> - Your Stripe secret key</li>
+                                <li><code>STRIPE_PUBLISHABLE_KEY</code> - Your Stripe publishable key</li>
+                            </ul>
                         </div>
                         
-                        <div class="row">
-                            <div class="col-6">
-                                <div class="mb-3">
-                                    <label for="price_display" class="form-label">Monthly Price Display</label>
-                                    <input type="text" class="form-control" id="price_display" name="price_display"
-                                           value="{{ tier.price_display }}">
-                                </div>
-                            </div>
-                            <div class="col-6">
-                                <div class="mb-3">
-                                    <label for="price_yearly_display" class="form-label">Yearly Price Display</label>
-                                    <input type="text" class="form-control" id="price_yearly_display" name="price_yearly_display"
-                                           value="{{ tier.price_yearly_display }}">
-                                </div>
-                            </div>
+                        <div class="mt-3">
+                            <h6>Current Stripe Data:</h6>
+                            <p><strong>Monthly Price:</strong> {{ tier.stripe_price_monthly or 'Not synced' }}</p>
+                            <p><strong>Yearly Price:</strong> {{ tier.stripe_price_yearly or 'Not synced' }}</p>
+                            <p><strong>Last Synced:</strong> {{ tier.last_synced or 'Never' }}</p>
                         </div>
                     </div>
                 </div>
@@ -91,10 +89,29 @@
                         <h5 class="mb-0">Features</h5>
                     </div>
                     <div class="card-body">
+                        <div class="alert alert-warning">
+                            <h6><i class="fas fa-exclamation-triangle"></i> Stripe Integration</h6>
+                            <p class="mb-2">Features are automatically synced from Stripe product metadata.</p>
+                            <p class="mb-0">Configure features in your Stripe Dashboard under Product → Metadata → "features" (comma-separated).</p>
+                        </div>
+                        
                         <div class="mb-3">
-                            <label for="features" class="form-label">Feature List</label>
-                            <textarea class="form-control" id="features" name="features" rows="8">{{ tier.features | join('\n') }}</textarea>
-                            <small class="form-text text-muted">Enter one feature per line</small>
+                            <label class="form-label">Current Stripe Features:</label>
+                            {% if tier.stripe_features %}
+                                <ul class="list-group">
+                                    {% for feature in tier.stripe_features %}
+                                        <li class="list-group-item">{{ feature }}</li>
+                                    {% endfor %}
+                                </ul>
+                            {% else %}
+                                <p class="text-muted">No features synced from Stripe. Check your Stripe product configuration.</p>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="fallback_features" class="form-label">Fallback Features (Local Override)</label>
+                            <textarea class="form-control" id="fallback_features" name="fallback_features" rows="4">{{ tier.fallback_features | join('\n') if tier.fallback_features else '' }}</textarea>
+                            <small class="form-text text-muted">Used only if Stripe sync fails. One feature per line.</small>
                         </div>
                     </div>
                 </div>
