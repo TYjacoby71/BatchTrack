@@ -206,6 +206,30 @@ class StripeService:
             logger.error(f"Failed to cancel subscription for org {organization.id}: {str(e)}")
             return False
 
+    @staticmethod
+    def create_customer_portal_session(organization, return_url):
+        """Create a Stripe Customer Portal session for self-service billing management"""
+        if not StripeService.initialize_stripe():
+            logger.error("Stripe not configured")
+            return None
+            
+        if not organization.subscription or not organization.subscription.stripe_customer_id:
+            logger.error(f"No Stripe customer ID for org {organization.id}")
+            return None
+            
+        try:
+            session = stripe.billing_portal.Session.create(
+                customer=organization.subscription.stripe_customer_id,
+                return_url=return_url,
+            )
+            
+            logger.info(f"Created customer portal session for org {organization.id}")
+            return session
+            
+        except stripe.error.StripeError as e:
+            logger.error(f"Failed to create customer portal session for org {organization.id}: {str(e)}")
+            return None
+
 
 
     @staticmethod

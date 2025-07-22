@@ -153,6 +153,29 @@ def checkout(tier, billing_cycle='monthly'):
 
     return redirect(session.url)
 
+@billing_bp.route('/customer-portal')
+@login_required
+def customer_portal():
+    """Redirect to Stripe Customer Portal for self-service billing management"""
+    if not has_permission(current_user, 'organization.manage_billing'):
+        flash('You do not have permission to manage billing.', 'error')
+        return redirect(url_for('organization.dashboard'))
+    
+    # Create return URL to billing tab
+    return_url = url_for('settings.index', _external=True) + '#billing'
+    
+    session = StripeService.create_customer_portal_session(current_user.organization, return_url)
+    
+    if not session:
+        # Fallback for development mode or if customer portal fails
+        if not current_app.config.get('STRIPE_WEBHOOK_SECRET'):
+            flash('Customer portal not available in development mode.', 'info')
+        else:
+            flash('Unable to access billing management. Please contact support.', 'error')
+        return redirect(url_for('settings.index') + '#billing')
+    
+    return redirect(session.url)
+
 @billing_bp.route('/cancel-subscription', methods=['POST'])
 @login_required
 def cancel_subscription():

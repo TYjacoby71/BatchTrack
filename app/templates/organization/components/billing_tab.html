@@ -35,7 +35,23 @@
             </div>
             <div class="card-body">
                 <p>Unlock more features and users with our premium plans.</p>
-                <a href="{{ url_for('billing.upgrade') }}" class="btn btn-light">View All Plans</a>
+                <div class="d-flex gap-2">
+                    <a href="{{ url_for('billing.upgrade') }}" class="btn btn-light">View All Plans</a>
+                    {% if organization.subscription and organization.subscription.stripe_customer_id %}
+                    <a href="{{ url_for('billing.customer_portal') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-cog"></i> Manage Billing
+                    </a>
+                    {% endif %}
+                </div>
+                
+                {% if organization.subscription and organization.subscription.stripe_customer_id %}
+                <div class="mt-3">
+                    <small class="text-muted">
+                        <i class="fas fa-info-circle"></i> 
+                        Use "Manage Billing" to update payment methods, view invoices, and change billing address.
+                    </small>
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>
