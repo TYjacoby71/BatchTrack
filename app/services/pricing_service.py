@@ -10,32 +10,59 @@ class PricingService:
     """Service for fetching pricing information from Stripe"""
     
     @staticmethod
-    def get_pricing_data():
-        """Get comprehensive pricing data from Stripe for all tiers"""
-        # Default fallback pricing data
-        pricing_data = {
+    def _load_tiers_config():
+        """Load subscription tiers configuration from JSON file"""
+        import os
+        import json
+        
+        config_file = 'subscription_tiers.json'
+        if os.path.exists(config_file):
+            with open(config_file, 'r') as f:
+                return json.load(f)
+        
+        # Fallback to default configuration
+        return {
             'solo': {
-                'price': '$29', 
-                'price_yearly': '$290',
-                'features': ['Up to 5 users', 'Full batch tracking', 'Email support'],
                 'name': 'Solo Plan',
-                'description': 'Perfect for small operations'
+                'price_display': '$29',
+                'price_yearly_display': '$290',
+                'features': ['Up to 5 users', 'Full batch tracking', 'Email support'],
+                'stripe_price_id': '',
+                'user_limit': 5
             },
             'team': {
-                'price': '$79', 
-                'price_yearly': '$790',
-                'features': ['Up to 10 users', 'Advanced features', 'Custom roles'],
                 'name': 'Team Plan',
-                'description': 'Great for growing businesses'
+                'price_display': '$79',
+                'price_yearly_display': '$790',
+                'features': ['Up to 10 users', 'Advanced features', 'Custom roles'],
+                'stripe_price_id': '',
+                'user_limit': 10
             },
             'enterprise': {
-                'price': '$199', 
-                'price_yearly': '$1990',
-                'features': ['Unlimited users', 'All features', 'API access'],
                 'name': 'Enterprise Plan',
-                'description': 'Full-featured solution'
+                'price_display': '$199',
+                'price_yearly_display': '$1990',
+                'features': ['Unlimited users', 'All features', 'API access'],
+                'stripe_price_id': '',
+                'user_limit': -1
             }
         }
+    
+    @staticmethod
+    def get_pricing_data():
+        """Get comprehensive pricing data from Stripe for all tiers"""
+        # Load dynamic tiers configuration
+        pricing_data = PricingService._load_tiers_config()
+        
+        # Convert to expected format
+        for tier_key, tier_data in pricing_data.items():
+            pricing_data[tier_key] = {
+                'price': tier_data.get('price_display', '$0'),
+                'price_yearly': tier_data.get('price_yearly_display', '$0'),
+                'features': tier_data.get('features', []),
+                'name': tier_data.get('name', tier_key.title()),
+                'description': f"Perfect for {tier_key} operations"
+            }
         
         # Only try to fetch from Stripe if properly configured
         if not StripeService.initialize_stripe():

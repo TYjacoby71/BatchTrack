@@ -1,0 +1,157 @@
+
+{% extends 'layout.html' %}
+
+{% block title %}Subscription Tiers Management - Developer{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div>
+                        <h3 class="mb-0">
+                            <i class="fas fa-layer-group text-primary"></i> Subscription Tiers Management
+                        </h3>
+                        <p class="text-muted mb-0">Configure subscription tiers, permissions, and pricing</p>
+                    </div>
+                    <a href="{{ url_for('developer.subscription_tiers.create_tier') }}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Create New Tier
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Existing Tiers -->
+    <div class="row">
+        {% for tier_key, tier_data in tiers.items() %}
+        <div class="col-lg-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">{{ tier_data.name }}</h5>
+                    <small class="text-muted">Key: {{ tier_key }}</small>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <strong>Pricing:</strong>
+                        <br>Monthly: {{ tier_data.price_display }}
+                        <br>Yearly: {{ tier_data.price_yearly_display }}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong>User Limit:</strong>
+                        {% if tier_data.user_limit == -1 %}
+                            Unlimited
+                        {% else %}
+                            {{ tier_data.user_limit }}
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <strong>Stripe Price IDs:</strong>
+                        <br><small>Monthly: {{ tier_data.stripe_price_id or 'Not set' }}</small>
+                        <br><small>Yearly: {{ tier_data.stripe_yearly_price_id or 'Not set' }}</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong>Features:</strong>
+                        <ul class="list-unstyled small">
+                            {% for feature in tier_data.features %}
+                            <li><i class="fas fa-check text-success me-1"></i>{{ feature }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong>Permissions ({{ tier_data.permissions|length }}):</strong>
+                        <div class="small">
+                            {% for permission in tier_data.permissions[:3] %}
+                                <span class="badge bg-secondary me-1">{{ permission }}</span>
+                            {% endfor %}
+                            {% if tier_data.permissions|length > 3 %}
+                                <span class="badge bg-light text-dark">+{{ tier_data.permissions|length - 3 }} more</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer d-flex justify-content-between">
+                    <a href="{{ url_for('developer.subscription_tiers.edit_tier', tier_key=tier_key) }}" 
+                       class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-edit"></i> Edit
+                    </a>
+                    <button class="btn btn-outline-danger btn-sm" 
+                            onclick="confirmDelete('{{ tier_key }}', '{{ tier_data.name }}')">
+                        <i class="fas fa-trash"></i> Delete
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- System Integration Info -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card border-info">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0"><i class="fas fa-info-circle"></i> Integration Notes</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>To Add a New Tier:</h6>
+                            <ol class="small">
+                                <li>Create product in Stripe Dashboard</li>
+                                <li>Copy the Price IDs (monthly/yearly)</li>
+                                <li>Create tier here with those Price IDs</li>
+                                <li>Select appropriate permissions</li>
+                                <li>Test with a trial organization</li>
+                            </ol>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Available Permissions:</h6>
+                            <div class="small">
+                                Total: {{ all_permissions|length }} permissions available
+                                <br>Categories: Dashboard, Batches, Inventory, Organization, Reports, API
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the subscription tier "<span id="tierName"></span>"?</p>
+                <p class="text-warning"><i class="fas fa-exclamation-triangle"></i> This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteForm" method="post" style="display: inline;">
+                    <button type="submit" class="btn btn-danger">Delete Tier</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function confirmDelete(tierKey, tierName) {
+    document.getElementById('tierName').textContent = tierName;
+    document.getElementById('deleteForm').action = `/developer/subscription-tiers/delete/${tierKey}`;
+    
+    const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    modal.show();
+}
+</script>
+{% endblock %}
