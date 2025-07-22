@@ -27,28 +27,31 @@ def init_db():
 def seed_all_command():
     """Seed all data"""
     try:
-        # First seed the consolidated permissions system
-        from .seeders.consolidated_permission_seeder import seed_consolidated_permissions
-        seed_consolidated_permissions()
+        from flask import current_app
+        
+        with current_app.app_context():
+            # First seed the consolidated permissions system
+            from .seeders.consolidated_permission_seeder import seed_consolidated_permissions
+            seed_consolidated_permissions()
 
-        seed_units()
+            seed_units()
 
-        # Seed users first to create organization
-        seed_users()
+            # Seed users first to create organization
+            seed_users()
 
-        # Get the organization ID from the first organization
-        from .models import Organization
-        org = Organization.query.first()
-        if org:
-            seed_categories(organization_id=org.id)
-        else:
-            click.echo('❌ No organization found for seeding categories')
-            return
+            # Get the organization ID from the first organization
+            from .models import Organization
+            org = Organization.query.first()
+            if org:
+                seed_categories(organization_id=org.id)
+            else:
+                click.echo('❌ No organization found for seeding categories')
+                return
 
-        # Update existing users with database roles
-        update_existing_users_with_roles()
+            # Update existing users with database roles
+            update_existing_users_with_roles()
 
-        click.echo('✅ All data seeded successfully!')
+            click.echo('✅ All data seeded successfully!')
     except Exception as e:
         click.echo(f'❌ Error seeding data: {str(e)}')
         raise
