@@ -22,10 +22,13 @@ def has_permission(user_or_permission_name, permission_name=None):
         return True
 
     # Check through assigned roles for all user types (including org owners)
-    roles = user.get_active_roles()
-    for role in roles:
-        if role.has_permission(permission):
-            return True
+    try:
+        roles = user.get_active_roles() if hasattr(user, 'get_active_roles') else []
+        for role in roles:
+            if hasattr(role, 'has_permission') and role.has_permission(permission):
+                return True
+    except Exception as e:
+        print(f"Error checking user roles: {e}")
 
     return False
 
@@ -33,7 +36,15 @@ def has_role(role_name):
     """Check if current user has specific role"""
     if not current_user.is_authenticated:
         return False
-    return any(role.name == role_name for role in current_user.get_active_roles())
+    
+    try:
+        if hasattr(current_user, 'get_active_roles'):
+            roles = current_user.get_active_roles()
+            return any(role.name == role_name for role in roles)
+    except Exception as e:
+        print(f"Error checking role {role_name}: {e}")
+    
+    return False
 
 def has_subscription_feature(feature):
     """Check if current user's organization has subscription feature"""
