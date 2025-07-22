@@ -126,8 +126,17 @@ def create_app():
     app.register_blueprint(reservation_api_bp)
 
     # Register billing blueprint
-    from .blueprints.billing import billing_bp
-    app.register_blueprint(billing_bp, url_prefix='/billing')
+    try:
+        from .blueprints.billing import billing_bp
+        print(f"DEBUG: Billing blueprint imported successfully: {billing_bp}")
+        print(f"DEBUG: Billing blueprint name: {billing_bp.name}")
+        print(f"DEBUG: Billing blueprint url_prefix: {billing_bp.url_prefix}")
+        app.register_blueprint(billing_bp)
+        print("DEBUG: Billing blueprint registered successfully")
+    except Exception as e:
+        print(f"ERROR: Failed to register billing blueprint: {e}")
+        import traceback
+        traceback.print_exc()
 
     # Register all blueprints
     app.register_blueprint(auth_bp, url_prefix='/auth')
@@ -188,6 +197,15 @@ def create_app():
         # Check for specific container route
         container_routes = [rule.rule for rule in app.url_map.iter_rules() if 'container' in rule.rule]
         print(f"Container routes found: {container_routes}")
+        
+        # Debug billing routes
+        billing_routes = [rule.rule for rule in app.url_map.iter_rules() if 'billing' in rule.rule]
+        print(f"Billing routes found: {billing_routes}")
+        
+        # Debug all registered endpoints
+        all_endpoints = [(rule.rule, rule.endpoint) for rule in app.url_map.iter_rules()]
+        billing_endpoints = [ep for ep in all_endpoints if 'billing' in ep[1]]
+        print(f"Billing endpoints: {billing_endpoints}")
 
     # Load additional config if provided
     #if config_filename:

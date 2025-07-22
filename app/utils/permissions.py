@@ -17,9 +17,23 @@ def has_permission(user_or_permission_name, permission_name=None):
     if not user.is_authenticated:
         return False
 
-    # Developers check their developer roles/permissions (system-wide, no tier restrictions)
+    # Developers in customer view mode mimic organization owner permissions
     if user.user_type == 'developer':
-        return user.has_developer_permission(permission)
+        from flask import session
+        if session.get('dev_selected_org_id'):
+            # Developer is in customer view - check permissions as organization owner
+            from app.models import Organization
+            selected_org = Organization.query.get(session.get('dev_selected_org_id'))
+            if selected_org:
+                # Check if permission is available for the selected organization's tier
+                if not _has_tier_permission_for_org(selected_org, permission):
+                    return False
+                # Developers in customer view have all tier-allowed permissions
+                return True
+            return False
+        else:
+            # Developer not in customer view - use developer permissions
+            return user.has_developer_permission(permission)
 
     # All other users check organization roles with tier restrictions
     if not user.organization:
@@ -42,8 +56,15 @@ def _has_tier_permission(user, permission_name):
     if not user.organization:
         return False
 
+    return _has_tier_permission_for_org(user.organization, permission_name)
+
+def _has_tier_permission_for_org(organization, permission_name):
+    """Check if organization's subscription tier allows this permission"""
+    if not organization:
+        return False
+
     # Get organization's effective subscription tier (handles subscription model fallback)
-    current_tier = user.organization.effective_subscription_tier
+    current_tier = organization.effective_subscription_tier
 
     # Import here to avoid circular import
     from app.blueprints.developer.subscription_tiers import load_tiers_config
@@ -116,8 +137,24 @@ def get_user_permissions():
         return []
 
     if current_user.user_type == 'developer':
-        from app.models.permission import Permission
-        return [perm.name for perm in Permission.query.filter_by(is_active=True).all()]
+        from flask import session
+        if session.get('dev_selected_org_id'):
+            # Developer in customer view - return permissions available to selected org's tier
+            from app.models import Organization
+            from app.models.permission import Permission
+            selected_org = Organization.query.get(session.get('dev_selected_org_id'))
+            if selected_org:
+                permissions = set()
+                all_permissions = Permission.query.filter_by(is_active=True).all()
+                for perm in all_permissions:
+                    if perm.is_available_for_tier(selected_org.effective_subscription_tier):
+                        permissions.add(perm.name)
+                return list(permissions)
+            return []
+        else:
+            # Developer not in customer view - return all permissions
+            from app.models.permission import Permission
+            return [perm.name for perm in Permission.query.filter_by(is_active=True).all()]
 
     # Get permissions from assigned roles (works for all user types)
     # All permissions in the Permission model are now organization permissions
@@ -130,12 +167,38 @@ def get_user_permissions():
 
     return list(permissions)
 
+def get_effective_organization_id():
+    """Get the effective organization ID for the current user (handles developer customer view)"""
+    if not current_user.is_authenticated:
+        return None
+
+    if current_user.user_type == 'developer':
+        from flask import session
+        return session.get('dev_selected_org_id')
+    
+    return current_user.organization_id
+
+def get_effective_organization():
+    """Get the effective organization for the current user (handles developer customer view)"""
+    org_id = get_effective_organization_id()
+    if not org_id:
+        return None
+    
+    from app.models import Organization
+    return Organization.query.get(org_id)
+
 def get_available_roles_for_user(user=None):
     """Get roles that can be assigned to a user"""
     if not user:
         user = current_user
 
     from app.models.role import Role
+    
+    # Handle developer customer view
+    if user.user_type == 'developer':
+        org_id = get_effective_organization_id()
+        return Role.get_organization_roles(org_id) if org_id else []
+    
     return Role.get_organization_roles(user.organization_id)
 
 class UserTypeManager:

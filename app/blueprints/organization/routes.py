@@ -35,14 +35,15 @@ def dashboard():
     pricing_data = PricingService.get_pricing_data()
 
     # Get organization data - handle developer customer view
-    from flask import session
-    if current_user.user_type == 'developer' and session.get('dev_selected_org_id'):
-        organization = Organization.query.get(session.get('dev_selected_org_id'))
-        if not organization:
-            flash('Selected organization not found', 'error')
+    from app.utils.permissions import get_effective_organization
+    organization = get_effective_organization()
+    if not organization:
+        if current_user.user_type == 'developer':
+            flash('Please select an organization first', 'error')
             return redirect(url_for('developer.organizations'))
-    else:
-        organization = current_user.organization
+        else:
+            flash('No organization found', 'error')
+            return redirect(url_for('app_routes.dashboard'))
 
     # Get organization statistics
     from app.models import Batch
@@ -119,13 +120,10 @@ def create_role():
         data = request.get_json()
 
         # Get organization
-        from flask import session
-        if current_user.user_type == 'developer' and session.get('dev_selected_org_id'):
-            from app.models import Organization
-            organization = Organization.query.get(session.get('dev_selected_org_id'))
-            org_id = organization.id
-        else:
-            org_id = current_user.organization_id
+        from app.utils.permissions import get_effective_organization_id
+        org_id = get_effective_organization_id()
+        if not org_id:
+            return jsonify({'success': False, 'error': 'No organization selected'})
 
         # Create role
         role = Role(
