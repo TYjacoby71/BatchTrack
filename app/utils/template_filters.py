@@ -10,7 +10,7 @@ from ..utils.unit_utils import get_global_unit_list
 
 def register_template_filters(app):
     """Register all template filters"""
-    
+
     @app.template_filter('user_timezone')
     def user_timezone_filter(dt, format='%Y-%m-%d %H:%M'):
         """Convert UTC datetime to user's timezone and format it"""
@@ -24,6 +24,20 @@ def register_template_filters(app):
 
 def register_filters(app):
     """Register custom template filters"""
+
+    @app.template_filter('timestamp_to_date')
+    def timestamp_to_date(timestamp):
+        """Convert Unix timestamp to readable date"""
+        if not timestamp:
+            return 'N/A'
+        try:
+            if isinstance(timestamp, (int, float)):
+                dt = datetime.fromtimestamp(timestamp)
+            else:
+                dt = timestamp
+            return dt.strftime('%B %d, %Y')
+        except (ValueError, TypeError):
+            return 'Invalid date'
 
     @app.template_filter('user_datetime')
     def user_datetime(dt, format_string='%Y-%m-%d %H:%M:%S'):
@@ -73,12 +87,12 @@ def register_filters(app):
     def TimezoneUtils_global():
         """Make TimezoneUtils available globally in templates"""
         return TimezoneUtils
-    
+
     @app.template_global()
     def get_grouped_timezones():
         """Get grouped timezones for dropdowns"""
         return TimezoneUtils.get_grouped_timezones()
-    
+
     @app.template_global()
     def get_available_timezones():
         """Get all available timezones"""
