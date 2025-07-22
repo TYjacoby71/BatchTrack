@@ -1,13 +1,13 @@
 
 #!/usr/bin/env python3
-"""Fix organization owner role assignments"""
+"""Fix organization owner role assignments using new flag system"""
 
 from app.models import User, Role, UserRoleAssignment
 from app.extensions import db
 from app import create_app
 
 def fix_organization_owners():
-    """Assign organization owner role to users who don't have proper role assignments"""
+    """Assign organization owner role to users with is_organization_owner flag"""
     
     app = create_app()
     with app.app_context():
@@ -22,8 +22,8 @@ def fix_organization_owners():
         
         print(f"✅ Found organization owner role with {len(org_owner_role.permissions)} permissions")
         
-        # Find all organization owner users
-        org_owners = User.query.filter_by(user_type='organization_owner').all()
+        # Find all users with is_organization_owner flag
+        org_owners = User.query.filter_by(is_organization_owner=True).all()
         
         print(f"Found {len(org_owners)} organization owner users")
         

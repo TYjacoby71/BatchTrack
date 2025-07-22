@@ -53,8 +53,14 @@ def debug_organization_permissions(org_name):
                             print(f"      {status} {perm}")
             
             # Get all user permissions
-            all_perms = get_user_permissions(user)
-            print(f"   📝 Total Permissions: {len(all_perms)}")
+            try:
+                all_perms = []
+                roles = user.get_active_roles()
+                for role in roles:
+                    all_perms.extend(role.get_permissions())
+                print(f"   📝 Total Permissions: {len(all_perms)}")
+            except Exception as e:
+                print(f"   ❌ Error getting permissions: {e}")
             print()
         
         # Check organization owner role exists

@@ -103,17 +103,10 @@ def has_subscription_feature(feature):
     return feature in org_features or 'all_features' in org_features
 
 def is_organization_owner():
-    """Check if current user has organization owner role (for UI context only)"""
+    """Check if current user is organization owner"""
     if not current_user.is_authenticated:
         return False
-
-    # Developers in customer support mode act as organization owners
-    if current_user.user_type == 'developer':
-        from flask import session
-        return session.get('dev_selected_org_id') is not None
-
-    # Check if user has the organization_owner role
-    return has_role('organization_owner')
+    return current_user.is_organization_owner
 
 def is_developer():
     """Check if current user is developer"""
@@ -175,7 +168,7 @@ def get_effective_organization_id():
     if current_user.user_type == 'developer':
         from flask import session
         return session.get('dev_selected_org_id')
-    
+
     return current_user.organization_id
 
 def get_effective_organization():
@@ -183,7 +176,7 @@ def get_effective_organization():
     org_id = get_effective_organization_id()
     if not org_id:
         return None
-    
+
     from app.models import Organization
     return Organization.query.get(org_id)
 
@@ -193,12 +186,12 @@ def get_available_roles_for_user(user=None):
         user = current_user
 
     from app.models.role import Role
-    
+
     # Handle developer customer view
     if user.user_type == 'developer':
         org_id = get_effective_organization_id()
         return Role.get_organization_roles(org_id) if org_id else []
-    
+
     return Role.get_organization_roles(user.organization_id)
 
 class UserTypeManager:

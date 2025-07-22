@@ -112,6 +112,7 @@ class User(UserMixin, db.Model):
     phone = db.Column(db.String(20), nullable=True)
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)
     user_type = db.Column(db.String(32), default='customer')  # 'developer', 'customer'
+    is_organization_owner = db.Column(db.Boolean, default=False)  # Flag for organization owners
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
     last_login = db.Column(db.DateTime, nullable=True)
@@ -141,11 +142,28 @@ class User(UserMixin, db.Model):
             return self.last_name
         return self.username
 
-    @property
-    def is_organization_owner(self):
+    def is_org_owner(self):
         """Check if user has organization owner role"""
         roles = self.get_active_roles()
         return any(role.name == 'organization_owner' for role in roles)
+    
+    def ensure_organization_owner_role(self):
+        """Ensure organization owner has the proper role assigned"""
+        if self.is_organization_owner and self.user_type == 'customer':
+            from .role import Role
+            org_owner_role = Role.query.filter_by(name='organization_owner', is_system_role=True).first()
+            if org_owner_role:
+                # Check if already assigned
+                existing_assignment = False
+                for assignment in self.role_assignments:
+                    if assignment.is_active and assignment.role_id == org_owner_role.id:
+                        existing_assignment = True
+                        break
+                
+                if not existing_assignment:
+                    self.assign_role(org_owner_role)
+                    return True
+        return False
 
     def get_active_roles(self):
         """Get all active roles for this user"""
