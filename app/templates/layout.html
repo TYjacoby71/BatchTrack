@@ -90,7 +90,6 @@
                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="customerDropdown">
                     <!-- User Dashboard -->
                     <li><a class="dropdown-item" href="{{ url_for('app_routes.dashboard') }}">User Dashboard</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('index') }}">Homepage</a></li>
 
                     <!-- Organization Dashboard (for developers in customer support mode) -->
                     <li><a class="dropdown-item" href="{{ url_for('organization.dashboard') }}"><i class="fas fa-crown"></i> Organization Dashboard</a></li>
@@ -207,7 +206,6 @@
                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="directoryDropdown">
                     <!-- User Dashboard -->
                     <li><a class="dropdown-item" href="{{ url_for('app_routes.dashboard') }}">User Dashboard</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('index') }}">Homepage</a></li>
 
                     {% if is_organization_owner() %}
                     <li><a class="dropdown-item" href="{{ url_for('organization.dashboard') }}"><i class="fas fa-users-cog"></i> Organization Dashboard</a></li>
