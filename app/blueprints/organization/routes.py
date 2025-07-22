@@ -282,8 +282,7 @@ def export_report(report_type):
         elif report_type == 'batches':
             flash('Batch export functionality coming soon', 'info')
         elif report_type == 'inventory':
-            flash('Inventory export functionality coming soon', 'info')
-        elif report_type == 'products':
+            flash('Inventory export functionality coming soon', 'info')        elif report_type == 'products':
             flash('Product export functionality coming soon', 'info')
         elif report_type == 'activity':
             flash('Activity export functionality coming soon', 'info')
@@ -452,10 +451,6 @@ def update_user(user_id):
             'success': True, 
             'message': f'User {user.full_name} updated successfully'
         })
-
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'success': False, 'error': str(e)})
 
 @organization_bp.route('/user/<int:user_id>/toggle-status', methods=['POST'])
 @login_required
