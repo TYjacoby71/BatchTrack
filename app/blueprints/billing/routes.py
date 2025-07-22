@@ -111,17 +111,23 @@ def checkout(tier, billing_cycle='monthly'):
     # Construct price key
     price_key = f"{tier}_{billing_cycle}" if billing_cycle != 'monthly' else tier
 
+    # Check if tier is stripe-ready
+    tiers_config = load_tiers_config()
+    tier_data = tiers_config.get(tier, {})
+    is_stripe_ready = tier_data.get('is_stripe_ready', False)
+    
     # Create checkout session
     try:
         session = StripeService.create_checkout_session(current_user.organization, price_key)
 
         if not session:
-            # Check if we're in development mode without webhook config
-            if not current_app.config.get('STRIPE_WEBHOOK_SECRET'):
+            # Check if tier is not stripe-ready or we're in development mode
+            if not is_stripe_ready or not current_app.config.get('STRIPE_WEBHOOK_SECRET'):
                 # Development mode - simulate subscription
                 success = StripeService.simulate_subscription_success(current_user.organization, tier)
                 if success:
-                    flash(f'Development Mode: Simulated {tier} subscription activated!', 'success')
+                    mode_reason = "Development Mode" if not is_stripe_ready else "Webhook not configured"
+                    flash(f'{mode_reason}: Simulated {tier} subscription activated!', 'success')
                     return redirect(url_for('organization.dashboard'))
             
             flash('Failed to create checkout session. Please try again.', 'error')

@@ -1,4 +1,3 @@
-
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
 from app.models import db, Permission
@@ -232,6 +231,7 @@ def load_tiers_config():
             'user_limit': 1,
             'is_customer_facing': False,  # Internal only
             'is_available': True,
+            'is_stripe_ready': False,
             'fallback_features': [
                 'View inventory levels',
                 'Manual stock adjustments only',
@@ -258,6 +258,7 @@ def load_tiers_config():
             'user_limit': 1,
             'is_customer_facing': True,
             'is_available': True,
+            'is_stripe_ready': False,
             'fallback_features': [
                 'Complete batch tracking with FIFO',
                 'Recipe management and scaling',
@@ -289,6 +290,7 @@ def load_tiers_config():
             'user_limit': 10,
             'is_customer_facing': True,
             'is_available': True,
+            'is_stripe_ready': False,
             'fallback_features': [
                 'Everything in Solo Plan',
                 'Product catalog with variants',
@@ -322,6 +324,7 @@ def load_tiers_config():
             'user_limit': -1,
             'is_customer_facing': True,
             'is_available': True,
+            'is_stripe_ready': False,
             'fallback_features': [
                 'Everything in Team Plan',
                 'Unlimited users and organizations',
@@ -358,6 +361,7 @@ def load_tiers_config():
             'user_limit': -1,
             'is_customer_facing': False,  # Internal only
             'is_available': True,
+            'is_stripe_ready': False,
             'fallback_features': [
                 'All Enterprise features',
                 'System administration access',
@@ -371,7 +375,7 @@ def load_tiers_config():
             'last_synced': None
         }
     }
-    
+
     if os.path.exists(TIERS_CONFIG_FILE):
         with open(TIERS_CONFIG_FILE, 'r') as f:
             loaded_tiers = json.load(f)
@@ -380,7 +384,7 @@ def load_tiers_config():
                 if tier_key not in loaded_tiers:
                     loaded_tiers[tier_key] = tier_data
             return loaded_tiers
-    
+
     return default_tiers
 
 def save_tiers_config(tiers):
@@ -394,7 +398,7 @@ def manage_tiers():
     """Main subscription tiers management page"""
     tiers = load_tiers_config()
     all_permissions = Permission.query.filter_by(is_active=True).all()
-    
+
     return render_template('developer/subscription_tiers.html', 
                          tiers=tiers,
                          all_permissions=all_permissions)
@@ -406,26 +410,26 @@ def create_tier():
     if request.method == 'POST':
         tier_key = request.form.get('tier_key')
         tier_name = request.form.get('tier_name')
-        
+
         if not tier_key or not tier_name:
             flash('Tier key and name are required', 'error')
             return redirect(url_for('developer.subscription_tiers.manage_tiers'))
-            
+
         tiers = load_tiers_config()
-        
+
         if tier_key in tiers:
             flash('Tier key already exists', 'error')
             return redirect(url_for('developer.subscription_tiers.manage_tiers'))
-        
+
         # Get form data
         permissions = request.form.getlist('permissions')
         fallback_features = [f.strip() for f in request.form.get('fallback_features', '').split('\n') if f.strip()]
-        
+
         user_limit = int(request.form.get('user_limit', 1))
         # Only exempt tier can have unlimited users (-1)
         if user_limit == -1 and tier_key != 'exempt':
             user_limit = 1
-        
+
         new_tier = {
             'name': tier_name,
             'permissions': permissions,
@@ -440,13 +444,13 @@ def create_tier():
             'stripe_price_yearly': None,
             'last_synced': None
         }
-        
+
         tiers[tier_key] = new_tier
         save_tiers_config(tiers)
-        
+
         flash(f'Subscription tier "{tier_name}" created successfully', 'success')
         return redirect(url_for('developer.subscription_tiers.manage_tiers'))
-    
+
     all_permissions = Permission.query.filter_by(is_active=True).all()
     return render_template('developer/create_tier.html', permissions=all_permissions)
 
@@ -455,40 +459,40 @@ def create_tier():
 def edit_tier(tier_key):
     """Edit an existing subscription tier"""
     tiers = load_tiers_config()
-    
+
     if tier_key not in tiers:
         flash('Tier not found', 'error')
         return redirect(url_for('developer.subscription_tiers.manage_tiers'))
-    
+
     if request.method == 'POST':
         tier = tiers[tier_key]
-        
+
         # Update tier data
         tier['name'] = request.form.get('tier_name', tier['name'])
         tier['permissions'] = request.form.getlist('permissions')
         tier['feature_groups'] = request.form.getlist('feature_groups')
         tier['stripe_lookup_key'] = request.form.get('stripe_lookup_key', '')
-        
+
         user_limit = int(request.form.get('user_limit', 1))
         # Only exempt tier can have unlimited users (-1)
         if user_limit == -1 and tier_key != 'exempt':
             user_limit = 1
         tier['user_limit'] = user_limit
-        
+
         # Update visibility controls
         tier['is_customer_facing'] = request.form.get('is_customer_facing') == 'on'
         tier['is_available'] = request.form.get('is_available') == 'on'
-        
+
         tier['fallback_features'] = [f.strip() for f in request.form.get('fallback_features', '').split('\n') if f.strip()]
-        
+
         save_tiers_config(tiers)
-        
+
         flash(f'Subscription tier "{tier["name"]}" updated successfully', 'success')
         return redirect(url_for('developer.subscription_tiers.manage_tiers'))
-    
+
     tier = tiers[tier_key]
     all_permissions = Permission.query.filter_by(is_active=True).all()
-    
+
     return render_template('developer/edit_tier.html', 
                          tier_key=tier_key,
                          tier=tier,
@@ -502,17 +506,17 @@ def delete_tier(tier_key):
     if tier_key in ['free', 'exempt']:
         flash(f'Cannot delete system tier: {tier_key}', 'error')
         return redirect(url_for('developer.subscription_tiers.manage_tiers'))
-        
+
     tiers = load_tiers_config()
-    
+
     if tier_key not in tiers:
         flash('Tier not found', 'error')
         return redirect(url_for('developer.subscription_tiers.manage_tiers'))
-    
+
     tier_name = tiers[tier_key]['name']
     del tiers[tier_key]
     save_tiers_config(tiers)
-    
+
     flash(f'Subscription tier "{tier_name}" deleted successfully', 'success')
     return redirect(url_for('developer.subscription_tiers.manage_tiers'))
 
@@ -522,65 +526,65 @@ def sync_tier(tier_key):
     """Sync a tier with Stripe pricing and features"""
     import stripe
     from datetime import datetime
-    
+
     tiers = load_tiers_config()
-    
+
     if tier_key not in tiers:
         return jsonify({'error': 'Tier not found'}), 404
-    
+
     tier = tiers[tier_key]
     lookup_key = tier.get('stripe_lookup_key')
-    
+
     if not lookup_key:
         return jsonify({'error': 'No Stripe lookup key configured'}), 400
-    
+
     try:
         # Initialize Stripe
         stripe_key = os.environ.get('STRIPE_SECRET_KEY')
         if not stripe_key:
             return jsonify({'error': 'Stripe secret key not configured in secrets'}), 400
-        
+
         stripe.api_key = stripe_key
-        
+
         # Find products by lookup key
         products = stripe.Product.list(lookup_keys=[lookup_key], limit=1)
-        
+
         if not products.data:
             return jsonify({'error': f'No Stripe product found with lookup key: {lookup_key}'}), 404
-        
+
         product = products.data[0]
-        
+
         # Get prices for this product
         prices = stripe.Price.list(product=product.id)
-        
+
         monthly_price = None
         yearly_price = None
-        
+
         for price in prices.data:
             if price.recurring and price.recurring.interval == 'month':
                 monthly_price = f"${price.unit_amount // 100}"
             elif price.recurring and price.recurring.interval == 'year':
                 yearly_price = f"${price.unit_amount // 100}"
-        
+
         # Get features from product metadata
         features = []
         if product.metadata.get('features'):
             features = [f.strip() for f in product.metadata['features'].split(',')]
-        
+
         # Update tier with Stripe data
         tier['stripe_features'] = features
         tier['stripe_price_monthly'] = monthly_price
         tier['stripe_price_yearly'] = yearly_price
         tier['last_synced'] = datetime.now().isoformat()
-        
+
         save_tiers_config(tiers)
-        
+
         return jsonify({
             'success': True,
             'tier': tier,
             'message': f'Successfully synced {tier["name"]} with Stripe'
         })
-        
+
     except stripe.error.StripeError as e:
         return jsonify({'error': f'Stripe error: {str(e)}'}), 400
     except Exception as e:
