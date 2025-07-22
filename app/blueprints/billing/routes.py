@@ -36,8 +36,12 @@ def checkout(tier, billing_cycle='monthly'):
         flash('You do not have permission to manage billing.', 'error')
         return redirect(url_for('organization.dashboard'))
 
-    if tier not in ['solo', 'team', 'enterprise']:
-        flash('Invalid subscription tier.', 'error')
+    # Validate tier is customer-facing and available
+    from ...services.pricing_service import PricingService
+    available_tiers = PricingService.get_pricing_data()
+    
+    if tier not in available_tiers:
+        flash('Invalid or unavailable subscription tier.', 'error')
         return redirect(url_for('billing.upgrade'))
 
     if billing_cycle not in ['monthly', 'yearly']:
