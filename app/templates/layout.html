@@ -230,7 +230,7 @@
                     <li><hr class="dropdown-divider"></li>
 
                     <!-- Production Tools -->
-                    {% if has_permission('timers.manage') %}
+                    {% if has_permission('batches.view') %}
                     <li><a class="dropdown-item" href="{{ url_for('timers.list_timers') }}">Timer Management</a></li>
                     {% endif %}
                     {% if has_permission('products.view') %}
