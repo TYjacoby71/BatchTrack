@@ -1,6 +1,10 @@
 from flask import render_template, request, jsonify, redirect, url_for, flash, current_app
 from flask_login import login_required, current_user
 from . import billing_bp
+
+print(f"DEBUG: billing_bp in routes.py: {billing_bp}")
+print(f"DEBUG: billing_bp name: {billing_bp.name}")
+print(f"DEBUG: billing_bp url_prefix: {billing_bp.url_prefix}")
 from ...services.stripe_service import StripeService
 from ...services.subscription_service import SubscriptionService
 from ...utils.permissions import require_permission, has_permission
@@ -44,6 +48,7 @@ def user_has_tier_permission(user, permission_name):
 @billing_bp.route('/upgrade')
 @login_required 
 def upgrade():
+    print("DEBUG: billing.upgrade route called")
     """Show subscription upgrade options"""
     organization = current_user.organization
     if not organization:
