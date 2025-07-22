@@ -28,7 +28,9 @@ class PricingService:
                 'price_yearly_display': '$290',
                 'features': ['Up to 5 users', 'Full batch tracking', 'Email support'],
                 'stripe_price_id': '',
-                'user_limit': 5
+                'user_limit': 5,
+                'is_customer_facing': True,
+                'is_available': True
             },
             'team': {
                 'name': 'Team Plan',
@@ -36,7 +38,9 @@ class PricingService:
                 'price_yearly_display': '$790',
                 'features': ['Up to 10 users', 'Advanced features', 'Custom roles'],
                 'stripe_price_id': '',
-                'user_limit': 10
+                'user_limit': 10,
+                'is_customer_facing': True,
+                'is_available': True
             },
             'enterprise': {
                 'name': 'Enterprise Plan',
@@ -44,25 +48,31 @@ class PricingService:
                 'price_yearly_display': '$1990',
                 'features': ['Unlimited users', 'All features', 'API access'],
                 'stripe_price_id': '',
-                'user_limit': -1
+                'user_limit': -1,
+                'is_customer_facing': True,
+                'is_available': True
             }
         }
     
     @staticmethod
     def get_pricing_data():
-        """Get comprehensive pricing data from Stripe for all tiers"""
+        """Get comprehensive pricing data from Stripe for customer-facing and available tiers only"""
         # Load dynamic tiers configuration
-        pricing_data = PricingService._load_tiers_config()
+        all_tiers = PricingService._load_tiers_config()
         
-        # Convert to expected format
-        for tier_key, tier_data in pricing_data.items():
-            pricing_data[tier_key] = {
-                'price': tier_data.get('price_display', '$0'),
-                'price_yearly': tier_data.get('price_yearly_display', '$0'),
-                'features': tier_data.get('features', []),
-                'name': tier_data.get('name', tier_key.title()),
-                'description': f"Perfect for {tier_key} operations"
-            }
+        # Filter to only customer-facing and available tiers
+        pricing_data = {}
+        for tier_key, tier_data in all_tiers.items():
+            # Only include tiers that are customer-facing and available
+            if tier_data.get('is_customer_facing', True) and tier_data.get('is_available', True):
+                pricing_data[tier_key] = {
+                    'price': tier_data.get('price_display', '$0'),
+                    'price_yearly': tier_data.get('price_yearly_display', '$0'),
+                    'features': tier_data.get('fallback_features', tier_data.get('features', [])),
+                    'name': tier_data.get('name', tier_key.title()),
+                    'description': f"Perfect for {tier_key} operations",
+                    'user_limit': tier_data.get('user_limit', 1)
+                }
         
         # Only try to fetch from Stripe if properly configured
         if not StripeService.initialize_stripe():
@@ -118,6 +128,27 @@ class PricingService:
             logger.error(f"Error fetching pricing data: {str(e)}")
             # Return hardcoded fallbacks
             
+        return pricing_data
+    
+    @staticmethod
+    def get_all_tiers_data():
+        """Get all tiers data including internal/unavailable ones (for admin use)"""
+        all_tiers = PricingService._load_tiers_config()
+        
+        # Convert to expected format but include all tiers
+        pricing_data = {}
+        for tier_key, tier_data in all_tiers.items():
+            pricing_data[tier_key] = {
+                'price': tier_data.get('price_display', '$0'),
+                'price_yearly': tier_data.get('price_yearly_display', '$0'),
+                'features': tier_data.get('fallback_features', tier_data.get('features', [])),
+                'name': tier_data.get('name', tier_key.title()),
+                'description': f"Perfect for {tier_key} operations",
+                'user_limit': tier_data.get('user_limit', 1),
+                'is_customer_facing': tier_data.get('is_customer_facing', True),
+                'is_available': tier_data.get('is_available', True)
+            }
+        
         return pricing_data
     
     @staticmethod
