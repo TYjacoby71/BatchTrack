@@ -56,11 +56,12 @@ def seed_users():
             print(f"✅ Assigned role to existing user: {user.username} -> {user.user_type}")
     
     # Also handle users with is_organization_owner flag (for backward compatibility)
-    org_owner_flagged_users = User.query.filter_by(is_organization_owner=True).all()
-    fixed_count = 0
-    
-    for user in org_owner_flagged_users:
-        if user.user_type != 'developer':  # Skip developers
+    # Only query non-developer users since developers don't use this flag
+    try:
+        org_owner_flagged_users = User.query.filter_by(is_organization_owner=True).filter(User.user_type != 'developer').all()
+        fixed_count = 0
+        
+        for user in org_owner_flagged_users:
             # Check if user already has organization owner role
             has_org_owner_role = any(
                 assignment.role and assignment.role.name == 'organization_owner' 
@@ -76,9 +77,11 @@ def seed_users():
                     user.assign_role(org_owner_role)
                     fixed_count += 1
                     print(f"✅ Fixed legacy organization owner role for flagged user: {user.username}")
-    
-    if fixed_count > 0:
-        print(f"✅ Fixed {fixed_count} organization owner users with missing roles")
+        
+        if fixed_count > 0:
+            print(f"✅ Fixed {fixed_count} organization owner users with missing roles")
+    except Exception as e:
+        print(f"⚠️  Note: Could not query is_organization_owner flag (column may not exist yet): {e}")
 
     # Ensure all developer users have no organization association
     developer_users = User.query.filter(User.user_type == 'developer').all()
