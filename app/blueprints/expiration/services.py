@@ -62,8 +62,12 @@ class ExpirationService:
         try:
             # Get current UTC time for consistent comparison
             now_utc = TimezoneUtils.utc_now()
+            
+            # Ensure now_utc is timezone-aware
+            if now_utc.tzinfo is None:
+                now_utc = now_utc.replace(tzinfo=timezone.utc)
 
-            # Convert all dates to UTC for consistent calculation
+            # Convert all dates to timezone-aware UTC for consistent calculation
             if entry_date.tzinfo:
                 entry_utc = entry_date.astimezone(timezone.utc)
             else:
@@ -84,7 +88,7 @@ class ExpirationService:
             # Calculate percentage based on time remaining vs total life
             life_remaining_percent = max(0.0, (time_remaining_seconds / total_life_seconds) * 100)
             return min(100.0, life_remaining_percent)
-        except (TypeError, AttributeError) as e:
+        except (TypeError, AttributeError, ValueError) as e:
             # Handle cases where timezone conversion fails
             logger.warning(f"Timezone conversion error in get_life_remaining_percent: {e}")
             return None
@@ -488,12 +492,13 @@ class ExpirationService:
     @staticmethod
     def get_weighted_average_freshness(inventory_item_id: int) -> Optional[float]:
         """Calculate weighted average freshness for an inventory item based on FIFO entries"""
-        # Get all FIFO entries with remaining quantity - organization scoping handled by InventoryHistory model
-        entries = db.session.query(InventoryHistory).filter(
+        # Get all FIFO entries with remaining quantity - with explicit organization scoping for security
+        entries = db.session.query(InventoryHistory).join(InventoryItem).filter(
             and_(
                 InventoryHistory.inventory_item_id == inventory_item_id,
                 InventoryHistory.remaining_quantity > 0,
-                InventoryHistory.is_perishable == True
+                InventoryHistory.is_perishable == True,
+                InventoryItem.organization_id == current_user.organization_id if current_user.is_authenticated and current_user.organization_id else True
             )
         ).all()
 
