@@ -1,46 +1,24 @@
-from flask import Blueprint, redirect, url_for, request, flash, render_template
-from flask_login import login_required
-from ...models import db, User
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask_login import login_required, current_user
+from ...models import Organization, User, Batch, Recipe, InventoryItem
+from ...extensions import db
+from ...utils.permissions import require_permission
 
-admin_bp = Blueprint('admin', __name__)
+admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
-@admin_bp.route('/admin/units')
+@admin_bp.route('/organizations')
 @login_required
-def unit_manager():
-    return redirect(url_for('conversion_bp.manage_units'))
+@require_permission('system.admin')
+def list_organizations():
+    """List all organizations for system admin"""
+    organizations = Organization.query.all()
+    return render_template('admin/organizations.html', organizations=organizations)
 
-@admin_bp.route('/admin/tools/cleanup')
+@admin_bp.route('/organizations/<int:org_id>')
 @login_required
-def cleanup_tools():
-    return render_template('admin/cleanup_tools.html')
-
-@admin_bp.route('/admin/tools/archive_zeroed', methods=['POST'])
-@login_required
-def archive_zeroed_inventory():
-    """Archive all inventory entries with zero quantity"""
-    try:
-        from ...models import InventoryItem
-        from flask_login import current_user
-        
-        # Apply organization scoping
-        query = InventoryItem.query.filter(InventoryItem.quantity <= 0)
-        if current_user.is_authenticated and current_user.organization_id:
-            query = query.filter(InventoryItem.organization_id == current_user.organization_id)
-        elif current_user.user_type == 'developer':
-            # Developers can clean up system-wide or selected org
-            from flask import session
-            selected_org_id = session.get('dev_selected_org_id')
-            if selected_org_id:
-                query = query.filter(InventoryItem.organization_id == selected_org_id)
-        
-        zero_rows = query.all()
-        count = len(zero_rows)
-        for row in zero_rows:
-            db.session.delete(row)
-        db.session.commit()
-        flash(f'Successfully archived {count} zeroed inventory entries', 'success')
-    except Exception as e:
-        db.session.rollback()
-        flash(f'Error archiving inventory: {str(e)}', 'error')
-    return redirect(url_for('admin.cleanup_tools'))
-
+@require_permission('system.admin')
+def view_organization(org_id):
+    """View specific organization details"""
+    org = Organization.query.get_or_404(org_id)
+    users = User.query.filter_by(organization_id=org_id).all()
+    return render_template('admin/organization_detail.html', organization=org, users=users)
