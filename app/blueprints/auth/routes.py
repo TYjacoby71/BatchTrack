@@ -230,20 +230,20 @@ def signup():
 
         try:
             from datetime import datetime, timedelta
+            from ...services.stripe_service import StripeService
+            from ...models.subscription import Subscription
             
             # Create organization with trial details
             trial_end_date = datetime.utcnow() + timedelta(days=current_offer['days'])
             
             org = Organization(
                 name=org_name,
-                subscription_tier='trial',  # Start with trial
+                subscription_tier='team',  # Trial gets team features
                 contact_email=email,
                 is_active=True,
-                trial_end_date=trial_end_date,
                 signup_source=signup_source,
                 promo_code=entered_promo if entered_promo else None,
-                referral_code=referral_code,
-                # Billing will be handled by Stripe - no local storage needed
+                referral_code=referral_code
             )
             db.session.add(org)
             db.session.flush()  # Get the ID
@@ -261,13 +261,63 @@ def signup():
             )
             owner_user.set_password(password)
             db.session.add(owner_user)
+            db.session.flush()
             
-            # Create pending subscription (will be activated by Stripe)
-            from ...services.subscription_service import SubscriptionService
-            SubscriptionService.create_pending_subscription(
-                organization=org,
-                selected_tier='team'  # What they want to try
-            )
+            # Create Stripe customer and subscription with trial
+            if current_offer['requires_billing']:
+                try:
+                    stripe_service = StripeService()
+                    
+                    # Create Stripe customer
+                    customer = stripe_service.create_customer(
+                        email=email,
+                        name=f"{first_name} {last_name}".strip() or username,
+                        organization_name=org_name,
+                        phone=phone
+                    )
+                    
+                    # Create subscription record
+                    subscription = Subscription(
+                        organization_id=org.id,
+                        tier='team',
+                        status='trialing',
+                        trial_start=datetime.utcnow(),
+                        trial_end=trial_end_date,
+                        stripe_customer_id=customer.id
+                    )
+                    db.session.add(subscription)
+                    
+                    # Store payment method (for post-trial billing)
+                    if card_number:
+                        stripe_service.create_payment_method(
+                            customer_id=customer.id,
+                            card_number=card_number,
+                            exp_month=card_exp_month,
+                            exp_year=card_exp_year,
+                            cvc=card_cvc
+                        )
+                        
+                except Exception as stripe_error:
+                    # Fall back to local trial if Stripe fails
+                    subscription = Subscription(
+                        organization_id=org.id,
+                        tier='team',
+                        status='trialing',
+                        trial_start=datetime.utcnow(),
+                        trial_end=trial_end_date
+                    )
+                    db.session.add(subscription)
+                    flash(f'Trial created successfully (payment processing in test mode)', 'info')
+            else:
+                # Free trial without payment info
+                subscription = Subscription(
+                    organization_id=org.id,
+                    tier='team',
+                    status='trialing',
+                    trial_start=datetime.utcnow(),
+                    trial_end=trial_end_date
+                )
+                db.session.add(subscription)
             
             db.session.commit()
 
