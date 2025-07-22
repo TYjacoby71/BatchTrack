@@ -36,14 +36,14 @@ def has_role(role_name):
     """Check if current user has specific role"""
     if not current_user.is_authenticated:
         return False
-    
+
     try:
         if hasattr(current_user, 'get_active_roles'):
             roles = current_user.get_active_roles()
             return any(role.name == role_name for role in roles)
     except Exception as e:
         print(f"Error checking role {role_name}: {e}")
-    
+
     return False
 
 def has_subscription_feature(feature):
