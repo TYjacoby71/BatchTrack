@@ -23,11 +23,7 @@
   "solo": {
     "name": "Solo Plan",
     "feature_groups": [
-      "dashboard",
-      "inventory",
-      "batches",
-      "products",
-      "advanced_features"
+      "basic_dashboard"
     ],
     "stripe_lookup_key": "batchtrack_solo_monthly",
     "user_limit": 1,
@@ -39,7 +35,10 @@
     "stripe_features": [],
     "stripe_price_monthly": null,
     "stripe_price_yearly": null,
-    "last_synced": null
+    "last_synced": null,
+    "permissions": [],
+    "is_customer_facing": true,
+    "is_available": true
   },
   "team": {
     "name": "Team Plan",
