@@ -1,3 +1,4 @@
+
 {% extends 'layout.html' %}
 
 {% block title %}Edit Subscription Tier - Developer{% endblock %}
@@ -19,6 +20,7 @@
 
     <form method="post">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        
         <div class="row mt-4">
             <!-- Basic Information -->
             <div class="col-md-6">
@@ -47,13 +49,6 @@
                             </small>
                         </div>
 
-                        <div class="mb-3">
-                            <label for="stripe_lookup_key" class="form-label">Stripe Lookup Key</label>
-                            <input type="text" class="form-control" id="stripe_lookup_key" name="stripe_lookup_key" 
-                                   value="{{ tier.get('stripe_lookup_key', '') }}" 
-                                   placeholder="e.g. team-plan">
-                        </div>
-
                         <!-- Visibility Controls -->
                         <div class="mb-3">
                             <div class="form-check">
@@ -74,8 +69,6 @@
                                 </label>
                             </div>
                         </div>
-
-
                     </div>
                 </div>
             </div>
@@ -88,7 +81,7 @@
                     </div>
                     <div class="card-body">
                         <div class="mb-3">
-                            <label for="stripe_lookup_key" class="form-label">Stripe Lookup Key *</label>
+                            <label for="stripe_lookup_key" class="form-label">Stripe Lookup Key</label>
                             <input type="text" class="form-control" id="stripe_lookup_key" name="stripe_lookup_key"
                                    value="{{ tier.stripe_lookup_key or '' }}" 
                                    placeholder="e.g., solo-plan, team-plan">
@@ -118,8 +111,15 @@
             </div>
         </div>
 
+        <!-- Permissions and Features Section -->
         <div class="row mt-4">
-            <!-- Consolidated Permissions Section -->
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Permissions and Features</h5>
+                    </div>
+                    <div class="card-body">
+                        <!-- Tier Permissions -->
                         <div class="mb-4">
                             <label class="form-label">
                                 <i class="fas fa-key text-primary"></i> Tier Permissions
@@ -142,8 +142,8 @@
 
                                 <div class="row">
                                     {% for category, perms in permission_categories.items() %}
-                                    <div class="col-md-6 mb-3">
-                                        <div class="card">
+                                    <div class="col-lg-4 col-md-6 mb-3">
+                                        <div class="card h-100">
                                             <div class="card-header py-2">
                                                 <h6 class="mb-0 text-capitalize">
                                                     <i class="fas fa-folder-open text-secondary me-1"></i>
@@ -151,7 +151,7 @@
                                                     <small class="text-muted">({{ perms|length }})</small>
                                                 </h6>
                                             </div>
-                                            <div class="card-body py-2" style="max-height: 200px; overflow-y: auto;">
+                                            <div class="card-body py-2" style="max-height: 300px; overflow-y: auto;">
                                                 {% for permission in perms %}
                                                 <div class="form-check mb-1">
                                                     <input class="form-check-input" type="checkbox" name="permissions" 
@@ -173,34 +173,8 @@
                             </div>
                         </div>
 
-                        <!-- Stripe Features -->
-                        <div class="mb-3">
-                            <label class="form-label">
-                                <i class="fas fa-credit-card text-info"></i> Stripe Features
-                            </label>
-                            {% if tier.stripe_features %}
-                                <ul class="list-group">
-                                    {% for feature in tier.stripe_features %}
-                                        <li class="list-group-item py-1">{{ feature }}</li>
-                                    {% endfor %}
-                                </ul>
-                                <small class="form-text text-muted">These features are synced from Stripe product configuration.</small>
-                            {% else %}
-                                <p class="text-muted">No features synced from Stripe. Check your Stripe product configuration.</p>
-                            {% endif %}
-                        </div>
-
-                        <!-- Fallback Features -->
-                        <div class="mb-3">
-                            <label for="fallback_features" class="form-label">
-                                <i class="fas fa-list text-warning"></i> Fallback Features (Local Override)
-                            </label>
-                            <textarea class="form-control" id="fallback_features" name="fallback_features" rows="4">{{ tier.fallback_features | join('\n') if tier.fallback_features else '' }}</textarea>
-                            <small class="form-text text-muted">Used only if Stripe sync fails. One feature per line.</small>
-                        </div>
-
                         <!-- Feature Groups -->
-                        <div class="mb-3">
+                        <div class="mb-4">
                             <label class="form-label">
                                 <i class="fas fa-layer-group text-success"></i> Feature Groups
                             </label>
@@ -222,7 +196,7 @@
                             ] %}
                             <div class="row">
                                 {% for feature_group in available_feature_groups %}
-                                <div class="col-md-4 mb-1">
+                                <div class="col-md-4 col-lg-3 mb-1">
                                     <div class="form-check">
                                         <input class="form-check-input" type="checkbox" name="feature_groups" 
                                                value="{{ feature_group }}" id="fg_{{ loop.index }}"
@@ -235,22 +209,37 @@
                                 {% endfor %}
                             </div>
                         </div>
+
+                        <!-- Stripe Features -->
+                        <div class="mb-4">
+                            <label class="form-label">
+                                <i class="fas fa-credit-card text-info"></i> Stripe Features
+                            </label>
+                            {% if tier.stripe_features %}
+                                <ul class="list-group">
+                                    {% for feature in tier.stripe_features %}
+                                        <li class="list-group-item py-1 small">{{ feature }}</li>
+                                    {% endfor %}
+                                </ul>
+                                <small class="form-text text-muted">These features are synced from Stripe product configuration.</small>
+                            {% else %}
+                                <p class="text-muted">No features synced from Stripe. Check your Stripe product configuration.</p>
+                            {% endif %}
+                        </div>
+
+                        <!-- Fallback Features -->
+                        <div class="mb-3">
+                            <label for="fallback_features" class="form-label">
+                                <i class="fas fa-list text-warning"></i> Fallback Features (Local Override)
+                            </label>
+                            <textarea class="form-control" id="fallback_features" name="fallback_features" rows="4">{{ tier.fallback_features | join('\n') if tier.fallback_features else '' }}</textarea>
+                            <small class="form-text text-muted">Used only if Stripe sync fails. One feature per line.</small>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Tier Settings -->
-        <div class="row mt-4">
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="mb-0">Tier Settings</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-6">
-        
         <!-- Actions -->
         <div class="row mt-4">
             <div class="col-12">
@@ -265,8 +254,6 @@
                     </div>
                 </div>
             </div>
-
-
         </div>
     </form>
 </div>
