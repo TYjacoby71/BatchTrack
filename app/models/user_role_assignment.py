@@ -9,6 +9,14 @@ class UserRoleAssignment(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     role_id = db.Column(db.Integer, db.ForeignKey('role.id'), nullable=True)  # Organization role
     developer_role_id = db.Column(db.Integer, db.ForeignKey('developer_role.id'), nullable=True)  # Developer role
+    
+    # Add constraint to ensure either role_id OR developer_role_id is set, but not both
+    __table_args__ = (
+        db.CheckConstraint(
+            '(role_id IS NOT NULL AND developer_role_id IS NULL) OR (role_id IS NULL AND developer_role_id IS NOT NULL)',
+            name='check_exactly_one_role'
+        ),
+    )
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)
     is_active = db.Column(db.Boolean, default=True)
     assigned_at = db.Column(db.DateTime, default=datetime.utcnow)
