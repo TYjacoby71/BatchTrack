@@ -1,0 +1,25 @@
+
+{% macro upgrade_prompt(feature_name, feature_display_name=None) %}
+    {% if not has_subscription_feature(feature_name) %}
+        {% set display_name = feature_display_name or feature_name|replace('_', ' ')|title %}
+        <div class="alert alert-info border-primary">
+            <div class="d-flex align-items-center">
+                <i class="fas fa-lock text-primary me-2"></i>
+                <div class="flex-grow-1">
+                    <strong>{{ display_name }}</strong> is available with Team and Enterprise plans.
+                </div>
+                <a href="{{ url_for('billing.upgrade') }}" class="btn btn-sm btn-primary ms-2">
+                    Upgrade
+                </a>
+            </div>
+        </div>
+    {% endif %}
+{% endmacro %}
+
+{% macro feature_gate(feature_name, feature_display_name=None) %}
+    {% if has_subscription_feature(feature_name) %}
+        {{ caller() }}
+    {% else %}
+        {{ upgrade_prompt(feature_name, feature_display_name) }}
+    {% endif %}
+{% endmacro %}

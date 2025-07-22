@@ -7,10 +7,18 @@ import json
 from ..models import Unit
 from ..services.unit_conversion import ConversionEngine
 from ..utils.unit_utils import get_global_unit_list
+from app.models.models import User
+from app.models.permission import Permission
+from app.models.role import Role
+from flask_login import current_user
+from flask import session
+import logging
+
+logger = logging.getLogger(__name__)
 
 def register_template_filters(app):
     """Register all template filters"""
-    
+
     @app.template_filter('user_timezone')
     def user_timezone_filter(dt, format='%Y-%m-%d %H:%M'):
         """Convert UTC datetime to user's timezone and format it"""
@@ -73,12 +81,12 @@ def register_filters(app):
     def TimezoneUtils_global():
         """Make TimezoneUtils available globally in templates"""
         return TimezoneUtils
-    
+
     @app.template_global()
     def get_grouped_timezones():
         """Get grouped timezones for dropdowns"""
         return TimezoneUtils.get_grouped_timezones()
-    
+
     @app.template_global()
     def get_available_timezones():
         """Get all available timezones"""
@@ -106,3 +114,21 @@ def register_filters(app):
         # Use the centralized permission checking function
         from app.utils.permissions import has_permission as check_permission
         return check_permission(permission_name)
+
+def register_template_helpers(app):
+    """Register template helper functions"""
+
+    @app.context_processor
+    def inject_helpers():
+        from app.services.subscription_features import SubscriptionFeatures
+
+        return dict(
+            TimezoneUtils_global=TimezoneUtils,
+            has_permission=has_permission,
+            has_role=has_role,
+            is_organization_owner=is_organization_owner,
+            get_user_display_name=get_user_display_name,
+            has_subscription_feature=SubscriptionFeatures.has_feature,
+            get_subscription_features=SubscriptionFeatures.get_available_features,
+            get_upgrade_suggestions=SubscriptionFeatures.get_upgrade_suggestions
+        )
