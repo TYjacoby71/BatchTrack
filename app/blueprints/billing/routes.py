@@ -1,15 +1,9 @@
-from flask import render_template, request, jsonify, redirect, url_for, flash, current_app
-from flask_login import login_required, current_user
-from . import billing_bp
-from ...services.stripe_service import StripeService
-from ...services.subscription_service import SubscriptionService
-from ...utils.permissions import require_permission, has_permission
-import logging
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app
 from flask_login import login_required, current_user
 from app.models import db, Organization, Permission
-from app.utils.permissions import require_permission
+from app.utils.permissions import require_permission, has_permission
 from app.blueprints.developer.subscription_tiers import load_tiers_config
+import logging
 
 billing_bp = Blueprint('billing', __name__, url_prefix='/billing')
 
@@ -85,33 +79,38 @@ def checkout(tier, billing_cycle='monthly'):
         flash('You do not have permission to manage billing.', 'error')
         return redirect(url_for('organization.dashboard'))
 
-    # Validate tier is customer-facing and available
-    from ...services.pricing_service import PricingService
-    available_tiers = PricingService.get_pricing_data()
-
-    if tier not in available_tiers:
-        flash('Invalid or unavailable subscription tier.', 'error')
-        return redirect(url_for('billing.upgrade'))
-
-    if billing_cycle not in ['monthly', 'yearly']:
-        billing_cycle = 'monthly'
-
-    # Construct price key
-    price_key = f"{tier}_{billing_cycle}" if billing_cycle != 'monthly' else tier
-
-    # Create checkout session
     try:
-        session = StripeService.create_checkout_session(current_user.organization, price_key)
+        # Validate tier is customer-facing and available
+        from ...services.pricing_service import PricingService
+        available_tiers = PricingService.get_pricing_data()
 
-        if not session:
-            flash('Failed to create checkout session. Please try again.', 'error')
+        if tier not in available_tiers:
+            flash('Invalid or unavailable subscription tier.', 'error')
+            return redirect(url_for('billing.upgrade'))
+
+        if billing_cycle not in ['monthly', 'yearly']:
+            billing_cycle = 'monthly'
+
+        # Construct price key
+        price_key = f"{tier}_{billing_cycle}" if billing_cycle != 'monthly' else tier
+
+        # Create checkout session
+        try:
+            from ...services.stripe_service import StripeService
+            session = StripeService.create_checkout_session(current_user.organization, price_key)
+
+            if not session:
+                flash('Failed to create checkout session. Please try again.', 'error')
+                return redirect(url_for('billing.upgrade'))
+                
+            return redirect(session.url)
+        except ImportError:
+            flash('Payment system not configured. Please contact support.', 'error')
             return redirect(url_for('billing.upgrade'))
     except Exception as e:
         logger.error(f"Checkout error for org {current_user.organization.id}: {str(e)}")
         flash('Payment system temporarily unavailable. Please try again later.', 'error')
         return redirect(url_for('billing.upgrade'))
-
-    return redirect(session.url)
 
 @billing_bp.route('/cancel-subscription', methods=['POST'])
 @login_required
@@ -120,41 +119,53 @@ def cancel_subscription():
     if not has_permission(current_user, 'organization.manage_billing'):
         return jsonify({'error': 'Permission denied'}), 403
 
-    success = StripeService.cancel_subscription(current_user.organization)
+    try:
+        from ...services.stripe_service import StripeService
+        success = StripeService.cancel_subscription(current_user.organization)
 
-    if success:
-        flash('Subscription canceled successfully.', 'success')
-        return jsonify({'success': True})
-    else:
-        flash('Failed to cancel subscription. Please contact support.', 'error')
-        return jsonify({'error': 'Failed to cancel subscription'}), 500
+        if success:
+            flash('Subscription canceled successfully.', 'success')
+            return jsonify({'success': True})
+        else:
+            flash('Failed to cancel subscription. Please contact support.', 'error')
+            return jsonify({'error': 'Failed to cancel subscription'}), 500
+    except ImportError:
+        flash('Payment system not configured. Please contact support.', 'error')
+        return jsonify({'error': 'Payment system not available'}), 500
 
 @billing_bp.route('/webhooks/stripe', methods=['POST'])
 def stripe_webhook():
     """Handle Stripe webhooks"""
-    payload = request.get_data()
-    sig_header = request.headers.get('Stripe-Signature')
-
     try:
-        event = stripe.Webhook.construct_event(
-            payload, sig_header, current_app.config['STRIPE_WEBHOOK_SECRET']
-        )
-    except ValueError:
-        logger.error("Invalid payload in Stripe webhook")
-        return jsonify({'error': 'Invalid payload'}), 400
-    except stripe.error.SignatureVerificationError:
-        logger.error("Invalid signature in Stripe webhook")
-        return jsonify({'error': 'Invalid signature'}), 400
+        import stripe
+        from ...services.stripe_service import StripeService
+        
+        payload = request.get_data()
+        sig_header = request.headers.get('Stripe-Signature')
 
-    # Handle the event
-    if event['type'] == 'customer.subscription.created':
-        StripeService.handle_subscription_created(event['data']['object'])
-    elif event['type'] == 'customer.subscription.updated':
-        StripeService.handle_subscription_updated(event['data']['object'])
-    elif event['type'] == 'customer.subscription.deleted':
-        # Handle subscription cancellation
-        pass
-    else:
-        logger.info(f"Unhandled Stripe webhook event: {event['type']}")
+        try:
+            event = stripe.Webhook.construct_event(
+                payload, sig_header, current_app.config['STRIPE_WEBHOOK_SECRET']
+            )
+        except ValueError:
+            logger.error("Invalid payload in Stripe webhook")
+            return jsonify({'error': 'Invalid payload'}), 400
+        except stripe.error.SignatureVerificationError:
+            logger.error("Invalid signature in Stripe webhook")
+            return jsonify({'error': 'Invalid signature'}), 400
 
-    return jsonify({'status': 'success'})
+        # Handle the event
+        if event['type'] == 'customer.subscription.created':
+            StripeService.handle_subscription_created(event['data']['object'])
+        elif event['type'] == 'customer.subscription.updated':
+            StripeService.handle_subscription_updated(event['data']['object'])
+        elif event['type'] == 'customer.subscription.deleted':
+            # Handle subscription cancellation
+            pass
+        else:
+            logger.info(f"Unhandled Stripe webhook event: {event['type']}")
+
+        return jsonify({'status': 'success'})
+    except ImportError:
+        logger.warning("Stripe not configured, webhook ignored")
+        return jsonify({'status': 'stripe_not_configured'}), 200
