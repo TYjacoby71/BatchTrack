@@ -15,15 +15,23 @@ organization_bp = Blueprint('organization', __name__)
 @login_required
 def dashboard():
     """Organization management dashboard"""
-    # Check permissions - only team and enterprise tiers get org dashboard
-    if not has_permission(current_user, 'manage_organization'):
-        flash('You do not have permission to access the organization dashboard.', 'error')
-        return redirect(url_for('settings.index'))
-
-    # Also check subscription tier
-    if current_user.organization.effective_subscription_tier in ['free', 'solo']:
+    # First check subscription tier - only team, enterprise, and exempt should have access
+    effective_tier = current_user.organization.effective_subscription_tier
+    if effective_tier in ['free', 'solo']:
         flash('Organization dashboard is available with Team and Enterprise plans.', 'info')
         return redirect(url_for('settings.index'))
+
+    # Organization owners automatically have access to dashboard for allowed tiers
+    if current_user.user_type == 'organization_owner' or current_user.is_organization_owner:
+        pass  # Access granted
+    # Developers have access
+    elif current_user.user_type == 'developer':
+        pass  # Access granted
+    # Team members need the manage_organization permission
+    else:
+        if not has_permission(current_user, 'manage_organization'):
+            flash('You do not have permission to access the organization dashboard.', 'error')
+            return redirect(url_for('settings.index'))
 
     from ...services.pricing_service import PricingService
     pricing_data = PricingService.get_pricing_data()
