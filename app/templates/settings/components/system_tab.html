@@ -1,0 +1,64 @@
+
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-cogs"></i> System Settings</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Items Per Page</label>
+                    <select class="form-select" x-model="systemSettings.system.per_page" @change="updateSystemSetting('system', 'per_page', $event.target.value)">
+                        <option value="10">10</option>
+                        <option value="25">25</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                    </select>
+                </div>
+
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" x-model="systemSettings.system.enable_csv_export" @change="updateSystemSetting('system', 'enable_csv_export', $event.target.checked)">
+                    <label class="form-check-label">Enable CSV Export</label>
+                </div>
+
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" x-model="systemSettings.system.auto_save_forms" @change="updateSystemSetting('system', 'auto_save_forms', $event.target.checked)">
+                    <label class="form-check-label">Auto-save Forms</label>
+                </div>
+
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" x-model="systemSettings.system.auto_backup" @change="updateSystemSetting('system', 'auto_backup', $event.target.checked)">
+                    <label class="form-check-label">Auto Backup</label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-bell"></i> Notification Settings</h5>
+            </div>
+            <div class="card-body">
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" x-model="systemSettings.notifications.browser_notifications" @change="updateSystemSetting('notifications', 'browser_notifications', $event.target.checked)">
+                    <label class="form-check-label">Browser Notifications</label>
+                </div>
+
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" x-model="systemSettings.notifications.email_alerts" @change="updateSystemSetting('notifications', 'email_alerts', $event.target.checked)">
+                    <label class="form-check-label">Email Alerts</label>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Alert Frequency</label>
+                    <select class="form-select" x-model="systemSettings.notifications.alert_frequency" @change="updateSystemSetting('notifications', 'alert_frequency', $event.target.value)">
+                        <option value="real_time">Real Time</option>
+                        <option value="hourly">Hourly</option>
+                        <option value="daily">Daily</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

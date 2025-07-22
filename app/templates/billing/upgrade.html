@@ -1,72 +1,40 @@
-
 {% extends "layout.html" %}
 
 {% block content %}
 <div class="container">
     <h2>Upgrade Your Subscription</h2>
-    
+
     <div class="current-plan">
         <h3>Current Plan: {{ current_tier.title() }}</h3>
     </div>
-    
+
     <div class="pricing-cards">
-        <div class="pricing-card">
-            <h3>Solo</h3>
-            <p class="price">$29/month</p>
+        {% for tier_name, tier_data in pricing_data.items() %}
+        <div class="pricing-card {% if tier_name == 'team' %}featured{% endif %}">
+            <h3>{{ tier_name.title() }}</h3>
+            <p class="price">{{ tier_data.price }}/month</p>
             <ul>
-                <li>Up to 5 users</li>
-                <li>Full batch tracking</li>
-                <li>Basic inventory management</li>
-                <li>Email support</li>
+                {% for feature in tier_data.features %}
+                <li>{{ feature }}</li>
+                {% endfor %}
             </ul>
-            {% if current_tier != 'solo' %}
-            <a href="{{ url_for('billing.checkout', tier='solo') }}" class="btn btn-primary">
-                {% if current_tier == 'free' %}Upgrade to Solo{% else %}Switch to Solo{% endif %}
+            {% if current_tier != tier_name %}
+            <a href="{{ url_for('billing.checkout', tier=tier_name) }}" class="btn btn-primary">
+                {% if current_tier == 'free' or 
+                     (tier_name == 'team' and current_tier == 'solo') or
+                     (tier_name == 'enterprise' and current_tier in ['free', 'solo', 'team']) %}
+                    Upgrade to {{ tier_name.title() }}
+                {% else %}
+                    Switch to {{ tier_name.title() }}
+                {% endif %}
             </a>
             {% else %}
             <button class="btn btn-secondary" disabled>Current Plan</button>
             {% endif %}
         </div>
-        
-        <div class="pricing-card featured">
-            <h3>Team</h3>
-            <p class="price">$79/month</p>
-            <ul>
-                <li>Up to 10 users</li>
-                <li>Advanced batch tracking</li>
-                <li>Full inventory management</li>
-                <li>Custom roles & permissions</li>
-                <li>Priority support</li>
-            </ul>
-            {% if current_tier != 'team' %}
-            <a href="{{ url_for('billing.checkout', tier='team') }}" class="btn btn-primary">
-                {% if current_tier in ['free', 'solo'] %}Upgrade to Team{% else %}Switch to Team{% endif %}
-            </a>
-            {% else %}
-            <button class="btn btn-secondary" disabled>Current Plan</button>
-            {% endif %}
-        </div>
-        
-        <div class="pricing-card">
-            <h3>Enterprise</h3>
-            <p class="price">$199/month</p>
-            <ul>
-                <li>Unlimited users</li>
-                <li>All features included</li>
-                <li>API access</li>
-                <li>Custom integrations</li>
-                <li>Phone & email support</li>
-            </ul>
-            {% if current_tier != 'enterprise' %}
-            <a href="{{ url_for('billing.checkout', tier='enterprise') }}" class="btn btn-primary">
-                Upgrade to Enterprise
-            </a>
-            {% else %}
-            <button class="btn btn-secondary" disabled>Current Plan</button>
-            {% endif %}
-        </div>
+        {% endfor %}
     </div>
-    
+
     {% if current_tier != 'free' %}
     <div class="cancel-section">
         <h3>Need to Cancel?</h3>

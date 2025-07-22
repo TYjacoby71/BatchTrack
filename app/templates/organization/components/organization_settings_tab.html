@@ -1,0 +1,21 @@
+
+<h5 class="mb-3"><i class="fas fa-building"></i> Organization Settings</h5>
+<form @submit.prevent="updateOrgSettings()">
+    <div class="row">
+        <div class="col-md-6">
+            <div class="mb-3">
+                <label class="form-label">Organization Name</label>
+                <input type="text" class="form-control" x-model="orgSettings.name" required>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="mb-3">
+                <label class="form-label">Contact Email</label>
+                <input type="email" class="form-control" x-model="orgSettings.contact_email" placeholder="{{ current_user.email }}">
+            </div>
+        </div>
+    </div>
+    <button type="submit" class="btn btn-primary">
+        <i class="fas fa-save"></i> Save Settings
+    </button>
+</form>
