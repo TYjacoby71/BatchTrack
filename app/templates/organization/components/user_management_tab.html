@@ -1,4 +1,3 @@
-
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h5 class="mb-0"><i class="fas fa-users"></i> User Management</h5>
     <div class="d-flex align-items-center gap-3">
@@ -29,7 +28,17 @@
                         </div>
                     </td>
                     <td class="user-role">
-                        {{ user.display_role }}
+                        {% if user.get_active_roles() %}
+                            {% for role in user.get_active_roles() %}
+                                {{ role.name|title }}{% if not loop.last %}, {% endif %}
+                            {% endfor %}
+                        {% elif user.user_type == 'organization_owner' %}
+                            Organization Owner
+                        {% elif user.user_type == 'team_member' %}
+                            Team Member (No Roles)
+                        {% else %}
+                            {{ user.user_type|title }}
+                        {% endif %}
                     </td>
                     <td>
                         {% if user.is_active %}
