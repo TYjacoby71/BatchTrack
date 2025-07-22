@@ -18,8 +18,13 @@ def upgrade():
         flash('You do not have permission to manage billing.', 'error')
         return redirect(url_for('organization.dashboard'))
     
+    from ...services.pricing_service import PricingService
     current_tier = SubscriptionService.get_effective_tier(current_user.organization)
-    return render_template('billing/upgrade.html', current_tier=current_tier)
+    pricing_data = PricingService.get_pricing_data()
+    
+    return render_template('billing/upgrade.html', 
+                         current_tier=current_tier, 
+                         pricing_data=pricing_data)
 
 @billing_bp.route('/checkout/<tier>')
 @billing_bp.route('/checkout/<tier>/<billing_cycle>')
