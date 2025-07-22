@@ -119,53 +119,118 @@
         </div>
 
         <div class="row mt-4">
-            <!-- Features -->
-            <div class="col-md-6">
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="mb-0">Features</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="alert alert-warning">
-                            <h6><i class="fas fa-exclamation-triangle"></i> Stripe Integration</h6>
-                            <p class="mb-2">Features are automatically synced from Stripe product metadata.</p>
-                            <p class="mb-0">Configure features in your Stripe Dashboard under Product → Metadata → "features" (comma-separated).</p>
+            <!-- Consolidated Permissions Section -->
+                        <div class="mb-4">
+                            <label class="form-label">
+                                <i class="fas fa-key text-primary"></i> Tier Permissions
+                            </label>
+                            <div class="form-text mb-3">
+                                Select all permissions that should be included in this subscription tier. 
+                                Users with this tier will have access to these specific features and actions.
+                            </div>
+
+                            <!-- Permission Categories -->
+                            <div class="permissions-container">
+                                {% set permission_categories = {} %}
+                                {% for permission in permissions %}
+                                    {% set category = permission.category or 'general' %}
+                                    {% if category not in permission_categories %}
+                                        {% set _ = permission_categories.update({category: []}) %}
+                                    {% endif %}
+                                    {% set _ = permission_categories[category].append(permission) %}
+                                {% endfor %}
+
+                                <div class="row">
+                                    {% for category, perms in permission_categories.items() %}
+                                    <div class="col-md-6 mb-3">
+                                        <div class="card">
+                                            <div class="card-header py-2">
+                                                <h6 class="mb-0 text-capitalize">
+                                                    <i class="fas fa-folder-open text-secondary me-1"></i>
+                                                    {{ category.replace('_', ' ').title() }} 
+                                                    <small class="text-muted">({{ perms|length }})</small>
+                                                </h6>
+                                            </div>
+                                            <div class="card-body py-2" style="max-height: 200px; overflow-y: auto;">
+                                                {% for permission in perms %}
+                                                <div class="form-check mb-1">
+                                                    <input class="form-check-input" type="checkbox" name="permissions" 
+                                                           value="{{ permission.name }}" id="perm_{{ permission.id }}"
+                                                           {% if permission.name in tier.get('permissions', []) %}checked{% endif %}>
+                                                    <label class="form-check-label small" for="perm_{{ permission.id }}">
+                                                        <strong>{{ permission.name }}</strong>
+                                                        {% if permission.description %}
+                                                        <br><small class="text-muted">{{ permission.description }}</small>
+                                                        {% endif %}
+                                                    </label>
+                                                </div>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
                         </div>
 
+                        <!-- Stripe Features -->
                         <div class="mb-3">
-                            <label class="form-label">Current Stripe Features:</label>
+                            <label class="form-label">
+                                <i class="fas fa-credit-card text-info"></i> Stripe Features
+                            </label>
                             {% if tier.stripe_features %}
                                 <ul class="list-group">
                                     {% for feature in tier.stripe_features %}
-                                        <li class="list-group-item">{{ feature }}</li>
+                                        <li class="list-group-item py-1">{{ feature }}</li>
                                     {% endfor %}
                                 </ul>
+                                <small class="form-text text-muted">These features are synced from Stripe product configuration.</small>
                             {% else %}
                                 <p class="text-muted">No features synced from Stripe. Check your Stripe product configuration.</p>
                             {% endif %}
                         </div>
 
+                        <!-- Fallback Features -->
                         <div class="mb-3">
-                            <label for="fallback_features" class="form-label">Fallback Features (Local Override)</label>
+                            <label for="fallback_features" class="form-label">
+                                <i class="fas fa-list text-warning"></i> Fallback Features (Local Override)
+                            </label>
                             <textarea class="form-control" id="fallback_features" name="fallback_features" rows="4">{{ tier.fallback_features | join('\n') if tier.fallback_features else '' }}</textarea>
                             <small class="form-text text-muted">Used only if Stripe sync fails. One feature per line.</small>
                         </div>
 
+                        <!-- Feature Groups -->
                         <div class="mb-3">
-                            <label class="form-label">Permissions</label>
-                            <div class="form-text mb-2">Select permissions for this tier:</div>
-                            <div class="permissions-grid" style="max-height: 200px; overflow-y: auto; border: 1px solid #dee2e6; padding: 10px;">
-                                {% for permission in permissions %}
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="permissions" 
-                                           value="{{ permission.name }}" id="perm_{{ permission.id }}"
-                                           {% if permission.name in tier.get('permissions', []) %}checked{% endif %}>
-                                    <label class="form-check-label small" for="perm_{{ permission.id }}">
-                                        <strong>{{ permission.name }}</strong>
-                                        {% if permission.description %}
-                                        <br><small class="text-muted">{{ permission.description }}</small>
-                                        {% endif %}
-                                    </label>
+                            <label class="form-label">
+                                <i class="fas fa-layer-group text-success"></i> Feature Groups
+                            </label>
+                            <div class="form-text mb-2">Select high-level feature groups for organizational purposes.</div>
+                            {% set available_feature_groups = [
+                                'basic_dashboard',
+                                'full_dashboard', 
+                                'limited_inventory',
+                                'full_inventory',
+                                'batch_production',
+                                'recipe_management',
+                                'product_catalog',
+                                'team_management',
+                                'basic_reports',
+                                'advanced_reports',
+                                'api_access',
+                                'integrations',
+                                'system_admin'
+                            ] %}
+                            <div class="row">
+                                {% for feature_group in available_feature_groups %}
+                                <div class="col-md-4 mb-1">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="feature_groups" 
+                                               value="{{ feature_group }}" id="fg_{{ loop.index }}"
+                                               {% if feature_group in tier.get('feature_groups', []) %}checked{% endif %}>
+                                        <label class="form-check-label small" for="fg_{{ loop.index }}">
+                                            {{ feature_group.replace('_', ' ').title() }}
+                                        </label>
+                                    </div>
                                 </div>
                                 {% endfor %}
                             </div>
@@ -173,83 +238,19 @@
                     </div>
                 </div>
             </div>
-
-            <!-- Feature Groups -->
-            <div class="col-md-6">
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="mb-0">Feature Groups</h5>
-                    </div>
-                    <div class="card-body" style="max-height: 400px; overflow-y: auto;">
-                        <p class="text-muted small mb-3">Select the main feature groups available for this tier:</p>
-
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="feature_dashboard" name="feature_groups" value="dashboard"
-                                   {% if 'dashboard' in tier.get('feature_groups', []) %}checked{% endif %}>
-                            <label class="form-check-label" for="feature_dashboard">
-                                <strong>Dashboard & Analytics</strong>
-                                <br><small class="text-muted">Basic dashboard, metrics, and reporting</small>
-                            </label>
-                        </div>
-
-                        <div class="form-check mt-3">
-                            <input class="form-check-input" type="checkbox" id="feature_inventory" name="feature_groups" value="inventory"
-                                   {% if 'inventory' in tier.get('feature_groups', []) %}checked{% endif %}>
-                            <label class="form-check-label" for="feature_inventory">
-                                <strong>Inventory Management</strong>
-                                <br><small class="text-muted">Stock tracking, adjustments, and alerts</small>
-                            </label>
-                        </div>
-
-                        <div class="form-check mt-3">
-                            <input class="form-check-input" type="checkbox" id="feature_batches" name="feature_groups" value="batches"
-                                   {% if 'batches' in tier.get('feature_groups', []) %}checked{% endif %}>
-                            <label class="form-check-label" for="feature_batches">
-                                <strong>Batch Production</strong>
-                                <br><small class="text-muted">Recipe management, batch tracking, and costing</small>
-                            </label>
-                        </div>
-
-                        <div class="form-check mt-3">
-                            <input class="form-check-input" type="checkbox" id="feature_products" name="feature_groups" value="products"
-                                   {% if 'products' in tier.get('feature_groups', []) %}checked{% endif %}>
-                            <label class="form-check-label" for="feature_products">
-                                <strong>Product Management</strong>
-                                <br><small class="text-muted">SKU management, variants, and reservations</small>
-                            </label>
-                        </div>
-
-                        <div class="form-check mt-3">
-                            <input class="form-check-input" type="checkbox" id="feature_users" name="feature_groups" value="user_management"
-                                   {% if 'user_management' in tier.get('feature_groups', []) %}checked{% endif %}>
-                            <label class="form-check-label" for="feature_users">
-                                <strong>User Management</strong>
-                                <br><small class="text-muted">Team member management and role assignments</small>
-                            </label>
-                        </div>
-
-                        <div class="form-check mt-3">
-                            <input class="form-check-input" type="checkbox" id="feature_api" name="feature_groups" value="api_access"
-                                   {% if 'api_access' in tier.get('feature_groups', []) %}checked{% endif %}>
-                            <label class="form-check-label" for="feature_api">
-                                <strong>API Access</strong>
-                                <br><small class="text-muted">REST API for integrations and automation</small>
-                            </label>
-                        </div>
-
-                        <div class="form-check mt-3">
-                            <input class="form-check-input" type="checkbox" id="feature_advanced" name="feature_groups" value="advanced_features"
-                                   {% if 'advanced_features' in tier.get('feature_groups', []) %}checked{% endif %}>
-                            <label class="form-check-label" for="feature_advanced">
-                                <strong>Advanced Features</strong>
-                                <br><small class="text-muted">FIFO tracking, expiration management, advanced alerts</small>
-                            </label>
-                        </div>
-                    </div>
-                </div>
-            </div>
         </div>
 
+        <!-- Tier Settings -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Tier Settings</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+        
         <!-- Actions -->
         <div class="row mt-4">
             <div class="col-12">
@@ -265,7 +266,7 @@
                 </div>
             </div>
 
-            
+
         </div>
     </form>
 </div>
