@@ -1,21 +1,18 @@
 from flask import render_template, request, jsonify, redirect, url_for, flash, current_app
 from flask_login import login_required, current_user
 from . import billing_bp
+import logging
+import stripe
 
 print(f"DEBUG: billing_bp in routes.py: {billing_bp}")
 print(f"DEBUG: billing_bp name: {billing_bp.name}")
 print(f"DEBUG: billing_bp url_prefix: {billing_bp.url_prefix}")
+
 from ...services.stripe_service import StripeService
 from ...services.subscription_service import SubscriptionService
 from ...utils.permissions import require_permission, has_permission
-import logging
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
-from flask_login import login_required, current_user
-from app.models import db, Organization, Permission
-from app.utils.permissions import require_permission
-from app.blueprints.developer.subscription_tiers import load_tiers_config
-
-billing_bp = Blueprint('billing', __name__, url_prefix='/billing')
+from ...models import db, Organization, Permission
+from ...blueprints.developer.subscription_tiers import load_tiers_config
 
 def get_tier_permissions(tier_key):
     """Get all permissions for a subscription tier"""
