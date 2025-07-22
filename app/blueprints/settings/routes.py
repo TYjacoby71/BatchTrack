@@ -23,7 +23,7 @@ def index():
     user_prefs = {
         'max_dashboard_alerts': user_prefs_obj.max_dashboard_alerts,
         'show_expiration_alerts': user_prefs_obj.show_expiration_alerts,
-        'show_timer_alerts': user_prefs_obj.show_expiration_alerts,
+        'show_timer_alerts': user_prefs_obj.show_timer_alerts,
         'show_timer_alerts': user_prefs_obj.show_timer_alerts,
         'show_low_stock_alerts': user_prefs_obj.show_low_stock_alerts,
         'show_batch_alerts': user_prefs_obj.show_batch_alerts,
