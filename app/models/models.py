@@ -112,7 +112,7 @@ class User(UserMixin, db.Model):
     phone = db.Column(db.String(20), nullable=True)
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)
     user_type = db.Column(db.String(32), default='customer')  # 'developer', 'customer'
-    is_organization_owner = db.Column(db.Boolean, default=False)  # Flag for organization owners
+    is_organization_owner = db.Column(db.Boolean, nullable=True, default=False)  # Flag for organization owners
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
     last_login = db.Column(db.DateTime, nullable=True)
