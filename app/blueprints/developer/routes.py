@@ -247,13 +247,12 @@ def delete_organization(org_id):
             # Delete batch containers, timers, etc. if you have those relationships
             db.session.delete(batch)
         
-        # 4. Delete inventory and FIFO lots
-        from app.models import InventoryItem
-        from app.models.models import FIFOLot
+        # 4. Delete inventory and FIFO history
+        from app.models import InventoryItem, InventoryHistory
         inventory_items = InventoryItem.query.filter_by(organization_id=org_id).all()
         for item in inventory_items:
-            # Delete associated FIFO lots
-            FIFOLot.query.filter_by(inventory_item_id=item.id).delete()
+            # Delete associated inventory history (contains FIFO tracking)
+            InventoryHistory.query.filter_by(inventory_item_id=item.id).delete()
             db.session.delete(item)
         
         # 5. Delete products and SKUs
