@@ -17,31 +17,34 @@ def has_permission(user_or_permission_name, permission_name=None):
     if not user.is_authenticated:
         return False
 
-    # Developers have all permissions
+    # ONLY developers bypass tier restrictions - organization owners must respect them
     if user.user_type == 'developer':
         return True
 
-    # First check subscription tier permissions
+    # For ALL other users (including organization owners), check subscription tier first
+    # Tier restrictions are absolute - no role can override subscription limits
     tier_has_permission = _has_tier_permission(user, permission)
-    print(f"DEBUG: Permission check for {user.username} - {permission}")
+    print(f"DEBUG: Permission check for {user.username} ({user.user_type}) - {permission}")
     print(f"DEBUG: Tier: {user.organization.effective_subscription_tier if user.organization else 'None'}")
     print(f"DEBUG: Tier has permission: {tier_has_permission}")
     
+    # If the tier doesn't allow this permission, deny access regardless of roles or user type
     if not tier_has_permission:
+        print(f"DEBUG: Permission {permission} denied - not allowed by tier {user.organization.effective_subscription_tier if user.organization else 'None'}")
         return False
 
-    # Check through assigned roles for all user types (including org owners)
+    # Only if tier allows the permission, then check roles
     try:
         roles = user.get_active_roles() if hasattr(user, 'get_active_roles') else []
         print(f"DEBUG: User roles: {[role.name for role in roles]}")
         for role in roles:
             if hasattr(role, 'has_permission') and role.has_permission(permission):
-                print(f"DEBUG: Role {role.name} has permission {permission}")
+                print(f"DEBUG: Role {role.name} has permission {permission} and tier allows it")
                 return True
     except Exception as e:
         print(f"Error checking user roles: {e}")
 
-    print(f"DEBUG: Permission {permission} denied for user {user.username}")
+    print(f"DEBUG: Permission {permission} denied - no role grants permission")
     return False
 
 def _has_tier_permission(user, permission_name):
@@ -89,7 +92,7 @@ def has_subscription_feature(feature):
     return feature in org_features or 'all_features' in org_features
 
 def is_organization_owner():
-    """Check if current user is organization owner"""
+    """Check if current user is organization owner (for UI context only - does NOT bypass permissions)"""
     if not current_user.is_authenticated:
         return False
 
@@ -98,6 +101,8 @@ def is_organization_owner():
         from flask import session
         return session.get('dev_selected_org_id') is not None
 
+    # This function only indicates user type - it does NOT grant permission bypasses
+    # All permission checks must still go through has_permission() which respects tier limits
     return current_user.user_type == 'organization_owner'
 
 def is_developer():

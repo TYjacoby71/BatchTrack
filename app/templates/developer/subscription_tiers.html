@@ -251,25 +251,5 @@ function syncTier(tierKey) {
         alert('Sync failed: Network error');
     });
 }
-        fetch(`{{ url_for('developer.subscription_tiers.sync_tier', tier_key='TIER_KEY') }}`.replace('TIER_KEY', tierKey), {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert(data.message);
-                location.reload();
-            } else {
-                alert('Sync failed: ' + data.error);
-            }
-        })
-        .catch(error => {
-            alert('Sync failed: ' + error);
-        });
-    }
-}
 </script>
 {% endblock %}
