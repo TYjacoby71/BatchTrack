@@ -3,81 +3,47 @@ from ..extensions import db as database
 from ..utils.permission_management import update_organization_owner_permissions as update_org_owner_perms
 
 def seed_permissions():
-    """Seed all permissions with their subscription tier requirements"""
-    permissions_data = [
-        # Dashboard permissions
-        {'name': 'dashboard.view', 'description': 'View dashboard', 'category': 'dashboard', 'tier': 'free'},
-
-        # Alert permissions
-        {'name': 'alerts.view', 'description': 'View alerts', 'category': 'alerts', 'tier': 'free'},
-        {'name': 'alerts.manage', 'description': 'Manage alert settings', 'category': 'alerts', 'tier': 'team'},
-
-        # Batch permissions
-        {'name': 'batches.view', 'description': 'View batches', 'category': 'batches', 'tier': 'free'},
-        {'name': 'batches.create', 'description': 'Create batches', 'category': 'batches', 'tier': 'free'},
-        {'name': 'batches.edit', 'description': 'Edit batches', 'category': 'batches', 'tier': 'free'},
-        {'name': 'batches.finish', 'description': 'Finish batches', 'category': 'batches', 'tier': 'free'},
-        {'name': 'batches.cancel', 'description': 'Cancel batches', 'category': 'batches', 'tier': 'free'},
-
-        # Inventory permissions
-        {'name': 'inventory.view', 'description': 'View inventory', 'category': 'inventory', 'tier': 'free'},
-        {'name': 'inventory.edit', 'description': 'Edit inventory', 'category': 'inventory', 'tier': 'free'},
-        {'name': 'inventory.adjust', 'description': 'Adjust inventory', 'category': 'inventory', 'tier': 'free'},
-        {'name': 'inventory.reserve', 'description': 'Reserve inventory', 'category': 'inventory', 'tier': 'team'},
-        {'name': 'inventory.delete', 'description': 'Delete inventory', 'category': 'inventory', 'tier': 'team'},
-
-        # Product permissions
-        {'name': 'products.view', 'description': 'View products', 'category': 'products', 'tier': 'free'},
-        {'name': 'products.edit', 'description': 'Edit products', 'category': 'products', 'tier': 'free'},
-        {'name': 'products.create', 'description': 'Create products', 'category': 'products', 'tier': 'free'},
-        {'name': 'products.delete', 'description': 'Delete products', 'category': 'products', 'tier': 'team'},
-
-        # Recipe permissions
-        {'name': 'recipes.view', 'description': 'View recipes', 'category': 'recipes', 'tier': 'free'},
-        {'name': 'recipes.create', 'description': 'Create recipes', 'category': 'recipes', 'tier': 'free'},
-        {'name': 'recipes.edit', 'description': 'Edit recipes', 'category': 'recipes', 'tier': 'free'},
-        {'name': 'recipes.delete', 'description': 'Delete recipes', 'category': 'recipes', 'tier': 'team'},
-
-        # Organization permissions
-        {'name': 'organization.view', 'description': 'View organization settings', 'category': 'organization', 'tier': 'team'},
-        {'name': 'organization.edit', 'description': 'Edit organization settings', 'category': 'organization', 'tier': 'team'},
-        {'name': 'organization.manage_users', 'description': 'Manage organization users', 'category': 'organization', 'tier': 'team'},
-        {'name': 'organization.manage_roles', 'description': 'Manage organization roles', 'category': 'organization', 'tier': 'team'},
-        {'name': 'organization.manage_billing', 'description': 'Manage billing', 'category': 'organization', 'tier': 'team'},
-
-        # Reporting permissions
-        {'name': 'reports.view', 'description': 'View reports', 'category': 'reports', 'tier': 'team'},
-        {'name': 'reports.export', 'description': 'Export reports', 'category': 'reports', 'tier': 'team'},
-        {'name': 'reports.advanced', 'description': 'Advanced reporting', 'category': 'reports', 'tier': 'enterprise'},
-
-        # API permissions
-        {'name': 'api.access', 'description': 'API access', 'category': 'api', 'tier': 'enterprise'},
-        {'name': 'api.admin', 'description': 'API administration', 'category': 'api', 'tier': 'enterprise'},
-
-        # System permissions
-        {'name': 'system.admin', 'description': 'System administration', 'category': 'system', 'tier': 'enterprise'},
-        {'name': 'system.debug', 'description': 'System debugging', 'category': 'system', 'tier': 'enterprise'},
-    ]
-
-    print("Seeding permissions...")
-    for perm_data in permissions_data:
-        permission = Permission.query.filter_by(name=perm_data['name']).first()
-        if not permission:
-            permission = Permission(
-                name=perm_data['name'],
-                description=perm_data['description'],
-                category=perm_data['category'],
-                required_subscription_tier=perm_data['tier']
-            )
-            db.session.add(permission)
-        else:
-            # Update existing permission
-            permission.description = perm_data['description']
-            permission.category = perm_data['category']
-            permission.required_subscription_tier = perm_data['tier']
-
-    db.session.commit()
-    print(f"✅ Seeded {len(permissions_data)} permissions")
+    """Seed all permissions using consolidated permissions system"""
+    print("⚠️  Using legacy seeder. Please run 'python seed_consolidated_permissions.py' instead.")
+    print("This will use the new consolidated permissions structure with better organization.")
+    
+    # Fallback to basic permissions if consolidated file doesn't exist
+    import os
+    if not os.path.exists('consolidated_permissions.json'):
+        print("Consolidated permissions file not found. Creating basic permissions...")
+        
+        basic_permissions = [
+            {'name': 'dashboard.view', 'description': 'View main dashboard with production overview and alerts', 'category': 'dashboard', 'tier': 'free'},
+            {'name': 'inventory.view', 'description': 'View all inventory items and stock levels', 'category': 'inventory_management', 'tier': 'free'},
+            {'name': 'inventory.edit', 'description': 'Modify inventory item details and specifications', 'category': 'inventory_management', 'tier': 'free'},
+            {'name': 'inventory.adjust', 'description': 'Manually adjust inventory quantities and record changes', 'category': 'inventory_management', 'tier': 'free'},
+            {'name': 'recipes.view', 'description': 'Access recipe details and ingredient lists', 'category': 'recipe_management', 'tier': 'free'},
+            {'name': 'recipes.create', 'description': 'Create new recipes with ingredients and instructions', 'category': 'recipe_management', 'tier': 'free'},
+            {'name': 'recipes.edit', 'description': 'Modify existing recipes and update ingredients', 'category': 'recipe_management', 'tier': 'free'},
+            {'name': 'batches.view', 'description': 'Access batch details and production history', 'category': 'batch_production', 'tier': 'free'},
+            {'name': 'batches.create', 'description': 'Start new production batches from recipes', 'category': 'batch_production', 'tier': 'free'},
+            {'name': 'batches.edit', 'description': 'Modify batch information and notes', 'category': 'batch_production', 'tier': 'free'},
+            {'name': 'batches.finish', 'description': 'Complete production batches and add finished goods', 'category': 'batch_production', 'tier': 'free'},
+            {'name': 'products.view', 'description': 'Access product catalog and SKU details', 'category': 'product_management', 'tier': 'free'},
+            {'name': 'products.create', 'description': 'Add new products to catalog with SKUs', 'category': 'product_management', 'tier': 'free'},
+            {'name': 'products.edit', 'description': 'Modify product details and specifications', 'category': 'product_management', 'tier': 'free'},
+        ]
+        
+        for perm_data in basic_permissions:
+            permission = Permission.query.filter_by(name=perm_data['name']).first()
+            if not permission:
+                permission = Permission(
+                    name=perm_data['name'],
+                    description=perm_data['description'],
+                    category=perm_data['category'],
+                    required_subscription_tier=perm_data['tier']
+                )
+                db.session.add(permission)
+        
+        db.session.commit()
+        print(f"✅ Created {len(basic_permissions)} basic permissions")
+    else:
+        print("✅ Consolidated permissions file found. Run consolidated seeder for full permissions.")
 
 def seed_system_roles():
     """Seed system roles that are available to all organizations"""

@@ -1,0 +1,691 @@
+
+{
+  "organization_permissions": {
+    "dashboard": {
+      "description": "Main dashboard and overview features",
+      "permissions": [
+        {
+          "name": "dashboard.view",
+          "display_name": "View Dashboard",
+          "description": "Access main dashboard with production overview, alerts, and key metrics",
+          "required_tier": "free"
+        }
+      ]
+    },
+    "inventory_management": {
+      "description": "All inventory tracking, adjustments, and stock management",
+      "permissions": [
+        {
+          "name": "inventory.view",
+          "display_name": "View Inventory",
+          "description": "View all inventory items, stock levels, and FIFO lot details",
+          "required_tier": "free"
+        },
+        {
+          "name": "inventory.edit",
+          "display_name": "Edit Inventory Details",
+          "description": "Modify inventory item details like names, categories, and specifications",
+          "required_tier": "free"
+        },
+        {
+          "name": "inventory.adjust",
+          "display_name": "Adjust Stock Levels",
+          "description": "Manually adjust inventory quantities, add stock, or record waste/loss",
+          "required_tier": "free"
+        },
+        {
+          "name": "inventory.reserve",
+          "display_name": "Reserve Inventory",
+          "description": "Create inventory reservations for planned production or sales",
+          "required_tier": "team"
+        },
+        {
+          "name": "inventory.delete",
+          "display_name": "Delete Inventory Items",
+          "description": "Permanently remove inventory items and their history",
+          "required_tier": "team"
+        },
+        {
+          "name": "inventory.view_costs",
+          "display_name": "View Inventory Costs",
+          "description": "Access cost information and pricing data for inventory items",
+          "required_tier": "team"
+        }
+      ]
+    },
+    "recipe_management": {
+      "description": "Recipe creation, editing, and production planning",
+      "permissions": [
+        {
+          "name": "recipes.view",
+          "display_name": "View Recipes",
+          "description": "Access recipe details, ingredient lists, and instructions",
+          "required_tier": "free"
+        },
+        {
+          "name": "recipes.create",
+          "display_name": "Create Recipes",
+          "description": "Create new recipes with ingredients, instructions, and scaling options",
+          "required_tier": "free"
+        },
+        {
+          "name": "recipes.edit",
+          "display_name": "Edit Recipes",
+          "description": "Modify existing recipes, update ingredients, or change instructions",
+          "required_tier": "free"
+        },
+        {
+          "name": "recipes.delete",
+          "display_name": "Delete Recipes",
+          "description": "Permanently remove recipes from the system",
+          "required_tier": "team"
+        },
+        {
+          "name": "recipes.scale",
+          "display_name": "Scale Recipes",
+          "description": "Use recipe scaling tools for different batch sizes",
+          "required_tier": "free"
+        },
+        {
+          "name": "recipes.plan_production",
+          "display_name": "Production Planning",
+          "description": "Plan production runs and check ingredient availability",
+          "required_tier": "free"
+        }
+      ]
+    },
+    "batch_production": {
+      "description": "Production batch tracking from start to finish",
+      "permissions": [
+        {
+          "name": "batches.view",
+          "display_name": "View Batches",
+          "description": "Access batch details, status, and production history",
+          "required_tier": "free"
+        },
+        {
+          "name": "batches.create",
+          "display_name": "Start Production Batches",
+          "description": "Start new production batches from recipes",
+          "required_tier": "free"
+        },
+        {
+          "name": "batches.edit",
+          "display_name": "Edit Batch Details",
+          "description": "Modify batch information, notes, and non-critical details",
+          "required_tier": "free"
+        },
+        {
+          "name": "batches.finish",
+          "display_name": "Finish Batches",
+          "description": "Complete production batches and add finished goods to inventory",
+          "required_tier": "free"
+        },
+        {
+          "name": "batches.cancel",
+          "display_name": "Cancel Batches",
+          "description": "Cancel in-progress batches and handle ingredient returns",
+          "required_tier": "free"
+        },
+        {
+          "name": "batches.view_costs",
+          "display_name": "View Batch Costs",
+          "description": "Access batch cost breakdowns and profitability analysis",
+          "required_tier": "team"
+        }
+      ]
+    },
+    "product_management": {
+      "description": "Product catalog, SKUs, and sales tracking",
+      "permissions": [
+        {
+          "name": "products.view",
+          "display_name": "View Products",
+          "description": "Access product catalog, SKU details, and sales information",
+          "required_tier": "free"
+        },
+        {
+          "name": "products.create",
+          "display_name": "Create Products",
+          "description": "Add new products to catalog with SKUs and variants",
+          "required_tier": "free"
+        },
+        {
+          "name": "products.edit",
+          "display_name": "Edit Products",
+          "description": "Modify product details, pricing, and specifications",
+          "required_tier": "free"
+        },
+        {
+          "name": "products.delete",
+          "display_name": "Delete Products",
+          "description": "Remove products from catalog and their sales history",
+          "required_tier": "team"
+        },
+        {
+          "name": "products.manage_variants",
+          "display_name": "Manage Product Variants",
+          "description": "Create and manage product variants like sizes, colors, or scents",
+          "required_tier": "free"
+        },
+        {
+          "name": "products.sales_tracking",
+          "display_name": "Sales Tracking",
+          "description": "Record sales, track inventory depletion, and view sales history",
+          "required_tier": "team"
+        }
+      ]
+    },
+    "organization_management": {
+      "description": "Organization settings, users, and roles management",
+      "permissions": [
+        {
+          "name": "organization.view",
+          "display_name": "View Organization Settings",
+          "description": "Access organization information and basic settings",
+          "required_tier": "team"
+        },
+        {
+          "name": "organization.edit",
+          "display_name": "Edit Organization Settings",
+          "description": "Modify organization details, preferences, and configurations",
+          "required_tier": "team"
+        },
+        {
+          "name": "organization.manage_users",
+          "display_name": "Manage Users",
+          "description": "Invite users, assign roles, and manage team member access",
+          "required_tier": "team"
+        },
+        {
+          "name": "organization.manage_roles",
+          "display_name": "Manage Roles",
+          "description": "Create custom roles and assign permissions to team members",
+          "required_tier": "team"
+        },
+        {
+          "name": "organization.manage_billing",
+          "display_name": "Manage Billing",
+          "description": "Access billing information, upgrade plans, and manage subscriptions",
+          "required_tier": "team"
+        },
+        {
+          "name": "organization.view_audit_logs",
+          "display_name": "View Audit Logs",
+          "description": "Access logs of user actions and system changes for compliance",
+          "required_tier": "enterprise"
+        }
+      ]
+    },
+    "alerts_notifications": {
+      "description": "Alert management and notification preferences",
+      "permissions": [
+        {
+          "name": "alerts.view",
+          "display_name": "View Alerts",
+          "description": "See system alerts for low stock, expiring items, and production issues",
+          "required_tier": "free"
+        },
+        {
+          "name": "alerts.manage",
+          "display_name": "Manage Alert Settings",
+          "description": "Configure alert thresholds, notification preferences, and alert rules",
+          "required_tier": "team"
+        },
+        {
+          "name": "alerts.dismiss",
+          "display_name": "Dismiss Alerts",
+          "description": "Mark alerts as resolved or dismiss non-critical notifications",
+          "required_tier": "free"
+        }
+      ]
+    },
+    "reports_analytics": {
+      "description": "Reporting, analytics, and business insights",
+      "permissions": [
+        {
+          "name": "reports.view",
+          "display_name": "View Basic Reports",
+          "description": "Access basic production and inventory reports",
+          "required_tier": "team"
+        },
+        {
+          "name": "reports.export",
+          "display_name": "Export Reports",
+          "description": "Download reports as CSV, PDF, or Excel files",
+          "required_tier": "team"
+        },
+        {
+          "name": "reports.advanced",
+          "display_name": "Advanced Analytics",
+          "description": "Access detailed analytics, trends, and business intelligence features",
+          "required_tier": "enterprise"
+        },
+        {
+          "name": "reports.custom",
+          "display_name": "Custom Reports",
+          "description": "Create custom reports with flexible filtering and grouping",
+          "required_tier": "enterprise"
+        }
+      ]
+    },
+    "integrations": {
+      "description": "Third-party integrations and marketplace connections",
+      "permissions": [
+        {
+          "name": "integrations.shopify",
+          "display_name": "Shopify Integration",
+          "description": "Connect and sync with Shopify store for automated order fulfillment",
+          "required_tier": "enterprise"
+        },
+        {
+          "name": "integrations.marketplace",
+          "display_name": "Marketplace Integration",
+          "description": "Connect to marketplaces like Etsy, Amazon, or custom platforms",
+          "required_tier": "enterprise"
+        },
+        {
+          "name": "integrations.api_access",
+          "display_name": "API Access",
+          "description": "Access REST API for custom integrations and third-party connections",
+          "required_tier": "enterprise"
+        }
+      ]
+    },
+    "ai_features": {
+      "description": "AI-powered features and automation",
+      "permissions": [
+        {
+          "name": "ai.recipe_optimization",
+          "display_name": "AI Recipe Optimization",
+          "description": "Use AI to optimize recipes for cost, sustainability, or performance",
+          "required_tier": "enterprise"
+        },
+        {
+          "name": "ai.demand_forecasting",
+          "display_name": "AI Demand Forecasting",
+          "description": "AI-powered predictions for inventory needs and production planning",
+          "required_tier": "enterprise"
+        },
+        {
+          "name": "ai.quality_insights",
+          "display_name": "AI Quality Insights",
+          "description": "AI analysis of batch quality and process improvement suggestions",
+          "required_tier": "enterprise"
+        }
+      ]
+    }
+  },
+  "developer_permissions": {
+    "system_administration": {
+      "description": "Core system administration and management",
+      "permissions": [
+        {
+          "name": "dev.system_admin",
+          "display_name": "System Administration",
+          "description": "Full system administration access across all organizations"
+        },
+        {
+          "name": "dev.dashboard",
+          "display_name": "Developer Dashboard",
+          "description": "Access to developer control panel and system overview"
+        },
+        {
+          "name": "dev.debug_mode",
+          "display_name": "Debug Mode",
+          "description": "Enable debug mode and access detailed system diagnostics"
+        },
+        {
+          "name": "dev.access_logs",
+          "display_name": "System Logs",
+          "description": "Access all system logs, error logs, and audit trails"
+        },
+        {
+          "name": "dev.system_settings",
+          "display_name": "System Settings",
+          "description": "Modify global system configuration and settings"
+        }
+      ]
+    },
+    "database_operations": {
+      "description": "Database management and migration operations",
+      "permissions": [
+        {
+          "name": "dev.run_migrations",
+          "display_name": "Database Migrations",
+          "description": "Execute database migrations and schema changes"
+        },
+        {
+          "name": "dev.seed_data",
+          "display_name": "Seed Test Data",
+          "description": "Populate database with test data and sample organizations"
+        },
+        {
+          "name": "dev.backup_restore",
+          "display_name": "Backup & Restore",
+          "description": "Perform system backups and restore operations"
+        }
+      ]
+    },
+    "organization_management": {
+      "description": "Cross-organization management and oversight",
+      "permissions": [
+        {
+          "name": "dev.all_organizations",
+          "display_name": "Access All Organizations",
+          "description": "View and access data from any organization in the system"
+        },
+        {
+          "name": "dev.create_organizations",
+          "display_name": "Create Organizations",
+          "description": "Create new organizations and set up initial configurations"
+        },
+        {
+          "name": "dev.modify_any_organization",
+          "display_name": "Modify Organizations",
+          "description": "Edit any organization's settings, users, and configurations"
+        },
+        {
+          "name": "dev.delete_organizations",
+          "display_name": "Delete Organizations",
+          "description": "Permanently remove organizations and all associated data"
+        }
+      ]
+    },
+    "user_role_management": {
+      "description": "Global user and permission management",
+      "permissions": [
+        {
+          "name": "dev.manage_users",
+          "display_name": "Manage All Users",
+          "description": "Create, edit, and manage users across all organizations"
+        },
+        {
+          "name": "dev.manage_roles",
+          "display_name": "Manage System Roles",
+          "description": "Create and manage developer roles and system permissions"
+        },
+        {
+          "name": "dev.assign_permissions",
+          "display_name": "Assign Permissions",
+          "description": "Grant or revoke any permission to any user or role"
+        }
+      ]
+    },
+    "subscription_management": {
+      "description": "Subscription tiers and billing oversight",
+      "permissions": [
+        {
+          "name": "dev.manage_tiers",
+          "display_name": "Manage Subscription Tiers",
+          "description": "Create, edit, and manage subscription tier configurations"
+        },
+        {
+          "name": "dev.billing_override",
+          "display_name": "Billing Overrides",
+          "description": "Override billing restrictions and grant tier access"
+        },
+        {
+          "name": "dev.view_all_billing",
+          "display_name": "View All Billing",
+          "description": "Access billing information for all organizations"
+        }
+      ]
+    },
+    "application_permissions": {
+      "description": "All organization-level permissions available to developers",
+      "permissions": [
+        {
+          "name": "app.dashboard.view",
+          "display_name": "[App] View Dashboard",
+          "description": "Developer access to dashboard functionality"
+        },
+        {
+          "name": "app.inventory.view",
+          "display_name": "[App] View Inventory",
+          "description": "Developer access to inventory viewing"
+        },
+        {
+          "name": "app.inventory.edit",
+          "display_name": "[App] Edit Inventory",
+          "description": "Developer access to inventory editing"
+        },
+        {
+          "name": "app.inventory.adjust",
+          "display_name": "[App] Adjust Inventory",
+          "description": "Developer access to inventory adjustments"
+        },
+        {
+          "name": "app.inventory.reserve",
+          "display_name": "[App] Reserve Inventory",
+          "description": "Developer access to inventory reservations"
+        },
+        {
+          "name": "app.inventory.delete",
+          "display_name": "[App] Delete Inventory",
+          "description": "Developer access to inventory deletion"
+        },
+        {
+          "name": "app.inventory.view_costs",
+          "display_name": "[App] View Inventory Costs",
+          "description": "Developer access to inventory cost information"
+        },
+        {
+          "name": "app.recipes.view",
+          "display_name": "[App] View Recipes",
+          "description": "Developer access to recipe viewing"
+        },
+        {
+          "name": "app.recipes.create",
+          "display_name": "[App] Create Recipes",
+          "description": "Developer access to recipe creation"
+        },
+        {
+          "name": "app.recipes.edit",
+          "display_name": "[App] Edit Recipes",
+          "description": "Developer access to recipe editing"
+        },
+        {
+          "name": "app.recipes.delete",
+          "display_name": "[App] Delete Recipes",
+          "description": "Developer access to recipe deletion"
+        },
+        {
+          "name": "app.recipes.scale",
+          "display_name": "[App] Scale Recipes",
+          "description": "Developer access to recipe scaling"
+        },
+        {
+          "name": "app.recipes.plan_production",
+          "display_name": "[App] Production Planning",
+          "description": "Developer access to production planning"
+        },
+        {
+          "name": "app.batches.view",
+          "display_name": "[App] View Batches",
+          "description": "Developer access to batch viewing"
+        },
+        {
+          "name": "app.batches.create",
+          "display_name": "[App] Create Batches",
+          "description": "Developer access to batch creation"
+        },
+        {
+          "name": "app.batches.edit",
+          "display_name": "[App] Edit Batches",
+          "description": "Developer access to batch editing"
+        },
+        {
+          "name": "app.batches.finish",
+          "display_name": "[App] Finish Batches",
+          "description": "Developer access to batch completion"
+        },
+        {
+          "name": "app.batches.cancel",
+          "display_name": "[App] Cancel Batches",
+          "description": "Developer access to batch cancellation"
+        },
+        {
+          "name": "app.batches.view_costs",
+          "display_name": "[App] View Batch Costs",
+          "description": "Developer access to batch cost information"
+        },
+        {
+          "name": "app.products.view",
+          "display_name": "[App] View Products",
+          "description": "Developer access to product viewing"
+        },
+        {
+          "name": "app.products.create",
+          "display_name": "[App] Create Products",
+          "description": "Developer access to product creation"
+        },
+        {
+          "name": "app.products.edit",
+          "display_name": "[App] Edit Products",
+          "description": "Developer access to product editing"
+        },
+        {
+          "name": "app.products.delete",
+          "display_name": "[App] Delete Products",
+          "description": "Developer access to product deletion"
+        },
+        {
+          "name": "app.products.manage_variants",
+          "display_name": "[App] Manage Product Variants",
+          "description": "Developer access to product variant management"
+        },
+        {
+          "name": "app.products.sales_tracking",
+          "display_name": "[App] Sales Tracking",
+          "description": "Developer access to sales tracking"
+        },
+        {
+          "name": "app.organization.view",
+          "display_name": "[App] View Organization",
+          "description": "Developer access to organization viewing"
+        },
+        {
+          "name": "app.organization.edit",
+          "display_name": "[App] Edit Organization",
+          "description": "Developer access to organization editing"
+        },
+        {
+          "name": "app.organization.manage_users",
+          "display_name": "[App] Manage Organization Users",
+          "description": "Developer access to user management"
+        },
+        {
+          "name": "app.organization.manage_roles",
+          "display_name": "[App] Manage Organization Roles",
+          "description": "Developer access to role management"
+        },
+        {
+          "name": "app.organization.manage_billing",
+          "display_name": "[App] Manage Organization Billing",
+          "description": "Developer access to billing management"
+        },
+        {
+          "name": "app.organization.view_audit_logs",
+          "display_name": "[App] View Organization Audit Logs",
+          "description": "Developer access to audit logs"
+        },
+        {
+          "name": "app.alerts.view",
+          "display_name": "[App] View Alerts",
+          "description": "Developer access to alert viewing"
+        },
+        {
+          "name": "app.alerts.manage",
+          "display_name": "[App] Manage Alerts",
+          "description": "Developer access to alert management"
+        },
+        {
+          "name": "app.alerts.dismiss",
+          "display_name": "[App] Dismiss Alerts",
+          "description": "Developer access to alert dismissal"
+        },
+        {
+          "name": "app.reports.view",
+          "display_name": "[App] View Reports",
+          "description": "Developer access to report viewing"
+        },
+        {
+          "name": "app.reports.export",
+          "display_name": "[App] Export Reports",
+          "description": "Developer access to report exports"
+        },
+        {
+          "name": "app.reports.advanced",
+          "display_name": "[App] Advanced Reports",
+          "description": "Developer access to advanced reporting"
+        },
+        {
+          "name": "app.reports.custom",
+          "display_name": "[App] Custom Reports",
+          "description": "Developer access to custom report creation"
+        },
+        {
+          "name": "app.integrations.shopify",
+          "display_name": "[App] Shopify Integration",
+          "description": "Developer access to Shopify integration"
+        },
+        {
+          "name": "app.integrations.marketplace",
+          "display_name": "[App] Marketplace Integration",
+          "description": "Developer access to marketplace integration"
+        },
+        {
+          "name": "app.integrations.api_access",
+          "display_name": "[App] API Access",
+          "description": "Developer access to API functionality"
+        },
+        {
+          "name": "app.ai.recipe_optimization",
+          "display_name": "[App] AI Recipe Optimization",
+          "description": "Developer access to AI recipe optimization"
+        },
+        {
+          "name": "app.ai.demand_forecasting",
+          "display_name": "[App] AI Demand Forecasting",
+          "description": "Developer access to AI demand forecasting"
+        },
+        {
+          "name": "app.ai.quality_insights",
+          "display_name": "[App] AI Quality Insights",
+          "description": "Developer access to AI quality insights"
+        }
+      ]
+    }
+  },
+  "subscription_tier_mappings": {
+    "free": {
+      "name": "Free Tier",
+      "description": "Basic production tracking for individuals",
+      "max_users": 1,
+      "max_recipes": 10,
+      "max_batches_per_month": 50
+    },
+    "solo": {
+      "name": "Solo Maker",
+      "description": "Enhanced features for solo makers",
+      "max_users": 1,
+      "max_recipes": 50,
+      "max_batches_per_month": 200
+    },
+    "team": {
+      "name": "Team",
+      "description": "Collaboration and management features for small teams",
+      "max_users": 10,
+      "max_recipes": "unlimited",
+      "max_batches_per_month": "unlimited"
+    },
+    "enterprise": {
+      "name": "Enterprise",
+      "description": "Full features with integrations and advanced analytics",
+      "max_users": "unlimited",
+      "max_recipes": "unlimited",
+      "max_batches_per_month": "unlimited"
+    }
+  }
+}
