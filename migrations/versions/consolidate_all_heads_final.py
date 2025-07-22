@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = 'consolidate_all_heads_final'
-down_revision = None
+down_revision = 'new_fs_uniquifier_migration'
 branch_labels = None
 depends_on = None
 
