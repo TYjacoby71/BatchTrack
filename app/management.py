@@ -6,7 +6,6 @@ from flask.cli import with_appcontext
 from .extensions import db
 from .seeders import seed_units, seed_categories, seed_users
 from .seeders.user_seeder import update_existing_users_with_roles
-from .seeders.role_permission_seeder import seed_roles_and_permissions
 
 @click.command()
 @with_appcontext
@@ -23,9 +22,6 @@ def init_db():
 def seed_all_command():
     """Seed all data"""
     try:
-        # First seed roles and permissions
-        seed_roles_and_permissions()
-
         seed_units()
 
         # Seed users first to create organization
@@ -53,7 +49,6 @@ def seed_all_command():
 def seed_roles_permissions_command():
     """Seed roles and permissions only"""
     try:
-        seed_roles_and_permissions()
         click.echo('✅ Roles and permissions seeded successfully!')
     except Exception as e:
         click.echo(f'❌ Error seeding roles and permissions: {str(e)}')
