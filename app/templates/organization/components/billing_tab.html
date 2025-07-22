@@ -17,24 +17,6 @@
             <div class="card-body">
                 <h5 class="text-primary">{{ current_user.organization.effective_subscription_tier.title() }}</h5>
                 <p class="text-muted">{{ current_user.organization.active_users_count }}/{{ current_user.organization.get_max_users() }} users</p>
-                
-                {% if subscription_details and subscription_details.status != 'inactive' %}
-                <div class="subscription-info mt-3">
-                    <p><strong>Status:</strong> {{ subscription_details.status.title() }}</p>
-                    {% if subscription_details.next_billing_date %}
-                    <p><strong>Next Billing:</strong> {{ subscription_details.next_billing_date|timestamp_to_date }}</p>
-                    {% endif %}
-                    {% if subscription_details.amount %}
-                    <p><strong>Amount:</strong> ${{ subscription_details.amount }}/{{ subscription_details.interval }}</p>
-                    {% endif %}
-                    {% if subscription_details.trial_end %}
-                    <p><strong>Trial Ends:</strong> {{ subscription_details.trial_end|timestamp_to_date }}</p>
-                    {% endif %}
-                    {% if subscription_details.cancel_at_period_end %}
-                    <p class="text-warning"><strong>Scheduled for cancellation at period end</strong></p>
-                    {% endif %}
-                </div>
-                {% endif %}
 
                 <h6 class="mt-3">Available Features:</h6>
                 <ul class="list-unstyled">

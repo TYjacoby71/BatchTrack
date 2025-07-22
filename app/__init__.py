@@ -89,10 +89,16 @@ def create_app():
 
     # Register blueprints
     from .blueprints.auth import auth_bp
-    from .blueprints.inventory import inventory_bp
-    from .blueprints.recipes import recipes_bp
-    from .blueprints.batches import batches_bp
     from .blueprints.products import products_bp
+    from .blueprints.products.api import products_api_bp
+    from .blueprints.recipes import recipes_bp
+    from .blueprints.inventory import inventory_bp
+    from .blueprints.batches import batches_bp
+    from .blueprints.batches.finish_batch import finish_batch_bp
+    from .blueprints.batches.cancel_batch import cancel_batch_bp
+    from .blueprints.batches.start_batch import start_batch_bp
+    from .blueprints.api.stock_routes import stock_api_bp
+    from .blueprints.api.ingredient_routes import ingredient_api_bp
     from .blueprints.conversion import conversion_bp
     from .blueprints.expiration import expiration_bp
     from .blueprints.settings import settings_bp
@@ -119,12 +125,12 @@ def create_app():
     app.register_blueprint(reservation_bp, url_prefix='/reservations')
     app.register_blueprint(reservation_api_bp)
 
-    # Register all blueprints
-    app.register_blueprint(auth_bp, url_prefix='/auth')
-    
     # Register billing blueprint
     from .blueprints.billing import billing_bp
-    app.register_blueprint(billing_bp)
+    app.register_blueprint(billing_bp, url_prefix='/billing')
+
+    # Register all blueprints
+    app.register_blueprint(auth_bp, url_prefix='/auth')
     app.register_blueprint(recipes_bp, url_prefix='/recipes')
     app.register_blueprint(inventory_bp, url_prefix='/inventory')
     app.register_blueprint(batches_bp, url_prefix='/batches')

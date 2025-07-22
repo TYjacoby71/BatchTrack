@@ -25,33 +25,19 @@ def register_template_filters(app):
 def register_filters(app):
     """Register custom template filters"""
 
-    @app.template_filter('datetime')
-    def datetime_filter(value):
-        """Format datetime for display"""
-        if value is None:
-            return ""
-        return value.strftime('%Y-%m-%d %H:%M')
-
-    @app.template_filter('date')
-    def date_filter(value):
-        """Format date for display"""
-        if value is None:
-            return ""
-        return value.strftime('%Y-%m-%d')
-
     @app.template_filter('timestamp_to_date')
-    def timestamp_to_date_filter(timestamp):
-        """Convert timestamp to formatted date"""
-        if timestamp is None:
-            return ""
+    def timestamp_to_date(timestamp):
+        """Convert Unix timestamp to readable date"""
+        if not timestamp:
+            return 'N/A'
         try:
             if isinstance(timestamp, (int, float)):
                 dt = datetime.fromtimestamp(timestamp)
             else:
                 dt = timestamp
-            return dt.strftime('%Y-%m-%d')
+            return dt.strftime('%B %d, %Y')
         except (ValueError, TypeError):
-            return ""
+            return 'Invalid date'
 
     @app.template_filter('user_datetime')
     def user_datetime(dt, format_string='%Y-%m-%d %H:%M:%S'):
