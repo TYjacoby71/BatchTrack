@@ -1,3 +1,4 @@
+
 """make_is_organization_owner_nullable
 
 Revision ID: 7ae741d610b4
@@ -17,20 +18,38 @@ depends_on = None
 
 
 def upgrade():
-    # Make the column nullable and set proper defaults
-    with op.batch_alter_table('user', schema=None) as batch_op:
-        # Change the column to be nullable with a default of False
-        batch_op.alter_column('is_organization_owner', 
-                              nullable=True, 
-                              server_default='0')  # 0 = False for SQLite
-    
-    # Update existing NULL values to False
+    # Add the is_organization_owner column if it doesn't exist
     connection = op.get_bind()
-    connection.execute(
-        sa.text("UPDATE user SET is_organization_owner = 0 WHERE is_organization_owner IS NULL")
-    )
+    
+    # Check if column already exists
+    inspector = sa.inspect(connection)
+    columns = [col['name'] for col in inspector.get_columns('user')]
+    
+    if 'is_organization_owner' not in columns:
+        with op.batch_alter_table('user', schema=None) as batch_op:
+            batch_op.add_column(sa.Column('is_organization_owner', sa.Boolean(), 
+                                         nullable=False, default=False, server_default='0'))
+        
+        # Update existing organization owners based on legacy user_type
+        connection.execute(
+            sa.text("""
+                UPDATE user 
+                SET is_organization_owner = 1 
+                WHERE user_type = 'organization_owner'
+            """)
+        )
+        
+        # Update the user_type for organization owners to 'customer'
+        connection.execute(
+            sa.text("""
+                UPDATE user 
+                SET user_type = 'customer' 
+                WHERE user_type = 'organization_owner'
+            """)
+        )
+
 
 def downgrade():
+    # Remove the column
     with op.batch_alter_table('user', schema=None) as batch_op:
-        batch_op.alter_column('is_organization_owner', 
-                              nullable=False)
+        batch_op.drop_column('is_organization_owner')
