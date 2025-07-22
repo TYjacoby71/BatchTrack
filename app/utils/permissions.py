@@ -85,6 +85,7 @@ def get_user_permissions():
         return [perm.name for perm in Permission.query.filter_by(is_active=True).all()]
 
     # Get permissions from assigned roles (works for all user types)
+    # All permissions in the Permission model are now organization permissions
     permissions = set()
     roles = current_user.get_active_roles()
     for role in roles:
