@@ -183,63 +183,52 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 <form id="deleteForm" method="post" style="display: inline;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                     <button type="submit" class="btn btn-danger">Delete Tier</button>
                 </form>
             </div>
         </div>
     </div>
-</div>
+</div></div>
 
 <script>
-// Toggle visibility of internal tiers
-document.getElementById('showInternalTiers').addEventListener('change', function() {
-    const showInternal = this.checked;
-    const tierCards = document.querySelectorAll('.tier-card');
+document.addEventListener('DOMContentLoaded', function() {
+    // Add toggle for internal tiers if needed in the future
+    const showInternalToggle = document.getElementById('showInternalTiers');
+    if (showInternalToggle) {
+        showInternalToggle.addEventListener('change', function() {
+            const showInternal = this.checked;
+            const tierCards = document.querySelectorAll('.tier-card');
 
-    tierCards.forEach(card => {
-        const isCustomerFacing = card.getAttribute('data-is-customer-facing') === 'true';
-        if (!isCustomerFacing && !showInternal) {
-            card.style.display = 'none';
-        } else {
-            card.style.display = 'block';
-        }
-    });
+            tierCards.forEach(card => {
+                const isCustomerFacing = card.getAttribute('data-is-customer-facing') === 'true';
+                if (!isCustomerFacing && !showInternal) {
+                    card.style.display = 'none';
+                } else {
+                    card.style.display = 'block';
+                }
+            });
+        });
+    }
 });
 
 function confirmDelete(tierKey, tierName) {
-    if (confirm(`Are you sure you want to delete the "${tierName}" tier? This cannot be undone.`)) {
-        document.getElementById('deleteForm' + tierKey).submit();
-    }
-}
-
-function syncTier(tierKey) {
-    if (confirm(`Sync ${tierKey} tier with Stripe? This will update pricing and features.`)) {
-        fetch(`{{ url_for('developer.subscription_tiers.sync_tier', tier_key='TIER_KEY') }}`.replace('TIER_KEY', tierKey), {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
+    const deleteModal = document.getElementById('deleteModal');
+    if (deleteModal) {
+        document.getElementById('tierName').textContent = tierName;
+        const deleteForm = document.getElementById('deleteForm');
+        deleteForm.action = `/developer/subscription-tiers/delete/${tierKey}`;
+        const modal = new bootstrap.Modal(deleteModal);
+        modal.show();
+    } else {
+        // Fallback to simple confirm
+        if (confirm(`Are you sure you want to delete the "${tierName}" tier? This cannot be undone.`)) {
+            const form = document.getElementById('deleteForm' + tierKey);
+            if (form) {
+                form.submit();
             }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert(data.message);
-                location.reload();
-            } else {
-                alert('Sync failed: ' + data.error);
-            }
-        })
-        .catch(error => {
-            alert('Sync failed: ' + error);
-        });
+        }
     }
-}
-
-function confirmDelete(tierKey, tierName) {
-    document.getElementById('tierName').textContent = tierName;
-    document.getElementById('deleteTierKey').value = tierKey;
-    var deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
-    deleteModal.show();
 }
 
 function syncTier(tierKey) {
