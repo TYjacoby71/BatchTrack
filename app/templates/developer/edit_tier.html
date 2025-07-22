@@ -307,7 +307,9 @@ const featureGroupPermissions = {
         'inventory.edit', 
         'inventory.delete',
         'inventory.adjust',
-        'inventory.fifo'
+        'inventory.fifo',
+        'inventory.reserve',
+        'inventory.view_cost'
     ],
     'batch_production': [
         'batches.view', 
@@ -315,24 +317,35 @@ const featureGroupPermissions = {
         'batches.edit',
         'batches.start',
         'batches.finish',
-        'batches.cancel'
+        'batches.cancel',
+        'batches.view_cost'
     ],
     'recipe_management': [
         'recipes.view', 
         'recipes.create', 
         'recipes.edit',
-        'recipes.delete'
+        'recipes.delete',
+        'recipes.scale',
+        'recipes.duplicate',
+        'recipes.import',
+        'recipes.export'
     ],
     'product_catalog': [
         'products.view', 
         'products.create', 
         'products.edit',
-        'products.delete'
+        'products.delete',
+        'products.manage_variants',
+        'products.manage_pricing',
+        'products.export',
+        'products.import'
     ],
     'team_management': [
         'users.manage', 
         'roles.manage',
-        'organization.manage'
+        'organization.manage',
+        'organization.billing',
+        'organization.settings'
     ],
     'basic_reports': [
         'reports.view'
@@ -340,16 +353,26 @@ const featureGroupPermissions = {
     'advanced_reports': [
         'reports.view', 
         'reports.export',
-        'reports.advanced'
+        'reports.advanced',
+        'reports.custom'
     ],
     'api_access': [
-        'api.access'
+        'api.access',
+        'api.read',
+        'api.write',
+        'integrations.webhook'
     ],
     'integrations': [
-        'integrations.manage'
+        'integrations.manage',
+        'integrations.shopify',
+        'integrations.marketplace',
+        'integrations.api_access'
     ],
     'system_admin': [
-        'system.admin'
+        'system.admin',
+        'alerts.manage',
+        'alerts.view',
+        'alerts.dismiss'
     ]
 };
 
