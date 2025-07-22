@@ -6,11 +6,11 @@
     </button>
 </div>
 
-<!-- System Roles -->
-<h6 class="text-muted mb-2">System Roles</h6>
+<!-- System Roles (Read-only) -->
+<h6 class="text-muted mb-2">System Roles <small class="text-muted">(Available to all organizations)</small></h6>
 <div class="row mb-4">
     {% for role in roles %}
-    {% if role.is_system_role or role.organization_id is none %}
+    {% if role.is_system_role %}
     <div class="col-md-4 mb-3">
         <div class="card border-info">
             <div class="card-body">
@@ -20,8 +20,16 @@
                 </h6>
                 <p class="card-text small text-muted">{{ role.description or 'No description' }}</p>
                 <p class="card-text">
-                    <strong>Users:</strong> {{ role.assigned_users|length }}
+                    <small class="text-muted">{{ role.permissions|length }} permissions</small>
                 </p>
+                <div class="mb-2">
+                    {% for permission in role.permissions[:2] %}
+                    <span class="badge bg-light text-dark me-1 small">{{ permission.name }}</span>
+                    {% endfor %}
+                    {% if role.permissions|length > 2 %}
+                    <span class="text-muted small">+{{ role.permissions|length - 2 }} more</span>
+                    {% endif %}
+                </div>
             </div>
         </div>
     </div>
@@ -30,10 +38,10 @@
 </div>
 
 <!-- Organization Custom Roles -->
-<h6 class="text-muted mb-2">Custom Roles</h6>
+<h6 class="text-muted mb-2">Custom Organization Roles</h6>
 <div class="row" id="customRolesContainer">
     {% for role in roles %}
-    {% if not role.is_system_role and role.organization_id %}
+    {% if not role.is_system_role and role.organization_id == current_user.organization_id %}
     <div class="col-md-4 mb-3">
         <div class="card border-success">
             <div class="card-body">
