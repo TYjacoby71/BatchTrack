@@ -452,7 +452,10 @@ def update_user(user_id):
             'success': True, 
             'message': f'User {user.full_name} updated successfully'
         })
-
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)})
+        
 @organization_bp.route('/user/<int:user_id>/toggle-status', methods=['POST'])
 @login_required
 def toggle_user_status(user_id):
