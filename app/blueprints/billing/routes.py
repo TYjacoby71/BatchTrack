@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 @login_required
 def upgrade():
     # Check if user has billing permission or is organization owner
-    if not (has_permission('organization.manage_billing') or current_user.user_type == 'organization_owner'):
+    if not (has_permission(current_user, 'organization.manage_billing') or current_user.user_type == 'organization_owner'):
         flash('You do not have permission to access billing information.', 'error')
         return redirect(url_for('organization.dashboard'))
 
@@ -32,7 +32,7 @@ def upgrade():
 @login_required
 def checkout(tier, billing_cycle='monthly'):
     """Create Stripe checkout session and redirect"""
-    if not has_permission(current_user, 'manage_billing'):
+    if not has_permission(current_user, 'organization.manage_billing'):
         flash('You do not have permission to manage billing.', 'error')
         return redirect(url_for('organization.dashboard'))
 
@@ -64,7 +64,7 @@ def checkout(tier, billing_cycle='monthly'):
 @login_required
 def cancel_subscription():
     """Cancel current subscription"""
-    if not has_permission(current_user, 'manage_billing'):
+    if not has_permission(current_user, 'organization.manage_billing'):
         return jsonify({'error': 'Permission denied'}), 403
 
     success = StripeService.cancel_subscription(current_user.organization)
