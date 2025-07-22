@@ -53,6 +53,67 @@ function getCSRFToken() {
     return tokenMeta ? tokenMeta.getAttribute('content') : '';
 }
 
+function showLoginCredentials(username, password, statusText) {
+    const modalHtml = `
+        <div class="modal fade" id="loginCredentialsModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header bg-info text-white">
+                        <h5 class="modal-title">
+                            <i class="fas fa-key me-2"></i>Login Credentials Created
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Please share these credentials securely with the new user.
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-3"><strong>Username:</strong></div>
+                            <div class="col-sm-9">
+                                <code class="bg-light p-1 rounded">${username}</code>
+                                <button type="button" class="btn btn-sm btn-outline-secondary ms-2" onclick="navigator.clipboard.writeText('${username}')">
+                                    <i class="fas fa-copy"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-sm-3"><strong>Password:</strong></div>
+                            <div class="col-sm-9">
+                                <code class="bg-light p-1 rounded">${password}</code>
+                                <button type="button" class="btn btn-sm btn-outline-secondary ms-2" onclick="navigator.clipboard.writeText('${password}')">
+                                    <i class="fas fa-copy"></i>
+                                </button>
+                            </div>
+                        </div>
+                        ${statusText ? `<div class="alert alert-info mt-3"><i class="fas fa-info-circle me-2"></i>${statusText}</div>` : ''}
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Got it</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Remove existing modal if present
+    const existingModal = document.getElementById('loginCredentialsModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+
+    // Add new modal to body
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    const modal = new bootstrap.Modal(document.getElementById('loginCredentialsModal'));
+    modal.show();
+
+    // Clean up when modal is closed
+    document.getElementById('loginCredentialsModal').addEventListener('hidden.bs.modal', function() {
+        this.remove();
+    });
+}
+
 function showMessage(message, type = 'success') {
     const alertDiv = document.createElement('div');
     alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
@@ -205,7 +266,7 @@ async function inviteUser() {
             if (result.user_data && result.user_data.temp_password) {
                 const statusText = inviteData.force_inactive ? ' (Account is inactive - activate when a seat becomes available)' : '';
                 setTimeout(() => {
-                    alert(`Login Credentials:\nUsername: ${result.user_data.username}\nPassword: ${result.user_data.temp_password}${statusText}\n\nPlease share these securely with the new user.`);
+                    showLoginCredentials(result.user_data.username, result.user_data.temp_password, statusText);
                 }, 500);
             }
 
