@@ -604,13 +604,50 @@ def delete_user(user_id):
         username = user.username
         full_name = user.full_name
 
-        # Delete the user
-        db.session.delete(user)
-        db.session.commit()
+        # Soft delete the user (preserves all historical data)
+        user.soft_delete(deleted_by_user=current_user)
 
         return jsonify({
             'success': True, 
-            'message': f'User {full_name} ({username}) deleted successfully'
+            'message': f'User {full_name} ({username}) removed successfully (can be restored if needed)'
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)})
+
+@organization_bp.route('/user/<int:user_id>/restore', methods=['POST'])
+@login_required
+def restore_user(user_id):
+    """Restore a soft-deleted user (organization owners only)"""
+
+    # Check permissions - only organization owners can restore
+    if not (current_user.user_type == 'organization_owner' or 
+            current_user.is_organization_owner):
+        return jsonify({'success': False, 'error': 'Insufficient permissions'})
+
+    try:
+        # Get user from same organization (including deleted users)
+        user = User.query.filter_by(
+            id=user_id, 
+            organization_id=current_user.organization_id
+        ).first()
+
+        if not user:
+            return jsonify({'success': False, 'error': 'User not found'})
+
+        if not user.is_deleted:
+            return jsonify({'success': False, 'error': 'User is not deleted'})
+
+        username = user.username
+        full_name = user.full_name
+
+        # Restore the user
+        user.restore(restored_by_user=current_user)
+
+        return jsonify({
+            'success': True, 
+            'message': f'User {full_name} ({username}) restored successfully (needs manual activation and role assignment)'
         })
 
     except Exception as e:

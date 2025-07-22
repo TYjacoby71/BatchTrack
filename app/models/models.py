@@ -96,6 +96,11 @@ class User(UserMixin, db.Model):
     last_login = db.Column(db.DateTime, nullable=True)
     timezone = db.Column(db.String(64), default='UTC')
     # role_id removed - using UserRoleAssignment table instead
+    
+    # Soft delete fields
+    deleted_at = db.Column(db.DateTime, nullable=True)
+    deleted_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    is_deleted = db.Column(db.Boolean, default=False)
 
     def set_password(self, password):
         from werkzeug.security import generate_password_hash
@@ -186,6 +191,35 @@ class User(UserMixin, db.Model):
         if assignment:
             assignment.is_active = False
             db.session.commit()
+
+    def soft_delete(self, deleted_by_user=None):
+        """Soft delete this user - preserves data but removes access"""
+        self.is_deleted = True
+        self.is_active = False  # Also deactivate
+        self.deleted_at = TimezoneUtils.utc_now()
+        if deleted_by_user:
+            self.deleted_by = deleted_by_user.id
+        
+        # Deactivate all role assignments
+        from .user_role_assignment import UserRoleAssignment
+        assignments = UserRoleAssignment.query.filter_by(user_id=self.id).all()
+        for assignment in assignments:
+            assignment.is_active = False
+        
+        db.session.commit()
+
+    def restore(self, restored_by_user=None):
+        """Restore a soft-deleted user"""
+        self.is_deleted = False
+        self.deleted_at = None
+        self.deleted_by = None
+        # Note: is_active and role assignments need to be manually restored
+        db.session.commit()
+
+    @property
+    def is_soft_deleted(self):
+        """Check if user is soft deleted"""
+        return self.is_deleted is True
 
     @property
     def display_role(self):
