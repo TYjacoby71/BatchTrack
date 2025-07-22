@@ -4,6 +4,11 @@ from werkzeug.security import generate_password_hash
 
 def seed_users():
     """Seed default users into the database"""
+    
+    # Import Role at top of function to avoid scope issues
+    from app.models.role import Role
+    from ..models.developer_role import DeveloperRole
+    from ..models.user_role_assignment import UserRoleAssignment
 
     # Get or create default organization
     org = Organization.query.first()
@@ -29,7 +34,6 @@ def seed_users():
         return
 
     # Get organization owner system role
-    from app.models.role import Role
     system_org_owner_role = Role.query.filter_by(name='organization_owner', is_system_role=True).first()
 
     # Assign all users proper roles based on their user types (excluding developers)
@@ -72,9 +76,6 @@ def seed_users():
         db.session.flush()  # Get the user ID
 
         # Assign system_admin developer role
-        from ..models.developer_role import DeveloperRole
-        from ..models.user_role_assignment import UserRoleAssignment
-
         system_admin_role = DeveloperRole.query.filter_by(name='system_admin').first()
         if system_admin_role:
             assignment = UserRoleAssignment(
@@ -95,9 +96,6 @@ def seed_users():
         dev_user.is_active = True
 
         # Ensure dev user has system_admin role
-        from ..models.developer_role import DeveloperRole
-        from ..models.user_role_assignment import UserRoleAssignment
-
         system_admin_role = DeveloperRole.query.filter_by(name='system_admin').first()
         if system_admin_role:
             existing_assignment = UserRoleAssignment.query.filter_by(
