@@ -1,5 +1,6 @@
 from ..models import Role, Permission, db, role_permission
 from ..extensions import db as database
+from ..utils.permission_management import update_organization_owner_permissions as update_org_owner_perms
 
 def seed_permissions():
     """Seed all permissions with their subscription tier requirements"""
@@ -82,6 +83,12 @@ def seed_system_roles():
     """Seed system roles that are available to all organizations"""
     system_roles = [
         {
+            'name': 'organization_owner',
+            'description': 'Organization owner with all permissions available to subscription tier.',
+            'permissions': 'all',  # Special marker for all permissions
+            'is_system_role': True
+        },
+        {
             'name': 'viewer',
             'description': 'Can view basic information',
             'permissions': ['dashboard.view', 'batches.view', 'inventory.view', 'products.view', 'recipes.view']
@@ -117,20 +124,6 @@ def seed_system_roles():
                 'recipes.view', 'recipes.create', 'recipes.edit', 'recipes.delete',
                 'organization.view', 'organization.manage_users', 'organization.manage_roles',
                 'reports.view', 'reports.export'
-            ]
-        },
-        {
-            'name': 'organization_owner',
-            'description': 'Organization owner with full access to organization management',
-            'permissions': [
-                'dashboard.view', 'alerts.view', 'alerts.manage',
-                'batches.view', 'batches.create', 'batches.edit', 'batches.finish', 'batches.cancel',
-                'inventory.view', 'inventory.edit', 'inventory.adjust', 'inventory.reserve', 'inventory.delete',
-                'products.view', 'products.edit', 'products.create', 'products.delete',
-                'recipes.view', 'recipes.create', 'recipes.edit', 'recipes.delete',
-                'organization.view', 'organization.edit', 'organization.manage_users', 'organization.manage_roles', 'organization.manage_billing',
-                'reports.view', 'reports.export', 'reports.advanced',
-                'api.access', 'api.admin'
             ]
         },
         {
@@ -183,10 +176,16 @@ def seed_system_roles():
         role.permissions.clear()
 
         # Add permissions
-        for perm_name in role_data['permissions']:
-            permission = Permission.query.filter_by(name=perm_name).first()
-            if permission:
-                role.permissions.append(permission)
+        if role_data['permissions'] == 'all':
+            # Organization owner gets all permissions
+            all_permissions = Permission.query.filter_by().all()
+            role.permissions = all_permissions
+            print(f"✅ Assigned all {len(all_permissions)} permissions to {role.name}")
+        else:
+            for perm_name in role_data['permissions']:
+                permission = Permission.query.filter_by(name=perm_name).first()
+                if permission:
+                    role.permissions.append(permission)
 
     db.session.commit()
     print(f"✅ Seeded {len(system_roles)} system roles")
@@ -196,6 +195,8 @@ def seed_roles_and_permissions():
     print("=== Seeding Roles and Permissions ===")
     seed_permissions()
     seed_system_roles()
+    # Update organization owner role with any new permissions
+    update_org_owner_perms()
     print("✅ Roles and permissions seeded successfully!")
 
 if __name__ == "__main__":

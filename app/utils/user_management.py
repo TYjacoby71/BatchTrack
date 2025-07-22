@@ -67,16 +67,20 @@ class UserTypeManager:
         db.session.flush()  # Get org.id
         
         # Create owner user
-        owner_role = Role.query.filter_by(name='organization_owner').first()
         owner = User(
             username=owner_username,
             email=owner_email,
             organization_id=org.id,
-            is_owner=True,
-            user_type='organization_owner',
-            role_id=owner_role.id if owner_role else None
+            user_type='organization_owner'
         )
         db.session.add(owner)
+        db.session.flush()  # Get user.id
+        
+        # Assign organization owner system role
+        org_owner_role = Role.query.filter_by(name='organization_owner', is_system_role=True).first()
+        if org_owner_role:
+            owner.assign_role(org_owner_role)
+        
         db.session.commit()
         
         return org, owner

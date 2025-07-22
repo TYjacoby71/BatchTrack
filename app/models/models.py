@@ -135,15 +135,7 @@ class User(UserMixin, db.Model):
         if self.user_type == 'developer':
             return True
 
-        # Organization owners have all permissions available to their subscription tier
-        if self.user_type == 'organization_owner':
-            from .permission import Permission
-            permission = Permission.query.filter_by(name=permission_name).first()
-            if permission:
-                return permission.is_available_for_tier(self.organization.subscription_tier)
-            return False
-
-        # Team members need to check their assigned roles
+        # All users (including organization owners) check their assigned roles
         roles = self.get_active_roles()
         for role in roles:
             if role.has_permission(permission_name):
