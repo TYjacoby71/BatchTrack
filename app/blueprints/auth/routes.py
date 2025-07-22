@@ -100,6 +100,11 @@ def login():
 
 @auth_bp.route('/logout')
 def logout():
+    from flask import session
+    
+    # Clear developer customer view session if present
+    session.pop('dev_selected_org_id', None)
+    
     logout_user()
     return redirect(url_for('homepage'))
 
