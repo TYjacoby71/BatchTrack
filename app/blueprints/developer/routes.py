@@ -242,28 +242,6 @@ def system_settings():
 
     return render_template('developer/system_settings.html', stats=stats)
 
-@developer_bp.route('/subscriptions')
-@login_required
-def subscription_management():
-    """Subscription and billing management"""
-    # Group organizations by subscription tier
-    tiers = {}
-    for tier in ['free', 'solo', 'team', 'enterprise']:
-        orgs = Organization.query.filter_by(subscription_tier=tier).all()
-        tiers[tier] = {
-            'count': len(orgs),
-            'organizations': orgs
-        }
-
-    # Add exempt tier
-    orgs = Organization.query.filter_by(subscription_tier='exempt').all()
-    tiers['exempt'] = {
-        'count': len(orgs),
-        'organizations': orgs
-    }
-
-    return render_template('developer/subscriptions.html', tiers=tiers)
-
 # Customer support filtering routes
 @developer_bp.route('/select-org/<int:org_id>')
 @login_required
