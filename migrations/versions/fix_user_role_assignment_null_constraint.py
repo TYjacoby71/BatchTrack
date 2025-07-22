@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = 'fix_user_role_assignment_null_constraint'
-down_revision = 'consolidate_all_heads_final'
+down_revision = 'bd55298f5ebc'
 branch_labels = None
 depends_on = None
 
