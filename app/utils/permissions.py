@@ -21,27 +21,29 @@ def has_permission(user_or_permission_name, permission_name=None):
     if user.user_type == 'developer':
         return True
 
-    # First check subscription tier permissions
+    # First check subscription tier permissions - tier restrictions are absolute
     tier_has_permission = _has_tier_permission(user, permission)
     print(f"DEBUG: Permission check for {user.username} - {permission}")
     print(f"DEBUG: Tier: {user.organization.effective_subscription_tier if user.organization else 'None'}")
     print(f"DEBUG: Tier has permission: {tier_has_permission}")
     
+    # If the tier doesn't allow this permission, deny access regardless of roles
     if not tier_has_permission:
+        print(f"DEBUG: Permission {permission} denied - not allowed by tier {user.organization.effective_subscription_tier if user.organization else 'None'}")
         return False
 
-    # Check through assigned roles for all user types (including org owners)
+    # Only if tier allows the permission, then check roles
     try:
         roles = user.get_active_roles() if hasattr(user, 'get_active_roles') else []
         print(f"DEBUG: User roles: {[role.name for role in roles]}")
         for role in roles:
             if hasattr(role, 'has_permission') and role.has_permission(permission):
-                print(f"DEBUG: Role {role.name} has permission {permission}")
+                print(f"DEBUG: Role {role.name} has permission {permission} and tier allows it")
                 return True
     except Exception as e:
         print(f"Error checking user roles: {e}")
 
-    print(f"DEBUG: Permission {permission} denied for user {user.username}")
+    print(f"DEBUG: Permission {permission} denied - no role grants permission")
     return False
 
 def _has_tier_permission(user, permission_name):
