@@ -13,12 +13,19 @@ class StripeService:
     @staticmethod
     def initialize_stripe():
         """Initialize Stripe with API key"""
-        stripe.api_key = current_app.config['STRIPE_SECRET_KEY']
+        stripe_key = current_app.config.get('STRIPE_SECRET_KEY')
+        if not stripe_key:
+            logger.warning("STRIPE_SECRET_KEY not configured - Stripe functionality will be limited")
+            return False
+        stripe.api_key = stripe_key
+        return True
     
     @staticmethod
     def create_customer(organization):
         """Create a Stripe customer for an organization"""
-        StripeService.initialize_stripe()
+        if not StripeService.initialize_stripe():
+            logger.error("Cannot create Stripe customer - Stripe not configured")
+            return None
         
         try:
             customer = stripe.Customer.create(
@@ -44,9 +51,11 @@ class StripeService:
     @staticmethod
     def create_checkout_session(organization, tier):
         """Create a Stripe checkout session for subscription"""
-        StripeService.initialize_stripe()
+        if not StripeService.initialize_stripe():
+            logger.error("Cannot create checkout session - Stripe not configured")
+            return None
         
-        price_id = current_app.config['STRIPE_PRICE_IDS'].get(tier)
+        price_id = current_app.config.get('STRIPE_PRICE_IDS', {}).get(tier)
         if not price_id:
             logger.error(f"No Stripe price ID configured for tier: {tier}")
             return None
@@ -165,7 +174,9 @@ class StripeService:
     @staticmethod
     def cancel_subscription(organization):
         """Cancel a Stripe subscription"""
-        StripeService.initialize_stripe()
+        if not StripeService.initialize_stripe():
+            logger.error("Cannot cancel subscription - Stripe not configured")
+            return False
         
         if not organization.subscription.stripe_subscription_id:
             logger.error(f"No Stripe subscription ID for org {organization.id}")
