@@ -31,10 +31,12 @@
                     <h5 class="mb-0">{{ tier_data.name }}</h5>
                     <div>
                         <span class="badge bg-primary">{{ tier_key }}</span>
-                        {% if tier_data.stripe_lookup_key %}
+                        {% if tier_data.stripe_lookup_key and tier_data.last_synced %}
                             <span class="badge bg-success ms-1">Synced</span>
-                        {% else %}
+                        {% elif tier_data.stripe_lookup_key %}
                             <span class="badge bg-warning ms-1">Not Synced</span>
+                        {% else %}
+                            <span class="badge bg-secondary ms-1">No Stripe Key</span>
                         {% endif %}
                     </div>
                 </div>
