@@ -198,6 +198,103 @@ def upgrade_organization(org_id):
 
     return redirect(url_for('developer.organization_detail', org_id=org_id))
 
+@developer_bp.route('/organizations/<int:org_id>/delete', methods=['POST'])
+@login_required
+def delete_organization(org_id):
+    """Permanently delete an organization and all associated data (developers only)"""
+    try:
+        data = request.get_json()
+        password = data.get('password')
+        confirm_text = data.get('confirm_text')
+        
+        org = Organization.query.get_or_404(org_id)
+        expected_confirm = f"DELETE {org.name}"
+        
+        # Validate developer password
+        if not current_user.check_password(password):
+            return jsonify({'success': False, 'error': 'Invalid developer password'})
+        
+        # Validate confirmation text
+        if confirm_text != expected_confirm:
+            return jsonify({'success': False, 'error': f'Confirmation text must match exactly: "{expected_confirm}"'})
+        
+        # Security check - prevent deletion of organizations with active subscriptions
+        # You might want to add additional checks here based on your business rules
+        
+        # Log the deletion attempt for security audit
+        from datetime import datetime
+        import logging
+        logging.warning(f"ORGANIZATION DELETION: Developer {current_user.username} is deleting organization '{org.name}' (ID: {org.id}) at {datetime.utcnow()}")
+        
+        # Begin deletion process
+        org_name = org.name
+        users_count = len(org.users)
+        
+        # Delete all organization data in the correct order to respect foreign key constraints
+        
+        # 1. Delete user role assignments
+        from app.models.user_role_assignment import UserRoleAssignment
+        UserRoleAssignment.query.filter_by(organization_id=org_id).delete()
+        
+        # 2. Delete organization-specific roles
+        from app.models.role import Role
+        Role.query.filter_by(organization_id=org_id, is_system_role=False).delete()
+        
+        # 3. Delete batches and related data
+        from app.models import Batch
+        batches = Batch.query.filter_by(organization_id=org_id).all()
+        for batch in batches:
+            # Delete batch containers, timers, etc. if you have those relationships
+            db.session.delete(batch)
+        
+        # 4. Delete inventory and FIFO lots
+        from app.models import InventoryItem, FIFOLot
+        inventory_items = InventoryItem.query.filter_by(organization_id=org_id).all()
+        for item in inventory_items:
+            # Delete associated FIFO lots
+            FIFOLot.query.filter_by(inventory_item_id=item.id).delete()
+            db.session.delete(item)
+        
+        # 5. Delete products and SKUs
+        from app.models import Product
+        products = Product.query.filter_by(organization_id=org_id).all()
+        for product in products:
+            # Delete product variants, SKUs, history, etc.
+            db.session.delete(product)
+        
+        # 6. Delete recipes
+        from app.models import Recipe
+        Recipe.query.filter_by(organization_id=org_id).delete()
+        
+        # 7. Delete subscriptions
+        from app.models.subscription import Subscription
+        Subscription.query.filter_by(organization_id=org_id).delete()
+        
+        # 8. Delete users (this should be last due to foreign key references)
+        org_users = User.query.filter_by(organization_id=org_id).all()
+        for user in org_users:
+            if user.user_type != 'developer':  # Don't delete developer accounts
+                db.session.delete(user)
+        
+        # 9. Finally delete the organization
+        db.session.delete(org)
+        
+        # Commit all deletions
+        db.session.commit()
+        
+        # Log successful deletion
+        logging.warning(f"ORGANIZATION DELETED: '{org_name}' (ID: {org_id}) successfully deleted by developer {current_user.username}. {users_count} users removed.")
+        
+        return jsonify({
+            'success': True, 
+            'message': f'Organization "{org_name}" and all associated data permanently deleted. {users_count} users removed.'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        logging.error(f"ORGANIZATION DELETION FAILED: Error deleting organization {org_id}: {str(e)}")
+        return jsonify({'success': False, 'error': f'Failed to delete organization: {str(e)}'})
+
 @developer_bp.route('/users')
 @login_required
 def users():

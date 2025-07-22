@@ -27,6 +27,9 @@
                                class="btn btn-primary me-2">
                                 <i class="fas fa-eye"></i> View as Customer Support
                             </a>
+                            <button type="button" class="btn btn-danger me-2" data-bs-toggle="modal" data-bs-target="#deleteOrgModal">
+                                <i class="fas fa-trash"></i> Delete Organization
+                            </button>
                             <a href="{{ url_for('developer.dashboard') }}" class="btn btn-outline-secondary">
                                 <i class="fas fa-arrow-left"></i> Back to Dashboard
                             </a>
@@ -153,4 +156,147 @@
         </div>
     </div>
 </div>
+
+<!-- Delete Organization Modal -->
+<div class="modal fade" id="deleteOrgModal" tabindex="-1" aria-labelledby="deleteOrgModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content border-danger">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteOrgModalLabel">
+                    <i class="fas fa-exclamation-triangle"></i> PERMANENT ORGANIZATION DELETION
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger mb-4">
+                    <h5 class="alert-heading">⚠️ CRITICAL WARNING</h5>
+                    <p class="mb-2">This action will <strong>PERMANENTLY DELETE</strong> the organization "<strong>{{ organization.name }}</strong>" and ALL associated data:</p>
+                    <ul class="mb-0">
+                        <li>All users ({{ users|length }} users will lose access)</li>
+                        <li>All batches and production history</li>
+                        <li>All inventory records and FIFO lots</li>
+                        <li>All recipes and formulations</li>
+                        <li>All products and SKUs</li>
+                        <li>All settings and preferences</li>
+                        <li>Stripe subscription data (if applicable)</li>
+                    </ul>
+                </div>
+
+                <form id="deleteOrgForm">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <input type="hidden" name="organization_id" value="{{ organization.id }}"/>
+                    
+                    <div class="mb-3">
+                        <label class="form-label"><strong>1. Enter your developer password to confirm:</strong></label>
+                        <input type="password" class="form-control" id="developerPassword" name="password" required>
+                        <div class="form-text">This must be your current Replit login password.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label"><strong>2. Type "DELETE {{ organization.name }}" to confirm:</strong></label>
+                        <input type="text" class="form-control" id="confirmText" required>
+                        <div class="form-text">Must match exactly: <code>DELETE {{ organization.name }}</code></div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="confirmUnderstand" required>
+                            <label class="form-check-label text-danger" for="confirmUnderstand">
+                                <strong>I understand this action is IRREVERSIBLE and will permanently destroy all organization data</strong>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="confirmUsers" required>
+                            <label class="form-check-label text-danger" for="confirmUsers">
+                                <strong>I understand {{ users|length }} users will immediately lose access to their accounts</strong>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-warning">
+                        <small><strong>Security Note:</strong> This action is logged and cannot be undone. Consider backing up critical data or downgrading the organization instead of deletion.</small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn" onclick="deleteOrganization()">
+                    <i class="fas fa-trash"></i> PERMANENTLY DELETE ORGANIZATION
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function deleteOrganization() {
+    const form = document.getElementById('deleteOrgForm');
+    const password = document.getElementById('developerPassword').value;
+    const confirmText = document.getElementById('confirmText').value;
+    const expectedText = `DELETE {{ organization.name }}`;
+    const understand = document.getElementById('confirmUnderstand').checked;
+    const confirmUsers = document.getElementById('confirmUsers').checked;
+
+    // Validation
+    if (!password) {
+        alert('Developer password is required');
+        return;
+    }
+
+    if (confirmText !== expectedText) {
+        alert(`Confirmation text must match exactly: "${expectedText}"`);
+        return;
+    }
+
+    if (!understand || !confirmUsers) {
+        alert('You must check both confirmation boxes');
+        return;
+    }
+
+    // Final confirmation
+    if (!confirm('FINAL CONFIRMATION: Are you absolutely certain you want to permanently delete this organization and all its data? This cannot be undone.')) {
+        return;
+    }
+
+    // Disable button to prevent double-clicks
+    document.getElementById('confirmDeleteBtn').disabled = true;
+    document.getElementById('confirmDeleteBtn').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting...';
+
+    // Send deletion request
+    fetch(`/developer/organizations/{{ organization.id }}/delete`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name="csrf_token"]').value
+        },
+        body: JSON.stringify({
+            password: password,
+            confirm_text: confirmText
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Organization deleted successfully');
+            window.location.href = '/developer/dashboard';
+        } else {
+            alert('Error: ' + (data.error || 'Failed to delete organization'));
+            // Re-enable button
+            document.getElementById('confirmDeleteBtn').disabled = false;
+            document.getElementById('confirmDeleteBtn').innerHTML = '<i class="fas fa-trash"></i> PERMANENTLY DELETE ORGANIZATION';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred while deleting the organization');
+        // Re-enable button
+        document.getElementById('confirmDeleteBtn').disabled = false;
+        document.getElementById('confirmDeleteBtn').innerHTML = '<i class="fas fa-trash"></i> PERMANENTLY DELETE ORGANIZATION';
+    });
+}
+</script>
+
 {% endblock %}
