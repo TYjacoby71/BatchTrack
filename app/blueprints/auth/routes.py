@@ -30,71 +30,30 @@ def login():
             flash('Please provide both username and password')
             return render_template('auth/login.html', form=form)
 
-        if form_type == 'register':
-            # Handle registration
-            confirm_password = request.form.get('confirm_password')
+        # Handle login only (registration removed - use dedicated signup flow)
+        user = User.query.filter_by(username=username).first()
 
-            if password != confirm_password:
-                flash('Passwords do not match')
+        if user and user.check_password(password):
+            # Ensure user is active
+            if not user.is_active:
+                flash('Account is inactive. Please contact administrator.')
                 return render_template('auth/login.html', form=form)
 
-            # Check if username already exists
-            existing_user = User.query.filter_by(username=username).first()
-            if existing_user:
-                flash('Username already exists')
-                return render_template('auth/login.html', form=form)
+            # Log the user in
+            login_user(user)
 
-            # Get email from form if provided
-            email = request.form.get('email', '').strip()
-
-            # Create organization for new user
-            new_org = Organization(
-                name=f"{username}'s Organization",
-                contact_email=email if email else None  # Set organization email to user's email
-            )
-            db.session.add(new_org)
-            db.session.flush()  # Get the ID
-
-            # Create new user as organization owner
-            new_user = User(
-                username=username,
-                email=email if email else None,  # Set user email
-                organization_id=new_org.id,
-                user_type='organization_owner',  # Use user_type instead of role
-                is_active=True
-            )
-            new_user.set_password(password)
-            db.session.add(new_user)
+            # Update last login
+            user.last_login = TimezoneUtils.utc_now()
             db.session.commit()
 
-            flash('Account created successfully! Please log in.')
-            return render_template('auth/login.html', form=form)
-
-        else:
-            # Handle login
-            user = User.query.filter_by(username=username).first()
-
-            if user and user.check_password(password):
-                # Ensure user is active
-                if not user.is_active:
-                    flash('Account is inactive. Please contact administrator.')
-                    return render_template('auth/login.html', form=form)
-
-                # Log the user in
-                login_user(user)
-
-                # Update last login
-                user.last_login = TimezoneUtils.utc_now()
-                db.session.commit()
-
-                # Redirect based on user type - developers go to their own dashboard
-                if user.user_type == 'developer':
-                    return redirect(url_for('developer.dashboard'))
-                else:
-                    return redirect(url_for('app_routes.dashboard'))
+            # Redirect based on user type - developers go to their own dashboard
+            if user.user_type == 'developer':
+                return redirect(url_for('developer.dashboard'))
             else:
-                flash('Invalid username or password')
-                return render_template('auth/login.html', form=form)
+                return redirect(url_for('app_routes.dashboard'))
+        else:
+            flash('Invalid username or password')
+            return render_template('auth/login.html', form=form)
 
     return render_template('auth/login.html', form=form)
 
