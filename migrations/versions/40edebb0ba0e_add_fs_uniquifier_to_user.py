@@ -59,8 +59,8 @@ def upgrade():
         batch_op.alter_column('email',
                existing_type=sa.VARCHAR(length=120),
                nullable=False)
-        batch_op.create_unique_constraint(None, ['fs_uniquifier'])
-        batch_op.create_unique_constraint(None, ['email'])
+        batch_op.create_unique_constraint('uq_user_fs_uniquifier', ['fs_uniquifier'])
+        batch_op.create_unique_constraint('uq_user_email', ['email'])
         batch_op.drop_column('password_hash')
         batch_op.drop_column('is_owner')
         batch_op.drop_column('is_active')
@@ -94,8 +94,8 @@ def downgrade():
         batch_op.add_column(sa.Column('is_active', sa.BOOLEAN(), nullable=True))
         batch_op.add_column(sa.Column('is_owner', sa.BOOLEAN(), nullable=True))
         batch_op.add_column(sa.Column('password_hash', sa.VARCHAR(length=128), nullable=False))
-        batch_op.drop_constraint(None, type_='unique')
-        batch_op.drop_constraint(None, type_='unique')
+        batch_op.drop_constraint('uq_user_fs_uniquifier', type_='unique')
+        batch_op.drop_constraint('uq_user_email', type_='unique')
         batch_op.alter_column('email',
                existing_type=sa.VARCHAR(length=120),
                nullable=True)
