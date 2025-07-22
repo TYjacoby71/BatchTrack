@@ -98,6 +98,7 @@
                     </div>
 
                     <form method="POST" id="signupForm">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <!-- Hidden fields for tracking -->
                         <input type="hidden" name="signup_source" value="{{ signup_source }}">
                         {% if referral_code %}
