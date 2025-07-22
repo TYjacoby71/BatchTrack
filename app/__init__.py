@@ -120,68 +120,7 @@ def create_app():
     app.register_blueprint(recipes_bp, url_prefix='/recipes')
     app.register_blueprint(settings_bp, url_prefix='/settings')
     app.register_blueprint(timers_bp, url_prefix='/timers')
-    app.register_blueprint(developer_bp)
-
-    # Register reservation blueprints (now under products)
-    from .blueprints.products.reservation_routes import reservation_bp
-    from .blueprints.api.reservation_routes import reservation_api_bp
-    app.register_blueprint(reservation_bp, url_prefix='/reservations')
-    app.register_blueprint(reservation_api_bp)
-
-    # Register billing blueprint
-    from .blueprints.billing import billing_bp
-    app.register_blueprint(billing_bp, url_prefix='/billing')
-
-    # Register all blueprints
-    app.register_blueprint(auth_bp, url_prefix='/auth')
-    app.register_blueprint(recipes_bp, url_prefix='/recipes')
-    app.register_blueprint(inventory_bp, url_prefix='/inventory')
-    app.register_blueprint(batches_bp, url_prefix='/batches')
-    app.register_blueprint(finish_batch_bp, url_prefix='/batches')
-    app.register_blueprint(cancel_batch_bp, url_prefix='/batches')
-    app.register_blueprint(start_batch_bp, url_prefix='/start-batch')
-    # Import and register blueprints
-    try:
-        from .blueprints.products.products import products_bp
-        from .blueprints.products.api import products_api_bp
-        from .blueprints.products.product_inventory_routes import product_inventory_bp
-        from .blueprints.products.product_variants import product_variants_bp
-        from .blueprints.products.sku import sku_bp
-        app.register_blueprint(products_bp, url_prefix='/products')
-        app.register_blueprint(products_api_bp)
-        app.register_blueprint(product_inventory_bp, url_prefix='/products')
-        app.register_blueprint(product_variants_bp, url_prefix='/products')
-        app.register_blueprint(sku_bp, url_prefix='/products')
-    except ImportError:
-        print("Could not register any product blueprints")
-        pass
-
-    app.register_blueprint(conversion_bp, url_prefix='/conversion')
-    app.register_blueprint(expiration_bp, url_prefix='/expiration')
-    app.register_blueprint(settings_bp, url_prefix='/settings')
-    app.register_blueprint(timers_bp, url_prefix='/timers')
-    app.register_blueprint(quick_add_bp, url_prefix='/quick_add')
     app.register_blueprint(app_routes.app_routes_bp)
-    app.register_blueprint(fifo_bp)
-    app.register_blueprint(add_extra_bp, url_prefix='/add-extra')
-    app.register_blueprint(bulk_stock_routes.bulk_stock_bp, url_prefix='/bulk_stock')
-    app.register_blueprint(fault_log_routes.fault_log_bp, url_prefix='/fault_log')
-    app.register_blueprint(tag_manager_routes.tag_manager_bp, url_prefix='/tag_manager')
-
-    # Register organization blueprint
-    from .blueprints.organization.routes import organization_bp
-    app.register_blueprint(organization_bp, url_prefix='/organization')
-
-    # Register API blueprint
-    from .blueprints.api import api_bp
-    app.register_blueprint(api_bp)
-
-    # Register dashboard and unit API blueprints
-    from .blueprints.api.dashboard_routes import dashboard_api_bp  # Import dashboard API blueprint
-    from .blueprints.api.unit_routes import unit_api_bp  # Import unit API blueprint
-    app.register_blueprint(stock_api_bp)
-    app.register_blueprint(dashboard_api_bp)
-    app.register_blueprint(unit_api_bp)
 
     # Ensure all API routes are loaded
     with app.app_context():
