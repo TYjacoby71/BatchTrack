@@ -1,3 +1,4 @@
+
 """add_soft_delete_fields_to_user
 
 Revision ID: 28f3476c0a52
@@ -17,8 +18,20 @@ depends_on = None
 
 
 def upgrade():
-    pass
+    # Add soft delete fields to user table
+    with op.batch_alter_table('user', schema=None) as batch_op:
+        batch_op.add_column(sa.Column('deleted_at', sa.DateTime(), nullable=True))
+        batch_op.add_column(sa.Column('deleted_by', sa.Integer(), nullable=True))
+        batch_op.add_column(sa.Column('is_deleted', sa.Boolean(), nullable=True, default=False))
+        
+        # Add foreign key constraint for deleted_by
+        batch_op.create_foreign_key('fk_user_deleted_by', 'user', ['deleted_by'], ['id'])
 
 
 def downgrade():
-    pass
+    # Remove soft delete fields from user table
+    with op.batch_alter_table('user', schema=None) as batch_op:
+        batch_op.drop_constraint('fk_user_deleted_by', type_='foreignkey')
+        batch_op.drop_column('is_deleted')
+        batch_op.drop_column('deleted_by')
+        batch_op.drop_column('deleted_at')
