@@ -312,7 +312,8 @@ def update_developer_user_role(user_id):
         
         db.session.commit()
         
-        return jsonify({'success': True, 'message': f'Developer user "{user.username}" role updated successfully'})
+        role_name = developer_role.name if developer_role_id else "No role"
+        return jsonify({'success': True, 'message': f'Developer user "{user.username}" assigned to role: {role_name}'})
     
     except Exception as e:
         db.session.rollback()
