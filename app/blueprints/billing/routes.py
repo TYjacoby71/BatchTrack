@@ -1,6 +1,7 @@
 from flask import render_template, request, jsonify, redirect, url_for, flash, current_app
 from flask_login import login_required, current_user
 from . import billing_bp
+from ...extensions import csrf
 import logging
 import stripe
 
@@ -154,6 +155,7 @@ def cancel_subscription():
         return jsonify({'error': 'Failed to cancel subscription'}), 500
 
 @billing_bp.route('/webhooks/stripe', methods=['POST'])
+@csrf.exempt
 def stripe_webhook():
     """Handle Stripe webhooks"""
     payload = request.get_data()
