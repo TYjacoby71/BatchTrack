@@ -4,8 +4,10 @@ from app.models import Organization, User, Permission, Role
 from app.extensions import db
 from datetime import datetime, timedelta
 from sqlalchemy import func
+from .system_roles import system_roles_bp
 
 developer_bp = Blueprint('developer', __name__, url_prefix='/developer')
+developer_bp.register_blueprint(system_roles_bp)
 
 @developer_bp.before_request
 def require_developer():

@@ -1,4 +1,3 @@
-
 {% extends 'layout.html' %}
 
 {% block title %}Developer Dashboard{% endblock %}
@@ -98,16 +97,6 @@
                             <i class="fas fa-list"></i> View All Organizations
                         </a>
                     </div>
-                    
-                    <!-- Subscription Breakdown -->
-                    <hr>
-                    <h6>Subscription Tiers:</h6>
-                    {% for tier, count in subscription_stats %}
-                    <div class="d-flex justify-content-between">
-                        <span class="text-capitalize">{{ tier }}:</span>
-                        <span class="badge bg-secondary">{{ count }}</span>
-                    </div>
-                    {% endfor %}
                 </div>
             </div>
         </div>
@@ -277,6 +266,12 @@
                 </div>
             </div>
         </div>
+    </div>
+</div>
+<div class="container">
+    <div class="row">
+        
+        
     </div>
 </div>
 {% endblock %}
