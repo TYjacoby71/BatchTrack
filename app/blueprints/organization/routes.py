@@ -34,18 +34,26 @@ def dashboard():
     from ...services.pricing_service import PricingService
     pricing_data = PricingService.get_pricing_data()
 
-    # Get organization data
-    organization = current_user.organization
+    # Get organization data - handle developer customer view
+    from flask import session
+    if current_user.user_type == 'developer' and session.get('dev_selected_org_id'):
+        organization = Organization.query.get(session.get('dev_selected_org_id'))
+        if not organization:
+            flash('Selected organization not found', 'error')
+            return redirect(url_for('developer.organizations'))
+    else:
+        organization = current_user.organization
 
     # Get organization statistics
     from app.models import Batch
+    org_id = organization.id
     completed_batches = Batch.query.filter_by(
-        organization_id=current_user.organization_id,
+        organization_id=org_id,
         status='completed'
     ).count()
 
     failed_batches = Batch.query.filter_by(
-        organization_id=current_user.organization_id,
+        organization_id=org_id,
         status='failed'
     ).count()
 
@@ -56,7 +64,7 @@ def dashboard():
 
     # Count pending invites (inactive users)
     pending_invites = User.query.filter_by(
-        organization_id=current_user.organization_id,
+        organization_id=org_id,
         is_active=False,
         user_type='team_member'
     ).count()
@@ -72,11 +80,11 @@ def dashboard():
         permission_categories[category].append(perm)
 
     # Get roles for the roles tab  
-    roles = Role.get_organization_roles(current_user.organization_id)
+    roles = Role.get_organization_roles(org_id)
 
     # Get users for the user management tab (exclude developers from organization view)
     users = User.query.filter(
-        User.organization_id == current_user.organization_id,
+        User.organization_id == org_id,
         User.user_type != 'developer'
     ).order_by(User.created_at.desc()).all()
 
