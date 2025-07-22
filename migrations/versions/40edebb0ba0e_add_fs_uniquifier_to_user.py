@@ -41,8 +41,8 @@ def upgrade():
         )
     with op.batch_alter_table('role', schema=None) as batch_op:
         batch_op.create_unique_constraint('unique_role_name_org', ['name', 'organization_id'])
-        batch_op.create_foreign_key(None, 'user', ['created_by'], ['id'])
-        batch_op.create_foreign_key(None, 'organization', ['organization_id'], ['id'])
+        batch_op.create_foreign_key('fk_role_created_by', 'user', ['created_by'], ['id'])
+        batch_op.create_foreign_key('fk_role_organization_id', 'organization', ['organization_id'], ['id'])
 
     with op.batch_alter_table('subscription', schema=None) as batch_op:
         batch_op.drop_column('trial_days_remaining')
@@ -128,8 +128,8 @@ def downgrade():
         batch_op.add_column(sa.Column('trial_days_remaining', sa.INTEGER(), nullable=True))
 
     with op.batch_alter_table('role', schema=None) as batch_op:
-        batch_op.drop_constraint(None, type_='foreignkey')
-        batch_op.drop_constraint(None, type_='foreignkey')
+        batch_op.drop_constraint('fk_role_organization_id', type_='foreignkey')
+        batch_op.drop_constraint('fk_role_created_by', type_='foreignkey')
         batch_op.drop_constraint('unique_role_name_org', type_='unique')
 
     op.drop_table('roles_users')
