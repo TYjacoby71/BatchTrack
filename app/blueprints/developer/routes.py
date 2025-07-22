@@ -5,9 +5,11 @@ from app.extensions import db
 from datetime import datetime, timedelta
 from sqlalchemy import func
 from .system_roles import system_roles_bp
+from .subscription_tiers import subscription_tiers_bp
 
 developer_bp = Blueprint('developer', __name__, url_prefix='/developer')
 developer_bp.register_blueprint(system_roles_bp)
+developer_bp.register_blueprint(subscription_tiers_bp)
 
 @developer_bp.before_request
 def require_developer():
@@ -239,28 +241,6 @@ def system_settings():
     }
 
     return render_template('developer/system_settings.html', stats=stats)
-
-@developer_bp.route('/subscriptions')
-@login_required
-def subscription_management():
-    """Subscription and billing management"""
-    # Group organizations by subscription tier
-    tiers = {}
-    for tier in ['free', 'solo', 'team', 'enterprise']:
-        orgs = Organization.query.filter_by(subscription_tier=tier).all()
-        tiers[tier] = {
-            'count': len(orgs),
-            'organizations': orgs
-        }
-
-    # Add exempt tier
-    orgs = Organization.query.filter_by(subscription_tier='exempt').all()
-    tiers['exempt'] = {
-        'count': len(orgs),
-        'organizations': orgs
-    }
-
-    return render_template('developer/subscriptions.html', tiers=tiers)
 
 # Customer support filtering routes
 @developer_bp.route('/select-org/<int:org_id>')

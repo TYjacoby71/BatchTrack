@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 @billing_bp.route('/upgrade')
 @login_required
 def upgrade():
-    """Show upgrade options"""
+    """Show upgrade options with dynamic Stripe data"""
     if not has_permission(current_user, 'manage_billing'):
         flash('You do not have permission to manage billing.', 'error')
         return redirect(url_for('organization.dashboard'))
@@ -21,10 +21,12 @@ def upgrade():
     from ...services.pricing_service import PricingService
     current_tier = SubscriptionService.get_effective_tier(current_user.organization)
     pricing_data = PricingService.get_pricing_data()
+    subscription_details = PricingService.get_subscription_details(current_user.organization)
     
     return render_template('billing/upgrade.html', 
                          current_tier=current_tier, 
-                         pricing_data=pricing_data)
+                         pricing_data=pricing_data,
+                         subscription_details=subscription_details)
 
 @billing_bp.route('/checkout/<tier>')
 @billing_bp.route('/checkout/<tier>/<billing_cycle>')

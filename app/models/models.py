@@ -80,6 +80,14 @@ class Organization(db.Model):
         }
         effective_tier = self.effective_subscription_tier
         return features.get(effective_tier, features['solo'])
+    
+    def get_pricing_data(self):
+        """Get dynamic pricing data from Stripe"""
+        try:
+            from ..services.pricing_service import PricingService
+            return PricingService.get_pricing_data()
+        except ImportError:
+            return None
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)

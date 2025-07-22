@@ -32,72 +32,10 @@
             <div class="card-header bg-primary text-white">
                 <h6 class="mb-0"><i class="fas fa-arrow-up"></i> Upgrade Available</h6>
             </div>
-            <div class="card-body text-center">
-                <p>Get more users, features, and integrations</p>
-                <a href="{{ url_for('billing.upgrade') }}" class="btn btn-primary">
-                    <i class="fas fa-external-link-alt"></i> View Upgrade Options
-                </a>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="row">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-header">
-                <h6 class="mb-0"><i class="fas fa-history"></i> Quick Upgrade Options</h6>
-            </div>
             <div class="card-body">
-                <div class="row">
-                    {% for tier_name, tier_data in pricing_data.items() %}
-                    <div class="col-md-4 mb-3">
-                        <div class="upgrade-option">
-                            <h6>{{ tier_name.title() }} - {{ tier_data.price }}/month</h6>
-                            <ul class="small">
-                                {% for feature in tier_data.features %}
-                                <li>{{ feature }}</li>
-                                {% endfor %}
-                            </ul>
-                            {% if current_user.organization.effective_subscription_tier != tier_name %}
-                            <a href="{{ url_for('billing.checkout', tier=tier_name) }}" class="btn btn-sm btn-outline-primary">
-                                {% if current_user.organization.effective_subscription_tier == 'free' or 
-                                     (tier_name == 'team' and current_user.organization.effective_subscription_tier == 'solo') or
-                                     (tier_name == 'enterprise' and current_user.organization.effective_subscription_tier in ['free', 'solo', 'team']) %}
-                                    Upgrade
-                                {% else %}
-                                    Switch
-                                {% endif %}
-                            </a>
-                            {% else %}
-                            <span class="badge bg-secondary">Current Plan</span>
-                            {% endif %}
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
+                <p>Unlock more features and users with our premium plans.</p>
+                <a href="{{ url_for('billing.upgrade') }}" class="btn btn-light">View All Plans</a>
             </div>
         </div>
     </div>
 </div>
-
-<style>
-.upgrade-option {
-    padding: 15px;
-    border: 1px solid #e0e0e0;
-    border-radius: 5px;
-    text-align: center;
-    height: 100%;
-}
-
-.upgrade-option h6 {
-    color: #333;
-    font-weight: bold;
-    margin-bottom: 10px;
-}
-
-.upgrade-option ul {
-    text-align: left;
-    margin-bottom: 15px;
-}
-</style>
