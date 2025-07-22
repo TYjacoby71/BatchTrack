@@ -38,14 +38,14 @@
                     <span class="badge">{{ tier_data.badge }}</span>
                 </div>
                 {% endif %}
-                
+
                 <div class="card-body text-center">
                     <h4 class="card-title">{{ tier_data.get('name', tier_name.title()) }}</h4>
-                    
+
                     {% if tier_data.get('description') %}
                     <p class="text-muted">{{ tier_data.description }}</p>
                     {% endif %}
-                    
+
                     <div class="pricing">
                         <h3 class="price text-primary">{{ tier_data.price }}</h3>
                         <small class="text-muted">/month</small>
@@ -56,21 +56,23 @@
                         </div>
                         {% endif %}
                     </div>
-                    
+
                     {% if tier_data.get('user_limit') %}
                     <p class="mt-3"><strong>Up to {{ tier_data.user_limit }} users</strong></p>
                     {% endif %}
-                    
+
                     <ul class="list-unstyled mt-3">
                         {% for feature in tier_data.features %}
                         <li class="mb-2"><i class="fas fa-check text-success me-2"></i>{{ feature }}</li>
                         {% endfor %}
                     </ul>
                 </div>
-                
+
                 <div class="card-footer text-center">
                     {% if current_tier != tier_name %}
-                    <a href="{{ url_for('billing.checkout', tier=tier_name) }}" class="btn btn-primary btn-block">
+                    {% if config.get('STRIPE_WEBHOOK_SECRET') %}
+                    <a href="{{ url_for('billing.checkout', tier=tier_name) }}" 
+                       class="btn btn-primary btn-block">
                         {% if current_tier == 'free' or 
                              (tier_name == 'team' and current_tier == 'solo') or
                              (tier_name == 'enterprise' and current_tier in ['free', 'solo', 'team']) %}
@@ -79,6 +81,15 @@
                             Switch to {{ tier_data.get('name', tier_name.title()) }}
                         {% endif %}
                     </a>
+                    {% else %}
+                    <a href="{{ url_for('billing.dev_activate_subscription', tier=tier_name) }}" 
+                       class="btn btn-warning btn-block">
+                        Activate {{ tier_data.get('name', tier_name.title()) }} (Dev Mode)
+                    </a>
+                    <small class="text-muted d-block mt-1">
+                        Development mode - no payment required
+                    </small>
+                    {% endif %}
                     {% if tier_data.get('price_yearly') %}
                     <a href="{{ url_for('billing.checkout', tier=tier_name, billing_cycle='yearly') }}" 
                        class="btn btn-outline-success btn-sm mt-2">
@@ -132,3 +143,4 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 {% endblock %}
+</replit_final_file>

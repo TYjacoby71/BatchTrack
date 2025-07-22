@@ -190,3 +190,30 @@ class StripeService:
         except stripe.error.StripeError as e:
             logger.error(f"Failed to cancel subscription for org {organization.id}: {str(e)}")
             return False
+
+
+
+    @staticmethod
+    def simulate_subscription_success(organization, tier='team'):
+        """Simulate successful subscription for development/testing"""
+        from flask import current_app
+        
+        if current_app.config.get('STRIPE_WEBHOOK_SECRET'):
+            # Production mode - require real webhooks
+            return False
+            
+        # Development mode - simulate webhook data
+        subscription = organization.subscription
+        if not subscription:
+            return False
+            
+        # Simulate successful subscription creation
+        subscription.status = 'active'
+        subscription.tier = tier
+        subscription.current_period_start = TimezoneUtils.utc_now()
+        subscription.current_period_end = TimezoneUtils.utc_now() + timedelta(days=30)
+        subscription.next_billing_date = subscription.current_period_end
+        
+        db.session.commit()
+        logger.info(f"Simulated subscription activation for org {organization.id} (dev mode)")
+        return True

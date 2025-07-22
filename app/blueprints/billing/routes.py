@@ -104,11 +104,24 @@ def checkout(tier, billing_cycle='monthly'):
         session = StripeService.create_checkout_session(current_user.organization, price_key)
 
         if not session:
+            # Check if we're in development mode without webhook config
+            if not current_app.config.get('STRIPE_WEBHOOK_SECRET'):
+                # Development mode - simulate subscription
+                success = StripeService.simulate_subscription_success(current_user.organization, tier)
+                if success:
+                    flash(f'Development Mode: Simulated {tier} subscription activated!', 'success')
+                    return redirect(url_for('organization.dashboard'))
+            
             flash('Failed to create checkout session. Please try again.', 'error')
             return redirect(url_for('billing.upgrade'))
     except Exception as e:
         logger.error(f"Checkout error for org {current_user.organization.id}: {str(e)}")
-        flash('Payment system temporarily unavailable. Please try again later.', 'error')
+        
+        # Fallback for development
+        if not current_app.config.get('STRIPE_WEBHOOK_SECRET'):
+            flash('Development Mode: Stripe not configured. Contact admin for subscription setup.', 'warning')
+        else:
+            flash('Payment system temporarily unavailable. Please try again later.', 'error')
         return redirect(url_for('billing.upgrade'))
 
     return redirect(session.url)
@@ -134,6 +147,40 @@ def stripe_webhook():
     """Handle Stripe webhooks"""
     payload = request.get_data()
     sig_header = request.headers.get('Stripe-Signature')
+
+
+@billing_bp.route('/dev/activate/<tier>')
+@login_required
+def dev_activate_subscription(tier):
+    """Development-only route to activate subscriptions"""
+    from flask import current_app
+    
+    # Only allow in development mode
+    if current_app.config.get('STRIPE_WEBHOOK_SECRET'):
+        flash('This route is only available in development mode.', 'error')
+        return redirect(url_for('billing.upgrade'))
+    
+    if not has_permission(current_user, 'organization.manage_billing'):
+        flash('You do not have permission to manage billing.', 'error')
+        return redirect(url_for('organization.dashboard'))
+    
+    # Validate tier
+    from ...services.pricing_service import PricingService
+    available_tiers = PricingService.get_pricing_data()
+    
+    if tier not in available_tiers:
+        flash('Invalid subscription tier.', 'error')
+        return redirect(url_for('billing.upgrade'))
+    
+    success = StripeService.simulate_subscription_success(current_user.organization, tier)
+    
+    if success:
+        flash(f'Development Mode: {tier.title()} subscription activated!', 'success')
+    else:
+        flash('Failed to activate subscription.', 'error')
+    
+    return redirect(url_for('organization.dashboard'))
+
 
     try:
         event = stripe.Webhook.construct_event(
