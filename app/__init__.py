@@ -89,16 +89,10 @@ def create_app():
 
     # Register blueprints
     from .blueprints.auth import auth_bp
-    from .blueprints.products import products_bp
-    from .blueprints.products.api import products_api_bp
-    from .blueprints.recipes import recipes_bp
     from .blueprints.inventory import inventory_bp
+    from .blueprints.recipes import recipes_bp
     from .blueprints.batches import batches_bp
-    from .blueprints.batches.finish_batch import finish_batch_bp
-    from .blueprints.batches.cancel_batch import cancel_batch_bp
-    from .blueprints.batches.start_batch import start_batch_bp
-    from .blueprints.api.stock_routes import stock_api_bp
-    from .blueprints.api.ingredient_routes import ingredient_api_bp
+    from .blueprints.products import products_bp
     from .blueprints.conversion import conversion_bp
     from .blueprints.expiration import expiration_bp
     from .blueprints.settings import settings_bp
