@@ -14,7 +14,7 @@ pip install -r requirements.txt
 flask db upgrade
 
 # Seed initial data
-python -c "from app.seeders.role_permission_seeder import seed_roles_and_permissions; seed_roles_and_permissions()"
+python seed_consolidated_permissions.py
 python -c "from app.seeders.unit_seeder import seed_units; seed_units()"
 python -c "from app.seeders.ingredient_category_seeder import seed_categories; seed_categories()"
 
