@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = 'merge_all_heads_final'
-down_revision = ('fix_user_role_assignment_null_constraint', 'consolidate_all_heads_final')
+down_revision = 'add_is_organization_owner_column'
 branch_labels = None
 depends_on = None
 

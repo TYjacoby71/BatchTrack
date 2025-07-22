@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = 'add_is_organization_owner_column'
-down_revision = 'merge_all_heads_final'
+down_revision = 'merge_all_current_heads'
 branch_labels = None
 depends_on = None
 
