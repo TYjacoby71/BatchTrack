@@ -145,7 +145,7 @@
       "advanced_reports",
       "system_admin"
     ],
-    "stripe_lookup_key": "",
+    "stripe_lookup_key": "batchtrack_team_monthly",
     "fallback_features": []
   },
   "enterprise": {
