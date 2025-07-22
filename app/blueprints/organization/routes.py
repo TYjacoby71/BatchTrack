@@ -282,7 +282,8 @@ def export_report(report_type):
         elif report_type == 'batches':
             flash('Batch export functionality coming soon', 'info')
         elif report_type == 'inventory':
-            flash('Inventory export functionality coming soon', 'info')        elif report_type == 'products':
+            flash('Inventory export functionality coming soon', 'info')
+        elif report_type == 'products':
             flash('Product export functionality coming soon', 'info')
         elif report_type == 'activity':
             flash('Activity export functionality coming soon', 'info')
