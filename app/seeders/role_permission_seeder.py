@@ -200,4 +200,7 @@ def seed_roles_and_permissions():
     print("✅ Roles and permissions seeded successfully!")
 
 if __name__ == "__main__":
-    seed_roles_and_permissions()
+    from .. import create_app
+    app = create_app()
+    with app.app_context():
+        seed_roles_and_permissions()
