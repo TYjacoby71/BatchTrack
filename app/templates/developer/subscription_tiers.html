@@ -232,6 +232,28 @@ function confirmDelete(tierKey, tierName) {
 }
 
 function syncTier(tierKey) {
+    fetch(`/developer/subscription-tiers/sync/${tierKey}`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Sync failed: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Sync failed: Network error');
+    });
+}
+</script>
+
+function syncTier(tierKey) {
     if (confirm(`Sync ${tierKey} tier with Stripe? This will update pricing and features.`)) {
         fetch(`{{ url_for('developer.subscription_tiers.sync_tier', tier_key='TIER_KEY') }}`.replace('TIER_KEY', tierKey), {
             method: 'POST',
