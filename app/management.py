@@ -1,39 +1,63 @@
+
 """
 Management commands for deployment and maintenance
 """
 import click
 from flask.cli import with_appcontext
 from .extensions import db
-from .seeders import seed_units, seed_categories, seed_users
+from .seeders import (
+    seed_units, 
+    seed_categories, 
+    seed_users, 
+    seed_consolidated_permissions,
+    seed_subscriptions
+)
 from .seeders.user_seeder import update_existing_users_with_roles
 
 @click.command()
 @with_appcontext
 def init_db():
     """Initialize database with all seeders"""
-    db.create_all()
-    
-    # Seed consolidated permissions system first
-    from .seeders.consolidated_permission_seeder import seed_consolidated_permissions
-    seed_consolidated_permissions()
-    
-    seed_units()
-    seed_categories()
-    seed_users()
-    click.echo('✅ Database initialized successfully!')
+    try:
+        print("🚀 Initializing database...")
+        db.create_all()
+        
+        # Seed consolidated permissions system first
+        seed_consolidated_permissions()
+        
+        # Seed core data
+        seed_units()
+        seed_users()
+        
+        # Get the organization ID from the first organization
+        from .models import Organization
+        org = Organization.query.first()
+        if org:
+            seed_categories(organization_id=org.id)
+        else:
+            print('❌ No organization found for seeding categories')
+            return
+        
+        # Seed subscription data
+        seed_subscriptions()
+        
+        print('✅ Database initialized successfully!')
+    except Exception as e:
+        print(f'❌ Error initializing database: {str(e)}')
+        raise
 
 @click.command('seed-all')
 @with_appcontext
 def seed_all_command():
     """Seed all data"""
     try:
+        print("🌱 Seeding all data...")
+        
         # First seed the consolidated permissions system
-        from .seeders.consolidated_permission_seeder import seed_consolidated_permissions
         seed_consolidated_permissions()
 
+        # Core seeders
         seed_units()
-
-        # Seed users first to create organization
         seed_users()
 
         # Get the organization ID from the first organization
@@ -42,27 +66,29 @@ def seed_all_command():
         if org:
             seed_categories(organization_id=org.id)
         else:
-            click.echo('❌ No organization found for seeding categories')
+            print('❌ No organization found for seeding categories')
             return
 
         # Update existing users with database roles
         update_existing_users_with_roles()
+        
+        # Seed subscription data
+        seed_subscriptions()
 
-        click.echo('✅ All data seeded successfully!')
+        print('✅ All data seeded successfully!')
     except Exception as e:
-        click.echo(f'❌ Error seeding data: {str(e)}')
+        print(f'❌ Error seeding data: {str(e)}')
         raise
 
-@click.command('seed-roles-permissions')
+@click.command('seed-permissions')
 @with_appcontext
-def seed_roles_permissions_command():
-    """Seed roles and permissions only"""
+def seed_permissions_command():
+    """Seed permissions and roles only"""
     try:
-        from .seeders.consolidated_permission_seeder import seed_consolidated_permissions
         seed_consolidated_permissions()
-        click.echo('✅ Roles and permissions seeded successfully!')
+        print('✅ Permissions seeded successfully!')
     except Exception as e:
-        click.echo(f'❌ Error seeding roles and permissions: {str(e)}')
+        print(f'❌ Error seeding permissions: {str(e)}')
         raise
 
 @click.command('seed-users')
@@ -71,9 +97,20 @@ def seed_users_command():
     """Seed users only"""
     try:
         seed_users()
-        click.echo('✅ Users seeded successfully!')
+        print('✅ Users seeded successfully!')
     except Exception as e:
-        click.echo(f'❌ Error seeding users: {str(e)}')
+        print(f'❌ Error seeding users: {str(e)}')
+        raise
+
+@click.command('seed-subscriptions')
+@with_appcontext
+def seed_subscriptions_command():
+    """Seed subscription data only"""
+    try:
+        seed_subscriptions()
+        print('✅ Subscriptions seeded successfully!')
+    except Exception as e:
+        print(f'❌ Error seeding subscriptions: {str(e)}')
         raise
 
 @click.command('update-user-roles')
@@ -82,62 +119,51 @@ def update_user_roles_command():
     """Update existing users with database role assignments"""
     try:
         update_existing_users_with_roles()
-        click.echo('✅ User roles updated successfully!')
+        print('✅ User roles updated successfully!')
     except Exception as e:
-        click.echo(f'❌ Error updating user roles: {str(e)}')
+        print(f'❌ Error updating user roles: {str(e)}')
         raise
 
-@click.command()
+@click.command('seed-units')
 @with_appcontext
-def seed_units_only():
+def seed_units_command():
     """Seed only units"""
-    seed_units()
-    click.echo('✅ Units seeded!')
+    try:
+        seed_units()
+        print('✅ Units seeded!')
+    except Exception as e:
+        print(f'❌ Error seeding units: {str(e)}')
+        raise
 
-@click.command()
+@click.command('activate-users')
 @with_appcontext
 def activate_users():
     """Activate all inactive users"""
-    from .models import User
-    from .extensions import db
+    try:
+        from .models import User
+        
+        inactive_users = User.query.filter_by(is_active=False).all()
+        if not inactive_users:
+            print("ℹ️  No inactive users found.")
+            return
 
-    inactive_users = User.query.filter_by(is_active=False).all()
-    if not inactive_users:
-        click.echo("No inactive users found.")
-        return
+        for user in inactive_users:
+            user.is_active = True
+            print(f"✅ Activated user: {user.username}")
 
-    for user in inactive_users:
-        user.is_active = True
-        click.echo(f"Activated user: {user.username}")
-
-    db.session.commit()
-    click.echo(f"Activated {len(inactive_users)} users.")
+        db.session.commit()
+        print(f"✅ Activated {len(inactive_users)} users.")
+    except Exception as e:
+        print(f'❌ Error activating users: {str(e)}')
+        raise
 
 def register_commands(app):
     """Register CLI commands with the app"""
     app.cli.add_command(init_db)
     app.cli.add_command(seed_all_command)
-    app.cli.add_command(seed_units_only)
-    app.cli.add_command(seed_roles_permissions_command)
+    app.cli.add_command(seed_permissions_command)
     app.cli.add_command(seed_users_command)
+    app.cli.add_command(seed_subscriptions_command)
+    app.cli.add_command(seed_units_command)
     app.cli.add_command(update_user_roles_command)
     app.cli.add_command(activate_users)
-
-    @app.cli.command()
-    def assign_user_roles():
-        """Assign roles to existing users based on their user types"""
-        from .seeders.user_seeder import update_existing_users_with_roles
-        update_existing_users_with_roles()
-
-@click.command('assign-user-roles')
-@with_appcontext
-def assign_user_roles_command():
-    """Assign roles to existing users based on their user types"""
-    try:
-        update_existing_users_with_roles()
-        click.echo('✅ User roles assigned successfully!')
-    except Exception as e:
-        click.echo(f'❌ Error assigning user roles: {str(e)}')
-        raise
-
-    app.cli.add_command(assign_user_roles_command)

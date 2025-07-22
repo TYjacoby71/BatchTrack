@@ -4,6 +4,14 @@ from ..models import Unit
 from ..extensions import db
 
 def seed_units():
+    from flask import current_app
+    from ..models import Unit
+    from ..extensions import db
+    
+    # Ensure we're in an application context
+    if not current_app:
+        raise RuntimeError("seed_units() must be called within Flask application context")
+    
     units = [
         # Weight Units
         {"name": "gram", "symbol": "g", "type": "weight", "base_unit": "gram", "conversion_factor": 1.0, "is_custom": False, "is_mapped": True, "created_by": None, "created_at": datetime.utcnow()},

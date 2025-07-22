@@ -253,3 +253,7 @@ function syncTier(tierKey) {
 }
 </script>
 {% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/subscription_tiers.js') }}"></script>
+{% endblock %}

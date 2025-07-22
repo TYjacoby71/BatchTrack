@@ -4,8 +4,8 @@
 
 import json
 import os
+from flask import current_app
 from ..models import Permission, DeveloperPermission, Role, db
-from ..extensions import db as database
 
 def load_consolidated_permissions():
     """Load permissions from the consolidated JSON file"""
@@ -144,6 +144,10 @@ def cleanup_old_permissions():
 
 def seed_consolidated_permissions():
     """Main seeder function"""
+    # Ensure we're in an application context
+    if not current_app:
+        raise RuntimeError("seed_consolidated_permissions() must be called within Flask application context")
+    
     print("=== Seeding Consolidated Permissions System ===")
     
     # Seed permissions

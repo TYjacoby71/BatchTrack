@@ -89,6 +89,19 @@ class Organization(db.Model):
         except ImportError:
             return None
 
+    def is_owner(self, user):
+        """Check if user is owner of this organization"""
+        return user.id == self.owner_id
+
+    def owner_has_permission(self, user, permission_name):
+        """Check if owner has permission through subscription tier (no bypass)"""
+        if not self.is_owner(user):
+            return False
+
+        # Owners must still respect subscription tier limits
+        from ..utils.permissions import _has_tier_permission
+        return _has_tier_permission(self, permission_name)
+
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(64), unique=True, nullable=False)
@@ -98,7 +111,7 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(120), nullable=True)
     phone = db.Column(db.String(20), nullable=True)
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)
-    user_type = db.Column(db.String(32), default='team_member')  # 'developer', 'organization_owner', 'team_member'
+    user_type = db.Column(db.String(32), default='customer')  # 'developer', 'customer'
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
     last_login = db.Column(db.DateTime, nullable=True)
@@ -130,8 +143,9 @@ class User(UserMixin, db.Model):
 
     @property
     def is_organization_owner(self):
-        """Check if user is the owner of their organization"""
-        return self.user_type == 'organization_owner'
+        """Check if user has organization owner role"""
+        roles = self.get_active_roles()
+        return any(role.name == 'organization_owner' for role in roles)
 
     def get_active_roles(self):
         """Get all active roles for this user"""
@@ -307,7 +321,7 @@ class Unit(db.Model):
         # Standard units (is_custom=False) must have unique names globally
         db.Index('ix_unit_standard_unique', 'name', unique=True),
         # Custom units must have unique names within organization  
-        db.UniqueConstraint('name', 'organization_id', name='_unit_name_org_uc'),
+        db.UniqueConstraint('name', 'name', 'organization_id', name='_unit_name_org_uc'),
     )
 
     @classmethod
