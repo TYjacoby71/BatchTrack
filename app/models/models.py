@@ -1,5 +1,6 @@
 from datetime import datetime, date
 from flask_login import current_user, UserMixin
+from flask_security import UserMixin as SecurityUserMixin
 from ..extensions import db
 from .mixins import ScopedModelMixin
 from ..utils.timezone_utils import TimezoneUtils
@@ -81,34 +82,50 @@ class Organization(db.Model):
         effective_tier = self.effective_subscription_tier
         return features.get(effective_tier, features['solo'])
 
-class User(UserMixin, db.Model):
+class User(UserMixin, SecurityUserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(64), unique=True, nullable=False)
-    password_hash = db.Column(db.String(128), nullable=False)
+    password = db.Column(db.String(128), nullable=False)  # Flask-Security-Too uses 'password' not 'password_hash'
     first_name = db.Column(db.String(64), nullable=True)
     last_name = db.Column(db.String(64), nullable=True)
-    email = db.Column(db.String(120), nullable=True)
+    email = db.Column(db.String(120), unique=True, nullable=False)  # Required for Flask-Security-Too
     phone = db.Column(db.String(20), nullable=True)
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)
     user_type = db.Column(db.String(32), default='team_member')  # 'developer', 'organization_owner', 'team_member'
-    is_active = db.Column(db.Boolean, default=True)
+    active = db.Column(db.Boolean, default=True)  # Flask-Security-Too uses 'active' not 'is_active'
     created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
-    last_login = db.Column(db.DateTime, nullable=True)
+    last_login_at = db.Column(db.DateTime, nullable=True)  # Flask-Security-Too uses 'last_login_at'
     timezone = db.Column(db.String(64), default='UTC')
-    # role_id removed - using UserRoleAssignment table instead
+    
+    # Flask-Security-Too email confirmation fields
+    confirmed_at = db.Column(db.DateTime)
+    
+    # Flask-Security-Too roles relationship
+    roles = db.relationship('FlaskRole', secondary='roles_users', backref=db.backref('users', lazy='dynamic'))
     
     # Soft delete fields
     deleted_at = db.Column(db.DateTime, nullable=True)
     deleted_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     is_deleted = db.Column(db.Boolean, default=False)
 
-    def set_password(self, password):
-        from werkzeug.security import generate_password_hash
-        self.password_hash = generate_password_hash(password)
+    def set_password(self, password_text):
+        """Set password - Flask-Security-Too will handle hashing"""
+        self.password = password_text
 
-    def check_password(self, password):
+    def check_password(self, password_text):
+        """Check password - compatibility method"""
         from werkzeug.security import check_password_hash
-        return check_password_hash(self.password_hash, password)
+        return check_password_hash(self.password, password_text)
+        
+    @property
+    def is_active(self):
+        """Compatibility property for Flask-Login"""
+        return self.active and not self.is_deleted
+        
+    @property
+    def last_login(self):
+        """Compatibility property"""
+        return self.last_login_at
 
     @property
     def full_name(self):

@@ -328,11 +328,11 @@ async function confirmDeleteUser() {
     const userId = document.getElementById('editUserId').value;
     const username = document.getElementById('editUsername').textContent;
 
-    if (!confirm(`Are you sure you want to permanently delete user "${username}"? This action cannot be undone and will remove all associated data.`)) {
+    if (!confirm(`Are you sure you want to remove user "${username}"? This will deactivate their account but preserve all historical data.`)) {
         return;
     }
 
-    if (!confirm('This is your final warning. This will permanently delete the user and all their data. Are you absolutely sure?')) {
+    if (!confirm('This will remove the user\'s access to the system. They can be restored later if needed. Continue?')) {
         return;
     }
 

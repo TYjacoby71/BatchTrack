@@ -1,11 +1,12 @@
-from flask import Flask
-from flask_login import LoginManager
+from flask import Flask, render_template, request, redirect, url_for, flash, session
+from flask_login import current_user, LoginManager
 from flask_migrate import Migrate
+from flask_security import Security, SQLAlchemyUserDatastore
+from flask_mail import Mail
 from .extensions import db
 from .models import User
+from .models.flask_security_models import FlaskRole
 import os
-from flask import Flask, render_template, request, redirect, url_for, flash, session
-from flask_login import current_user
 
 
 def create_app():
@@ -37,7 +38,35 @@ def create_app():
     from .extensions import csrf
     csrf.init_app(app)
 
-    # Configure Flask-Login
+    # Configure email for Flask-Security-Too
+    app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER', 'smtp.gmail.com')
+    app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', '587'))
+    app.config['MAIL_USE_TLS'] = os.getenv('MAIL_USE_TLS', 'True').lower() == 'true'
+    app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
+    app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
+    app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER', 'noreply@batchtrack.com')
+    
+    # Flask-Security-Too configuration
+    app.config['SECURITY_REGISTERABLE'] = True
+    app.config['SECURITY_CONFIRMABLE'] = True
+    app.config['SECURITY_RECOVERABLE'] = True
+    app.config['SECURITY_CHANGEABLE'] = True
+    app.config['SECURITY_SEND_REGISTER_EMAIL'] = True
+    app.config['SECURITY_SEND_PASSWORD_CHANGE_EMAIL'] = True
+    app.config['SECURITY_SEND_PASSWORD_RESET_EMAIL'] = True
+    app.config['SECURITY_POST_REGISTER_REDIRECT_ENDPOINT'] = 'auth.login'
+    app.config['SECURITY_POST_CONFIRM_REDIRECT_ENDPOINT'] = 'auth.login'
+    app.config['SECURITY_POST_RESET_REDIRECT_ENDPOINT'] = 'auth.login'
+    app.config['SECURITY_EMAIL_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER', 'noreply@batchtrack.com')
+    
+    # Initialize Flask-Mail
+    mail = Mail(app)
+    
+    # Setup Flask-Security-Too
+    user_datastore = SQLAlchemyUserDatastore(db, User, FlaskRole)
+    security = Security(app, user_datastore)
+    
+    # Configure Flask-Login (still needed for compatibility)
     login_manager = LoginManager()
     login_manager.init_app(app)
     login_manager.login_view = 'auth.login'
