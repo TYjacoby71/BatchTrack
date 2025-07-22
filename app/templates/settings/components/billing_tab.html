@@ -101,3 +101,5 @@
     margin-bottom: 15px;
 }
 </style>
+{% if has_permission('organization.manage_billing') or current_user.user_type == 'organization_owner' %}
+{% endif %}
