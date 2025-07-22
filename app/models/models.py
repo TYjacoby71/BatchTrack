@@ -100,6 +100,9 @@ class User(SecurityUserMixin, db.Model):
     # Flask-Security-Too email confirmation fields
     confirmed_at = db.Column(db.DateTime)
     
+    # Flask-Security-Too uniquifier field (required as of 4.0.0)
+    fs_uniquifier = db.Column(db.String(255), unique=True, nullable=False)
+    
     # Flask-Security-Too roles relationship
     roles = db.relationship('FlaskRole', secondary='roles_users', backref=db.backref('users', lazy='dynamic'))
     
