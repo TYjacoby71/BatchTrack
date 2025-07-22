@@ -119,12 +119,12 @@ def create_app():
     app.register_blueprint(reservation_bp, url_prefix='/reservations')
     app.register_blueprint(reservation_api_bp)
 
-    # Register billing blueprint
-    from .blueprints.billing import billing_bp
-    app.register_blueprint(billing_bp, url_prefix='/billing')
-
     # Register all blueprints
     app.register_blueprint(auth_bp, url_prefix='/auth')
+    
+    # Register billing blueprint
+    from .blueprints.billing import billing_bp
+    app.register_blueprint(billing_bp)
     app.register_blueprint(recipes_bp, url_prefix='/recipes')
     app.register_blueprint(inventory_bp, url_prefix='/inventory')
     app.register_blueprint(batches_bp, url_prefix='/batches')
