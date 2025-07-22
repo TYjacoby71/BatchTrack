@@ -47,7 +47,7 @@
                 <i class="fas fa-boxes"></i> Inventory
             </button>
         </li>
-        {% if has_permission('manage_billing') %}
+        {% if has_permission(current_user, 'organization.manage_billing') %}
         <li class="nav-item" role="presentation">
             <button class="nav-link" id="billing-tab" data-bs-toggle="tab" data-bs-target="#billing" type="button" role="tab">
                 <i class="fas fa-credit-card"></i> Billing
@@ -82,7 +82,7 @@
         </div>
 
         <!-- Billing Tab -->
-        {% if has_permission('manage_billing') %}
+        {% if has_permission(current_user, 'organization.manage_billing') %}
         <div class="tab-pane fade" id="billing" role="tabpanel">
             {% include 'settings/components/billing_tab.html' %}
         </div>

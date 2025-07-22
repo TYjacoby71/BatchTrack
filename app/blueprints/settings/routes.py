@@ -234,9 +234,9 @@ def change_password():
     """Change user password"""
     try:
         data = request.get_json()
-        current_password = data.get('current_password')
-        new_password = data.get('new_password')
-        confirm_password = data.get('confirm_password')
+        current_password = data.get('current')
+        new_password = data.get('new')
+        confirm_password = data.get('confirm')
 
         if not current_password or not new_password or not confirm_password:
             return jsonify({'error': 'All fields are required'}), 400
