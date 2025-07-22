@@ -85,7 +85,7 @@ class Organization(db.Model):
 class User(SecurityUserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(64), unique=True, nullable=False)
-    password = db.Column(db.String(128), nullable=False)  # Flask-Security-Too uses 'password' not 'password_hash'
+    password = db.Column(db.String(128), nullable=True)  # Flask-Security-Too uses 'password' not 'password_hash'
     first_name = db.Column(db.String(64), nullable=True)
     last_name = db.Column(db.String(64), nullable=True)
     email = db.Column(db.String(120), unique=True, nullable=False)  # Required for Flask-Security-Too
