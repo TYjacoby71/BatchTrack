@@ -4,6 +4,11 @@ from werkzeug.security import generate_password_hash
 
 def seed_users():
     """Seed default users into the database"""
+    from flask import current_app
+    
+    # Ensure we're in an application context
+    if not current_app:
+        raise RuntimeError("seed_users() must be called within Flask application context")
 
     # Import Role at top of function to avoid scope issues
     from app.models.role import Role
