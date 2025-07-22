@@ -89,6 +89,19 @@ class Organization(db.Model):
         except ImportError:
             return None
 
+    def is_owner(self, user):
+        """Check if user is owner of this organization"""
+        return user.id == self.owner_id
+
+    def owner_has_permission(self, user, permission_name):
+        """Check if owner has permission through subscription tier (no bypass)"""
+        if not self.is_owner(user):
+            return False
+
+        # Owners must still respect subscription tier limits
+        from ..utils.permissions import _has_tier_permission
+        return _has_tier_permission(self, permission_name)
+
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(64), unique=True, nullable=False)
@@ -307,7 +320,7 @@ class Unit(db.Model):
         # Standard units (is_custom=False) must have unique names globally
         db.Index('ix_unit_standard_unique', 'name', unique=True),
         # Custom units must have unique names within organization  
-        db.UniqueConstraint('name', 'organization_id', name='_unit_name_org_uc'),
+        db.UniqueConstraint('name', 'name', 'organization_id', name='_unit_name_org_uc'),
     )
 
     @classmethod

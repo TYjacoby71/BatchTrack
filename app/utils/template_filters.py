@@ -100,16 +100,18 @@ def register_filters(app):
 
     @app.template_global()
     def is_organization_owner():
-        """Template function to check if current user is organization owner"""
+        """Check if current user is organization owner (but still respects subscription limits)"""
         if not current_user.is_authenticated:
             return False
 
-        # Developers in customer support mode act as organization owners
         if current_user.user_type == 'developer':
-            from flask import session
-            return session.get('dev_selected_org_id') is not None
+            return True  # Developers can act as owners
 
-        return current_user.user_type == 'organization_owner' or current_user.is_organization_owner
+        if not current_user.organization_id:
+            return False
+
+        organization = Organization.query.get(current_user.organization_id)
+        return organization and organization.owner_id == current_user.id
 
     @app.template_global()
     def has_permission(permission_name):

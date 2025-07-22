@@ -27,7 +27,7 @@ def has_permission(user_or_permission_name, permission_name=None):
     print(f"DEBUG: Permission check for {user.username} ({user.user_type}) - {permission}")
     print(f"DEBUG: Tier: {user.organization.effective_subscription_tier if user.organization else 'None'}")
     print(f"DEBUG: Tier has permission: {tier_has_permission}")
-    
+
     # If the tier doesn't allow this permission, deny access regardless of roles or user type
     if not tier_has_permission:
         print(f"DEBUG: Permission {permission} denied - not allowed by tier {user.organization.effective_subscription_tier if user.organization else 'None'}")

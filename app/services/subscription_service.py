@@ -104,3 +104,23 @@ class SubscriptionService:
             'current_period_end': subscription.current_period_end,
             'next_billing_date': subscription.next_billing_date
         }
+    
+    @staticmethod
+    def validate_permission_for_tier(organization, permission_name):
+        """Validate if permission is allowed for organization's subscription tier"""
+        from ..blueprints.developer.subscription_tiers import load_tiers_config
+        
+        effective_tier = SubscriptionService.get_effective_tier(organization)
+        tiers_config = load_tiers_config()
+        
+        if effective_tier not in tiers_config:
+            logger.warning(f"Unknown subscription tier: {effective_tier}")
+            return False
+        
+        tier_permissions = tiers_config[effective_tier].get('permissions', [])
+        is_allowed = permission_name in tier_permissions
+        
+        if not is_allowed:
+            logger.info(f"Permission '{permission_name}' denied for tier '{effective_tier}'")
+        
+        return is_allowed
