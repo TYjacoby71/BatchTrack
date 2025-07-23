@@ -7,7 +7,8 @@ function organizationDashboard() {
     return {
         orgSettings: {
             name: orgData.name || (userData.first_name && userData.last_name ? `${userData.first_name} ${userData.last_name}` : userData.username || ''),
-            contact_email: orgData.contact_email || userData.email || ''
+            contact_email: orgData.contact_email || userData.email || '',
+            subscription_tier: orgData.subscription_tier || 'free'
         },
 
         async updateOrgSettings() {
@@ -29,6 +30,30 @@ function organizationDashboard() {
                 }
             } catch (error) {
                 this.showToast('Error updating settings', 'error');
+                console.error('Error:', error);
+            }
+        },
+
+        async updateSubscriptionTier(tierKey) {
+            try {
+                const response = await fetch('/organization/update-tier', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCSRFToken()
+                    },
+                    body: JSON.stringify({ subscription_tier: tierKey })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    this.showToast('Subscription tier updated successfully', 'success');
+                    setTimeout(() => window.location.reload(), 1000);
+                } else {
+                    this.showToast(result.error || 'Failed to update tier', 'error');
+                }
+            } catch (error) {
+                this.showToast('Error updating tier', 'error');
                 console.error('Error:', error);
             }
         },
@@ -446,10 +471,62 @@ function viewUserActivity(userId) {
     showMessage('User activity view functionality coming soon', 'info');
 }
 
-// Initialize Bootstrap tooltips
+// Initialize Bootstrap tooltips and subscription tier dropdown
 document.addEventListener('DOMContentLoaded', function() {
     var tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
     var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
         return new bootstrap.Tooltip(tooltipTriggerEl);
     });
+
+    // Handle subscription tier dropdown changes
+    const tierDropdown = document.getElementById('subscriptionTierSelect');
+    if (tierDropdown) {
+        tierDropdown.addEventListener('change', function(e) {
+            const selectedTier = e.target.value;
+            if (selectedTier && confirm(`Are you sure you want to change the subscription tier to ${selectedTier}?`)) {
+                updateSubscriptionTierDirectly(selectedTier);
+            } else {
+                // Reset dropdown to original value if cancelled
+                tierDropdown.value = tierDropdown.dataset.originalValue || '';
+            }
+        });
+
+        // Store original value for reset on cancel
+        tierDropdown.dataset.originalValue = tierDropdown.value;
+    }
 });
+
+// Direct tier update function (for developers)
+async function updateSubscriptionTierDirectly(tierKey) {
+    try {
+        const response = await fetch('/organization/update-tier', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRFToken()
+            },
+            body: JSON.stringify({ subscription_tier: tierKey })
+        });
+
+        const result = await response.json();
+        if (result.success) {
+            showMessage('Subscription tier updated successfully', 'success');
+            setTimeout(() => window.location.reload(), 1000);
+        } else {
+            showMessage(result.error || 'Failed to update tier', 'danger');
+            // Reset dropdown
+            const dropdown = document.getElementById('subscriptionTierSelect');
+            if (dropdown) {
+                dropdown.value = dropdown.dataset.originalValue || '';
+            }
+        }
+    } catch (error) {
+        console.error('Tier update error:', error);
+        showMessage('Failed to update tier', 'danger');
+        // Reset dropdown
+        const dropdown = document.getElementById('subscriptionTierSelect');
+        if (dropdown) {
+            dropdown.value = dropdown.dataset.originalValue || '';
+        }
+    }
+}
