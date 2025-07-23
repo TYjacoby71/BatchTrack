@@ -1,5 +1,6 @@
 from flask import render_template, jsonify, request, flash, redirect, url_for
 from flask_login import login_required, current_user
+from app.utils.permissions import require_permission
 from . import timers_bp
 from ...services.timer_service import TimerService
 from ...models import db, Batch
@@ -27,6 +28,7 @@ def list_timers():
 @timers_bp.route('/api/create-timer', methods=['POST'])
 @timers_bp.route('/create', methods=['POST'])
 @login_required
+@require_permission('timers.create')
 def api_create_timer():
     """Create a new timer for a batch"""
     try:
