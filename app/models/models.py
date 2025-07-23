@@ -112,7 +112,18 @@ class User(UserMixin, db.Model):
     phone = db.Column(db.String(20), nullable=True)
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)
     user_type = db.Column(db.String(32), default='customer')  # 'developer', 'customer'
-    is_organization_owner = db.Column(db.Boolean, nullable=True, default=False)  # Flag for organization owners (only for customer users)
+    _is_organization_owner = db.Column('is_organization_owner', db.Boolean, nullable=True, default=False)  # Flag for organization owners (only for customer users)
+    
+    @property
+    def is_organization_owner(self):
+        return self._is_organization_owner
+    
+    @is_organization_owner.setter
+    def is_organization_owner(self, value):
+        self._is_organization_owner = value
+        # Auto-assign role when flag is set to True
+        if value is True and self.user_type == 'customer' and self.id:
+            self.ensure_organization_owner_role()
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
     last_login = db.Column(db.DateTime, nullable=True)
@@ -164,6 +175,7 @@ class User(UserMixin, db.Model):
                 
                 if not existing_assignment:
                     self.assign_role(org_owner_role)
+                    db.session.commit()
                     return True
         return False
 

@@ -139,11 +139,20 @@ def create_organization():
                 last_name=last_name,
                 phone=phone,
                 organization_id=org.id,
-                user_type='organization_owner',
+                user_type='customer',
+                is_organization_owner=True,
                 is_active=True
             )
             owner_user.set_password(password)
             db.session.add(owner_user)
+            db.session.flush()  # Get the user ID
+            
+            # Assign organization owner role
+            from app.models.role import Role
+            org_owner_role = Role.query.filter_by(name='organization_owner', is_system_role=True).first()
+            if org_owner_role:
+                owner_user.assign_role(org_owner_role)
+            
             db.session.commit()
 
             flash(f'Organization "{name}" and owner user "{username}" created successfully', 'success')

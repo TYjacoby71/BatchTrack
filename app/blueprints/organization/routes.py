@@ -151,8 +151,7 @@ def update_organization_settings():
     """Update organization settings (organization owners only)"""
 
     # Check permissions - only organization owners can update
-    if not (current_user.user_type == 'organization_owner' or 
-            current_user.is_organization_owner):
+    if not current_user.is_organization_owner:
         return jsonify({'success': False, 'error': 'Insufficient permissions'})
 
     try:
