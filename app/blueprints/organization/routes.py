@@ -30,9 +30,9 @@ def dashboard():
     from ...services.pricing_service import PricingService
     pricing_data = PricingService.get_pricing_data()
 
-    # Load subscription tiers config for developer tier selection
+    # Load subscription tiers config for tier display (needed for both developer and customer views)
     from ...blueprints.developer.subscription_tiers import load_tiers_config
-    tiers_config = load_tiers_config() if current_user.user_type == 'developer' else {}
+    tiers_config = load_tiers_config()
 
     # Get organization data - handle developer customer view
     from app.utils.permissions import get_effective_organization
