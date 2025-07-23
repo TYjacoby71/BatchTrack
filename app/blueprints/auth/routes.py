@@ -9,7 +9,8 @@ from . import auth_bp
 from ...extensions import db
 from ...models import User, Organization, Role, Permission
 from ...utils.timezone_utils import TimezoneUtils
-from flask_login import login_required, abort, jsonify
+from flask_login import login_required
+from flask import abort, jsonify
 
 class LoginForm(FlaskForm):
     username = StringField('Username', validators=[DataRequired()])
