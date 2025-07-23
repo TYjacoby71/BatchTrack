@@ -71,7 +71,7 @@ def create_app():
         from flask import request, abort, jsonify
         from flask_login import current_user
         from app.utils.permissions import has_permission, get_effective_organization_id
-        
+
         # Skip for static files and auth routes
         if (request.path.startswith('/static/') or 
             request.path.startswith('/auth/login') or 
@@ -79,13 +79,13 @@ def create_app():
             request.path == '/' or 
             request.path == '/homepage'):
             return None
-            
+
         # Require authentication for all other routes
         if not current_user.is_authenticated:
             if request.is_json:
                 return jsonify({'error': 'Authentication required'}), 401
             return redirect(url_for('auth.login'))
-        
+
         # Developer isolation - ensure developers access appropriate routes
         if current_user.user_type == 'developer':
             # Allow developer routes
@@ -100,7 +100,7 @@ def create_app():
                     return jsonify({'error': 'Developer must select organization to access customer features'}), 403
                 flash('Please select an organization to access customer features', 'warning')
                 return redirect(url_for('developer.organizations'))
-        
+
         # Organization scoping enforcement for all non-developer users
         effective_org_id = get_effective_organization_id()
         if not effective_org_id and current_user.user_type != 'developer':
@@ -108,7 +108,7 @@ def create_app():
                 return jsonify({'error': 'No organization context'}), 403
             flash('No organization context available', 'error')
             return redirect(url_for('auth.logout'))
-        
+
         # Route-based permission checking
         route_permissions = {
             # Core features
@@ -117,30 +117,30 @@ def create_app():
             '/batches': 'batches.view',
             '/products': 'products.view',
             '/timers': 'timers.view',
-            
+
             # Management features
             '/organization': 'organization.view',
             '/auth/permissions': 'dev.system_admin',
             '/auth/roles': 'organization.manage_roles',
             '/tag-manager': 'tags.manage',
-            
+
             # API endpoints
             '/api/batches': 'batches.view',
             '/api/inventory': 'inventory.view',
             '/api/products': 'products.view',
             '/api/timers': 'timers.view',
         }
-        
+
         # Check route permissions
-        for route_prefix, required_permission in route_permissions.items():
-            if request.path.startswith(route_prefix):
+        for route_pattern, required_permission in route_permissions.items():
+            if request.path.startswith(route_pattern):
                 if not has_permission(required_permission):
                     if request.is_json:
                         return jsonify({'error': f'Permission denied: {required_permission}'}), 403
-                    flash(f'Access denied: {required_permission}', 'error')
+                    flash(f'You do not have permission to access this feature', 'error')
                     return redirect(url_for('app_routes.dashboard'))
                 break
-        
+
         return None
 
             # Allow access to static files and API routes
@@ -396,7 +396,7 @@ def create_app():
         except Exception as e:
             print(f"Org owner check error: {e}")
             return False
-    
+
     def template_can_access_route(route_path):
         """Template helper to check if user can access a route"""
         try:
@@ -409,7 +409,7 @@ def create_app():
                 '/timers': 'timers.view',
                 '/organization': 'organization.view',
             }
-            
+
             for route_prefix, required_permission in route_permissions.items():
                 if route_path.startswith(route_prefix):
                     return has_permission(required_permission)
