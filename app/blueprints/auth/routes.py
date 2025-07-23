@@ -84,18 +84,31 @@ def signup():
     if current_user.is_authenticated:
         return redirect(url_for('app_routes.dashboard'))
 
-    # Get available subscription tiers for customer selection
+    # Get pricing data from the pricing service (already filtered for customer-facing and available)
+    from ...services.pricing_service import PricingService
+    pricing_data = PricingService.get_pricing_data()
+
+    # Also get the tiers config for additional filtering if needed
     from ...blueprints.developer.subscription_tiers import load_tiers_config
     tiers_config = load_tiers_config()
 
-    # Filter to customer-facing, available, and Stripe-ready tiers only
-    available_tiers = {
-        key: tier for key, tier in tiers_config.items() 
-        if (tier.get('is_customer_facing', False) and 
-            tier.get('is_available', True) and 
-            tier.get('is_stripe_ready', False) and  # When True, requires real Stripe
-            tier.get('stripe_lookup_key'))  # Must have lookup key configured
-    }
+    # Filter pricing_data to only include tiers that are both customer_facing AND available
+    available_tiers = {}
+    for tier_key, tier_data in pricing_data.items():
+        tier_config = tiers_config.get(tier_key, {})
+        if (tier_config.get('is_customer_facing', True) and 
+            tier_config.get('is_available', True) and 
+            tier_config.get('stripe_lookup_key')):  # Must have lookup key configured
+            
+            # Format the data for the template with price_monthly field
+            available_tiers[tier_key] = {
+                'name': tier_data.get('name', tier_key.title()),
+                'price_monthly': tier_data.get('price', '$0').replace('$', ''),  # Remove $ for numeric formatting
+                'price_yearly': tier_data.get('price_yearly', '$0'),
+                'features': tier_data.get('features', []),
+                'user_limit': tier_data.get('user_limit', 1),
+                'stripe_lookup_key': tier_config.get('stripe_lookup_key', '')
+            }
 
     # Get signup tracking parameters from URL or form
     signup_source = request.args.get('source', request.form.get('source', 'direct'))
@@ -122,45 +135,33 @@ def signup():
         required_fields = [org_name, username, email, password, confirm_password, selected_tier]
         if not all(required_fields):
             flash('Please fill in all required fields and select a subscription plan', 'error')
-            # Get pricing data for the template
-            from ...services.pricing_service import PricingService
-            pricing_data = PricingService.get_pricing_data()
-
             return render_template('auth/signup.html', 
                          signup_source=signup_source,
                          referral_code=referral_code,
                          promo_code=promo_code,
                          available_tiers=available_tiers,
-                         pricing_data=pricing_data,
+                         pricing_data=available_tiers,
                          form_data=request.form)
 
         if password != confirm_password:
             flash('Passwords do not match', 'error')
-            # Get pricing data for the template
-            from ...services.pricing_service import PricingService
-            pricing_data = PricingService.get_pricing_data()
-
             return render_template('auth/signup.html', 
                          signup_source=signup_source,
                          referral_code=referral_code,
                          promo_code=promo_code,
                          available_tiers=available_tiers,
-                         pricing_data=pricing_data,
+                         pricing_data=available_tiers,
                          form_data=request.form)
 
         # Validate selected tier
         if selected_tier not in available_tiers:
             flash('Invalid subscription plan selected', 'error')
-            # Get pricing data for the template
-            from ...services.pricing_service import PricingService
-            pricing_data = PricingService.get_pricing_data()
-
             return render_template('auth/signup.html', 
                          signup_source=signup_source,
                          referral_code=referral_code,
                          promo_code=promo_code,
                          available_tiers=available_tiers,
-                         pricing_data=pricing_data,
+                         pricing_data=available_tiers,
                          form_data=request.form)
 
         # Check if username/email already exists
@@ -169,16 +170,12 @@ def signup():
         ).first()
         if existing_user:
             flash('Username or email already exists', 'error')
-            # Get pricing data for the template
-            from ...services.pricing_service import PricingService
-            pricing_data = PricingService.get_pricing_data()
-
             return render_template('auth/signup.html', 
                          signup_source=signup_source,
                          referral_code=referral_code,
                          promo_code=promo_code,
                          available_tiers=available_tiers,
-                         pricing_data=pricing_data,
+                         pricing_data=available_tiers,
                          form_data=request.form)
 
         # Store signup data in session for post-Stripe completion
@@ -200,16 +197,12 @@ def signup():
         flash('Redirecting to secure payment processing...', 'info')
         return redirect(url_for('billing.checkout', tier=selected_tier))
 
-    # Get pricing data for the template
-    from ...services.pricing_service import PricingService
-    pricing_data = PricingService.get_pricing_data()
-
     return render_template('auth/signup.html', 
                          signup_source=signup_source,
                          referral_code=referral_code,
                          promo_code=promo_code,
                          available_tiers=available_tiers,
-                         pricing_data=pricing_data)
+                         pricing_data=available_tiers)
 
 @auth_bp.route('/complete-signup')
 @login_required
