@@ -2,15 +2,19 @@ from flask_login import current_user
 from functools import wraps
 from flask import abort
 
-def require_permission(permission):
-    """Centralized decorator for permission checking"""
+def require_permission(permission_name):
+    """Decorator to require a specific permission for a route"""
     def decorator(f):
         @wraps(f)
-        def wrapper(*args, **kwargs):
-            if not has_permission(permission):
+        def decorated_function(*args, **kwargs):
+            if not current_user.is_authenticated:
+                abort(401)
+
+            if not has_permission(current_user, permission_name):
                 abort(403)
+
             return f(*args, **kwargs)
-        return wrapper
+        return decorated_function
     return decorator
 
 def has_permission(user_or_permission_name, permission_name=None):
@@ -122,7 +126,7 @@ def is_organization_owner():
     # Organization owners are customers with the organization_owner role
     if current_user.user_type == 'customer':
         return any(role.name == 'organization_owner' for role in current_user.get_active_roles())
-    
+
     return False
 
 def is_developer():

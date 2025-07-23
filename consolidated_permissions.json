@@ -6,8 +6,7 @@
         {
           "name": "dashboard.view",
           "display_name": "View Dashboard",
-          "description": "Access main dashboard with production overview, alerts, and key metrics",
-          "required_tier": "free"
+          "description": "Access main dashboard with production overview, alerts, and key metrics"
         }
       ]
     },
@@ -17,38 +16,32 @@
         {
           "name": "inventory.view",
           "display_name": "View Inventory",
-          "description": "View all inventory items, stock levels, and FIFO lot details",
-          "required_tier": "free"
+          "description": "View all inventory items, stock levels, and FIFO lot details"
         },
         {
           "name": "inventory.edit",
           "display_name": "Edit Inventory Details",
-          "description": "Modify inventory item details like names, categories, and specifications",
-          "required_tier": "free"
+          "description": "Modify inventory item details like names, categories, and specifications"
         },
         {
           "name": "inventory.adjust",
           "display_name": "Adjust Stock Levels",
-          "description": "Manually adjust inventory quantities, add stock, or record waste/loss",
-          "required_tier": "free"
+          "description": "Manually adjust inventory quantities, add stock, or record waste/loss"
         },
         {
           "name": "inventory.reserve",
           "display_name": "Reserve Inventory",
-          "description": "Create inventory reservations for planned production or sales",
-          "required_tier": "team"
+          "description": "Create inventory reservations for planned production or sales"
         },
         {
           "name": "inventory.delete",
           "display_name": "Delete Inventory Items",
-          "description": "Permanently remove inventory items and their history",
-          "required_tier": "team"
+          "description": "Permanently remove inventory items and their history"
         },
         {
           "name": "inventory.view_costs",
           "display_name": "View Inventory Costs",
-          "description": "Access cost information and pricing data for inventory items",
-          "required_tier": "team"
+          "description": "Access cost information and pricing data for inventory items"
         }
       ]
     },
@@ -686,5 +679,15 @@
       "max_recipes": "unlimited",
       "max_batches_per_month": "unlimited"
     }
+  },
+  "system_administration": {
+    "description": "System administration and management features",
+    "permissions": [
+      {
+        "name": "system.admin",
+        "display_name": "System Administration",
+        "description": "Access system administration features like permissions management"
+      }
+    ]
   }
 }
