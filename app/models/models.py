@@ -113,11 +113,11 @@ class User(UserMixin, db.Model):
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)
     user_type = db.Column(db.String(32), default='customer')  # 'developer', 'customer'
     _is_organization_owner = db.Column('is_organization_owner', db.Boolean, nullable=True, default=False)  # Flag for organization owners (only for customer users)
-
+    
     @property
     def is_organization_owner(self):
         return self._is_organization_owner
-
+    
     @is_organization_owner.setter
     def is_organization_owner(self, value):
         self._is_organization_owner = value
@@ -157,7 +157,7 @@ class User(UserMixin, db.Model):
         """Check if user has organization owner role"""
         roles = self.get_active_roles()
         return any(role.name == 'organization_owner' for role in roles)
-
+    
     def ensure_organization_owner_role(self):
         """Ensure organization owner has the proper role assigned"""
         # Only apply to customer users with the flag set
@@ -172,7 +172,7 @@ class User(UserMixin, db.Model):
                     if assignment.is_active and assignment.role_id == org_owner_role.id:
                         existing_assignment = True
                         break
-
+                
                 if not existing_assignment:
                     self.assign_role(org_owner_role)
                     db.session.commit()
@@ -676,7 +676,3 @@ class Tag(ScopedModelMixin, db.Model):
     __table_args__ = (
         db.UniqueConstraint('name', 'organization_id', name='_tag_name_org_uc'),
     )
-
-    # Relationships
-    users = db.relationship('User', backref='organization')
-    subscription = db.relationship('Subscription', uselist=False, back_populates='organization')

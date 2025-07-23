@@ -72,17 +72,19 @@ def upgrade():
 
     current_tier = organization.effective_subscription_tier
 
-    # Get current subscription info
-    subscription = organization.subscription
-
-    pricing_data = PricingService.get_pricing_data()
-
     return render_template('billing/upgrade.html',
-        pricing_data=pricing_data,
-        current_tier=organization.effective_subscription_tier,
-        organization=organization,
-        subscription=subscription,
-    )
+                         organization=organization,
+                         tiers=available_tiers,
+                         current_tier=current_tier,
+                         pricing_data=available_tiers,
+                         subscription_details={
+                             'status': organization.subscription.status if organization.subscription else 'inactive',
+                             'next_billing_date': organization.subscription.next_billing_date if organization.subscription else None,
+                             'amount': None,
+                             'interval': 'monthly',
+                             'trial_end': organization.subscription.trial_end if organization.subscription else None,
+                             'cancel_at_period_end': False
+                         })
 
 logger = logging.getLogger(__name__)
 
@@ -113,7 +115,7 @@ def checkout(tier, billing_cycle='monthly'):
     tiers_config = load_tiers_config()
     tier_data = tiers_config.get(tier, {})
     is_stripe_ready = tier_data.get('is_stripe_ready', False)
-
+    
     # Create checkout session
     try:
         session = StripeService.create_checkout_session(current_user.organization, price_key)
@@ -131,12 +133,12 @@ def checkout(tier, billing_cycle='monthly'):
                 else:
                     flash('Failed to activate subscription in development mode.', 'error')
                     return redirect(url_for('billing.upgrade'))
-
+            
             flash('Failed to create checkout session. Please try again.', 'error')
             return redirect(url_for('billing.upgrade'))
     except Exception as e:
         logger.error(f"Checkout error for org {current_user.organization.id}: {str(e)}")
-
+        
         # Fallback for development
         if not is_stripe_ready:
             success = StripeService.simulate_subscription_success(current_user.organization, tier)
@@ -158,12 +160,12 @@ def customer_portal():
     if not has_permission(current_user, 'organization.manage_billing'):
         flash('You do not have permission to manage billing.', 'error')
         return redirect(url_for('organization.dashboard'))
-
+    
     # Create return URL to billing tab
     return_url = url_for('settings.index', _external=True) + '#billing'
-
+    
     session = StripeService.create_customer_portal_session(current_user.organization, return_url)
-
+    
     if not session:
         # Fallback for development mode or if customer portal fails
         if not current_app.config.get('STRIPE_WEBHOOK_SECRET'):
@@ -171,7 +173,7 @@ def customer_portal():
         else:
             flash('Unable to access billing management. Please contact support.', 'error')
         return redirect(url_for('settings.index') + '#billing')
-
+    
     return redirect(session.url)
 
 @billing_bp.route('/cancel-subscription', methods=['POST'])
@@ -196,16 +198,16 @@ def stripe_webhook():
     """Handle Stripe webhooks"""
     payload = request.get_data()
     sig_header = request.headers.get('Stripe-Signature')
-
+    
     logger.info(f"Webhook received - Signature: {sig_header[:20] if sig_header else 'None'}...")
     logger.info(f"Payload size: {len(payload)} bytes")
-
+    
     # Check if webhook secret is configured
     webhook_secret = current_app.config.get('STRIPE_WEBHOOK_SECRET')
     if not webhook_secret:
         logger.error("STRIPE_WEBHOOK_SECRET not configured - webhook cannot be verified")
         return jsonify({'error': 'Webhook secret not configured'}), 500
-
+    
     try:
         event = stripe.Webhook.construct_event(
             payload, sig_header, webhook_secret
@@ -239,31 +241,31 @@ def stripe_webhook():
 def dev_activate_subscription(tier):
     """Development-only route to activate subscriptions"""
     from flask import current_app
-
+    
     # Only allow in development mode
     if current_app.config.get('STRIPE_WEBHOOK_SECRET'):
         flash('This route is only available in development mode.', 'error')
         return redirect(url_for('billing.upgrade'))
-
+    
     if not has_permission(current_user, 'organization.manage_billing'):
         flash('You do not have permission to manage billing.', 'error')
         return redirect(url_for('organization.dashboard'))
-
+    
     # Validate tier
     from ...services.pricing_service import PricingService
     available_tiers = PricingService.get_pricing_data()
-
+    
     if tier not in available_tiers:
         flash('Invalid subscription tier.', 'error')
         return redirect(url_for('billing.upgrade'))
-
+    
     success = StripeService.simulate_subscription_success(current_user.organization, tier)
-
+    
     if success:
         flash(f'Development Mode: {tier.title()} subscription activated!', 'success')
     else:
         flash('Failed to activate subscription.', 'error')
-
+    
     return redirect(url_for('organization.dashboard'))
 
 @billing_bp.route('/debug')
@@ -271,19 +273,19 @@ def dev_activate_subscription(tier):
 def debug_billing():
     """Debug route to show billing system state"""
     from flask import current_app
-
+    
     # Only allow in debug mode
     if not current_app.config.get('DEBUG'):
         flash('Debug route only available in debug mode.', 'error')
         return redirect(url_for('billing.upgrade'))
-
+    
     organization = current_user.organization
     if not organization:
         return jsonify({'error': 'No organization found'})
-
+    
     # Load tier configuration
     tiers_config = load_tiers_config()
-
+    
     debug_info = {
         'stripe_configured': bool(current_app.config.get('STRIPE_SECRET_KEY')),
         'webhook_configured': bool(current_app.config.get('STRIPE_WEBHOOK_SECRET')),
@@ -313,7 +315,7 @@ def debug_billing():
             for tier_key, tier_data in tiers_config.items()
         }
     }
-
+    
     return jsonify(debug_info)
 
 
