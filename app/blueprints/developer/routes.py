@@ -417,7 +417,11 @@ def get_customer_user_roles(user_id):
     if current_user.user_type != 'developer':
         return jsonify({'error': 'Access denied'}), 403
 
-    user = User.query.filter_by(id=user_id, user_type='customer').first_or_404()
+    user = User.query.filter(
+        User.id == user_id,
+        User.user_type != 'developer'
+    ).first_or_404()
+    
     current_roles = [assignment.role_id for assignment in user.role_assignments if assignment.is_active and assignment.role_id]
 
     return jsonify({
@@ -432,7 +436,10 @@ def get_customer_user_available_roles(user_id):
     if current_user.user_type != 'developer':
         return jsonify({'error': 'Access denied'}), 403
 
-    user = User.query.filter_by(id=user_id, user_type='customer').first_or_404()
+    user = User.query.filter(
+        User.id == user_id,
+        User.user_type != 'developer'
+    ).first_or_404()
 
     if not user.organization_id:
         return jsonify({'error': 'User must belong to an organization'}), 400
@@ -461,7 +468,10 @@ def validate_org_owner_assignment(user_id):
     if current_user.user_type != 'developer':
         return jsonify({'error': 'Access denied'}), 403
 
-    user = User.query.filter_by(id=user_id, user_type='customer').first_or_404()
+    user = User.query.filter(
+        User.id == user_id,
+        User.user_type != 'developer'
+    ).first_or_404()
 
     if not user.organization_id:
         return jsonify({
@@ -506,7 +516,11 @@ def update_customer_user_roles(user_id):
         return jsonify({'error': 'Access denied'}), 403
 
     try:
-        user = User.query.filter_by(id=user_id, user_type='customer').first_or_404()
+        user = User.query.filter(
+            User.id == user_id,
+            User.user_type != 'developer'
+        ).first_or_404()
+        
         data = request.get_json()
         role_ids = data.get('role_ids', [])
 
@@ -560,6 +574,84 @@ def update_customer_user_roles(user_id):
         return jsonify({
             'success': True,
             'message': f'Roles updated for user {user.username}'
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        })
+
+# Developer User Role Management
+@developer_bp.route('/developer-users/<int:user_id>/role', methods=['GET'])
+@login_required
+def get_developer_user_role(user_id):
+    """Get current role for a developer user"""
+    if current_user.user_type != 'developer':
+        return jsonify({'error': 'Access denied'}), 403
+
+    user = User.query.filter_by(id=user_id, user_type='developer').first_or_404()
+    
+    # Get current developer role assignment
+    from app.models.user_role_assignment import UserRoleAssignment
+    assignment = UserRoleAssignment.query.filter_by(
+        user_id=user.id,
+        is_active=True
+    ).filter(UserRoleAssignment.developer_role_id.isnot(None)).first()
+
+    current_role_id = assignment.developer_role_id if assignment else None
+
+    return jsonify({
+        'success': True,
+        'current_role_id': current_role_id
+    })
+
+@developer_bp.route('/developer-users/<int:user_id>/role', methods=['PUT'])
+@login_required
+def update_developer_user_role(user_id):
+    """Update role for a developer user"""
+    if current_user.user_type != 'developer':
+        return jsonify({'error': 'Access denied'}), 403
+
+    try:
+        user = User.query.filter_by(id=user_id, user_type='developer').first_or_404()
+        data = request.get_json()
+        developer_role_id = data.get('developer_role_id')
+
+        # Deactivate existing developer role assignment
+        from app.models.user_role_assignment import UserRoleAssignment
+        existing_assignment = UserRoleAssignment.query.filter_by(
+            user_id=user.id,
+            is_active=True
+        ).filter(UserRoleAssignment.developer_role_id.isnot(None)).first()
+
+        if existing_assignment:
+            existing_assignment.is_active = False
+
+        # Add new developer role assignment if provided
+        if developer_role_id:
+            from app.models.developer_role import DeveloperRole
+            dev_role = DeveloperRole.query.get(developer_role_id)
+            if not dev_role:
+                return jsonify({
+                    'success': False,
+                    'error': 'Developer role not found'
+                })
+
+            assignment = UserRoleAssignment(
+                user_id=user.id,
+                developer_role_id=developer_role_id,
+                assigned_by=current_user.id,
+                is_active=True
+            )
+            db.session.add(assignment)
+
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'message': f'Role updated for developer {user.username}'
         })
 
     except Exception as e:
