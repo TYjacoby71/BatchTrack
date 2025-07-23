@@ -314,6 +314,29 @@ def update_developer_user_role(user_id):
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)})
 
+@system_roles_bp.route('/developer-users/<int:user_id>/role', methods=['GET'])
+@login_required
+def get_developer_user_role(user_id):
+    """Get developer user's current role"""
+    try:
+        user = User.query.filter_by(id=user_id, user_type='developer').first_or_404()
+        
+        # Get current active developer role assignment
+        assignment = UserRoleAssignment.query.filter_by(
+            user_id=user.id,
+            is_active=True
+        ).filter(UserRoleAssignment.developer_role_id.isnot(None)).first()
+        
+        current_role_id = assignment.developer_role_id if assignment else None
+        
+        return jsonify({
+            'success': True,
+            'current_role_id': current_role_id
+        })
+    
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
 @system_roles_bp.route('/developer-users/<int:user_id>', methods=['DELETE'])
 @login_required
 def delete_developer_user(user_id):

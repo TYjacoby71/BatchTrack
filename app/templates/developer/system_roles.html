@@ -676,73 +676,6 @@ function editDeveloperUserRole(userId, username) {
         });
 }
 
-function saveEditDeveloperUserRole() {
-    const userId = document.getElementById('editDeveloperUserId').value;
-    const roleId = document.getElementById('editDeveloperUserRole').value;
-    
-    console.log('Saving developer user role:', { userId, roleId });
-    
-    const data = {
-        developer_role_id: roleId || null
-    };
-    
-    const modal = bootstrap.Modal.getInstance(document.getElementById('editDeveloperUserRoleModal'));
-    
-    debugFetch(`/developer/developer-users/${userId}/role`, {
-        method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCSRFToken()
-        },
-        body: JSON.stringify(data)
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-        return response.json();
-    })
-    .then(result => {
-        console.log('Save result:', result);
-        if (result.success) {
-            modal.hide();
-            location.reload();
-        } else {
-            alert(result.error || 'Unknown error occurred');
-        }
-    })
-    .catch(error => {
-        console.error('Error updating user role:', error);
-        alert(`Failed to update user role: ${error.message}`);
-    });
-}
-
-function getCSRFToken() {
-    return document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-}
-
-// Add debugging for network errors
-window.addEventListener('unhandledrejection', function(event) {
-    console.error('Unhandled promise rejection:', event.reason);
-    alert('Network error occurred. Check console for details.');
-});
-
-// Add debugging for fetch errors
-function debugFetch(url, options) {
-    console.log('Making request to:', url, 'with options:', options);
-    return fetch(url, options)
-        .then(response => {
-            console.log('Response status:', response.status);
-            console.log('Response headers:', [...response.headers.entries()]);
-            return response;
-        })
-        .catch(error => {
-            console.error('Fetch error:', error);
-            throw error;
-        });
-}
-</script>
-
 function saveDeveloperUserRole() {
     const userId = document.getElementById('editDeveloperUserId').value;
     const data = {
@@ -760,6 +693,7 @@ function saveDeveloperUserRole() {
     .then(response => response.json())
     .then(result => {
         if (result.success) {
+            bootstrap.Modal.getInstance(document.getElementById('editDeveloperUserRoleModal')).hide();
             location.reload();
         } else {
             alert(result.error);
@@ -812,26 +746,25 @@ function getCSRFToken() {
     return tokenMeta ? tokenMeta.getAttribute('content') : '';
 }
 
+function showAlert(type, message) {
+    // Create alert element
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
 
-    function showAlert(type, message) {
-        // Create alert element
-        const alertDiv = document.createElement('div');
-        alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
-        alertDiv.innerHTML = `
-            ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        `;
+    // Insert at top of page
+    const container = document.querySelector('.container-fluid');
+    container.insertBefore(alertDiv, container.firstChild);
 
-        // Insert at top of page
-        const container = document.querySelector('.container-fluid');
-        container.insertBefore(alertDiv, container.firstChild);
-
-        // Auto-dismiss after 3 seconds
-        setTimeout(() => {
-            if (alertDiv.parentNode) {
-                alertDiv.remove();
-            }
-        }, 3000);
-    }
+    // Auto-dismiss after 3 seconds
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            alertDiv.remove();
+        }
+    }, 3000);
+}
 </script>
 {% endblock %}
