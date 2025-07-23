@@ -120,7 +120,13 @@
                                     <div class="card tier-option h-100" data-tier="{{ tier_key }}" style="cursor: pointer; transition: all 0.3s;">
                                         <div class="card-body text-center">
                                             <h5 class="card-title">{{ tier_data.name }}</h5>
-                                            <div class="h4 text-primary">${{ "%.0f"|format(tier_data.price_monthly) }}<small class="text-muted">/mo</small></div>
+                                            <div class="h4 text-primary">
+                                            {% if tier_data.price_monthly == 0 %}
+                                                {{ tier_data.price_display }}
+                                            {% else %}
+                                                ${{ "%.0f"|format(tier_data.price_monthly) }}<small class="text-muted">/mo</small>
+                                            {% endif %}
+                                        </div>
                                             <div class="text-muted mb-3">{{ tier_data.user_limit }} user{{ 's' if tier_data.user_limit != 1 else '' }}</div>
                                             <ul class="list-unstyled small">
                                                 {% for feature in tier_data.features[:3] %}

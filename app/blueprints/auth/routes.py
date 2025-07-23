@@ -101,9 +101,18 @@ def signup():
             tier_config.get('stripe_lookup_key')):  # Must have lookup key configured
             
             # Format the data for the template with price_monthly field
+            price_str = tier_data.get('price', '$0').replace('$', '')
+            
+            # Handle non-numeric prices like "Free" or "Exempt"
+            try:
+                price_monthly = float(price_str) if price_str.replace('.', '').isdigit() else 0
+            except (ValueError, AttributeError):
+                price_monthly = 0
+            
             available_tiers[tier_key] = {
                 'name': tier_data.get('name', tier_key.title()),
-                'price_monthly': tier_data.get('price', '$0').replace('$', ''),  # Remove $ for numeric formatting
+                'price_monthly': price_monthly,
+                'price_display': tier_data.get('price', '$0'),  # Keep original for display
                 'price_yearly': tier_data.get('price_yearly', '$0'),
                 'features': tier_data.get('features', []),
                 'user_limit': tier_data.get('user_limit', 1),
