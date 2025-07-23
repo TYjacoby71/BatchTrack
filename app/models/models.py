@@ -112,7 +112,7 @@ class User(UserMixin, db.Model):
     phone = db.Column(db.String(20), nullable=True)
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)
     user_type = db.Column(db.String(32), default='customer')  # 'developer', 'customer'
-    is_organization_owner = db.Column(db.Boolean, nullable=False, default=False, server_default='0')  # Flag for organization owners
+    is_organization_owner = db.Column(db.Boolean, nullable=True, default=False)  # Flag for organization owners (only for customer users)
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
     last_login = db.Column(db.DateTime, nullable=True)
@@ -149,7 +149,9 @@ class User(UserMixin, db.Model):
     
     def ensure_organization_owner_role(self):
         """Ensure organization owner has the proper role assigned"""
-        if self.is_organization_owner and self.user_type == 'customer':
+        # Only apply to customer users with the flag set
+        if (self.user_type == 'customer' and 
+            self.is_organization_owner is True):
             from .role import Role
             org_owner_role = Role.query.filter_by(name='organization_owner', is_system_role=True).first()
             if org_owner_role:
@@ -307,7 +309,9 @@ class User(UserMixin, db.Model):
         """Get display-friendly role description"""
         if self.user_type == 'developer':
             return 'System Developer'
-        elif self.user_type == 'organization_owner':
+        elif (self.user_type == 'customer' and 
+              self.is_organization_owner is True and 
+              self.organization):
             tier = self.organization.subscription_tier.title()
             return f'{tier} Owner'
         else:

@@ -215,7 +215,8 @@ def signup():
                 last_name=last_name,
                 phone=phone,
                 organization_id=org.id,
-                user_type='organization_owner',
+                user_type='customer',
+                is_organization_owner=True,  # Set the flag for role assignment
                 is_active=True
             )
             owner_user.set_password(password)

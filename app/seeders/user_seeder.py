@@ -5,7 +5,7 @@ from werkzeug.security import generate_password_hash
 def seed_users():
     """Seed default users into the database"""
     from flask import current_app
-    
+
     # Ensure we're in an application context
     if not current_app:
         raise RuntimeError("seed_users() must be called within Flask application context")
@@ -54,20 +54,25 @@ def seed_users():
         elif user.user_type == 'team_member' and manager_role:
             user.assign_role(manager_role)
             print(f"✅ Assigned role to existing user: {user.username} -> {user.user_type}")
-    
-    # Also handle users with is_organization_owner flag (for backward compatibility)
-    # Only query non-developer users since developers don't use this flag
+
+    # Fix organization owner roles for users with the flag
     try:
-        org_owner_flagged_users = User.query.filter_by(is_organization_owner=True).filter(User.user_type != 'developer').all()
+        # Only check customer users with the flag set to True
+        flagged_users = User.query.filter(
+            User.user_type == 'customer',
+            User.is_organization_owner == True
+        ).all()
         fixed_count = 0
-        
-        for user in org_owner_flagged_users:
+
+        for user in flagged_users:
             # Check if user already has organization owner role
             has_org_owner_role = any(
-                assignment.role and assignment.role.name == 'organization_owner' 
-                for assignment in user.role_assignments if assignment.is_active
+                assignment.is_active and 
+                assignment.role and 
+                assignment.role.name == 'organization_owner' 
+                for assignment in user.role_assignments
             )
-            
+
             if not has_org_owner_role:
                 if system_org_owner_role:
                     user.assign_role(system_org_owner_role)
@@ -77,7 +82,7 @@ def seed_users():
                     user.assign_role(org_owner_role)
                     fixed_count += 1
                     print(f"✅ Fixed legacy organization owner role for flagged user: {user.username}")
-        
+
         if fixed_count > 0:
             print(f"✅ Fixed {fixed_count} organization owner users with missing roles")
     except Exception as e:
@@ -255,7 +260,7 @@ def update_existing_users_with_roles():
             else:
                 user.user_type = 'customer'  # Everyone else is customer type
             updated = True
-        
+
         # Set is_organization_owner flag if missing
         if not hasattr(user, 'is_organization_owner') or user.is_organization_owner is None:
             if user.username == 'admin':
