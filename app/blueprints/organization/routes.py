@@ -15,21 +15,17 @@ organization_bp = Blueprint('organization', __name__)
 @login_required
 def dashboard():
     """Organization management dashboard"""
-    # Developers always have access
-    if current_user.user_type == 'developer':
-        pass  # Access granted
-    else:
-        # For all other users (including organization owners), check subscription tier first
+    # Check subscription tier first (except for developers)
+    if current_user.user_type != 'developer':
         effective_tier = current_user.organization.effective_subscription_tier
         if effective_tier in ['free', 'solo']:
             flash('Organization dashboard is available with Team and Enterprise plans.', 'info')
             return redirect(url_for('settings.index'))
 
-        # Then check permissions - organization owners should have organization.view permission
-        # through their role, but it should still be subject to tier restrictions
-        if not has_permission(current_user, 'organization.view'):
-            flash('You do not have permission to access the organization dashboard.', 'error')
-            return redirect(url_for('settings.index'))
+    # Check permissions - use require_permission decorator logic
+    if not has_permission(current_user, 'organization.view'):
+        flash('You do not have permission to access the organization dashboard.', 'error')
+        return redirect(url_for('settings.index'))
 
     from ...services.pricing_service import PricingService
     pricing_data = PricingService.get_pricing_data()
@@ -155,8 +151,7 @@ def update_organization_settings():
     """Update organization settings (organization owners only)"""
 
     # Check permissions - only organization owners can update
-    if not (current_user.user_type == 'organization_owner' or 
-            current_user.is_organization_owner):
+    if not current_user.is_organization_owner:
         return jsonify({'success': False, 'error': 'Insufficient permissions'})
 
     try:
@@ -652,71 +647,6 @@ def restore_user(user_id):
         return jsonify({
             'success': True, 
             'message': f'User {full_name} ({username}) restored successfully (needs manual activation and role assignment)'
-        })
-
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'success': False, 'error': str(e)})
-
-@organization_bp.route('/user/<int:user_id>/roles', methods=['PUT'])
-@login_required
-def update_user_roles(user_id):
-    """Update user role assignments (organization owners only)"""
-
-    # Check permissions - only organization owners can manage roles
-    if not (current_user.user_type == 'organization_owner' or 
-            current_user.is_organization_owner):
-        return jsonify({'success': False, 'error': 'Insufficient permissions'})
-
-    try:
-        data = request.get_json()
-        role_ids = data.get('role_ids', [])
-
-        # Get user from same organization
-        user = User.query.filter_by(
-            id=user_id, 
-            organization_id=current_user.organization_id
-        ).first()
-
-        if not user:
-            return jsonify({'success': False, 'error': 'User not found'})
-
-        # Don't allow changing roles for organization owners or developers
-        if user.user_type in ['developer', 'organization_owner'] or user.is_organization_owner:
-            return jsonify({'success': False, 'error': 'Cannot modify roles for organization owners or system users'})
-
-        # Prevent assigning organization owner role through this endpoint
-        org_owner_roles = Role.query.filter_by(name='organization_owner').all()
-        org_owner_role_ids = [role.id for role in org_owner_roles]
-        
-        if any(role_id in org_owner_role_ids for role_id in role_ids):
-            return jsonify({'success': False, 'error': 'Organization owner role cannot be assigned through role management. Contact support for ownership transfers.'})
-
-        # Get valid roles for this organization
-        valid_roles = Role.query.filter(
-            (Role.organization_id == current_user.organization_id) | 
-            (Role.is_system_role == True)
-        ).filter(Role.id.in_(role_ids)).all()
-
-        # Deactivate all current role assignments
-        from app.models.user_role_assignment import UserRoleAssignment
-        current_assignments = UserRoleAssignment.query.filter_by(
-            user_id=user.id,
-            organization_id=current_user.organization_id
-        ).all()
-        
-        for assignment in current_assignments:
-            assignment.is_active = False
-
-        # Create new role assignments
-        for role in valid_roles:
-            user.assign_role(role, assigned_by=current_user)
-
-        db.session.commit()
-
-        return jsonify({
-            'success': True, 
-            'message': f'Roles updated for {user.full_name}. Assigned {len(valid_roles)} role(s).'
         })
 
     except Exception as e:

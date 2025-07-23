@@ -35,7 +35,7 @@ class Subscription(db.Model):
     notes = db.Column(db.Text, nullable=True)  # For internal tracking
 
     # Relationships
-    organization = db.relationship('Organization', backref='subscription')
+    organization = db.relationship('Organization', backref=db.backref('subscription', uselist=False))
 
     @property
     def is_trial(self):
