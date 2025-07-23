@@ -206,9 +206,27 @@ def organization_detail(org_id):
     org = Organization.query.get_or_404(org_id)
     users = User.query.filter_by(organization_id=org_id).all()
 
+    # Load subscription tiers config for the dropdown
+    from .subscription_tiers import load_tiers_config
+    tiers_config = load_tiers_config()
+
+    # Debug subscription info
+    subscription = org.subscription
+    current_tier = org.effective_subscription_tier
+    
+    print(f"DEBUG: Organization {org.name} (ID: {org.id})")
+    print(f"DEBUG: Has subscription record: {subscription is not None}")
+    if subscription:
+        print(f"DEBUG: Subscription tier: {subscription.tier}")
+        print(f"DEBUG: Subscription status: {subscription.status}")
+    print(f"DEBUG: Effective tier: {current_tier}")
+    print(f"DEBUG: Available tiers: {list(tiers_config.keys())}")
+
     return render_template('developer/organization_detail.html',
                          organization=org,
-                         users=users)
+                         users=users,
+                         tiers_config=tiers_config,
+                         current_tier=current_tier)
 
 @developer_bp.route('/organizations/<int:org_id>/edit', methods=['POST'])
 @login_required
@@ -216,25 +234,46 @@ def edit_organization(org_id):
     """Edit organization details"""
     org = Organization.query.get_or_404(org_id)
 
+    # Debug form data
+    print(f"DEBUG: Form data received: {dict(request.form)}")
+    
+    old_name = org.name
+    old_active = org.is_active
+    old_tier = org.effective_subscription_tier
+
     org.name = request.form.get('name', org.name)
     org.is_active = request.form.get('is_active') == 'true'
 
     # Update subscription tier if provided
     new_tier = request.form.get('subscription_tier')
-    if new_tier and org.subscription:
-        org.subscription.tier = new_tier
-    elif new_tier and not org.subscription:
-        # Create subscription if it doesn't exist
-        from app.models.subscription import Subscription
-        subscription = Subscription(
-            organization_id=org.id,
-            tier=new_tier,
-            status='active'
-        )
-        db.session.add(subscription)
+    print(f"DEBUG: Updating tier from '{old_tier}' to '{new_tier}'")
+    
+    if new_tier:
+        if org.subscription:
+            print(f"DEBUG: Updating existing subscription from '{org.subscription.tier}' to '{new_tier}'")
+            org.subscription.tier = new_tier
+        else:
+            print(f"DEBUG: Creating new subscription with tier '{new_tier}'")
+            # Create subscription if it doesn't exist
+            from app.models.subscription import Subscription
+            subscription = Subscription(
+                organization_id=org.id,
+                tier=new_tier,
+                status='active'
+            )
+            db.session.add(subscription)
 
-    db.session.commit()
-    flash('Organization updated successfully', 'success')
+    try:
+        db.session.commit()
+        print(f"DEBUG: Successfully committed changes")
+        print(f"DEBUG: Name: '{old_name}' -> '{org.name}'")
+        print(f"DEBUG: Active: {old_active} -> {org.is_active}")
+        print(f"DEBUG: New effective tier: '{org.effective_subscription_tier}'")
+        flash('Organization updated successfully', 'success')
+    except Exception as e:
+        db.session.rollback()
+        print(f"DEBUG: Error committing changes: {str(e)}")
+        flash(f'Error updating organization: {str(e)}', 'error')
 
     return redirect(url_for('developer.organization_detail', org_id=org_id))
 

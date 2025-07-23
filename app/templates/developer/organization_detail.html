@@ -1,4 +1,3 @@
-
 {% extends 'layout.html' %}
 
 {% block title %}{{ organization.name }} - Organization Details{% endblock %}
@@ -56,15 +55,34 @@
                             <label for="name" class="form-label">Name</label>
                             <input type="text" class="form-control" id="name" name="name" value="{{ organization.name }}">
                         </div>
-                        
+
                         <div class="mb-3">
                             <label for="subscription_tier" class="form-label">Subscription Tier</label>
+                            {% if config.get('DEBUG') %}
+                            <div class="alert alert-info small">
+                                <strong>Debug:</strong> Current tier = "{{ current_tier }}", 
+                                Has subscription = {{ organization.subscription is not none }},
+                                Available tiers = {{ tiers_config.keys() | list }}
+                            </div>
+                            {% endif %}
                             <select class="form-select" id="subscription_tier" name="subscription_tier">
-                                <option value="free" {{ 'selected' if organization.subscription_tier == 'free' }}>Free</option>
-                                <option value="solo" {{ 'selected' if organization.subscription_tier == 'solo' }}>Solo</option>
-                                <option value="team" {{ 'selected' if organization.subscription_tier == 'team' }}>Team</option>
-                                <option value="enterprise" {{ 'selected' if organization.subscription_tier == 'enterprise' }}>Enterprise</option>
-                                <option value="exempt" {{ 'selected' if organization.subscription_tier == 'exempt' }}>Exempt (Gifted)</option>
+                                {% if tiers_config %}
+                                    {% for tier_key, tier_data in tiers_config.items() %}
+                                        {% if tier_data.get('is_available', True) %}
+                                        <option value="{{ tier_key }}" 
+                                                {% if tier_key == current_tier %}selected{% endif %}>
+                                            {{ tier_data.get('name', tier_key.title()) }}
+                                        </option>
+                                        {% endif %}
+                                    {% endfor %}
+                                {% else %}
+                                <!-- Fallback if tiers_config not available -->
+                                <option value="free" {% if current_tier == 'free' %}selected{% endif %}>Free</option>
+                                <option value="solo" {% if current_tier == 'solo' %}selected{% endif %}>Solo</option>
+                                <option value="team" {% if current_tier == 'team' %}selected{% endif %}>Team</option>
+                                <option value="enterprise" {% if current_tier == 'enterprise' %}selected{% endif %}>Enterprise</option>
+                                <option value="exempt" {% if current_tier == 'exempt' %}selected{% endif %}>Exempt</option>
+                                {% endif %}
                             </select>
                         </div>
 
@@ -83,7 +101,7 @@
                         </button>
                     </form>
 
-                    
+
                 </div>
             </div>
 
@@ -185,7 +203,7 @@
                 <form id="deleteOrgForm">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                     <input type="hidden" name="organization_id" value="{{ organization.id }}"/>
-                    
+
                     <div class="mb-3">
                         <label class="form-label"><strong>1. Enter your developer password to confirm:</strong></label>
                         <input type="password" class="form-control" id="developerPassword" name="password" required>
