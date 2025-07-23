@@ -427,9 +427,7 @@ def create_tier():
 
         user_limit = int(request.form.get('user_limit', 1))
         # Only exempt tier can have unlimited users (-1)
-        if user_limit == -1 and tier_key != 'exempt':
-            user_limit = 1
-
+        
         new_tier = {
             'name': tier_name,
             'permissions': permissions,
@@ -475,8 +473,7 @@ def edit_tier(tier_key):
 
         user_limit = int(request.form.get('user_limit', 1))
         # Only exempt tier can have unlimited users (-1)
-        if user_limit == -1 and tier_key != 'exempt':
-            user_limit = 1
+        
         tier['user_limit'] = user_limit
 
         # Update visibility controls

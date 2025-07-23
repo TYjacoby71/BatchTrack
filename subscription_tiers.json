@@ -45,7 +45,7 @@
       "system_admin"
     ],
     "stripe_lookup_key": "batchtrack_solo_monthly",
-    "user_limit": 1,
+    "user_limit": -1,
     "fallback_features": [
       "Up to 1 user",
       "Full batch tracking with FIFO",
@@ -108,7 +108,7 @@
     "price_display": "$29",
     "price_yearly_display": "$299",
     "description": "Perfect for growing teams and small businesses",
-    "user_limit": 10,
+    "user_limit": -1,
     "is_customer_facing": true,
     "is_available": true,
     "is_stripe_ready": false,
@@ -183,7 +183,7 @@
     "price_display": "$99",
     "price_yearly_display": "$999",
     "description": "Perfect for large operations and enterprises",
-    "user_limit": 1,
+    "user_limit": -1,
     "is_customer_facing": true,
     "is_available": true,
     "is_stripe_ready": false,
