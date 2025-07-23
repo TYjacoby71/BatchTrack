@@ -141,8 +141,6 @@ class StripeService:
             metadata = stripe_subscription.get('metadata', {})
             if 'tier' in metadata:
                 subscription.tier = metadata['tier']
-                # Also update the organization's subscription_tier field for consistency
-                subscription.organization.subscription_tier = metadata['tier']
             
             db.session.commit()
             logger.info(f"Updated subscription {subscription.id} with Stripe data (status: {subscription.status})")
@@ -276,9 +274,6 @@ class StripeService:
             subscription.current_period_end = TimezoneUtils.utc_now() + timedelta(days=30)
         
         subscription.next_billing_date = subscription.current_period_end
-        
-        # Also update the organization's subscription_tier field for consistency
-        organization.subscription_tier = tier
         
         try:
             db.session.commit()

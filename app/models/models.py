@@ -15,7 +15,6 @@ class Organization(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(128), nullable=False)
     contact_email = db.Column(db.String(256))
-    subscription_tier = db.Column(db.String(32), default='free')  # free, trial, solo, team, enterprise
     created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
     is_active = db.Column(db.Boolean, default=True)
 
@@ -64,18 +63,17 @@ class Organization(db.Model):
 
     @property
     def effective_subscription_tier(self):
-        """Get the effective subscription tier (from subscription or fallback to organization tier)"""
-        # Try to get from subscription model first
+        """Get the effective subscription tier from Subscription model (single source of truth)"""
         try:
             from .subscription import Subscription
             subscription = Subscription.query.filter_by(organization_id=self.id).first()
-            if subscription and subscription.status == 'active':
+            if subscription:
                 return subscription.tier
         except (ImportError, AttributeError):
             pass
 
-        # Fallback to organization subscription_tier
-        return self.subscription_tier or 'free'
+        # Fallback to free if no subscription exists
+        return 'free'
 
     def get_subscription_features(self):
         """Get features available for subscription tier"""
