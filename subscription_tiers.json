@@ -292,7 +292,7 @@
       "ai.demand_forecasting",
       "ai.quality_insights"
     ],
-    "is_customer_facing": false,
+    "is_customer_facing": true,
     "is_available": true
   }
 }
