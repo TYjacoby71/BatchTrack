@@ -122,30 +122,45 @@ def signup():
         required_fields = [org_name, username, email, password, confirm_password, selected_tier]
         if not all(required_fields):
             flash('Please fill in all required fields and select a subscription plan', 'error')
+            # Get pricing data for the template
+            from ...services.pricing_service import PricingService
+            pricing_data = PricingService.get_pricing_data()
+
             return render_template('auth/signup.html', 
                          signup_source=signup_source,
                          referral_code=referral_code,
                          promo_code=promo_code,
                          available_tiers=available_tiers,
+                         pricing_data=pricing_data,
                          form_data=request.form)
 
         if password != confirm_password:
             flash('Passwords do not match', 'error')
+            # Get pricing data for the template
+            from ...services.pricing_service import PricingService
+            pricing_data = PricingService.get_pricing_data()
+
             return render_template('auth/signup.html', 
                          signup_source=signup_source,
                          referral_code=referral_code,
                          promo_code=promo_code,
                          available_tiers=available_tiers,
+                         pricing_data=pricing_data,
                          form_data=request.form)
 
         # Validate selected tier
         if selected_tier not in available_tiers:
             flash('Invalid subscription plan selected', 'error')
+            # Get pricing data for the template
+            from ...services.pricing_service import PricingService
+            pricing_data = PricingService.get_pricing_data()
+
             return render_template('auth/signup.html', 
                          signup_source=signup_source,
                          referral_code=referral_code,
                          promo_code=promo_code,
                          available_tiers=available_tiers,
+                         pricing_data=pricing_data,
                          form_data=request.form)
 
         # Check if username/email already exists
@@ -154,11 +169,16 @@ def signup():
         ).first()
         if existing_user:
             flash('Username or email already exists', 'error')
+            # Get pricing data for the template
+            from ...services.pricing_service import PricingService
+            pricing_data = PricingService.get_pricing_data()
+
             return render_template('auth/signup.html', 
                          signup_source=signup_source,
                          referral_code=referral_code,
                          promo_code=promo_code,
                          available_tiers=available_tiers,
+                         pricing_data=pricing_data,
                          form_data=request.form)
 
         # Store signup data in session for post-Stripe completion
@@ -180,11 +200,16 @@ def signup():
         flash('Redirecting to secure payment processing...', 'info')
         return redirect(url_for('billing.checkout', tier=selected_tier))
 
+    # Get pricing data for the template
+    from ...services.pricing_service import PricingService
+    pricing_data = PricingService.get_pricing_data()
+
     return render_template('auth/signup.html', 
                          signup_source=signup_source,
                          referral_code=referral_code,
                          promo_code=promo_code,
-                         available_tiers=available_tiers)
+                         available_tiers=available_tiers,
+                         pricing_data=pricing_data)
 
 @auth_bp.route('/complete-signup')
 @login_required
