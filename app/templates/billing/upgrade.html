@@ -219,7 +219,7 @@ function debugCheckout(tierKey, tierName, isStripeReady) {
 
     function loadDebugData() {
         // Make an API request to fetch detailed debug information
-        fetch('/billing/debug_data')
+        fetch('/billing/debug')
             .then(response => response.json())
             .then(data => {
                 const debugJsonElement = document.getElementById('debug-json');

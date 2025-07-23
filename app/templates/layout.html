@@ -62,7 +62,7 @@
                 <span class="navbar-text text-danger">
                     <i class="fas fa-shield-alt"></i> Developer Mode
                     {% if session.get('dev_selected_org_id') %}
-                    <small class="text-primary">| Customer View Active</small>
+                    <small class="text-primary">| Customer View Active ({{ current_user.organization.effective_subscription_tier.title() if current_user.organization else 'No Org' }})</small>
                     <a href="{{ url_for('developer.clear_organization_filter') }}" class="btn btn-sm btn-outline-secondary ms-2">
                         <i class="fas fa-times"></i> Clear Filter
                     </a>
