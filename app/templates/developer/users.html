@@ -577,4 +577,7 @@ async function saveDeveloperUserRole() {
     </div>
 </div>
 
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/developer_user_management.js') }}"></script>
+{% endblock %}
 {% endblock %}

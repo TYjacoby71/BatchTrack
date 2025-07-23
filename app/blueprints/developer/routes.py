@@ -407,20 +407,7 @@ def api_stats():
 
     return jsonify(stats)
 
-@developer_bp.route('/toggle_user_active/<int:user_id>', methods=['POST'])
-@login_required
-def toggle_user_active(user_id):
-    """Toggle user active status"""
-    if current_user.user_type != 'developer':
-        return jsonify({'error': 'Access denied'}), 403
 
-    user = User.query.get_or_404(user_id)
-    user.is_active = not user.is_active
-    db.session.commit()
-
-    status = 'activated' if user.is_active else 'deactivated'
-    flash(f'User {user.username} has been {status}', 'success')
-    return redirect(url_for('developer.users'))
 
 # Customer User Role Management
 @developer_bp.route('/customer-users/<int:user_id>/roles', methods=['GET'])
