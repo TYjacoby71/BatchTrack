@@ -33,7 +33,8 @@ def seed_organization_permissions():
                 # Update existing permission
                 existing.description = perm_data['description']
                 existing.category = category_key
-                existing.required_subscription_tier = perm_data['required_tier']
+                # Remove required_subscription_tier as permissions are now subscription-agnostic
+                existing.required_subscription_tier = 'free'  # Default to free since permissions are tier-agnostic
                 print(f"  Updated: {perm_data['name']}")
             else:
                 # Create new permission
@@ -41,7 +42,7 @@ def seed_organization_permissions():
                     name=perm_data['name'],
                     description=perm_data['description'],
                     category=category_key,
-                    required_subscription_tier=perm_data['required_tier']
+                    required_subscription_tier='free'  # Default to free since permissions are tier-agnostic
                 )
                 db.session.add(new_perm)
                 print(f"  Created: {perm_data['name']}")
