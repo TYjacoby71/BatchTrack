@@ -5,7 +5,6 @@ from datetime import datetime, timedelta
 from ...utils import get_setting
 from sqlalchemy import extract, func
 from ...services.unit_conversion import ConversionEngine
-from ..inventory.routes import adjust_inventory
 import uuid, os
 from werkzeug.utils import secure_filename
 from ...services.inventory_adjustment import process_inventory_adjustment
