@@ -143,19 +143,6 @@ def create_app():
 
         return None
 
-            # Allow access to static files and API routes
-            if request.path.startswith('/api/') or request.path.startswith('/static/'):
-                return None
-
-            # Allow access to root and homepage
-            if request.path in ['/', '/homepage']:
-                return None
-
-            # If accessing customer routes, require organization selection
-            if not session.get('dev_selected_org_id'):
-                flash('Please select an organization to view customer data, or use the developer dashboard.', 'warning')
-                return redirect(url_for('developer.dashboard'))
-
     # Register blueprints
     from .blueprints.auth import auth_bp
     from .blueprints.products import products_bp
