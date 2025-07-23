@@ -36,11 +36,12 @@ def dashboard():
         User.is_active == True
     ).count()
 
-    # Subscription tier breakdown
+    # Subscription tier breakdown - get from Subscription model
+    from app.models.subscription import Subscription
     subscription_stats = db.session.query(
-        Organization.subscription_tier,
-        func.count(Organization.id).label('count')
-    ).group_by(Organization.subscription_tier).all()
+        Subscription.tier,
+        func.count(Subscription.id).label('count')
+    ).group_by(Subscription.tier).all()
 
     # Recent organizations (last 30 days)
     thirty_days_ago = datetime.utcnow() - timedelta(days=30)
@@ -124,12 +125,20 @@ def create_organization():
             # Create organization
             org = Organization(
                 name=name,
-                subscription_tier=subscription_tier,
                 contact_email=email,
                 is_active=True
             )
             db.session.add(org)
             db.session.flush()  # Get the ID
+
+            # Create subscription record
+            from app.models.subscription import Subscription
+            subscription = Subscription(
+                organization_id=org.id,
+                tier=subscription_tier,
+                status='active'
+            )
+            db.session.add(subscription)
 
             # Create organization owner user
             owner_user = User(
@@ -183,8 +192,21 @@ def edit_organization(org_id):
     org = Organization.query.get_or_404(org_id)
 
     org.name = request.form.get('name', org.name)
-    org.subscription_tier = request.form.get('subscription_tier', org.subscription_tier)
     org.is_active = request.form.get('is_active') == 'true'
+    
+    # Update subscription tier if provided
+    new_tier = request.form.get('subscription_tier')
+    if new_tier and org.subscription:
+        org.subscription.tier = new_tier
+    elif new_tier and not org.subscription:
+        # Create subscription if it doesn't exist
+        from app.models.subscription import Subscription
+        subscription = Subscription(
+            organization_id=org.id,
+            tier=new_tier,
+            status='active'
+        )
+        db.session.add(subscription)
 
     db.session.commit()
     flash('Organization updated successfully', 'success')
@@ -199,7 +221,17 @@ def upgrade_organization(org_id):
     new_tier = request.form.get('tier')
 
     if new_tier in ['free', 'solo', 'team', 'enterprise']:
-        org.subscription_tier = new_tier
+        if org.subscription:
+            org.subscription.tier = new_tier
+        else:
+            # Create subscription if it doesn't exist
+            from app.models.subscription import Subscription
+            subscription = Subscription(
+                organization_id=org.id,
+                tier=new_tier,
+                status='active'
+            )
+            db.session.add(subscription)
         db.session.commit()
         flash(f'Organization upgraded to {new_tier}', 'success')
     else:
@@ -391,10 +423,11 @@ def api_stats():
         }
     }
 
-    # Subscription tier breakdown
+    # Subscription tier breakdown - get from Subscription model
+    from app.models.subscription import Subscription
     for tier in ['free', 'solo', 'team', 'enterprise']:
-        stats['organizations']['by_tier'][tier] = Organization.query.filter_by(
-            subscription_tier=tier
-        ).count()
+        stats['organizations']['by_tier'][tier] = db.session.query(Organization).join(
+            Subscription, Organization.id == Subscription.organization_id
+        ).filter(Subscription.tier == tier).count()
 
     return jsonify(stats)
