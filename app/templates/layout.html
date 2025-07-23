@@ -269,7 +269,7 @@
                     {% endif %}
 
                     <!-- Auth Management -->
-                    {% if has_permission('system.admin') %}
+                    {% if has_permission('dev.system_admin') %}
                     <li><a class="dropdown-item" href="{{ url_for('auth.permissions') }}"><i class="fas fa-key"></i> Permissions</a></li>
                     {% endif %}
 
