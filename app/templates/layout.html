@@ -207,7 +207,7 @@
                     <!-- User Dashboard -->
                     <li><a class="dropdown-item" href="{{ url_for('app_routes.dashboard') }}">User Dashboard</a></li>
 
-                    {% if is_organization_owner() %}
+                    {% if has_permission('organization.view') %}
                     <li><a class="dropdown-item" href="{{ url_for('organization.dashboard') }}"><i class="fas fa-users-cog"></i> Organization Dashboard</a></li>
                     {% endif %}
 
@@ -252,7 +252,7 @@
                     <li><a class="dropdown-item" href="{{ url_for('reservations.list_reservations') }}"><i class="fas fa-clock"></i> Reservations</a></li>
                     {% endif %}
 
-                    {% if has_permission('organization.manage') %}
+                    {% if has_permission('organization.view') %}
                     <li><a class="dropdown-item" href="{{ url_for('organization.dashboard') }}"><i class="fas fa-crown"></i> Organization Dashboard</a></li>
                     {% endif %}
 
