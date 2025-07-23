@@ -19,39 +19,9 @@ class PricingService:
             with open(config_file, 'r') as f:
                 return json.load(f)
 
-        # Fallback to default configuration
-        return {
-            'solo': {
-                'name': 'Solo Plan',
-                'price_display': '$29',
-                'price_yearly_display': '$290',
-                'features': ['Up to 5 users', 'Full batch tracking', 'Email support'],
-                'stripe_price_id': '',
-                'user_limit': 5,
-                'is_customer_facing': True,
-                'is_available': True
-            },
-            'team': {
-                'name': 'Team Plan',
-                'price_display': '$79',
-                'price_yearly_display': '$790',
-                'features': ['Up to 10 users', 'Advanced features', 'Custom roles'],
-                'stripe_price_id': '',
-                'user_limit': 10,
-                'is_customer_facing': True,
-                'is_available': True
-            },
-            'enterprise': {
-                'name': 'Enterprise Plan',
-                'price_display': '$199',
-                'price_yearly_display': '$1990',
-                'features': ['Unlimited users', 'All features', 'API access'],
-                'stripe_price_id': '',
-                'user_limit': -1,
-                'is_customer_facing': True,
-                'is_available': True
-            }
-        }
+        # Return empty dict if no config exists - should be created via admin interface
+        logger.warning("No subscription_tiers.json found - tiers should be configured via developer interface")
+        return {}
 
     @staticmethod
     def get_pricing_data():
@@ -64,13 +34,19 @@ class PricingService:
         for tier_key, tier_data in all_tiers.items():
             # Only include tiers that are customer-facing and available
             if tier_data.get('is_customer_facing', True) and tier_data.get('is_available', True):
+                # Use stripe pricing if available, otherwise fallback to configured pricing
+                monthly_price = tier_data.get('stripe_price_monthly') or tier_data.get('price_display', '$0')
+                yearly_price = tier_data.get('stripe_price_yearly') or tier_data.get('price_yearly_display', '$0')
+                
                 pricing_data[tier_key] = {
-                    'price': tier_data.get('price_display', '$0'),
-                    'price_yearly': tier_data.get('price_yearly_display', '$0'),
-                    'features': tier_data.get('fallback_features', tier_data.get('features', [])),
+                    'price': monthly_price,
+                    'price_yearly': yearly_price,
+                    'features': tier_data.get('fallback_features', tier_data.get('stripe_features', [])),
                     'name': tier_data.get('name', tier_key.title()),
-                    'description': f"Perfect for {tier_key} operations",
-                    'user_limit': tier_data.get('user_limit', 1)
+                    'description': tier_data.get('description', f"Perfect for {tier_key} operations"),
+                    'user_limit': tier_data.get('user_limit', 1),
+                    'stripe_lookup_key': tier_data.get('stripe_lookup_key', ''),
+                    'is_stripe_ready': tier_data.get('is_stripe_ready', False)
                 }
 
         # Only try to fetch from Stripe if properly configured
@@ -168,15 +144,21 @@ class PricingService:
         # Convert to expected format but include all tiers
         pricing_data = {}
         for tier_key, tier_data in all_tiers.items():
+            # Use stripe pricing if available, otherwise fallback to configured pricing
+            monthly_price = tier_data.get('stripe_price_monthly') or tier_data.get('price_display', '$0')
+            yearly_price = tier_data.get('stripe_price_yearly') or tier_data.get('price_yearly_display', '$0')
+            
             pricing_data[tier_key] = {
-                'price': tier_data.get('price_display', '$0'),
-                'price_yearly': tier_data.get('price_yearly_display', '$0'),
-                'features': tier_data.get('fallback_features', tier_data.get('features', [])),
+                'price': monthly_price,
+                'price_yearly': yearly_price,
+                'features': tier_data.get('fallback_features', tier_data.get('stripe_features', [])),
                 'name': tier_data.get('name', tier_key.title()),
-                'description': f"Perfect for {tier_key} operations",
+                'description': tier_data.get('description', f"Perfect for {tier_key} operations"),
                 'user_limit': tier_data.get('user_limit', 1),
                 'is_customer_facing': tier_data.get('is_customer_facing', True),
-                'is_available': tier_data.get('is_available', True)
+                'is_available': tier_data.get('is_available', True),
+                'stripe_lookup_key': tier_data.get('stripe_lookup_key', ''),
+                'is_stripe_ready': tier_data.get('is_stripe_ready', False)
             }
 
         return pricing_data

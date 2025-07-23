@@ -353,53 +353,41 @@ def dev_activate_subscription(tier):
 @billing_bp.route('/debug')
 @login_required
 def debug_billing():
-    """Debug billing system state"""
-    from flask import current_app
+    """Debug endpoint for billing information"""
+    try:
+        if not current_user.organization:
+            return jsonify({'error': 'No organization found for user'}), 400
 
-    # Only allow in debug mode
-    if not current_app.config.get('DEBUG'):
-        flash('Debug route only available in debug mode.', 'error')
-        return redirect(url_for('billing.upgrade'))
+        max_users = current_user.organization.get_max_users()
 
-    organization = current_user.organization
-    if not organization:
-        return jsonify({'error': 'No organization found'})
-
-    # Load tier configuration
-    tiers_config = load_tiers_config()
-
-    debug_info = {
-        'stripe_configured': bool(current_app.config.get('STRIPE_SECRET_KEY')),
-        'webhook_configured': bool(current_app.config.get('STRIPE_WEBHOOK_SECRET')),
-        'operating_mode': 'production' if current_app.config.get('STRIPE_WEBHOOK_SECRET') else 'development',
-        'organization': {
-            'id': organization.id,
-            'name': organization.name,
-            'current_tier': organization.effective_subscription_tier,
-            'max_users': organization.get_max_users(),
-            'active_users': organization.active_users_count
-        },
-        'subscription': {
-            'exists': organization.subscription is not None,
-            'status': organization.subscription.status if organization.subscription else None,
-            'tier': organization.subscription.tier if organization.subscription else None,
-            'stripe_customer_id': organization.subscription.stripe_customer_id if organization.subscription else None,
-            'stripe_subscription_id': organization.subscription.stripe_subscription_id if organization.subscription else None
-        },
-        'available_tiers': {
-            tier_key: {
-                'name': tier_data.get('name'),
-                'stripe_ready': tier_data.get('is_stripe_ready', False),
-                'customer_facing': tier_data.get('is_customer_facing', True),
-                'available': tier_data.get('is_available', True),
-                'user_limit': tier_data.get('user_limit', 1)
+        debug_data = {
+            'user_id': current_user.id,
+            'user_type': current_user.user_type,
+            'organization_id': current_user.organization_id,
+            'subscription_tier': current_user.organization.effective_subscription_tier,
+            'stripe_configured': bool(current_app.config.get('STRIPE_SECRET_KEY')),
+            'webhook_configured': bool(current_app.config.get('STRIPE_WEBHOOK_SECRET')),
+            'organization_info': {
+                'id': current_user.organization.id,
+                'name': current_user.organization.name,
+                'max_users': max_users,
+                'active_users': current_user.organization.active_users_count,
+                'features': current_user.organization.get_subscription_features()
+            },
+            'subscription_info': {
+                'has_subscription': bool(current_user.organization.subscription),
+                'subscription_status': current_user.organization.subscription.status if current_user.organization.subscription else None,
+                'subscription_tier': current_user.organization.subscription.tier if current_user.organization.subscription else None
             }
-            for tier_key, tier_data in tiers_config.items()
         }
-    }
-
-    return jsonify(debug_info)
-
+        logger.info(f"Debug data generated successfully for user {current_user.id}")
+        return jsonify(debug_data)
+    except AttributeError as e:
+        logger.error(f"AttributeError in debug_billing: {e}")
+        return jsonify({'error': f'Attribute error - likely missing organization or subscription: {str(e)}'}), 500
+    except Exception as e:
+        logger.error(f"Debug billing error for user {current_user.id if current_user else 'Unknown'}: {e}")
+        return jsonify({'error': f'Debug failed: {str(e)}'}), 500
 
     try:
         event = stripe.Webhook.construct_event(

@@ -84,18 +84,41 @@ def signup():
     if current_user.is_authenticated:
         return redirect(url_for('app_routes.dashboard'))
 
-    # Get available subscription tiers for customer selection
+    # Get pricing data from the pricing service (already filtered for customer-facing and available)
+    from ...services.pricing_service import PricingService
+    pricing_data = PricingService.get_pricing_data()
+
+    # Also get the tiers config for additional filtering if needed
     from ...blueprints.developer.subscription_tiers import load_tiers_config
     tiers_config = load_tiers_config()
 
-    # Filter to customer-facing, available, and Stripe-ready tiers only
-    available_tiers = {
-        key: tier for key, tier in tiers_config.items() 
-        if (tier.get('is_customer_facing', False) and 
-            tier.get('is_available', True) and 
-            tier.get('is_stripe_ready', False) and  # When True, requires real Stripe
-            tier.get('stripe_lookup_key'))  # Must have lookup key configured
-    }
+    # Filter pricing_data to only include tiers that are both customer_facing AND available
+    available_tiers = {}
+    for tier_key, tier_data in pricing_data.items():
+        tier_config = tiers_config.get(tier_key, {})
+        if (tier_config.get('is_customer_facing', True) and 
+            tier_config.get('is_available', True) and 
+            tier_config.get('stripe_lookup_key')):  # Must have lookup key configured
+            
+            # Format the data for the template with price_monthly field
+            price_str = tier_data.get('price', '$0').replace('$', '')
+            
+            # Handle non-numeric prices like "Free" or "Exempt"
+            try:
+                price_monthly = float(price_str) if price_str.replace('.', '').isdigit() else 0
+            except (ValueError, AttributeError):
+                price_monthly = 0
+            
+            available_tiers[tier_key] = {
+                'name': tier_data.get('name', tier_key.title()),
+                'price_monthly': price_monthly,
+                'price_display': tier_data.get('price', '$0'),  # Keep original for display
+                'price_yearly': tier_data.get('price_yearly', '$0'),
+                'features': tier_data.get('features', []),
+                'fallback_features': tier_data.get('features', []),  # Add fallback_features for template compatibility
+                'user_limit': tier_data.get('user_limit', 1),
+                'stripe_lookup_key': tier_config.get('stripe_lookup_key', '')
+            }
 
     # Get signup tracking parameters from URL or form
     signup_source = request.args.get('source', request.form.get('source', 'direct'))
@@ -127,6 +150,7 @@ def signup():
                          referral_code=referral_code,
                          promo_code=promo_code,
                          available_tiers=available_tiers,
+                         pricing_data=available_tiers,
                          form_data=request.form)
 
         if password != confirm_password:
@@ -136,6 +160,7 @@ def signup():
                          referral_code=referral_code,
                          promo_code=promo_code,
                          available_tiers=available_tiers,
+                         pricing_data=available_tiers,
                          form_data=request.form)
 
         # Validate selected tier
@@ -146,6 +171,7 @@ def signup():
                          referral_code=referral_code,
                          promo_code=promo_code,
                          available_tiers=available_tiers,
+                         pricing_data=available_tiers,
                          form_data=request.form)
 
         # Check if username/email already exists
@@ -159,6 +185,7 @@ def signup():
                          referral_code=referral_code,
                          promo_code=promo_code,
                          available_tiers=available_tiers,
+                         pricing_data=available_tiers,
                          form_data=request.form)
 
         # Store signup data in session for post-Stripe completion
@@ -184,7 +211,8 @@ def signup():
                          signup_source=signup_source,
                          referral_code=referral_code,
                          promo_code=promo_code,
-                         available_tiers=available_tiers)
+                         available_tiers=available_tiers,
+                         pricing_data=available_tiers)
 
 @auth_bp.route('/complete-signup')
 @login_required

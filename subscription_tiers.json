@@ -30,6 +30,9 @@
   },
   "solo": {
     "name": "Solo Plan",
+    "price_display": "$19",
+    "price_yearly_display": "$190",
+    "description": "Perfect for solo makers getting started",
     "feature_groups": [
       "basic_dashboard",
       "full_dashboard",
@@ -45,13 +48,16 @@
     "user_limit": 1,
     "fallback_features": [
       "Up to 1 user",
-      "Full batch tracking",
+      "Full batch tracking with FIFO",
+      "Recipe management and scaling", 
+      "Expiration alerts and freshness tracking",
       "Email support"
     ],
     "stripe_features": [],
     "stripe_price_monthly": null,
     "stripe_price_yearly": null,
     "last_synced": null,
+    "is_stripe_ready": false,
     "permissions": [
       "organization.manage_billing",
       "batches.view",
@@ -91,9 +97,11 @@
     "name": "Team Plan",
     "price_display": "$29",
     "price_yearly_display": "$299",
+    "description": "Perfect for growing teams and small businesses",
     "user_limit": 10,
     "is_customer_facing": true,
     "is_available": true,
+    "is_stripe_ready": false,
     "permissions": [
       "organization.manage_users",
       "organization.view",
@@ -146,15 +154,42 @@
       "system_admin"
     ],
     "stripe_lookup_key": "batchtrack_team_monthly",
-    "fallback_features": []
+    "fallback_features": [
+      "Up to 10 users",
+      "Everything in Solo Plan",
+      "Product catalog with variants",
+      "Team collaboration tools",
+      "Custom role management",
+      "Basic reporting and analytics",
+      "Priority email support"
+    ],
+    "stripe_features": [],
+    "stripe_price_monthly": null,
+    "stripe_price_yearly": null,
+    "last_synced": null
   },
   "enterprise": {
     "name": "Enterprise Plan",
     "price_display": "$99",
     "price_yearly_display": "$999",
-    "user_limit": "unlimited",
+    "description": "Perfect for large operations and enterprises",
+    "user_limit": -1,
     "is_customer_facing": true,
     "is_available": true,
+    "is_stripe_ready": false,
+    "fallback_features": [
+      "Unlimited users",
+      "Everything in Team Plan",
+      "Advanced reporting and analytics",
+      "API access for integrations",
+      "POS system integration",
+      "Dedicated account manager",
+      "Priority phone support"
+    ],
+    "stripe_features": [],
+    "stripe_price_monthly": null,
+    "stripe_price_yearly": null,
+    "last_synced": null,
     "permissions": [
       "dashboard.view",
       "dashboard.admin",

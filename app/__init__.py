@@ -76,6 +76,7 @@ def create_app():
         if (request.path.startswith('/static/') or 
             request.path.startswith('/auth/login') or 
             request.path.startswith('/auth/logout') or
+            request.path.startswith('/auth/signup') or
             request.path == '/' or 
             request.path == '/homepage'):
             return None
