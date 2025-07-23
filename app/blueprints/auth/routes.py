@@ -204,7 +204,7 @@ def complete_signup():
 from .permissions import manage_permissions, manage_roles, create_role, update_role
 
 @auth_bp.route('/permissions')
-@require_permission('system.admin')
+@require_permission('dev.system_admin')
 def permissions():
     return manage_permissions()
 

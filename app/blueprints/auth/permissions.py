@@ -19,7 +19,7 @@ def get_tier_permissions(tier_key):
     ).all()
     return permissions
 
-@require_permission('system.admin')
+@require_permission('dev.system_admin')
 @login_required
 def manage_permissions():
     """Manage system permissions (system admin only)"""
