@@ -41,61 +41,7 @@
                     </div>
                     {% endif %}
 
-                    <!-- Tier Selection -->
-                    <div class="mb-4">
-                        <h5 class="text-muted mb-3">
-                            <i class="fas fa-star me-2"></i>Choose Your Plan
-                            <small class="text-success">({{ current_offer.days if current_offer else 14 }} days free)</small>
-                        </h5>
-                        <div class="row" id="tier-selection">
-                            <div class="col-md-4 mb-3">
-                                <div class="card tier-option" data-tier="solo">
-                                    <div class="card-body text-center">
-                                        <h6 class="card-title">Solo</h6>
-                                        <div class="h4 text-primary mb-2">$19<small class="text-muted">/mo</small></div>
-                                        <ul class="list-unstyled small text-muted">
-                                            <li>✓ 1 user</li>
-                                            <li>✓ Full batch tracking</li>
-                                            <li>✓ Recipe management</li>
-                                            <li>✓ Email support</li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <div class="card tier-option border-primary" data-tier="team">
-                                    <div class="card-header bg-primary text-white text-center py-1">
-                                        <small><i class="fas fa-star"></i> Most Popular</small>
-                                    </div>
-                                    <div class="card-body text-center">
-                                        <h6 class="card-title">Team</h6>
-                                        <div class="h4 text-primary mb-2">$29<small class="text-muted">/mo</small></div>
-                                        <ul class="list-unstyled small text-muted">
-                                            <li>✓ Up to 10 users</li>
-                                            <li>✓ Advanced reports</li>
-                                            <li>✓ User roles</li>
-                                            <li>✓ Priority support</li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <div class="card tier-option" data-tier="enterprise">
-                                    <div class="card-body text-center">
-                                        <h6 class="card-title">Enterprise</h6>
-                                        <div class="h4 text-primary mb-2">$99<small class="text-muted">/mo</small></div>
-                                        <ul class="list-unstyled small text-muted">
-                                            <li>✓ Unlimited users</li>
-                                            <li>✓ API access</li>
-                                            <li>✓ Custom integrations</li>
-                                            <li>✓ Phone support</li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <input type="hidden" name="selected_tier" id="selected_tier" value="team">
-                    </div>
+                    
 
                     <form method="POST" id="signupForm">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -117,7 +63,11 @@
                             <div class="row">
                                 {% for tier_key, tier_data in available_tiers.items() %}
                                 <div class="col-md-4 mb-3">
-                                    <div class="card tier-option h-100 {% if tier_key == 'team' %}border-primary{% endif %}" data-tier="{{ tier_key }}" style="cursor: pointer; transition: all 0.3s;">
+                                    <div class="card tier-option h-100 {% if tier_key == 'team' %}border-primary{% endif %}" 
+                                         data-tier="{{ tier_key }}" 
+                                         style="cursor: pointer; transition: all 0.3s; border-width: 2px;"
+                                         onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 4px 15px rgba(0,0,0,0.1)'"
+                                         onmouseout="if(!this.classList.contains('border-success')) { this.style.transform='translateY(0px)'; this.style.boxShadow='0 1px 3px rgba(0,0,0,0.1)'; }">
                                         {% if tier_key == 'team' %}
                                         <div class="card-header bg-primary text-white text-center py-1">
                                             <small><i class="fas fa-star"></i> Most Popular</small>
@@ -428,11 +378,13 @@ document.addEventListener('DOMContentLoaded', function() {
             tierOptions.forEach(opt => {
                 opt.classList.remove('border-success', 'bg-light');
                 opt.style.boxShadow = '';
+                opt.style.transform = '';
             });
 
             // Add active class to selected
             this.classList.add('border-success', 'bg-light');
-            this.style.boxShadow = '0 0 10px rgba(0,123,255,0.3)';
+            this.style.boxShadow = '0 0 15px rgba(0,123,255,0.4)';
+            this.style.transform = 'translateY(-2px)';
 
             // Update hidden input
             selectedTierInput.value = this.dataset.tier;
@@ -446,7 +398,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const defaultTier = document.querySelector('[data-tier="team"]');
     if (defaultTier) {
         defaultTier.classList.add('border-success', 'bg-light');
-        defaultTier.style.boxShadow = '0 0 10px rgba(0,123,255,0.3)';
+        defaultTier.style.boxShadow = '0 0 15px rgba(0,123,255,0.4)';
+        defaultTier.style.transform = 'translateY(-2px)';
     }
 
     function updatePaymentSection() {
