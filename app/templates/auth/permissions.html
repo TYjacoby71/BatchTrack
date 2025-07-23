@@ -5,7 +5,7 @@
     <div class="card">
         <div class="card-header">
             <h4><i class="fas fa-shield-alt"></i> System Permissions Management</h4>
-            <p class="text-muted mb-0">Manage system-wide permissions (Developer access only)</p>
+            <p class="text-muted mb-0">Manage all system permissions (Developer access only)</p>
         </div>
         <div class="card-body">
             {% for category, perms in permission_categories.items() %}
@@ -17,8 +17,9 @@
                             <tr>
                                 <th>Permission</th>
                                 <th>Description</th>
-                                <th>Subscription Tier</th>
+                                <th>Type</th>
                                 <th>Status</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -27,7 +28,11 @@
                                 <td><code>{{ perm.name }}</code></td>
                                 <td>{{ perm.description or 'No description' }}</td>
                                 <td>
-                                    <span class="badge bg-info">Tier-agnostic</span>
+                                    {% if perm.type == 'developer' %}
+                                    <span class="badge bg-danger">Developer</span>
+                                    {% else %}
+                                    <span class="badge bg-info">Organization</span>
+                                    {% endif %}
                                 </td>
                                 <td>
                                     {% if perm.is_active %}
@@ -35,6 +40,21 @@
                                     {% else %}
                                     <span class="badge bg-secondary">Inactive</span>
                                     {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        {% if perm.is_active %}
+                                        <button class="btn btn-outline-secondary btn-sm" 
+                                                onclick="togglePermissionStatus({{ perm.id }}, '{{ perm.table }}', false, '{{ perm.name }}')">
+                                            <i class="fas fa-toggle-off"></i> Deactivate
+                                        </button>
+                                        {% else %}
+                                        <button class="btn btn-outline-success btn-sm"
+                                                onclick="togglePermissionStatus({{ perm.id }}, '{{ perm.table }}', true, '{{ perm.name }}')">
+                                            <i class="fas fa-toggle-on"></i> Activate
+                                        </button>
+                                        {% endif %}
+                                    </div>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -46,4 +66,51 @@
         </div>
     </div>
 </div>
+
+<script>
+function togglePermissionStatus(permissionId, table, newStatus, permissionName) {
+    const action = newStatus ? 'activate' : 'deactivate';
+    
+    if (!confirm(`Are you sure you want to ${action} the permission "${permissionName}"?`)) {
+        return;
+    }
+    
+    fetch('/auth/permissions/toggle-status', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        },
+        body: JSON.stringify({
+            permission_id: permissionId,
+            table: table,
+            is_active: newStatus
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Show success message
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'alert alert-success alert-dismissible fade show';
+            alertDiv.innerHTML = `
+                ${data.message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.querySelector('.container-fluid').insertBefore(alertDiv, document.querySelector('.card'));
+            
+            // Reload the page to reflect changes
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
+        } else {
+            alert('Error: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred while updating the permission status.');
+    });
+}
+</script>
 {% endblock %}

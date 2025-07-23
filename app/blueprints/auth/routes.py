@@ -201,12 +201,17 @@ def complete_signup():
     return redirect(url_for('app_routes.dashboard'))
 
 # Permission and Role Management Routes
-from .permissions import manage_permissions, manage_roles, create_role, update_role
+from .permissions import manage_permissions, manage_roles, create_role, update_role, toggle_permission_status
 
 @auth_bp.route('/permissions')
 @require_permission('dev.system_admin')
 def permissions():
     return manage_permissions()
+
+@auth_bp.route('/permissions/toggle-status', methods=['POST'])
+@require_permission('dev.system_admin')
+def toggle_permission_status_route():
+    return toggle_permission_status()
 
 @auth_bp.route('/roles')
 @require_permission('organization.manage_roles')
