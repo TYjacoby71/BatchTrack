@@ -117,18 +117,22 @@ def create_app():
             '/batches': 'batches.view',
             '/products': 'products.view',
             '/timers': 'timers.view',
+            '/expiration': 'inventory.view',
+            '/settings': 'settings.view',
 
             # Management features
             '/organization': 'organization.view',
             '/auth/permissions': 'dev.system_admin',
             '/auth/roles': 'organization.manage_roles',
             '/tag-manager': 'tags.manage',
+            '/billing': 'organization.view',
 
             # API endpoints
             '/api/batches': 'batches.view',
             '/api/inventory': 'inventory.view',
             '/api/products': 'products.view',
             '/api/timers': 'timers.view',
+            '/api/reservations': 'products.view',
         }
 
         # Check route permissions
