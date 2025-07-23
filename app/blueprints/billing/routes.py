@@ -357,11 +357,8 @@ def debug_billing():
     try:
         if not current_user.organization:
             return jsonify({'error': 'No organization found for user'}), 400
-            
+
         max_users = current_user.organization.get_max_users()
-        # Handle Infinity values for JSON serialization
-        if max_users == float('inf'):
-            max_users = "unlimited"
 
         debug_data = {
             'user_id': current_user.id,
@@ -385,11 +382,12 @@ def debug_billing():
         }
         logger.info(f"Debug data generated successfully for user {current_user.id}")
         return jsonify(debug_data)
+    except AttributeError as e:
+        logger.error(f"AttributeError in debug_billing: {e}")
+        return jsonify({'error': f'Attribute error - likely missing organization or subscription: {str(e)}'}), 500
     except Exception as e:
         logger.error(f"Debug billing error for user {current_user.id if current_user else 'Unknown'}: {e}")
-        current_app.logger.error(f"Debug billing error: {e}")
-        return jsonify({'error': str(e), 'details': 'Check server logs for more information'}), 500
-
+        return jsonify({'error': f'Debug failed: {str(e)}'}), 500
 
     try:
         event = stripe.Webhook.construct_event(
