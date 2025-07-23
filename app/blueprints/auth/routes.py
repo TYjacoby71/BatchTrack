@@ -1,4 +1,3 @@
-
 from flask import render_template, request, redirect, url_for, flash, session
 from flask_login import login_user, logout_user, current_user
 from flask_wtf import FlaskForm
@@ -88,7 +87,7 @@ def signup():
     # Get available subscription tiers for customer selection
     from ...blueprints.developer.subscription_tiers import load_tiers_config
     tiers_config = load_tiers_config()
-    
+
     # Filter to customer-facing, available, and Stripe-ready tiers only
     available_tiers = {
         key: tier for key, tier in tiers_config.items() 
@@ -115,7 +114,7 @@ def signup():
         password = request.form.get('password')
         confirm_password = request.form.get('confirm_password')
         phone = request.form.get('phone')
-        
+
         # Selected subscription tier
         selected_tier = request.form.get('subscription_tier')
 
@@ -194,10 +193,10 @@ def complete_signup():
     # This route will be called by the billing system after successful payment
     # The user should already be logged in with a temporary account
     # and the organization should be created with the proper tier
-    
+
     # Clear any pending signup data
     session.pop('pending_signup', None)
-    
+
     flash('Welcome! Your account has been successfully created.', 'success')
     return redirect(url_for('app_routes.dashboard'))
 

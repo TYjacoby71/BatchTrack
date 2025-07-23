@@ -85,6 +85,16 @@ def organizations():
 @login_required
 def create_organization():
     """Create new organization with owner user"""
+    # Load available tiers for the form
+    from .subscription_tiers import load_tiers_config
+    tiers_config = load_tiers_config()
+
+    # Include all tiers for developer creation (including internal ones)
+    available_tiers = {
+        key: tier for key, tier in tiers_config.items() 
+        if tier.get('is_available', True)
+    }
+
     if request.method == 'POST':
         # Organization details
         name = request.form.get('name')
@@ -136,13 +146,13 @@ def create_organization():
             # Create subscription record with proper billing setup
             from app.models.subscription import Subscription
             from datetime import datetime, timedelta
-            
+
             subscription = Subscription(
                 organization_id=org.id,
                 tier=subscription_tier,
                 notes=f"Developer created: {creation_reason}. {notes}".strip()
             )
-            
+
             # Set up billing based on tier
             if subscription_tier == 'exempt':
                 subscription.status = 'active'  # No billing required
@@ -152,7 +162,7 @@ def create_organization():
                 subscription.trial_start = datetime.utcnow()
                 subscription.trial_end = datetime.utcnow() + timedelta(days=14)
                 subscription.notes += f" Trial expires {subscription.trial_end.strftime('%Y-%m-%d')}."
-            
+
             db.session.add(subscription)
 
             # Create organization owner user
@@ -170,13 +180,13 @@ def create_organization():
             owner_user.set_password(password)
             db.session.add(owner_user)
             db.session.flush()  # Get the user ID
-            
+
             # Assign organization owner role
             from app.models.role import Role
             org_owner_role = Role.query.filter_by(name='organization_owner', is_system_role=True).first()
             if org_owner_role:
                 owner_user.assign_role(org_owner_role)
-            
+
             db.session.commit()
 
             flash(f'Organization "{name}" and owner user "{username}" created successfully', 'success')
@@ -187,7 +197,7 @@ def create_organization():
             flash(f'Error creating organization: {str(e)}', 'error')
             return redirect(url_for('developer.create_organization'))
 
-    return render_template('developer/create_organization.html')
+    return render_template('developer/create_organization.html', available_tiers=available_tiers)
 
 @developer_bp.route('/organizations/<int:org_id>')
 @login_required
@@ -208,7 +218,7 @@ def edit_organization(org_id):
 
     org.name = request.form.get('name', org.name)
     org.is_active = request.form.get('is_active') == 'true'
-    
+
     # Update subscription tier if provided
     new_tier = request.form.get('subscription_tier')
     if new_tier and org.subscription:
@@ -262,47 +272,47 @@ def delete_organization(org_id):
         data = request.get_json()
         password = data.get('password')
         confirm_text = data.get('confirm_text')
-        
+
         org = Organization.query.get_or_404(org_id)
         expected_confirm = f"DELETE {org.name}"
-        
+
         # Validate developer password
         if not current_user.check_password(password):
             return jsonify({'success': False, 'error': 'Invalid developer password'})
-        
+
         # Validate confirmation text
         if confirm_text != expected_confirm:
             return jsonify({'success': False, 'error': f'Confirmation text must match exactly: "{expected_confirm}"'})
-        
+
         # Security check - prevent deletion of organizations with active subscriptions
         # You might want to add additional checks here based on your business rules
-        
+
         # Log the deletion attempt for security audit
         from datetime import datetime
         import logging
         logging.warning(f"ORGANIZATION DELETION: Developer {current_user.username} is deleting organization '{org.name}' (ID: {org.id}) at {datetime.utcnow()}")
-        
+
         # Begin deletion process
         org_name = org.name
         users_count = len(org.users)
-        
+
         # Delete all organization data in the correct order to respect foreign key constraints
-        
+
         # 1. Delete user role assignments
         from app.models.user_role_assignment import UserRoleAssignment
         UserRoleAssignment.query.filter_by(organization_id=org_id).delete()
-        
+
         # 2. Delete organization-specific roles
         from app.models.role import Role
         Role.query.filter_by(organization_id=org_id, is_system_role=False).delete()
-        
+
         # 3. Delete batches and related data
         from app.models import Batch
         batches = Batch.query.filter_by(organization_id=org_id).all()
         for batch in batches:
             # Delete batch containers, timers, etc. if you have those relationships
             db.session.delete(batch)
-        
+
         # 4. Delete inventory and FIFO history
         from app.models import InventoryItem, InventoryHistory
         inventory_items = InventoryItem.query.filter_by(organization_id=org_id).all()
@@ -310,25 +320,25 @@ def delete_organization(org_id):
             # Delete associated inventory history (contains FIFO tracking)
             InventoryHistory.query.filter_by(inventory_item_id=item.id).delete()
             db.session.delete(item)
-        
+
         # 5. Delete products and SKUs
         from app.models import Product
         products = Product.query.filter_by(organization_id=org_id).all()
         for product in products:
             # Delete product variants, SKUs, history, etc.
             db.session.delete(product)
-        
+
         # 6. Delete recipes
         from app.models import Recipe
         Recipe.query.filter_by(organization_id=org_id).delete()
-        
+
         # 7. Delete subscriptions
         from app.models.subscription import Subscription
         Subscription.query.filter_by(organization_id=org_id).delete()
-        
+
         # 8. Delete user preferences first, then users
         from app.models.user_preferences import UserPreferences
-        
+
         org_users = User.query.filter_by(organization_id=org_id).all()
         for user in org_users:
             if user.user_type != 'developer':  # Don't delete developer accounts
@@ -336,21 +346,21 @@ def delete_organization(org_id):
                 UserPreferences.query.filter_by(user_id=user.id).delete()
                 # Then delete the user
                 db.session.delete(user)
-        
+
         # 9. Finally delete the organization
         db.session.delete(org)
-        
+
         # Commit all deletions
         db.session.commit()
-        
+
         # Log successful deletion
         logging.warning(f"ORGANIZATION DELETED: '{org_name}' (ID: {org_id}) successfully deleted by developer {current_user.username}. {users_count} users removed.")
-        
+
         return jsonify({
             'success': True, 
             'message': f'Organization "{org_name}" and all associated data permanently deleted. {users_count} users removed.'
         })
-        
+
     except Exception as e:
         db.session.rollback()
         logging.error(f"ORGANIZATION DELETION FAILED: Error deleting organization {org_id}: {str(e)}")

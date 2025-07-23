@@ -30,6 +30,10 @@ def dashboard():
     from ...services.pricing_service import PricingService
     pricing_data = PricingService.get_pricing_data()
 
+    # Load subscription tiers config for tier display (needed for both developer and customer views)
+    from ...blueprints.developer.subscription_tiers import load_tiers_config
+    tiers_config = load_tiers_config()
+
     # Get organization data - handle developer customer view
     from app.utils.permissions import get_effective_organization
     organization = get_effective_organization()
@@ -99,7 +103,8 @@ def dashboard():
         pending_invites=pending_invites,
         permission_categories=permission_categories,
         roles=roles,
-        users=users
+        users=users,
+        tiers_config=tiers_config
     )
 
 @organization_bp.route('/create-role', methods=['POST'])
@@ -176,6 +181,56 @@ def update_organization_settings():
         db.session.commit()
 
         return jsonify({'success': True, 'message': 'Organization settings updated successfully'})
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@organization_bp.route('/update-tier', methods=['POST'])
+@login_required
+def update_subscription_tier():
+    """Update organization subscription tier (developers only)"""
+
+    # Only developers can update subscription tiers directly
+    if current_user.user_type != 'developer':
+        return jsonify({'success': False, 'error': 'Only developers can update subscription tiers'})
+
+    try:
+        data = request.get_json()
+        tier_key = data.get('subscription_tier')
+
+        if not tier_key:
+            return jsonify({'success': False, 'error': 'Subscription tier is required'})
+
+        # Get organization (handle developer customer view)
+        from app.utils.permissions import get_effective_organization
+        organization = get_effective_organization()
+        if not organization:
+            return jsonify({'success': False, 'error': 'No organization selected'})
+
+        # Load and validate tier
+        from ...blueprints.developer.subscription_tiers import load_tiers_config
+        tiers_config = load_tiers_config()
+        if tier_key not in tiers_config:
+            return jsonify({'success': False, 'error': 'Invalid subscription tier'})
+
+        # Update or create subscription
+        from ...models.subscription import Subscription
+        subscription = organization.subscription
+        if not subscription:
+            subscription = Subscription(
+                organization_id=organization.id,
+                tier=tier_key,
+                status='active'
+            )
+            db.session.add(subscription)
+        else:
+            subscription.tier = tier_key
+            subscription.status = 'active'
+
+        db.session.commit()
+
+        return jsonify({'success': True, 'message': f'Subscription tier updated to {tier_key}'})
 
     except Exception as e:
         db.session.rollback()

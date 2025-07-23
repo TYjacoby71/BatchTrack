@@ -27,7 +27,10 @@
                 <h6 class="mb-0"><i class="fas fa-info-circle"></i> Current Plan</h6>
             </div>
             <div class="card-body">
-                <h5 class="text-primary">{{ current_user.organization.effective_subscription_tier.title() }}</h5>
+                <h5 class="text-primary">
+                    {% set tier_name = current_user.organization.get_tier_display_name() %}
+                    {{ tier_name if tier_name else current_user.organization.effective_subscription_tier.title() }}
+                </h5>
                 <p class="text-muted">{{ current_user.organization.active_users_count }}/{{ current_user.organization.get_max_users() }} users</p>
 
                 <h6 class="mt-3">Available Features:</h6>

@@ -76,15 +76,36 @@ class Organization(db.Model):
         return 'free'
 
     def get_subscription_features(self):
-        """Get features available for subscription tier"""
-        features = {
-            'solo': ['basic_production', 'inventory_tracking', 'recipe_management'],
-            'team': ['basic_production', 'inventory_tracking', 'recipe_management', 'user_management', 'advanced_alerts', 'batch_tracking'],
-            'enterprise': ['all_features', 'api_access', 'custom_integrations', 'priority_support'],
-            'exempt': ['all_features', 'api_access', 'custom_integrations', 'priority_support', 'exempt_access']
-        }
-        effective_tier = self.effective_subscription_tier
-        return features.get(effective_tier, features['solo'])
+        """Get list of features for current subscription tier"""
+        if not self.subscription:
+            return []
+
+        tier = self.subscription.effective_tier
+
+        # Load tier configuration
+        from ..blueprints.developer.subscription_tiers import load_tiers_config
+        tiers_config = load_tiers_config()
+
+        if tier in tiers_config:
+            return tiers_config[tier].get('fallback_features', [])
+
+        return []
+
+    def get_tier_display_name(self):
+        """Get the display name for the current subscription tier"""
+        if not self.subscription:
+            return None
+
+        tier = self.subscription.tier
+
+        # Load tier configuration
+        from ..blueprints.developer.subscription_tiers import load_tiers_config
+        tiers_config = load_tiers_config()
+
+        if tier in tiers_config:
+            return tiers_config[tier].get('name', tier.title())
+
+        return tier.title()
 
     def get_pricing_data(self):
         """Get dynamic pricing data from Stripe"""
