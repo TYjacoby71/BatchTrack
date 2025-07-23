@@ -115,13 +115,15 @@ def has_subscription_feature(feature):
     return feature in org_features or 'all_features' in org_features
 
 def is_organization_owner():
-    """Unified organization owner check"""
+    """Unified organization owner check - based on having the organization_owner role"""
     if not current_user.is_authenticated:
         return False
 
-    # Check the user type and organization owner flag
-    return (current_user.user_type == 'customer' and 
-            current_user.is_organization_owner is True)
+    # Organization owners are customers with the organization_owner role
+    if current_user.user_type == 'customer':
+        return any(role.name == 'organization_owner' for role in current_user.get_active_roles())
+    
+    return False
 
 def is_developer():
     """Check if current user is developer"""
