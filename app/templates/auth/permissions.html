@@ -1,4 +1,3 @@
-
 {% extends "layout.html" %}
 {% block content %}
 <div class="container-fluid">
@@ -74,10 +73,10 @@ function togglePermissionStatus(permissionId, table, newStatus, permissionName) 
     const row = button.closest('tr');
     const statusCell = row.querySelector('td:nth-child(4)'); // Status column
     const actionsCell = row.querySelector('td:nth-child(5)'); // Actions column
-    
+
     // Disable button during request
     button.disabled = true;
-    
+
     fetch('/auth/permissions/toggle-status', {
         method: 'POST',
         headers: {
@@ -99,7 +98,7 @@ function togglePermissionStatus(permissionId, table, newStatus, permissionName) 
             } else {
                 statusCell.innerHTML = '<span class="badge bg-secondary">Inactive</span>';
             }
-            
+
             // Update button
             if (newStatus) {
                 actionsCell.innerHTML = `
