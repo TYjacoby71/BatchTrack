@@ -89,6 +89,8 @@ def create_organization():
         # Organization details
         name = request.form.get('name')
         subscription_tier = request.form.get('subscription_tier', 'free')
+        creation_reason = request.form.get('creation_reason')
+        notes = request.form.get('notes', '')
 
         # User details
         username = request.form.get('username')
@@ -131,13 +133,26 @@ def create_organization():
             db.session.add(org)
             db.session.flush()  # Get the ID
 
-            # Create subscription record
+            # Create subscription record with proper billing setup
             from app.models.subscription import Subscription
+            from datetime import datetime, timedelta
+            
             subscription = Subscription(
                 organization_id=org.id,
                 tier=subscription_tier,
-                status='active'
+                notes=f"Developer created: {creation_reason}. {notes}".strip()
             )
+            
+            # Set up billing based on tier
+            if subscription_tier == 'exempt':
+                subscription.status = 'active'  # No billing required
+            else:
+                # Set up as trial that requires billing setup
+                subscription.status = 'trialing'
+                subscription.trial_start = datetime.utcnow()
+                subscription.trial_end = datetime.utcnow() + timedelta(days=14)
+                subscription.notes += f" Trial expires {subscription.trial_end.strftime('%Y-%m-%d')}."
+            
             db.session.add(subscription)
 
             # Create organization owner user

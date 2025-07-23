@@ -25,13 +25,34 @@
                             <div class="col-md-4">
                                 <div class="mb-3">
                                     <label for="subscription_tier" class="form-label">Subscription Tier</label>
-                                    <select class="form-select" id="subscription_tier" name="subscription_tier">
-                                        <option value="free">Free</option>
-                                        <option value="solo">Solo</option>
-                                        <option value="team">Team</option>
-                                        <option value="enterprise">Enterprise</option>
-                                        <option value="exempt">Exempt (Gifted)</option>
+                                    <select class="form-select" id="subscription_tier" name="subscription_tier" required>
+                                        <option value="free">Free (Trial)</option>
+                                        <option value="solo">Solo (Trial)</option>
+                                        <option value="team">Team (Trial)</option>
+                                        <option value="enterprise">Enterprise (Trial)</option>
+                                        <option value="exempt">Exempt (No Billing)</option>
                                     </select>
+                                    <div class="form-text">
+                                        Trial tiers will require the customer to set up billing within 14 days.
+                                        Exempt is for internal use, testing, or special arrangements.
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="creation_reason" class="form-label">Reason for Creation</label>
+                                    <select class="form-select" id="creation_reason" name="creation_reason" required>
+                                        <option value="">Select reason...</option>
+                                        <option value="customer_support">Customer Support - Signup Issues</option>
+                                        <option value="enterprise_onboarding">Enterprise Client Onboarding</option>
+                                        <option value="data_migration">Data Migration from Other System</option>
+                                        <option value="internal_testing">Internal Testing</option>
+                                        <option value="special_arrangement">Special Business Arrangement</option>
+                                    </select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="notes" class="form-label">Notes</label>
+                                    <textarea class="form-control" id="notes" name="notes" rows="3" placeholder="Optional notes about this organization creation..."></textarea>
                                 </div>
                             </div>
                         </div>
