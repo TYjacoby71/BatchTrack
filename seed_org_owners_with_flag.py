@@ -22,7 +22,7 @@ def seed_org_owners_with_flag():
         
         print(f"✅ Found organization owner role with {len(org_owner_role.permissions)} permissions")
         
-        # Users who should be organization owners
+        # Users who should be organization owners (one per organization)
         owner_usernames = ['admin', 'test1', 'test2', 'test3']
         
         print(f"\nSetting organization owner flag for: {owner_usernames}")
@@ -34,7 +34,10 @@ def seed_org_owners_with_flag():
         
         print(f"✅ Cleared organization owner flags for all {len(all_users)} customer users")
         
-        # Set flags for specified users and assign roles
+        # Get all organizations to track which ones get owners
+        organizations = {}
+        
+        # Set flags for specified users (one owner per organization)
         updated_count = 0
         assigned_count = 0
         
@@ -42,11 +45,18 @@ def seed_org_owners_with_flag():
             user = User.query.filter_by(username=username).first()
             
             if user:
-                if user.user_type == 'customer':
+                if user.user_type == 'customer' and user.organization_id:
+                    # Check if this organization already has an owner
+                    if user.organization_id in organizations:
+                        print(f"  ⚠️  Organization {user.organization_id} already has owner: {organizations[user.organization_id]}")
+                        print(f"      Skipping user: {username}")
+                        continue
+                    
                     # Set the organization owner flag
                     user.is_organization_owner = True
+                    organizations[user.organization_id] = username
                     updated_count += 1
-                    print(f"  ✅ Set organization owner flag for: {username}")
+                    print(f"  ✅ Set organization owner flag for: {username} (org_id: {user.organization_id})")
                     
                     # Check if user already has organization owner role
                     has_org_owner_role = any(
@@ -64,6 +74,8 @@ def seed_org_owners_with_flag():
                         
                 elif user.user_type == 'developer':
                     print(f"  ⚠️  Skipping developer user: {username}")
+                elif not user.organization_id:
+                    print(f"  ⚠️  User {username} has no organization - skipping")
                     
             else:
                 print(f"  ❌ User not found: {username}")
@@ -72,6 +84,7 @@ def seed_org_owners_with_flag():
         
         print(f"\n✅ Updated organization owner flags for {updated_count} users")
         print(f"✅ Assigned organization owner roles to {assigned_count} users")
+        print(f"✅ Organizations with owners: {len(organizations)}")
         
         # Verify the results
         print("\n=== Verification ===")
