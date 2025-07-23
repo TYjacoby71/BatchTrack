@@ -1,455 +1,441 @@
 // Organization Dashboard JavaScript
 function organizationDashboard() {
-    // Get organization data from the page data
-    const orgData = window.organizationData || {};
-    const userData = window.currentUserData || {};
-    
     return {
-        orgSettings: {
-            name: orgData.name || (userData.first_name && userData.last_name ? `${userData.first_name} ${userData.last_name}` : userData.username || ''),
-            contact_email: orgData.contact_email || userData.email || ''
+        organizationData: window.organizationData || {},
+        currentUserData: window.currentUserData || {},
+
+        init() {
+            console.log('Organization dashboard initialized');
         },
 
-        async updateOrgSettings() {
-            try {
-                const response = await fetch('/organization/update-settings', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCSRFToken()
-                    },
-                    body: JSON.stringify(this.orgSettings)
-                });
+        updateOrganizationSettings() {
+            const formData = new FormData(document.getElementById('organizationSettingsForm'));
+            const data = Object.fromEntries(formData.entries());
 
-                const result = await response.json();
+            fetch('/organization/update-settings', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrf_token]').value
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
                 if (result.success) {
-                    this.showToast('Organization settings updated successfully', 'success');
+                    showAlert('Organization settings updated successfully', 'success');
                 } else {
-                    this.showToast(result.error || 'Failed to update settings', 'error');
+                    showAlert(result.error || 'Failed to update settings', 'error');
                 }
-            } catch (error) {
-                this.showToast('Error updating settings', 'error');
+            })
+            .catch(error => {
                 console.error('Error:', error);
-            }
-        },
-
-        showToast(message, type = 'info') {
-            const toast = document.createElement('div');
-            toast.className = `alert alert-${type === 'error' ? 'danger' : type === 'success' ? 'success' : 'info'} position-fixed`;
-            toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
-            toast.textContent = message;
-
-            document.body.appendChild(toast);
-            setTimeout(() => {
-                toast.remove();
-            }, 3000);
+                showAlert('Failed to update settings', 'error');
+            });
         }
     };
 }
 
-// Global utility functions
-function getCSRFToken() {
-    const tokenMeta = document.querySelector('meta[name=csrf-token]');
-    return tokenMeta ? tokenMeta.getAttribute('content') : '';
+// Role and Permission Management Functions
+function selectAllInCategory(category) {
+    const checkboxes = document.querySelectorAll(`input[data-category="${category}"]`);
+    const selectAllCheckbox = document.querySelector(`#selectAll${category}`);
+
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = selectAllCheckbox.checked;
+    });
 }
 
-function showMessage(message, type = 'success') {
+function createRole() {
+    const form = document.getElementById('createRoleForm');
+    const formData = new FormData(form);
+
+    // Get selected permissions
+    const selectedPermissions = [];
+    document.querySelectorAll('input[name="permission_ids"]:checked').forEach(checkbox => {
+        selectedPermissions.push(checkbox.value);
+    });
+
+    const data = {
+        name: formData.get('name'),
+        description: formData.get('description'),
+        permission_ids: selectedPermissions
+    };
+
+    fetch('/organization/create-role', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrf_token]').value
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            showAlert('Role created successfully', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('createRoleModal')).hide();
+            location.reload(); // Refresh to show new role
+        } else {
+            showAlert(result.error || 'Failed to create role', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showAlert('Failed to create role', 'error');
+    });
+}
+
+// User Management Functions
+function editUser(userId) {
+    fetch(`/organization/user/${userId}`)
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                populateEditUserModal(result.user);
+                const modal = new bootstrap.Modal(document.getElementById('editUserModal'));
+                modal.show();
+            } else {
+                showAlert(result.error || 'Failed to load user data', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showAlert('Failed to load user data', 'error');
+        });
+}
+
+function populateEditUserModal(user) {
+    document.getElementById('editUserId').value = user.id;
+    document.getElementById('editUserFirstName').value = user.first_name || '';
+    document.getElementById('editUserLastName').value = user.last_name || '';
+    document.getElementById('editUserEmail').value = user.email || '';
+    document.getElementById('editUserPhone').value = user.phone || '';
+    document.getElementById('editUserIsActive').checked = user.is_active;
+
+    // Populate role assignments
+    const roleContainer = document.getElementById('editUserRoles');
+    roleContainer.innerHTML = '';
+
+    if (user.role_assignments && user.role_assignments.length > 0) {
+        user.role_assignments.forEach(assignment => {
+            const roleDiv = document.createElement('div');
+            roleDiv.className = 'mb-2';
+            roleDiv.innerHTML = `
+                <span class="badge bg-primary">${assignment.role_name}</span>
+                <small class="text-muted ms-2">
+                    Assigned: ${assignment.assigned_at ? new Date(assignment.assigned_at).toLocaleDateString() : 'Unknown'}
+                </small>
+            `;
+            roleContainer.appendChild(roleDiv);
+        });
+    } else {
+        roleContainer.innerHTML = '<p class="text-muted">No roles assigned</p>';
+    }
+}
+
+function updateUser() {
+    const form = document.getElementById('editUserForm');
+    const formData = new FormData(form);
+    const userId = formData.get('user_id');
+
+    const data = {
+        first_name: formData.get('first_name'),
+        last_name: formData.get('last_name'),
+        email: formData.get('email'),
+        phone: formData.get('phone'),
+        is_active: formData.has('is_active')
+    };
+
+    fetch(`/organization/user/${userId}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrf_token]').value
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            showAlert('User updated successfully', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('editUserModal')).hide();
+            location.reload(); // Refresh to show changes
+        } else {
+            showAlert(result.error || 'Failed to update user', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showAlert('Failed to update user', 'error');
+    });
+}
+
+function toggleUserStatus(userId) {
+    if (confirm('Are you sure you want to change this user\'s status?')) {
+        fetch(`/organization/user/${userId}/toggle-status`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrf_token]').value
+            }
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                showAlert(result.message, 'success');
+                location.reload();
+            } else {
+                showAlert(result.error || 'Failed to update user status', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showAlert('Failed to update user status', 'error');
+        });
+    }
+}
+
+function deleteUser(userId) {
+    if (confirm('Are you sure you want to remove this user? This action can be undone later.')) {
+        fetch(`/organization/user/${userId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrf_token]').value
+            }
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                showAlert(result.message, 'success');
+                location.reload();
+            } else {
+                showAlert(result.error || 'Failed to remove user', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showAlert('Failed to remove user', 'error');
+        });
+    }
+}
+
+// Developer-specific functions (for system roles page)
+function deleteDeveloperUser(userId) {
+    if (confirm('Are you sure you want to delete this developer user? This action cannot be undone.')) {
+        fetch(`/developer/users/${userId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrf_token]').value
+            }
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                showAlert(result.message || 'User deleted successfully', 'success');
+                location.reload();
+            } else {
+                showAlert(result.error || 'Failed to delete user', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showAlert('Failed to delete user', 'error');
+        });
+    }
+}
+
+// Utility Functions
+function showAlert(message, type = 'info') {
     const alertDiv = document.createElement('div');
-    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+    alertDiv.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show`;
     alertDiv.innerHTML = `
         ${message}
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     `;
 
-    const container = document.querySelector('.container-fluid');
+    const container = document.querySelector('.container-fluid') || document.body;
     container.insertBefore(alertDiv, container.firstChild);
 
+    // Auto-dismiss after 5 seconds
     setTimeout(() => {
-        if (alertDiv && alertDiv.parentNode) {
+        if (alertDiv.parentNode) {
             alertDiv.remove();
         }
     }, 5000);
 }
 
-// User management functions
-function openInviteModal() {
-    // Check if organization can add more users
-    const currentUsers = parseInt(document.querySelector('[data-current-users]')?.dataset.currentUsers || '0');
-    const maxUsers = parseInt(document.querySelector('[data-max-users]')?.dataset.maxUsers || '1');
-    const subscriptionTier = document.querySelector('[data-subscription-tier]')?.dataset.subscriptionTier || 'solo';
-
-    if (currentUsers >= maxUsers && maxUsers !== Infinity) {
-        // Show warning modal about subscription limits
-        const warningHtml = `
-            <div class="modal fade" id="subscriptionLimitModal" tabindex="-1">
-                <div class="modal-dialog">
-                    <div class="modal-content">
-                        <div class="modal-header bg-warning text-dark">
-                            <h5 class="modal-title">
-                                <i class="fas fa-exclamation-triangle me-2"></i>Subscription Limit Reached
-                            </h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                        </div>
-                        <div class="modal-body">
-                            <p>Your organization has reached the user limit for the <strong>${subscriptionTier}</strong> subscription tier (${currentUsers}/${maxUsers} users).</p>
-                            <p>You can still invite new users, but they will be added as <strong>inactive</strong> until you:</p>
-                            <ul>
-                                <li>Deactivate another user to free up a seat, or</li>
-                                <li>Upgrade your subscription tier</li>
-                            </ul>
-                            <p><strong>Would you like to continue with adding an inactive user?</strong></p>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                            <button type="button" class="btn btn-warning" onclick="proceedWithInactiveUser()">
-                                Add Inactive User
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        // Remove existing modal if present
-        const existingModal = document.getElementById('subscriptionLimitModal');
-        if (existingModal) {
-            existingModal.remove();
-        }
-
-        // Add new modal to body
-        document.body.insertAdjacentHTML('beforeend', warningHtml);
-        const warningModal = new bootstrap.Modal(document.getElementById('subscriptionLimitModal'));
-        warningModal.show();
-    } else {
-        const modal = new bootstrap.Modal(document.getElementById('inviteUserModal'));
-        modal.show();
-    }
+function exportReport(reportType) {
+    window.location.href = `/organization/export/${reportType}`;
 }
 
-function proceedWithInactiveUser() {
-    // Close warning modal and open invite modal
-    const warningModal = bootstrap.Modal.getInstance(document.getElementById('subscriptionLimitModal'));
-    warningModal.hide();
+function viewAuditLog() {
+    showAlert('Audit log functionality coming soon', 'info');
+}
 
-    // Set flag to indicate this will be an inactive user
-    document.getElementById('inviteUserModal').dataset.addAsInactive = 'true';
-
-    // Show notice in invite modal
-    const noticeHtml = `
-        <div class="alert alert-warning border-0 mb-3" id="inactiveUserNotice">
-            <i class="fas fa-exclamation-triangle me-2"></i>
-            <strong>Note:</strong> This user will be added as <strong>inactive</strong> due to subscription limits.
-        </div>
-    `;
-
-    const modalBody = document.querySelector('#inviteUserModal .modal-body');
-    const existingNotice = document.getElementById('inactiveUserNotice');
-    if (existingNotice) {
-        existingNotice.remove();
-    }
-    modalBody.insertAdjacentHTML('afterbegin', noticeHtml);
-
+function openInviteModal() {
     const modal = new bootstrap.Modal(document.getElementById('inviteUserModal'));
     modal.show();
 }
 
-async function inviteUser() {
-    const form = document.getElementById('inviteUserForm');
-    const formData = new FormData(form);
-
-    const inviteData = {
-        email: document.getElementById('inviteEmail').value.trim(),
-        first_name: document.getElementById('inviteFirstName').value.trim(),
-        last_name: document.getElementById('inviteLastName').value.trim(),
-        role_id: document.getElementById('inviteRole').value,
-        phone: document.getElementById('invitePhone').value.trim(),
-        // Check if this should be added as inactive due to subscription limits
-        force_inactive: document.getElementById('inviteUserModal').dataset.addAsInactive === 'true'
-    };
-
-    if (!inviteData.email || !inviteData.first_name || !inviteData.last_name || !inviteData.role_id) {
-        showMessage('Please fill in all required fields', 'danger');
-        return;
-    }
-
-    try {
-        const response = await fetch('/organization/invite-user', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCSRFToken()
-            },
-            body: JSON.stringify(inviteData)
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-            let message = result.message || 'User invited successfully';
-            if (inviteData.force_inactive) {
-                message += ' (User added as inactive due to subscription limits)';
-            }
-            showMessage(message, 'success');
-
-            const modal = bootstrap.Modal.getInstance(document.getElementById('inviteUserModal'));
-            modal.hide();
-            document.getElementById('inviteUserForm').reset();
-
-            // Clean up the modal state
-            delete document.getElementById('inviteUserModal').dataset.addAsInactive;
-            const inactiveNotice = document.getElementById('inactiveUserNotice');
-            if (inactiveNotice) {
-                inactiveNotice.remove();
-            }
-
-            if (result.user_data && result.user_data.temp_password) {
-                const statusText = inviteData.force_inactive ? ' (Account is inactive - activate when a seat becomes available)' : '';
-                setTimeout(() => {
-                    alert(`Login Credentials:\nUsername: ${result.user_data.username}\nPassword: ${result.user_data.temp_password}${statusText}\n\nPlease share these securely with the new user.`);
-                }, 500);
-            }
-
-            setTimeout(() => window.location.reload(), 2000);
-        } else {
-            showMessage(result.error || 'Failed to send invite', 'danger');
-        }
-    } catch (error) {
-        console.error('Invite error:', error);
-        showMessage('Failed to send invite', 'danger');
-    }
-}
-
-async function toggleUserStatus(userId) {
-    if (!confirm('Are you sure you want to change this user\'s status?')) {
-        return;
-    }
-
-    try {
-        const response = await fetch(`/organization/user/${userId}/toggle-status`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCSRFToken()
-            }
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-            showMessage(result.message || 'User status updated', 'success');
-            setTimeout(() => window.location.reload(), 1000);
-        } else {
-            showMessage(result.error || 'Failed to update user status', 'danger');
-        }
-    } catch (error) {
-        console.error('Toggle status error:', error);
-        showMessage('Failed to update user status', 'danger');
-    }
-}
-
-async function editUser(userId) {
-    try {
-        const response = await fetch(`/organization/user/${userId}`, {
-            method: 'GET',
-            headers: {
-                'X-CSRFToken': getCSRFToken()
-            }
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-            const user = result.user;
-
-            document.getElementById('editUserId').value = user.id;
-            document.getElementById('editFirstName').value = user.first_name || '';
-            document.getElementById('editLastName').value = user.last_name || '';
-            document.getElementById('editEmail').value = user.email || '';
-            document.getElementById('editPhone').value = user.phone || '';
-
-            const userRoles = user.role_assignments || [];
-            const activeRole = userRoles.find(assignment => assignment.is_active);
-            document.getElementById('editRole').value = activeRole ? activeRole.role_id : '';
-            document.getElementById('editStatus').value = user.is_active.toString();
-
-            document.getElementById('editUsername').textContent = user.username;
-            document.getElementById('editLastLogin').textContent = user.last_login || 'Never';
-            document.getElementById('editCreatedAt').textContent = user.created_at || 'Unknown';
-
-            const modal = new bootstrap.Modal(document.getElementById('editUserModal'));
-            modal.show();
-        } else {
-            showMessage(result.error || 'Failed to load user data', 'danger');
-        }
-    } catch (error) {
-        console.error('Edit user error:', error);
-        showMessage('Failed to load user data', 'danger');
-    }
-}
-
-async function updateUser() {
-    const userId = document.getElementById('editUserId').value;
-    const userData = {
-        first_name: document.getElementById('editFirstName').value,
-        last_name: document.getElementById('editLastName').value,
-        email: document.getElementById('editEmail').value,
-        phone: document.getElementById('editPhone').value,
-        role_id: document.getElementById('editRole').value,
-        is_active: document.getElementById('editStatus').value === 'true'
-    };
-
-    try {
-        const response = await fetch(`/organization/user/${userId}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCSRFToken()
-            },
-            body: JSON.stringify(userData)
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-            showMessage(result.message || 'User updated successfully', 'success');
-            const modal = bootstrap.Modal.getInstance(document.getElementById('editUserModal'));
-            modal.hide();
-            setTimeout(() => window.location.reload(), 1000);
-        } else {
-            showMessage(result.error || 'Failed to update user', 'danger');
-        }
-    } catch (error) {
-        console.error('Update error:', error);
-        showMessage('Failed to update user', 'danger');
-    }
-}
-
-async function confirmDeleteUser() {
-    const userId = document.getElementById('editUserId').value;
-    const username = document.getElementById('editUsername').textContent;
-
-    if (!confirm(`Are you sure you want to remove user "${username}"? This will deactivate their account but preserve all historical data.`)) {
-        return;
-    }
-
-    if (!confirm('This will remove the user\'s access to the system. They can be restored later if needed. Continue?')) {
-        return;
-    }
-
-    try {
-        const response = await fetch(`/organization/user/${userId}`, {
-            method: 'DELETE',
-            headers: {
-                'X-CSRFToken': getCSRFToken()
-            }
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-            showMessage(result.message || 'User deleted successfully', 'success');
-            const modal = bootstrap.Modal.getInstance(document.getElementById('editUserModal'));
-            modal.hide();
-            setTimeout(() => window.location.reload(), 1000);
-        } else {
-            showMessage(result.error || 'Failed to delete user', 'danger');
-        }
-    } catch (error) {
-        console.error('Delete user error:', error);
-        showMessage('Failed to delete user', 'danger');
-    }
-}
-
-// Role management functions
-function openCreateRoleModal() {
+function showCreateRoleModal() {
     const modal = new bootstrap.Modal(document.getElementById('createRoleModal'));
     modal.show();
 }
 
-async function createRole() {
-    const roleName = document.getElementById('roleName').value;
-    const roleDescription = document.getElementById('roleDescription').value;
-    const permissionCheckboxes = document.querySelectorAll('.permission-checkbox:checked');
-    const permissionIds = Array.from(permissionCheckboxes).map(cb => cb.value);
-
-    const roleData = {
-        name: roleName,
-        description: roleDescription,
-        permissions: permissionIds
-    };
-
-    try {
-        const response = await fetch('/organization/create-role', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCSRFToken()
-            },
-            body: JSON.stringify(roleData)
+function manageUserRoles(userId) {
+    fetch(`/organization/user/${userId}`)
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                populateRoleManagementModal(result.user);
+                const modal = new bootstrap.Modal(document.getElementById('manageUserRolesModal'));
+                modal.show();
+            } else {
+                showAlert(result.error || 'Failed to load user data', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showAlert('Failed to load user data', 'error');
         });
-
-        const result = await response.json();
-
-        if (result.success) {
-            showMessage(result.message || 'Role created successfully', 'success');
-            const modal = bootstrap.Modal.getInstance(document.getElementById('createRoleModal'));
-            modal.hide();
-            document.getElementById('createRoleForm').reset();
-            setTimeout(() => window.location.reload(), 1000);
-        } else {
-            showMessage(result.error || 'Failed to create role', 'danger');
-        }
-    } catch (error) {
-        console.error('Create role error:', error);
-        showMessage('Failed to create role', 'danger');
-    }
 }
 
-function toggleCategoryPermissions(category) {
-    const categoryCheckbox = document.getElementById(`category_${category}`);
-    const permissionCheckboxes = document.querySelectorAll(`.category-${category}`);
-
-    permissionCheckboxes.forEach(cb => {
-        cb.checked = categoryCheckbox.checked;
-    });
-}
-
-function updateCategoryCheckbox(category) {
-    const categoryCheckbox = document.getElementById(`category_${category}`);
-    const permissionCheckboxes = document.querySelectorAll(`.category-${category}`);
-    const checkedPermissions = Array.from(permissionCheckboxes).filter(cb => cb.checked);
-
-    categoryCheckbox.checked = checkedPermissions.length === permissionCheckboxes.length;
-}
-
-// Utility functions
-function exportReport(type) {
-    window.open(`/organization/export/${type}`, '_blank');
-}
-
-function editRole(roleId) {
-    showMessage('Role editing functionality coming soon', 'info');
-}
-
-function deleteRole(roleId) {
-    if (!confirm('Are you sure you want to delete this role?')) {
+function populateRoleManagementModal(user) {
+    document.getElementById('roleManageUserId').value = user.id;
+    document.getElementById('roleManageUserName').textContent = user.first_name && user.last_name 
+        ? `${user.first_name} ${user.last_name}` 
+        : user.username;
+    document.getElementById('roleManageUserEmail').textContent = user.email || 'No email';
+    
+    // Show warning if user is organization owner
+    const orgOwnerWarning = document.getElementById('orgOwnerWarning');
+    if (user.user_type === 'organization_owner') {
+        orgOwnerWarning.classList.remove('d-none');
+        // Disable all role checkboxes
+        document.querySelectorAll('input[name="role_ids"]').forEach(checkbox => {
+            checkbox.disabled = true;
+        });
         return;
+    } else {
+        orgOwnerWarning.classList.add('d-none');
+        // Enable all role checkboxes
+        document.querySelectorAll('input[name="role_ids"]').forEach(checkbox => {
+            checkbox.disabled = false;
+        });
     }
-    showMessage('Role deletion functionality coming soon', 'info');
-}
-
-function viewAuditLog() {
-    showMessage('Audit log functionality coming soon', 'info');
-}
-
-function viewUserActivity(userId) {
-    showMessage('User activity view functionality coming soon', 'info');
-}
-
-// Initialize Bootstrap tooltips
-document.addEventListener('DOMContentLoaded', function() {
-    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
-    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
+    
+    // Clear all role checkboxes first
+    document.querySelectorAll('input[name="role_ids"]').forEach(checkbox => {
+        checkbox.checked = false;
     });
+    
+    // Populate current roles
+    const currentRolesContainer = document.getElementById('currentUserRoles');
+    currentRolesContainer.innerHTML = '';
+    
+    if (user.role_assignments && user.role_assignments.length > 0) {
+        user.role_assignments.forEach(assignment => {
+            const roleDiv = document.createElement('div');
+            roleDiv.className = 'mb-2';
+            roleDiv.innerHTML = `
+                <span class="badge bg-primary me-2">${assignment.role_name}</span>
+                <small class="text-muted">
+                    Assigned: ${assignment.assigned_at ? new Date(assignment.assigned_at).toLocaleDateString() : 'Unknown'}
+                </small>
+            `;
+            currentRolesContainer.appendChild(roleDiv);
+            
+            // Check the corresponding checkbox
+            const checkbox = document.querySelector(`input[name="role_ids"][value="${assignment.role_id}"]`);
+            if (checkbox) {
+                checkbox.checked = true;
+            }
+        });
+    } else {
+        currentRolesContainer.innerHTML = '<p class="text-muted">No roles assigned</p>';
+    }
+}
+
+function saveUserRoles() {
+    const form = document.getElementById('manageUserRolesForm');
+    const formData = new FormData(form);
+    const userId = formData.get('user_id');
+    
+    // Get selected role IDs
+    const selectedRoles = [];
+    document.querySelectorAll('input[name="role_ids"]:checked').forEach(checkbox => {
+        selectedRoles.push(parseInt(checkbox.value));
+    });
+    
+    const data = {
+        role_ids: selectedRoles
+    };
+    
+    fetch(`/organization/user/${userId}/roles`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrf_token]').value
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            showAlert('User roles updated successfully', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('manageUserRolesModal')).hide();
+            location.reload();
+        } else {
+            showAlert(result.error || 'Failed to update user roles', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showAlert('Failed to update user roles', 'error');
+    });
+}
+
+function showOwnershipTransferInfo() {
+    showAlert('Organization ownership transfer requires contacting support for security verification. This ensures billing continuity and account security.', 'info');
+}
+
+// Form submission handlers
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle invite user form
+    const inviteForm = document.getElementById('inviteUserForm');
+    if (inviteForm) {
+        inviteForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const formData = new FormData(this);
+            const data = Object.fromEntries(formData.entries());
+
+            fetch('/organization/invite-user', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrf_token]').value
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    showAlert(result.message, 'success');
+                    bootstrap.Modal.getInstance(document.getElementById('inviteUserModal')).hide();
+                    this.reset();
+                    location.reload();
+                } else {
+                    showAlert(result.error || 'Failed to invite user', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showAlert('Failed to invite user', 'error');
+            });
+        });
+    }
 });

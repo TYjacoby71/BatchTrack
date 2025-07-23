@@ -55,10 +55,13 @@
                         {% endif %}
                     </td>
                     <td>
-                        {% if user.id != current_user.id %}
                         <div class="btn-group btn-group-sm">
                             <button class="btn btn-outline-primary" onclick="editUser({{ user.id }})" title="Edit user details and permissions">
                                 <i class="fas fa-edit"></i>
+                            </button>
+                            {% if user.id != current_user.id and user.user_type != 'organization_owner' %}
+                            <button class="btn btn-outline-info" onclick="manageUserRoles({{ user.id }})" title="Manage user roles">
+                                <i class="fas fa-user-cog"></i>
                             </button>
                             <button class="btn btn-outline-warning" onclick="toggleUserStatus({{ user.id }})" title="{% if user.is_active %}Disable user account{% else %}Enable user account{% endif %}">
                                 {% if user.is_active %}
@@ -67,10 +70,11 @@
                                 <i class="fas fa-user-check"></i>
                                 {% endif %}
                             </button>
+                            <button class="btn btn-outline-danger" onclick="deleteUser({{ user.id }})" title="Delete user">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                            {% endif %}
                         </div>
-                        {% else %}
-                        <span class="badge bg-info">Owner</span>
-                        {% endif %}
                     </td>
                 </tr>
             {% endfor %}
