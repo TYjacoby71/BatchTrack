@@ -2,20 +2,75 @@ from flask_login import current_user
 from functools import wraps
 from flask import abort
 
-def require_permission(permission_name):
-    """Decorator to require a specific permission for a route"""
+def require_permission(permission_name, require_org_scoping=True):
+    """
+    Decorator to require a specific permission for a route
+    Also enforces organization scoping by default
+    """
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
             if not current_user.is_authenticated:
                 abort(401)
 
+            # Check permission
             if not has_permission(current_user, permission_name):
                 abort(403)
+            
+            # Enforce organization scoping for non-developer users
+            if require_org_scoping and current_user.user_type != 'developer':
+                effective_org_id = get_effective_organization_id()
+                if not effective_org_id:
+                    abort(403, description="No organization context")
+                    
+                # Add organization context to kwargs for easy access
+                kwargs['organization_id'] = effective_org_id
 
             return f(*args, **kwargs)
         return decorated_function
     return decorator
+
+def require_organization_scoping(f):
+    """Decorator to enforce organization scoping on data access"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated:
+            abort(401)
+            
+        effective_org_id = get_effective_organization_id()
+        if not effective_org_id and current_user.user_type != 'developer':
+            abort(403, description="No organization context")
+            
+        # Add organization context to kwargs
+        kwargs['organization_id'] = effective_org_id
+        return f(*args, **kwargs)
+    return decorated_function
+
+def require_system_admin(f):
+    """Decorator for system admin only routes"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated:
+            abort(401)
+            
+        if not has_permission('dev.system_admin'):
+            abort(403)
+            
+        return f(*args, **kwargs)
+    return decorated_function
+
+def require_organization_owner(f):
+    """Decorator for organization owner only routes"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated:
+            abort(401)
+            
+        if not is_organization_owner():
+            abort(403)
+            
+        return f(*args, **kwargs)
+    return decorated_function
 
 def has_permission(user_or_permission_name, permission_name=None):
     """
