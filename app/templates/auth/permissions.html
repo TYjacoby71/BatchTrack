@@ -94,15 +94,17 @@ function togglePermissionStatus(permissionId, table, newStatus, permissionName) 
                 '<span class="badge bg-success">Active</span>' : 
                 '<span class="badge bg-secondary">Inactive</span>';
 
-            const buttonHtml = newStatus ? 
-                `<button class="btn btn-outline-secondary btn-sm" onclick="togglePermissionStatus(${permissionId}, '${table}', false, '${permissionName}')">
-                    <i class="fas fa-toggle-off"></i> Deactivate
-                </button>` :
-                `<button class="btn btn-outline-success btn-sm" onclick="togglePermissionStatus(${permissionId}, '${table}', true, '${permissionName}')">
-                    <i class="fas fa-toggle-on"></i> Activate
-                </button>`;
+            // Update button by replacing the entire button element
+            const newButton = document.createElement('button');
+            newButton.className = newStatus ? 'btn btn-warning btn-sm' : 'btn btn-success btn-sm';
+            newButton.onclick = () => togglePermissionStatus(permissionId, table, !newStatus, permissionName);
+            newButton.innerHTML = newStatus ? 
+                '<i class="fas fa-pause"></i> Deactivate' : 
+                '<i class="fas fa-play"></i> Activate';
 
-            actionsCell.innerHTML = `<div class="btn-group btn-group-sm">${buttonHtml}</div>`;
+            // Clear and append new button
+            actionsCell.innerHTML = '';
+            actionsCell.appendChild(newButton);
         } else {
             button.disabled = false;
             alert('Error: ' + data.message);

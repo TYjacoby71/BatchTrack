@@ -355,6 +355,9 @@ def dev_activate_subscription(tier):
 def debug_billing():
     """Debug endpoint for billing information"""
     try:
+        if not current_user.organization:
+            return jsonify({'error': 'No organization found for user'}), 400
+            
         max_users = current_user.organization.get_max_users()
         # Handle Infinity values for JSON serialization
         if max_users == float('inf'):
@@ -362,6 +365,7 @@ def debug_billing():
 
         debug_data = {
             'user_id': current_user.id,
+            'user_type': current_user.user_type,
             'organization_id': current_user.organization_id,
             'subscription_tier': current_user.organization.effective_subscription_tier,
             'stripe_configured': bool(current_app.config.get('STRIPE_SECRET_KEY')),
@@ -372,12 +376,19 @@ def debug_billing():
                 'max_users': max_users,
                 'active_users': current_user.organization.active_users_count,
                 'features': current_user.organization.get_subscription_features()
+            },
+            'subscription_info': {
+                'has_subscription': bool(current_user.organization.subscription),
+                'subscription_status': current_user.organization.subscription.status if current_user.organization.subscription else None,
+                'subscription_tier': current_user.organization.subscription.tier if current_user.organization.subscription else None
             }
         }
+        logger.info(f"Debug data generated successfully for user {current_user.id}")
         return jsonify(debug_data)
     except Exception as e:
+        logger.error(f"Debug billing error for user {current_user.id if current_user else 'Unknown'}: {e}")
         current_app.logger.error(f"Debug billing error: {e}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': str(e), 'details': 'Check server logs for more information'}), 500
 
 
     try:
