@@ -1,3 +1,4 @@
+# Fixed signup route to handle pricing data
 from flask import render_template, request, redirect, url_for, flash
 from flask_login import login_user, logout_user, current_user
 from flask_wtf import FlaskForm
@@ -6,9 +7,9 @@ from wtforms.validators import DataRequired
 from werkzeug.security import generate_password_hash
 from . import auth_bp
 from ...extensions import db
-from ...models import User, Organization, Role
+from ...models import User, Organization, Role, Permission
 from ...utils.timezone_utils import TimezoneUtils
-from flask_login import login_required
+from flask_login import login_required, abort, jsonify
 
 class LoginForm(FlaskForm):
     username = StringField('Username', validators=[DataRequired()])
@@ -243,11 +244,16 @@ def signup():
                          current_offer=current_offer,
                          form_data=request.form)
 
-    return render_template('auth/signup.html', 
+    # Get pricing data for tier display
+    from ..services.pricing_service import PricingService
+    pricing_data = PricingService.get_pricing_data()
+
+    return render_template('auth/signup.html',
                          signup_source=signup_source,
                          referral_code=referral_code,
                          promo_code=promo_code,
-                         current_offer=current_offer)
+                         current_offer=current_offer,
+                         pricing_data=pricing_data)
 
 def _validate_credit_card(card_number, exp_month, exp_year, cvc):
     """Basic credit card validation"""

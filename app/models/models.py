@@ -679,4 +679,4 @@ class Tag(ScopedModelMixin, db.Model):
 
     # Relationships
     users = db.relationship('User', backref='organization')
-    subscription = db.relationship('Subscription', backref='organization', uselist=False)
+    subscription = db.relationship('Subscription', uselist=False, back_populates='organization')
