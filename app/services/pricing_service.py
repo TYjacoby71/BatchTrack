@@ -23,19 +23,49 @@ class PricingService:
         return {
             'solo': {
                 'name': 'Solo Plan',
-                'price_display': '$29',
-                'price_yearly_display': '$290',
-                'features': ['Up to 5 users', 'Full batch tracking', 'Email support'],
+                'price_display': '$19',
+                'price_yearly_display': '$190',
+                'features': [
+                    '1 user account',
+                    'Complete batch tracking with FIFO',
+                    'Recipe management and scaling',
+                    'Expiration alerts and freshness tracking',
+                    'Email support'
+                ],
+                'fallback_features': [
+                    '1 user account',
+                    'Complete batch tracking with FIFO',
+                    'Recipe management and scaling',
+                    'Expiration alerts and freshness tracking',
+                    'Email support'
+                ],
                 'stripe_price_id': '',
-                'user_limit': 5,
+                'user_limit': 1,
                 'is_customer_facing': True,
                 'is_available': True
             },
             'team': {
                 'name': 'Team Plan',
-                'price_display': '$79',
-                'price_yearly_display': '$790',
-                'features': ['Up to 10 users', 'Advanced features', 'Custom roles'],
+                'price_display': '$29',
+                'price_yearly_display': '$290',
+                'features': [
+                    'Up to 10 users',
+                    'Everything in Solo Plan',
+                    'Product catalog with variants',
+                    'Team collaboration tools',
+                    'Custom role management',
+                    'Basic reporting and analytics',
+                    'Priority email support'
+                ],
+                'fallback_features': [
+                    'Up to 10 users',
+                    'Everything in Solo Plan', 
+                    'Product catalog with variants',
+                    'Team collaboration tools',
+                    'Custom role management',
+                    'Basic reporting and analytics',
+                    'Priority email support'
+                ],
                 'stripe_price_id': '',
                 'user_limit': 10,
                 'is_customer_facing': True,
@@ -43,9 +73,26 @@ class PricingService:
             },
             'enterprise': {
                 'name': 'Enterprise Plan',
-                'price_display': '$199',
-                'price_yearly_display': '$1990',
-                'features': ['Unlimited users', 'All features', 'API access'],
+                'price_display': '$99',
+                'price_yearly_display': '$990',
+                'features': [
+                    'Unlimited users',
+                    'Everything in Team Plan',
+                    'Advanced reporting and analytics',
+                    'API access for integrations',
+                    'POS system integration',
+                    'Dedicated account manager',
+                    'Priority phone support'
+                ],
+                'fallback_features': [
+                    'Unlimited users',
+                    'Everything in Team Plan',
+                    'Advanced reporting and analytics', 
+                    'API access for integrations',
+                    'POS system integration',
+                    'Dedicated account manager',
+                    'Priority phone support'
+                ],
                 'stripe_price_id': '',
                 'user_limit': -1,
                 'is_customer_facing': True,

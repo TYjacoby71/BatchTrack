@@ -115,6 +115,7 @@ def signup():
                 'price_display': tier_data.get('price', '$0'),  # Keep original for display
                 'price_yearly': tier_data.get('price_yearly', '$0'),
                 'features': tier_data.get('features', []),
+                'fallback_features': tier_data.get('features', []),  # Add fallback_features for template compatibility
                 'user_limit': tier_data.get('user_limit', 1),
                 'stripe_lookup_key': tier_config.get('stripe_lookup_key', '')
             }
