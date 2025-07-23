@@ -236,6 +236,88 @@ def stripe_webhook():
     return jsonify({'status': 'success'})
 
 
+@billing_bp.route('/complete-signup-from-stripe')
+def complete_signup_from_stripe():
+    """Complete organization creation after successful Stripe payment"""
+    from flask import session
+    from ...models import User, Organization, Role, Subscription
+    from ...services.stripe_service import StripeService
+    
+    # Get pending signup data from session
+    pending_signup = session.get('pending_signup')
+    if not pending_signup:
+        flash('No pending signup found. Please start the signup process again.', 'error')
+        return redirect(url_for('auth.signup'))
+    
+    # Verify Stripe payment was successful (this would typically be called from a success URL)
+    # In production, you'd verify the session ID or subscription ID from Stripe
+    
+    try:
+        # Create organization with no tier initially (will be set by Stripe webhook)
+        org = Organization(
+            name=pending_signup['org_name'],
+            subscription_tier='pending',  # Will be updated by Stripe webhook
+            contact_email=pending_signup['email'],
+            is_active=True,
+            signup_source=pending_signup['signup_source'],
+            promo_code=pending_signup.get('promo_code'),
+            referral_code=pending_signup.get('referral_code')
+        )
+        db.session.add(org)
+        db.session.flush()  # Get the ID
+
+        # Create subscription record for Stripe integration
+        subscription = Subscription(
+            organization_id=org.id,
+            tier=pending_signup['selected_tier'],
+            status='pending',  # Will be updated by Stripe webhook
+            notes=f"Created from signup for {pending_signup['selected_tier']} tier"
+        )
+        db.session.add(subscription)
+        db.session.flush()
+
+        # Create organization owner user
+        owner_user = User(
+            username=pending_signup['username'],
+            email=pending_signup['email'],
+            first_name=pending_signup['first_name'],
+            last_name=pending_signup['last_name'],
+            phone=pending_signup.get('phone'),
+            organization_id=org.id,
+            user_type='customer',
+            is_organization_owner=True,
+            is_active=True
+        )
+        owner_user.set_password(pending_signup['password'])
+        db.session.add(owner_user)
+        db.session.flush()
+
+        # Assign organization owner role
+        org_owner_role = Role.query.filter_by(name='organization_owner', is_system_role=True).first()
+        if org_owner_role:
+            owner_user.assign_role(org_owner_role)
+
+        # Create Stripe customer
+        stripe_customer = StripeService.create_customer(org)
+        if stripe_customer:
+            subscription.stripe_customer_id = stripe_customer.id
+
+        db.session.commit()
+
+        # Log in the user
+        login_user(owner_user)
+        
+        # Clear pending signup data
+        session.pop('pending_signup', None)
+
+        flash('Account created successfully! Your subscription will be activated once payment is processed.', 'success')
+        return redirect(url_for('auth.complete_signup'))
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error creating account: {str(e)}', 'error')
+        return redirect(url_for('auth.signup'))
+
 @billing_bp.route('/dev/activate/<tier>')
 @login_required
 def dev_activate_subscription(tier):

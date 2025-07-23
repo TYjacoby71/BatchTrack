@@ -1,4 +1,5 @@
-from flask import render_template, request, redirect, url_for, flash
+
+from flask import render_template, request, redirect, url_for, flash, session
 from flask_login import login_user, logout_user, current_user
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField
@@ -81,9 +82,22 @@ def dev_login():
 
 @auth_bp.route('/signup', methods=['GET', 'POST'])
 def signup():
-    """Public signup route - auth only, billing handled by subscription service"""
+    """Stripe-first signup flow - collect user info then redirect to Stripe"""
     if current_user.is_authenticated:
         return redirect(url_for('app_routes.dashboard'))
+
+    # Get available subscription tiers for customer selection
+    from ...blueprints.developer.subscription_tiers import load_tiers_config
+    tiers_config = load_tiers_config()
+    
+    # Filter to customer-facing, available, and Stripe-ready tiers only
+    available_tiers = {
+        key: tier for key, tier in tiers_config.items() 
+        if (tier.get('is_customer_facing', False) and 
+            tier.get('is_available', True) and 
+            tier.get('is_stripe_ready', False) and  # When True, requires real Stripe
+            tier.get('stripe_lookup_key'))  # Must have lookup key configured
+    }
 
     # Get signup tracking parameters
     signup_source = request.args.get('source', 'direct')
@@ -102,15 +116,19 @@ def signup():
         password = request.form.get('password')
         confirm_password = request.form.get('confirm_password')
         phone = request.form.get('phone')
+        
+        # Selected subscription tier
+        selected_tier = request.form.get('subscription_tier')
 
-        # Basic validation only
-        required_fields = [org_name, username, email, password, confirm_password]
+        # Basic validation
+        required_fields = [org_name, username, email, password, confirm_password, selected_tier]
         if not all(required_fields):
-            flash('Please fill in all required fields', 'error')
+            flash('Please fill in all required fields and select a subscription plan', 'error')
             return render_template('auth/signup.html', 
                          signup_source=signup_source,
                          referral_code=referral_code,
                          promo_code=promo_code,
+                         available_tiers=available_tiers,
                          form_data=request.form)
 
         if password != confirm_password:
@@ -119,6 +137,17 @@ def signup():
                          signup_source=signup_source,
                          referral_code=referral_code,
                          promo_code=promo_code,
+                         available_tiers=available_tiers,
+                         form_data=request.form)
+
+        # Validate selected tier
+        if selected_tier not in available_tiers:
+            flash('Invalid subscription plan selected', 'error')
+            return render_template('auth/signup.html', 
+                         signup_source=signup_source,
+                         referral_code=referral_code,
+                         promo_code=promo_code,
+                         available_tiers=available_tiers,
                          form_data=request.form)
 
         # Check if username/email already exists
@@ -131,70 +160,53 @@ def signup():
                          signup_source=signup_source,
                          referral_code=referral_code,
                          promo_code=promo_code,
+                         available_tiers=available_tiers,
                          form_data=request.form)
 
-        try:
-            # Create organization (starts on free tier)
-            org = Organization(
-                name=org_name,
-                subscription_tier='free',  # Start on free tier
-                contact_email=email,
-                is_active=True,
-                signup_source=signup_source,
-                promo_code=promo_code if promo_code else None,
-                referral_code=referral_code
-            )
-            db.session.add(org)
-            db.session.flush()  # Get the ID
+        # Store signup data in session for post-Stripe completion
+        session['pending_signup'] = {
+            'org_name': org_name,
+            'username': username,
+            'email': email,
+            'first_name': first_name,
+            'last_name': last_name,
+            'password': password,  # Will be hashed when organization is created
+            'phone': phone,
+            'selected_tier': selected_tier,
+            'signup_source': signup_source,
+            'promo_code': promo_code,
+            'referral_code': referral_code
+        }
 
-            # Create organization owner user
-            owner_user = User(
-                username=username,
-                email=email,
-                first_name=first_name,
-                last_name=last_name,
-                phone=phone,
-                organization_id=org.id,
-                user_type='customer',
-                is_organization_owner=True,
-                is_active=True
-            )
-            owner_user.set_password(password)
-            db.session.add(owner_user)
-            db.session.flush()  # Get the ID
-
-            # Assign organization owner role
-            org_owner_role = Role.query.filter_by(name='organization_owner', is_system_role=True).first()
-            if org_owner_role:
-                owner_user.assign_role(org_owner_role)
-
-            db.session.commit()
-
-            flash('Account created successfully! You can upgrade to unlock more features.', 'success')
-            return redirect(url_for('auth.login'))
-
-        except Exception as e:
-            db.session.rollback()
-            flash(f'Error creating account: {str(e)}', 'error')
-            return render_template('auth/signup.html', 
-                         signup_source=signup_source,
-                         referral_code=referral_code,
-                         promo_code=promo_code,
-                         form_data=request.form)
+        # Redirect to billing checkout for the selected tier
+        flash('Redirecting to secure payment processing...', 'info')
+        return redirect(url_for('billing.checkout', tier=selected_tier))
 
     return render_template('auth/signup.html', 
                          signup_source=signup_source,
                          referral_code=referral_code,
-                         promo_code=promo_code)
+                         promo_code=promo_code,
+                         available_tiers=available_tiers)
 
-
-
-
+@auth_bp.route('/complete-signup')
+@login_required
+def complete_signup():
+    """Complete signup after successful Stripe payment"""
+    # This route will be called by the billing system after successful payment
+    # The user should already be logged in with a temporary account
+    # and the organization should be created with the proper tier
+    
+    # Clear any pending signup data
+    session.pop('pending_signup', None)
+    
+    flash('Welcome! Your account has been successfully created.', 'success')
+    return redirect(url_for('app_routes.dashboard'))
 
 # Multiple Signup Entry Points
 @auth_bp.route('/free-trial')
 def free_trial():
-    """Homepage free trial signup entry point"""
+    """Homepage free trial signup entry point - redirect to pricing page"""
+    # No more free trials - redirect to paid signup
     return redirect(url_for('auth.signup', source='homepage_trial'))
 
 @auth_bp.route('/webinar-signup')

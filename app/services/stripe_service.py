@@ -86,8 +86,8 @@ class StripeService:
                     'quantity': 1,
                 }],
                 mode='subscription',
-                success_url=url_for('organization.dashboard', _external=True) + '?payment=success',
-                cancel_url=url_for('organization.dashboard', _external=True) + '?payment=cancelled',
+                success_url=url_for('billing.complete_signup_from_stripe', _external=True),
+                cancel_url=url_for('auth.signup', _external=True) + '?payment=cancelled',
                 metadata={
                     'organization_id': organization.id,
                     'tier': tier
