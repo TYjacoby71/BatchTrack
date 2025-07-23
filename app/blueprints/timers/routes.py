@@ -28,8 +28,8 @@ def list_timers():
 @timers_bp.route('/api/create-timer', methods=['POST'])
 @timers_bp.route('/create', methods=['POST'])
 @login_required
-@require_permission('timers.create')
-def api_create_timer():
+@require_permission('timers.create', require_org_scoping=True)
+def api_create_timer(organization_id=None):
     """Create a new timer for a batch"""
     try:
         # Handle both JSON and form data

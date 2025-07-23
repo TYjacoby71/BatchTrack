@@ -64,18 +64,84 @@ def create_app():
         except (ValueError, TypeError):
             return None
 
-    # Developer isolation middleware
+    # Comprehensive permission and scoping middleware
     @app.before_request
-    def enforce_developer_isolation():
-        """Ensure developers can only access developer routes unless they have an org filter active"""
-        if current_user.is_authenticated and current_user.user_type == 'developer':
-            # Allow access to developer routes (including dashboard)
+    def enforce_permissions_and_scoping():
+        """Universal permission and organization scoping enforcement"""
+        from flask import request, abort, jsonify
+        from flask_login import current_user
+        from app.utils.permissions import has_permission, get_effective_organization_id
+        
+        # Skip for static files and auth routes
+        if (request.path.startswith('/static/') or 
+            request.path.startswith('/auth/login') or 
+            request.path.startswith('/auth/logout') or
+            request.path == '/' or 
+            request.path == '/homepage'):
+            return None
+            
+        # Require authentication for all other routes
+        if not current_user.is_authenticated:
+            if request.is_json:
+                return jsonify({'error': 'Authentication required'}), 401
+            return redirect(url_for('auth.login'))
+        
+        # Developer isolation - ensure developers access appropriate routes
+        if current_user.user_type == 'developer':
+            # Allow developer routes
             if request.path.startswith('/developer/'):
                 return None
-
-            # Allow access to auth routes (including logout)
+            # Allow auth routes
             if request.path.startswith('/auth/'):
                 return None
+            # Require organization filter for customer routes
+            if not session.get('dev_selected_org_id'):
+                if request.is_json:
+                    return jsonify({'error': 'Developer must select organization to access customer features'}), 403
+                flash('Please select an organization to access customer features', 'warning')
+                return redirect(url_for('developer.organizations'))
+        
+        # Organization scoping enforcement for all non-developer users
+        effective_org_id = get_effective_organization_id()
+        if not effective_org_id and current_user.user_type != 'developer':
+            if request.is_json:
+                return jsonify({'error': 'No organization context'}), 403
+            flash('No organization context available', 'error')
+            return redirect(url_for('auth.logout'))
+        
+        # Route-based permission checking
+        route_permissions = {
+            # Core features
+            '/inventory': 'inventory.view',
+            '/recipes': 'recipes.view', 
+            '/batches': 'batches.view',
+            '/products': 'products.view',
+            '/timers': 'timers.view',
+            
+            # Management features
+            '/organization': 'organization.view',
+            '/auth/permissions': 'dev.system_admin',
+            '/auth/roles': 'organization.manage_roles',
+            '/tag-manager': 'tags.manage',
+            
+            # API endpoints
+            '/api/batches': 'batches.view',
+            '/api/inventory': 'inventory.view',
+            '/api/products': 'products.view',
+            '/api/timers': 'timers.view',
+        }
+        
+        # Check route permissions
+        for route_prefix, required_permission in route_permissions.items():
+            if request.path.startswith(route_prefix):
+                if not has_permission(required_permission):
+                    if request.is_json:
+                        return jsonify({'error': f'Permission denied: {required_permission}'}), 403
+                    flash(f'Access denied: {required_permission}', 'error')
+                    return redirect(url_for('app_routes.dashboard'))
+                break
+        
+        return None
 
             # Allow access to static files and API routes
             if request.path.startswith('/api/') or request.path.startswith('/static/'):
@@ -305,7 +371,7 @@ def create_app():
     # No automatic seeding on startup to improve performance
 
     # Register template globals for permissions
-    from .utils.permissions import has_permission, has_role, has_subscription_feature, is_organization_owner, is_developer
+    from .utils.permissions import has_permission, has_role, has_subscription_feature, is_organization_owner, is_developer, get_effective_organization_id
 
     def template_has_permission(permission_name):
         """Template helper for permission checking"""
@@ -330,12 +396,43 @@ def create_app():
         except Exception as e:
             print(f"Org owner check error: {e}")
             return False
+    
+    def template_can_access_route(route_path):
+        """Template helper to check if user can access a route"""
+        try:
+            # This would check the route permissions mapping
+            route_permissions = {
+                '/inventory': 'inventory.view',
+                '/recipes': 'recipes.view', 
+                '/batches': 'batches.view',
+                '/products': 'products.view',
+                '/timers': 'timers.view',
+                '/organization': 'organization.view',
+            }
+            
+            for route_prefix, required_permission in route_permissions.items():
+                if route_path.startswith(route_prefix):
+                    return has_permission(required_permission)
+            return True  # No specific permission required
+        except Exception as e:
+            print(f"Route access check error for {route_path}: {e}")
+            return False
+
+    def template_get_org_id():
+        """Template helper to get effective organization ID"""
+        try:
+            return get_effective_organization_id()
+        except Exception as e:
+            print(f"Organization ID check error: {e}")
+            return None
 
     app.jinja_env.globals['has_permission'] = template_has_permission
     app.jinja_env.globals['has_role'] = template_has_role
     app.jinja_env.globals['has_subscription_feature'] = has_subscription_feature
     app.jinja_env.globals['is_organization_owner'] = template_is_org_owner
     app.jinja_env.globals['is_developer'] = is_developer
+    app.jinja_env.globals['can_access_route'] = template_can_access_route
+    app.jinja_env.globals['get_effective_org_id'] = template_get_org_id
 
     # Add units to global context for dropdowns
     @app.context_processor
