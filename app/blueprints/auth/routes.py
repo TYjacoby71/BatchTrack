@@ -81,25 +81,14 @@ def dev_login():
 
 @auth_bp.route('/signup', methods=['GET', 'POST'])
 def signup():
-    """Public signup route with trial and billing support"""
+    """Public signup route - auth only, billing handled by subscription service"""
     if current_user.is_authenticated:
         return redirect(url_for('app_routes.dashboard'))
 
-    # Get signup source and offer details from query parameters
+    # Get signup tracking parameters
     signup_source = request.args.get('source', 'direct')
     referral_code = request.args.get('ref')
     promo_code = request.args.get('promo')
-
-    # Determine trial offer based on source
-    trial_offers = {
-        'homepage_trial': {'days': 14, 'name': 'Free Trial', 'requires_billing': True},
-        'webinar': {'days': 30, 'name': 'Webinar Special', 'requires_billing': True},
-        'demo_request': {'days': 21, 'name': 'Demo Trial', 'requires_billing': True},
-        'partner': {'days': 30, 'name': 'Partner Offer', 'requires_billing': True},
-        'direct': {'days': 14, 'name': 'Free Trial', 'requires_billing': True}
-    }
-
-    current_offer = trial_offers.get(signup_source, trial_offers['direct'])
 
     if request.method == 'POST':
         # Organization details
@@ -114,33 +103,14 @@ def signup():
         confirm_password = request.form.get('confirm_password')
         phone = request.form.get('phone')
 
-        # Billing details (required for trial)
-        card_number = request.form.get('card_number', '').replace(' ', '').replace('-', '')
-        card_exp_month = request.form.get('card_exp_month')
-        card_exp_year = request.form.get('card_exp_year')
-        card_cvc = request.form.get('card_cvc')
-        billing_name = request.form.get('billing_name')
-        billing_address = request.form.get('billing_address')
-        billing_city = request.form.get('billing_city')
-        billing_state = request.form.get('billing_state')
-        billing_zip = request.form.get('billing_zip')
-        billing_country = request.form.get('billing_country')
-
-        # Promo code
-        entered_promo = request.form.get('promo_code', '').strip().upper()
-
-        # Basic validation
+        # Basic validation only
         required_fields = [org_name, username, email, password, confirm_password]
-        if current_offer['requires_billing']:
-            required_fields.extend([card_number, card_exp_month, card_exp_year, card_cvc, billing_name])
-
         if not all(required_fields):
             flash('Please fill in all required fields', 'error')
             return render_template('auth/signup.html', 
                          signup_source=signup_source,
                          referral_code=referral_code,
                          promo_code=promo_code,
-                         current_offer=current_offer,
                          form_data=request.form)
 
         if password != confirm_password:
@@ -149,7 +119,6 @@ def signup():
                          signup_source=signup_source,
                          referral_code=referral_code,
                          promo_code=promo_code,
-                         current_offer=current_offer,
                          form_data=request.form)
 
         # Check if username/email already exists
@@ -162,46 +131,17 @@ def signup():
                          signup_source=signup_source,
                          referral_code=referral_code,
                          promo_code=promo_code,
-                         current_offer=current_offer,
-                         form_data=request.form)
-
-        # Validate card details (basic validation)
-        if current_offer['requires_billing']:
-            if not _validate_credit_card(card_number, card_exp_month, card_exp_year, card_cvc):
-                flash('Please enter valid payment information', 'error')
-                return render_template('auth/signup.html', 
-                             signup_source=signup_source,
-                             referral_code=referral_code,
-                             promo_code=promo_code,
-                             current_offer=current_offer,
-                             form_data=request.form)
-
-        # Validate and apply promo code
-        promo_discount = _validate_promo_code(entered_promo, signup_source)
-        if entered_promo and not promo_discount:
-            flash('Invalid promo code', 'error')
-            return render_template('auth/signup.html', 
-                         signup_source=signup_source,
-                         referral_code=referral_code,
-                         promo_code=promo_code,
-                         current_offer=current_offer,
                          form_data=request.form)
 
         try:
-            from datetime import datetime, timedelta
-            from ...services.stripe_service import StripeService
-            from ...models.subscription import Subscription
-
-            # Create organization with trial details
-            trial_end_date = datetime.utcnow() + timedelta(days=current_offer['days'])
-
+            # Create organization (starts on free tier)
             org = Organization(
                 name=org_name,
-                subscription_tier='team',  # Trial gets team features
+                subscription_tier='free',  # Start on free tier
                 contact_email=email,
                 is_active=True,
                 signup_source=signup_source,
-                promo_code=entered_promo if entered_promo else None,
+                promo_code=promo_code if promo_code else None,
                 referral_code=referral_code
             )
             db.session.add(org)
@@ -216,7 +156,7 @@ def signup():
                 phone=phone,
                 organization_id=org.id,
                 user_type='customer',
-                is_organization_owner=True,  # Set the flag for role assignment
+                is_organization_owner=True,
                 is_active=True
             )
             owner_user.set_password(password)
@@ -226,11 +166,11 @@ def signup():
             # Assign organization owner role
             org_owner_role = Role.query.filter_by(name='organization_owner', is_system_role=True).first()
             if org_owner_role:
-                owner_user.roles.append(org_owner_role)
+                owner_user.assign_role(org_owner_role)
 
             db.session.commit()
 
-            flash(f'Welcome! Your {current_offer["days"]}-day free trial has started. No charges until {trial_end_date.strftime("%B %d, %Y")}.', 'success')
+            flash('Account created successfully! You can upgrade to unlock more features.', 'success')
             return redirect(url_for('auth.login'))
 
         except Exception as e:
@@ -240,69 +180,16 @@ def signup():
                          signup_source=signup_source,
                          referral_code=referral_code,
                          promo_code=promo_code,
-                         current_offer=current_offer,
                          form_data=request.form)
 
     return render_template('auth/signup.html', 
                          signup_source=signup_source,
                          referral_code=referral_code,
-                         promo_code=promo_code,
-                         current_offer=current_offer)
+                         promo_code=promo_code)
 
-def _validate_credit_card(card_number, exp_month, exp_year, cvc):
-    """Basic credit card validation"""
-    if not card_number or len(card_number) < 13 or len(card_number) > 19:
-        return False
-    if not card_number.isdigit():
-        return False
-    if not exp_month or not exp_year or not cvc:
-        return False
-    if not (1 <= int(exp_month) <= 12):
-        return False
-    if len(cvc) < 3 or len(cvc) > 4:
-        return False
 
-    # Luhn algorithm for card validation
-    def luhn_checksum(card_num):
-        def digits_of(n):
-            return [int(d) for d in str(n)]
-        digits = digits_of(card_num)
-        odd_digits = digits[-1::-2]
-        even_digits = digits[-2::-2]
-        checksum = sum(odd_digits)
-        for d in even_digits:
-            checksum += sum(digits_of(d*2))
-        return checksum % 10
 
-    return luhn_checksum(card_number) == 0
 
-def _validate_promo_code(promo_code, signup_source):
-    """Validate promo codes and return discount info"""
-    if not promo_code:
-        return None
-
-    # Define available promo codes
-    promo_codes = {
-        'WELCOME20': {'discount_percent': 20, 'valid_for_months': 3, 'description': '20% off for 3 months'},
-        'TRIAL30': {'discount_percent': 30, 'valid_for_months': 1, 'description': '30% off first month'},
-        'WEBINAR50': {'discount_percent': 50, 'valid_for_months': 2, 'description': '50% off first 2 months'},
-        'PARTNER25': {'discount_percent': 25, 'valid_for_months': 6, 'description': '25% off for 6 months'}
-    }
-
-    # Source-specific promo validation
-    source_promos = {
-        'webinar': ['WEBINAR50', 'WELCOME20'],
-        'partner': ['PARTNER25', 'WELCOME20'],
-        'homepage_trial': ['WELCOME20', 'TRIAL30']
-    }
-
-    if promo_code in promo_codes:
-        # Check if promo is valid for this signup source
-        valid_promos = source_promos.get(signup_source, list(promo_codes.keys()))
-        if promo_code in valid_promos:
-            return promo_codes[promo_code]
-
-    return None
 
 # Multiple Signup Entry Points
 @auth_bp.route('/free-trial')
