@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for, abort
 from flask_login import login_required, current_user
-from app.models import Permission, Role, User
+from app.models import Permission, Role, User, DeveloperPermission
 from app.extensions import db
 from app.utils.permissions import require_permission
 from app.blueprints.developer.subscription_tiers import load_tiers_config
