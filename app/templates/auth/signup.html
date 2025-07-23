@@ -111,6 +111,29 @@
                         <!-- Name fields -->
                         <div class="row mb-3"></div>
 
+                        <!-- Tier Selection -->
+                        <div class="mb-4">
+                            <label class="form-label">Choose Your Plan</label>
+                            <div class="row">
+                                {% for tier_key, tier_data in pricing_data.items() %}
+                                <div class="col-md-4 mb-3">
+                                    <div class="card tier-option h-100" data-tier="{{ tier_key }}" style="cursor: pointer; transition: all 0.3s;">
+                                        <div class="card-body text-center">
+                                            <h5 class="card-title">{{ tier_data.name }}</h5>
+                                            <div class="h4 text-primary">${{ "%.0f"|format(tier_data.price_monthly) }}<small class="text-muted">/mo</small></div>
+                                            <div class="text-muted mb-3">{{ tier_data.user_limit }} user{{ 's' if tier_data.user_limit != 1 else '' }}</div>
+                                            <ul class="list-unstyled small">
+                                                {% for feature in tier_data.features[:3] %}
+                                                <li><i class="fas fa-check text-success me-1"></i>{{ feature }}</li>
+                                                {% endfor %}
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
                         <div class="row mb-3">
                             <!-- Left Column - Organization & Account -->
                             <div class="col-md-6">
@@ -318,6 +341,49 @@
                                     <a href="{{ url_for('auth.login') }}" class="btn btn-outline-secondary">
                                         <i class="fas fa-sign-in-alt"></i> Already have an account? Login
                                     </a>
+                                    <!-- Subscription Tier Selection -->
+                    <div class="mb-3">
+                        <label for="subscription_tier" class="form-label">Select Your Plan <span class="text-danger">*</span></label>
+                        <div class="row">
+                            {% for tier_key, tier_data in available_tiers.items() %}
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100 {% if tier_key == 'team' %}border-primary{% endif %}">
+                                    <div class="card-body">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="subscription_tier" 
+                                                   id="tier_{{ tier_key }}" value="{{ tier_key }}" 
+                                                   {% if tier_key == 'team' %}checked{% endif %} required>
+                                            <label class="form-check-label w-100" for="tier_{{ tier_key }}">
+                                                <h5 class="card-title">{{ tier_data.name }}</h5>
+                                                <p class="text-muted">
+                                                    {% if tier_data.stripe_price_monthly %}
+                                                        {{ tier_data.stripe_price_monthly }}/month
+                                                    {% else %}
+                                                        Contact for pricing
+                                                    {% endif %}
+                                                </p>
+                                                <ul class="list-unstyled small">
+                                                    {% for feature in tier_data.fallback_features[:3] %}
+                                                    <li><i class="fas fa-check text-success me-1"></i>{{ feature }}</li>
+                                                    {% endfor %}
+                                                    {% if tier_data.fallback_features|length > 3 %}
+                                                    <li class="text-muted">... and more</li>
+                                                    {% endif %}
+                                                </ul>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% if not available_tiers %}
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            No subscription plans are currently available. Please contact support.
+                        </div>
+                        {% endif %}
+                    </div>
 
                     <button type="submit" class="btn btn-success btn-lg px-4" {% if not available_tiers %}disabled{% endif %}>
                         Continue to Payment

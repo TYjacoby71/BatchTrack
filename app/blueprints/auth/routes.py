@@ -81,29 +81,21 @@ def dev_login():
 @auth_bp.route('/signup', methods=['GET', 'POST'])
 def signup():
     """Main signup flow - collect user info then redirect to Stripe"""
-    print(f"Signup route accessed: method={request.method}, user_authenticated={current_user.is_authenticated}")
-    
     if current_user.is_authenticated:
-        print("User is authenticated, redirecting to dashboard")
         return redirect(url_for('app_routes.dashboard'))
 
     # Get available subscription tiers for customer selection
-    try:
-        from ...blueprints.developer.subscription_tiers import load_tiers_config
-        tiers_config = load_tiers_config()
-        
-        # Filter to customer-facing, available, and Stripe-ready tiers only
-        available_tiers = {
-            key: tier for key, tier in tiers_config.items() 
-            if (tier.get('is_customer_facing', False) and 
-                tier.get('is_available', True) and 
-                tier.get('is_stripe_ready', False) and  # When True, requires real Stripe
-                tier.get('stripe_lookup_key'))  # Must have lookup key configured
-        }
-    except Exception as e:
-        # Fallback if subscription tiers loading fails
-        print(f"Error loading subscription tiers: {e}")
-        available_tiers = {}
+    from ...blueprints.developer.subscription_tiers import load_tiers_config
+    tiers_config = load_tiers_config()
+
+    # Filter to customer-facing, available, and Stripe-ready tiers only
+    available_tiers = {
+        key: tier for key, tier in tiers_config.items() 
+        if (tier.get('is_customer_facing', False) and 
+            tier.get('is_available', True) and 
+            tier.get('is_stripe_ready', False) and  # When True, requires real Stripe
+            tier.get('stripe_lookup_key'))  # Must have lookup key configured
+    }
 
     # Get signup tracking parameters from URL or form
     signup_source = request.args.get('source', request.form.get('source', 'direct'))
