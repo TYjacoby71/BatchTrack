@@ -139,12 +139,17 @@
                                                     </td>
                                                     <td>{{ user.created_at.strftime('%Y-%m-%d') if user.created_at else 'N/A' }}</td>
                                                     <td>
-                                                        <form method="POST" action="{{ url_for('developer.toggle_user_active', user_id=user.id) }}" style="display: inline;">
-                                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                                            <button type="submit" class="btn btn-sm btn-{{ 'warning' if user.is_active else 'success' }}">
-                                                                {{ 'Deactivate' if user.is_active else 'Activate' }}
+                                                        <div class="btn-group btn-group-sm">
+                                                            <button class="btn btn-outline-primary" onclick="manageCustomerUserRole({{ user.id }}, '{{ user.username }}', '{{ user.organization.name if user.organization else 'No Organization' }}')">
+                                                                <i class="fas fa-user-cog"></i> Role
                                                             </button>
-                                                        </form>
+                                                            <form method="POST" action="{{ url_for('developer.toggle_user_active', user_id=user.id) }}" style="display: inline;">
+                                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                                                <button type="submit" class="btn btn-{{ 'warning' if user.is_active else 'success' }}">
+                                                                    {{ 'Deactivate' if user.is_active else 'Activate' }}
+                                                                </button>
+                                                            </form>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                                 {% endfor %}
@@ -221,12 +226,17 @@
                                                     </td>
                                                     <td>{{ user.created_at.strftime('%Y-%m-%d') if user.created_at else 'N/A' }}</td>
                                                     <td>
-                                                        <form method="POST" action="{{ url_for('developer.toggle_user_active', user_id=user.id) }}" style="display: inline;">
-                                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                                            <button type="submit" class="btn btn-sm btn-{{ 'warning' if user.is_active else 'success' }}">
-                                                                {{ 'Deactivate' if user.is_active else 'Activate' }}
+                                                        <div class="btn-group btn-group-sm">
+                                                            <button class="btn btn-outline-primary" onclick="manageDeveloperUserRole({{ user.id }}, '{{ user.username }}')">
+                                                                <i class="fas fa-user-cog"></i> Role
                                                             </button>
-                                                        </form>
+                                                            <form method="POST" action="{{ url_for('developer.toggle_user_active', user_id=user.id) }}" style="display: inline;">
+                                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                                                <button type="submit" class="btn btn-{{ 'warning' if user.is_active else 'success' }}">
+                                                                    {{ 'Deactivate' if user.is_active else 'Activate' }}
+                                                                </button>
+                                                            </form>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                                 {% endfor %}
@@ -371,5 +381,203 @@ async function changePassword() {
         alert('Network error occurred');
     }
 }
+
+// Customer User Role Management
+async function manageCustomerUserRole(userId, username, orgName) {
+    try {
+        // Load current roles
+        const response = await fetch(`/developer/customer-users/${userId}/roles`);
+        const data = await response.json();
+
+        document.getElementById('customerUserRoleModalTitle').textContent = `Manage Roles for ${username} (${orgName})`;
+        document.getElementById('customerUserId').value = userId;
+
+        // Load available roles for the user's organization
+        const rolesResponse = await fetch(`/developer/customer-users/${userId}/available-roles`);
+        const rolesData = await rolesResponse.json();
+
+        const rolesList = document.getElementById('customerUserRolesList');
+        rolesList.innerHTML = '';
+
+        rolesData.roles.forEach(role => {
+            const isChecked = data.current_roles.includes(role.id);
+            const isOrgOwner = role.name === 'organization_owner';
+
+            rolesList.innerHTML += `
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="role_${role.id}" 
+                           value="${role.id}" ${isChecked ? 'checked' : ''} 
+                           ${isOrgOwner ? 'onchange="validateOrgOwner(this)"' : ''}>
+                    <label class="form-check-label" for="role_${role.id}">
+                        <strong>${role.name}</strong>
+                        ${role.description ? `<br><small class="text-muted">${role.description}</small>` : ''}
+                        ${isOrgOwner ? '<br><small class="text-warning"><i class="fas fa-crown"></i> Organization Owner</small>' : ''}
+                    </label>
+                </div>
+            `;
+        });
+
+        new bootstrap.Modal(document.getElementById('customerUserRoleModal')).show();
+    } catch (error) {
+        console.error('Error loading user roles:', error);
+        alert('Failed to load user roles');
+    }
+}
+
+async function validateOrgOwner(checkbox) {
+    if (checkbox.checked) {
+        const userId = document.getElementById('customerUserId').value;
+
+        try {
+            const response = await fetch(`/developer/customer-users/${userId}/validate-org-owner`);
+            const data = await response.json();
+
+            if (!data.can_assign) {
+                alert(data.message);
+                checkbox.checked = false;
+                return false;
+            }
+        } catch (error) {
+            console.error('Error validating org owner:', error);
+            checkbox.checked = false;
+            alert('Error validating organization owner assignment');
+            return false;
+        }
+    }
+    return true;
+}
+
+async function saveCustomerUserRoles() {
+    const userId = document.getElementById('customerUserId').value;
+    const selectedRoles = Array.from(document.querySelectorAll('#customerUserRolesList input:checked'))
+        .map(cb => parseInt(cb.value));
+
+    try {
+        const response = await fetch(`/developer/customer-users/${userId}/roles`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
+            },
+            body: JSON.stringify({ role_ids: selectedRoles })
+        });
+
+        const result = await response.json();
+        if (result.success) {
+            bootstrap.Modal.getInstance(document.getElementById('customerUserRoleModal')).hide();
+            location.reload();
+        } else {
+            alert(result.error || 'Failed to update user roles');
+        }
+    } catch (error) {
+        console.error('Error saving user roles:', error);
+        alert('Failed to save user roles');
+    }
+}
+
+// Developer User Role Management
+async function manageDeveloperUserRole(userId, username) {
+    try {
+        // Load current role
+        const response = await fetch(`/developer/developer-users/${userId}/role`);
+        const data = await response.json();
+
+        document.getElementById('developerUserRoleModalTitle').textContent = `Manage Role for ${username}`;
+        document.getElementById('developerUserId').value = userId;
+
+        // Set current role
+        document.getElementById('developerUserRole').value = data.current_role_id || '';
+
+        new bootstrap.Modal(document.getElementById('developerUserRoleModal')).show();
+    } catch (error) {
+        console.error('Error loading developer role:', error);
+        alert('Failed to load developer role');
+    }
+}
+
+async function saveDeveloperUserRole() {
+    const userId = document.getElementById('developerUserId').value;
+    const roleId = document.getElementById('developerUserRole').value;
+
+    try {
+        const response = await fetch(`/developer/developer-users/${userId}/role`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
+            },
+            body: JSON.stringify({ developer_role_id: roleId || null })
+        });
+
+        const result = await response.json();
+        if (result.success) {
+            bootstrap.Modal.getInstance(document.getElementById('developerUserRoleModal')).hide();
+            location.reload();
+        } else {
+            alert(result.error || 'Failed to update developer role');
+        }
+    } catch (error) {
+        console.error('Error saving developer role:', error);
+        alert('Failed to save developer role');
+    }
+}
 </script>
+
+<!-- Customer User Role Management Modal -->
+<div class="modal fade" id="customerUserRoleModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="customerUserRoleModalTitle">Manage User Roles</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="customerUserId">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i> 
+                    Select the roles you want to assign to this user. Note: Organization Owner role is limited to one per organization.
+                </div>
+                <div id="customerUserRolesList">
+                    <!-- Roles will be loaded here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveCustomerUserRoles()">Save Roles</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Developer User Role Management Modal -->
+<div class="modal fade" id="developerUserRoleModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="developerUserRoleModalTitle">Manage Developer Role</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="developerUserId">
+                <div class="mb-3">
+                    <label for="developerUserRole" class="form-label">Developer Role</label>
+                    <select class="form-select" id="developerUserRole">
+                        <option value="">No role</option>
+                        {% for role in developer_roles %}
+                        <option value="{{ role.id }}">{{ role.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveDeveloperUserRole()">Save Role</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/developer_user_management.js') }}"></script>
+{% endblock %}
 {% endblock %}
