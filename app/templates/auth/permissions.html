@@ -69,6 +69,15 @@
 
 <script>
 function togglePermissionStatus(permissionId, table, newStatus, permissionName) {
+    // Find the row containing this permission
+    const button = event.target;
+    const row = button.closest('tr');
+    const statusCell = row.querySelector('td:nth-child(4)'); // Status column
+    const actionsCell = row.querySelector('td:nth-child(5)'); // Actions column
+    
+    // Disable button during request
+    button.disabled = true;
+    
     fetch('/auth/permissions/toggle-status', {
         method: 'POST',
         headers: {
@@ -84,13 +93,40 @@ function togglePermissionStatus(permissionId, table, newStatus, permissionName) 
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            // Just reload the page to reflect changes
-            window.location.reload();
+            // Update status badge
+            if (newStatus) {
+                statusCell.innerHTML = '<span class="badge bg-success">Active</span>';
+            } else {
+                statusCell.innerHTML = '<span class="badge bg-secondary">Inactive</span>';
+            }
+            
+            // Update button
+            if (newStatus) {
+                actionsCell.innerHTML = `
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-secondary btn-sm" 
+                                onclick="togglePermissionStatus(${permissionId}, '${table}', false, '${permissionName}')">
+                            <i class="fas fa-toggle-off"></i> Deactivate
+                        </button>
+                    </div>
+                `;
+            } else {
+                actionsCell.innerHTML = `
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-success btn-sm"
+                                onclick="togglePermissionStatus(${permissionId}, '${table}', true, '${permissionName}')">
+                            <i class="fas fa-toggle-on"></i> Activate
+                        </button>
+                    </div>
+                `;
+            }
         } else {
+            button.disabled = false;
             alert('Error: ' + data.message);
         }
     })
     .catch(error => {
+        button.disabled = false;
         console.error('Error:', error);
         alert('An error occurred while updating the permission status.');
     });
