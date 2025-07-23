@@ -30,6 +30,10 @@ def dashboard():
     from ...services.pricing_service import PricingService
     pricing_data = PricingService.get_pricing_data()
 
+    # Load subscription tiers config for developer tier selection
+    from ...blueprints.developer.subscription_tiers import load_tiers_config
+    tiers_config = load_tiers_config() if current_user.user_type == 'developer' else {}
+
     # Get organization data - handle developer customer view
     from app.utils.permissions import get_effective_organization
     organization = get_effective_organization()
@@ -99,7 +103,8 @@ def dashboard():
         pending_invites=pending_invites,
         permission_categories=permission_categories,
         roles=roles,
-        users=users
+        users=users,
+        tiers_config=tiers_config
     )
 
 @organization_bp.route('/create-role', methods=['POST'])
