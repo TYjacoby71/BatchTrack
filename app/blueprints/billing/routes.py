@@ -353,7 +353,7 @@ def dev_activate_subscription(tier):
 @billing_bp.route('/debug')
 @login_required
 def debug_billing():
-    """Debug route to show billing system state"""
+    """Debug billing system state"""
     from flask import current_app
 
     # Only allow in debug mode
