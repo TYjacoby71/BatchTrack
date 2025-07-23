@@ -336,11 +336,6 @@
           "name": "dev.system_settings",
           "display_name": "System Settings",
           "description": "Modify global system configuration and settings"
-        },
-        {
-          "name": "dev.system_admin",
-          "display_name": "System Administration",
-          "description": "Full system administration access including permissions management"
         }
       ]
     },
