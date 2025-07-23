@@ -353,52 +353,31 @@ def dev_activate_subscription(tier):
 @billing_bp.route('/debug')
 @login_required
 def debug_billing():
-    """Debug billing system state"""
-    from flask import current_app
+    """Debug endpoint for billing information"""
+    try:
+        max_users = current_user.organization.get_max_users()
+        # Handle Infinity values for JSON serialization
+        if max_users == float('inf'):
+            max_users = "unlimited"
 
-    # Only allow in debug mode
-    if not current_app.config.get('DEBUG'):
-        flash('Debug route only available in debug mode.', 'error')
-        return redirect(url_for('billing.upgrade'))
-
-    organization = current_user.organization
-    if not organization:
-        return jsonify({'error': 'No organization found'})
-
-    # Load tier configuration
-    tiers_config = load_tiers_config()
-
-    debug_info = {
-        'stripe_configured': bool(current_app.config.get('STRIPE_SECRET_KEY')),
-        'webhook_configured': bool(current_app.config.get('STRIPE_WEBHOOK_SECRET')),
-        'operating_mode': 'production' if current_app.config.get('STRIPE_WEBHOOK_SECRET') else 'development',
-        'organization': {
-            'id': organization.id,
-            'name': organization.name,
-            'current_tier': organization.effective_subscription_tier,
-            'max_users': organization.get_max_users(),
-            'active_users': organization.active_users_count
-        },
-        'subscription': {
-            'exists': organization.subscription is not None,
-            'status': organization.subscription.status if organization.subscription else None,
-            'tier': organization.subscription.tier if organization.subscription else None,
-            'stripe_customer_id': organization.subscription.stripe_customer_id if organization.subscription else None,
-            'stripe_subscription_id': organization.subscription.stripe_subscription_id if organization.subscription else None
-        },
-        'available_tiers': {
-            tier_key: {
-                'name': tier_data.get('name'),
-                'stripe_ready': tier_data.get('is_stripe_ready', False),
-                'customer_facing': tier_data.get('is_customer_facing', True),
-                'available': tier_data.get('is_available', True),
-                'user_limit': tier_data.get('user_limit', 1)
+        debug_data = {
+            'user_id': current_user.id,
+            'organization_id': current_user.organization_id,
+            'subscription_tier': current_user.organization.effective_subscription_tier,
+            'stripe_configured': bool(current_app.config.get('STRIPE_SECRET_KEY')),
+            'webhook_configured': bool(current_app.config.get('STRIPE_WEBHOOK_SECRET')),
+            'organization_info': {
+                'id': current_user.organization.id,
+                'name': current_user.organization.name,
+                'max_users': max_users,
+                'active_users': current_user.organization.active_users_count,
+                'features': current_user.organization.get_subscription_features()
             }
-            for tier_key, tier_data in tiers_config.items()
         }
-    }
-
-    return jsonify(debug_info)
+        return jsonify(debug_data)
+    except Exception as e:
+        current_app.logger.error(f"Debug billing error: {e}")
+        return jsonify({'error': str(e)}), 500
 
 
     try:
