@@ -69,12 +69,6 @@
 
 <script>
 function togglePermissionStatus(permissionId, table, newStatus, permissionName) {
-    const action = newStatus ? 'activate' : 'deactivate';
-    
-    if (!confirm(`Are you sure you want to ${action} the permission "${permissionName}"?`)) {
-        return;
-    }
-    
     fetch('/auth/permissions/toggle-status', {
         method: 'POST',
         headers: {
@@ -90,19 +84,8 @@ function togglePermissionStatus(permissionId, table, newStatus, permissionName) 
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            // Show success message
-            const alertDiv = document.createElement('div');
-            alertDiv.className = 'alert alert-success alert-dismissible fade show';
-            alertDiv.innerHTML = `
-                ${data.message}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            `;
-            document.querySelector('.container-fluid').insertBefore(alertDiv, document.querySelector('.card'));
-            
-            // Reload the page to reflect changes
-            setTimeout(() => {
-                window.location.reload();
-            }, 1500);
+            // Just reload the page to reflect changes
+            window.location.reload();
         } else {
             alert('Error: ' + data.message);
         }
