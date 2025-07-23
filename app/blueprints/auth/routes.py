@@ -9,6 +9,7 @@ from . import auth_bp
 from ...extensions import db
 from ...models import User, Organization, Role
 from ...utils.timezone_utils import TimezoneUtils
+from ...utils.permissions import require_permission
 from flask_login import login_required
 
 class LoginForm(FlaskForm):
@@ -23,7 +24,6 @@ def login():
 
     form = LoginForm()
     if request.method == 'POST' and form.validate_on_submit():
-        form_type = request.form.get('form_type')
         username = request.form.get('username')
         password = request.form.get('password')
 
@@ -31,7 +31,6 @@ def login():
             flash('Please provide both username and password')
             return render_template('auth/login.html', form=form)
 
-        # Handle login only (registration removed - use dedicated signup flow)
         user = User.query.filter_by(username=username).first()
 
         if user and user.check_password(password):
@@ -82,7 +81,7 @@ def dev_login():
 
 @auth_bp.route('/signup', methods=['GET', 'POST'])
 def signup():
-    """Stripe-first signup flow - collect user info then redirect to Stripe"""
+    """Main signup flow - collect user info then redirect to Stripe"""
     if current_user.is_authenticated:
         return redirect(url_for('app_routes.dashboard'))
 
@@ -99,10 +98,10 @@ def signup():
             tier.get('stripe_lookup_key'))  # Must have lookup key configured
     }
 
-    # Get signup tracking parameters
-    signup_source = request.args.get('source', 'direct')
-    referral_code = request.args.get('ref')
-    promo_code = request.args.get('promo')
+    # Get signup tracking parameters from URL or form
+    signup_source = request.args.get('source', request.form.get('source', 'direct'))
+    referral_code = request.args.get('ref', request.form.get('ref'))
+    promo_code = request.args.get('promo', request.form.get('promo'))
 
     if request.method == 'POST':
         # Organization details
@@ -202,49 +201,32 @@ def complete_signup():
     flash('Welcome! Your account has been successfully created.', 'success')
     return redirect(url_for('app_routes.dashboard'))
 
-# Multiple Signup Entry Points
-@auth_bp.route('/free-trial')
-def free_trial():
-    """Homepage free trial signup entry point - redirect to pricing page"""
-    # No more free trials - redirect to paid signup
-    return redirect(url_for('auth.signup', source='homepage_trial'))
-
-@auth_bp.route('/webinar-signup')
-def webinar_signup():
-    """Webinar signup entry point"""
-    return redirect(url_for('auth.signup', source='webinar'))
-
-@auth_bp.route('/partner-signup/<partner_code>')
-def partner_signup(partner_code):
-    """Partner/affiliate signup entry point"""
-    return redirect(url_for('auth.signup', source='partner', ref=partner_code))
-
-@auth_bp.route('/demo-signup')
-def demo_signup():
-    """Demo request signup entry point"""
-    return redirect(url_for('auth.signup', source='demo_request'))
-
 # Permission and Role Management Routes
 from .permissions import manage_permissions, manage_roles, create_role, update_role
 
 @auth_bp.route('/permissions')
+@require_permission('system.admin')
 def permissions():
     return manage_permissions()
 
 @auth_bp.route('/roles')
+@require_permission('organization.manage_roles')
 def roles():
     return manage_roles()
 
 @auth_bp.route('/roles', methods=['POST'])
+@require_permission('organization.manage_roles')
 def create_role_route():
     return create_role()
 
 @auth_bp.route('/roles/<int:role_id>', methods=['PUT'])
+@require_permission('organization.manage_roles')
 def update_role_route(role_id):
     return update_role(role_id)
 
 @auth_bp.route('/roles/<int:role_id>')
 @login_required
+@require_permission('organization.manage_roles')
 def get_role(role_id):
     """Get role details for editing"""
     role = Role.query.get_or_404(role_id)
@@ -268,6 +250,7 @@ def get_role(role_id):
 
 @auth_bp.route('/permissions/api')
 @login_required
+@require_permission('organization.manage_roles')
 def permissions_api():
     """API endpoint for permissions data"""
     permissions = Permission.query.filter_by(is_active=True).all()

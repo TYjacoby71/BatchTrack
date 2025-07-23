@@ -1,5 +1,17 @@
 from flask_login import current_user
 from functools import wraps
+from flask import abort
+
+def require_permission(permission):
+    """Centralized decorator for permission checking"""
+    def decorator(f):
+        @wraps(f)
+        def wrapper(*args, **kwargs):
+            if not has_permission(permission):
+                abort(403)
+            return f(*args, **kwargs)
+        return wrapper
+    return decorator
 
 def has_permission(user_or_permission_name, permission_name=None):
     """
@@ -103,26 +115,17 @@ def has_subscription_feature(feature):
     return feature in org_features or 'all_features' in org_features
 
 def is_organization_owner():
-    """Check if current user is organization owner"""
+    """Unified organization owner check"""
     if not current_user.is_authenticated:
         return False
-    return current_user.is_organization_owner
+
+    # Check the user type and organization owner flag
+    return (current_user.user_type == 'customer' and 
+            current_user.is_organization_owner is True)
 
 def is_developer():
     """Check if current user is developer"""
     return current_user.is_authenticated and current_user.user_type == 'developer'
-
-def require_permission(permission):
-    """Decorator for permission checking"""
-    def decorator(f):
-        @wraps(f)
-        def wrapper(*args, **kwargs):
-            if not has_permission(permission):
-                from flask import abort
-                abort(403)
-            return f(*args, **kwargs)
-        return wrapper
-    return decorator
 
 def get_user_permissions():
     """Get all permissions for the current user"""

@@ -116,7 +116,9 @@ class User(UserMixin, db.Model):
     
     @property
     def is_organization_owner(self):
-        return self._is_organization_owner
+        """Unified organization owner check"""
+        return (self.user_type == 'customer' and 
+                self._is_organization_owner is True)
     
     @is_organization_owner.setter
     def is_organization_owner(self, value):
@@ -321,9 +323,7 @@ class User(UserMixin, db.Model):
         """Get display-friendly role description"""
         if self.user_type == 'developer':
             return 'System Developer'
-        elif (self.user_type == 'customer' and 
-              self.is_organization_owner is True and 
-              self.organization):
+        elif self.is_organization_owner and self.organization:
             tier = self.organization.subscription_tier.title()
             return f'{tier} Owner'
         else:
