@@ -4,6 +4,13 @@ from ..extensions import db
 from .mixins import ScopedModelMixin
 from ..utils.timezone_utils import TimezoneUtils
 
+# Import forwarding for moved models
+from .inventory import InventoryItem, InventoryHistory, BatchInventoryLog
+from .recipe import Recipe, RecipeIngredient
+from .batch import Batch, BatchIngredient, BatchContainer, ExtraBatchContainer, BatchTimer, ExtraBatchIngredient
+from .unit import Unit, CustomUnitMapping, ConversionLog
+from .category import IngredientCategory, Tag
+
 class Organization(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(128), nullable=False)
