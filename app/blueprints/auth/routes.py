@@ -89,13 +89,12 @@ def signup():
     from ...blueprints.developer.subscription_tiers import load_tiers_config
     tiers_config = load_tiers_config()
     
-    # Filter to customer-facing, available, and Stripe-ready tiers only
+    # Filter to customer-facing, available tiers only (for public signup)
     available_tiers = {
         key: tier for key, tier in tiers_config.items() 
-        if (tier.get('is_customer_facing', False) and 
+        if (tier.get('is_customer_facing', True) and 
             tier.get('is_available', True) and 
-            tier.get('is_stripe_ready', False) and  # When True, requires real Stripe
-            tier.get('stripe_lookup_key'))  # Must have lookup key configured
+            key != 'exempt')  # Exempt is only for developer creation
     }
 
     # Get signup tracking parameters from URL or form

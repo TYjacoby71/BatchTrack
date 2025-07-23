@@ -26,11 +26,16 @@
                                 <div class="mb-3">
                                     <label for="subscription_tier" class="form-label">Subscription Tier</label>
                                     <select class="form-select" id="subscription_tier" name="subscription_tier" required>
-                                        <option value="free">Free (Trial)</option>
-                                        <option value="solo">Solo (Trial)</option>
-                                        <option value="team">Team (Trial)</option>
-                                        <option value="enterprise">Enterprise (Trial)</option>
-                                        <option value="exempt">Exempt (No Billing)</option>
+                                        {% for tier_key, tier_data in available_tiers.items() %}
+                                        <option value="{{ tier_key }}">
+                                            {{ tier_data.name }}
+                                            {% if tier_key == 'exempt' %}
+                                            (No Billing)
+                                            {% elif tier_key != 'free' %}
+                                            (Trial)
+                                            {% endif %}
+                                        </option>
+                                        {% endfor %}
                                     </select>
                                     <div class="form-text">
                                         Trial tiers will require the customer to set up billing within 14 days.
