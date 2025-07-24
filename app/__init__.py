@@ -12,14 +12,23 @@ def create_app():
     app = Flask(__name__, static_folder='static', static_url_path='/static')
 
     # Configuration
-    app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', 'devkey-please-change-in-production') #os.environ.get('FLASK_SECRET_KEY', 'devkey-please-change-in-production')
-    instance_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', 'instance')
-    os.makedirs(instance_path, exist_ok=True)
-    os.makedirs('static/product_images', exist_ok=True)
-    os.chmod(instance_path, 0o777)
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(instance_path, 'batchtrack.db')
+    app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', 'devkey-please-change-in-production')
+    
+    # Database configuration - use PostgreSQL if available, fallback to SQLite
+    database_url = os.environ.get('DATABASE_URL')
+    if database_url:
+        # Use PostgreSQL from Replit
+        app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+    else:
+        # Fallback to SQLite for local development
+        instance_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', 'instance')
+        os.makedirs(instance_path, exist_ok=True)
+        os.chmod(instance_path, 0o777)
+        app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(instance_path, 'batchtrack.db')
+    
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['UPLOAD_FOLDER'] = 'static/product_images'
+    os.makedirs('static/product_images', exist_ok=True)
 
     # Force HTTPS in production
     if os.environ.get('REPLIT_DEPLOYMENT') == 'true':
