@@ -49,14 +49,10 @@ class StripeService:
     @staticmethod
     def create_checkout_session(organization, tier):
         """Create a Stripe checkout session for subscription"""
-        # Check if tier is stripe-ready
+        # This method should only be called for stripe-ready tiers
         from ..blueprints.developer.subscription_tiers import load_tiers_config
         tiers_config = load_tiers_config()
         tier_data = tiers_config.get(tier, {})
-        
-        if not tier_data.get('is_stripe_ready', False):
-            logger.info(f"Tier {tier} not stripe-ready, will use development mode")
-            return None
         
         StripeService.initialize_stripe()
         
@@ -234,22 +230,22 @@ class StripeService:
 
     @staticmethod
     def simulate_subscription_success(organization, tier='team'):
-        """Simulate successful subscription for development/testing"""
+        """Simulate successful subscription for development/testing ONLY"""
         from flask import current_app
         from datetime import timedelta
         from ..models import Subscription
         
         logger.info(f"Simulating subscription for org {organization.id}, tier: {tier}")
         
-        # Allow simulation if webhook secret is not configured OR if tier is not stripe-ready
+        # PRIMARY CONTROL: Only allow simulation if tier is explicitly marked as NOT stripe-ready
         from ..blueprints.developer.subscription_tiers import load_tiers_config
         tiers_config = load_tiers_config()
         tier_data = tiers_config.get(tier, {})
         is_stripe_ready = tier_data.get('is_stripe_ready', False)
         
-        if current_app.config.get('STRIPE_WEBHOOK_SECRET') and is_stripe_ready:
-            # Production mode with stripe-ready tier - require real webhooks
-            logger.info(f"Production mode with stripe-ready tier {tier} - requiring real webhooks")
+        # If stripe_ready is checked, force production mode - no simulation allowed
+        if is_stripe_ready:
+            logger.warning(f"Tier {tier} is stripe-ready - simulation blocked, must use real Stripe")
             return False
             
         # Development mode or non-stripe-ready tier - simulate webhook data
