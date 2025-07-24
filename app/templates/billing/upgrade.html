@@ -129,34 +129,37 @@
 
                 <div class="card-footer text-center">
                     {% if current_tier != tier_name %}
-                    {% if config.get('STRIPE_WEBHOOK_SECRET') %}
-                    <a href="{{ url_for('billing.checkout', tier=tier_name) }}" 
-                       class="btn btn-primary btn-block"
-                       onclick="debugCheckout('{{ tier_name }}', '{{ tier_data.get('name', tier_name.title()) }}', {{ tier_data.get('is_stripe_ready', False)|lower }})">
-                        {% if current_tier == 'free' or 
-                             (tier_name == 'team' and current_tier == 'solo') or
-                             (tier_name == 'enterprise' and current_tier in ['free', 'solo', 'team']) %}
-                            Upgrade to {{ tier_data.get('name', tier_name.title()) }}
-                        {% else %}
-                            Switch to {{ tier_data.get('name', tier_name.title()) }}
-                        {% endif %}
-                    </a>
-                        <!-- Debug info for each tier -->
-                        {% if config.get('DEBUG') %}
-                        <small class="text-muted d-block mt-2">
-                            Debug: Stripe Ready = {{ tier_data.get('is_stripe_ready', False) }},
-                            URL = {{ url_for('billing.checkout', tier=tier_name) }}
-                        </small>
-                        {% endif %}
-                    {% else %}
-                    <a href="{{ url_for('billing.dev_activate_subscription', tier=tier_name) }}" 
-                       class="btn btn-warning btn-block">
-                        Activate {{ tier_data.get('name', tier_name.title()) }} (Dev Mode)
-                    </a>
-                    <small class="text-muted d-block mt-1">
-                        Development mode - no payment required
-                    </small>
-                    {% endif %}
+                    <!-- Debug Info -->
+        {% if config.get('DEBUG') %}
+        <div class="alert alert-info small mb-2">
+          <strong>Debug:</strong> is_stripe_ready: {{ tier_data.get('is_stripe_ready', False) }}, 
+          Stripe configured: {{ config.get('STRIPE_SECRET_KEY') is not none }}
+        </div>
+        {% endif %}
+
+        {% if tier_data.get('is_stripe_ready', False) and config.get('STRIPE_SECRET_KEY') %}
+          <!-- Stripe Ready Tier - Real Payment Required -->
+          <form method="POST" action="{{ url_for('billing.checkout', tier=tier_name) }}" class="d-inline">
+            {{ csrf_token() }}
+            <button type="submit" class="btn btn-primary btn-lg w-100 mb-2">
+              <i class="fas fa-credit-card"></i> Upgrade to {{ tier_data.get('name', tier_name.title()) }}
+            </button>
+          </form>
+        {% elif not tier_data.get('is_stripe_ready', False) %}
+          <!-- Development/Simulation Tier -->
+          <form method="POST" action="{{ url_for('billing.dev_activate_subscription', tier=tier_name) }}" class="d-inline">
+            {{ csrf_token() }}
+            <button type="submit" class="btn btn-success btn-lg w-100 mb-2">
+              <i class="fas fa-play"></i> Activate {{ tier_data.get('name', tier_name.title()) }} (Dev Mode)
+            </button>
+          </form>
+        {% else %}
+          <!-- Stripe Ready but not configured -->
+          <div class="alert alert-warning">
+            <strong>Configuration Required:</strong> This tier requires Stripe configuration. 
+            <a href="/secrets" target="_blank">Add Stripe secrets</a> to enable payments.
+          </div>
+        {% endif %}
                     {% if tier_data.get('price_yearly') %}
                     <a href="{{ url_for('billing.checkout', tier=tier_name, billing_cycle='yearly') }}" 
                        class="btn btn-outline-success btn-sm mt-2">

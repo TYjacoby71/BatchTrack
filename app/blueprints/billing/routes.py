@@ -97,7 +97,7 @@ def checkout(tier, billing_cycle='monthly'):
     # Validate tier availability
     from ...services.pricing_service import PricingService
     available_tiers = PricingService.get_pricing_data()
-    
+
     if tier not in available_tiers:
         flash('Invalid subscription tier selected.', 'error')
         return redirect(url_for('billing.upgrade'))
@@ -110,25 +110,25 @@ def checkout(tier, billing_cycle='monthly'):
         # New customer signup flow
         try:
             price_key = f"{tier}_{billing_cycle}" if billing_cycle != 'monthly' else tier
-            
+
             # Create Stripe checkout session for new customer
             # This will be handled by the webhook after successful payment
             signup_data = session['pending_signup']
             checkout_session = StripeService.create_checkout_session_for_signup(
                 signup_data, price_key
             )
-            
+
             if not checkout_session:
                 flash('Payment system temporarily unavailable. Please try again later.', 'error')
                 return redirect(url_for('auth.signup'))
-            
+
             return redirect(checkout_session.url)
-            
+
         except Exception as e:
             logger.error(f"Signup checkout error: {str(e)}")
             flash('Unable to process payment. Please try again.', 'error')
             return redirect(url_for('auth.signup'))
-    
+
     elif current_user.is_authenticated:
         # Existing user upgrade flow
         if not has_permission(current_user, 'organization.manage_billing'):
@@ -149,7 +149,7 @@ def checkout(tier, billing_cycle='monthly'):
             logger.error(f"Upgrade checkout error: {str(e)}")
             flash('Payment system temporarily unavailable. Please contact support.', 'error')
             return redirect(url_for('billing.upgrade'))
-    
+
     else:
         # No valid flow
         flash('Please complete signup first.', 'error')
@@ -370,37 +370,45 @@ def complete_signup_from_stripe():
     # Use shared function for Stripe mode
     return complete_signup_dev_mode(pending_signup['selected_tier'], is_stripe_mode=True)
 
-@billing_bp.route('/dev/activate/<tier>')
+@billing_bp.route('/dev/activate/<tier>', methods=['POST'])
 @login_required
 def dev_activate_subscription(tier):
-    """Development-only route to activate subscriptions"""
-    from flask import current_app
+    """Development-only route to simulate subscription activation"""
+    logger.info(f"=== DEV ACTIVATION REQUESTED ===")
+    logger.info(f"User: {current_user.id}, Org: {current_user.organization_id}, Tier: {tier}")
 
-    # Only allow in development mode
-    if current_app.config.get('STRIPE_WEBHOOK_SECRET'):
-        flash('This route is only available in development mode.', 'error')
+    if not current_user.organization:
+        flash('Organization required for subscription', 'error')
+        logger.error("No organization found for user")
         return redirect(url_for('billing.upgrade'))
 
-    if not has_permission(current_user, 'organization.manage_billing'):
-        flash('You do not have permission to manage billing.', 'error')
-        return redirect(url_for('organization.dashboard'))
+    # Check if tier is marked as stripe-ready (should block dev activation)
+    from ..developer.subscription_tiers import load_tiers_config
+    tiers_config = load_tiers_config()
+    tier_data = tiers_config.get(tier, {})
+    is_stripe_ready = tier_data.get('is_stripe_ready', False)
 
-    # Validate tier
-    from ...services.pricing_service import PricingService
-    available_tiers = PricingService.get_pricing_data()
+    logger.info(f"Tier {tier} is_stripe_ready: {is_stripe_ready}")
 
-    if tier not in available_tiers:
-        flash('Invalid subscription tier.', 'error')
+    if is_stripe_ready:
+        flash(f'Tier {tier} requires real Stripe payment - dev activation blocked', 'error')
+        logger.warning(f"Dev activation blocked for stripe-ready tier: {tier}")
         return redirect(url_for('billing.upgrade'))
 
-    success = StripeService.simulate_subscription_success(current_user.organization, tier)
+    # Use Stripe service simulation
+    success = StripeService.simulate_subscription_success(
+        current_user.organization, 
+        tier=tier
+    )
 
     if success:
-        flash(f'Development Mode: {tier.title()} subscription activated!', 'success')
+        flash(f'Successfully activated {tier.title()} subscription (Development Mode)', 'success')
+        logger.info(f"Dev activation successful for org {current_user.organization_id}")
+        return redirect(url_for('app_routes.dashboard'))
     else:
-        flash('Failed to activate subscription.', 'error')
-
-    return redirect(url_for('organization.dashboard'))
+        flash('Failed to activate subscription - check logs for details', 'error')
+        logger.error(f"Dev activation failed for org {current_user.organization_id}")
+        return redirect(url_for('billing.upgrade'))
 
 @billing_bp.route('/debug')
 @login_required
@@ -432,14 +440,27 @@ def debug_billing():
                 'subscription_tier': current_user.organization.subscription.tier if current_user.organization.subscription else None
             }
         }
+
+        org = current_user.organization
+        subscription = org.subscription if org else None
+        debug_info = debug_data
         logger.info(f"Debug data generated successfully for user {current_user.id}")
-        return jsonify(debug_data)
     except AttributeError as e:
         logger.error(f"AttributeError in debug_billing: {e}")
         return jsonify({'error': f'Attribute error - likely missing organization or subscription: {str(e)}'}), 500
     except Exception as e:
         logger.error(f"Debug billing error for user {current_user.id if current_user else 'Unknown'}: {e}")
         return jsonify({'error': f'Debug failed: {str(e)}'}), 500
+
+    # Load tier information for debug buttons
+    from ..developer.subscription_tiers import load_tiers_config
+    tiers_config = load_tiers_config()
+
+    return render_template('billing/debug.html', 
+                         debug_info=debug_info,
+                         organization=org,
+                         subscription=subscription,
+                         tiers_config=tiers_config)
 
     try:
         event = stripe.Webhook.construct_event(
