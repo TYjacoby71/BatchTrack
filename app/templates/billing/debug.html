@@ -1,0 +1,105 @@
+
+{% extends "layout.html" %}
+
+{% block title %}Billing Debug - Developer Tools{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h2><i class="fas fa-bug"></i> Billing Debug Information</h2>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Debug Data</h5>
+                </div>
+                <div class="card-body">
+                    <pre id="debug-output" style="background: #f8f9fa; padding: 15px; border-radius: 4px; max-height: 400px; overflow-y: auto;">{{ debug_info | tojson(indent=2) }}</pre>
+                </div>
+            </div>
+
+            {% if organization %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Organization Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <strong>Organization:</strong> {{ organization.name }}<br>
+                            <strong>ID:</strong> {{ organization.id }}<br>
+                            <strong>Active:</strong> {{ '✓' if organization.is_active else '✗' }}<br>
+                            <strong>Max Users:</strong> {{ organization.get_max_users() }}<br>
+                            <strong>Active Users:</strong> {{ organization.active_users_count }}
+                        </div>
+                        <div class="col-md-6">
+                            {% if subscription %}
+                            <strong>Subscription Tier:</strong> {{ subscription.tier }}<br>
+                            <strong>Status:</strong> {{ subscription.status }}<br>
+                            <strong>Stripe Customer ID:</strong> {{ subscription.stripe_customer_id or 'Not Set' }}<br>
+                            <strong>Stripe Subscription ID:</strong> {{ subscription.stripe_subscription_id or 'Not Set' }}
+                            {% else %}
+                            <strong>No subscription record found</strong>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if tiers_config %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Available Tiers & Development Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for tier_key, tier_data in tiers_config.items() %}
+                        <div class="col-md-4 mb-3">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h6>{{ tier_data.get('name', tier_key.title()) }}</h6>
+                                    <small class="text-muted">
+                                        Stripe Ready: {{ '✓' if tier_data.get('is_stripe_ready', False) else '✗' }}<br>
+                                        Customer Facing: {{ '✓' if tier_data.get('is_customer_facing', True) else '✗' }}<br>
+                                        Available: {{ '✓' if tier_data.get('is_available', True) else '✗' }}
+                                    </small>
+                                    
+                                    {% if not tier_data.get('is_stripe_ready', False) %}
+                                    <form method="POST" action="{{ url_for('billing.dev_activate_subscription', tier=tier_key) }}" class="mt-2">
+                                        {{ csrf_token() }}
+                                        <button type="submit" class="btn btn-sm btn-success">
+                                            <i class="fas fa-play"></i> Dev Activate
+                                        </button>
+                                    </form>
+                                    {% else %}
+                                    <div class="mt-2">
+                                        <span class="badge badge-warning">Requires Stripe</span>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="card">
+                <div class="card-header">
+                    <h5>Actions</h5>
+                </div>
+                <div class="card-body">
+                    <a href="{{ url_for('billing.upgrade') }}" class="btn btn-primary">
+                        <i class="fas fa-arrow-up"></i> View Billing Upgrade Page
+                    </a>
+                    <button onclick="location.reload()" class="btn btn-secondary">
+                        <i class="fas fa-sync"></i> Refresh Debug Data
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
