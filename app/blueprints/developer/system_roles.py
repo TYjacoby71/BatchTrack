@@ -372,8 +372,7 @@ def get_permissions_api():
         categories[category].append({
             'id': perm.id,
             'name': perm.name,
-            'description': perm.description,
-            'tier': perm.required_subscription_tier
+            'description': perm.description
         })
     
     return jsonify({'categories': categories})

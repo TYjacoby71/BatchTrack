@@ -8,7 +8,6 @@ class Permission(db.Model):
     name = db.Column(db.String(128), unique=True, nullable=False)
     description = db.Column(db.Text)
     category = db.Column(db.String(64))  # e.g., 'alerts', 'batches', 'inventory'
-    required_subscription_tier = db.Column(db.String(32), default='free')  # free, solo, team, enterprise
 
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
