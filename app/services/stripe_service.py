@@ -49,14 +49,10 @@ class StripeService:
     @staticmethod
     def create_checkout_session(organization, tier):
         """Create a Stripe checkout session for subscription"""
-        # Check if tier is stripe-ready
+        # This method should only be called for stripe-ready tiers
         from ..blueprints.developer.subscription_tiers import load_tiers_config
         tiers_config = load_tiers_config()
         tier_data = tiers_config.get(tier, {})
-        
-        if not tier_data.get('is_stripe_ready', False):
-            logger.info(f"Tier {tier} not stripe-ready, will use development mode")
-            return None
         
         StripeService.initialize_stripe()
         
@@ -241,21 +237,15 @@ class StripeService:
         
         logger.info(f"Simulating subscription for org {organization.id}, tier: {tier}")
         
-        # SECURITY: Only allow simulation if webhook secret is NOT configured (development mode)
-        # AND tier is explicitly marked as not stripe-ready
+        # PRIMARY CONTROL: Only allow simulation if tier is explicitly marked as NOT stripe-ready
         from ..blueprints.developer.subscription_tiers import load_tiers_config
         tiers_config = load_tiers_config()
         tier_data = tiers_config.get(tier, {})
         is_stripe_ready = tier_data.get('is_stripe_ready', False)
         
-        # Production mode detection - if webhook secret exists, we're in production
-        if current_app.config.get('STRIPE_WEBHOOK_SECRET'):
-            logger.warning(f"Production mode detected - simulation blocked for org {organization.id}, tier: {tier}")
-            return False
-            
-        # Even in development, only simulate non-stripe-ready tiers
+        # If stripe_ready is checked, force production mode - no simulation allowed
         if is_stripe_ready:
-            logger.warning(f"Tier {tier} is stripe-ready - simulation blocked even in development")
+            logger.warning(f"Tier {tier} is stripe-ready - simulation blocked, must use real Stripe")
             return False
             
         # Development mode or non-stripe-ready tier - simulate webhook data

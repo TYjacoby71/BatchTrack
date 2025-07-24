@@ -116,8 +116,9 @@ def checkout(tier, billing_cycle='monthly'):
     tier_data = tiers_config.get(tier, {})
     is_stripe_ready = tier_data.get('is_stripe_ready', False)
 
-    # Check if tier is not stripe-ready - bypass Stripe entirely
+    # PRIMARY CONTROL: Use is_stripe_ready checkbox to determine mode
     if not is_stripe_ready:
+        # Stripe Ready is OFF - use development simulation
         logger.info(f"Tier {tier} not stripe-ready, using development simulation")
         success = StripeService.simulate_subscription_success(current_user.organization, tier)
         if success:
@@ -126,19 +127,22 @@ def checkout(tier, billing_cycle='monthly'):
         else:
             flash('Failed to activate subscription in development mode.', 'error')
             return redirect(url_for('billing.upgrade'))
+    else:
+        # Stripe Ready is ON - attempt real Stripe integration
+        logger.info(f"Tier {tier} is stripe-ready, attempting real Stripe checkout")
+        try:
+            session = StripeService.create_checkout_session(current_user.organization, price_key)
 
-    # Create checkout session for stripe-ready tiers
-    try:
-        session = StripeService.create_checkout_session(current_user.organization, price_key)
+            if not session:
+                flash('Stripe configuration incomplete. Please check your Stripe settings or contact support.', 'error')
+                return redirect(url_for('billing.upgrade'))
 
-        if not session:
-            flash('Failed to create checkout session. Please try again.', 'error')
+            return redirect(session.url)
+
+        except Exception as e:
+            logger.error(f"Checkout error for org {current_user.organization.id}: {str(e)}")
+            flash('Payment system temporarily unavailable. Please contact support.', 'error')
             return redirect(url_for('billing.upgrade'))
-
-    except Exception as e:
-        logger.error(f"Checkout error for org {current_user.organization.id}: {str(e)}")
-        flash('Payment system temporarily unavailable. Please try again later.', 'error')
-        return redirect(url_for('billing.upgrade'))
 
     return redirect(session.url)
 
