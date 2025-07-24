@@ -144,6 +144,12 @@ class StripeService:
             if 'tier' in metadata:
                 subscription.tier = metadata['tier']
             
+            # Create billing snapshot for resilience
+            from ..models.billing_snapshot import BillingSnapshot
+            snapshot = BillingSnapshot.create_from_subscription(subscription)
+            if snapshot:
+                logger.info(f"Created billing snapshot for org {subscription.organization_id}")
+            
             db.session.commit()
             logger.info(f"Updated subscription {subscription.id} with Stripe data (status: {subscription.status})")
             return True
@@ -175,6 +181,12 @@ class StripeService:
                 stripe_subscription['current_period_end']
             )
             subscription.next_billing_date = subscription.current_period_end
+            
+            # Create/update billing snapshot for resilience
+            from ..models.billing_snapshot import BillingSnapshot
+            snapshot = BillingSnapshot.create_from_subscription(subscription)
+            if snapshot:
+                logger.info(f"Updated billing snapshot for org {subscription.organization_id}")
             
             db.session.commit()
             logger.info(f"Updated subscription {subscription.id} from Stripe webhook")
