@@ -83,30 +83,26 @@ def dev_login():
 
 @auth_bp.route('/signup', methods=['GET', 'POST'])
 def signup():
-    """Main signup flow - collect user info then redirect to Stripe"""
+    """Production signup flow - collect user info then redirect to Stripe payment"""
     if current_user.is_authenticated:
         return redirect(url_for('app_routes.dashboard'))
 
-    # Get pricing data from the pricing service (already filtered for customer-facing and available)
+    # Get pricing data for customer-facing tiers only
     from ...services.pricing_service import PricingService
-    pricing_data = PricingService.get_pricing_data()
-
-    # Also get the tiers config for additional filtering if needed
     from ...blueprints.developer.subscription_tiers import load_tiers_config
+    
+    pricing_data = PricingService.get_pricing_data()
     tiers_config = load_tiers_config()
 
-    # Filter pricing_data to only include tiers that are both customer_facing AND available
+    # Only show customer-facing tiers with proper Stripe configuration
     available_tiers = {}
     for tier_key, tier_data in pricing_data.items():
         tier_config = tiers_config.get(tier_key, {})
         if (tier_config.get('is_customer_facing', True) and 
             tier_config.get('is_available', True) and 
-            tier_config.get('stripe_lookup_key')):  # Must have lookup key configured
+            tier_config.get('stripe_lookup_key')):
             
-            # Format the data for the template with price_monthly field
             price_str = tier_data.get('price', '$0').replace('$', '')
-            
-            # Handle non-numeric prices like "Free" or "Exempt"
             try:
                 price_monthly = float(price_str) if price_str.replace('.', '').isdigit() else 0
             except (ValueError, AttributeError):
@@ -115,24 +111,21 @@ def signup():
             available_tiers[tier_key] = {
                 'name': tier_data.get('name', tier_key.title()),
                 'price_monthly': price_monthly,
-                'price_display': tier_data.get('price', '$0'),  # Keep original for display
+                'price_display': tier_data.get('price', '$0'),
                 'price_yearly': tier_data.get('price_yearly', '$0'),
                 'features': tier_data.get('features', []),
-                'fallback_features': tier_data.get('features', []),  # Add fallback_features for template compatibility
                 'user_limit': tier_data.get('user_limit', 1),
                 'stripe_lookup_key': tier_config.get('stripe_lookup_key', '')
             }
 
-    # Get signup tracking parameters from URL or form
+    # Get signup tracking parameters
     signup_source = request.args.get('source', request.form.get('source', 'direct'))
     referral_code = request.args.get('ref', request.form.get('ref'))
     promo_code = request.args.get('promo', request.form.get('promo'))
 
     if request.method == 'POST':
-        # Organization details
+        # Extract form data
         org_name = request.form.get('org_name')
-
-        # User details
         username = request.form.get('username')
         email = request.form.get('email')
         first_name = request.form.get('first_name')
@@ -140,11 +133,9 @@ def signup():
         password = request.form.get('password')
         confirm_password = request.form.get('confirm_password')
         phone = request.form.get('phone')
-
-        # Selected subscription tier
         selected_tier = request.form.get('subscription_tier')
 
-        # Basic validation
+        # Validation
         required_fields = [org_name, username, email, password, confirm_password, selected_tier]
         if not all(required_fields):
             flash('Please fill in all required fields and select a subscription plan', 'error')
@@ -153,7 +144,6 @@ def signup():
                          referral_code=referral_code,
                          promo_code=promo_code,
                          available_tiers=available_tiers,
-                         pricing_data=available_tiers,
                          form_data=request.form)
 
         if password != confirm_password:
@@ -163,10 +153,8 @@ def signup():
                          referral_code=referral_code,
                          promo_code=promo_code,
                          available_tiers=available_tiers,
-                         pricing_data=available_tiers,
                          form_data=request.form)
 
-        # Validate selected tier
         if selected_tier not in available_tiers:
             flash('Invalid subscription plan selected', 'error')
             return render_template('auth/signup.html', 
@@ -174,10 +162,9 @@ def signup():
                          referral_code=referral_code,
                          promo_code=promo_code,
                          available_tiers=available_tiers,
-                         pricing_data=available_tiers,
                          form_data=request.form)
 
-        # Check if username/email already exists
+        # Check for existing users
         existing_user = User.query.filter(
             (User.username == username) | (User.email == email)
         ).first()
@@ -188,17 +175,16 @@ def signup():
                          referral_code=referral_code,
                          promo_code=promo_code,
                          available_tiers=available_tiers,
-                         pricing_data=available_tiers,
                          form_data=request.form)
 
-        # Store signup data in session for post-Stripe completion
+        # Store signup data for post-payment completion
         session['pending_signup'] = {
             'org_name': org_name,
             'username': username,
             'email': email,
             'first_name': first_name,
             'last_name': last_name,
-            'password': password,  # Will be hashed when organization is created
+            'password': password,
             'phone': phone,
             'selected_tier': selected_tier,
             'signup_source': signup_source,
@@ -206,24 +192,14 @@ def signup():
             'referral_code': referral_code
         }
 
-        logger.info(f"=== SIGNUP FORM SUBMISSION ===")
-        logger.info(f"Form selected tier: {selected_tier}")
-        logger.info(f"Organization: {org_name}")
-        logger.info(f"Username: {username}")
-        logger.info(f"Email: {email}")
-        logger.info(f"Stored in session: {session['pending_signup']['selected_tier']}")
-        logger.info(f"============================")
-
-        # Redirect to billing checkout for the selected tier
-        logger.info(f"Redirecting to checkout for tier: {selected_tier}")
+        # Redirect to Stripe checkout
         return redirect(url_for('billing.checkout', tier=selected_tier))
 
     return render_template('auth/signup.html', 
                          signup_source=signup_source,
                          referral_code=referral_code,
                          promo_code=promo_code,
-                         available_tiers=available_tiers,
-                         pricing_data=available_tiers)
+                         available_tiers=available_tiers)
 
 @auth_bp.route('/complete-signup')
 @login_required
