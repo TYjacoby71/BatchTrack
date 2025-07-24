@@ -23,6 +23,12 @@ class Permission(db.Model):
         """Get all active permissions"""
         return cls.query.filter_by(is_active=True).all()
 
+    def is_available_for_tier(self, tier):
+        """Check if permission is available for a subscription tier"""
+        # For now, return True for all permissions
+        # This can be extended to check tier-specific permissions
+        return True
+
 # Association table for many-to-many relationship
 role_permission = db.Table('role_permission',
     db.Column('role_id', db.Integer, db.ForeignKey('role.id'), primary_key=True),

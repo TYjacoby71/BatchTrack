@@ -11,6 +11,12 @@ from .batch import Batch, BatchIngredient, BatchContainer, ExtraBatchContainer, 
 from .unit import Unit, CustomUnitMapping, ConversionLog
 from .category import IngredientCategory, Tag
 
+# Make sure Organization and User are available for import
+__all__ = ['Organization', 'User', 'InventoryItem', 'InventoryHistory', 'BatchInventoryLog', 
+           'Recipe', 'RecipeIngredient', 'Batch', 'BatchIngredient', 'BatchContainer', 
+           'ExtraBatchContainer', 'BatchTimer', 'ExtraBatchIngredient', 'Unit', 
+           'CustomUnitMapping', 'ConversionLog', 'IngredientCategory', 'Tag']
+
 class Organization(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(128), nullable=False)
