@@ -25,3 +25,4 @@ bcrypt
 pytz
 stripe
 gunicorn
+psycopg2-binary
