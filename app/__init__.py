@@ -472,6 +472,21 @@ def create_app():
     app.jinja_env.globals['TimezoneUtils'] = TimezoneUtils
     app.jinja_env.globals['current_time'] = TimezoneUtils.utc_now
 
+    # Make TimezoneUtils available in templates
+    @app.context_processor
+    def inject_timezone_utils():
+        return dict(TimezoneUtils_global=TimezoneUtils)
+
+    # Make get_organization_by_id available in templates
+    @app.context_processor
+    def inject_organization_helpers():
+        from .models import Organization
+        def get_organization_by_id(org_id):
+            if org_id:
+                return Organization.query.get(org_id)
+            return None
+        return dict(get_organization_by_id=get_organization_by_id)
+
     from .management import register_commands
     register_commands(app)
 
