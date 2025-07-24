@@ -91,122 +91,69 @@ logger = logging.getLogger(__name__)
 @billing_bp.route('/checkout/<tier>')
 @billing_bp.route('/checkout/<tier>/<billing_cycle>')
 def checkout(tier, billing_cycle='monthly'):
-    """Create Stripe checkout session and redirect"""
+    """Create Stripe checkout session for subscription payment"""
     from flask import session
 
-    logger.info(f"=== CHECKOUT ROUTE START ===")
-    logger.info(f"Requested tier: {tier}")
-    logger.info(f"Billing cycle: {billing_cycle}")
-    logger.info(f"User authenticated: {current_user.is_authenticated}")
-    logger.info(f"Has pending signup: {bool(session.get('pending_signup'))}")
-
-    if session.get('pending_signup'):
-        logger.info(f"Pending signup data: {session['pending_signup']}")
-        logger.info(f"Selected tier from signup: {session['pending_signup'].get('selected_tier')}")
-
-    # Validate tier is customer-facing and available
+    # Validate tier availability
     from ...services.pricing_service import PricingService
-    logger.info("Loading pricing service data...")
     available_tiers = PricingService.get_pricing_data()
-    logger.info(f"Available tiers from pricing service: {list(available_tiers.keys())}")
-
+    
     if tier not in available_tiers:
-        logger.error(f"Tier {tier} not found in available tiers")
-        flash('Invalid or unavailable subscription tier.', 'error')
+        flash('Invalid subscription tier selected.', 'error')
         return redirect(url_for('billing.upgrade'))
 
     if billing_cycle not in ['monthly', 'yearly']:
         billing_cycle = 'monthly'
-        logger.info(f"Billing cycle reset to: {billing_cycle}")
 
-    # Check if we're in development mode (no webhook secret = dev mode)
-    is_dev_mode = not current_app.config.get('STRIPE_WEBHOOK_SECRET')
-    is_stripe_ready = tier_data.get('is_stripe_ready', False)
-    logger.info(f"Development mode: {is_dev_mode}")
-    logger.info(f"Tier {tier} stripe ready: {is_stripe_ready}")
-
-    # FLOW 1: DEVELOPMENT MODE (No webhook secret)
-    # Bypass payment processing, create account immediately
-    if is_dev_mode:
-        logger.info(f"=== DEVELOPMENT MODE FLOW ===")
-        logger.info(f"Bypassing Stripe payment processing for tier {tier}")
-        flash(f'Development Mode: Bypassing payment processing for {tier.title()} tier', 'info')
-
-        # NEW SIGNUP: User not authenticated but has pending signup data
-        if not current_user.is_authenticated and session.get('pending_signup'):
-            logger.info("NEW SIGNUP: Creating account immediately - no payment processing")
-            flash('Creating your account without payment processing...', 'info')
-            return complete_signup_dev_mode(tier, is_stripe_mode=False)
-
-        # EXISTING USER UPGRADE: User is authenticated, upgrade existing org
-        elif current_user.is_authenticated:
-            if not has_permission(current_user, 'organization.manage_billing'):
-                logger.warning(f"User {current_user.id} lacks billing permission")
-                flash('You do not have permission to manage billing.', 'error')
-                return redirect(url_for('organization.dashboard'))
-
-            logger.info(f"EXISTING USER: Upgrading user immediately - no payment processing")
-            flash(f'Processing {tier.title()} upgrade in development mode...', 'info')
-            success = StripeService.simulate_subscription_success(current_user.organization, tier)
-            if success:
-                flash(f'Development Mode: {tier.title()} subscription activated!', 'success')
-                return redirect(url_for('settings.index') + '#billing')
-            else:
-                flash('Failed to activate subscription in development mode.', 'error')
-                return redirect(url_for('billing.upgrade'))
-
-        # ERROR: No pending signup and not authenticated
-        else:
-            logger.error("No pending signup and user not authenticated")
-            flash('Please complete signup information first.', 'error')
+    # Handle new signups vs existing user upgrades
+    if not current_user.is_authenticated and session.get('pending_signup'):
+        # New customer signup flow
+        try:
+            price_key = f"{tier}_{billing_cycle}" if billing_cycle != 'monthly' else tier
+            
+            # Create Stripe checkout session for new customer
+            # This will be handled by the webhook after successful payment
+            signup_data = session['pending_signup']
+            checkout_session = StripeService.create_checkout_session_for_signup(
+                signup_data, price_key
+            )
+            
+            if not checkout_session:
+                flash('Payment system temporarily unavailable. Please try again later.', 'error')
+                return redirect(url_for('auth.signup'))
+            
+            return redirect(checkout_session.url)
+            
+        except Exception as e:
+            logger.error(f"Signup checkout error: {str(e)}")
+            flash('Unable to process payment. Please try again.', 'error')
             return redirect(url_for('auth.signup'))
+    
+    elif current_user.is_authenticated:
+        # Existing user upgrade flow
+        if not has_permission(current_user, 'organization.manage_billing'):
+            flash('You do not have permission to manage billing.', 'error')
+            return redirect(url_for('organization.dashboard'))
 
-    # FLOW 2: PRODUCTION MODE (Stripe Ready = TRUE)  
-    # Proceed to payment processing, hold account creation until payment success
-    else:
-        logger.info(f"=== PRODUCTION MODE FLOW ===")
-        logger.info(f"Processing Stripe payment first for tier {tier}")
-        flash(f'Production Mode: Redirecting to secure payment processing for {tier.title()} tier', 'info')
+        try:
+            price_key = f"{tier}_{billing_cycle}" if billing_cycle != 'monthly' else tier
+            checkout_session = StripeService.create_checkout_session(current_user.organization, price_key)
 
-        # NEW SIGNUP: Create temporary account first, then redirect to Stripe
-        if not current_user.is_authenticated and session.get('pending_signup'):
-            logger.info("NEW SIGNUP: Creating temporary account before Stripe checkout")
-            flash('Preparing account for payment processing...', 'info')
-            return complete_signup_dev_mode(tier, is_stripe_mode=True)
-
-        # EXISTING USER UPGRADE: Must be authenticated for billing changes
-        elif current_user.is_authenticated:
-            if not has_permission(current_user, 'organization.manage_billing'):
-                logger.warning(f"User {current_user.id} lacks billing permission")
-                flash('You do not have permission to manage billing.', 'error')
-                return redirect(url_for('organization.dashboard'))
-
-            try:
-                logger.info("EXISTING USER: Creating Stripe checkout session")
-                flash('Redirecting to secure payment processing...', 'info')
-                price_key = f"{tier}_{billing_cycle}" if billing_cycle != 'monthly' else tier
-                logger.info(f"Using price key: {price_key}")
-                checkout_session = StripeService.create_checkout_session(current_user.organization, price_key)
-
-                if not checkout_session:
-                    logger.error("Failed to create Stripe checkout session")
-                    flash('Stripe configuration incomplete. Please check your Stripe settings or contact support.', 'error')
-                    return redirect(url_for('billing.upgrade'))
-
-                logger.info(f"Stripe checkout session created: {checkout_session.id}")
-                flash('Redirecting to Stripe checkout...', 'info')
-                return redirect(checkout_session.url)
-
-            except Exception as e:
-                logger.error(f"Checkout error for org {current_user.organization.id}: {str(e)}")
+            if not checkout_session:
                 flash('Payment system temporarily unavailable. Please contact support.', 'error')
                 return redirect(url_for('billing.upgrade'))
 
-        # ERROR: No authentication for production mode
-        else:
-            logger.error("No authentication for production mode")
-            flash('Please complete account creation first, then upgrade your subscription.', 'error')
-            return redirect(url_for('auth.signup'))
+            return redirect(checkout_session.url)
+
+        except Exception as e:
+            logger.error(f"Upgrade checkout error: {str(e)}")
+            flash('Payment system temporarily unavailable. Please contact support.', 'error')
+            return redirect(url_for('billing.upgrade'))
+    
+    else:
+        # No valid flow
+        flash('Please complete signup first.', 'error')
+        return redirect(url_for('auth.signup'))
 
 @billing_bp.route('/customer-portal')
 @login_required
