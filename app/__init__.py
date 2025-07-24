@@ -126,7 +126,7 @@ def create_app():
             if not hasattr(current_user, '_original_org_id'):
                 current_user._original_org_id = current_user.organization_id
                 current_user._original_is_org_owner = getattr(current_user, 'is_organization_owner', False)
-            
+
             # Make developer appear as organization owner of selected org
             current_user.organization_id = selected_org_id
             current_user.organization = selected_org

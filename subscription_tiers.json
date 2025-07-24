@@ -348,7 +348,9 @@
       "ai.demand_forecasting",
       "ai.quality_insights"
     ],
-    "is_customer_facing": true,
-    "is_available": true
+    "is_customer_facing": false,
+    "is_available": true,
+    "fallback_price_monthly": "$0",
+    "fallback_price_yearly": "$0"
   }
 }
