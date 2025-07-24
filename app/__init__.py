@@ -13,7 +13,7 @@ def create_app():
 
     # Configuration
     app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', 'devkey-please-change-in-production')
-    
+
     # Database configuration - use PostgreSQL if available, fallback to SQLite
     database_url = os.environ.get('DATABASE_URL')
     if database_url:
@@ -25,7 +25,7 @@ def create_app():
         os.makedirs(instance_path, exist_ok=True)
         os.chmod(instance_path, 0o777)
         app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(instance_path, 'batchtrack.db')
-    
+
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['UPLOAD_FOLDER'] = 'static/product_images'
     os.makedirs('static/product_images', exist_ok=True)
@@ -104,7 +104,15 @@ def create_app():
             # Allow auth routes
             if request.path.startswith('/auth/'):
                 return None
-            # Require organization filter for customer routes
+            # Allow access to static files and API routes
+            if request.path.startswith('/api/') or request.path.startswith('/static/'):
+                return None
+
+            # Allow access to root and homepage
+            if request.path in ['/', '/homepage']:
+                return None
+
+            # If accessing customer routes, require organization selection
             if not session.get('dev_selected_org_id'):
                 if request.is_json:
                     return jsonify({'error': 'Developer must select organization to access customer features'}), 403
@@ -121,29 +129,7 @@ def create_app():
 
         # Permission checking is now handled by route decorators
         # This middleware only handles organization scoping
-
         return None
-
-        # Developer isolation - ensure developers access appropriate routes
-        if current_user.user_type == 'developer':
-            # Allow developer routes
-            if request.path.startswith('/developer/'):
-                return None
-            # Allow auth routes
-            if request.path.startswith('/auth/'):
-                return None
-            # Allow access to static files and API routes
-            if request.path.startswith('/api/') or request.path.startswith('/static/'):
-                return None
-
-            # Allow access to root and homepage
-            if request.path in ['/', '/homepage']:
-                return None
-
-            # If accessing customer routes, require organization selection
-            if not session.get('dev_selected_org_id'):
-                flash('Please select an organization to view customer data, or use the developer dashboard.', 'warning')
-                return redirect(url_for('developer.dashboard'))
 
     # Register blueprints
     from .blueprints.auth import auth_bp
