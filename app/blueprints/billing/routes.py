@@ -321,9 +321,10 @@ def complete_signup_dev(tier):
         if not success:
             raise Exception("Failed to activate development subscription")
 
+        # Commit all changes first
         db.session.commit()
 
-        # Log in the user
+        # Log in the user after successful commit
         login_user(owner_user)
 
         # Clear pending signup data
