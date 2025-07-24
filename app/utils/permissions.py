@@ -16,13 +16,13 @@ def require_permission(permission_name, require_org_scoping=True):
             # Check permission
             if not has_permission(current_user, permission_name):
                 abort(403)
-            
+
             # Enforce organization scoping for non-developer users
             if require_org_scoping and current_user.user_type != 'developer':
                 effective_org_id = get_effective_organization_id()
                 if not effective_org_id:
                     abort(403, description="No organization context")
-                    
+
                 # Add organization context to kwargs for easy access
                 kwargs['organization_id'] = effective_org_id
 
@@ -36,11 +36,11 @@ def require_organization_scoping(f):
     def decorated_function(*args, **kwargs):
         if not current_user.is_authenticated:
             abort(401)
-            
+
         effective_org_id = get_effective_organization_id()
         if not effective_org_id and current_user.user_type != 'developer':
             abort(403, description="No organization context")
-            
+
         # Add organization context to kwargs
         kwargs['organization_id'] = effective_org_id
         return f(*args, **kwargs)
@@ -52,10 +52,10 @@ def require_system_admin(f):
     def decorated_function(*args, **kwargs):
         if not current_user.is_authenticated:
             abort(401)
-            
+
         if not has_permission('dev.system_admin'):
             abort(403)
-            
+
         return f(*args, **kwargs)
     return decorated_function
 
@@ -65,59 +65,37 @@ def require_organization_owner(f):
     def decorated_function(*args, **kwargs):
         if not current_user.is_authenticated:
             abort(401)
-            
+
         if not is_organization_owner():
             abort(403)
-            
+
         return f(*args, **kwargs)
     return decorated_function
 
-def has_permission(user_or_permission_name, permission_name=None):
-    """
-    Check if user has a specific permission through their assigned roles
-    Supports both has_permission(permission_name) and has_permission(user, permission_name)
-    """
-    # Handle both calling patterns
-    if permission_name is None:
+def has_permission(permission_name, user=None):
+    """Check if user has a specific permission"""
+    if user is None:
         user = current_user
-        permission = user_or_permission_name
-    else:
-        user = user_or_permission_name
-        permission = permission_name
 
     if not user.is_authenticated:
         return False
 
-    # Developers in customer view mode mimic organization owner permissions
+    # Developers have all permissions, including when viewing as customer
     if user.user_type == 'developer':
-        from flask import session
-        if session.get('dev_selected_org_id'):
-            # Developer is in customer view - check permissions as organization owner
-            from app.models import Organization
-            selected_org = Organization.query.get(session.get('dev_selected_org_id'))
-            if selected_org:
-                # Check if permission is available for the selected organization's tier
-                if not _has_tier_permission_for_org(selected_org, permission):
-                    return False
-                # Developers in customer view have all tier-allowed permissions
-                return True
-            return False
-        else:
-            # Developer not in customer view - use developer permissions
-            return user.has_developer_permission(permission)
+        return True
 
     # All other users check organization roles with tier restrictions
     if not user.organization:
         return False
 
     # Check if subscription tier allows this permission
-    if not _has_tier_permission(user, permission):
+    if not _has_tier_permission(user, permission_name):
         return False
 
     # Check if any of the user's roles grants this permission
     roles = user.get_active_roles()
     for role in roles:
-        if role.has_permission(permission):
+        if role.has_permission(permission_name):
             return True
 
     return False

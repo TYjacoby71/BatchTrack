@@ -4,10 +4,9 @@ from .timezone_utils import TimezoneUtils
 from flask import Blueprint
 from datetime import datetime, timedelta
 import json
-from ..models import Unit
+from ..models import Unit, User, Organization
 from ..services.unit_conversion import ConversionEngine
 from ..utils.unit_utils import get_global_unit_list
-from ..models import User, Organization
 from ..utils.timezone_utils import TimezoneUtils
 import re
 
