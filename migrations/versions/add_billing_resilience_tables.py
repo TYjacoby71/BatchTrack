@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 # revision identifiers
 revision = 'add_billing_resilience_tables'
-down_revision = None  # Replace with latest revision
+down_revision = 'fb4c629d09cc'  # Points to remove_subscription_tier_from_permissions
 branch_labels = None
 depends_on = None
 
