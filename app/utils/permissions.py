@@ -94,15 +94,15 @@ def has_permission(permission_name_or_user, permission_name_or_none=None):
     if user.user_type == 'developer':
         return True
 
-    # All other users check organization roles with tier restrictions
+    # All other users: check org tier allows permission AND user has role with permission
     if not user.organization:
         return False
 
-    # Check if subscription tier allows this permission
-    if not _has_tier_permission(user, permission_name):
+    # 1. First check: Does the organization's subscription tier include this permission?
+    if not _org_tier_includes_permission(user.organization, permission_name):
         return False
 
-    # Check if any of the user's roles grants this permission
+    # 2. Second check: Does any of the user's roles grant this permission?
     roles = user.get_active_roles()
     for role in roles:
         if role.has_permission(permission_name):
@@ -110,25 +110,18 @@ def has_permission(permission_name_or_user, permission_name_or_none=None):
 
     return False
 
-def _has_tier_permission(user, permission_name):
-    """Check if user's subscription tier allows this permission"""
-    if not user.organization:
-        return False
-
-    return _has_tier_permission_for_org(user.organization, permission_name)
-
-def _has_tier_permission_for_org(organization, permission_name):
-    """Check if organization's subscription tier allows this permission"""
+def _org_tier_includes_permission(organization, permission_name):
+    """Check if organization's subscription tier includes this permission"""
     if not organization:
         return False
 
-    # Get organization's effective subscription tier (handles subscription model fallback)
+    # Get organization's effective subscription tier
     current_tier = organization.effective_subscription_tier
 
     # Import here to avoid circular import
     from app.blueprints.developer.subscription_tiers import load_tiers_config
 
-    # Get tier permissions
+    # Get tier permissions from subscription tiers config
     tiers_config = load_tiers_config()
     tier_data = tiers_config.get(current_tier, {})
     tier_permissions = tier_data.get('permissions', [])
@@ -202,12 +195,12 @@ def get_user_permissions():
             return [perm.name for perm in Permission.query.filter_by(is_active=True).all()]
 
     # Get permissions from assigned roles (works for all user types)
-    # All permissions in the Permission model are now organization permissions
     permissions = set()
     roles = current_user.get_active_roles()
     for role in roles:
         for perm in role.get_permissions():
-            if perm.is_available_for_tier(current_user.organization.subscription_tier):
+            # Only add permissions that the organization's tier allows
+            if _org_tier_includes_permission(current_user.organization, perm.name):
                 permissions.add(perm.name)
 
     return list(permissions)
