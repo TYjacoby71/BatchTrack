@@ -445,3 +445,29 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 {% endblock %}
+<div class="mb-3">
+                        <label for="fallback_features" class="form-label">Fallback Features (one per line)</label>
+                        <textarea class="form-control" id="fallback_features" name="fallback_features" rows="5">{{ '\n'.join(tier.get('fallback_features', [])) }}</textarea>
+                    </div>
+
+                    <hr class="my-4">
+                    <h6 class="text-muted">Fallback Pricing (used when Stripe is not available)</h6>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="fallback_price_monthly" class="form-label">Monthly Price</label>
+                                <input type="text" class="form-control" id="fallback_price_monthly" name="fallback_price_monthly" 
+                                       value="{{ tier.get('fallback_price_monthly', '$0') }}">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="fallback_price_yearly" class="form-label">Yearly Price</label>
+                                <input type="text" class="form-control" id="fallback_price_yearly" name="fallback_price_yearly" 
+                                       value="{{ tier.get('fallback_price_yearly', '$0') }}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>

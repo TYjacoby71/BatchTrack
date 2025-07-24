@@ -41,8 +41,6 @@
                     </div>
                     {% endif %}
 
-
-
                     <form method="POST" id="signupForm">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <!-- Hidden fields for tracking -->
@@ -52,10 +50,7 @@
                         {% endif %}
 
                         <!-- Hidden field for selected tier -->
-                        <input type="hidden" name="subscription_tier" id="selectedTier" value="team">
-
-                        <!-- Name fields -->
-                        <div class="row mb-3"></div>
+                        <input type="hidden" name="subscription_tier" id="subscription_tier" value="team">
 
                         <!-- Tier Selection -->
                         <div class="mb-4">
@@ -63,7 +58,7 @@
                             <div class="row">
                                 {% for tier_key, tier_data in available_tiers.items() %}
                                 <div class="col-md-4 mb-3">
-                                    <div class="card tier-option h-100 {% if tier_key == 'team' %}border-primary{% endif %}" 
+                                    <div class="card tier-card h-100 {% if tier_key == 'team' %}border-primary{% endif %}" 
                                          data-tier="{{ tier_key }}" 
                                          style="cursor: pointer; transition: all 0.3s; border-width: 2px;"
                                          onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 4px 15px rgba(0,0,0,0.1)'"
@@ -178,7 +173,7 @@
                                 </div>
                             </div>
 
-                            <!-- Right Column - Billing Information -->
+                            <!-- Right Column - Billing Information (if needed) -->
                             <div class="col-md-6">
                                 {% if current_offer and current_offer.requires_billing %}
                                 <div class="mb-4">
@@ -282,7 +277,6 @@
                                                     <option value="CA">Canada</option>
                                                     <option value="GB">United Kingdom</option>
                                                     <option value="AU">Australia</option>
-                                                    <!-- Add more countries as needed -->
                                                 </select>
                                             </div>
                                         </div>
@@ -312,8 +306,8 @@
                                         <i class="fas fa-sign-in-alt"></i> Already have an account? Login
                                     </a>
                                     <button type="submit" class="btn btn-success btn-lg px-4" {% if not available_tiers %}disabled{% endif %}>
-                        Continue to Payment
-                    </button>
+                                        Continue to Payment
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -331,101 +325,6 @@ function formatCardNumber(input) {
     if (formattedValue.length > 19) formattedValue = formattedValue.substr(0, 19);
     input.value = formattedValue;
 }
-
-function validatePromoCode() {
-    const promoCode = document.getElementById('promo_code').value.trim().toUpperCase();
-    const messageDiv = document.getElementById('promoMessage');
-
-    if (!promoCode) {
-        messageDiv.innerHTML = '';
-        return;
-    }
-
-    // Simple validation - in production, this would be an AJAX call
-    const validCodes = {
-        'WELCOME20': '20% off for 3 months',
-        'TRIAL30': '30% off first month', 
-        'WEBINAR50': '50% off first 2 months',
-        'PARTNER25': '25% off for 6 months'
-    };
-
-    if (validCodes[promoCode]) {
-        messageDiv.innerHTML = `<div class="alert alert-success small"><i class="fas fa-check-circle me-1"></i> Valid! ${validCodes[promoCode]}</div>`;
-    } else {
-        messageDiv.innerHTML = `<div class="alert alert-danger small"><i class="fas fa-exclamation-circle me-1"></i> Invalid promo code</div>`;
-    }
-}
-
-// Auto-validate promo code on page load
-document.addEventListener('DOMContentLoaded', function() {
-    if (document.getElementById('promo_code').value) {
-        validatePromoCode();
-    }
-});
-</script>
-
-<script>
-// Tier selection handling
-document.addEventListener('DOMContentLoaded', function() {
-    const tierOptions = document.querySelectorAll('.tier-option');
-    const selectedTierInput = document.getElementById('selectedTier');
-
-    if (!tierOptions.length || !selectedTierInput) {
-        console.error('Tier selection elements not found');
-        return;
-    }
-
-    tierOptions.forEach(option => {
-        option.addEventListener('click', function(e) {
-            e.preventDefault();
-            console.log('Tier clicked:', this.dataset.tier);
-
-            // Remove active class from all
-            tierOptions.forEach(opt => {
-                opt.classList.remove('border-success', 'bg-light');
-                opt.style.boxShadow = '';
-                opt.style.transform = '';
-            });
-
-            // Add active class to selected
-            this.classList.add('border-success', 'bg-light');
-            this.style.boxShadow = '0 0 15px rgba(0,123,255,0.4)';
-            this.style.transform = 'translateY(-2px)';
-
-            // Update hidden input
-            selectedTierInput.value = this.dataset.tier;
-            console.log('Selected tier updated to:', this.dataset.tier);
-
-            // Update payment visibility
-            updatePaymentSection();
-        });
-    });
-
-    // Set initial selection (team is pre-selected)
-    const defaultTier = document.querySelector('[data-tier="team"]');
-    if (defaultTier) {
-        defaultTier.click(); // Use click to trigger the event handler
-    }
-
-    function updatePaymentSection() {
-        const tier = selectedTierInput.value;
-        const paymentSections = document.querySelectorAll('.col-md-6');
-
-        // Find payment section by checking for payment-related content
-        let paymentSection = null;
-        paymentSections.forEach(section => {
-            const heading = section.querySelector('h5');
-            if (heading && heading.textContent.includes('Payment')) {
-                paymentSection = section;
-            }
-        });
-
-        // All tiers except free require payment
-        if (paymentSection) {
-            paymentSection.style.display = tier === 'free' ? 'none' : 'block';
-        }
-    }
-});
 </script>
 {% endblock %}
 
@@ -445,19 +344,30 @@ document.addEventListener('DOMContentLoaded', function() {
     tierCards.forEach(card => {
         card.addEventListener('click', function() {
             const tier = this.dataset.tier;
+            console.log('=== TIER SELECTION ===');
             console.log('Tier clicked:', tier);
+            console.log('Card dataset:', this.dataset);
 
             // Remove active class from all cards
-            tierCards.forEach(c => c.classList.remove('active', 'border-primary'));
+            tierCards.forEach(c => {
+                c.classList.remove('active', 'border-primary');
+                console.log('Removed active from:', c.dataset.tier);
+            });
 
             // Add active class to clicked card
             this.classList.add('active', 'border-primary');
+            console.log('Added active to:', tier);
 
             // Update hidden input
             if (selectedTierInput) {
+                const oldValue = selectedTierInput.value;
                 selectedTierInput.value = tier;
-                console.log('Selected tier updated to:', tier);
+                console.log('Tier input updated from:', oldValue, 'to:', tier);
+                console.log('Input element:', selectedTierInput);
+            } else {
+                console.error('selectedTierInput is null!');
             }
+            console.log('==================');
         });
     });
 
@@ -465,8 +375,17 @@ document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('signupForm');
     if (form) {
         form.addEventListener('submit', function(e) {
+            console.log('=== FORM SUBMISSION ===');
             const selectedTier = selectedTierInput ? selectedTierInput.value : '';
+            console.log('Selected tier on submit:', selectedTier);
+            console.log('Form data at submit:');
+            const formData = new FormData(form);
+            for (let [key, value] of formData.entries()) {
+                console.log(`${key}: ${value}`);
+            }
+            
             if (!selectedTier) {
+                console.error('No tier selected!');
                 e.preventDefault();
                 alert('Please select a subscription plan');
                 return false;
@@ -481,6 +400,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (field && !field.value.trim()) {
                     hasErrors = true;
                     field.classList.add('is-invalid');
+                    console.log(`Missing required field: ${fieldName}`);
                 } else if (field) {
                     field.classList.remove('is-invalid');
                 }
@@ -493,14 +413,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 hasErrors = true;
                 confirmPassword.classList.add('is-invalid');
                 alert('Passwords do not match');
+                console.log('Password mismatch!');
             }
 
             if (hasErrors) {
+                console.log('Form has errors, preventing submission');
                 e.preventDefault();
                 return false;
             }
 
             console.log('Form submission proceeding with tier:', selectedTier);
+            console.log('===================');
         });
     }
 });
