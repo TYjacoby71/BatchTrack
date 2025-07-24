@@ -116,19 +116,27 @@ def checkout(tier, billing_cycle='monthly'):
     tier_data = tiers_config.get(tier, {})
     is_stripe_ready = tier_data.get('is_stripe_ready', False)
 
-    # Create checkout session
+    # Check if tier is not stripe-ready - bypass Stripe entirely
+    if not is_stripe_ready:
+        logger.info(f"Tier {tier} not stripe-ready, using development simulation")
+        success = StripeService.simulate_subscription_success(current_user.organization, tier)
+        if success:
+            flash(f'Development Mode: {tier.title()} subscription activated!', 'success')
+            return redirect(url_for('settings.index') + '#billing')
+        else:
+            flash('Failed to activate subscription in development mode.', 'error')
+            return redirect(url_for('billing.upgrade'))
+
+    # Create checkout session for stripe-ready tiers
     try:
         session = StripeService.create_checkout_session(current_user.organization, price_key)
 
         if not session:
-            # Check if tier is not stripe-ready or we're in development mode
-            if not is_stripe_ready or not current_app.config.get('STRIPE_WEBHOOK_SECRET'):
-                # Development mode - simulate subscription
+            # Fallback to development mode if Stripe fails but webhook isn't configured
+            if not current_app.config.get('STRIPE_WEBHOOK_SECRET'):
                 success = StripeService.simulate_subscription_success(current_user.organization, tier)
                 if success:
-                    mode_reason = "Development Mode" if not is_stripe_ready else "Webhook not configured"
-                    flash(f'{mode_reason}: Simulated {tier.title()} subscription activated!', 'success')
-                    # Redirect to settings billing tab instead of organization dashboard
+                    flash('Webhook not configured: Simulated subscription activated!', 'success')
                     return redirect(url_for('settings.index') + '#billing')
                 else:
                     flash('Failed to activate subscription in development mode.', 'error')
@@ -136,11 +144,12 @@ def checkout(tier, billing_cycle='monthly'):
 
             flash('Failed to create checkout session. Please try again.', 'error')
             return redirect(url_for('billing.upgrade'))
+            
     except Exception as e:
         logger.error(f"Checkout error for org {current_user.organization.id}: {str(e)}")
-
-        # Fallback for development
-        if not is_stripe_ready:
+        
+        # Fallback to development mode for any Stripe errors
+        if not current_app.config.get('STRIPE_WEBHOOK_SECRET'):
             success = StripeService.simulate_subscription_success(current_user.organization, tier)
             if success:
                 flash(f'Development Mode: {tier.title()} subscription activated!', 'success')
