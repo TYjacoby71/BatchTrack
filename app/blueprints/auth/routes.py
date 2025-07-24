@@ -1,4 +1,4 @@
-from flask import render_template, request, redirect, url_for, flash, session
+from flask import render_template, request, redirect, url_for, flash, session, current_app
 from flask_login import login_user, logout_user, current_user
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField
@@ -177,6 +177,12 @@ def signup():
                          available_tiers=available_tiers,
                          form_data=request.form)
 
+        # Check if tier is Stripe-ready before proceeding
+        from ...blueprints.developer.subscription_tiers import load_tiers_config
+        tiers_config = load_tiers_config()
+        tier_data = tiers_config.get(selected_tier, {})
+        is_stripe_ready = tier_data.get('is_stripe_ready', False)
+
         # Store signup data for post-payment completion
         session['pending_signup'] = {
             'org_name': org_name,
@@ -192,8 +198,14 @@ def signup():
             'referral_code': referral_code
         }
 
-        # Redirect to Stripe checkout
-        return redirect(url_for('billing.checkout', tier=selected_tier))
+        # Check if we should use Stripe or development mode
+        if is_stripe_ready and current_app.config.get('STRIPE_SECRET_KEY'):
+            # Stripe is configured and tier is ready - use real payment
+            return redirect(url_for('billing.checkout', tier=selected_tier))
+        else:
+            # Development mode or tier not Stripe-ready - simulate signup completion
+            from ...blueprints.billing.routes import complete_signup_dev_mode
+            return complete_signup_dev_mode(selected_tier, is_stripe_mode=False)
 
     return render_template('auth/signup.html', 
                          signup_source=signup_source,
