@@ -2,7 +2,7 @@
 from flask import Blueprint, render_template, jsonify
 from flask_login import login_required, current_user
 from app.models import Permission
-from app.utils.permissions import has_permission, _has_tier_permission
+from app.utils.permissions import has_permission, _org_tier_includes_permission
 from app.blueprints.developer.subscription_tiers import load_tiers_config
 
 debug_bp = Blueprint('debug', __name__, url_prefix='/debug')
@@ -30,7 +30,7 @@ def debug_permissions():
     for perm in all_permissions:
         permission_status[perm.name] = {
             'has_permission': has_permission(current_user, perm.name),
-            'has_tier_permission': _has_tier_permission(current_user, perm.name),
+            'has_tier_permission': _org_tier_includes_permission(current_user.organization, perm.name) if current_user.organization else False,
             'in_tier_config': perm.name in tier_permissions,
             'description': perm.description
         }
