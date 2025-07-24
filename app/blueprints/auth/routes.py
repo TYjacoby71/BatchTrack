@@ -204,7 +204,7 @@ def signup():
         }
 
         # Redirect to billing checkout for the selected tier
-        flash('Redirecting to secure payment processing...', 'info')
+        logger.info(f"Redirecting to checkout for tier: {selected_tier}")
         return redirect(url_for('billing.checkout', tier=selected_tier))
 
     return render_template('auth/signup.html', 
