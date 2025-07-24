@@ -18,7 +18,9 @@ def debug_organization_permissions(org_name):
             return
         
         print(f"🏢 Organization: {org.name} (ID: {org.id})")
-        print(f"📋 Subscription Tier: {org.subscription_tier}")
+        # Get subscription tier from the separate Subscription model
+        subscription_tier = org.effective_subscription_tier if hasattr(org, 'effective_subscription_tier') else 'free'
+        print(f"📋 Subscription Tier: {subscription_tier}")
         print(f"👥 Users: {org.active_users_count}/{org.get_max_users()}")
         print()
         

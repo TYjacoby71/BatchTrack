@@ -1,0 +1,20 @@
+app/models/models.py:        effective_tier = self.effective_subscription_tier
+app/models/models.py:        effective_tier = self.effective_subscription_tier
+app/models/models.py:    def effective_subscription_tier(self):
+app/models/models.py:        from ..blueprints.developer.subscription_tiers import load_tiers_config
+app/models/models.py:        from ..blueprints.developer.subscription_tiers import load_tiers_config
+app/models/models.py:                if permission and permission.is_available_for_tier(self.organization.effective_subscription_tier):
+app/models/models.py:            tier = self.organization.subscription_tier.title()
+app/blueprints/auth/permissions.py:from app.blueprints.developer.subscription_tiers import load_tiers_config
+app/blueprints/auth/permissions.py:        available_permissions = get_tier_permissions(current_user.organization.effective_subscription_tier)
+app/blueprints/auth/permissions.py:            available_permissions = get_tier_permissions(current_user.organization.effective_subscription_tier)
+app/blueprints/auth/routes.py:    from ...blueprints.developer.subscription_tiers import load_tiers_config
+app/blueprints/auth/routes.py:        selected_tier = request.form.get('subscription_tier')
+app/blueprints/auth/routes.py:        from ...blueprints.developer.subscription_tiers import load_tiers_config
+app/blueprints/auth/routes.py:            'required_subscription_tier': perm.required_subscription_tier
+app/blueprints/organization/routes.py:        effective_tier = current_user.organization.effective_subscription_tier
+app/blueprints/organization/routes.py:    from ...blueprints.developer.subscription_tiers import load_tiers_config
+app/blueprints/organization/routes.py:def update_subscription_tier():
+app/blueprints/organization/routes.py:        tier_key = data.get('subscription_tier')
+app/blueprints/organization/routes.py:        from ...blueprints.developer.subscription_tiers import load_tiers_config
+app/blueprints/organization/routes.py:                'error': f'Organization has reached user limit ({current_count}/{max_users}) for {current_user.organization.subscription_tier} subscription'
