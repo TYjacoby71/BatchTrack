@@ -105,20 +105,18 @@ class ScopedModelMixin:
 
     @classmethod
     def scoped(cls):
-        """Return query filtered by current user's organization"""
+        """Return query filtered by current user's effective organization"""
+        from app.utils.permissions import get_effective_organization_id
+        
         if not current_user.is_authenticated:
             return cls.query.filter(False)  # Return empty query if no user
 
-        # Developers can access any organization's data based on session selection
-        if current_user.user_type == 'developer':
-            from flask import session
-            selected_org = session.get('dev_selected_org_id')
-            if selected_org:
-                return cls.query.filter_by(organization_id=selected_org)
-            else:
-                return cls.query  # Return all data for developers if no org selected
-
-        # Regular users only see their organization's data
-        return cls.query.filter_by(organization_id=current_user.organization_id)
+        # Get effective organization ID (handles both regular users and developers in customer view)
+        org_id = get_effective_organization_id()
+        if org_id:
+            return cls.query.filter_by(organization_id=org_id)
+        else:
+            # No organization context - return empty for safety
+            return cls.query.filter(False)
 
     

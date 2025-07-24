@@ -77,7 +77,7 @@ def has_permission(permission_name_or_user, permission_name_or_none=None):
     # Handle both calling patterns:
     # has_permission('permission.name') - from code
     # has_permission(current_user, 'permission.name') - from templates
-    
+
     if permission_name_or_none is not None:
         # Template style: has_permission(user, permission_name)
         user = permission_name_or_user
@@ -90,9 +90,16 @@ def has_permission(permission_name_or_user, permission_name_or_none=None):
     if not hasattr(user, 'is_authenticated') or not user.is_authenticated:
         return False
 
-    # Developers have all permissions, including when viewing as customer
+    # Developers in customer view mode work like organization owners
     if user.user_type == 'developer':
-        return True
+        from flask import session
+        selected_org_id = session.get('dev_selected_org_id')
+        if selected_org_id:
+            # Developer in customer view has all organization owner permissions for that tier
+            return _has_tier_permission_for_org(selected_org_id, permission_name)
+        else:
+            # Developer in developer mode - check developer permissions
+            return current_user.has_developer_permission(permission_name)
 
     # All other users: check org tier allows permission AND user has role with permission
     if not user.organization:
@@ -155,9 +162,14 @@ def has_subscription_feature(feature):
     return feature in org_features or 'all_features' in org_features
 
 def is_organization_owner():
-    """Unified organization owner check - based on having the organization_owner role"""
+    """Check if current user is organization owner"""
     if not current_user.is_authenticated:
         return False
+
+    # Developers in customer view mode act as organization owners
+    if current_user.user_type == 'developer':
+        from flask import session
+        return session.get('dev_selected_org_id') is not None
 
     # Organization owners are customers with the organization_owner role
     if current_user.user_type == 'customer':
@@ -206,24 +218,29 @@ def get_user_permissions():
     return list(permissions)
 
 def get_effective_organization_id():
-    """Get the effective organization ID for the current user (handles developer customer view)"""
+    """Get the effective organization ID for current user (handles developer customer view)"""
     if not current_user.is_authenticated:
         return None
 
     if current_user.user_type == 'developer':
+        # Developers can view customer data by selecting an organization
         from flask import session
         return session.get('dev_selected_org_id')
-
-    return current_user.organization_id
+    else:
+        # Regular users use their organization
+        return current_user.organization_id
 
 def get_effective_organization():
     """Get the effective organization for the current user (handles developer customer view)"""
-    org_id = get_effective_organization_id()
-    if not org_id:
+    from app.models import Organization
+
+    if not current_user.is_authenticated:
         return None
 
-    from app.models import Organization
-    return Organization.query.get(org_id)
+    org_id = get_effective_organization_id()
+    if org_id:
+        return Organization.query.get(org_id)
+    return None
 
 def get_available_roles_for_user(user=None):
     """Get roles that can be assigned to a user"""
@@ -302,3 +319,20 @@ class UserTypeManager:
 
         db.session.commit()
         return org, owner
+
+def _has_tier_permission_for_org(org_id, permission_name):
+    """Check if a permission is available for an organization's subscription tier"""
+    from app.models import Organization, Permission
+
+    org = Organization.query.get(org_id)
+    if not org:
+        return False
+
+    # Get the permission object
+    permission = Permission.query.filter_by(name=permission_name, is_active=True).first()
+    if not permission:
+        return False
+
+    # Check if permission is available for the organization's tier
+    effective_tier = org.effective_subscription_tier
+    return permission.is_available_for_tier(effective_tier)
