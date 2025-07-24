@@ -450,7 +450,10 @@ def debug_billing():
     """Debug endpoint for billing information"""
     try:
         if not current_user.organization:
-            return jsonify({'error': 'No organization found for user'}), 400
+            error_response = {'error': 'No organization found for user'}
+            if request.headers.get('Accept') == 'application/json':
+                return jsonify(error_response), 400
+            return render_template('billing/debug.html', debug_info=error_response)
 
         max_users = current_user.organization.get_max_users()
 
@@ -479,12 +482,23 @@ def debug_billing():
         subscription = org.subscription if org else None
         debug_info = debug_data
         logger.info(f"Debug data generated successfully for user {current_user.id}")
+        
+        # Return JSON if requested via API
+        if request.headers.get('Accept') == 'application/json':
+            return jsonify(debug_info)
+            
     except AttributeError as e:
         logger.error(f"AttributeError in debug_billing: {e}")
-        return jsonify({'error': f'Attribute error - likely missing organization or subscription: {str(e)}'}), 500
+        error_response = {'error': f'Attribute error - likely missing organization or subscription: {str(e)}'}
+        if request.headers.get('Accept') == 'application/json':
+            return jsonify(error_response), 500
+        return render_template('billing/debug.html', debug_info=error_response)
     except Exception as e:
         logger.error(f"Debug billing error for user {current_user.id if current_user else 'Unknown'}: {e}")
-        return jsonify({'error': f'Debug failed: {str(e)}'}), 500
+        error_response = {'error': f'Debug failed: {str(e)}'}
+        if request.headers.get('Accept') == 'application/json':
+            return jsonify(error_response), 500
+        return render_template('billing/debug.html', debug_info=error_response)
 
     # Load tier information for debug buttons
     from ..developer.subscription_tiers import load_tiers_config

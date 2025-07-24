@@ -200,7 +200,11 @@ function debugCheckout(tierKey, tierName, isStripeReady) {
 
     function loadDebugData() {
         // Make an API request to fetch detailed debug information
-        fetch('/billing/debug')
+        fetch('/billing/debug', {
+            headers: {
+                'Accept': 'application/json'
+            }
+        })
             .then(response => {
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -222,6 +226,10 @@ function debugCheckout(tierKey, tierName, isStripeReady) {
             .catch(error => {
                 console.error('Error fetching debug data:', error);
                 const debugJsonElement = document.getElementById('debug-json');
+                if (debugJsonElement) {
+                    debugJsonElement.textContent = 'Error: ' + error.message;
+                }
+            });
                 if (debugJsonElement) {
                     debugJsonElement.textContent = `Error: ${error.message}`;
                 }
