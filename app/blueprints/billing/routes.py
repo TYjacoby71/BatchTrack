@@ -90,10 +90,17 @@ logger = logging.getLogger(__name__)
 
 @billing_bp.route('/checkout/<tier>')
 @billing_bp.route('/checkout/<tier>/<billing_cycle>')
-@login_required
 def checkout(tier, billing_cycle='monthly'):
     """Create Stripe checkout session and redirect"""
-    if not has_permission(current_user, 'organization.manage_billing'):
+    
+    # Check if this is a signup flow (user not logged in but has pending signup)
+    from flask import session
+    if not current_user.is_authenticated and not session.get('pending_signup'):
+        flash('Please complete signup information first.', 'error')
+        return redirect(url_for('auth.signup'))
+    
+    # For logged-in users, check permissions
+    if current_user.is_authenticated and not has_permission(current_user, 'organization.manage_billing'):
         flash('You do not have permission to manage billing.', 'error')
         return redirect(url_for('organization.dashboard'))
 
@@ -119,38 +126,44 @@ def checkout(tier, billing_cycle='monthly'):
     # PRIMARY CONTROL: Use is_stripe_ready checkbox to determine mode
     if not is_stripe_ready:
         # Check if this is a signup flow (user not logged in but has pending signup)
-        from flask import session
         if not current_user.is_authenticated and session.get('pending_signup'):
             logger.info(f"Tier {tier} not stripe-ready, redirecting to development signup completion")
             return redirect(url_for('billing.complete_signup_dev', tier=tier))
         
-        # Existing organization upgrade flow
-        logger.info(f"Tier {tier} not stripe-ready, using development simulation")
-        success = StripeService.simulate_subscription_success(current_user.organization, tier)
-        if success:
-            flash(f'Development Mode: {tier.title()} subscription activated!', 'success')
-            return redirect(url_for('settings.index') + '#billing')
+        # Existing organization upgrade flow (user must be logged in for this)
+        if current_user.is_authenticated:
+            logger.info(f"Tier {tier} not stripe-ready, using development simulation")
+            success = StripeService.simulate_subscription_success(current_user.organization, tier)
+            if success:
+                flash(f'Development Mode: {tier.title()} subscription activated!', 'success')
+                return redirect(url_for('settings.index') + '#billing')
+            else:
+                flash('Failed to activate subscription in development mode.', 'error')
+                return redirect(url_for('billing.upgrade'))
         else:
-            flash('Failed to activate subscription in development mode.', 'error')
-            return redirect(url_for('billing.upgrade'))
+            # User not logged in and no pending signup - shouldn't happen
+            flash('Invalid checkout state. Please start signup process again.', 'error')
+            return redirect(url_for('auth.signup'))
     else:
         # Stripe Ready is ON - attempt real Stripe integration
+        if not current_user.is_authenticated:
+            flash('Stripe integration requires user account creation first. Please contact support.', 'error')
+            return redirect(url_for('auth.signup'))
+            
         logger.info(f"Tier {tier} is stripe-ready, attempting real Stripe checkout")
         try:
-            session = StripeService.create_checkout_session(current_user.organization, price_key)
+            checkout_session = StripeService.create_checkout_session(current_user.organization, price_key)
 
-            if not session:
+            if not checkout_session:
                 flash('Stripe configuration incomplete. Please check your Stripe settings or contact support.', 'error')
                 return redirect(url_for('billing.upgrade'))
 
-            return redirect(session.url)
+            return redirect(checkout_session.url)
 
         except Exception as e:
             logger.error(f"Checkout error for org {current_user.organization.id}: {str(e)}")
             flash('Payment system temporarily unavailable. Please contact support.', 'error')
             return redirect(url_for('billing.upgrade'))
-
-    return redirect(session.url)
 
 @billing_bp.route('/customer-portal')
 @login_required
