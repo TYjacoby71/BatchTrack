@@ -323,6 +323,9 @@ def complete_signup_dev(tier):
 
         db.session.commit()
 
+        # Commit the transaction before logging in
+        db.session.commit()
+
         # Log in the user
         login_user(owner_user)
 
