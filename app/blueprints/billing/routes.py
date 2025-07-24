@@ -93,17 +93,17 @@ logger = logging.getLogger(__name__)
 def checkout(tier, billing_cycle='monthly'):
     """Create Stripe checkout session and redirect"""
     from flask import session
-    
+
     logger.info(f"=== CHECKOUT ROUTE START ===")
     logger.info(f"Requested tier: {tier}")
     logger.info(f"Billing cycle: {billing_cycle}")
     logger.info(f"User authenticated: {current_user.is_authenticated}")
     logger.info(f"Has pending signup: {bool(session.get('pending_signup'))}")
-    
+
     if session.get('pending_signup'):
         logger.info(f"Pending signup data: {session['pending_signup']}")
         logger.info(f"Selected tier from signup: {session['pending_signup'].get('selected_tier')}")
-    
+
     # Validate tier is customer-facing and available
     from ...services.pricing_service import PricingService
     logger.info("Loading pricing service data...")
@@ -119,38 +119,32 @@ def checkout(tier, billing_cycle='monthly'):
         billing_cycle = 'monthly'
         logger.info(f"Billing cycle reset to: {billing_cycle}")
 
-    # Check tier configuration for Stripe readiness
-    logger.info("Loading tier configuration...")
-    tiers_config = load_tiers_config()
-    tier_data = tiers_config.get(tier, {})
+    # Check if we're in development mode (no webhook secret = dev mode)
+    is_dev_mode = not current_app.config.get('STRIPE_WEBHOOK_SECRET')
     is_stripe_ready = tier_data.get('is_stripe_ready', False)
-    
-    logger.info(f"=== TIER CONFIGURATION ===")
-    logger.info(f"Tier: {tier}")
-    logger.info(f"Tier data: {tier_data}")
-    logger.info(f"Is Stripe Ready: {is_stripe_ready}")
-    logger.info(f"========================")
+    logger.info(f"Development mode: {is_dev_mode}")
+    logger.info(f"Tier {tier} stripe ready: {is_stripe_ready}")
 
-    # FLOW 1: DEVELOPMENT MODE (Stripe Ready = FALSE)
+    # FLOW 1: DEVELOPMENT MODE (No webhook secret)
     # Bypass payment processing, create account immediately
-    if not is_stripe_ready:
+    if is_dev_mode:
         logger.info(f"=== DEVELOPMENT MODE FLOW ===")
         logger.info(f"Bypassing Stripe payment processing for tier {tier}")
         flash(f'Development Mode: Bypassing payment processing for {tier.title()} tier', 'info')
-        
+
         # NEW SIGNUP: User not authenticated but has pending signup data
         if not current_user.is_authenticated and session.get('pending_signup'):
             logger.info("NEW SIGNUP: Creating account immediately - no payment processing")
             flash('Creating your account without payment processing...', 'info')
             return complete_signup_dev_mode(tier, is_stripe_mode=False)
-        
+
         # EXISTING USER UPGRADE: User is authenticated, upgrade existing org
         elif current_user.is_authenticated:
             if not has_permission(current_user, 'organization.manage_billing'):
                 logger.warning(f"User {current_user.id} lacks billing permission")
                 flash('You do not have permission to manage billing.', 'error')
                 return redirect(url_for('organization.dashboard'))
-                
+
             logger.info(f"EXISTING USER: Upgrading user immediately - no payment processing")
             flash(f'Processing {tier.title()} upgrade in development mode...', 'info')
             success = StripeService.simulate_subscription_success(current_user.organization, tier)
@@ -160,33 +154,33 @@ def checkout(tier, billing_cycle='monthly'):
             else:
                 flash('Failed to activate subscription in development mode.', 'error')
                 return redirect(url_for('billing.upgrade'))
-        
+
         # ERROR: No pending signup and not authenticated
         else:
             logger.error("No pending signup and user not authenticated")
             flash('Please complete signup information first.', 'error')
             return redirect(url_for('auth.signup'))
-    
+
     # FLOW 2: PRODUCTION MODE (Stripe Ready = TRUE)  
     # Proceed to payment processing, hold account creation until payment success
     else:
         logger.info(f"=== PRODUCTION MODE FLOW ===")
         logger.info(f"Processing Stripe payment first for tier {tier}")
         flash(f'Production Mode: Redirecting to secure payment processing for {tier.title()} tier', 'info')
-        
+
         # NEW SIGNUP: Create temporary account first, then redirect to Stripe
         if not current_user.is_authenticated and session.get('pending_signup'):
             logger.info("NEW SIGNUP: Creating temporary account before Stripe checkout")
             flash('Preparing account for payment processing...', 'info')
             return complete_signup_dev_mode(tier, is_stripe_mode=True)
-        
+
         # EXISTING USER UPGRADE: Must be authenticated for billing changes
         elif current_user.is_authenticated:
             if not has_permission(current_user, 'organization.manage_billing'):
                 logger.warning(f"User {current_user.id} lacks billing permission")
                 flash('You do not have permission to manage billing.', 'error')
                 return redirect(url_for('organization.dashboard'))
-                
+
             try:
                 logger.info("EXISTING USER: Creating Stripe checkout session")
                 flash('Redirecting to secure payment processing...', 'info')
@@ -207,7 +201,7 @@ def checkout(tier, billing_cycle='monthly'):
                 logger.error(f"Checkout error for org {current_user.organization.id}: {str(e)}")
                 flash('Payment system temporarily unavailable. Please contact support.', 'error')
                 return redirect(url_for('billing.upgrade'))
-        
+
         # ERROR: No authentication for production mode
         else:
             logger.error("No authentication for production mode")
@@ -306,7 +300,7 @@ def complete_signup_dev_mode(tier, is_stripe_mode=False):
     logger.info(f"=== SIGNUP COMPLETION START ===")
     logger.info(f"Requested tier: {tier}")
     logger.info(f"Stripe mode: {is_stripe_mode}")
-    
+
     if is_stripe_mode:
         flash('Processing payment and creating account...', 'info')
     else:
@@ -326,14 +320,14 @@ def complete_signup_dev_mode(tier, is_stripe_mode=False):
     logger.info(f"Organization name: {pending_signup.get('org_name')}")
     logger.info(f"Email: {pending_signup.get('email')}")
     logger.info(f"==========================")
-    
+
     # Verify tier consistency
     signup_tier = pending_signup.get('selected_tier')
     if signup_tier and signup_tier != tier:
         logger.warning(f"Tier mismatch! Signup had {signup_tier}, processing {tier}")
         # Use the tier from the URL/checkout rather than signup data
         logger.info(f"Using tier from checkout: {tier}")
-    
+
     # Double-check tier configuration before proceeding
     tiers_config = load_tiers_config()
     tier_data = tiers_config.get(tier, {})
@@ -420,7 +414,7 @@ def complete_signup_dev_mode(tier, is_stripe_mode=False):
 def complete_signup_from_stripe():
     """Complete organization creation after successful Stripe payment"""
     from flask import session
-    
+
     pending_signup = session.get('pending_signup')
     if not pending_signup:
         flash('No pending signup found. Please start the signup process again.', 'error')
@@ -486,7 +480,7 @@ def debug_billing():
                 'features': current_user.organization.get_subscription_features()
             },
             'subscription_info': {
-                'has_subscription': bool(current_user.organization.subscription),
+                'has_subscription': bool(current_user.organization),
                 'subscription_status': current_user.organization.subscription.status if current_user.organization.subscription else None,
                 'subscription_tier': current_user.organization.subscription.tier if current_user.organization.subscription else None
             }

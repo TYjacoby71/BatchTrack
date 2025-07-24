@@ -199,11 +199,11 @@ function debugCheckout(tierKey, tierName, isStripeReady) {
             .then(data => {
                 const debugJsonElement = document.getElementById('debug-json');
                 const debugDetailsElement = document.getElementById('debug-details');
-                
+
                 if (debugJsonElement) {
                     debugJsonElement.textContent = JSON.stringify(data, null, 2);
                 }
-                
+
                 if (debugDetailsElement) {
                     debugDetailsElement.style.display = 'block';
                 }

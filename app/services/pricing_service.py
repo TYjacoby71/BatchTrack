@@ -25,33 +25,48 @@ class PricingService:
 
     @staticmethod
     def get_pricing_data():
-        """Get pricing data from Stripe or fallback to default"""
+        """Get pricing data from Stripe or fallback to default based on mode"""
         from flask import current_app
 
         logger.info("=== PRICING SERVICE ===")
+
+        # Check if we're in development mode (no webhook secret = dev mode)
+        is_dev_mode = not current_app.config.get('STRIPE_WEBHOOK_SECRET')
+        logger.info(f"Development mode: {is_dev_mode}")
 
         # Try to initialize Stripe first
         from .stripe_service import StripeService
         stripe_initialized = StripeService.initialize_stripe()
         logger.info(f"Stripe initialization result: {stripe_initialized}")
 
-        if not stripe_initialized:
-            logger.info("Stripe not configured, using default pricing data")
+        # In development mode, always use fallback pricing
+        if is_dev_mode:
+            logger.info("Development mode: Using fallback pricing data")
             pricing_data = PricingService._get_default_pricing()
-            logger.info(f"Default pricing data keys: {list(pricing_data.keys())}")
+            # Mark all tiers as not stripe-ready in dev mode
+            for tier_data in pricing_data.values():
+                tier_data['is_stripe_ready'] = False
+            logger.info(f"Dev mode pricing data keys: {list(pricing_data.keys())}")
             return pricing_data
+
+        # Production mode: Require Stripe
+        if not stripe_initialized:
+            logger.error("Production mode but Stripe not configured - returning empty pricing")
+            return {}
 
         try:
             # Get pricing from Stripe
-            logger.info("Attempting to get Stripe pricing...")
+            logger.info("Production mode: Attempting to get Stripe pricing...")
             pricing_data = PricingService._get_stripe_pricing()
-            logger.info(f"Stripe pricing data keys: {list(pricing_data.keys())}")
+            # Mark all tiers as stripe-ready in production mode
+            for tier_data in pricing_data.values():
+                tier_data['is_stripe_ready'] = True
+            logger.info(f"Production mode pricing data keys: {list(pricing_data.keys())}")
             return pricing_data
         except Exception as e:
-            logger.warning(f"Failed to get Stripe pricing, using default: {str(e)}")
-            pricing_data = PricingService._get_default_pricing()
-            logger.info(f"Fallback pricing data keys: {list(pricing_data.keys())}")
-            return pricing_data
+            logger.error(f"Production mode: Failed to get Stripe pricing: {str(e)}")
+            # In production, don't fallback - return empty to prevent access
+            return {}
 
     @staticmethod
     def _get_default_pricing():
