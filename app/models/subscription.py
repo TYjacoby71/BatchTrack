@@ -51,6 +51,11 @@ class Subscription(db.Model):
             return True
         if self.is_trial:
             return True
+        if self.status == 'reconciliation_needed':
+            # Allow access during reconciliation period via snapshots
+            from ..services.resilient_billing_service import ResilientBillingService
+            has_access, _ = ResilientBillingService.check_organization_access(self.organization)
+            return has_access
         return self.status in ['active', 'trialing']
 
     @property

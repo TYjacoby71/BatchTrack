@@ -1,0 +1,77 @@
+
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card border-warning">
+                <div class="card-header bg-warning text-dark">
+                    <h4 class="mb-0">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Billing Verification Needed
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <h5>What happened?</h5>
+                        <p>When you signed up, our billing system was temporarily unavailable. We've been providing you service based on your signup intent, but now we need to complete your billing setup.</p>
+                    </div>
+
+                    <div class="mb-4">
+                        <h5>Your Current Status:</h5>
+                        <ul class="list-unstyled">
+                            <li><strong>Requested Tier:</strong> {{ requested_tier.title() }}</li>
+                            <li><strong>Grace Period Expires:</strong> {{ grace_expires.strftime('%B %d, %Y at %I:%M %p') }}</li>
+                            <li><strong>Service Status:</strong> 
+                                <span class="badge bg-warning">Temporary Access</span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="alert alert-warning">
+                        <h6>Action Required:</h6>
+                        <p>To continue using BatchTrack beyond {{ grace_expires.strftime('%B %d') }}, please complete your billing setup now.</p>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-body text-center">
+                                    <h6>Complete {{ requested_tier.title() }} Signup</h6>
+                                    <p class="text-muted">Continue with your original plan</p>
+                                    <a href="{{ url_for('billing.checkout', tier=requested_tier) }}" 
+                                       class="btn btn-primary">
+                                        <i class="fas fa-credit-card"></i>
+                                        Complete Billing Setup
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-body text-center">
+                                    <h6>Switch to Free Plan</h6>
+                                    <p class="text-muted">Continue with limited features</p>
+                                    <form method="POST" action="{{ url_for('billing.reconcile_to_free') }}">
+                                        {{ csrf_token() }}
+                                        <button type="submit" class="btn btn-outline-secondary">
+                                            <i class="fas fa-arrow-down"></i>
+                                            Use Free Plan
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-4">
+                        <h6>Need Help?</h6>
+                        <p>If you have questions about this billing verification, please contact our support team.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

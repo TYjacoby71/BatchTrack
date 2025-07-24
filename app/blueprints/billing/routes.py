@@ -43,6 +43,40 @@ def user_has_tier_permission(user, permission_name):
 
     return permission_name in tier_permissions
 
+@billing_bp.route('/reconciliation-needed')
+@login_required
+def reconciliation_needed():
+    """Show reconciliation flow for users who signed up during Stripe outages"""
+    from ...services.resilient_billing_service import ResilientBillingService
+    
+    needs_reconciliation, reason = ResilientBillingService.check_reconciliation_needed(current_user.organization)
+    
+    if not needs_reconciliation:
+        return redirect(url_for('app_routes.dashboard'))
+    
+    # Get grace period info
+    from ...models.billing_snapshot import BillingSnapshot
+    latest_snapshot = BillingSnapshot.get_latest_valid_snapshot(current_user.organization.id)
+    
+    return render_template('billing/reconciliation_needed.html',
+                         requested_tier=current_user.organization.subscription.tier,
+                         grace_expires=latest_snapshot.period_end if latest_snapshot else None,
+                         reason=reason)
+
+@billing_bp.route('/reconcile-to-free', methods=['POST'])
+@login_required
+def reconcile_to_free():
+    """Handle user choosing free plan during reconciliation"""
+    subscription = current_user.organization.subscription
+    if subscription:
+        subscription.tier = 'free'
+        subscription.status = 'active'
+        subscription.notes = f"{subscription.notes or ''}\nReconciled to free plan".strip()
+        db.session.commit()
+        flash('Your account has been updated to the free plan.', 'success')
+    
+    return redirect(url_for('app_routes.dashboard'))
+
 @billing_bp.route('/upgrade')
 @login_required 
 def upgrade():
