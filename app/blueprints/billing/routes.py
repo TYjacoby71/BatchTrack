@@ -132,32 +132,12 @@ def checkout(tier, billing_cycle='monthly'):
         session = StripeService.create_checkout_session(current_user.organization, price_key)
 
         if not session:
-            # Fallback to development mode if Stripe fails but webhook isn't configured
-            if not current_app.config.get('STRIPE_WEBHOOK_SECRET'):
-                success = StripeService.simulate_subscription_success(current_user.organization, tier)
-                if success:
-                    flash('Webhook not configured: Simulated subscription activated!', 'success')
-                    return redirect(url_for('settings.index') + '#billing')
-                else:
-                    flash('Failed to activate subscription in development mode.', 'error')
-                    return redirect(url_for('billing.upgrade'))
-
             flash('Failed to create checkout session. Please try again.', 'error')
             return redirect(url_for('billing.upgrade'))
-            
+
     except Exception as e:
         logger.error(f"Checkout error for org {current_user.organization.id}: {str(e)}")
-        
-        # Fallback to development mode for any Stripe errors
-        if not current_app.config.get('STRIPE_WEBHOOK_SECRET'):
-            success = StripeService.simulate_subscription_success(current_user.organization, tier)
-            if success:
-                flash(f'Development Mode: {tier.title()} subscription activated!', 'success')
-                return redirect(url_for('settings.index') + '#billing')
-            else:
-                flash('Failed to activate subscription in development mode.', 'error')
-        else:
-            flash('Payment system temporarily unavailable. Please try again later.', 'error')
+        flash('Payment system temporarily unavailable. Please try again later.', 'error')
         return redirect(url_for('billing.upgrade'))
 
     return redirect(session.url)

@@ -234,22 +234,28 @@ class StripeService:
 
     @staticmethod
     def simulate_subscription_success(organization, tier='team'):
-        """Simulate successful subscription for development/testing"""
+        """Simulate successful subscription for development/testing ONLY"""
         from flask import current_app
         from datetime import timedelta
         from ..models import Subscription
         
         logger.info(f"Simulating subscription for org {organization.id}, tier: {tier}")
         
-        # Allow simulation if webhook secret is not configured OR if tier is not stripe-ready
+        # SECURITY: Only allow simulation if webhook secret is NOT configured (development mode)
+        # AND tier is explicitly marked as not stripe-ready
         from ..blueprints.developer.subscription_tiers import load_tiers_config
         tiers_config = load_tiers_config()
         tier_data = tiers_config.get(tier, {})
         is_stripe_ready = tier_data.get('is_stripe_ready', False)
         
-        if current_app.config.get('STRIPE_WEBHOOK_SECRET') and is_stripe_ready:
-            # Production mode with stripe-ready tier - require real webhooks
-            logger.info(f"Production mode with stripe-ready tier {tier} - requiring real webhooks")
+        # Production mode detection - if webhook secret exists, we're in production
+        if current_app.config.get('STRIPE_WEBHOOK_SECRET'):
+            logger.warning(f"Production mode detected - simulation blocked for org {organization.id}, tier: {tier}")
+            return False
+            
+        # Even in development, only simulate non-stripe-ready tiers
+        if is_stripe_ready:
+            logger.warning(f"Tier {tier} is stripe-ready - simulation blocked even in development")
             return False
             
         # Development mode or non-stripe-ready tier - simulate webhook data
