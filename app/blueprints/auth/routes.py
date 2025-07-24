@@ -206,6 +206,14 @@ def signup():
             'referral_code': referral_code
         }
 
+        logger.info(f"=== SIGNUP FORM SUBMISSION ===")
+        logger.info(f"Form selected tier: {selected_tier}")
+        logger.info(f"Organization: {org_name}")
+        logger.info(f"Username: {username}")
+        logger.info(f"Email: {email}")
+        logger.info(f"Stored in session: {session['pending_signup']['selected_tier']}")
+        logger.info(f"============================")
+
         # Redirect to billing checkout for the selected tier
         logger.info(f"Redirecting to checkout for tier: {selected_tier}")
         return redirect(url_for('billing.checkout', tier=selected_tier))

@@ -344,19 +344,30 @@ document.addEventListener('DOMContentLoaded', function() {
     tierCards.forEach(card => {
         card.addEventListener('click', function() {
             const tier = this.dataset.tier;
+            console.log('=== TIER SELECTION ===');
             console.log('Tier clicked:', tier);
+            console.log('Card dataset:', this.dataset);
 
             // Remove active class from all cards
-            tierCards.forEach(c => c.classList.remove('active', 'border-primary'));
+            tierCards.forEach(c => {
+                c.classList.remove('active', 'border-primary');
+                console.log('Removed active from:', c.dataset.tier);
+            });
 
             // Add active class to clicked card
             this.classList.add('active', 'border-primary');
+            console.log('Added active to:', tier);
 
             // Update hidden input
             if (selectedTierInput) {
+                const oldValue = selectedTierInput.value;
                 selectedTierInput.value = tier;
-                console.log('Selected tier updated to:', tier);
+                console.log('Tier input updated from:', oldValue, 'to:', tier);
+                console.log('Input element:', selectedTierInput);
+            } else {
+                console.error('selectedTierInput is null!');
             }
+            console.log('==================');
         });
     });
 
@@ -364,8 +375,17 @@ document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('signupForm');
     if (form) {
         form.addEventListener('submit', function(e) {
+            console.log('=== FORM SUBMISSION ===');
             const selectedTier = selectedTierInput ? selectedTierInput.value : '';
+            console.log('Selected tier on submit:', selectedTier);
+            console.log('Form data at submit:');
+            const formData = new FormData(form);
+            for (let [key, value] of formData.entries()) {
+                console.log(`${key}: ${value}`);
+            }
+            
             if (!selectedTier) {
+                console.error('No tier selected!');
                 e.preventDefault();
                 alert('Please select a subscription plan');
                 return false;
@@ -380,6 +400,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (field && !field.value.trim()) {
                     hasErrors = true;
                     field.classList.add('is-invalid');
+                    console.log(`Missing required field: ${fieldName}`);
                 } else if (field) {
                     field.classList.remove('is-invalid');
                 }
@@ -392,14 +413,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 hasErrors = true;
                 confirmPassword.classList.add('is-invalid');
                 alert('Passwords do not match');
+                console.log('Password mismatch!');
             }
 
             if (hasErrors) {
+                console.log('Form has errors, preventing submission');
                 e.preventDefault();
                 return false;
             }
 
             console.log('Form submission proceeding with tier:', selectedTier);
+            console.log('===================');
         });
     }
 });

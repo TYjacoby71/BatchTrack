@@ -25,6 +25,64 @@ class PricingService:
 
     @staticmethod
     def get_pricing_data():
+        """Get pricing data from Stripe or fallback to default"""
+        from flask import current_app
+
+        logger.info("=== PRICING SERVICE ===")
+
+        # Try to initialize Stripe first
+        from .stripe_service import StripeService
+        stripe_initialized = StripeService.initialize_stripe()
+        logger.info(f"Stripe initialization result: {stripe_initialized}")
+
+        if not stripe_initialized:
+            logger.info("Stripe not configured, using default pricing data")
+            pricing_data = PricingService._get_default_pricing()
+            logger.info(f"Default pricing data keys: {list(pricing_data.keys())}")
+            return pricing_data
+
+        try:
+            # Get pricing from Stripe
+            logger.info("Attempting to get Stripe pricing...")
+            pricing_data = PricingService._get_stripe_pricing()
+            logger.info(f"Stripe pricing data keys: {list(pricing_data.keys())}")
+            return pricing_data
+        except Exception as e:
+            logger.warning(f"Failed to get Stripe pricing, using default: {str(e)}")
+            pricing_data = PricingService._get_default_pricing()
+            logger.info(f"Fallback pricing data keys: {list(pricing_data.keys())}")
+            return pricing_data
+
+    @staticmethod
+    def _get_default_pricing():
+        """Get comprehensive pricing data from JSON file for customer-facing and available tiers only"""
+        # Load dynamic tiers configuration
+        all_tiers = PricingService._load_tiers_config()
+
+        # Filter to only customer-facing and available tiers
+        pricing_data = {}
+        for tier_key, tier_data in all_tiers.items():
+            # Only include tiers that are customer-facing and available
+            if tier_data.get('is_customer_facing', True) and tier_data.get('is_available', True):
+                # Use stripe pricing if available, otherwise fallback to configured pricing
+                monthly_price = tier_data.get('stripe_price_monthly') or tier_data.get('price_display', '$0')
+                yearly_price = tier_data.get('stripe_price_yearly') or tier_data.get('price_yearly_display', '$0')
+
+                pricing_data[tier_key] = {
+                    'price': monthly_price,
+                    'price_yearly': yearly_price,
+                    'features': tier_data.get('fallback_features', tier_data.get('stripe_features', [])),
+                    'name': tier_data.get('name', tier_key.title()),
+                    'description': tier_data.get('description', f"Perfect for {tier_key} operations"),
+                    'user_limit': tier_data.get('user_limit', 1),
+                    'stripe_lookup_key': tier_data.get('stripe_lookup_key', ''),
+                    'is_stripe_ready': tier_data.get('is_stripe_ready', False)
+                }
+
+        return pricing_data
+
+    @staticmethod
+    def _get_stripe_pricing():
         """Get comprehensive pricing data from Stripe for customer-facing and available tiers only"""
         # Load dynamic tiers configuration
         all_tiers = PricingService._load_tiers_config()
@@ -37,7 +95,7 @@ class PricingService:
                 # Use stripe pricing if available, otherwise fallback to configured pricing
                 monthly_price = tier_data.get('stripe_price_monthly') or tier_data.get('price_display', '$0')
                 yearly_price = tier_data.get('stripe_price_yearly') or tier_data.get('price_yearly_display', '$0')
-                
+
                 pricing_data[tier_key] = {
                     'price': monthly_price,
                     'price_yearly': yearly_price,
@@ -48,11 +106,6 @@ class PricingService:
                     'stripe_lookup_key': tier_data.get('stripe_lookup_key', ''),
                     'is_stripe_ready': tier_data.get('is_stripe_ready', False)
                 }
-
-        # Only try to fetch from Stripe if properly configured
-        if not StripeService.initialize_stripe():
-            logger.info("Stripe not configured, using default pricing data")
-            return pricing_data
 
         try:
             # Get price IDs from config
@@ -147,7 +200,7 @@ class PricingService:
             # Use stripe pricing if available, otherwise fallback to configured pricing
             monthly_price = tier_data.get('stripe_price_monthly') or tier_data.get('price_display', '$0')
             yearly_price = tier_data.get('stripe_price_yearly') or tier_data.get('price_yearly_display', '$0')
-            
+
             pricing_data[tier_key] = {
                 'price': monthly_price,
                 'price_yearly': yearly_price,
