@@ -1,0 +1,177 @@
+You are 100% correct to want to straighten this out now because permission design is foundational and you’re getting tangled because Stripe tiers, organization roles, and user-level settings are all bleeding into each other. Let me propose a clean, industry-standard but flexible permission structure tailored for your app.
+
+✅ How It SHOULD Be Structured
+1. Principles to Follow
+Permissions are Tier-Agnostic:
+
+Permissions = atomic building blocks (e.g., billing.manage, organization.view_users).
+
+Tiers = bundles of permissions, assigned when you define subscription plans.
+
+Roles are Org-Scoped, Not Tier-Scoped:
+
+Roles = permission sets for users WITHIN an organization.
+
+E.g., Owner, Manager, Maker, Viewer.
+
+Solo users get an implicit "Solo Owner" role with only personal permissions.
+
+The App Checks in This Order:
+✅ Subscription Tier → ✅ Org Role → ✅ Permission.
+
+Tiers unlock what’s possible.
+
+Roles limit what that user can do inside the org.
+
+Permissions are toggles that power everything.
+
+2. Correct Permission Categories
+Think of permissions as verbs grouped by logical scope:
+
+🔹 A. User-Level (Solo & All Users)
+For anyone, solo or in an org:
+
+settings.view
+
+settings.manage
+
+billing.view
+
+billing.manage
+
+(These must be separate from org ones so Solo doesn’t get blocked.)
+
+🔹 B. Organization-Level
+Only relevant if a user belongs to an org:
+
+General Organization Access
+organization.view_dashboard
+
+organization.manage_settings (name, address, tax info, etc.)
+
+User & Role Management
+organization.view_users
+
+organization.invite_users
+
+organization.manage_roles
+
+Organization Billing
+(For org owners only — separate from personal billing)
+
+organization.view_billing
+
+organization.manage_billing
+
+Audit & Logs
+organization.view_audit_logs
+
+(A Solo user never even sees these routes.)
+
+🔹 C. Core App Features
+(You already have these, just keep them granular)
+
+inventory.view, inventory.manage
+
+recipes.view, recipes.manage
+
+batches.view, batches.manage
+
+products.view, products.manage
+
+reports.view, reports.export
+
+(All tiers and users draw from the same pool — tiers simply bundle them.)
+
+3. Tier vs Role vs Permission (Clean Separation)
+A. Subscription Tiers
+Purely a bundle of permissions.
+
+Example (solo plan):
+
+ini
+Copy
+Edit
+solo_tier.permissions = [
+  "settings.view", "settings.manage",
+  "billing.view", "billing.manage",
+  "inventory.*", "recipes.*", "batches.*"
+]
+Example (team plan):
+
+ini
+Copy
+Edit
+team_tier.permissions = [
+  ...all solo permissions...
+  "organization.*"
+]
+B. Organization Roles
+Within an org, you assign roles which filter down permissions further:
+
+Owner → all organization.* + app permissions.
+
+Manager → organization.view_users, inventory.manage, etc.
+
+Maker → just inventory.manage, batches.manage.
+
+Solo users are given a virtual Owner role for their personal "organization".
+
+4. Routes & Permission Checks
+Personal Billing Tab (/settings/billing)
+→ Checks billing.view / billing.manage.
+
+Organization Dashboard (/org/:id)
+→ Requires organization.view_dashboard.
+(If user is solo, they never hit this route.)
+
+Organization Billing Tab (/org/:id/billing)
+→ Requires organization.view_billing.
+
+5. Fixing Your Current Issues
+✅ A. The JSON Problem
+Remove all required_tier fields from permissions.json.
+
+JSON should look like:
+
+json
+Copy
+Edit
+{
+  "key": "billing.manage",
+  "description": "Manage subscription and payment methods"
+}
+Subscription tiers file assigns permissions:
+
+json
+Copy
+Edit
+{
+  "solo": ["billing.manage", "settings.manage", ...],
+  "team": ["organization.manage_users", "organization.view_dashboard", ...]
+}
+✅ B. Developer Customer View
+Dev customer view should impersonate an org owner by:
+
+Setting current_user.effective_permissions = tier.permissions.
+
+For solo users, impersonate as a solo owner (no org routes).
+
+✅ C. Missing Seed Logic
+Reseed roles:
+
+Owner, Manager, etc., are seeded with relevant org permissions.
+
+Solo users automatically get solo_owner role.
+
+6. What to Do Right Now
+Rewrite consolidated_permissions.json → flat, tier-agnostic.
+
+Rewrite subscription_tiers.json → assign permission keys to tiers.
+
+Reseed roles → assign permissions to default org roles.
+
+Refactor routes to check the correct permission keys (billing.* vs organization.billing.*).
+
+Fix dev customer view → explicitly apply tier.permissions.
+
