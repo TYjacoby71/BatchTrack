@@ -428,3 +428,81 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 {% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Tier selection handling
+    const tierCards = document.querySelectorAll('.tier-card');
+    const selectedTierInput = document.getElementById('subscription_tier');
+
+    // Check if elements exist before adding listeners
+    if (!selectedTierInput) {
+        console.error('subscription_tier input not found');
+        return;
+    }
+
+    tierCards.forEach(card => {
+        card.addEventListener('click', function() {
+            const tier = this.dataset.tier;
+            console.log('Tier clicked:', tier);
+
+            // Remove active class from all cards
+            tierCards.forEach(c => c.classList.remove('active', 'border-primary'));
+
+            // Add active class to clicked card
+            this.classList.add('active', 'border-primary');
+
+            // Update hidden input
+            if (selectedTierInput) {
+                selectedTierInput.value = tier;
+                console.log('Selected tier updated to:', tier);
+            }
+        });
+    });
+
+    // Form validation
+    const form = document.getElementById('signupForm');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            const selectedTier = selectedTierInput ? selectedTierInput.value : '';
+            if (!selectedTier) {
+                e.preventDefault();
+                alert('Please select a subscription plan');
+                return false;
+            }
+
+            // Validate required fields
+            const requiredFields = ['org_name', 'username', 'email', 'password', 'confirm_password'];
+            let hasErrors = false;
+
+            requiredFields.forEach(fieldName => {
+                const field = document.querySelector(`[name="${fieldName}"]`);
+                if (field && !field.value.trim()) {
+                    hasErrors = true;
+                    field.classList.add('is-invalid');
+                } else if (field) {
+                    field.classList.remove('is-invalid');
+                }
+            });
+
+            // Check password match
+            const password = document.querySelector('[name="password"]');
+            const confirmPassword = document.querySelector('[name="confirm_password"]');
+            if (password && confirmPassword && password.value !== confirmPassword.value) {
+                hasErrors = true;
+                confirmPassword.classList.add('is-invalid');
+                alert('Passwords do not match');
+            }
+
+            if (hasErrors) {
+                e.preventDefault();
+                return false;
+            }
+
+            console.log('Form submission proceeding with tier:', selectedTier);
+        });
+    }
+});
+</script>
+{% endblock %}
