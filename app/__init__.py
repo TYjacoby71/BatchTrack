@@ -110,37 +110,8 @@ def create_app():
             flash('No organization context available', 'error')
             return redirect(url_for('auth.logout'))
 
-        # Route-based permission checking
-        route_permissions = {
-            # Core features
-            '/inventory': 'inventory.view',
-            '/recipes': 'recipes.view', 
-            '/batches': 'batches.view',
-            '/products': 'products.view',
-            '/timers': 'timers.view',
-
-            # Management features
-            '/organization': 'organization.view',
-            '/auth/permissions': 'dev.system_admin',
-            '/auth/roles': 'organization.manage_roles',
-            '/tag-manager': 'tags.manage',
-
-            # API endpoints
-            '/api/batches': 'batches.view',
-            '/api/inventory': 'inventory.view',
-            '/api/products': 'products.view',
-            '/api/timers': 'timers.view',
-        }
-
-        # Check route permissions
-        for route_pattern, required_permission in route_permissions.items():
-            if request.path.startswith(route_pattern):
-                if not has_permission(required_permission):
-                    if request.is_json:
-                        return jsonify({'error': f'Permission denied: {required_permission}'}), 403
-                    flash(f'You do not have permission to access this feature', 'error')
-                    return redirect(url_for('app_routes.dashboard'))
-                break
+        # Permission checking is now handled by route decorators
+        # This middleware only handles organization scoping
 
         return None
 
@@ -385,6 +356,7 @@ def create_app():
     def template_has_permission(permission_name):
         """Template helper for permission checking"""
         try:
+            # Always call with just permission name from templates
             return has_permission(permission_name)
         except Exception as e:
             print(f"Permission check error for {permission_name}: {e}")
@@ -409,20 +381,9 @@ def create_app():
     def template_can_access_route(route_path):
         """Template helper to check if user can access a route"""
         try:
-            # This would check the route permissions mapping
-            route_permissions = {
-                '/inventory': 'inventory.view',
-                '/recipes': 'recipes.view', 
-                '/batches': 'batches.view',
-                '/products': 'products.view',
-                '/timers': 'timers.view',
-                '/organization': 'organization.view',
-            }
-
-            for route_prefix, required_permission in route_permissions.items():
-                if route_path.startswith(route_prefix):
-                    return has_permission(required_permission)
-            return True  # No specific permission required
+            # Route permissions are now handled by decorators
+            # This helper is deprecated but maintained for backward compatibility
+            return True
         except Exception as e:
             print(f"Route access check error for {route_path}: {e}")
             return False
