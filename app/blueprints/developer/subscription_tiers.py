@@ -473,8 +473,11 @@ def edit_tier(tier_key):
         tier['feature_groups'] = request.form.getlist('feature_groups')
         tier['stripe_lookup_key'] = request.form.get('stripe_lookup_key', '')
 
-        user_limit = int(request.form.get('user_limit', 1))
-        # Only exempt tier can have unlimited users (-1)
+        user_limit_str = request.form.get('user_limit', '1')
+        try:
+            user_limit = int(user_limit_str)
+        except (ValueError, TypeError):
+            user_limit = 1  # Default fallback
         
         tier['user_limit'] = user_limit
 

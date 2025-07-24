@@ -37,8 +37,8 @@
                         <div class="mb-3">
                             <label for="user_limit" class="form-label">User Limit</label>
                             <input type="number" class="form-control" id="user_limit" name="user_limit" 
-                                   value="{{ tier.user_limit }}" min="-1"
-                                   placeholder="Use -1 for unlimited users">
+                                   value="{{ tier.user_limit if tier.user_limit is defined else 1 }}" min="-1"
+                                   placeholder="Enter number of users (use -1 for unlimited)">
                             <small class="form-text text-muted">
                                 {% if tier_key == 'exempt' %}
                                     Use -1 for unlimited users (exempt tier only)
