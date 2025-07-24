@@ -56,7 +56,7 @@ def submit_signup(base_url=BASE_URL, tier='solo'):
     try:
         # First, get the signup page to extract CSRF token
         print("📄 Getting signup page...")
-        signup_page = session.get(f'{base_url}/auth/signup')
+        signup_page = session.get(f'{base_url}/auth/signup', verify=False)
 
         if signup_page.status_code != 200:
             print(f"❌ Failed to load signup page. Status: {signup_page.status_code}")
@@ -88,7 +88,8 @@ def submit_signup(base_url=BASE_URL, tier='solo'):
         response = session.post(
             f'{base_url}/auth/signup',
             data=user_data,
-            allow_redirects=False  # Don't follow redirects automatically
+            allow_redirects=False,  # Don't follow redirects automatically
+            verify=False
         )
 
         print(f"📊 Response Status: {response.status_code}")
@@ -139,7 +140,7 @@ def submit_signup(base_url=BASE_URL, tier='solo'):
 def check_app_running():
     """Check if the Flask app is running"""
     global BASE_URL
-    
+
     urls_to_try = [
         BASE_URL,
         "http://127.0.0.1:5000", 
