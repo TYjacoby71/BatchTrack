@@ -48,7 +48,7 @@
       "system_admin"
     ],
     "stripe_lookup_key": "batchtrack_solo_monthly",
-    "user_limit": 12,
+    "user_limit": 1,
     "fallback_features": [
       "Up to 1 user",
       "Full batch tracking with FIFO",
@@ -116,7 +116,7 @@
     "price_display": "$29",
     "price_yearly_display": "$299",
     "description": "Perfect for growing teams and small businesses",
-    "user_limit": -1,
+    "user_limit": 5,
     "is_customer_facing": true,
     "is_available": true,
     "is_stripe_ready": false,
@@ -173,7 +173,7 @@
     ],
     "stripe_lookup_key": "batchtrack_team_monthly",
     "fallback_features": [
-      "Up to 10 users",
+      "Up to 5 users",
       "Everything in Solo Plan",
       "Product catalog with variants",
       "Team collaboration tools",
@@ -184,7 +184,9 @@
     "stripe_features": [],
     "stripe_price_monthly": null,
     "stripe_price_yearly": null,
-    "last_synced": null
+    "last_synced": null,
+    "fallback_price_monthly": "$0",
+    "fallback_price_yearly": "$0"
   },
   "enterprise": {
     "name": "Enterprise Plan",
