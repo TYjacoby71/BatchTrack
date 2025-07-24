@@ -143,33 +143,37 @@ def create_app():
         # This middleware only handles organization scoping
         return None
 
-    # Register blueprints
-    from .blueprints.auth import auth_bp
-    from .blueprints.products import products_bp
-    from .blueprints.products.api import products_api_bp
-    from .blueprints.recipes import recipes_bp
-    from .blueprints.inventory import inventory_bp
-    from .blueprints.batches import batches_bp
-    from .blueprints.batches.finish_batch import finish_batch_bp
-    from .blueprints.batches.cancel_batch import cancel_batch_bp
-    from .blueprints.batches.start_batch import start_batch_bp
-    from .blueprints.api.stock_routes import stock_api_bp
-    from .blueprints.api.ingredient_routes import ingredient_api_bp
-    from .blueprints.conversion import conversion_bp
-    from .blueprints.expiration import expiration_bp
-    from .blueprints.settings import settings_bp
-    from .blueprints.timers import timers_bp
-    from .blueprints.quick_add import quick_add_bp
-    from .blueprints.admin import admin_bp
-    from .routes import app_routes
-    from .blueprints.fifo import fifo_bp
-    from .blueprints.batches.add_extra import add_extra_bp
-    from .routes import bulk_stock_routes
-    from .routes import fault_log_routes
-    from .routes import tag_manager_routes
-    # Register admin blueprints
-    from .blueprints.admin.admin_routes import admin_bp
-    app.register_blueprint(admin_bp)
+    # Register blueprints with error handling
+    try:
+        from .blueprints.auth import auth_bp
+        from .blueprints.recipes import recipes_bp
+        from .blueprints.inventory import inventory_bp
+        from .blueprints.batches import batches_bp
+        from .blueprints.batches.finish_batch import finish_batch_bp
+        from .blueprints.batches.cancel_batch import cancel_batch_bp
+        from .blueprints.batches.start_batch import start_batch_bp
+        from .blueprints.conversion import conversion_bp
+        from .blueprints.expiration import expiration_bp
+        from .blueprints.settings import settings_bp
+        from .blueprints.timers import timers_bp
+        from .blueprints.quick_add import quick_add_bp
+        from .routes import app_routes
+        from .blueprints.fifo import fifo_bp
+        from .blueprints.batches.add_extra import add_extra_bp
+        from .routes import bulk_stock_routes
+        from .routes import fault_log_routes
+        from .routes import tag_manager_routes
+        
+        # Register admin blueprints
+        from .blueprints.admin.admin_routes import admin_bp
+        app.register_blueprint(admin_bp)
+        
+        # Register API blueprints
+        from .blueprints.api.stock_routes import stock_api_bp
+        from .blueprints.api.ingredient_routes import ingredient_api_bp
+        
+    except ImportError as e:
+        print(f"Warning: Failed to import some blueprints: {e}")
 
     # Register developer blueprint
     from .blueprints.developer.routes import developer_bp
