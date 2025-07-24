@@ -65,8 +65,12 @@ class PricingService:
             # Only include tiers that are customer-facing and available
             if tier_data.get('is_customer_facing', True) and tier_data.get('is_available', True):
                 # Use stripe pricing if available, otherwise fallback to configured pricing
-                monthly_price = tier_data.get('stripe_price_monthly') or tier_data.get('price_display', '$0')
-                yearly_price = tier_data.get('stripe_price_yearly') or tier_data.get('price_yearly_display', '$0')
+                monthly_price = (tier_data.get('stripe_price_monthly') or 
+                               tier_data.get('price_display') or 
+                               tier_data.get('fallback_price_monthly', '$0'))
+                yearly_price = (tier_data.get('stripe_price_yearly') or 
+                              tier_data.get('price_yearly_display') or 
+                              tier_data.get('fallback_price_yearly', '$0'))
 
                 pricing_data[tier_key] = {
                     'price': monthly_price,
@@ -93,8 +97,12 @@ class PricingService:
             # Only include tiers that are customer-facing and available
             if tier_data.get('is_customer_facing', True) and tier_data.get('is_available', True):
                 # Use stripe pricing if available, otherwise fallback to configured pricing
-                monthly_price = tier_data.get('stripe_price_monthly') or tier_data.get('price_display', '$0')
-                yearly_price = tier_data.get('stripe_price_yearly') or tier_data.get('price_yearly_display', '$0')
+                monthly_price = (tier_data.get('stripe_price_monthly') or 
+                               tier_data.get('price_display') or 
+                               tier_data.get('fallback_price_monthly', '$0'))
+                yearly_price = (tier_data.get('stripe_price_yearly') or 
+                              tier_data.get('price_yearly_display') or 
+                              tier_data.get('fallback_price_yearly', '$0'))
 
                 pricing_data[tier_key] = {
                     'price': monthly_price,

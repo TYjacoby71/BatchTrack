@@ -138,6 +138,8 @@ def submit_signup(base_url=BASE_URL, tier='solo'):
 
 def check_app_running():
     """Check if the Flask app is running"""
+    global BASE_URL
+    
     urls_to_try = [
         BASE_URL,
         "http://127.0.0.1:5000", 
@@ -150,7 +152,6 @@ def check_app_running():
             print(f"   Trying {url}...")
             response = requests.get(f"{url}/", timeout=5)
             if response.status_code in [200, 302]:
-                global BASE_URL
                 BASE_URL = url
                 print(f"   ✅ Connected to {url}")
                 return True

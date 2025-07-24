@@ -437,6 +437,8 @@ def create_tier():
             'is_customer_facing': request.form.get('is_customer_facing') == 'on',
             'is_available': request.form.get('is_available') == 'on',
             'fallback_features': fallback_features,
+            'fallback_price_monthly': request.form.get('fallback_price_monthly', '$0'),
+            'fallback_price_yearly': request.form.get('fallback_price_yearly', '$0'),
             'stripe_features': [],
             'stripe_price_monthly': None,
             'stripe_price_yearly': None,
@@ -481,6 +483,8 @@ def edit_tier(tier_key):
         tier['is_available'] = request.form.get('is_available') == 'on'
 
         tier['fallback_features'] = [f.strip() for f in request.form.get('fallback_features', '').split('\n') if f.strip()]
+        tier['fallback_price_monthly'] = request.form.get('fallback_price_monthly', '$0')
+        tier['fallback_price_yearly'] = request.form.get('fallback_price_yearly', '$0')
 
         save_tiers_config(tiers)
 
