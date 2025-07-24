@@ -118,10 +118,12 @@ def checkout(tier, billing_cycle='monthly'):
     # Bypass payment processing, create account immediately
     if not is_stripe_ready:
         logger.info(f"Development mode: Bypassing payment processing for tier {tier}")
+        flash(f'Development Mode: Bypassing payment processing for {tier.title()} tier', 'info')
         
         # NEW SIGNUP: User not authenticated but has pending signup data
         if not current_user.is_authenticated and session.get('pending_signup'):
             logger.info("Creating account immediately - no payment processing")
+            flash('Creating your account without payment processing...', 'info')
             return complete_signup_dev_mode(tier, is_stripe_mode=False)
         
         # EXISTING USER UPGRADE: User is authenticated, upgrade existing org
@@ -131,6 +133,7 @@ def checkout(tier, billing_cycle='monthly'):
                 return redirect(url_for('organization.dashboard'))
                 
             logger.info(f"Upgrading existing user immediately - no payment processing")
+            flash(f'Processing {tier.title()} upgrade in development mode...', 'info')
             success = StripeService.simulate_subscription_success(current_user.organization, tier)
             if success:
                 flash(f'Development Mode: {tier.title()} subscription activated!', 'success')
@@ -148,10 +151,12 @@ def checkout(tier, billing_cycle='monthly'):
     # Proceed to payment processing, hold account creation until payment success
     else:
         logger.info(f"Production mode: Processing payment first for tier {tier}")
+        flash(f'Production Mode: Redirecting to secure payment processing for {tier.title()} tier', 'info')
         
         # NEW SIGNUP: Create temporary account first, then redirect to Stripe
         if not current_user.is_authenticated and session.get('pending_signup'):
             logger.info("Creating temporary account before Stripe checkout")
+            flash('Preparing account for payment processing...', 'info')
             return complete_signup_dev_mode(tier, is_stripe_mode=True)
         
         # EXISTING USER UPGRADE: Must be authenticated for billing changes
@@ -161,6 +166,7 @@ def checkout(tier, billing_cycle='monthly'):
                 return redirect(url_for('organization.dashboard'))
                 
             try:
+                flash('Redirecting to secure payment processing...', 'info')
                 price_key = f"{tier}_{billing_cycle}" if billing_cycle != 'monthly' else tier
                 checkout_session = StripeService.create_checkout_session(current_user.organization, price_key)
 
@@ -168,6 +174,7 @@ def checkout(tier, billing_cycle='monthly'):
                     flash('Stripe configuration incomplete. Please check your Stripe settings or contact support.', 'error')
                     return redirect(url_for('billing.upgrade'))
 
+                flash('Redirecting to Stripe checkout...', 'info')
                 return redirect(checkout_session.url)
 
             except Exception as e:
@@ -269,7 +276,12 @@ def complete_signup_dev_mode(tier, is_stripe_mode=False):
     from ...models import User, Organization, Role, Subscription
     from flask_login import login_user
 
-    logger.info(f"Starting development signup completion for tier: {tier}")
+    logger.info(f"Starting signup completion for tier: {tier}, stripe_mode: {is_stripe_mode}")
+    
+    if is_stripe_mode:
+        flash('Processing payment and creating account...', 'info')
+    else:
+        flash('Creating your account now...', 'info')
 
     # Get pending signup data from session
     pending_signup = session.get('pending_signup')
