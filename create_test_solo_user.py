@@ -8,7 +8,13 @@ import requests
 import random
 import string
 from datetime import datetime
+from bs4 import BeautifulSoup
 import sys
+import os
+
+# Configuration - Use Replit URL or fallback to local
+REPL_URL = os.environ.get('REPL_URL', 'http://172.31.81.34:5000')
+BASE_URL = REPL_URL if REPL_URL != 'http://172.31.81.34:5000' else "http://172.31.81.34:5000"
 
 def generate_random_string(length=8):
     """Generate random string for usernames/passwords"""
@@ -30,7 +36,7 @@ def generate_test_user_data(tier='solo'):
         'subscription_tier': tier
     }
 
-def submit_signup(base_url='http://127.0.0.1:5000', tier='solo'):
+def submit_signup(base_url=BASE_URL, tier='solo'):
     """Submit signup form programmatically"""
 
     # Generate test data
@@ -130,6 +136,38 @@ def submit_signup(base_url='http://127.0.0.1:5000', tier='solo'):
         print(f"❌ Error: {e}")
         return False
 
+def check_app_running():
+    """Check if the Flask app is running"""
+    urls_to_try = [
+        BASE_URL,
+        "http://127.0.0.1:5000", 
+        "http://172.31.81.34:5000",
+        "http://localhost:5000"
+    ]
+
+    for url in urls_to_try:
+        try:
+            print(f"   Trying {url}...")
+            response = requests.get(f"{url}/", timeout=5)
+            if response.status_code in [200, 302]:
+                global BASE_URL
+                BASE_URL = url
+                print(f"   ✅ Connected to {url}")
+                return True
+
+            # Try homepage route
+            response = requests.get(f"{url}/homepage", timeout=5)
+            if response.status_code == 200:
+                BASE_URL = url
+                print(f"   ✅ Connected to {url}/homepage")
+                return True
+
+        except requests.exceptions.RequestException as e:
+            print(f"   ❌ {url} failed: {e}")
+            continue
+
+    return False
+
 def main():
     """Main function"""
     # Available tiers
@@ -150,11 +188,8 @@ def main():
     print("=" * 40)
 
     # Check if app is running
-    try:
-        response = requests.get('http://127.0.0.1:5000', timeout=5)
-        print("✅ Application is running")
-    except:
-        print("❌ Application is not running on http://127.0.0.1:5000")
+    if not check_app_running():
+        print("❌ Application is not running.")
         print("   Please start your Flask app first with: python run.py")
         return
 
