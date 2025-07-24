@@ -96,32 +96,44 @@ def create_app():
                 return jsonify({'error': 'Authentication required'}), 401
             return redirect(url_for('auth.login'))
 
-        # Developer isolation - ensure developers access appropriate routes
+        # Developer customer view - make them work exactly like organization owners
         if current_user.user_type == 'developer':
-            # Allow developer routes
+            # Allow developer-only routes
             if request.path.startswith('/developer/'):
                 return None
             # Allow auth routes
             if request.path.startswith('/auth/'):
                 return None
-            # Allow access to static files and API routes
-            if request.path.startswith('/api/') or request.path.startswith('/static/'):
-                return None
 
-            # Allow access to root and homepage
-            if request.path in ['/', '/homepage']:
-                return None
-
-            # If accessing customer routes, require organization selection
-            if not session.get('dev_selected_org_id'):
+            # For all customer routes, require organization selection and inject organization context
+            selected_org_id = session.get('dev_selected_org_id')
+            if not selected_org_id:
                 if request.is_json:
                     return jsonify({'error': 'Developer must select organization to access customer features'}), 403
                 flash('Please select an organization to access customer features', 'warning')
                 return redirect(url_for('developer.organizations'))
 
-        # Organization scoping enforcement for all non-developer users
-        effective_org_id = get_effective_organization_id()
-        if not effective_org_id and current_user.user_type != 'developer':
+            # CRITICAL: Temporarily inject organization context for developers
+            # This makes them work exactly like organization owners for the selected org
+            from app.models import Organization
+            selected_org = Organization.query.get(selected_org_id)
+            if not selected_org:
+                session.pop('dev_selected_org_id', None)
+                flash('Selected organization no longer exists', 'error')
+                return redirect(url_for('developer.organizations'))
+
+            # Store original user attributes and temporarily override them
+            if not hasattr(current_user, '_original_org_id'):
+                current_user._original_org_id = current_user.organization_id
+                current_user._original_is_org_owner = getattr(current_user, 'is_organization_owner', False)
+            
+            # Make developer appear as organization owner of selected org
+            current_user.organization_id = selected_org_id
+            current_user.organization = selected_org
+            current_user._is_organization_owner = True
+
+        # Organization scoping enforcement for regular users
+        elif not current_user.organization_id:
             if request.is_json:
                 return jsonify({'error': 'No organization context'}), 403
             flash('No organization context available', 'error')
