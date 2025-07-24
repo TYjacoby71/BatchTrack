@@ -127,8 +127,9 @@ def checkout(tier, billing_cycle='monthly'):
     if not is_stripe_ready:
         # Check if this is a signup flow (user not logged in but has pending signup)
         if not current_user.is_authenticated and session.get('pending_signup'):
-            logger.info(f"Tier {tier} not stripe-ready, redirecting to development signup completion")
-            return redirect(url_for('billing.complete_signup_dev', tier=tier))
+            logger.info(f"Tier {tier} not stripe-ready, proceeding with development signup completion")
+            # Don't redirect - directly process the development signup here
+            return complete_signup_dev_inline(tier)
         
         # Existing organization upgrade flow (user must be logged in for this)
         if current_user.is_authenticated:
@@ -247,6 +248,96 @@ def stripe_webhook():
 
     return jsonify({'status': 'success'})
 
+
+def complete_signup_dev_inline(tier):
+    """Process development signup inline to avoid redirect loops"""
+    from flask import session
+    from ...models import User, Organization, Role, Subscription
+    from flask_login import login_user
+
+    # Get pending signup data from session
+    pending_signup = session.get('pending_signup')
+    if not pending_signup:
+        flash('No pending signup found. Please start the signup process again.', 'error')
+        return redirect(url_for('auth.signup'))
+
+    # Verify tier is not stripe-ready
+    from ...blueprints.developer.subscription_tiers import load_tiers_config
+    tiers_config = load_tiers_config()
+    tier_data = tiers_config.get(tier, {})
+    is_stripe_ready = tier_data.get('is_stripe_ready', False)
+    
+    if is_stripe_ready:
+        flash('This tier requires payment processing. Please use the standard checkout flow.', 'error')
+        return redirect(url_for('billing.checkout', tier=tier))
+
+    try:
+        # Create organization
+        org = Organization(
+            name=pending_signup['org_name'],
+            subscription_tier=tier,  # Set directly since no Stripe involved
+            contact_email=pending_signup['email'],
+            is_active=True,
+            signup_source=pending_signup['signup_source'],
+            promo_code=pending_signup.get('promo_code'),
+            referral_code=pending_signup.get('referral_code')
+        )
+        db.session.add(org)
+        db.session.flush()  # Get the ID
+
+        # Create subscription record for development mode
+        subscription = Subscription(
+            organization_id=org.id,
+            tier=tier,
+            status='active',  # Immediately active in dev mode
+            notes=f"Created from signup for {tier} tier (development mode)"
+        )
+        db.session.add(subscription)
+        db.session.flush()
+
+        # Create organization owner user
+        owner_user = User(
+            username=pending_signup['username'],
+            email=pending_signup['email'],
+            first_name=pending_signup['first_name'],
+            last_name=pending_signup['last_name'],
+            phone=pending_signup.get('phone'),
+            organization_id=org.id,
+            user_type='customer',
+            is_organization_owner=True,
+            is_active=True
+        )
+        owner_user.set_password(pending_signup['password'])
+        db.session.add(owner_user)
+        db.session.flush()
+
+        # Assign organization owner role
+        org_owner_role = Role.query.filter_by(name='organization_owner', is_system_role=True).first()
+        if org_owner_role:
+            owner_user.assign_role(org_owner_role)
+
+        # Simulate subscription success
+        success = StripeService.simulate_subscription_success(org, tier)
+        if not success:
+            raise Exception("Failed to activate development subscription")
+
+        # Commit all changes first
+        db.session.commit()
+
+        # Log in the user after successful commit
+        login_user(owner_user)
+
+        # Clear pending signup data
+        session.pop('pending_signup', None)
+
+        flash(f'Account created successfully with {tier.title()} plan (Development Mode)!', 'success')
+        return redirect(url_for('app_routes.dashboard'))
+
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error creating development account: {str(e)}")
+        flash(f'Error creating account: {str(e)}', 'error')
+        return redirect(url_for('auth.signup'))
 
 @billing_bp.route('/complete-signup-dev/<tier>')
 def complete_signup_dev(tier):
