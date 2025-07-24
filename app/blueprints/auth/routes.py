@@ -10,6 +10,9 @@ from ...models import User, Organization, Role
 from ...utils.timezone_utils import TimezoneUtils
 from ...utils.permissions import require_permission
 from flask_login import login_required
+import logging
+
+logger = logging.getLogger(__name__)
 
 class LoginForm(FlaskForm):
     username = StringField('Username', validators=[DataRequired()])
