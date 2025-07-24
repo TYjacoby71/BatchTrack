@@ -72,12 +72,22 @@ def require_organization_owner(f):
         return f(*args, **kwargs)
     return decorated_function
 
-def has_permission(permission_name, user=None):
+def has_permission(permission_name_or_user, permission_name_or_none=None):
     """Check if user has a specific permission"""
-    if user is None:
+    # Handle both calling patterns:
+    # has_permission('permission.name') - from code
+    # has_permission(current_user, 'permission.name') - from templates
+    
+    if permission_name_or_none is not None:
+        # Template style: has_permission(user, permission_name)
+        user = permission_name_or_user
+        permission_name = permission_name_or_none
+    else:
+        # Code style: has_permission(permission_name, user=None)
+        permission_name = permission_name_or_user
         user = current_user
 
-    if not user.is_authenticated:
+    if not hasattr(user, 'is_authenticated') or not user.is_authenticated:
         return False
 
     # Developers have all permissions, including when viewing as customer
