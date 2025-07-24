@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers
 revision = 'remove_subscription_tier_from_permissions'
-down_revision = None
+down_revision = '002_add_is_org_owner_nullable'
 branch_labels = None
 depends_on = None
 
