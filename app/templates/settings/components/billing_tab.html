@@ -20,6 +20,15 @@
     </div>
 </div>
 
+{% if current_user.user_type == 'developer' and session.get('dev_selected_org_id') %}
+    {# Developer viewing as customer - get the selected organization #}
+    {% set org = get_organization_by_id(session.get('dev_selected_org_id')) %}
+{% else %}
+    {# Regular customer user #}
+    {% set org = current_user.organization %}
+{% endif %}
+
+{% if org %}
 <div class="row mb-4">
     <div class="col-md-6">
         <div class="card">
@@ -28,14 +37,14 @@
             </div>
             <div class="card-body">
                 <h5 class="text-primary">
-                    {% set tier_name = current_user.organization.get_tier_display_name() %}
-                    {{ tier_name if tier_name else current_user.organization.effective_subscription_tier.title() }}
+                    {% set tier_name = org.get_tier_display_name() %}
+                    {{ tier_name if tier_name else org.effective_subscription_tier.title() }}
                 </h5>
-                <p class="text-muted">{{ current_user.organization.active_users_count }}/{{ current_user.organization.get_max_users() }} users</p>
+                <p class="text-muted">{{ org.active_users_count }}/{{ org.get_max_users() }} users</p>
 
                 <h6 class="mt-3">Available Features:</h6>
                 <ul class="list-unstyled">
-                    {% for feature in current_user.organization.get_subscription_features() %}
+                    {% for feature in org.get_subscription_features() %}
                     <li><i class="fas fa-check text-success me-2"></i>{{ feature|replace('_', ' ')|title }}</li>
                     {% endfor %}
                 </ul>
@@ -52,7 +61,7 @@
                 <p>Unlock more features and users with our premium plans.</p>
                 <div class="d-flex gap-2">
                     <a href="{{ url_for('billing.upgrade') }}" class="btn btn-light">View All Plans</a>
-                    {% if current_user.organization.subscription and current_user.organization.subscription.stripe_customer_id %}
+                    {% if org.subscription and org.subscription.stripe_customer_id %}
                     <a href="{{ url_for('billing.customer_portal') }}" class="btn btn-outline-secondary">
                         <i class="fas fa-cog"></i> Manage Billing
                     </a>
@@ -62,3 +71,12 @@
         </div>
     </div>
 </div>
+{% else %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="alert alert-warning">
+            <i class="fas fa-exclamation-triangle"></i> No organization context available for billing management.
+        </div>
+    </div>
+</div>
+{% endif %}

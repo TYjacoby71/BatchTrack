@@ -51,38 +51,32 @@
         {
           "name": "recipes.view",
           "display_name": "View Recipes",
-          "description": "Access recipe details, ingredient lists, and instructions",
-          "required_tier": "free"
+          "description": "Access recipe details, ingredient lists, and instructions"
         },
         {
           "name": "recipes.create",
           "display_name": "Create Recipes",
-          "description": "Create new recipes with ingredients, instructions, and scaling options",
-          "required_tier": "free"
+          "description": "Create new recipes with ingredients, instructions, and scaling options"
         },
         {
           "name": "recipes.edit",
           "display_name": "Edit Recipes",
-          "description": "Modify existing recipes, update ingredients, or change instructions",
-          "required_tier": "free"
+          "description": "Modify existing recipes, update ingredients, or change instructions"
         },
         {
           "name": "recipes.delete",
           "display_name": "Delete Recipes",
-          "description": "Permanently remove recipes from the system",
-          "required_tier": "team"
+          "description": "Permanently remove recipes from the system"
         },
         {
           "name": "recipes.scale",
           "display_name": "Scale Recipes",
-          "description": "Use recipe scaling tools for different batch sizes",
-          "required_tier": "free"
+          "description": "Use recipe scaling tools for different batch sizes"
         },
         {
           "name": "recipes.plan_production",
           "display_name": "Production Planning",
-          "description": "Plan production runs and check ingredient availability",
-          "required_tier": "free"
+          "description": "Plan production runs and check ingredient availability"
         }
       ]
     },
@@ -92,38 +86,32 @@
         {
           "name": "batches.view",
           "display_name": "View Batches",
-          "description": "Access batch details, status, and production history",
-          "required_tier": "free"
+          "description": "Access batch details, status, and production history"
         },
         {
           "name": "batches.create",
           "display_name": "Start Production Batches",
-          "description": "Start new production batches from recipes",
-          "required_tier": "free"
+          "description": "Start new production batches from recipes"
         },
         {
           "name": "batches.edit",
           "display_name": "Edit Batch Details",
-          "description": "Modify batch information, notes, and non-critical details",
-          "required_tier": "free"
+          "description": "Modify batch information, notes, and non-critical details"
         },
         {
           "name": "batches.finish",
           "display_name": "Finish Batches",
-          "description": "Complete production batches and add finished goods to inventory",
-          "required_tier": "free"
+          "description": "Complete production batches and add finished goods to inventory"
         },
         {
           "name": "batches.cancel",
           "display_name": "Cancel Batches",
-          "description": "Cancel in-progress batches and handle ingredient returns",
-          "required_tier": "free"
+          "description": "Cancel in-progress batches and handle ingredient returns"
         },
         {
           "name": "batches.view_costs",
           "display_name": "View Batch Costs",
-          "description": "Access batch cost breakdowns and profitability analysis",
-          "required_tier": "team"
+          "description": "Access batch cost breakdowns and profitability analysis"
         }
       ]
     },
@@ -133,38 +121,32 @@
         {
           "name": "products.view",
           "display_name": "View Products",
-          "description": "Access product catalog, SKU details, and sales information",
-          "required_tier": "free"
+          "description": "Access product catalog, SKU details, and sales information"
         },
         {
           "name": "products.create",
           "display_name": "Create Products",
-          "description": "Add new products to catalog with SKUs and variants",
-          "required_tier": "free"
+          "description": "Add new products to catalog with SKUs and variants"
         },
         {
           "name": "products.edit",
           "display_name": "Edit Products",
-          "description": "Modify product details, pricing, and specifications",
-          "required_tier": "free"
+          "description": "Modify product details, pricing, and specifications"
         },
         {
           "name": "products.delete",
           "display_name": "Delete Products",
-          "description": "Remove products from catalog and their sales history",
-          "required_tier": "team"
+          "description": "Remove products from catalog and their sales history"
         },
         {
           "name": "products.manage_variants",
           "display_name": "Manage Product Variants",
-          "description": "Create and manage product variants like sizes, colors, or scents",
-          "required_tier": "free"
+          "description": "Create and manage product variants like sizes, colors, or scents"
         },
         {
           "name": "products.sales_tracking",
           "display_name": "Sales Tracking",
-          "description": "Record sales, track inventory depletion, and view sales history",
-          "required_tier": "team"
+          "description": "Record sales, track inventory depletion, and view sales history"
         }
       ]
     },
@@ -174,38 +156,32 @@
         {
           "name": "organization.view",
           "display_name": "View Organization Settings",
-          "description": "Access organization information and basic settings",
-          "required_tier": "team"
+          "description": "Access organization information and basic settings"
         },
         {
           "name": "organization.edit",
           "display_name": "Edit Organization Settings",
-          "description": "Modify organization details, preferences, and configurations",
-          "required_tier": "team"
+          "description": "Modify organization details, preferences, and configurations"
         },
         {
           "name": "organization.manage_users",
           "display_name": "Manage Users",
-          "description": "Invite users, assign roles, and manage team member access",
-          "required_tier": "team"
+          "description": "Invite users, assign roles, and manage team member access"
         },
         {
           "name": "organization.manage_roles",
           "display_name": "Manage Roles",
-          "description": "Create custom roles and assign permissions to team members",
-          "required_tier": "team"
+          "description": "Create custom roles and assign permissions to team members"
         },
         {
           "name": "organization.manage_billing",
           "display_name": "Manage Billing",
-          "description": "Access billing information, upgrade plans, and manage subscriptions",
-          "required_tier": "team"
+          "description": "Access billing information, upgrade plans, and manage subscriptions"
         },
         {
           "name": "organization.view_audit_logs",
           "display_name": "View Audit Logs",
-          "description": "Access logs of user actions and system changes for compliance",
-          "required_tier": "enterprise"
+          "description": "Access logs of user actions and system changes for compliance"
         }
       ]
     },
@@ -215,20 +191,17 @@
         {
           "name": "alerts.view",
           "display_name": "View Alerts",
-          "description": "See system alerts for low stock, expiring items, and production issues",
-          "required_tier": "free"
+          "description": "See system alerts for low stock, expiring items, and production issues"
         },
         {
           "name": "alerts.manage",
           "display_name": "Manage Alert Settings",
-          "description": "Configure alert thresholds, notification preferences, and alert rules",
-          "required_tier": "team"
+          "description": "Configure alert thresholds, notification preferences, and alert rules"
         },
         {
           "name": "alerts.dismiss",
           "display_name": "Dismiss Alerts",
-          "description": "Mark alerts as resolved or dismiss non-critical notifications",
-          "required_tier": "free"
+          "description": "Mark alerts as resolved or dismiss non-critical notifications"
         }
       ]
     },
@@ -238,26 +211,22 @@
         {
           "name": "reports.view",
           "display_name": "View Basic Reports",
-          "description": "Access basic production and inventory reports",
-          "required_tier": "team"
+          "description": "Access basic production and inventory reports"
         },
         {
           "name": "reports.export",
           "display_name": "Export Reports",
-          "description": "Download reports as CSV, PDF, or Excel files",
-          "required_tier": "team"
+          "description": "Download reports as CSV, PDF, or Excel files"
         },
         {
           "name": "reports.advanced",
           "display_name": "Advanced Analytics",
-          "description": "Access detailed analytics, trends, and business intelligence features",
-          "required_tier": "enterprise"
+          "description": "Access detailed analytics, trends, and business intelligence features"
         },
         {
           "name": "reports.custom",
           "display_name": "Custom Reports",
-          "description": "Create custom reports with flexible filtering and grouping",
-          "required_tier": "enterprise"
+          "description": "Create custom reports with flexible filtering and grouping"
         }
       ]
     },
@@ -267,20 +236,17 @@
         {
           "name": "integrations.shopify",
           "display_name": "Shopify Integration",
-          "description": "Connect and sync with Shopify store for automated order fulfillment",
-          "required_tier": "enterprise"
+          "description": "Connect and sync with Shopify store for automated order fulfillment"
         },
         {
           "name": "integrations.marketplace",
           "display_name": "Marketplace Integration",
-          "description": "Connect to marketplaces like Etsy, Amazon, or custom platforms",
-          "required_tier": "enterprise"
+          "description": "Connect to marketplaces like Etsy, Amazon, or custom platforms"
         },
         {
           "name": "integrations.api_access",
           "display_name": "API Access",
-          "description": "Access REST API for custom integrations and third-party connections",
-          "required_tier": "enterprise"
+          "description": "Access REST API for custom integrations and third-party connections"
         }
       ]
     },
@@ -290,20 +256,17 @@
         {
           "name": "ai.recipe_optimization",
           "display_name": "AI Recipe Optimization",
-          "description": "Use AI to optimize recipes for cost, sustainability, or performance",
-          "required_tier": "enterprise"
+          "description": "Use AI to optimize recipes for cost, sustainability, or performance"
         },
         {
           "name": "ai.demand_forecasting",
           "display_name": "AI Demand Forecasting",
-          "description": "AI-powered predictions for inventory needs and production planning",
-          "required_tier": "enterprise"
+          "description": "AI-powered predictions for inventory needs and production planning"
         },
         {
           "name": "ai.quality_insights",
           "display_name": "AI Quality Insights",
-          "description": "AI analysis of batch quality and process improvement suggestions",
-          "required_tier": "enterprise"
+          "description": "AI analysis of batch quality and process improvement suggestions"
         }
       ]
     }

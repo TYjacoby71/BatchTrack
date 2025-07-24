@@ -7,9 +7,19 @@ import json
 from ..models import Unit
 from ..services.unit_conversion import ConversionEngine
 from ..utils.unit_utils import get_global_unit_list
+from ..models import User, Organization
+from ..utils.timezone_utils import TimezoneUtils
+import re
 
 def register_template_filters(app):
     """Register all template filters"""
+
+    @app.template_global('get_organization_by_id')
+    def get_organization_by_id(org_id):
+        """Get organization by ID for template use"""
+        if org_id:
+            return Organization.query.get(org_id)
+        return None
 
     @app.template_filter('user_timezone')
     def user_timezone_filter(dt, format='%Y-%m-%d %H:%M'):
