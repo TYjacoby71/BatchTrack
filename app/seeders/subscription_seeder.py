@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python3
 """Seed subscription tiers and data"""
 
@@ -11,7 +10,7 @@ from datetime import datetime
 def create_exempt_tier():
     """Create the only hardcoded tier - exempt tier for system use"""
     exempt_tier = SubscriptionTier.query.filter_by(key='exempt').first()
-    
+
     if not exempt_tier:
         print("✅ Creating exempt tier")
         exempt_tier = SubscriptionTier(
@@ -28,11 +27,11 @@ def create_exempt_tier():
             stripe_price_yearly='Exempt'
         )
         db.session.add(exempt_tier)
-        
+
         # Give exempt tier ALL permissions
         all_permissions = Permission.query.all()
         exempt_tier.permissions = all_permissions
-        
+
         db.session.commit()
         print(f"   - Exempt tier created with {len(all_permissions)} permissions")
     else:
@@ -41,17 +40,17 @@ def create_exempt_tier():
         all_permissions = Permission.query.all()
         exempt_tier.permissions = all_permissions
         db.session.commit()
-    
+
     return exempt_tier
 
 def load_subscription_tiers():
     """Load subscription tiers from JSON file if it exists"""
     json_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'subscription_tiers.json')
-    
+
     if not os.path.exists(json_path):
         print("ℹ️  No subscription_tiers.json found - only exempt tier will be created")
         return {}
-    
+
     with open(json_path, 'r') as f:
         return json.load(f)
 
@@ -67,12 +66,22 @@ def seed_subscription_tiers():
 
     # Load additional tiers from JSON if available
     tiers_data = load_subscription_tiers()
-    
+
     # Skip exempt tier if it's in JSON - we handle it separately
     if 'exempt' in tiers_data:
         del tiers_data['exempt']
 
     for tier_key, tier_config in tiers_data.items():
+        # Skip metadata keys (they start with underscore)
+        if tier_key.startswith('_'):
+            print(f"ℹ️  Skipping metadata key: {tier_key}")
+            continue
+
+        # Skip if tier_config is not a dictionary
+        if not isinstance(tier_config, dict):
+            print(f"⚠️  Skipping invalid tier config for {tier_key}: {type(tier_config)}")
+            continue
+
         # Check if tier already exists
         existing_tier = SubscriptionTier.query.filter_by(key=tier_key).first()
 
@@ -127,11 +136,33 @@ def migrate_existing_organizations():
     print("✅ Organization migration completed!")
 
 def seed_subscriptions():
-    """Main subscription seeder function - creates proper tier structure"""
+    """Seed subscription tiers and related data"""
+    from flask import current_app
+
+    # Ensure we're in an application context
     if not current_app:
         raise RuntimeError("seed_subscriptions() must be called within Flask application context")
 
     print("=== Seeding Subscription Foundation ===")
+
+    # Ensure basic roles exist before proceeding
+    from ..models.role import Role
+    from ..models.permission import Permission
+
+    # Check if organization_owner role exists
+    org_owner_role = Role.query.filter_by(name='organization_owner', is_system_role=True).first()
+    if not org_owner_role:
+        print("⚠️  organization_owner role not found - permissions may not be seeded yet")
+        # Create basic role as fallback
+        org_owner_role = Role(
+            name='organization_owner',
+            description='Organization owner with full access to their organization',
+            is_system_role=True,
+            is_active=True
+        )
+        db.session.add(org_owner_role)
+        db.session.commit()
+        print("✅ Created fallback organization_owner role")
 
     # Step 1: Create tier records (exempt + any from JSON)
     seed_subscription_tiers()

@@ -7,34 +7,36 @@ from flask.cli import with_appcontext
 from .extensions import db
 from .models import User, Organization, Permission
 from .seeders import (
-    seed_permissions,
     seed_units,
     seed_categories,
     seed_subscriptions,
     seed_users
 )
+from .seeders.consolidated_permission_seeder import seed_consolidated_permissions
 
 @click.command()
 @with_appcontext  
 def seed_all():
-    """Seed all initial data"""
+    """Seed all initial data in proper order"""
     print("=== SEEDING ALL DATA ===")
 
-    # 1. Core permissions first
-    seed_permissions()
+    # 1. Consolidated permissions system (permissions + roles)
+    seed_consolidated_permissions()
 
-    # 2. Developer permissions (now handled by consolidated permissions)
-    # seed_developer_permissions() - moved to consolidated system
-
-    # 3. Basic data
-    seed_units()
-    seed_categories()
-
-    # 4. Subscription system (only exempt tier by default)
+    # 2. Subscription system (creates tiers with proper permissions)
     seed_subscriptions()
 
-    # 5. Users (if needed)
+    # 3. Basic system data
+    seed_units()
+
+    # 4. Users (after permissions and subscriptions exist)
     seed_users()
+
+    # 5. Categories (needs organization from users)
+    from .models import Organization
+    org = Organization.query.first()
+    if org:
+        seed_categories(organization_id=org.id)
 
     print("=== ALL SEEDING COMPLETED ===")
 
@@ -73,10 +75,10 @@ def init_db():
 @click.command('seed-permissions')
 @with_appcontext
 def seed_permissions_command():
-    """Seed permissions and roles only"""
+    """Seed consolidated permissions and roles system"""
     try:
-        seed_permissions()
-        print('✅ Permissions seeded successfully!')
+        seed_consolidated_permissions()
+        print('✅ Consolidated permissions seeded successfully!')
     except Exception as e:
         print(f'❌ Error seeding permissions: {str(e)}')
         raise
@@ -159,19 +161,31 @@ def init_production_command():
         from flask_migrate import upgrade
         upgrade()
 
-        # Use existing comprehensive seeders
-        seed_permissions()
+        # CORRECTED SEEDING ORDER:
+        # 1. Permissions and roles MUST come first
+        print("=== Step 1: Setting up permissions and roles ===")
+        seed_consolidated_permissions()
+        
+        # 2. Subscription tiers (creates organizations with proper tiers)
+        print("=== Step 2: Setting up subscription foundation ===")
+        seed_subscriptions()
+        
+        # 3. Basic system data
+        print("=== Step 3: Setting up basic system data ===")
         seed_units()
-        seed_users()  # This already creates exempt org + admin user
+        
+        # 4. Users (now has all dependencies available)
+        print("=== Step 4: Creating users ===")
+        seed_users()
 
-        # Get the organization ID for categories
+        # 5. Categories (needs organization from users)
+        print("=== Step 5: Setting up categories ===")
         from .models import Organization
         org = Organization.query.first()
         if org:
             seed_categories(organization_id=org.id)
-
-        # Seed subscription data
-        seed_subscriptions()
+        else:
+            print("⚠️  No organization found for categories, skipping...")
 
         print('✅ Production database initialized successfully!')
         print('🔒 Default users created: admin/admin, dev/dev123')

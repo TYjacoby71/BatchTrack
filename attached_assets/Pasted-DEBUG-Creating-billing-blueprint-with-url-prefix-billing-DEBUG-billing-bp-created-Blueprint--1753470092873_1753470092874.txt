@@ -1,0 +1,190 @@
+DEBUG: Creating billing blueprint with url_prefix='/billing'
+DEBUG: billing_bp created: <Blueprint 'billing'>
+DEBUG: billing_bp in routes.py: <Blueprint 'billing'>
+DEBUG: billing_bp name: billing
+DEBUG: billing_bp url_prefix: /billing
+DEBUG: Billing blueprint imported successfully: <Blueprint 'billing'>
+DEBUG: Billing blueprint name: billing
+DEBUG: Billing blueprint url_prefix: /billing
+DEBUG: Billing blueprint registered successfully
+Registered API routes: ['/api/reservations/create', '/api/reservations/release/<int:reservation_id>', '/api/reservations/convert-to-sale/<int:reservation_id>', '/api/reservations/expire-old', '/api/products/<int:product_id>/variants', '/api/dismiss-alert', '/api/dashboard-alerts', '/api/server-time', '/api/server-time', '/api/dismiss-alert', '/api/dashboard-alerts', '/api/check-stock', '/api/categories', '/api/ingredient/<int:id>/density', '/api/debug-containers', '/api/available-containers/<int:recipe_id>', '/api/containers/available', '/api/batches/<int:batch_id>/containers', '/api/batches/<int:batch_id>/containers/<int:container_id>', '/api/batches/<int:batch_id>/containers/<int:container_id>/adjust', '/api/api/fifo-details/<int:inventory_id>', '/api/api/batch-inventory-summary/<int:batch_id>', '/api/api/reservations/create', '/api/api/reservations/release/<int:reservation_id>', '/api/api/reservations/convert-to-sale/<int:reservation_id>', '/api/api/reservations/expire-old', '/api/dashboard-alerts', '/api/dismiss-alert', '/api/units', '/api/convert-units']
+Container routes found: ['/settings/bulk-update-containers', '/api/debug-containers', '/api/available-containers/<int:recipe_id>', '/api/containers/available', '/api/batches/<int:batch_id>/containers', '/api/batches/<int:batch_id>/containers/<int:container_id>', '/api/batches/<int:batch_id>/containers/<int:container_id>/adjust']
+Billing routes found: ['/billing/reconciliation-needed', '/billing/reconcile-to-free', '/billing/upgrade', '/billing/checkout/<tier>/<billing_cycle>', '/billing/checkout/<tier>', '/billing/customer-portal', '/billing/cancel-subscription', '/billing/webhooks/stripe', '/billing/complete-signup-from-stripe', '/billing/dev/activate/<tier>', '/billing/debug']
+Billing endpoints: [('/billing/reconciliation-needed', 'billing.reconciliation_needed'), ('/billing/reconcile-to-free', 'billing.reconcile_to_free'), ('/billing/upgrade', 'billing.upgrade'), ('/billing/checkout/<tier>/<billing_cycle>', 'billing.checkout'), ('/billing/checkout/<tier>', 'billing.checkout'), ('/billing/customer-portal', 'billing.customer_portal'), ('/billing/cancel-subscription', 'billing.cancel_subscription'), ('/billing/webhooks/stripe', 'billing.stripe_webhook'), ('/billing/complete-signup-from-stripe', 'billing.complete_signup_from_stripe'), ('/billing/dev/activate/<tier>', 'billing.dev_activate_subscription'), ('/billing/debug', 'billing.debug_billing')]
+[2025-07-25 19:00:58,182] INFO in unit_utils: BatchTrack startup
+🚀 Initializing production database...
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> e9987bef6c93, Initial database setup
+=== Step 1: Setting up permissions and roles ===
+=== Seeding Consolidated Permissions System ===
+Seeding organization permissions...
+Processing category: Main dashboard and overview features
+/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_sqlalchemy/model.py:22: SAWarning: relationship 'SubscriptionTier.organizations' will copy column subscription_tier.id to column organization.subscription_tier_id, which conflicts with relationship(s): 'Organization.tier' (copies subscription_tier.id to organization.subscription_tier_id), 'SubscriptionTier.assigned_organizations' (copies subscription_tier.id to organization.subscription_tier_id). If this is not the intention, consider if these relationships should be linked with back_populates, or if viewonly=True should be applied to one or more if they are read-only. For the less common case that foreign key constraints are partially overlapping, the orm.foreign() annotation can be used to isolate the columns that should be written towards.   To silence this warning, add the parameter 'overlaps="assigned_organizations,tier"' to the 'SubscriptionTier.organizations' relationship. (Background on this warning at: https://sqlalche.me/e/20/qzyx) (This warning originated from the `configure_mappers()` process, which was invoked automatically in response to a user-initiated operation.)
+  return cls.query_class(
+  Created: dashboard.view
+Processing category: All inventory tracking, adjustments, and stock management
+  Created: inventory.view
+  Created: inventory.edit
+  Created: inventory.adjust
+  Created: inventory.reserve
+  Created: inventory.delete
+  Created: inventory.view_costs
+Processing category: Recipe creation, editing, and production planning
+  Created: recipes.view
+  Created: recipes.create
+  Created: recipes.edit
+  Created: recipes.delete
+  Created: recipes.scale
+  Created: recipes.plan_production
+Processing category: Production batch tracking from start to finish
+  Created: batches.view
+  Created: batches.create
+  Created: batches.edit
+  Created: batches.finish
+  Created: batches.cancel
+  Created: batches.view_costs
+Processing category: Product catalog, SKUs, and sales tracking
+  Created: products.view
+  Created: products.create
+  Created: products.edit
+  Created: products.delete
+  Created: products.manage_variants
+  Created: products.sales_tracking
+Processing category: Organization settings, users, and roles management
+  Created: organization.view
+  Created: organization.edit
+  Created: organization.manage_users
+  Created: organization.manage_roles
+  Created: organization.manage_billing
+  Created: organization.view_audit_logs
+Processing category: Alert management and notification preferences
+  Created: alerts.view
+  Created: alerts.manage
+  Created: alerts.dismiss
+Processing category: Reporting, analytics, and business insights
+  Created: reports.view
+  Created: reports.export
+  Created: reports.advanced
+  Created: reports.custom
+Processing category: Third-party integrations and marketplace connections
+  Created: integrations.shopify
+  Created: integrations.marketplace
+  Created: integrations.api_access
+Processing category: AI-powered features and automation
+  Created: ai.recipe_optimization
+  Created: ai.demand_forecasting
+  Created: ai.quality_insights
+✅ Organization permissions seeded successfully!
+Seeding developer permissions...
+Processing category: Core system administration and management
+  Created: dev.system_admin
+  Created: dev.dashboard
+  Created: dev.debug_mode
+  Created: dev.access_logs
+  Created: dev.system_settings
+Processing category: Database management and migration operations
+  Created: dev.run_migrations
+  Created: dev.seed_data
+  Created: dev.backup_restore
+Processing category: Cross-organization management and oversight
+  Created: dev.all_organizations
+  Created: dev.create_organizations
+  Created: dev.modify_any_organization
+  Created: dev.delete_organizations
+Processing category: Global user and permission management
+  Created: dev.manage_users
+  Created: dev.manage_roles
+  Created: dev.assign_permissions
+Processing category: Subscription tiers and billing oversight
+  Created: dev.manage_tiers
+  Created: dev.billing_override
+  Created: dev.view_all_billing
+Processing category: All organization-level permissions available to developers
+  Created: app.dashboard.view
+  Created: app.inventory.view
+  Created: app.inventory.edit
+  Created: app.inventory.adjust
+  Created: app.inventory.reserve
+  Created: app.inventory.delete
+  Created: app.inventory.view_costs
+  Created: app.recipes.view
+  Created: app.recipes.create
+  Created: app.recipes.edit
+  Created: app.recipes.delete
+  Created: app.recipes.scale
+  Created: app.recipes.plan_production
+  Created: app.batches.view
+  Created: app.batches.create
+  Created: app.batches.edit
+  Created: app.batches.finish
+  Created: app.batches.cancel
+  Created: app.batches.view_costs
+  Created: app.products.view
+  Created: app.products.create
+  Created: app.products.edit
+  Created: app.products.delete
+  Created: app.products.manage_variants
+  Created: app.products.sales_tracking
+  Created: app.organization.view
+  Created: app.organization.edit
+  Created: app.organization.manage_users
+  Created: app.organization.manage_roles
+  Created: app.organization.manage_billing
+  Created: app.organization.view_audit_logs
+  Created: app.alerts.view
+  Created: app.alerts.manage
+  Created: app.alerts.dismiss
+  Created: app.reports.view
+  Created: app.reports.export
+  Created: app.reports.advanced
+  Created: app.reports.custom
+  Created: app.integrations.shopify
+  Created: app.integrations.marketplace
+  Created: app.integrations.api_access
+  Created: app.ai.recipe_optimization
+  Created: app.ai.demand_forecasting
+  Created: app.ai.quality_insights
+✅ Developer permissions seeded successfully!
+Seeding developer roles...
+✅ Created/updated system_admin role with 62 permissions
+✅ Created/updated developer role with 7 permissions
+✅ Created/updated support role with 8 permissions
+✅ Developer roles seeded successfully!
+✅ Updated organization owner role with 6 permissions
+✅ Cleaned up old permissions
+✅ Consolidated permissions system seeded successfully!
+
+📊 Summary:
+Organization permissions: 44
+Developer permissions: 62
+=== Step 2: Setting up subscription foundation ===
+=== Seeding Subscription Foundation ===
+=== Seeding Subscription Tiers ===
+✅ Creating exempt tier
+   - Exempt tier created with 44 permissions
+ℹ️  Skipping metadata key: _note
+ℹ️  Skipping metadata key: _example_tier
+✅ Subscription tiers seeded successfully!
+=== Migrating Organizations to Tier IDs ===
+✅ Organization migration completed!
+✅ Subscription foundation seeding completed!
+   - Exempt tier created with unlimited permissions
+   - Additional tiers created from JSON configuration
+   - Organizations assigned appropriate tiers
+=== Step 3: Setting up basic system data ===
+=== Step 4: Creating users ===
+=== Seeding Users (Roles and Subscriptions Should Already Exist) ===
+❌ No organization found! Subscription seeder should run first.
+   Creating organization with exempt tier as fallback...
+✅ Created organization: Jacob Boulette's Organization (ID: 1)
+⚠️  Organization needs exempt tier, updating...
+✅ Assigned exempt tier ID 1
+Role check results:
+  - developer_role: ❌
+  - org_owner_role: ✅
+  - manager_role: ❌
+  - operator_role: ❌
+⚠️  developer role not found - creating basic fallback
+✅ Assigned system_admin role to dev user
+✅ Created developer user: dev/dev123 (no organization)

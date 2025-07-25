@@ -51,13 +51,32 @@ def seed_users():
 
     # Get roles from database - these should exist from consolidated permissions seeder
     developer_role = Role.query.filter_by(name='developer').first()
-    org_owner_role = Role.query.filter_by(name='organization_owner').first()
+    org_owner_role = Role.query.filter_by(name='organization_owner', is_system_role=True).first()
     manager_role = Role.query.filter_by(name='manager').first()
     operator_role = Role.query.filter_by(name='operator').first()
 
-    if not developer_role or not org_owner_role:
-        print("❌ Required roles not found. Please run consolidated permissions seeder first.")
+    print(f"Role check results:")
+    print(f"  - developer_role: {'✅' if developer_role else '❌'}")
+    print(f"  - org_owner_role: {'✅' if org_owner_role else '❌'}")
+    print(f"  - manager_role: {'✅' if manager_role else '❌'}")
+    print(f"  - operator_role: {'✅' if operator_role else '❌'}")
+
+    if not org_owner_role:
+        print("❌ Critical: organization_owner role not found!")
+        print("   This role is essential for user management.")
+        print("   Please run: flask seed-permissions")
         return
+        
+    if not developer_role:
+        print("⚠️  developer role not found - creating basic fallback")
+        developer_role = Role(
+            name='developer',
+            description='System developer access',
+            is_system_role=True,
+            is_active=True
+        )
+        db.session.add(developer_role)
+        db.session.commit()
 
     # Get organization owner system role
     system_org_owner_role = Role.query.filter_by(name='organization_owner', is_system_role=True).first()
