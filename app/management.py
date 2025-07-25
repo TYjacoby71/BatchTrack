@@ -48,23 +48,37 @@ def init_db():
 @click.command('seed-all')
 @with_appcontext
 def seed_all_command():
-    """Seed all data"""
+    """Seed all data in proper dependency order"""
     try:
-        print("🌱 Seeding all data...")
+        print("🌱 Seeding all data in proper order...")
 
-        # First seed the consolidated permissions system (creates permissions and roles)
-        seed_consolidated_permissions()
-
-        # Core seeders
+        # 1. Units (no dependencies)
+        print("1️⃣ Seeding units...")
         seed_units()
 
-        # Seed subscription data
+        # 2. Ingredient categories (no dependencies, but needs org later)
+        print("2️⃣ Deferring ingredient categories until organization exists...")
+
+        # 3. Permissions system (creates base permissions and roles)
+        print("3️⃣ Seeding permissions system...")
+        seed_consolidated_permissions()
+
+        # 4. Subscriptions (creates exempt tier)
+        print("4️⃣ Seeding subscription tiers...")
         seed_subscriptions()
 
-        # Seed users after permissions and roles are created
-        seed_users()
+        # 5. System roles are created by consolidated_permissions (developer roles)
+        print("5️⃣ System roles created by permissions seeder ✓")
 
-        # Get the organization ID from the first organization
+        # 6. Org system roles are created by consolidated_permissions (organization roles)
+        print("6️⃣ Organization roles created by permissions seeder ✓")
+
+        # 7. Organizations and Users (creates test org with exempt subscription + users)
+        print("7️⃣ Seeding organizations and users...")
+        seed_users()  # This creates the organization AND users
+
+        # 8. Now seed ingredient categories for the created organization
+        print("8️⃣ Seeding ingredient categories...")
         from .models import Organization
         org = Organization.query.first()
         if org:
@@ -73,11 +87,12 @@ def seed_all_command():
             print('❌ No organization found for seeding categories')
             return
 
-        # Update existing users with database roles (now that roles exist)
+        # 9. Update existing users with database roles (ensure all assignments are correct)
+        print("9️⃣ Updating user role assignments...")
         update_existing_users_with_roles()
 
-
-        print('✅ All data seeded successfully!')
+        print('✅ All data seeded successfully in proper order!')
+        print('🔗 Dependency chain: Units → Permissions → Subscriptions → Organizations → Users → Categories')
     except Exception as e:
         print(f'❌ Error seeding data: {str(e)}')
         raise
