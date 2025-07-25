@@ -1,8 +1,8 @@
-"""Initial database schema
+"""Initial database setup
 
-Revision ID: 47698e17fc63
+Revision ID: e9987bef6c93
 Revises: 
-Create Date: 2025-07-25 16:59:00.167075
+Create Date: 2025-07-25 18:51:18.381296
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '47698e17fc63'
+revision = 'e9987bef6c93'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -71,17 +71,6 @@ def upgrade():
     sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('name')
-    )
-    op.create_table('organization',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('name', sa.String(length=128), nullable=False),
-    sa.Column('contact_email', sa.String(length=256), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=True),
-    sa.Column('is_active', sa.Boolean(), nullable=True),
-    sa.Column('signup_source', sa.String(length=64), nullable=True),
-    sa.Column('promo_code', sa.String(length=32), nullable=True),
-    sa.Column('referral_code', sa.String(length=32), nullable=True),
-    sa.PrimaryKeyConstraint('id')
     )
     op.create_table('permission',
     sa.Column('id', sa.Integer(), nullable=False),
@@ -164,12 +153,63 @@ def upgrade():
         batch_op.create_index('idx_inventory_item', ['inventory_item_id'], unique=False)
         batch_op.create_index('idx_product_variant', ['product_id', 'variant_id'], unique=False)
 
+    op.create_table('subscription_tier',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('name', sa.String(length=64), nullable=False),
+    sa.Column('key', sa.String(length=32), nullable=False),
+    sa.Column('description', sa.Text(), nullable=True),
+    sa.Column('user_limit', sa.Integer(), nullable=True),
+    sa.Column('is_customer_facing', sa.Boolean(), nullable=True),
+    sa.Column('is_available', sa.Boolean(), nullable=True),
+    sa.Column('stripe_lookup_key', sa.String(length=128), nullable=True),
+    sa.Column('stripe_customer_id', sa.String(length=128), nullable=True),
+    sa.Column('stripe_subscription_id', sa.String(length=128), nullable=True),
+    sa.Column('stripe_price_id_monthly', sa.String(length=128), nullable=True),
+    sa.Column('stripe_price_id_yearly', sa.String(length=128), nullable=True),
+    sa.Column('fallback_price_monthly', sa.String(length=32), nullable=True),
+    sa.Column('fallback_price_yearly', sa.String(length=32), nullable=True),
+    sa.Column('stripe_price_monthly', sa.String(length=32), nullable=True),
+    sa.Column('stripe_price_yearly', sa.String(length=32), nullable=True),
+    sa.Column('last_synced', sa.DateTime(), nullable=True),
+    sa.Column('status', sa.String(length=32), nullable=True),
+    sa.Column('current_period_start', sa.DateTime(), nullable=True),
+    sa.Column('current_period_end', sa.DateTime(), nullable=True),
+    sa.Column('next_billing_date', sa.DateTime(), nullable=True),
+    sa.Column('trial_start', sa.DateTime(), nullable=True),
+    sa.Column('trial_end', sa.DateTime(), nullable=True),
+    sa.Column('cancel_at_period_end', sa.Boolean(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.Column('updated_at', sa.DateTime(), nullable=True),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('key')
+    )
     op.create_table('developer_role_permission',
     sa.Column('developer_role_id', sa.Integer(), nullable=False),
     sa.Column('developer_permission_id', sa.Integer(), nullable=False),
     sa.ForeignKeyConstraint(['developer_permission_id'], ['developer_permission.id'], ),
     sa.ForeignKeyConstraint(['developer_role_id'], ['developer_role.id'], ),
     sa.PrimaryKeyConstraint('developer_role_id', 'developer_permission_id')
+    )
+    op.create_table('organization',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('name', sa.String(length=128), nullable=False),
+    sa.Column('contact_email', sa.String(length=256), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.Column('is_active', sa.Boolean(), nullable=True),
+    sa.Column('signup_source', sa.String(length=64), nullable=True),
+    sa.Column('promo_code', sa.String(length=32), nullable=True),
+    sa.Column('referral_code', sa.String(length=32), nullable=True),
+    sa.Column('subscription_tier_id', sa.Integer(), nullable=True),
+    sa.Column('subscription_tier', sa.String(length=32), nullable=True),
+    sa.ForeignKeyConstraint(['subscription_tier_id'], ['subscription_tier.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_table('subscription_tier_permission',
+    sa.Column('tier_id', sa.Integer(), nullable=False),
+    sa.Column('permission_id', sa.Integer(), nullable=False),
+    sa.ForeignKeyConstraint(['permission_id'], ['permission.id'], ),
+    sa.ForeignKeyConstraint(['tier_id'], ['subscription_tier.id'], ),
+    sa.PrimaryKeyConstraint('tier_id', 'permission_id')
     )
     op.create_table('organization_stats',
     sa.Column('id', sa.Integer(), nullable=False),
@@ -190,27 +230,6 @@ def upgrade():
     sa.ForeignKeyConstraint(['organization_id'], ['organization.id'], ),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('organization_id')
-    )
-    op.create_table('subscription',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('tier', sa.String(length=32), nullable=True),
-    sa.Column('status', sa.String(length=32), nullable=True),
-    sa.Column('current_period_start', sa.DateTime(), nullable=True),
-    sa.Column('current_period_end', sa.DateTime(), nullable=True),
-    sa.Column('next_billing_date', sa.DateTime(), nullable=True),
-    sa.Column('trial_start', sa.DateTime(), nullable=True),
-    sa.Column('trial_end', sa.DateTime(), nullable=True),
-    sa.Column('stripe_subscription_id', sa.String(length=128), nullable=True),
-    sa.Column('stripe_customer_id', sa.String(length=128), nullable=True),
-    sa.Column('discount_percent', sa.Float(), nullable=True),
-    sa.Column('discount_end_date', sa.DateTime(), nullable=True),
-    sa.Column('comp_months_remaining', sa.Integer(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=True),
-    sa.Column('updated_at', sa.DateTime(), nullable=True),
-    sa.Column('notes', sa.Text(), nullable=True),
-    sa.ForeignKeyConstraint(['organization_id'], ['organization.id'], ),
-    sa.PrimaryKeyConstraint('id')
     )
     op.create_table('user',
     sa.Column('id', sa.Integer(), nullable=False),
@@ -741,9 +760,11 @@ def downgrade():
     op.drop_table('conversion_log')
     op.drop_table('batch_timer')
     op.drop_table('user')
-    op.drop_table('subscription')
     op.drop_table('organization_stats')
+    op.drop_table('subscription_tier_permission')
+    op.drop_table('organization')
     op.drop_table('developer_role_permission')
+    op.drop_table('subscription_tier')
     with op.batch_alter_table('product_sku', schema=None) as batch_op:
         batch_op.drop_index('idx_product_variant')
         batch_op.drop_index('idx_inventory_item')
@@ -751,7 +772,6 @@ def downgrade():
 
     op.drop_table('product_sku')
     op.drop_table('permission')
-    op.drop_table('organization')
     op.drop_table('developer_role')
     op.drop_table('developer_permission')
     op.drop_table('batch')

@@ -1,0 +1,68 @@
+DEBUG: Creating billing blueprint with url_prefix='/billing'
+DEBUG: billing_bp in routes.py: <Blueprint 'billing'>
+DEBUG: billing_bp name: billing
+DEBUG: billing_bp url_prefix: /billing
+DEBUG: Billing blueprint imported successfully: <Blueprint 'billing'>
+DEBUG: Billing blueprint name: billing
+DEBUG: Billing blueprint url_prefix: /billing
+DEBUG: Billing blueprint registered successfully
+Registered API routes: ['/api/reservations/create', '/api/reservations/release/<int:reservation_id>', '/api/reservations/convert-to-sale/<int:reservation_id>', '/api/reservations/expire-old', '/api/products/<int:product_id>/variants', '/api/dismiss-alert', '/api/dashboard-alerts', '/api/server-time', '/api/server-time', '/api/dismiss-alert', '/api/dashboard-alerts', '/api/check-stock', '/api/categories', '/api/ingredient/<int:id>/density', '/api/debug-containers', '/api/available-containers/<int:recipe_id>', '/api/containers/available', '/api/batches/<int:batch_id>/containers', '/api/batches/<int:batch_id>/containers/<int:container_id>', '/api/batches/<int:batch_id>/containers/<int:container_id>/adjust', '/api/api/fifo-details/<int:inventory_id>', '/api/api/batch-inventory-summary/<int:batch_id>', '/api/api/reservations/create', '/api/api/reservations/release/<int:reservation_id>', '/api/api/reservations/convert-to-sale/<int:reservation_id>', '/api/api/reservations/expire-old', '/api/dashboard-alerts', '/api/dismiss-alert', '/api/units', '/api/convert-units']
+Container routes found: ['/settings/bulk-update-containers', '/api/debug-containers', '/api/available-containers/<int:recipe_id>', '/api/containers/available', '/api/batches/<int:batch_id>/containers', '/api/batches/<int:batch_id>/containers/<int:container_id>', '/api/batches/<int:batch_id>/containers/<int:container_id>/adjust']
+Billing routes found: ['/billing/reconciliation-needed', '/billing/reconcile-to-free', '/billing/upgrade', '/billing/checkout/<tier>/<billing_cycle>', '/billing/checkout/<tier>', '/billing/customer-portal', '/billing/cancel-subscription', '/billing/webhooks/stripe', '/billing/complete-signup-from-stripe', '/billing/dev/activate/<tier>', '/billing/debug']
+Billing endpoints: [('/billing/reconciliation-needed', 'billing.reconciliation_needed'), ('/billing/reconcile-to-free', 'billing.reconcile_to_free'), ('/billing/upgrade', 'billing.upgrade'), ('/billing/checkout/<tier>/<billing_cycle>', 'billing.checkout'), ('/billing/checkout/<tier>', 'billing.checkout'), ('/billing/customer-portal', 'billing.customer_portal'), ('/billing/cancel-subscription', 'billing.cancel_subscription'), ('/billing/webhooks/stripe', 'billing.stripe_webhook'), ('/billing/complete-signup-from-stripe', 'billing.complete_signup_from_stripe'), ('/billing/dev/activate/<tier>', 'billing.dev_activate_subscription'), ('/billing/debug', 'billing.debug_billing')]
+[2025-07-25 18:51:30,996] INFO in unit_utils: BatchTrack startup
+🚀 Initializing production database...
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+=== Seeding Consolidated Permissions ===
+/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_sqlalchemy/model.py:22: SAWarning: relationship 'SubscriptionTier.organizations' will copy column subscription_tier.id to column organization.subscription_tier_id, which conflicts with relationship(s): 'Organization.tier' (copies subscription_tier.id to organization.subscription_tier_id), 'SubscriptionTier.assigned_organizations' (copies subscription_tier.id to organization.subscription_tier_id). If this is not the intention, consider if these relationships should be linked with back_populates, or if viewonly=True should be applied to one or more if they are read-only. For the less common case that foreign key constraints are partially overlapping, the orm.foreign() annotation can be used to isolate the columns that should be written towards.   To silence this warning, add the parameter 'overlaps="assigned_organizations,tier"' to the 'SubscriptionTier.organizations' relationship. (Background on this warning at: https://sqlalche.me/e/20/qzyx) (This warning originated from the `configure_mappers()` process, which was invoked automatically in response to a user-initiated operation.)
+  return cls.query_class(
+✅ Basic permissions seeded
+=== Seeding Users (Roles and Subscriptions Should Already Exist) ===
+❌ No organization found! Subscription seeder should run first.
+   Creating organization with exempt tier as fallback...
+✅ Created organization: Jacob Boulette's Organization (ID: 1)
+⚠️  Organization needs exempt tier, updating...
+❌ Exempt tier not found in database!
+❌ Required roles not found. Please run consolidated permissions seeder first.
+=== Seeding Subscription Foundation ===
+=== Seeding Subscription Tiers ===
+✅ Creating exempt tier
+   - Exempt tier created with 3 permissions
+✅ Creating new tier: _note
+❌ Error initializing production database: 'str' object has no attribute 'get'
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/bin/flask", line 8, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/cli.py", line 1129, in main
+    cli.main()
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/click/core.py", line 1082, in main
+    rv = self.invoke(ctx)
+         ^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/click/core.py", line 1697, in invoke
+    return _process_result(sub_ctx.command.invoke(sub_ctx))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/click/core.py", line 1443, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/click/core.py", line 788, in invoke
+    return __callback(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/click/decorators.py", line 33, in new_func
+    return f(get_current_context(), *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/cli.py", line 400, in decorator
+    return ctx.invoke(f, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/click/core.py", line 788, in invoke
+    return __callback(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/app/management.py", line 174, in init_production_command
+    seed_subscriptions()
+  File "/home/runner/workspace/app/seeders/subscription_seeder.py", line 137, in seed_subscriptions
+    seed_subscription_tiers()
+  File "/home/runner/workspace/app/seeders/subscription_seeder.py", line 88, in seed_subscription_tiers
+    tier.name = tier_config.get('name', tier_key.title())
+                ^^^^^^^^^^^^^^^
+AttributeError: 'str' object has no attribute 'get'
