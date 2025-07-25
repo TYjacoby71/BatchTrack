@@ -1,4 +1,3 @@
-
 """
 Management commands for deployment and maintenance
 """
@@ -21,14 +20,14 @@ def init_db():
     try:
         print("🚀 Initializing database...")
         db.create_all()
-        
+
         # Seed consolidated permissions system first
         seed_consolidated_permissions()
-        
+
         # Seed core data
         seed_units()
         seed_users()
-        
+
         # Get the organization ID from the first organization
         from .models import Organization
         org = Organization.query.first()
@@ -37,10 +36,10 @@ def init_db():
         else:
             print('❌ No organization found for seeding categories')
             return
-        
+
         # Seed subscription data
         seed_subscriptions()
-        
+
         print('✅ Database initialized successfully!')
     except Exception as e:
         print(f'❌ Error initializing database: {str(e)}')
@@ -52,7 +51,7 @@ def seed_all_command():
     """Seed all data"""
     try:
         print("🌱 Seeding all data...")
-        
+
         # First seed the consolidated permissions system
         seed_consolidated_permissions()
 
@@ -71,7 +70,7 @@ def seed_all_command():
 
         # Update existing users with database roles
         update_existing_users_with_roles()
-        
+
         # Seed subscription data
         seed_subscriptions()
 
@@ -141,7 +140,7 @@ def activate_users():
     """Activate all inactive users"""
     try:
         from .models import User
-        
+
         inactive_users = User.query.filter_by(is_active=False).all()
         if not inactive_users:
             print("ℹ️  No inactive users found.")
@@ -155,6 +154,39 @@ def activate_users():
         print(f"✅ Activated {len(inactive_users)} users.")
     except Exception as e:
         print(f'❌ Error activating users: {str(e)}')
+        raise
+
+@click.command('init-production')
+@with_appcontext
+def init_production_command():
+    """Initialize production database with essential data only"""
+    try:
+        print("🚀 Initializing production database...")
+
+        # Apply migrations
+        from flask_migrate import upgrade
+        upgrade()
+
+        # Use existing comprehensive seeders
+        seed_consolidated_permissions()
+        seed_units()
+        seed_users()  # This already creates exempt org + admin user
+
+        # Get the organization ID for categories
+        from .models import Organization
+        org = Organization.query.first()
+        if org:
+            seed_categories(organization_id=org.id)
+
+        # Seed subscription data
+        seed_subscriptions()
+
+        print('✅ Production database initialized successfully!')
+        print('🔒 Default users created: admin/admin, dev/dev123')
+        print('🔒 Remember to change passwords after first login!')
+
+    except Exception as e:
+        print(f'❌ Error initializing production database: {str(e)}')
         raise
 
 def register_commands(app):
