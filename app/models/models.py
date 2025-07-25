@@ -31,6 +31,12 @@ class Organization(db.Model):
 
     # Move billing to separate Subscription model for flexibility
 
+    # Subscription tier (relationship to SubscriptionTier)
+    subscription_tier_id = db.Column(db.Integer, db.ForeignKey('subscription_tier.id'), nullable=True)
+
+    # Keep old string field for migration compatibility (will be removed later)
+    subscription_tier = db.Column(db.String(32), default='free')  # free, solo, team, enterprise, exempt
+
     users = db.relationship('User', backref='organization')
 
     @property
