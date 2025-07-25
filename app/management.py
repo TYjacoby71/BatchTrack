@@ -110,8 +110,7 @@ def seed_subscriptions_command():
 def update_user_roles_command():
     """Update existing users with database role assignments"""
     try:
-        from .seeders.user_seeder import update_existing_users_with_roles
-        update_existing_users_with_roles()
+        # update_existing_users_with_roles() removed - users are created properly by seed_users()
         print('✅ User roles updated successfully!')
     except Exception as e:
         print(f'❌ Error updating user roles: {str(e)}')

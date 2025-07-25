@@ -145,7 +145,5 @@ def seed_users():
     db.session.commit()
     print("✅ Essential users seeded successfully")
 
-def update_existing_users_with_roles():
-    """Legacy function - kept for compatibility but not used"""
-    print("ℹ️  update_existing_users_with_roles() is deprecated")
-    pass
+# update_existing_users_with_roles() removed - no longer needed since 
+# seed_users() creates users with proper roles from scratch
