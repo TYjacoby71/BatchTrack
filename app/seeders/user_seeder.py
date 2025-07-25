@@ -15,27 +15,38 @@ def seed_users():
     from ..models.developer_role import DeveloperRole
     from ..models.user_role_assignment import UserRoleAssignment
 
-    # Get or create default organization
+    print("=== Seeding Users (Roles and Subscriptions Should Already Exist) ===")
+
+    # Get the default organization (should exist from subscription seeder)
     org = Organization.query.first()
     if not org:
+        print("❌ No organization found! Subscription seeder should run first.")
+        print("   Creating organization with exempt tier as fallback...")
         org = Organization(
             name="Jacob Boulette's Organization",
-            subscription_tier='team'  # Changed from 'free' to 'team' for better features
+            subscription_tier='exempt'  # Use exempt tier for testing
         )
         db.session.add(org)
-        db.session.commit()  # Commit to ensure we have a valid ID
+        db.session.commit()
         print(f"✅ Created organization: {org.name} (ID: {org.id})")
     else:
         print(f"ℹ️  Using existing organization: {org.name} (ID: {org.id})")
+        print(f"   - Subscription tier: {org.subscription_tier}")
 
-    # Get roles from database - these should exist from role_permission_seeder
+    # Verify the organization has exempt tier
+    if org.subscription_tier != 'exempt':
+        print(f"⚠️  Organization tier is '{org.subscription_tier}', updating to 'exempt'")
+        org.subscription_tier = 'exempt'
+        db.session.commit()
+
+    # Get roles from database - these should exist from consolidated permissions seeder
     developer_role = Role.query.filter_by(name='developer').first()
     org_owner_role = Role.query.filter_by(name='organization_owner').first()
     manager_role = Role.query.filter_by(name='manager').first()
     operator_role = Role.query.filter_by(name='operator').first()
 
     if not developer_role or not org_owner_role:
-        print("❌ Required roles not found. Please run 'flask seed-roles-permissions' first.")
+        print("❌ Required roles not found. Please run consolidated permissions seeder first.")
         return
 
     # Get organization owner system role

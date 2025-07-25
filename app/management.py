@@ -57,7 +57,10 @@ def seed_all_command():
 
         # Core seeders
         seed_units()
-        
+
+        # Seed subscription data
+        seed_subscriptions()
+
         # Seed users after permissions and roles are created
         seed_users()
 
@@ -73,8 +76,6 @@ def seed_all_command():
         # Update existing users with database roles (now that roles exist)
         update_existing_users_with_roles()
 
-        # Seed subscription data
-        seed_subscriptions()
 
         print('✅ All data seeded successfully!')
     except Exception as e:
