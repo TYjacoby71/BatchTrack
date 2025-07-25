@@ -165,15 +165,15 @@ def init_production_command():
         # 1. Permissions and roles MUST come first
         print("=== Step 1: Setting up permissions and roles ===")
         seed_consolidated_permissions()
-        
+
         # 2. Subscription tiers (creates organizations with proper tiers)
         print("=== Step 2: Setting up subscription foundation ===")
         seed_subscriptions()
-        
+
         # 3. Basic system data
         print("=== Step 3: Setting up basic system data ===")
         seed_units()
-        
+
         # 4. Users (now has all dependencies available)
         print("=== Step 4: Creating users ===")
         seed_users()
