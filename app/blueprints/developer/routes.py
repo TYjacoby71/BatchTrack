@@ -92,7 +92,7 @@ def create_organization():
     # Include all tiers for developer creation (including internal ones)
     available_tiers = {
         key: tier for key, tier in tiers_config.items() 
-        if tier.get('is_available', True)
+        if isinstance(tier, dict) and tier.get('is_available', True)
     }
 
     if request.method == 'POST':
