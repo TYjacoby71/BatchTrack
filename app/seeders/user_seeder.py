@@ -16,11 +16,30 @@ def seed_users():
 
     print("=== Seeding Essential Users ===")
 
-    # Get the exempt organization (should exist from subscription seeder)
+    # Get or create the organization
+    from ..models.subscription_tier import SubscriptionTier
+    
     org = Organization.query.first()
     if not org:
-        print("❌ No organization found! Subscription seeder must run first.")
-        return
+        print("ℹ️  No organization found, creating default organization...")
+        
+        # Get the exempt tier
+        exempt_tier = SubscriptionTier.query.filter_by(key='exempt').first()
+        if not exempt_tier:
+            print("❌ Exempt tier not found! Run subscription seeder first.")
+            return
+            
+        # Create default organization
+        org = Organization(
+            name='BatchTrack Organization',
+            subscription_tier_id=exempt_tier.id,
+            is_active=True
+        )
+        db.session.add(org)
+        db.session.flush()
+        print(f"✅ Created default organization: {org.name}")
+    else:
+        print(f"ℹ️  Found existing organization: {org.name}")
 
     print(f"ℹ️  Using organization: {org.name} (ID: {org.id})")
     if org.tier:
