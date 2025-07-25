@@ -34,9 +34,9 @@ def seed_users():
         print(f"   - Subscription tier: {org.subscription}")
 
     # Verify the organization has exempt tier
-    if org.subscription_tier != 'exempt':
-        print(f"⚠️  Organization tier is '{org.subscription_tier}', updating to 'exempt'")
-        org.subscription_tier = 'exempt'
+    if org.subscription != 'exempt':
+        print(f"⚠️  Organization tier is '{org.subscription}', updating to 'exempt'")
+        org.subscription = 'exempt'
         db.session.commit()
 
     # Get roles from database - these should exist from consolidated permissions seeder
