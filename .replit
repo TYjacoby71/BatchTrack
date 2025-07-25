@@ -12,7 +12,7 @@ language = "python3"
 requiredFiles = [".replit", "replit.nix"]
 
 [deployment]
-run = ["sh", "-c", "gunicorn wsgi:app --host=0.0.0.0 --port=$PORT --workers=1"]
+run = ["sh", "-c", "python wsgi.py"]
 deploymentTarget = "cloudrun"
 build = ["sh", "-c", "pip install -r requirements.txt"]
 
