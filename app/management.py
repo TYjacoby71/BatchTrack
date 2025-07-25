@@ -52,11 +52,13 @@ def seed_all_command():
     try:
         print("🌱 Seeding all data...")
 
-        # First seed the consolidated permissions system
+        # First seed the consolidated permissions system (creates permissions and roles)
         seed_consolidated_permissions()
 
         # Core seeders
         seed_units()
+        
+        # Seed users after permissions and roles are created
         seed_users()
 
         # Get the organization ID from the first organization
@@ -68,7 +70,7 @@ def seed_all_command():
             print('❌ No organization found for seeding categories')
             return
 
-        # Update existing users with database roles
+        # Update existing users with database roles (now that roles exist)
         update_existing_users_with_roles()
 
         # Seed subscription data
