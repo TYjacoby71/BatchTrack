@@ -31,7 +31,7 @@ def seed_users():
         print(f"✅ Created organization: {org.name} (ID: {org.id})")
     else:
         print(f"ℹ️  Using existing organization: {org.name} (ID: {org.id})")
-        print(f"   - Subscription tier: {org.subscription_tier}")
+        print(f"   - Subscription tier: {org.subscription}")
 
     # Verify the organization has exempt tier
     if org.subscription_tier != 'exempt':
