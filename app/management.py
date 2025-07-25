@@ -23,18 +23,20 @@ def seed_all():
     # 1. Core permissions first
     seed_permissions()
 
-    # 2. Developer permissions (now handled by consolidated permissions)
-    # seed_developer_permissions() - moved to consolidated system
+    # 2. Subscription system (creates tiers that users need)
+    seed_subscriptions()
 
     # 3. Basic data
     seed_units()
-    seed_categories()
 
-    # 4. Subscription system (only exempt tier by default)
-    seed_subscriptions()
-
-    # 5. Users (if needed)
+    # 4. Users (now runs after subscriptions exist)
     seed_users()
+
+    # 5. Categories (needs organization from users)
+    from .models import Organization
+    org = Organization.query.first()
+    if org:
+        seed_categories(organization_id=org.id)
 
     print("=== ALL SEEDING COMPLETED ===")
 
@@ -159,19 +161,17 @@ def init_production_command():
         from flask_migrate import upgrade
         upgrade()
 
-        # Use existing comprehensive seeders
+        # Use existing comprehensive seeders in correct order
         seed_permissions()
+        seed_subscriptions()  # Must run before users to create tiers
         seed_units()
-        seed_users()  # This already creates exempt org + admin user
+        seed_users()  # Now runs after subscriptions exist
 
         # Get the organization ID for categories
         from .models import Organization
         org = Organization.query.first()
         if org:
             seed_categories(organization_id=org.id)
-
-        # Seed subscription data
-        seed_subscriptions()
 
         print('✅ Production database initialized successfully!')
         print('🔒 Default users created: admin/admin, dev/dev123')

@@ -73,6 +73,16 @@ def seed_subscription_tiers():
         del tiers_data['exempt']
 
     for tier_key, tier_config in tiers_data.items():
+        # Skip metadata keys (they start with underscore)
+        if tier_key.startswith('_'):
+            print(f"ℹ️  Skipping metadata key: {tier_key}")
+            continue
+            
+        # Skip if tier_config is not a dictionary
+        if not isinstance(tier_config, dict):
+            print(f"⚠️  Skipping invalid tier config for {tier_key}: {type(tier_config)}")
+            continue
+
         # Check if tier already exists
         existing_tier = SubscriptionTier.query.filter_by(key=tier_key).first()
 
