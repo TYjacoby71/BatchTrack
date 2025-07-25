@@ -12,7 +12,7 @@ from .seeders import (
     seed_subscriptions
 )
 from .seeders.consolidated_permission_seeder import seed_consolidated_permissions
-from .seeders.user_organization_seeder import seed_users_and_organization # Modified import
+from .seeders.user_seeder import seed_users_and_organization
 
 @click.command()
 @with_appcontext  

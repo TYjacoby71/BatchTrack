@@ -68,10 +68,15 @@
                             <select class="form-select" id="subscription_tier" name="subscription_tier">
                                 {% if tiers_config %}
                                     {% for tier_key, tier_data in tiers_config.items() %}
-                                        {% if tier_data.get('is_available', True) %}
+                                        {% if tier_data is mapping and tier_data.get('is_available', True) %}
                                         <option value="{{ tier_key }}" 
                                                 {% if tier_key == current_tier %}selected{% endif %}>
-                                            {{ tier_data.get('name', tier_key.title()) }}
+                                            {{ tier_data.get('name', tier_key.title()) if tier_data is mapping else tier_key.title() }}
+                                        </option>
+                                        {% elif tier_data is not mapping %}
+                                        <option value="{{ tier_key }}" 
+                                                {% if tier_key == current_tier %}selected{% endif %}>
+                                            {{ tier_key.title() }}
                                         </option>
                                         {% endif %}
                                     {% endfor %}
