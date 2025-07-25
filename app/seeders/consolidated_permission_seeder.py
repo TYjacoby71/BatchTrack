@@ -35,15 +35,13 @@ def seed_organization_permissions():
                 # Update existing permission
                 existing.description = perm_data['description']
                 existing.category = category_key
-                existing.required_subscription_tier = perm_data.get('required_subscription_tier', 'free')
                 print(f"  Updated: {perm_data['name']}")
             else:
                 # Create new permission
                 new_perm = Permission(
                     name=perm_data['name'],
                     description=perm_data['description'],
-                    category=category_key,
-                    required_subscription_tier=perm_data['required_tier']
+                    category=category_key
                 )
                 db.session.add(new_perm)
                 print(f"  Created: {perm_data['name']}")
