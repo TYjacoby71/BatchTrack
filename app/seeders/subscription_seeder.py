@@ -5,7 +5,7 @@
 import json
 import os
 from flask import current_app
-from ..models import db, Organization, Subscription
+from ..models import db, Organization, Subscription, SubscriptionTier, Permission
 from datetime import datetime
 
 def load_subscription_tiers():
@@ -14,92 +14,120 @@ def load_subscription_tiers():
     with open(json_path, 'r') as f:
         return json.load(f)
 
-def seed_exempt_subscription_tier():
-    """Create the exempt subscription tier in the database if it doesn't exist"""
+def seed_subscription_tiers():
+    """Create subscription tier records from JSON configuration"""
     if not current_app:
-        raise RuntimeError("seed_exempt_subscription_tier() must be called within Flask application context")
+        raise RuntimeError("seed_subscription_tiers() must be called within Flask application context")
     
-    # Check if we already have subscription tiers seeded by checking for exempt tier data
-    print("=== Creating Exempt Subscription Tier ===")
+    print("=== Seeding Subscription Tiers ===")
     
-    # Load subscription tiers from JSON
+    # Load tiers from JSON
     tiers_data = load_subscription_tiers()
-    exempt_tier_data = tiers_data.get('exempt')
     
-    if not exempt_tier_data:
-        print("❌ Exempt tier not found in subscription_tiers.json")
-        return
+    for tier_key, tier_config in tiers_data.items():
+        # Check if tier already exists
+        existing_tier = SubscriptionTier.query.filter_by(key=tier_key).first()
+        
+        if existing_tier:
+            print(f"ℹ️  Updating existing tier: {tier_key}")
+            tier = existing_tier
+        else:
+            print(f"✅ Creating new tier: {tier_key}")
+            tier = SubscriptionTier(key=tier_key)
+            db.session.add(tier)
+        
+        # Update tier properties
+        tier.name = tier_config.get('name', tier_key.title())
+        tier.description = tier_config.get('description', '')
+        tier.user_limit = tier_config.get('user_limit', 1)
+        tier.is_customer_facing = tier_config.get('is_customer_facing', True)
+        tier.is_available = tier_config.get('is_available', True)
+        tier.stripe_lookup_key = tier_config.get('stripe_lookup_key', '')
+        tier.fallback_price_monthly = tier_config.get('fallback_price_monthly', '$0')
+        tier.fallback_price_yearly = tier_config.get('fallback_price_yearly', '$0')
+        tier.stripe_price_monthly = tier_config.get('stripe_price_monthly')
+        tier.stripe_price_yearly = tier_config.get('stripe_price_yearly')
+        
+        # Assign permissions
+        permission_names = tier_config.get('permissions', [])
+        permissions = Permission.query.filter(Permission.name.in_(permission_names)).all()
+        tier.permissions = permissions
+        
+        print(f"   - {len(permissions)} permissions assigned")
     
-    print("✅ Exempt tier configuration loaded from JSON")
-    print(f"   - Name: {exempt_tier_data.get('name')}")
-    print(f"   - User Limit: {exempt_tier_data.get('user_limit')}")
-    print(f"   - Permissions: {len(exempt_tier_data.get('permissions', []))} permissions")
-    
-    # The exempt tier is now ready for assignment to organizations
-    print("✅ Exempt subscription tier is available for assignment")
+    db.session.commit()
+    print("✅ Subscription tiers seeded successfully!")
 
-def seed_subscription_for_test_organization():
-    """Create exempt subscription for the test organization"""
+def migrate_existing_organizations():
+    """Migrate existing organizations to use tier IDs"""
     if not current_app:
-        raise RuntimeError("seed_subscription_for_test_organization() must be called within Flask application context")
+        raise RuntimeError("migrate_existing_organizations() must be called within Flask application context")
     
-    print("=== Assigning Exempt Subscription to Test Organization ===")
+    print("=== Migrating Organizations to Tier IDs ===")
     
-    # Get or create the test organization (this should exist from user seeder)
-    org = Organization.query.first()
-    if not org:
-        # Create the organization if it doesn't exist
-        org = Organization(
-            name="Jacob Boulette's Organization",
-            subscription_tier='exempt'  # Set to exempt tier
-        )
-        db.session.add(org)
-        db.session.commit()
-        print(f"✅ Created test organization: {org.name} (ID: {org.id})")
-    else:
-        # Update existing organization to exempt tier
-        org.subscription_tier = 'exempt'
-        db.session.commit()
-        print(f"ℹ️  Updated existing organization: {org.name} (ID: {org.id}) to exempt tier")
+    organizations = Organization.query.all()
+    
+    for org in organizations:
+        if org.subscription_tier and not org.subscription_tier_id:
+            # Find matching tier by key
+            tier = SubscriptionTier.query.filter_by(key=org.subscription_tier).first()
+            if tier:
+                org.subscription_tier_id = tier.id
+                print(f"✅ Migrated organization {org.name} to tier ID {tier.id} ({tier.key})")
+            else:
+                print(f"⚠️  No tier found for organization {org.name} with tier '{org.subscription_tier}'")
+    
+    db.session.commit()
+    print("✅ Organization migration completed!")
 
-    # Check if subscription record exists
-    sub = Subscription.query.filter_by(organization_id=org.id).first()
-    if not sub:
-        print(f'Creating exempt subscription for organization {org.id}')
-        sub = Subscription(
-            organization_id=org.id,
-            tier='exempt',
-            status='active',
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
-            notes='Development/testing organization with exempt tier'
-        )
-        db.session.add(sub)
-        db.session.commit()
-        print('✅ Created exempt subscription successfully')
-    else:
-        print(f'ℹ️  Subscription already exists: {sub.tier}')
-        if sub.tier != 'exempt':
-            sub.tier = 'exempt'
-            sub.status = 'active'
-            sub.notes = 'Development/testing organization with exempt tier'
-            db.session.commit()
-            print('✅ Updated to exempt tier')
+def migrate_existing_subscriptions():
+    """Migrate existing subscriptions to use tier IDs"""
+    if not current_app:
+        raise RuntimeError("migrate_existing_subscriptions() must be called within Flask application context")
+    
+    print("=== Migrating Subscriptions to Tier IDs ===")
+    
+    subscriptions = Subscription.query.all()
+    
+    for sub in subscriptions:
+        if sub.tier and not sub.tier_id:
+            # Find matching tier by key
+            tier = SubscriptionTier.query.filter_by(key=sub.tier).first()
+            if tier:
+                sub.tier_id = tier.id
+                print(f"✅ Migrated subscription {sub.id} to tier ID {tier.id} ({tier.key})")
+            else:
+                print(f"⚠️  No tier found for subscription {sub.id} with tier '{sub.tier}'")
+    
+    db.session.commit()
+    print("✅ Subscription migration completed!")
 
 def seed_subscriptions():
-    """Main subscription seeder function - creates exempt tier foundation"""
+    """Main subscription seeder function - creates proper tier structure"""
     if not current_app:
         raise RuntimeError("seed_subscriptions() must be called within Flask application context")
     
     print("=== Seeding Subscription Foundation ===")
     
-    # Step 1: Ensure exempt tier is available in JSON config
-    seed_exempt_subscription_tier()
+    # Step 1: Create tier records from JSON
+    seed_subscription_tiers()
     
-    # Step 2: Create/update test organization with exempt subscription
-    seed_subscription_for_test_organization()
+    # Step 2: Migrate existing organizations
+    migrate_existing_organizations()
+    
+    # Step 3: Migrate existing subscriptions
+    migrate_existing_subscriptions()
+    
+    # Step 4: Ensure test organization has exempt subscription
+    exempt_tier = SubscriptionTier.query.filter_by(key='exempt').first()
+    if exempt_tier:
+        org = Organization.query.first()
+        if org and not org.subscription_tier_id:
+            org.subscription_tier_id = exempt_tier.id
+            db.session.commit()
+            print(f"✅ Assigned exempt tier to test organization")
     
     print("✅ Subscription foundation seeding completed!")
-    print("   - Exempt tier available for assignment")
-    print("   - Test organization has exempt subscription")
-    print("   - Ready for user seeder to assign users")
+    print("   - Tier records created with proper IDs")
+    print("   - Organizations migrated to tier IDs")
+    print("   - Subscriptions migrated to tier IDs")

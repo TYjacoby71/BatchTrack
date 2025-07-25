@@ -8,7 +8,8 @@ class Subscription(db.Model):
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=False)
 
     # Core subscription info
-    tier = db.Column(db.String(32), default='free')  # free, solo, team, enterprise, exempt
+    tier_id = db.Column(db.Integer, db.ForeignKey('subscription_tier.id'), nullable=True)
+    tier = db.Column(db.String(32), default='free')  # DEPRECATED: Keep for migration compatibility
     status = db.Column(db.String(32), default='active')  # active, trialing, past_due, canceled, paused
 
     # Flexible period management
@@ -61,8 +62,13 @@ class Subscription(db.Model):
     @property
     def effective_tier(self):
         """Get the tier considering trial status"""
+        if self.tier_id and self.tier:
+            if self.tier.key == 'exempt':
+                return 'enterprise'  # Exempt accounts get enterprise features
+            return self.tier.key
+        # Fallback to string field during migration
         if self.tier == 'exempt':
-            return 'enterprise'  # Exempt accounts get enterprise features
+            return 'enterprise'
         return self.tier
 
     def extend_trial(self, days, reason=None):
