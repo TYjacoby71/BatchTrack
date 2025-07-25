@@ -6,6 +6,7 @@ import json
 import os
 from flask import current_app
 from ..models import Permission, DeveloperPermission, Role, db
+from ..models.developer_role import DeveloperRole
 
 def load_consolidated_permissions():
     """Load permissions from the consolidated JSON file"""
@@ -84,6 +85,76 @@ def seed_developer_permissions():
     db.session.commit()
     print("✅ Developer permissions seeded successfully!")
 
+def seed_developer_roles():
+    """Create developer roles and assign permissions"""
+    print("Seeding developer roles...")
+    
+    # System Admin Role - full system access
+    system_admin_role = DeveloperRole.query.filter_by(name='system_admin').first()
+    if not system_admin_role:
+        system_admin_role = DeveloperRole(
+            name='system_admin',
+            description='Full system administration access across all organizations',
+            category='admin',
+            is_active=True
+        )
+        db.session.add(system_admin_role)
+        db.session.flush()
+    
+    # Assign all developer permissions to system_admin
+    all_dev_permissions = DeveloperPermission.query.filter_by(is_active=True).all()
+    system_admin_role.permissions = all_dev_permissions
+    print(f"✅ Created/updated system_admin role with {len(all_dev_permissions)} permissions")
+    
+    # Developer Role - limited development access
+    developer_role = DeveloperRole.query.filter_by(name='developer').first()
+    if not developer_role:
+        developer_role = DeveloperRole(
+            name='developer',
+            description='Basic developer access for debugging and development',
+            category='developer',
+            is_active=True
+        )
+        db.session.add(developer_role)
+        db.session.flush()
+    
+    # Assign basic developer permissions
+    dev_permissions = DeveloperPermission.query.filter(
+        DeveloperPermission.name.in_([
+            'dev.dashboard',
+            'dev.debug_mode',
+            'dev.access_logs',
+            'app.batches.view',
+            'app.batches.create',
+            'app.inventory.view',
+            'app.organization.view'
+        ])
+    ).all()
+    developer_role.permissions = dev_permissions
+    print(f"✅ Created/updated developer role with {len(dev_permissions)} permissions")
+    
+    # Support Role - read-only access for support staff
+    support_role = DeveloperRole.query.filter_by(name='support').first()
+    if not support_role:
+        support_role = DeveloperRole(
+            name='support',
+            description='Read-only access for customer support',
+            category='support',
+            is_active=True
+        )
+        db.session.add(support_role)
+        db.session.flush()
+    
+    # Assign read-only permissions
+    support_permissions = DeveloperPermission.query.filter(
+        DeveloperPermission.name.like('app.%.view')
+    ).all()
+    support_role.permissions = support_permissions
+    print(f"✅ Created/updated support role with {len(support_permissions)} permissions")
+    
+    db.session.commit()
+    print("✅ Developer roles seeded successfully!")
+
 def update_organization_owner_role():
     """Update organization owner role with necessary permissions"""
     org_owner_role = Role.query.filter_by(name='organization_owner', is_system_role=True).first()
@@ -151,6 +222,9 @@ def seed_consolidated_permissions():
     # Seed permissions
     seed_organization_permissions()
     seed_developer_permissions()
+    
+    # Seed developer roles
+    seed_developer_roles()
     
     # Update roles
     update_organization_owner_role()
