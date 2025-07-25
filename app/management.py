@@ -8,7 +8,6 @@ from .extensions import db
 from .models import User, Organization, Permission
 from .seeders import (
     seed_permissions,
-    seed_developer_permissions,
     seed_units,
     seed_categories,
     seed_subscriptions,
@@ -24,8 +23,8 @@ def seed_all():
     # 1. Core permissions first
     seed_permissions()
 
-    # 2. Developer permissions
-    seed_developer_permissions()
+    # 2. Developer permissions (now handled by consolidated permissions)
+    # seed_developer_permissions() - moved to consolidated system
 
     # 3. Basic data
     seed_units()
