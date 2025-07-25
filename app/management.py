@@ -161,17 +161,31 @@ def init_production_command():
         from flask_migrate import upgrade
         upgrade()
 
-        # Use existing comprehensive seeders in correct order
+        # CORRECTED SEEDING ORDER:
+        # 1. Permissions and roles MUST come first
+        print("=== Step 1: Setting up permissions and roles ===")
         seed_permissions()
-        seed_subscriptions()  # Must run before users to create tiers
+        
+        # 2. Subscription tiers (creates organizations with proper tiers)
+        print("=== Step 2: Setting up subscription foundation ===")
+        seed_subscriptions()
+        
+        # 3. Basic system data
+        print("=== Step 3: Setting up basic system data ===")
         seed_units()
-        seed_users()  # Now runs after subscriptions exist
+        
+        # 4. Users (now has all dependencies available)
+        print("=== Step 4: Creating users ===")
+        seed_users()
 
-        # Get the organization ID for categories
+        # 5. Categories (needs organization from users)
+        print("=== Step 5: Setting up categories ===")
         from .models import Organization
         org = Organization.query.first()
         if org:
             seed_categories(organization_id=org.id)
+        else:
+            print("⚠️  No organization found for categories, skipping...")
 
         print('✅ Production database initialized successfully!')
         print('🔒 Default users created: admin/admin, dev/dev123')
