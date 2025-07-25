@@ -241,31 +241,3 @@ def seed_consolidated_permissions():
     print(f"Organization permissions: {org_count}")
     print(f"Developer permissions: {dev_count}")
 
-from ..models import db, Permission
-from flask import current_app
-
-def seed_permissions():
-    """Seed permissions from consolidated permissions"""
-    print("=== Seeding Consolidated Permissions ===")
-
-    # This is a placeholder - the actual permissions should be loaded
-    # from your consolidated_permissions.json file
-
-    basic_permissions = [
-        ('dashboard.view', 'View dashboard'),
-        ('inventory.view', 'View inventory'),
-        ('system.admin', 'System administration')
-    ]
-
-    for perm_name, description in basic_permissions:
-        existing = Permission.query.filter_by(name=perm_name).first()
-        if not existing:
-            permission = Permission(
-                name=perm_name,
-                description=description,
-                is_active=True
-            )
-            db.session.add(permission)
-
-    db.session.commit()
-    print("✅ Basic permissions seeded")

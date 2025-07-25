@@ -7,29 +7,29 @@ from flask.cli import with_appcontext
 from .extensions import db
 from .models import User, Organization, Permission
 from .seeders import (
-    seed_permissions,
     seed_units,
     seed_categories,
     seed_subscriptions,
     seed_users
 )
+from .seeders.consolidated_permission_seeder import seed_consolidated_permissions
 
 @click.command()
 @with_appcontext  
 def seed_all():
-    """Seed all initial data"""
+    """Seed all initial data in proper order"""
     print("=== SEEDING ALL DATA ===")
 
-    # 1. Core permissions first
-    seed_permissions()
+    # 1. Consolidated permissions system (permissions + roles)
+    seed_consolidated_permissions()
 
-    # 2. Subscription system (creates tiers that users need)
+    # 2. Subscription system (creates tiers with proper permissions)
     seed_subscriptions()
 
-    # 3. Basic data
+    # 3. Basic system data
     seed_units()
 
-    # 4. Users (now runs after subscriptions exist)
+    # 4. Users (after permissions and subscriptions exist)
     seed_users()
 
     # 5. Categories (needs organization from users)
@@ -75,10 +75,10 @@ def init_db():
 @click.command('seed-permissions')
 @with_appcontext
 def seed_permissions_command():
-    """Seed permissions and roles only"""
+    """Seed consolidated permissions and roles system"""
     try:
-        seed_permissions()
-        print('✅ Permissions seeded successfully!')
+        seed_consolidated_permissions()
+        print('✅ Consolidated permissions seeded successfully!')
     except Exception as e:
         print(f'❌ Error seeding permissions: {str(e)}')
         raise
@@ -164,7 +164,7 @@ def init_production_command():
         # CORRECTED SEEDING ORDER:
         # 1. Permissions and roles MUST come first
         print("=== Step 1: Setting up permissions and roles ===")
-        seed_permissions()
+        seed_consolidated_permissions()
         
         # 2. Subscription tiers (creates organizations with proper tiers)
         print("=== Step 2: Setting up subscription foundation ===")
