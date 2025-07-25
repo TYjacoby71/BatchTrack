@@ -27,7 +27,7 @@ class SubscriptionTier(db.Model):
     stripe_price_monthly = db.Column(db.String(32), nullable=True)
     stripe_price_yearly = db.Column(db.String(32), nullable=True)
     last_synced = db.Column(db.DateTime, nullable=True)
-    
+
     # Subscription status and billing info
     status = db.Column(db.String(32), default='inactive')  # active, trialing, canceled, etc.
     current_period_start = db.Column(db.DateTime, nullable=True)
@@ -41,8 +41,9 @@ class SubscriptionTier(db.Model):
     created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
     updated_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now, onupdate=TimezoneUtils.utc_now)
 
-    # Relationships
-    organizations = db.relationship('Organization', foreign_keys='Organization.subscription_tier_id', lazy='dynamic')
+    # Relationship to organizations using this tier
+    organizations = db.relationship('Organization', foreign_keys='Organization.subscription_tier_id', back_populates='tier', overlaps="assigned_organizations,tier")
+    assigned_organizations = db.relationship('Organization', foreign_keys='Organization.subscription_tier_id', back_populates='tier', overlaps="organizations,tier")
     permissions = db.relationship('Permission', secondary='subscription_tier_permission', 
                                  backref=db.backref('tiers', lazy='dynamic'))
 

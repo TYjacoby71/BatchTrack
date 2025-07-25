@@ -197,7 +197,13 @@ def organization_detail(org_id):
 
     # Load subscription tiers config for the dropdown
     from .subscription_tiers import load_tiers_config
-    tiers_config = load_tiers_config()
+    all_tiers_config = load_tiers_config()
+    
+    # Filter to only include dictionary objects (valid tier configurations)
+    tiers_config = {}
+    for tier_key, tier_data in all_tiers_config.items():
+        if isinstance(tier_data, dict) and tier_data.get('is_available', True):
+            tiers_config[tier_key] = tier_data
 
     # Debug subscription info
     current_tier = org.effective_subscription_tier
