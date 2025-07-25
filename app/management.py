@@ -164,12 +164,11 @@ def init_production_command():
         # CORRECTED SEEDING ORDER:
         # 1. Permissions and roles MUST come first
         print("=== Step 1: Setting up permissions and roles ===")
-        # Seed consolidated permissions and roles (includes organization roles)
         print("=== Seeding Consolidated Permissions ===")
         seed_consolidated_permissions()
 
-        # Seed subscription tiers
-        print("=== Seeding Subscription Tiers ===")
+        # 2. Subscription tiers (creates exempt tier)
+        print("=== Step 2: Setting up subscription tiers ===")
         seed_subscriptions()
 
         # 3. Basic system data
@@ -177,10 +176,10 @@ def init_production_command():
         seed_units()
 
         # 4. Users (now has all dependencies available)
-        print("=== Step 4: Creating users ===")
+        print("=== Step 4: Creating users and organization ===")
         seed_users()
 
-        # 5. Categories (needs organization from users)
+        # 5. Categories (needs organization from user seeder)
         print("=== Step 5: Setting up categories ===")
         from .models import Organization
         org = Organization.query.first()

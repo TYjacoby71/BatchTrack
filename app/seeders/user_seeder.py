@@ -3,141 +3,40 @@ from ..extensions import db
 from werkzeug.security import generate_password_hash
 
 def seed_users():
-    """Seed default users into the database"""
+    """Seed 4 essential users: dev (developer), admin (exempt org owner), manager, operator"""
     from flask import current_app
 
     # Ensure we're in an application context
     if not current_app:
         raise RuntimeError("seed_users() must be called within Flask application context")
 
-    # Import Role at top of function to avoid scope issues
     from app.models.role import Role
     from ..models.developer_role import DeveloperRole
     from ..models.user_role_assignment import UserRoleAssignment
 
-    print("=== Seeding Users (Roles and Subscriptions Should Already Exist) ===")
+    print("=== Seeding Essential Users ===")
 
-    # Get the default organization (should exist from subscription seeder)
+    # Get the exempt organization (should exist from subscription seeder)
     org = Organization.query.first()
     if not org:
-        print("❌ No organization found! Subscription seeder should run first.")
-        print("   Creating organization with exempt tier as fallback...")
-        org = Organization(
-            name="Jacob Boulette's Organization",
-            subscription_tier='exempt'  # Use exempt tier for testing
-        )
-        db.session.add(org)
-        db.session.commit()
-        print(f"✅ Created organization: {org.name} (ID: {org.id})")
-    else:
-        print(f"ℹ️  Using existing organization: {org.name} (ID: {org.id})")
-        if org.tier:
-            print(f"   - Subscription tier: {org.tier.key} ({org.tier.name})")
-        else:
-            print(f"   - Subscription tier: {org.subscription_tier} (legacy)")
+        print("❌ No organization found! Subscription seeder must run first.")
+        return
 
-    # Verify the organization has exempt tier
-    if not org.tier or org.tier.key != 'exempt':
-        print(f"⚠️  Organization needs exempt tier, updating...")
-        from ..models import SubscriptionTier
-        exempt_tier = SubscriptionTier.query.filter_by(key='exempt').first()
-        if exempt_tier:
-            org.subscription_tier_id = exempt_tier.id
-            org.subscription_tier = None  # Clear legacy field
-            db.session.commit()
-            print(f"✅ Assigned exempt tier ID {exempt_tier.id}")
-        else:
-            print(f"❌ Exempt tier not found in database!")
+    print(f"ℹ️  Using organization: {org.name} (ID: {org.id})")
+    if org.tier:
+        print(f"   - Subscription tier: {org.tier.key} ({org.tier.name})")
 
-    # Get roles from database - these should exist from consolidated permissions seeder
-    developer_role = Role.query.filter_by(name='developer').first()
+    # Get required roles
     org_owner_role = Role.query.filter_by(name='organization_owner', is_system_role=True).first()
     manager_role = Role.query.filter_by(name='manager').first()
     operator_role = Role.query.filter_by(name='operator').first()
-
-    print(f"Role check results:")
-    print(f"  - developer_role: {'✅' if developer_role else '❌'}")
-    print(f"  - org_owner_role: {'✅' if org_owner_role else '❌'}")
-    print(f"  - manager_role: {'✅' if manager_role else '❌'}")
-    print(f"  - operator_role: {'✅' if operator_role else '❌'}")
+    system_admin_dev_role = DeveloperRole.query.filter_by(name='system_admin').first()
 
     if not org_owner_role:
-        print("❌ Critical: organization_owner role not found!")
-        print("   This role is essential for user management.")
-        print("   Please run: flask seed-permissions")
+        print("❌ organization_owner role not found! Run consolidated permissions seeder first.")
         return
-        
-    if not developer_role:
-        print("⚠️  developer role not found - creating basic fallback")
-        developer_role = Role(
-            name='developer',
-            description='System developer access',
-            is_system_role=True,
-            is_active=True
-        )
-        db.session.add(developer_role)
-        db.session.commit()
 
-    # Get organization owner system role
-    system_org_owner_role = Role.query.filter_by(name='organization_owner', is_system_role=True).first()
-
-    # Assign all users proper roles based on their user types (excluding developers)
-    all_users = User.query.filter(User.user_type != 'developer').all()
-    for user in all_users:
-        if user.user_type == 'organization_owner':
-            if system_org_owner_role:
-                user.assign_role(system_org_owner_role)
-                print(f"✅ Assigned system organization owner role to: {user.username}")
-            elif org_owner_role:
-                user.assign_role(org_owner_role)
-                print(f"✅ Assigned legacy organization owner role to: {user.username}")
-        elif user.user_type == 'team_member' and manager_role:
-            user.assign_role(manager_role)
-            print(f"✅ Assigned role to existing user: {user.username} -> {user.user_type}")
-
-    # Fix organization owner roles for users with the flag
-    try:
-        # Only check customer users with the flag set to True
-        flagged_users = User.query.filter(
-            User.user_type == 'customer',
-            User.is_organization_owner == True
-        ).all()
-        fixed_count = 0
-
-        for user in flagged_users:
-            # Check if user already has organization owner role
-            has_org_owner_role = any(
-                assignment.is_active and 
-                assignment.role and 
-                assignment.role.name == 'organization_owner' 
-                for assignment in user.role_assignments
-            )
-
-            if not has_org_owner_role:
-                if system_org_owner_role:
-                    user.assign_role(system_org_owner_role)
-                    fixed_count += 1
-                    print(f"✅ Fixed organization owner role for flagged user: {user.username}")
-                elif org_owner_role:
-                    user.assign_role(org_owner_role)
-                    fixed_count += 1
-                    print(f"✅ Fixed legacy organization owner role for flagged user: {user.username}")
-
-        if fixed_count > 0:
-            print(f"✅ Fixed {fixed_count} organization owner users with missing roles")
-    except Exception as e:
-        print(f"⚠️  Note: Could not query is_organization_owner flag (column may not exist yet): {e}")
-
-    # Ensure all developer users have no organization association
-    developer_users = User.query.filter(User.user_type == 'developer').all()
-    for dev_user in developer_users:
-        if dev_user.organization_id is not None:
-            print(f"⚠️  Removing organization association from developer: {dev_user.username}")
-            dev_user.organization_id = None
-
-    db.session.commit()
-
-    # Create developer user if it doesn't exist
+    # 1. Create developer user (no organization)
     if not User.query.filter_by(username='dev').first():
         developer_user = User(
             username='dev',
@@ -146,66 +45,29 @@ def seed_users():
             last_name='Developer',
             email='dev@batchtrack.com',
             phone='000-000-0000',
-            organization_id=None,  # Developers don't belong to customer organizations
+            organization_id=None,  # Developers don't belong to organizations
             user_type='developer',
             is_active=True
         )
         db.session.add(developer_user)
-        db.session.flush()  # Get the user ID
+        db.session.flush()
 
         # Assign system_admin developer role
-        system_admin_role = DeveloperRole.query.filter_by(name='system_admin').first()
-        if system_admin_role:
+        if system_admin_dev_role:
             assignment = UserRoleAssignment(
                 user_id=developer_user.id,
-                developer_role_id=system_admin_role.id,
+                developer_role_id=system_admin_dev_role.id,
                 organization_id=None,
                 is_active=True
             )
             db.session.add(assignment)
-            print(f"✅ Assigned system_admin role to dev user")
-
-        print(f"✅ Created developer user: dev/dev123 (no organization)")
+            print(f"✅ Created developer user: dev/dev123 with system_admin role")
+        else:
+            print(f"✅ Created developer user: dev/dev123 (no system_admin role found)")
     else:
-        # Update existing developer user
-        dev_user = User.query.filter_by(username='dev').first()
-        dev_user.user_type = 'developer'
-        dev_user.organization_id = None  # Remove from customer organization
-        dev_user.is_active = True
+        print(f"ℹ️  Developer user 'dev' already exists")
 
-        # Create developer user with system_admin role
-        print("✅ Assigned system_admin role to existing dev user")
-        dev_user = User.query.filter_by(username='dev').first()
-        if dev_user:
-            dev_user.user_type = 'developer'
-            print("✅ Updated developer user with user_type: developer")
-
-            # Get system_admin developer role
-            system_admin_role = DeveloperRole.query.filter_by(name='system_admin').first()
-            if system_admin_role:
-                # Check if assignment already exists
-                existing_assignment = UserRoleAssignment.query.filter_by(
-                    user_id=dev_user.id,
-                    developer_role_id=system_admin_role.id
-                ).first()
-
-                if not existing_assignment:
-                    assignment = UserRoleAssignment(
-                        user_id=dev_user.id,
-                        role_id=None,  # Explicitly set to None for developer roles
-                        developer_role_id=system_admin_role.id,
-                        organization_id=None,
-                        is_active=True
-                    )
-                    db.session.add(assignment)
-
-            # Commit developer user changes before proceeding
-            db.session.commit()
-
-
-        print(f"✅ Updated developer user with user_type: developer")
-
-    # Create organization owner (admin) user if it doesn't exist
+    # 2. Create admin user (organization owner with exempt tier)
     if not User.query.filter_by(username='admin').first():
         admin_user = User(
             username='admin',
@@ -215,48 +77,47 @@ def seed_users():
             email='jacobboulette@outlook.com',
             phone='775-934-5968',
             organization_id=org.id,
-            user_type='customer',  # Everyone is customer type now
-            is_organization_owner=True,  # This flag determines ownership
+            user_type='customer',
+            is_organization_owner=True,
             is_active=True
         )
         db.session.add(admin_user)
-        print(f"✅ Created organization owner user: admin/admin (org_id: {org.id})")
-    else:
-        # Update existing admin user with missing fields
-        admin_user = User.query.filter_by(username='admin').first()
-        admin_user.user_type = 'customer'  # Update to customer type
-        admin_user.is_organization_owner = True  # Set the ownership flag
-        admin_user.is_active = True  # Ensure user is active
-        print(f"✅ Updated admin user with user_type=customer and is_organization_owner=True")
+        db.session.flush()
 
-    # Create sample manager user if it doesn't exist
+        # Assign organization owner role
+        admin_user.assign_role(org_owner_role)
+        print(f"✅ Created admin user: admin/admin (org owner)")
+    else:
+        print(f"ℹ️  Admin user 'admin' already exists")
+
+    # 3. Create manager user
     if not User.query.filter_by(username='manager').first():
-        if manager_role:
-            manager_user = User(
-                username='manager',
-                password_hash=generate_password_hash('manager123'),
-                first_name='Sample',
-                last_name='Manager',
-                email='manager@example.com',
-                phone='555-0124',
-                organization_id=org.id,
-                user_type='customer',  # Everyone is customer type now
-                is_organization_owner=False,  # Not an organization owner
-                is_active=True
-            )
-            db.session.add(manager_user)
-            print(f"✅ Created sample manager user: manager/manager123 (org_id: {org.id})")
-        else:
-            print("⚠️  Manager role not found, skipping manager user creation")
-    else:
-        manager_user = User.query.filter_by(username='manager').first()
-        manager_user.user_type = 'customer'  # Update to customer type
-        manager_user.is_organization_owner = False  # Not an owner
-        manager_user.is_active = True  # Ensure user is active
-        print(f"✅ Updated manager user with user_type=customer")
+        manager_user = User(
+            username='manager',
+            password_hash=generate_password_hash('manager123'),
+            first_name='Sample',
+            last_name='Manager',
+            email='manager@example.com',
+            phone='555-0124',
+            organization_id=org.id,
+            user_type='customer',
+            is_organization_owner=False,
+            is_active=True
+        )
+        db.session.add(manager_user)
+        db.session.flush()
 
-    # Create sample operator user if it doesn't exist
-    if not User.query.filter_by(username='operator').first() and operator_role:
+        # Assign manager role if it exists
+        if manager_role:
+            manager_user.assign_role(manager_role)
+            print(f"✅ Created manager user: manager/manager123 with manager role")
+        else:
+            print(f"✅ Created manager user: manager/manager123 (no manager role found)")
+    else:
+        print(f"ℹ️  Manager user 'manager' already exists")
+
+    # 4. Create operator user
+    if not User.query.filter_by(username='operator').first():
         operator_user = User(
             username='operator',
             password_hash=generate_password_hash('operator123'),
@@ -265,78 +126,26 @@ def seed_users():
             email='operator@example.com',
             phone='555-0125',
             organization_id=org.id,
-            user_type='customer',  # Everyone is customer type now
-            is_organization_owner=False,  # Not an organization owner
+            user_type='customer',
+            is_organization_owner=False,
             is_active=True
         )
         db.session.add(operator_user)
-        print(f"✅ Created sample operator user: operator/operator123 (org_id: {org.id})")
+        db.session.flush()
+
+        # Assign operator role if it exists
+        if operator_role:
+            operator_user.assign_role(operator_role)
+            print(f"✅ Created operator user: operator/operator123 with operator role")
+        else:
+            print(f"✅ Created operator user: operator/operator123 (no operator role found)")
     else:
-        if User.query.filter_by(username='operator').first():
-            operator_user = User.query.filter_by(username='operator').first()
-            operator_user.user_type = 'customer'  # Update to customer type
-            operator_user.is_organization_owner = False  # Not an owner
-            operator_user.is_active = True  # Ensure user is active
-            print(f"✅ Updated operator user with user_type=customer")
+        print(f"ℹ️  Operator user 'operator' already exists")
 
     db.session.commit()
-    print("✅ User seeding completed")
+    print("✅ Essential users seeded successfully")
 
 def update_existing_users_with_roles():
-    """Update existing users with database roles and user_type"""
-    # Ensure we're in an application context
-    from flask import current_app
-    if not current_app:
-        raise RuntimeError("update_existing_users_with_roles() must be called within Flask application context")
-
-    # Get the required roles
-    org_owner_role = Role.query.filter_by(name='organization_owner', is_system_role=True).first()
-    production_manager_role = Role.query.filter_by(name='production_manager', is_system_role=True).first()
-    operator_role = Role.query.filter_by(name='operator', is_system_role=True).first()
-
-    if not org_owner_role:
-        print("❌ Required roles not found. Please run consolidated permissions seeder first.")
-        return
-
-    # Update admin user
-    admin_user = User.query.filter_by(username='admin').first()
-    if admin_user:
-        admin_user.user_type = 'customer'
-        admin_user.is_organization_owner = True  # Make admin an organization owner
-        if org_owner_role:
-            admin_user.roles = [org_owner_role]
-        db.session.add(admin_user)
-        print(f"✅ Updated admin user with org_owner role")
-
-    # Update manager user
-    manager_user = User.query.filter_by(username='manager').first()
-    if manager_user:
-        if production_manager_role:
-            manager_user.roles = [production_manager_role]
-            print(f"✅ Updated manager user with production_manager role")
-        else:
-            print("⚠️  Production manager role not found, skipping role assignment")
-        db.session.add(manager_user)
-
-    # Update operator user
-    operator_user = User.query.filter_by(username='operator').first()
-    if operator_user:
-        if operator_role:
-            operator_user.roles = [operator_role]
-            print(f"✅ Updated operator user with operator role")
-        else:
-            print("⚠️  Operator role not found, skipping role assignment")
-        db.session.add(operator_user)
-
-    # Update dev user
-    dev_user = User.query.filter_by(username='dev').first()
-    if dev_user:
-        dev_user.user_type = 'developer'  # Dev should remain developer type
-        dev_user.organization_id = None  # Developers don't belong to organizations
-        dev_user.is_organization_owner = False
-        dev_user.roles = []  # Developers don't have organization roles
-        db.session.add(dev_user)
-        print(f"✅ Updated dev user to developer type")
-
-    db.session.commit()
-    print("✅ Existing users updated with database roles and user_type")
+    """Legacy function - kept for compatibility but not used"""
+    print("ℹ️  update_existing_users_with_roles() is deprecated")
+    pass
