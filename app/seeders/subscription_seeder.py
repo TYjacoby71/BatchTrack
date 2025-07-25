@@ -105,4 +105,3 @@ def seed_subscriptions():
     print("   - Tier records created with proper IDs")
     print("   - Organizations migrated to tier IDs")
 
-```

@@ -18,11 +18,24 @@ class SubscriptionTier(db.Model):
 
     # Stripe integration
     stripe_lookup_key = db.Column(db.String(128), nullable=True)
+    stripe_customer_id = db.Column(db.String(128), nullable=True)
+    stripe_subscription_id = db.Column(db.String(128), nullable=True)
+    stripe_price_id_monthly = db.Column(db.String(128), nullable=True)
+    stripe_price_id_yearly = db.Column(db.String(128), nullable=True)
     fallback_price_monthly = db.Column(db.String(32), default='$0')
     fallback_price_yearly = db.Column(db.String(32), default='$0')
     stripe_price_monthly = db.Column(db.String(32), nullable=True)
     stripe_price_yearly = db.Column(db.String(32), nullable=True)
     last_synced = db.Column(db.DateTime, nullable=True)
+    
+    # Subscription status and billing info
+    status = db.Column(db.String(32), default='inactive')  # active, trialing, canceled, etc.
+    current_period_start = db.Column(db.DateTime, nullable=True)
+    current_period_end = db.Column(db.DateTime, nullable=True)
+    next_billing_date = db.Column(db.DateTime, nullable=True)
+    trial_start = db.Column(db.DateTime, nullable=True)
+    trial_end = db.Column(db.DateTime, nullable=True)
+    cancel_at_period_end = db.Column(db.Boolean, default=False)
 
     # Metadata
     created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)

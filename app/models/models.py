@@ -54,33 +54,42 @@ class Organization(db.Model):
     def can_add_users(self):
         """Check if organization can add more active users based on subscription (excluding developers)"""
         active_non_dev_users = len([u for u in self.users if u.is_active and u.user_type != 'developer'])
-        
+
         if not self.tier:
             return active_non_dev_users < 1  # Default to 1 user limit
-            
+
         # Use tier's user_limit (-1 means unlimited)
         if self.tier.user_limit == -1:
             return True  # Unlimited
-        
+
         return active_non_dev_users < self.tier.user_limit
 
     def get_max_users(self):
         """Get maximum users allowed for subscription tier"""
         if not self.tier:
             return 1  # Default
-            
+
         if self.tier.user_limit == -1:
             return float('inf')  # Unlimited
-            
+
         return self.tier.user_limit
 
     @property
     def effective_subscription_tier(self):
-        """Get the effective subscription tier (single source of truth from tier ID)"""
-        if self.subscription_tier_id and self.tier:
-            return self.tier.key
-        # Fallback only during migration
+        """Get the effective subscription tier from SubscriptionTier model"""
+        if self.subscription_tier_id:
+            from .subscription_tier import SubscriptionTier
+            tier = SubscriptionTier.query.get(self.subscription_tier_id)
+            return tier.key if tier else 'free'
         return 'free'
+
+    @property
+    def subscription_tier_obj(self):
+        """Get the full SubscriptionTier object"""
+        if self.subscription_tier_id:
+            from .subscription_tier import SubscriptionTier
+            return SubscriptionTier.query.get(self.subscription_tier_id)
+        return None
 
     def get_subscription_features(self):
         """Get list of features for current subscription tier"""
