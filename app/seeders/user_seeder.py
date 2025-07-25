@@ -17,24 +17,32 @@ def seed_users():
 
     print("=== Seeding Users (Roles and Subscriptions Should Already Exist) ===")
 
-    # Get the default organization (should exist from subscription seeder)
+    # Get the default organization or create one with exempt tier
     org = Organization.query.first()
     if not org:
-        print("❌ No organization found! Subscription seeder should run first.")
-        print("   Creating organization with exempt tier as fallback...")
+        print("✅ Creating default organization with exempt tier...")
+
+        # Get exempt tier (should exist from subscription seeder)
+        from ..models import SubscriptionTier
+        exempt_tier = SubscriptionTier.query.filter_by(key='exempt').first()
+        if not exempt_tier:
+            print("❌ Exempt tier not found! Run subscription seeder first.")
+            return
+
         org = Organization(
             name="Jacob Boulette's Organization",
-            subscription_tier='exempt'  # Use exempt tier for testing
+            subscription_tier_id=exempt_tier.id,
+            subscription_tier=None  # Clear legacy field
         )
         db.session.add(org)
         db.session.commit()
-        print(f"✅ Created organization: {org.name} (ID: {org.id})")
+        print(f"✅ Created organization: {org.name} (ID: {org.id}) with exempt tier")
     else:
         print(f"ℹ️  Using existing organization: {org.name} (ID: {org.id})")
         if org.tier:
             print(f"   - Subscription tier: {org.tier.key} ({org.tier.name})")
         else:
-            print(f"   - Subscription tier: {org.subscription_tier} (legacy)")
+            print(f"   - Legacy subscription tier: {org.subscription_tier}")
 
     # Verify the organization has exempt tier
     if not org.tier or org.tier.key != 'exempt':
@@ -66,7 +74,7 @@ def seed_users():
         print("   This role is essential for user management.")
         print("   Please run: flask seed-permissions")
         return
-        
+
     if not developer_role:
         print("⚠️  developer role not found - creating basic fallback")
         developer_role = Role(

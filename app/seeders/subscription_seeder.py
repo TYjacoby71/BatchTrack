@@ -136,41 +136,22 @@ def migrate_existing_organizations():
     print("✅ Organization migration completed!")
 
 def seed_subscriptions():
-    """Seed subscription tiers and related data"""
+    """Seed subscription tiers only - organizations are created by user seeder"""
     from flask import current_app
 
     # Ensure we're in an application context
     if not current_app:
         raise RuntimeError("seed_subscriptions() must be called within Flask application context")
 
-    print("=== Seeding Subscription Foundation ===")
-
-    # Ensure basic roles exist before proceeding
-    from ..models.role import Role
-    from ..models.permission import Permission
-
-    # Check if organization_owner role exists
-    org_owner_role = Role.query.filter_by(name='organization_owner', is_system_role=True).first()
-    if not org_owner_role:
-        print("⚠️  organization_owner role not found - permissions may not be seeded yet")
-        # Create basic role as fallback
-        org_owner_role = Role(
-            name='organization_owner',
-            description='Organization owner with full access to their organization',
-            is_system_role=True,
-            is_active=True
-        )
-        db.session.add(org_owner_role)
-        db.session.commit()
-        print("✅ Created fallback organization_owner role")
+    print("=== Seeding Subscription Tiers Only ===")
 
     # Step 1: Create tier records (exempt + any from JSON)
     seed_subscription_tiers()
 
-    # Step 2: Migrate existing organizations
+    # Step 2: Migrate existing organizations if any exist
     migrate_existing_organizations()
 
-    print("✅ Subscription foundation seeding completed!")
+    print("✅ Subscription tiers seeding completed!")
     print("   - Exempt tier created with unlimited permissions")
     print("   - Additional tiers created from JSON configuration")
-    print("   - Organizations assigned appropriate tiers")
+    print("   - Ready for user seeder to create organizations")
