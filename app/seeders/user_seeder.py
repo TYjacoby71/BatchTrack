@@ -15,27 +15,38 @@ def seed_users():
     from ..models.developer_role import DeveloperRole
     from ..models.user_role_assignment import UserRoleAssignment
 
-    # Get or create default organization
+    print("=== Seeding Users (Roles and Subscriptions Should Already Exist) ===")
+
+    # Get the default organization (should exist from subscription seeder)
     org = Organization.query.first()
     if not org:
+        print("❌ No organization found! Subscription seeder should run first.")
+        print("   Creating organization with exempt tier as fallback...")
         org = Organization(
             name="Jacob Boulette's Organization",
-            subscription_tier='team'  # Changed from 'free' to 'team' for better features
+            subscription_tier='exempt'  # Use exempt tier for testing
         )
         db.session.add(org)
-        db.session.commit()  # Commit to ensure we have a valid ID
+        db.session.commit()
         print(f"✅ Created organization: {org.name} (ID: {org.id})")
     else:
         print(f"ℹ️  Using existing organization: {org.name} (ID: {org.id})")
+        print(f"   - Subscription tier: {org.subscription_tier}")
 
-    # Get roles from database - these should exist from role_permission_seeder
+    # Verify the organization has exempt tier
+    if org.subscription_tier != 'exempt':
+        print(f"⚠️  Organization tier is '{org.subscription_tier}', updating to 'exempt'")
+        org.subscription_tier = 'exempt'
+        db.session.commit()
+
+    # Get roles from database - these should exist from consolidated permissions seeder
     developer_role = Role.query.filter_by(name='developer').first()
     org_owner_role = Role.query.filter_by(name='organization_owner').first()
     manager_role = Role.query.filter_by(name='manager').first()
     operator_role = Role.query.filter_by(name='operator').first()
 
     if not developer_role or not org_owner_role:
-        print("❌ Required roles not found. Please run 'flask seed-roles-permissions' first.")
+        print("❌ Required roles not found. Please run consolidated permissions seeder first.")
         return
 
     # Get organization owner system role
@@ -189,29 +200,31 @@ def seed_users():
         admin_user.is_active = True  # Ensure user is active
         print(f"✅ Updated admin user with user_type=customer and is_organization_owner=True")
 
-    # Create a sample manager user if it doesn't exist
-    if not User.query.filter_by(username='manager').first() and manager_role:
-        manager_user = User(
-            username='manager',
-            password_hash=generate_password_hash('manager123'),
-            first_name='Sample',
-            last_name='Manager',
-            email='manager@example.com',
-            phone='555-0124',
-            organization_id=org.id,
-            user_type='customer',  # Everyone is customer type now
-            is_organization_owner=False,  # Not an organization owner
-            is_active=True
-        )
-        db.session.add(manager_user)
-        print(f"✅ Created sample manager user: manager/manager123 (org_id: {org.id})")
+    # Create sample manager user if it doesn't exist
+    if not User.query.filter_by(username='manager').first():
+        if manager_role:
+            manager_user = User(
+                username='manager',
+                password_hash=generate_password_hash('manager123'),
+                first_name='Sample',
+                last_name='Manager',
+                email='manager@example.com',
+                phone='555-0124',
+                organization_id=org.id,
+                user_type='customer',  # Everyone is customer type now
+                is_organization_owner=False,  # Not an organization owner
+                is_active=True
+            )
+            db.session.add(manager_user)
+            print(f"✅ Created sample manager user: manager/manager123 (org_id: {org.id})")
+        else:
+            print("⚠️  Manager role not found, skipping manager user creation")
     else:
-        if User.query.filter_by(username='manager').first():
-            manager_user = User.query.filter_by(username='manager').first()
-            manager_user.user_type = 'customer'  # Update to customer type
-            manager_user.is_organization_owner = False  # Not an owner
-            manager_user.is_active = True  # Ensure user is active
-            print(f"✅ Updated manager user with user_type=customer")
+        manager_user = User.query.filter_by(username='manager').first()
+        manager_user.user_type = 'customer'  # Update to customer type
+        manager_user.is_organization_owner = False  # Not an owner
+        manager_user.is_active = True  # Ensure user is active
+        print(f"✅ Updated manager user with user_type=customer")
 
     # Create sample operator user if it doesn't exist
     if not User.query.filter_by(username='operator').first() and operator_role:
@@ -241,57 +254,60 @@ def seed_users():
     print("✅ User seeding completed")
 
 def update_existing_users_with_roles():
-    """Update existing users to have database role assignments and user_type"""
-    users = User.query.all()
+    """Update existing users with database roles and user_type"""
+    # Ensure we're in an application context
+    from flask import current_app
+    if not current_app:
+        raise RuntimeError("update_existing_users_with_roles() must be called within Flask application context")
 
-    # Get roles
-    developer_role = Role.query.filter_by(name='developer').first()
-    org_owner_role = Role.query.filter_by(name='organization_owner').first()
-    manager_role = Role.query.filter_by(name='manager').first()
-    operator_role = Role.query.filter_by(name='operator').first()
+    # Get the required roles
+    org_owner_role = Role.query.filter_by(name='organization_owner', is_system_role=True).first()
+    production_manager_role = Role.query.filter_by(name='production_manager', is_system_role=True).first()
+    operator_role = Role.query.filter_by(name='operator', is_system_role=True).first()
 
-    for user in users:
-        updated = False
+    if not org_owner_role:
+        print("❌ Required roles not found. Please run consolidated permissions seeder first.")
+        return
 
-        # Set user_type if missing
-        if not hasattr(user, 'user_type') or not user.user_type:
-            if user.username == 'dev':
-                user.user_type = 'developer'
-            else:
-                user.user_type = 'customer'  # Everyone else is customer type
-            updated = True
+    # Update admin user
+    admin_user = User.query.filter_by(username='admin').first()
+    if admin_user:
+        admin_user.user_type = 'customer'
+        admin_user.is_organization_owner = True  # Make admin an organization owner
+        if org_owner_role:
+            admin_user.roles = [org_owner_role]
+        db.session.add(admin_user)
+        print(f"✅ Updated admin user with org_owner role")
 
-        # Set is_organization_owner flag if missing
-        if not hasattr(user, 'is_organization_owner') or user.is_organization_owner is None:
-            if user.username == 'admin':
-                user.is_organization_owner = True
-            elif user.user_type != 'developer':
-                user.is_organization_owner = False
-            updated = True
-
-        # Ensure developers have no organization association
-        if user.user_type == 'developer':
-            if user.organization_id is not None:
-                print(f"⚠️  Removing organization association from developer: {user.username}")
-                user.organization_id = None
-                updated = True
-            # Skip role assignment for developers
+    # Update manager user
+    manager_user = User.query.filter_by(username='manager').first()
+    if manager_user:
+        if production_manager_role:
+            manager_user.roles = [production_manager_role]
+            print(f"✅ Updated manager user with production_manager role")
         else:
-            # Assign roles using the new role assignment system
-            if user.user_type == 'organization_owner' and org_owner_role:
-                user.assign_role(org_owner_role)
-                print(f"✅ Assigned organization owner role to {user.username}")
-            elif user.user_type == 'team_member' and manager_role:
-                user.assign_role(manager_role)
-                print(f"✅ Assigned manager role to {user.username}")
+            print("⚠️  Production manager role not found, skipping role assignment")
+        db.session.add(manager_user)
 
-        # Ensure is_active is set
-        if not hasattr(user, 'is_active') or user.is_active is None:
-            user.is_active = True
-            updated = True
+    # Update operator user
+    operator_user = User.query.filter_by(username='operator').first()
+    if operator_user:
+        if operator_role:
+            operator_user.roles = [operator_role]
+            print(f"✅ Updated operator user with operator role")
+        else:
+            print("⚠️  Operator role not found, skipping role assignment")
+        db.session.add(operator_user)
 
-        if updated:
-            print(f"✅ Updated user {user.username} with user_type: {user.user_type}")
+    # Update dev user
+    dev_user = User.query.filter_by(username='dev').first()
+    if dev_user:
+        dev_user.user_type = 'developer'  # Dev should remain developer type
+        dev_user.organization_id = None  # Developers don't belong to organizations
+        dev_user.is_organization_owner = False
+        dev_user.roles = []  # Developers don't have organization roles
+        db.session.add(dev_user)
+        print(f"✅ Updated dev user to developer type")
 
     db.session.commit()
     print("✅ Existing users updated with database roles and user_type")
