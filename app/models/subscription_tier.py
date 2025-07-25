@@ -41,9 +41,7 @@ class SubscriptionTier(db.Model):
     created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
     updated_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now, onupdate=TimezoneUtils.utc_now)
 
-    # Relationship to organizations using this tier
-    organizations = db.relationship('Organization', foreign_keys='Organization.subscription_tier_id', back_populates='tier', overlaps="assigned_organizations,tier")
-    assigned_organizations = db.relationship('Organization', foreign_keys='Organization.subscription_tier_id', back_populates='tier', overlaps="organizations,tier")
+    # Relationships
     permissions = db.relationship('Permission', secondary='subscription_tier_permission', 
                                  backref=db.backref('tiers', lazy='dynamic'))
 
