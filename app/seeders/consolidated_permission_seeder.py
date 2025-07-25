@@ -158,27 +158,20 @@ def update_organization_owner_role():
     """Update organization owner role with necessary permissions"""
     org_owner_role = Role.query.filter_by(name='organization_owner', is_system_role=True).first()
 
-    if not org_owner_role:
-        # Create organization owner role if it doesn't exist
-        org_owner_role = Role(
-            name='organization_owner',
-            description='Organization owner with full access to their organization',
-            is_system_role=True,
-            is_active=True
-        )
-        db.session.add(org_owner_role)
-        db.session.flush()
+    if org_owner_role:
+        # Get all customer-facing permissions (app and organization categories)
+        customer_permissions = Permission.query.filter(
+            Permission.category.in_(['app', 'organization']),
+            Permission.is_active == True
+        ).all()
 
-    # Get all organization management permissions
-    org_management_perms = Permission.query.filter(
-        Permission.category.in_(['organization_management', 'user_management'])
-    ).all()
+        # Update permissions to role
+        org_owner_role.permissions = customer_permissions
+        db.session.commit()
 
-    # Add permissions to role
-    org_owner_role.permissions = org_management_perms
-    db.session.commit()
-
-    print(f"✅ Updated organization owner role with {len(org_management_perms)} permissions")
+        print(f"✅ Updated organization owner role with {len(customer_permissions)} permissions")
+    else:
+        print("⚠️  organization_owner role not found - it should be created by seed_organization_roles()")
 
 def cleanup_old_permissions():
     """Remove permissions that are no longer in the consolidated file"""
@@ -210,6 +203,39 @@ def cleanup_old_permissions():
     db.session.commit()
     print("✅ Cleaned up old permissions")
 
+def seed_organization_roles():
+    """Seed initial organization system roles (these can be used by any organization)"""
+    print("=== Seeding Organization System Roles ===")
+
+    # Organization Owner Role - Default system role for organization owners
+    org_owner_role = Role.query.filter_by(name='organization_owner', is_system_role=True).first()
+    if not org_owner_role:
+        org_owner_role = Role(
+            name='organization_owner',
+            description='Organization owner with full access to their organization',
+            is_system_role=True,
+            is_active=True,
+            organization_id=None  # System roles have no organization_id
+        )
+        db.session.add(org_owner_role)
+
+        # Give organization owner all customer-facing permissions
+        customer_permissions = Permission.query.filter(
+            Permission.category.in_(['app', 'organization'])
+        ).all()
+        org_owner_role.permissions = customer_permissions
+
+        db.session.commit()
+        print(f"✅ Created organization_owner system role with {len(customer_permissions)} permissions")
+    else:
+        print("ℹ️  organization_owner system role already exists")
+
+    # NOTE: Additional system roles can be created by developers via the system roles management UI
+    # These roles become available to ALL organizations as templates
+    # Individual organizations can also create their own custom roles (organization_id != NULL)
+
+    print("✅ Organization system roles seeded successfully!")
+
 def seed_consolidated_permissions():
     """Main seeder function"""
     # Ensure we're in an application context
@@ -224,6 +250,9 @@ def seed_consolidated_permissions():
 
     # Seed developer roles
     seed_developer_roles()
+
+    # Seed organization roles
+    seed_organization_roles()
 
     # Update roles
     update_organization_owner_role()

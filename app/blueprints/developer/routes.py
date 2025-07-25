@@ -36,12 +36,12 @@ def dashboard():
         User.is_active == True
     ).count()
 
-    # Subscription tier breakdown - get from Subscription model
-    from app.models.subscription import Subscription
+    # Subscription tier breakdown - get from organization's subscription tiers
+    from app.models.subscription_tier import SubscriptionTier
     subscription_stats = db.session.query(
-        Subscription.tier,
-        func.count(Subscription.id).label('count')
-    ).group_by(Subscription.tier).all()
+        SubscriptionTier.key,
+        func.count(Organization.id).label('count')
+    ).join(Organization, Organization.subscription_tier_id == SubscriptionTier.id).group_by(SubscriptionTier.key).all()
 
     # Recent organizations (last 30 days)
     thirty_days_ago = datetime.utcnow() - timedelta(days=30)
@@ -143,27 +143,16 @@ def create_organization():
             db.session.add(org)
             db.session.flush()  # Get the ID
 
-            # Create subscription record with proper billing setup
-            from app.models.subscription import Subscription
-            from datetime import datetime, timedelta
-
-            subscription = Subscription(
-                organization_id=org.id,
-                tier=subscription_tier,
-                notes=f"Developer created: {creation_reason}. {notes}".strip()
-            )
-
-            # Set up billing based on tier
-            if subscription_tier == 'exempt':
-                subscription.status = 'active'  # No billing required
+            # Assign subscription tier to organization
+            from app.models.subscription_tier import SubscriptionTier
+            tier_record = SubscriptionTier.query.filter_by(key=subscription_tier).first()
+            if tier_record:
+                org.subscription_tier_id = tier_record.id
             else:
-                # Set up as trial that requires billing setup
-                subscription.status = 'trialing'
-                subscription.trial_start = datetime.utcnow()
-                subscription.trial_end = datetime.utcnow() + timedelta(days=14)
-                subscription.notes += f" Trial expires {subscription.trial_end.strftime('%Y-%m-%d')}."
-
-            db.session.add(subscription)
+                # Default to exempt tier if tier not found
+                exempt_tier = SubscriptionTier.query.filter_by(key='exempt').first()
+                if exempt_tier:
+                    org.subscription_tier_id = exempt_tier.id
 
             # Create organization owner user
             owner_user = User(
@@ -211,14 +200,14 @@ def organization_detail(org_id):
     tiers_config = load_tiers_config()
 
     # Debug subscription info
-    subscription = org.subscription
     current_tier = org.effective_subscription_tier
+    tier_record = org.tier
     
     print(f"DEBUG: Organization {org.name} (ID: {org.id})")
-    print(f"DEBUG: Has subscription record: {subscription is not None}")
-    if subscription:
-        print(f"DEBUG: Subscription tier: {subscription.tier}")
-        print(f"DEBUG: Subscription status: {subscription.status}")
+    print(f"DEBUG: Has tier record: {tier_record is not None}")
+    if tier_record:
+        print(f"DEBUG: Tier key: {tier_record.key}")
+        print(f"DEBUG: Tier name: {tier_record.name}")
     print(f"DEBUG: Effective tier: {current_tier}")
     print(f"DEBUG: Available tiers: {list(tiers_config.keys())}")
 
@@ -249,19 +238,13 @@ def edit_organization(org_id):
     print(f"DEBUG: Updating tier from '{old_tier}' to '{new_tier}'")
     
     if new_tier:
-        if org.subscription:
-            print(f"DEBUG: Updating existing subscription from '{org.subscription.tier}' to '{new_tier}'")
-            org.subscription.tier = new_tier
+        from app.models.subscription_tier import SubscriptionTier
+        tier_record = SubscriptionTier.query.filter_by(key=new_tier).first()
+        if tier_record:
+            print(f"DEBUG: Updating organization tier to '{new_tier}'")
+            org.subscription_tier_id = tier_record.id
         else:
-            print(f"DEBUG: Creating new subscription with tier '{new_tier}'")
-            # Create subscription if it doesn't exist
-            from app.models.subscription import Subscription
-            subscription = Subscription(
-                organization_id=org.id,
-                tier=new_tier,
-                status='active'
-            )
-            db.session.add(subscription)
+            print(f"DEBUG: Tier '{new_tier}' not found in database")
 
     try:
         db.session.commit()
@@ -284,18 +267,11 @@ def upgrade_organization(org_id):
     org = Organization.query.get_or_404(org_id)
     new_tier = request.form.get('tier')
 
-    if new_tier in ['free', 'solo', 'team', 'enterprise']:
-        if org.subscription:
-            org.subscription.tier = new_tier
-        else:
-            # Create subscription if it doesn't exist
-            from app.models.subscription import Subscription
-            subscription = Subscription(
-                organization_id=org.id,
-                tier=new_tier,
-                status='active'
-            )
-            db.session.add(subscription)
+    from app.models.subscription_tier import SubscriptionTier
+    tier_record = SubscriptionTier.query.filter_by(key=new_tier).first()
+    
+    if tier_record:
+        org.subscription_tier_id = tier_record.id
         db.session.commit()
         flash(f'Organization upgraded to {new_tier}', 'success')
     else:
@@ -371,9 +347,7 @@ def delete_organization(org_id):
         from app.models import Recipe
         Recipe.query.filter_by(organization_id=org_id).delete()
 
-        # 7. Delete subscriptions
-        from app.models.subscription import Subscription
-        Subscription.query.filter_by(organization_id=org_id).delete()
+        # 7. Organization tier relationship will be handled by cascade delete
 
         # 8. Delete user preferences first, then users
         from app.models.user_preferences import UserPreferences
@@ -487,11 +461,15 @@ def api_stats():
         }
     }
 
-    # Subscription tier breakdown - get from Subscription model
-    from app.models.subscription import Subscription
-    for tier in ['free', 'solo', 'team', 'enterprise']:
-        stats['organizations']['by_tier'][tier] = db.session.query(Organization).join(
-            Subscription, Organization.id == Subscription.organization_id
-        ).filter(Subscription.tier == tier).count()
+    # Subscription tier breakdown - get from SubscriptionTier model
+    from app.models.subscription_tier import SubscriptionTier
+    for tier in ['exempt', 'free', 'solo', 'team', 'enterprise']:
+        tier_record = SubscriptionTier.query.filter_by(key=tier).first()
+        if tier_record:
+            stats['organizations']['by_tier'][tier] = Organization.query.filter_by(
+                subscription_tier_id=tier_record.id
+            ).count()
+        else:
+            stats['organizations']['by_tier'][tier] = 0
 
     return jsonify(stats)

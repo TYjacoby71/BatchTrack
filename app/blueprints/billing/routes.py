@@ -67,11 +67,10 @@ def reconciliation_needed():
 @login_required
 def reconcile_to_free():
     """Handle user choosing free plan during reconciliation"""
-    subscription = current_user.organization.subscription
-    if subscription:
-        subscription.tier = 'free'
-        subscription.status = 'active'
-        subscription.notes = f"{subscription.notes or ''}\nReconciled to free plan".strip()
+    from app.models.subscription_tier import SubscriptionTier
+    free_tier = SubscriptionTier.query.filter_by(key='free').first()
+    if free_tier and current_user.organization:
+        current_user.organization.subscription_tier_id = free_tier.id
         db.session.commit()
         flash('Your account has been updated to the free plan.', 'success')
     
