@@ -2,16 +2,41 @@
 Management commands for deployment and maintenance
 """
 import click
+from flask import current_app
 from flask.cli import with_appcontext
 from .extensions import db
+from .models import User, Organization, Permission
 from .seeders import (
-    seed_units, 
-    seed_categories, 
-    seed_users, 
-    seed_consolidated_permissions,
-    seed_subscriptions
+    seed_permissions,
+    seed_units,
+    seed_categories,
+    seed_subscriptions,
+    seed_users
 )
-from .seeders.user_seeder import update_existing_users_with_roles
+
+@click.command()
+@with_appcontext  
+def seed_all():
+    """Seed all initial data"""
+    print("=== SEEDING ALL DATA ===")
+
+    # 1. Core permissions first
+    seed_permissions()
+
+    # 2. Developer permissions (now handled by consolidated permissions)
+    # seed_developer_permissions() - moved to consolidated system
+
+    # 3. Basic data
+    seed_units()
+    seed_categories()
+
+    # 4. Subscription system (only exempt tier by default)
+    seed_subscriptions()
+
+    # 5. Users (if needed)
+    seed_users()
+
+    print("=== ALL SEEDING COMPLETED ===")
 
 @click.command()
 @with_appcontext
@@ -22,7 +47,7 @@ def init_db():
         db.create_all()
 
         # Seed consolidated permissions system first
-        seed_consolidated_permissions()
+        seed_permissions()
 
         # Seed core data
         seed_units()
@@ -45,64 +70,12 @@ def init_db():
         print(f'❌ Error initializing database: {str(e)}')
         raise
 
-@click.command('seed-all')
-@with_appcontext
-def seed_all_command():
-    """Seed all data in proper dependency order"""
-    try:
-        print("🌱 Seeding all data in proper order...")
-
-        # 1. Units (no dependencies)
-        print("1️⃣ Seeding units...")
-        seed_units()
-
-        # 2. Ingredient categories (no dependencies, but needs org later)
-        print("2️⃣ Deferring ingredient categories until organization exists...")
-
-        # 3. Permissions system (creates base permissions and roles)
-        print("3️⃣ Seeding permissions system...")
-        seed_consolidated_permissions()
-
-        # 4. Subscriptions (creates exempt tier)
-        print("4️⃣ Seeding subscription tiers...")
-        seed_subscriptions()
-
-        # 5. System roles are created by consolidated_permissions (developer roles)
-        print("5️⃣ System roles created by permissions seeder ✓")
-
-        # 6. Org system roles are created by consolidated_permissions (organization roles)
-        print("6️⃣ Organization roles created by permissions seeder ✓")
-
-        # 7. Organizations and Users (creates test org with exempt subscription + users)
-        print("7️⃣ Seeding organizations and users...")
-        seed_users()  # This creates the organization AND users
-
-        # 8. Now seed ingredient categories for the created organization
-        print("8️⃣ Seeding ingredient categories...")
-        from .models import Organization
-        org = Organization.query.first()
-        if org:
-            seed_categories(organization_id=org.id)
-        else:
-            print('❌ No organization found for seeding categories')
-            return
-
-        # 9. Update existing users with database roles (ensure all assignments are correct)
-        print("9️⃣ Updating user role assignments...")
-        update_existing_users_with_roles()
-
-        print('✅ All data seeded successfully in proper order!')
-        print('🔗 Dependency chain: Units → Permissions → Subscriptions → Organizations → Users → Categories')
-    except Exception as e:
-        print(f'❌ Error seeding data: {str(e)}')
-        raise
-
 @click.command('seed-permissions')
 @with_appcontext
 def seed_permissions_command():
     """Seed permissions and roles only"""
     try:
-        seed_consolidated_permissions()
+        seed_permissions()
         print('✅ Permissions seeded successfully!')
     except Exception as e:
         print(f'❌ Error seeding permissions: {str(e)}')
@@ -135,6 +108,7 @@ def seed_subscriptions_command():
 def update_user_roles_command():
     """Update existing users with database role assignments"""
     try:
+        from .seeders.user_seeder import update_existing_users_with_roles
         update_existing_users_with_roles()
         print('✅ User roles updated successfully!')
     except Exception as e:
@@ -186,7 +160,7 @@ def init_production_command():
         upgrade()
 
         # Use existing comprehensive seeders
-        seed_consolidated_permissions()
+        seed_permissions()
         seed_units()
         seed_users()  # This already creates exempt org + admin user
 
@@ -208,12 +182,13 @@ def init_production_command():
         raise
 
 def register_commands(app):
-    """Register CLI commands with the app"""
+    """Register CLI commands"""
+    app.cli.add_command(seed_all)
     app.cli.add_command(init_db)
-    app.cli.add_command(seed_all_command)
     app.cli.add_command(seed_permissions_command)
     app.cli.add_command(seed_users_command)
     app.cli.add_command(seed_subscriptions_command)
     app.cli.add_command(seed_units_command)
     app.cli.add_command(update_user_roles_command)
     app.cli.add_command(activate_users)
+    app.cli.add_command(init_production_command)

@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
-from app.models import db, Permission
+from app.models import db, Permission, SubscriptionTier
 from app.extensions import db
 import json
 import os
@@ -392,6 +392,37 @@ def save_tiers_config(tiers):
     with open(TIERS_CONFIG_FILE, 'w') as f:
         json.dump(tiers, f, indent=2)
 
+def sync_tier_to_database(tier_key, tier_config):
+    """Sync a tier configuration to the database"""
+    # Skip exempt tier - it's handled by seeder
+    if tier_key == 'exempt':
+        return
+    
+    # Find or create tier record
+    tier_record = SubscriptionTier.query.filter_by(key=tier_key).first()
+    if not tier_record:
+        tier_record = SubscriptionTier(key=tier_key)
+        db.session.add(tier_record)
+    
+    # Update tier fields
+    tier_record.name = tier_config.get('name', tier_key)
+    tier_record.description = tier_config.get('description', '')
+    tier_record.user_limit = tier_config.get('user_limit', 1)
+    tier_record.is_customer_facing = tier_config.get('is_customer_facing', True)
+    tier_record.is_available = tier_config.get('is_available', True)
+    tier_record.stripe_lookup_key = tier_config.get('stripe_lookup_key', '')
+    tier_record.fallback_price_monthly = tier_config.get('fallback_price_monthly', '$0')
+    tier_record.fallback_price_yearly = tier_config.get('fallback_price_yearly', '$0')
+    
+    # Handle permissions
+    permission_names = tier_config.get('permissions', [])
+    permissions = Permission.query.filter(Permission.name.in_(permission_names)).all()
+    tier_record.permissions = permissions
+    
+    db.session.commit()
+    
+    return tier_record
+
 @subscription_tiers_bp.route('/')
 @login_required
 def manage_tiers():
@@ -448,6 +479,9 @@ def create_tier():
         tiers[tier_key] = new_tier
         save_tiers_config(tiers)
 
+        # Also create/update database record
+        sync_tier_to_database(tier_key, new_tier)
+
         flash(f'Subscription tier "{tier_name}" created successfully', 'success')
         return redirect(url_for('developer.subscription_tiers.manage_tiers'))
 
@@ -491,6 +525,9 @@ def edit_tier(tier_key):
 
         save_tiers_config(tiers)
 
+        # Also update database record
+        sync_tier_to_database(tier_key, tier)
+
         flash(f'Subscription tier "{tier["name"]}" updated successfully', 'success')
         return redirect(url_for('developer.subscription_tiers.manage_tiers'))
 
@@ -520,6 +557,12 @@ def delete_tier(tier_key):
     tier_name = tiers[tier_key]['name']
     del tiers[tier_key]
     save_tiers_config(tiers)
+
+    # Also remove from database
+    tier_record = SubscriptionTier.query.filter_by(key=tier_key).first()
+    if tier_record:
+        db.session.delete(tier_record)
+        db.session.commit()
 
     flash(f'Subscription tier "{tier_name}" deleted successfully', 'success')
     return redirect(url_for('developer.subscription_tiers.manage_tiers'))

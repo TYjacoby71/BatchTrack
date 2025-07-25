@@ -31,13 +31,15 @@ class Organization(db.Model):
 
     # Move billing to separate Subscription model for flexibility
 
-    # Subscription tier (relationship to SubscriptionTier)
+    # Subscription tier (relationship to SubscriptionTier) - SINGLE SOURCE OF TRUTH
     subscription_tier_id = db.Column(db.Integer, db.ForeignKey('subscription_tier.id'), nullable=True)
 
-    # Keep old string field for migration compatibility (will be removed later)
-    subscription_tier = db.Column(db.String(32), default='free')  # free, solo, team, enterprise, exempt
+    # Keep old string field for migration compatibility only (DO NOT USE)
+    subscription_tier = db.Column(db.String(32), default='free')  # DEPRECATED - use tier relationship
 
+    # Relationships
     users = db.relationship('User', backref='organization')
+    tier = db.relationship('SubscriptionTier', foreign_keys=[subscription_tier_id], backref='assigned_organizations')
 
     @property
     def active_users_count(self):
@@ -52,72 +54,63 @@ class Organization(db.Model):
     def can_add_users(self):
         """Check if organization can add more active users based on subscription (excluding developers)"""
         active_non_dev_users = len([u for u in self.users if u.is_active and u.user_type != 'developer'])
-        effective_tier = self.effective_subscription_tier
-        if effective_tier == 'solo':
-            return active_non_dev_users < 1  # Solo only
-        elif effective_tier == 'team':
-            return active_non_dev_users < 10  # Up to 10 active users
-        elif effective_tier in ['enterprise', 'exempt']:
-            return True  # Unlimited active users for enterprise/exempt
-        else:
-            return active_non_dev_users < 1  # Default to solo limits
+
+        if not self.tier:
+            return active_non_dev_users < 1  # Default to 1 user limit
+
+        # Use tier's user_limit (-1 means unlimited)
+        if self.tier.user_limit == -1:
+            return True  # Unlimited
+
+        return active_non_dev_users < self.tier.user_limit
 
     def get_max_users(self):
         """Get maximum users allowed for subscription tier"""
-        tier_limits = {
-            'solo': 1,
-            'team': 10,
-            'enterprise': float('inf'),
-            'exempt': float('inf')
-        }
-        effective_tier = self.effective_subscription_tier
-        return tier_limits.get(effective_tier, 1)
+        if not self.tier:
+            return 1  # Default
+
+        if self.tier.user_limit == -1:
+            return float('inf')  # Unlimited
+
+        return self.tier.user_limit
 
     @property
     def effective_subscription_tier(self):
-        """Get the effective subscription tier from Subscription model (single source of truth)"""
-        try:
-            from .subscription import Subscription
-            subscription = Subscription.query.filter_by(organization_id=self.id).first()
-            if subscription:
-                return subscription.tier
-        except (ImportError, AttributeError):
-            pass
-
-        # Fallback to free if no subscription exists
+        """Get the effective subscription tier from SubscriptionTier model"""
+        if self.subscription_tier_id:
+            from .subscription_tier import SubscriptionTier
+            tier = SubscriptionTier.query.get(self.subscription_tier_id)
+            return tier.key if tier else 'free'
         return 'free'
+
+    @property
+    def subscription_tier_obj(self):
+        """Get the full SubscriptionTier object"""
+        if self.subscription_tier_id:
+            from .subscription_tier import SubscriptionTier
+            return SubscriptionTier.query.get(self.subscription_tier_id)
+        return None
 
     def get_subscription_features(self):
         """Get list of features for current subscription tier"""
-        if not self.subscription:
+        if not self.tier:
             return []
-
-        tier = self.subscription.effective_tier
 
         # Load tier configuration
         from ..blueprints.developer.subscription_tiers import load_tiers_config
         tiers_config = load_tiers_config()
 
-        if tier in tiers_config:
-            return tiers_config[tier].get('fallback_features', [])
+        if self.tier.key in tiers_config:
+            return tiers_config[self.tier.key].get('fallback_features', [])
 
         return []
 
     def get_tier_display_name(self):
         """Get the display name for the current subscription tier"""
-        if not self.subscription:
-            return None
+        if not self.tier:
+            return 'Free'
 
-        tier = self.subscription.tier
-
-        # Load tier configuration
-        from ..blueprints.developer.subscription_tiers import load_tiers_config
-        tiers_config = load_tiers_config()
-
-        if tier in tiers_config:
-            return tiers_config[tier].get('name', tier.title())
-
-        return tier.title()
+        return self.tier.name
 
     def get_pricing_data(self):
         """Get dynamic pricing data from Stripe"""
