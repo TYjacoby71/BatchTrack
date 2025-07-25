@@ -1,45 +1,48 @@
+
 from ..models import User, Organization, Role
 from ..extensions import db
 from werkzeug.security import generate_password_hash
 
-def seed_users():
-    """Seed 4 essential users: dev (developer), admin (exempt org owner), manager, operator"""
+def seed_users_and_organization():
+    """Create the default BatchTrack organization with 4 essential users"""
     from flask import current_app
 
     # Ensure we're in an application context
     if not current_app:
-        raise RuntimeError("seed_users() must be called within Flask application context")
+        raise RuntimeError("seed_users_and_organization() must be called within Flask application context")
 
     from app.models.role import Role
     from ..models.developer_role import DeveloperRole
     from ..models.user_role_assignment import UserRoleAssignment
-
-    print("=== Seeding Essential Users ===")
-
-    # Get or create the organization
     from ..models.subscription_tier import SubscriptionTier
+
+    print("=== Creating Default Organization with Essential Users ===")
+
+    # Check if this is a fresh installation or re-initialization
+    existing_orgs = Organization.query.count()
     
-    org = Organization.query.first()
-    if not org:
-        print("ℹ️  No organization found, creating default organization...")
+    if existing_orgs > 0:
+        print(f"ℹ️  Found {existing_orgs} existing organizations - using first organization")
+        org = Organization.query.first()
+    else:
+        print("ℹ️  No organizations found - creating default organization")
         
-        # Get the exempt tier
+        # Get the exempt tier (must exist from subscription seeder)
         exempt_tier = SubscriptionTier.query.filter_by(key='exempt').first()
         if not exempt_tier:
             print("❌ Exempt tier not found! Run subscription seeder first.")
             return
             
-        # Create default organization
+        # Create the default BatchTrack organization
         org = Organization(
             name='BatchTrack Organization',
+            contact_email='admin@batchtrack.com',
             subscription_tier_id=exempt_tier.id,
             is_active=True
         )
         db.session.add(org)
         db.session.flush()
-        print(f"✅ Created default organization: {org.name}")
-    else:
-        print(f"ℹ️  Found existing organization: {org.name}")
+        print(f"✅ Created default organization: {org.name} (ID: {org.id})")
 
     print(f"ℹ️  Using organization: {org.name} (ID: {org.id})")
     if org.tier:
@@ -55,7 +58,7 @@ def seed_users():
         print("❌ organization_owner role not found! Run consolidated permissions seeder first.")
         return
 
-    # 1. Create developer user (no organization)
+    # 1. Create developer user (system-wide, no organization)
     if not User.query.filter_by(username='dev').first():
         developer_user = User(
             username='dev',
@@ -64,7 +67,7 @@ def seed_users():
             last_name='Developer',
             email='dev@batchtrack.com',
             phone='000-000-0000',
-            organization_id=None,  # Developers don't belong to organizations
+            organization_id=None,  # Developers exist outside organizations
             user_type='developer',
             is_active=True
         )
@@ -86,7 +89,7 @@ def seed_users():
     else:
         print(f"ℹ️  Developer user 'dev' already exists")
 
-    # 2. Create admin user (organization owner with exempt tier)
+    # 2. Create admin user (organization owner)
     if not User.query.filter_by(username='admin').first():
         admin_user = User(
             username='admin',
@@ -97,7 +100,7 @@ def seed_users():
             phone='775-934-5968',
             organization_id=org.id,
             user_type='customer',
-            is_organization_owner=True,
+            is_organization_owner=True,  # This triggers role assignment
             is_active=True
         )
         db.session.add(admin_user)
@@ -105,7 +108,7 @@ def seed_users():
 
         # Assign organization owner role
         admin_user.assign_role(org_owner_role)
-        print(f"✅ Created admin user: admin/admin (org owner)")
+        print(f"✅ Created admin user: admin/admin (organization owner)")
     else:
         print(f"ℹ️  Admin user 'admin' already exists")
 
@@ -162,7 +165,12 @@ def seed_users():
         print(f"ℹ️  Operator user 'operator' already exists")
 
     db.session.commit()
-    print("✅ Essential users seeded successfully")
+    print("✅ Default organization and essential users created successfully")
+    print(f"   - Organization: {org.name} (Exempt tier)")
+    print(f"   - 1 System developer (dev/dev123)")
+    print(f"   - 3 Organization users (admin, manager, operator)")
 
-# update_existing_users_with_roles() removed - no longer needed since 
-# seed_users() creates users with proper roles from scratch
+# Maintain backward compatibility
+def seed_users():
+    """Backward compatibility wrapper"""
+    return seed_users_and_organization()

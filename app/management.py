@@ -9,10 +9,10 @@ from .models import User, Organization, Permission
 from .seeders import (
     seed_units,
     seed_categories,
-    seed_subscriptions,
-    seed_users
+    seed_subscriptions
 )
 from .seeders.consolidated_permission_seeder import seed_consolidated_permissions
+from .seeders.user_organization_seeder import seed_users_and_organization # Modified import
 
 @click.command()
 @with_appcontext  
@@ -30,7 +30,7 @@ def seed_all():
     seed_units()
 
     # 4. Users (after permissions and subscriptions exist)
-    seed_users()
+    seed_users_and_organization()
 
     # 5. Categories (needs organization from users)
     from .models import Organization
@@ -49,11 +49,11 @@ def init_db():
         db.create_all()
 
         # Seed consolidated permissions system first
-        seed_permissions()
+        seed_consolidated_permissions()
 
         # Seed core data
         seed_units()
-        seed_users()
+        seed_users_and_organization()
 
         # Get the organization ID from the first organization
         from .models import Organization
@@ -88,7 +88,7 @@ def seed_permissions_command():
 def seed_users_command():
     """Seed users only"""
     try:
-        seed_users()
+        seed_users_and_organization()
         print('✅ Users seeded successfully!')
     except Exception as e:
         print(f'❌ Error seeding users: {str(e)}')
@@ -176,7 +176,7 @@ def init_production_command():
 
         # 4. Users (now has all dependencies available)
         print("=== Step 4: Creating users and organization ===")
-        seed_users()
+        seed_users_and_organization()
 
         # 5. Categories (needs organization from user seeder)
         print("=== Step 5: Setting up categories ===")
