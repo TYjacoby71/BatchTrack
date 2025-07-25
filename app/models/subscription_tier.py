@@ -28,8 +28,8 @@ class SubscriptionTier(db.Model):
     created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
     updated_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now, onupdate=TimezoneUtils.utc_now)
 
-    # Relationships - simplified to just organizations and permissions
-    organizations = db.relationship('Organization', backref='tier', lazy='dynamic')
+    # Relationships
+    organizations = db.relationship('Organization', foreign_keys='Organization.subscription_tier_id', lazy='dynamic')
     permissions = db.relationship('Permission', secondary='subscription_tier_permission', 
                                  backref=db.backref('tiers', lazy='dynamic'))
 
@@ -55,6 +55,18 @@ class SubscriptionTier(db.Model):
     def has_permission(self, permission_name):
         """Check if tier includes a specific permission"""
         return any(p.name == permission_name for p in self.permissions)
+
+    @property
+    def is_exempt_from_billing(self):
+        """Check if this tier is exempt from billing (exempt, free, or test tiers)"""
+        return self.key in ['exempt', 'free'] or not self.is_customer_facing
+
+    @property
+    def requires_stripe_billing(self):
+        """Check if this tier requires Stripe billing"""
+        return (self.is_customer_facing and 
+                self.key not in ['exempt', 'free'] and 
+                self.is_available)
 
     def __repr__(self):
         return f'<SubscriptionTier {self.key}: {self.name}>'

@@ -31,16 +31,23 @@ def seed_users():
         print(f"✅ Created organization: {org.name} (ID: {org.id})")
     else:
         print(f"ℹ️  Using existing organization: {org.name} (ID: {org.id})")
-        print(f"   - Subscription tier: {org.subscription_tier}")
+        if org.tier:
+            print(f"   - Subscription tier: {org.tier.key} ({org.tier.name})")
+        else:
+            print(f"   - Subscription tier: {org.subscription_tier} (legacy)")
 
-    # Ensure organization has exempt tier
-    from ..models.subscription_tier import SubscriptionTier
-    exempt_tier = SubscriptionTier.query.filter_by(key='exempt').first()
-    if exempt_tier and org.subscription_tier_id != exempt_tier.id:
-        print(f"⚠️  Organization tier needs updating to exempt")
-        org.subscription_tier_id = exempt_tier.id
-        org.subscription_tier = 'exempt'  # Keep for migration compatibility
-        db.session.commit()
+    # Verify the organization has exempt tier
+    if not org.tier or org.tier.key != 'exempt':
+        print(f"⚠️  Organization needs exempt tier, updating...")
+        from ..models import SubscriptionTier
+        exempt_tier = SubscriptionTier.query.filter_by(key='exempt').first()
+        if exempt_tier:
+            org.subscription_tier_id = exempt_tier.id
+            org.subscription_tier = None  # Clear legacy field
+            db.session.commit()
+            print(f"✅ Assigned exempt tier ID {exempt_tier.id}")
+        else:
+            print(f"❌ Exempt tier not found in database!")
 
     # Get roles from database - these should exist from consolidated permissions seeder
     developer_role = Role.query.filter_by(name='developer').first()

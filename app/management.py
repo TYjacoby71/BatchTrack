@@ -5,11 +5,12 @@ import click
 from flask.cli import with_appcontext
 from .extensions import db
 from .seeders import (
-    seed_units, 
-    seed_categories, 
-    seed_users, 
     seed_consolidated_permissions,
-    seed_subscriptions
+    seed_units,
+    seed_categories,
+    seed_subscription_foundation,
+    seed_developer_users,
+    seed_developer_permissions
 )
 from .seeders.user_seeder import update_existing_users_with_roles
 
@@ -38,7 +39,7 @@ def init_db():
             return
 
         # Seed subscription data
-        seed_subscriptions()
+        seed_subscription_foundation()
 
         print('✅ Database initialized successfully!')
     except Exception as e:
@@ -65,7 +66,7 @@ def seed_all_command():
 
         # 4. Subscriptions (creates exempt tier)
         print("4️⃣ Seeding subscription tiers...")
-        seed_subscriptions()
+        seed_subscription_foundation()
 
         # 5. System roles are created by consolidated_permissions (developer roles)
         print("5️⃣ System roles created by permissions seeder ✓")
@@ -124,7 +125,7 @@ def seed_users_command():
 def seed_subscriptions_command():
     """Seed subscription data only"""
     try:
-        seed_subscriptions()
+        seed_subscription_foundation()
         print('✅ Subscriptions seeded successfully!')
     except Exception as e:
         print(f'❌ Error seeding subscriptions: {str(e)}')
@@ -197,7 +198,7 @@ def init_production_command():
             seed_categories(organization_id=org.id)
 
         # Seed subscription data
-        seed_subscriptions()
+        seed_subscription_foundation()
 
         print('✅ Production database initialized successfully!')
         print('🔒 Default users created: admin/admin, dev/dev123')

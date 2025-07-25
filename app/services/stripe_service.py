@@ -2,7 +2,7 @@
 import stripe
 import logging
 from flask import current_app, url_for
-from ..models import db, Subscription
+from ..models import db, SubscriptionTier, Organization
 from ..utils.timezone_utils import TimezoneUtils
 
 logger = logging.getLogger(__name__)
