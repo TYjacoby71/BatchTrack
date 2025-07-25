@@ -33,10 +33,13 @@ def seed_users():
         print(f"ℹ️  Using existing organization: {org.name} (ID: {org.id})")
         print(f"   - Subscription tier: {org.subscription_tier}")
 
-    # Verify the organization has exempt tier
-    if org.subscription_tier != 'exempt':
-        print(f"⚠️  Organization tier is '{org.subscription_tier}', updating to 'exempt'")
-        org.subscription_tier = 'exempt'
+    # Ensure organization has exempt tier
+    from ..models.subscription_tier import SubscriptionTier
+    exempt_tier = SubscriptionTier.query.filter_by(key='exempt').first()
+    if exempt_tier and org.subscription_tier_id != exempt_tier.id:
+        print(f"⚠️  Organization tier needs updating to exempt")
+        org.subscription_tier_id = exempt_tier.id
+        org.subscription_tier = 'exempt'  # Keep for migration compatibility
         db.session.commit()
 
     # Get roles from database - these should exist from consolidated permissions seeder

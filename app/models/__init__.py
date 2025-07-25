@@ -15,7 +15,6 @@ from .permission import Permission, role_permission
 from .user_role_assignment import UserRoleAssignment
 from .user_preferences import *
 from .statistics import UserStats, OrganizationStats, Leaderboard
-from .subscription import Subscription
 from .subscription_tier import SubscriptionTier
 from .developer_permission import DeveloperPermission
 from .developer_role import DeveloperRole

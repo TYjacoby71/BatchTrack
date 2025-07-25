@@ -75,17 +75,10 @@ class Organization(db.Model):
 
     @property
     def effective_subscription_tier(self):
-        """Get the effective subscription tier from Subscription model (single source of truth)"""
-        try:
-            from .subscription import Subscription
-            subscription = Subscription.query.filter_by(organization_id=self.id).first()
-            if subscription:
-                return subscription.tier
-        except (ImportError, AttributeError):
-            pass
-
-        # Fallback to free if no subscription exists
-        return 'free'
+        """Get the effective subscription tier (single source of truth)"""
+        if self.subscription_tier_id and self.tier:
+            return self.tier.key
+        return self.subscription_tier or 'free'
 
     def get_subscription_features(self):
         """Get list of features for current subscription tier"""
