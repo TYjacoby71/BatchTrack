@@ -204,10 +204,10 @@ def cleanup_old_permissions():
     print("✅ Cleaned up old permissions")
 
 def seed_organization_roles():
-    """Seed organization system roles with their permissions"""
+    """Seed initial organization system roles (these can be used by any organization)"""
     print("=== Seeding Organization System Roles ===")
 
-    # Organization Owner Role - THE ONLY system role for customer organizations
+    # Organization Owner Role - Default system role for organization owners
     org_owner_role = Role.query.filter_by(name='organization_owner', is_system_role=True).first()
     if not org_owner_role:
         org_owner_role = Role(
@@ -226,13 +226,13 @@ def seed_organization_roles():
         org_owner_role.permissions = customer_permissions
 
         db.session.commit()
-        print(f"✅ Created organization_owner role with {len(customer_permissions)} permissions")
+        print(f"✅ Created organization_owner system role with {len(customer_permissions)} permissions")
     else:
-        print("ℹ️  organization_owner role already exists")
+        print("ℹ️  organization_owner system role already exists")
 
-    # NOTE: No other system roles for customer organizations!
-    # Customer organizations create their own custom roles as needed.
-    # "admin" roles are for DEVELOPER users only, not customer users.
+    # NOTE: Additional system roles can be created by developers via the system roles management UI
+    # These roles become available to ALL organizations as templates
+    # Individual organizations can also create their own custom roles (organization_id != NULL)
 
     print("✅ Organization system roles seeded successfully!")
 
