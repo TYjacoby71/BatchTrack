@@ -52,7 +52,7 @@
     "user_limit": 1,
     "is_customer_facing": true,
     "is_available": true,
-    "is_stripe_ready": false,
+    "is_stripe_ready": true,
     "fallback_features": [
       "Complete batch tracking with FIFO",
       "Recipe management and scaling",
