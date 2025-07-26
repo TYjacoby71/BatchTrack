@@ -1,4 +1,7 @@
 
+# Import db from extensions to make it available for import
+from ..extensions import db
+
 # Import models in dependency order to ensure proper table creation
 # Base models first (no foreign key dependencies)
 from .models import User, Organization
@@ -28,7 +31,7 @@ from .statistics import UserStats, OrganizationStats
 
 # Make sure all models are available for import
 __all__ = [
-    'User', 'Organization', 'Permission', 'DeveloperPermission', 'DeveloperRole',
+    'db', 'User', 'Organization', 'Permission', 'DeveloperPermission', 'DeveloperRole',
     'SubscriptionTier', 'Role', 'UserRoleAssignment', 'UserPreferences',
     'Unit', 'IngredientCategory', 'InventoryItem', 'Product', 'ProductVariant', 
     'ProductSKU', 'Recipe', 'Batch', 'Reservation', 'BillingSnapshot',
