@@ -193,8 +193,13 @@ def stripe_webhook():
     payload = request.get_data()
     sig_header = request.headers.get('Stripe-Signature')
 
-    logger.info(f"Webhook received - Signature: {sig_header[:20] if sig_header else 'None'}...")
+    logger.info("=== STRIPE WEBHOOK RECEIVED ===")
+    logger.info(f"Request method: {request.method}")
+    logger.info(f"Content-Type: {request.headers.get('Content-Type')}")
+    logger.info(f"User-Agent: {request.headers.get('User-Agent')}")
+    logger.info(f"Signature: {sig_header[:20] if sig_header else 'None'}...")
     logger.info(f"Payload size: {len(payload)} bytes")
+    logger.info(f"Environment: {current_app.config.get('ENV', 'unknown')}")
 
     # Check if webhook secret is configured
     webhook_secret = current_app.config.get('STRIPE_WEBHOOK_SECRET')
