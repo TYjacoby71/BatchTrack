@@ -247,6 +247,86 @@ class StripeService:
 
 
     @staticmethod
+    def handle_webhook(event):
+        """Centralized webhook event handling"""
+        event_type = event['type']
+        logger.info(f"Processing webhook event: {event_type}")
+
+        try:
+            if event_type == 'customer.subscription.created':
+                success = StripeService.handle_subscription_created(event['data']['object'])
+                logger.info(f"Subscription created event handled: {success}")
+                return success
+            elif event_type == 'customer.subscription.updated':
+                success = StripeService.handle_subscription_updated(event['data']['object'])
+                logger.info(f"Subscription updated event handled: {success}")
+                return success
+            elif event_type == 'customer.subscription.deleted':
+                # Handle subscription cancellation
+                logger.info("Subscription deleted event received")
+                # TODO: Implement subscription deletion handler
+                return True
+            else:
+                logger.info(f"Unhandled Stripe webhook event: {event_type}")
+                return True
+        except Exception as e:
+            logger.error(f"Error handling webhook event {event_type}: {str(e)}")
+            return False
+
+    @staticmethod
+    def create_checkout_session_for_signup(signup_data, price_key):
+        """Create Stripe checkout session for new customer signup"""
+        if not StripeService.initialize_stripe():
+            logger.error("Stripe not configured for signup checkout")
+            return None
+
+        # Get tier from price key
+        tier = price_key.replace('_yearly', '').replace('_monthly', '')
+        
+        # Validate tier configuration
+        from ..blueprints.developer.subscription_tiers import load_tiers_config
+        tiers_config = load_tiers_config()
+        tier_data = tiers_config.get(tier, {})
+        
+        # Get Stripe price ID
+        if 'yearly' in price_key:
+            price_id = tier_data.get('stripe_price_id_yearly')
+        else:
+            price_id = tier_data.get('stripe_price_id_monthly')
+
+        # Fallback to config
+        if not price_id:
+            price_id = current_app.config.get('STRIPE_PRICE_IDS', {}).get(price_key)
+
+        if not price_id:
+            logger.error(f"No Stripe price ID configured for: {price_key}")
+            return None
+
+        try:
+            session = stripe.checkout.Session.create(
+                payment_method_types=['card'],
+                line_items=[{
+                    'price': price_id,
+                    'quantity': 1,
+                }],
+                mode='subscription',
+                success_url=url_for('billing.complete_signup_from_stripe', _external=True),
+                cancel_url=url_for('auth.signup', _external=True) + '?payment=cancelled',
+                metadata={
+                    'signup_data': str(signup_data),
+                    'tier': tier,
+                    'price_key': price_key
+                }
+            )
+            
+            logger.info(f"Created signup checkout session {session.id} for tier {tier}")
+            return session
+            
+        except stripe.error.StripeError as e:
+            logger.error(f"Failed to create signup checkout session: {str(e)}")
+            return None
+
+    @staticmethod
     def simulate_subscription_success(organization, tier='team'):
         """Simulate successful subscription for development/testing ONLY"""
         from flask import current_app
