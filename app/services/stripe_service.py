@@ -108,48 +108,54 @@ class StripeService:
             customer_id = stripe_subscription['customer']
             subscription_id = stripe_subscription['id']
             
-            # For now, we don't have a separate Subscription model
-            # This would need to be implemented when you add the Subscription model
-            logger.warning("Subscription model not implemented - webhook handling incomplete")
-            return True
-            
-            # Update subscription with Stripe data
-            subscription.stripe_subscription_id = subscription_id
-            subscription.status = stripe_subscription['status']  # 'trialing' or 'active'
-            subscription.current_period_start = TimezoneUtils.from_timestamp(
-                stripe_subscription['current_period_start']
-            )
-            subscription.current_period_end = TimezoneUtils.from_timestamp(
-                stripe_subscription['current_period_end']
-            )
-            subscription.next_billing_date = subscription.current_period_end
-            
-            # Handle trial information from Stripe
-            if stripe_subscription.get('trial_end'):
-                subscription.trial_start = TimezoneUtils.from_timestamp(
-                    stripe_subscription.get('trial_start', stripe_subscription['current_period_start'])
-                )
-                subscription.trial_end = TimezoneUtils.from_timestamp(
-                    stripe_subscription['trial_end']
-                )
-            
-            # Set tier based on metadata
+            # Find organization by customer metadata or signup metadata
+            organization = None
             metadata = stripe_subscription.get('metadata', {})
-            if 'tier' in metadata:
-                subscription.tier = metadata['tier']
+            
+            # Try to find organization from subscription metadata first
+            if 'organization_id' in metadata:
+                organization = Organization.query.get(metadata['organization_id'])
+            
+            # If not found, try to find by customer
+            if not organization:
+                # Get customer to check for organization_id in metadata
+                customer = stripe.Customer.retrieve(customer_id)
+                if customer.metadata.get('organization_id'):
+                    organization = Organization.query.get(customer.metadata['organization_id'])
+            
+            if not organization:
+                logger.error(f"No organization found for subscription {subscription_id}")
+                return False
+            
+            # Set subscription tier based on metadata
+            tier_key = metadata.get('tier')
+            if tier_key:
+                tier = SubscriptionTier.query.filter_by(key=tier_key).first()
+                if tier:
+                    organization.subscription_tier_id = tier.id
+                    logger.info(f"Set organization {organization.id} to tier {tier_key}")
+                else:
+                    logger.error(f"Tier '{tier_key}' not found for organization {organization.id}")
+                    return False
             
             # Create billing snapshot for resilience
-            from ..models.billing_snapshot import BillingSnapshot
-            snapshot = BillingSnapshot.create_from_subscription(subscription)
-            if snapshot:
-                logger.info(f"Created billing snapshot for org {subscription.organization_id}")
+            try:
+                from ..models.billing_snapshot import BillingSnapshot
+                snapshot = BillingSnapshot.create_from_stripe_subscription(
+                    organization, stripe_subscription
+                )
+                if snapshot:
+                    logger.info(f"Created billing snapshot for org {organization.id}")
+            except Exception as e:
+                logger.warning(f"Failed to create billing snapshot: {str(e)}")
             
             db.session.commit()
-            logger.info(f"Updated subscription {subscription.id} with Stripe data (status: {subscription.status})")
+            logger.info(f"Activated subscription for org {organization.id} (tier: {tier_key})")
             return True
             
         except Exception as e:
             logger.error(f"Failed to handle subscription creation: {str(e)}")
+            db.session.rollback()
             return False
     
     @staticmethod
@@ -157,52 +163,91 @@ class StripeService:
         """Handle subscription updates from webhook"""
         try:
             subscription_id = stripe_subscription['id']
+            customer_id = stripe_subscription['customer']
             
-            # For now, we don't have a separate Subscription model
-            # This would need to be implemented when you add the Subscription model
-            logger.warning("Subscription model not implemented - webhook handling incomplete")
-            return True
+            # Find organization by customer metadata
+            organization = None
+            customer = stripe.Customer.retrieve(customer_id)
+            if customer.metadata.get('organization_id'):
+                organization = Organization.query.get(customer.metadata['organization_id'])
             
-            # Update status and periods
-            subscription.status = stripe_subscription['status']
-            subscription.current_period_start = TimezoneUtils.from_timestamp(
-                stripe_subscription['current_period_start']
-            )
-            subscription.current_period_end = TimezoneUtils.from_timestamp(
-                stripe_subscription['current_period_end']
-            )
-            subscription.next_billing_date = subscription.current_period_end
+            if not organization:
+                logger.error(f"No organization found for subscription update {subscription_id}")
+                return False
+            
+            # Handle subscription status changes
+            status = stripe_subscription['status']
+            logger.info(f"Subscription {subscription_id} status: {status} for org {organization.id}")
+            
+            # If subscription is canceled or past_due, might need to downgrade
+            if status in ['canceled', 'unpaid', 'past_due']:
+                # Could implement automatic downgrade to free tier here
+                free_tier = SubscriptionTier.query.filter_by(key='free').first()
+                if free_tier and status == 'canceled':
+                    organization.subscription_tier_id = free_tier.id
+                    logger.info(f"Downgraded org {organization.id} to free tier due to cancellation")
             
             # Create/update billing snapshot for resilience
-            from ..models.billing_snapshot import BillingSnapshot
-            snapshot = BillingSnapshot.create_from_subscription(subscription)
-            if snapshot:
-                logger.info(f"Updated billing snapshot for org {subscription.organization_id}")
+            try:
+                from ..models.billing_snapshot import BillingSnapshot
+                snapshot = BillingSnapshot.create_from_stripe_subscription(
+                    organization, stripe_subscription
+                )
+                if snapshot:
+                    logger.info(f"Updated billing snapshot for org {organization.id}")
+            except Exception as e:
+                logger.warning(f"Failed to update billing snapshot: {str(e)}")
             
             db.session.commit()
-            logger.info(f"Updated subscription {subscription.id} from Stripe webhook")
+            logger.info(f"Updated subscription for org {organization.id} from webhook")
             return True
             
         except Exception as e:
             logger.error(f"Failed to handle subscription update: {str(e)}")
+            db.session.rollback()
             return False
     
     @staticmethod
     def cancel_subscription(organization):
         """Cancel a Stripe subscription"""
-        StripeService.initialize_stripe()
+        if not StripeService.initialize_stripe():
+            logger.error("Stripe not configured")
+            return False
         
-        # For now, we don't have a separate Subscription model with stripe_subscription_id
-        # This would need to be implemented when you add the Subscription model
-        logger.warning("Subscription model not implemented - cancellation unavailable")
-        return False
-        
+        # Find customer by organization
         try:
-            stripe.Subscription.delete(
-                organization.subscription.stripe_subscription_id
+            customers = stripe.Customer.list(
+                metadata={'organization_id': str(organization.id)},
+                limit=1
             )
             
-            organization.subscription.status = 'canceled'
+            if not customers.data:
+                logger.error(f"No Stripe customer found for org {organization.id}")
+                return False
+            
+            customer = customers.data[0]
+            
+            # Get active subscriptions for this customer
+            subscriptions = stripe.Subscription.list(
+                customer=customer.id,
+                status='active',
+                limit=1
+            )
+            
+            if not subscriptions.data:
+                logger.error(f"No active subscription found for org {organization.id}")
+                return False
+            
+            subscription = subscriptions.data[0]
+            
+            # Cancel the subscription
+            stripe.Subscription.delete(subscription.id)
+            
+            # Downgrade to free tier
+            free_tier = SubscriptionTier.query.filter_by(key='free').first()
+            if free_tier:
+                organization.subscription_tier_id = free_tier.id
+            
             db.session.commit()
             
             logger.info(f"Canceled subscription for org {organization.id}")
@@ -218,15 +263,22 @@ class StripeService:
         if not StripeService.initialize_stripe():
             logger.error("Stripe not configured")
             return None
-            
-        # For now, we don't have a separate Subscription model with stripe_customer_id
-        # This would need to be implemented when you add the Subscription model
-        logger.warning("Subscription model not implemented - customer portal unavailable")
-        return None
-            
+        
         try:
+            # Find customer by organization metadata
+            customers = stripe.Customer.list(
+                metadata={'organization_id': str(organization.id)},
+                limit=1
+            )
+            
+            if not customers.data:
+                logger.error(f"No Stripe customer found for org {organization.id}")
+                return None
+            
+            customer = customers.data[0]
+            
             session = stripe.billing_portal.Session.create(
-                customer=organization.subscription.stripe_customer_id,
+                customer=customer.id,
                 return_url=return_url,
             )
             
