@@ -50,7 +50,13 @@ def sync_tier_to_database(tier_key, tier_config):
     tier_record.user_limit = tier_config.get('user_limit', 1)
     tier_record.is_customer_facing = tier_config.get('is_customer_facing', True)
     tier_record.is_available = tier_config.get('is_available', True)
-    tier_record.stripe_lookup_key = tier_config.get('stripe_lookup_key', '')
+    
+    # Only update stripe_lookup_key if it's actually provided in config
+    # This preserves manually set lookup keys from being overwritten
+    lookup_key_from_config = tier_config.get('stripe_lookup_key')
+    if lookup_key_from_config is not None:
+        tier_record.stripe_lookup_key = lookup_key_from_config
+    
     tier_record.fallback_price_monthly = tier_config.get('fallback_price_monthly', '$0')
     tier_record.fallback_price_yearly = tier_config.get('fallback_price_yearly', '$0')
     
@@ -258,18 +264,23 @@ def sync_tier(tier_key):
         if product.metadata.get('features'):
             features = [f.strip() for f in product.metadata['features'].split(',')]
 
-        # Update tier with Stripe data
+        # Update tier with Stripe data - NEVER overwrite manually set lookup key
         tier['stripe_features'] = features
         tier['stripe_price_monthly'] = monthly_price
         tier['stripe_price_yearly'] = yearly_price
         tier['last_synced'] = datetime.now().isoformat()
+        
+        # Preserve existing stripe_lookup_key - this is the user's manual configuration
+        # and should NEVER be overwritten by sync operations
 
         save_tiers_config(tiers)
+
+        logger.info(f"Synced tier {tier_key} with Stripe - preserved lookup key: {lookup_key}")
 
         return jsonify({
             'success': True,
             'tier': tier,
-            'message': f'Successfully synced {tier["name"]} with Stripe'
+            'message': f'Successfully synced {tier["name"]} with Stripe (lookup key preserved)'
         })
 
     except stripe.error.StripeError as e:
