@@ -1,4 +1,3 @@
-
 import logging
 from flask import session, flash, current_app, redirect, url_for
 from flask_login import login_user
@@ -100,6 +99,11 @@ class SignupService:
                     raise Exception("Failed to activate development subscription")
                 logger.info("Activated development subscription")
 
+            # Subscription tracking is now handled by the SubscriptionTier relationship
+            # The organization is already assigned to the correct tier above
+            db.session.commit()
+            logger.info(f"Organization assigned to tier: {tier}")
+
             # Commit all changes
             db.session.commit()
             logger.info("Database changes committed successfully")
@@ -130,7 +134,7 @@ class SignupService:
 
         required_fields = ['username', 'email', 'first_name', 'last_name', 'org_name', 'password', 'selected_tier']
         missing_fields = [field for field in required_fields if not pending_signup.get(field)]
-        
+
         if missing_fields:
             return False, f"Missing required fields: {', '.join(missing_fields)}"
 
