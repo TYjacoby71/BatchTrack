@@ -90,7 +90,7 @@ def signup():
     # Get pricing data for customer-facing tiers only
     from ...services.pricing_service import PricingService
     from ...blueprints.developer.subscription_tiers import load_tiers_config
-    
+
     pricing_data = PricingService.get_pricing_data()
     tiers_config = load_tiers_config()
 
@@ -101,13 +101,13 @@ def signup():
         if (tier_config.get('is_customer_facing', True) and 
             tier_config.get('is_available', True) and 
             tier_config.get('stripe_lookup_key')):
-            
+
             price_str = tier_data.get('price', '$0').replace('$', '')
             try:
                 price_monthly = float(price_str) if price_str.replace('.', '').isdigit() else 0
             except (ValueError, AttributeError):
                 price_monthly = 0
-            
+
             available_tiers[tier_key] = {
                 'name': tier_data.get('name', tier_key.title()),
                 'price_monthly': price_monthly,
@@ -203,9 +203,9 @@ def signup():
             # Stripe is configured and tier is ready - use real payment
             return redirect(url_for('billing.checkout', tier=selected_tier))
         else:
-            # Development mode or tier not Stripe-ready - simulate signup completion
-            from ...blueprints.billing.routes import complete_signup_dev_mode
-            return complete_signup_dev_mode(selected_tier, is_stripe_mode=False)
+            # Development mode or tier not Stripe-ready - use signup service
+            from ...services.signup_service import SignupService
+            return SignupService.complete_signup(selected_tier, is_stripe_mode=False)
 
     return render_template('auth/signup.html', 
                          signup_source=signup_source,
