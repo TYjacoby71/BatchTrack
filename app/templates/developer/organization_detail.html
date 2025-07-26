@@ -167,9 +167,11 @@
                                         </div>
                                     </td>
                                     <td>
-                                        <span class="badge bg-{{ 'primary' if user.user_type == 'organization_owner' else 'secondary' }}">
-                                            {{ user.user_type.replace('_', ' ')|title }}
-                                        </span>
+                                        {% if user.is_organization_owner %}
+                                        <span class="badge bg-primary">Customer (Owner)</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">{{ user.user_type.replace('_', ' ').title() }}</span>
+                                        {% endif %}
                                     </td>
                                     <td>
                                         <span class="badge bg-{{ 'success' if user.is_active else 'danger' }}">
@@ -295,7 +297,7 @@
             <div class="modal-body">
                 <form id="editOrgUserForm">
                     <input type="hidden" id="orgUserId">
-                    
+
                     <!-- User Information Section -->
                     <div class="row mb-4">
                         <div class="col-12">
@@ -419,7 +421,7 @@ async function editOrgUser(userId) {
                 'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
             }
         });
-        
+
         const data = await response.json();
         if (data.success) {
             currentOrgUser = data.user;
@@ -482,10 +484,10 @@ async function saveOrgUser() {
 
 async function resetOrgUserPassword() {
     if (!currentOrgUser) return;
-    
+
     const newPassword = prompt('Enter new password for user:');
     if (!newPassword) return;
-    
+
     try {
         const response = await fetch('/developer/api/user/reset-password', {
             method: 'POST',
@@ -513,7 +515,7 @@ async function resetOrgUserPassword() {
 function loginAsOrgUser(userId = null) {
     const targetUserId = userId || (currentOrgUser ? currentOrgUser.id : null);
     if (!targetUserId) return;
-    
+
     if (confirm('Login as this user? This will open a new tab with their session.')) {
         window.open(`/developer/login-as/${targetUserId}`, '_blank');
     }
@@ -521,18 +523,18 @@ function loginAsOrgUser(userId = null) {
 
 function viewAsCustomerSupport() {
     if (!currentOrgUser) return;
-    
+
     // Switch to customer support view for this organization
     window.open(`/developer/select-org/{{ organization.id }}`, '_blank');
 }
 
 async function softDeleteOrgUser() {
     if (!currentOrgUser) return;
-    
+
     if (!confirm(`Soft delete user ${currentOrgUser.username}? This will deactivate their account and remove access while preserving data.`)) {
         return;
     }
-    
+
     try {
         const response = await fetch('/developer/api/user/soft-delete', {
             method: 'POST',
@@ -566,7 +568,7 @@ async function toggleOrgUserStatus(userId, currentStatus) {
                 'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
             }
         });
-        
+
         if (response.ok) {
             location.reload();
         } else {

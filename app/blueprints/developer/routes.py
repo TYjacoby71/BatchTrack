@@ -583,10 +583,7 @@ def update_user():
         user.is_active = data.get('is_active', user.is_active)
         
         # Handle organization owner flag
-        if data.get('user_type') == 'organization_owner':
-            user.is_organization_owner = True
-        else:
-            user.is_organization_owner = False
+        user.is_organization_owner = data.get('is_organization_owner', False)
         
         db.session.commit()
         

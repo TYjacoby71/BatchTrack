@@ -121,9 +121,11 @@
                                                         {% endif %}
                                                     </td>
                                                     <td>
-                                                        <span class="badge bg-{{ 'primary' if user.user_type == 'organization_owner' else 'secondary' }}">
-                                                            {{ user.user_type.replace('_', ' ').title() }}
-                                                        </span>
+                                                        {% if user.is_organization_owner %}
+                                                        <span class="badge bg-primary">Customer (Owner)</span>
+                                                        {% else %}
+                                                        <span class="badge bg-secondary">{{ user.user_type.replace('_', ' ').title() }}</span>
+                                                        {% endif %}
                                                     </td>
                                                     <td>
                                                         <span class="badge bg-{{ 'success' if user.is_active else 'danger' }}">
