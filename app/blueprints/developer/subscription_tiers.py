@@ -317,57 +317,6 @@ def sync_tier(tier_key):
             'tier': tier,
             'message': f'Successfully synced {tier["name"]} with Stripe (lookup key preserved)'
         })
-                return jsonify({'error': f'No Stripe product found with lookup key: {lookup_key}'}), 404
-
-            product = search_results.data[0]
-        except stripe.error.StripeError as search_error:
-            # Fallback: try to list all products and filter (less efficient but works)
-            logger.warning(f"Search API failed, trying fallback method: {str(search_error)}")
-            all_products = stripe.Product.list(limit=100)
-            product = None
-            for p in all_products.data:
-                if p.lookup_key == lookup_key:
-                    product = p
-                    break
-
-            if not product:
-                return jsonify({'error': f'No Stripe product found with lookup key: {lookup_key}'}), 404
-
-        # Get prices for this product
-        prices = stripe.Price.list(product=product.id)
-
-        monthly_price = None
-        yearly_price = None
-
-        for price in prices.data:
-            if price.recurring and price.recurring.interval == 'month':
-                monthly_price = f"${price.unit_amount // 100}"
-            elif price.recurring and price.recurring.interval == 'year':
-                yearly_price = f"${price.unit_amount // 100}"
-
-        # Get features from product metadata
-        features = []
-        if product.metadata.get('features'):
-            features = [f.strip() for f in product.metadata['features'].split(',')]
-
-        # Update tier with Stripe data - NEVER overwrite manually set lookup key
-        tier['stripe_features'] = features
-        tier['stripe_price_monthly'] = monthly_price
-        tier['stripe_price_yearly'] = yearly_price
-        tier['last_synced'] = datetime.now().isoformat()
-
-        # Preserve existing stripe_lookup_key - this is the user's manual configuration
-        # and should NEVER be overwritten by sync operations
-
-        save_tiers_config(tiers)
-
-        logger.info(f"Synced tier {tier_key} with Stripe - preserved lookup key: {lookup_key}")
-
-        return jsonify({
-            'success': True,
-            'tier': tier,
-            'message': f'Successfully synced {tier["name"]} with Stripe (lookup key preserved)'
-        })
 
     except stripe.error.StripeError as e:
         return jsonify({'error': f'Stripe error: {str(e)}'}), 400
