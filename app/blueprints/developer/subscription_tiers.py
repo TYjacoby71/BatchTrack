@@ -248,36 +248,49 @@ def sync_tier(tier_key):
         stripe.api_key = stripe_key
         logger.info(f"Stripe initialized for sync of tier {tier_key} with lookup key: {lookup_key}")
 
-        # Find products by name matching tier (since lookup_key isn't working as expected)
+        # First try to find product by lookup key in prices, then fall back to name matching
         try:
-            # List all products and filter by name matching tier
-            all_products = stripe.Product.list(limit=100, active=True)
             product = None
+            
+            # Method 1: Find by lookup key in prices (most reliable)
+            try:
+                prices = stripe.Price.list(lookup_keys=[lookup_key], limit=1, active=True)
+                if prices.data:
+                    price = prices.data[0]
+                    product = stripe.Product.retrieve(price.product)
+                    logger.info(f"Found product via lookup key '{lookup_key}': {product.name} (ID: {product.id})")
+            except stripe.error.StripeError as lookup_error:
+                logger.warning(f"Lookup key search failed for '{lookup_key}': {str(lookup_error)}")
+            
+            # Method 2: If lookup key failed, fall back to name matching
+            if not product:
+                logger.info(f"Lookup key '{lookup_key}' not found, falling back to name matching")
+                all_products = stripe.Product.list(limit=100, active=True)
+                
+                # Try to match by product name containing tier key
+                tier_name_variations = [
+                    f"BatchTrack {tier_key.title()}",  # "BatchTrack Solo"
+                    f"BatchTrack {tier['name']}",      # "BatchTrack Solo Plan"
+                    tier_key.title(),                  # "Solo"
+                    tier['name']                       # "Solo Plan"
+                ]
 
-            # Try to match by product name containing tier key
-            tier_name_variations = [
-                f"BatchTrack {tier_key.title()}",  # "BatchTrack Solo"
-                f"BatchTrack {tier['name']}",      # "BatchTrack Solo Plan"
-                tier_key.title(),                  # "Solo"
-                tier['name']                       # "Solo Plan"
-            ]
+                logger.info(f"Searching for product matching tier '{tier_key}' in {len(all_products.data)} products")
 
-            logger.info(f"Searching for product matching tier '{tier_key}' in {len(all_products.data)} products")
-
-            for p in all_products.data:
-                logger.info(f"Checking product: {p.name} (ID: {p.id})")
-                # Try name matching
-                for name_variation in tier_name_variations:
-                    if name_variation.lower() in p.name.lower():
-                        product = p
-                        logger.info(f"Found matching product: {p.name} for variation: {name_variation}")
+                for p in all_products.data:
+                    logger.info(f"Checking product: {p.name} (ID: {p.id})")
+                    # Try name matching
+                    for name_variation in tier_name_variations:
+                        if name_variation.lower() in p.name.lower():
+                            product = p
+                            logger.info(f"Found matching product: {p.name} for variation: {name_variation}")
+                            break
+                    if product:
                         break
-                if product:
-                    break
 
             if not product:
-                available_products = [p.name for p in all_products.data]
-                return jsonify({'error': f'No Stripe product found for tier: {tier_key}. Available products: {available_products}'}), 404
+                available_products = [p.name for p in stripe.Product.list(limit=100, active=True).data]
+                return jsonify({'error': f'No Stripe product found for tier: {tier_key} (lookup key: {lookup_key}). Available products: {available_products}'}), 404
 
             logger.info(f"Found Stripe product: {product.id} ({product.name})")
 
@@ -307,12 +320,18 @@ def sync_tier(tier_key):
             # Also check for additional prices
             prices = stripe.Price.list(product=product.id, active=True)
             for price in prices.data:
-                if price.recurring and price.recurring.interval == 'month' and not monthly_price_id:
-                    monthly_price = f"${price.unit_amount / 100:.0f}"
-                    monthly_price_id = price.id
-                elif price.recurring and price.recurring.interval == 'year' and not yearly_price_id:
-                    yearly_price = f"${price.unit_amount / 100:.0f}"
-                    yearly_price_id = price.id
+                if price.recurring:
+                    # Monthly price (interval = month, interval_count = 1)
+                    if (price.recurring.interval == 'month' and 
+                        price.recurring.interval_count == 1 and 
+                        not monthly_price_id):
+                        monthly_price = f"${price.unit_amount / 100:.0f}"
+                        monthly_price_id = price.id
+                    # Yearly price (interval = month, interval_count = 12 OR interval = year)
+                    elif ((price.recurring.interval == 'month' and price.recurring.interval_count == 12) or
+                          (price.recurring.interval == 'year')) and not yearly_price_id:
+                        yearly_price = f"${price.unit_amount / 100:.0f}"
+                        yearly_price_id = price.id
 
             logger.info(f"Found prices - Monthly: {monthly_price} ({monthly_price_id}), Yearly: {yearly_price} ({yearly_price_id})")
 
@@ -338,6 +357,28 @@ def sync_tier(tier_key):
 
         # Preserve existing stripe_lookup_key - this is the user's manual configuration
         # and should NEVER be overwritten by sync operations
+
+        # Update pricing snapshots for resilience
+        try:
+            from ...models.pricing_snapshot import PricingSnapshot
+            
+            # Create/update snapshots for both monthly and yearly prices
+            if monthly_price_id:
+                monthly_price_data = stripe.Price.retrieve(monthly_price_id)
+                PricingSnapshot.update_from_stripe_data(monthly_price_data, product)
+                logger.info(f"Updated pricing snapshot for monthly price: {monthly_price_id}")
+            
+            if yearly_price_id:
+                yearly_price_data = stripe.Price.retrieve(yearly_price_id)
+                PricingSnapshot.update_from_stripe_data(yearly_price_data, product)
+                logger.info(f"Updated pricing snapshot for yearly price: {yearly_price_id}")
+                
+            db.session.commit()
+            logger.info(f"Pricing snapshots updated for tier {tier_key}")
+            
+        except Exception as snapshot_error:
+            logger.warning(f"Failed to update pricing snapshots for tier {tier_key}: {str(snapshot_error)}")
+            # Don't fail the sync if snapshots fail
 
         save_tiers_config(tiers)
 
