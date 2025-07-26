@@ -179,13 +179,18 @@ class StripeService:
             status = stripe_subscription['status']
             logger.info(f"Subscription {subscription_id} status: {status} for org {organization.id}")
             
-            # If subscription is canceled or past_due, might need to downgrade
-            if status in ['canceled', 'unpaid', 'past_due']:
-                # Could implement automatic downgrade to free tier here
-                free_tier = SubscriptionTier.query.filter_by(key='free').first()
-                if free_tier and status == 'canceled':
-                    organization.subscription_tier_id = free_tier.id
-                    logger.info(f"Downgraded org {organization.id} to free tier due to cancellation")
+            # If subscription is canceled, deactivate the organization entirely
+            if status == 'canceled':
+                organization.is_active = False
+                logger.info(f"Deactivated org {organization.id} due to subscription cancellation")
+            elif status in ['unpaid', 'past_due']:
+                # For unpaid/past_due, also deactivate to prevent access
+                organization.is_active = False
+                logger.info(f"Deactivated org {organization.id} due to payment issues: {status}")
+            elif status == 'active':
+                # Reactivate if subscription becomes active again
+                organization.is_active = True
+                logger.info(f"Reactivated org {organization.id} due to active subscription")
             
             # Create/update billing snapshot for resilience
             try:
@@ -209,7 +214,7 @@ class StripeService:
     
     @staticmethod
     def cancel_subscription(organization):
-        """Cancel a Stripe subscription"""
+        """Cancel a Stripe subscription and deactivate organization"""
         if not StripeService.initialize_stripe():
             logger.error("Stripe not configured")
             return False
@@ -243,18 +248,56 @@ class StripeService:
             # Cancel the subscription
             stripe.Subscription.delete(subscription.id)
             
-            # Downgrade to free tier
-            free_tier = SubscriptionTier.query.filter_by(key='free').first()
-            if free_tier:
-                organization.subscription_tier_id = free_tier.id
+            # Deactivate the organization - no access at all
+            organization.is_active = False
             
             db.session.commit()
             
-            logger.info(f"Canceled subscription for org {organization.id}")
+            logger.info(f"Canceled subscription and deactivated org {organization.id}")
             return True
             
         except stripe.error.StripeError as e:
             logger.error(f"Failed to cancel subscription for org {organization.id}: {str(e)}")
+            return False
+
+    @staticmethod
+    def handle_subscription_deleted(stripe_subscription):
+        """Handle subscription deletion from webhook - deactivate organization"""
+        try:
+            subscription_id = stripe_subscription['id']
+            customer_id = stripe_subscription['customer']
+            
+            # Find organization by customer metadata
+            organization = None
+            customer = stripe.Customer.retrieve(customer_id)
+            if customer.metadata.get('organization_id'):
+                organization = Organization.query.get(customer.metadata['organization_id'])
+            
+            if not organization:
+                logger.error(f"No organization found for subscription deletion {subscription_id}")
+                return False
+            
+            # Deactivate the organization entirely - no access
+            organization.is_active = False
+            
+            # Create billing snapshot for record keeping
+            try:
+                from ..models.billing_snapshot import BillingSnapshot
+                snapshot = BillingSnapshot.create_from_stripe_subscription(
+                    organization, stripe_subscription
+                )
+                if snapshot:
+                    logger.info(f"Created final billing snapshot for org {organization.id}")
+            except Exception as e:
+                logger.warning(f"Failed to create final billing snapshot: {str(e)}")
+            
+            db.session.commit()
+            logger.info(f"Deactivated org {organization.id} due to subscription deletion")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to handle subscription deletion: {str(e)}")
+            db.session.rollback()
             return False
 
     @staticmethod
@@ -307,10 +350,10 @@ class StripeService:
                 logger.info(f"Subscription updated event handled: {success}")
                 return success
             elif event_type == 'customer.subscription.deleted':
-                # Handle subscription cancellation
-                logger.info("Subscription deleted event received")
-                # TODO: Implement subscription deletion handler
-                return True
+                # Handle subscription cancellation - deactivate organization
+                success = StripeService.handle_subscription_deleted(event['data']['object'])
+                logger.info(f"Subscription deleted event handled: {success}")
+                return success
             else:
                 logger.info(f"Unhandled Stripe webhook event: {event_type}")
                 return True

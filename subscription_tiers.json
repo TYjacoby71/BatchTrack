@@ -28,31 +28,27 @@
     "last_synced": null
   },
   "solo": {
-    "name": "Solo Plan",
+    "name": "Solo Maker",
     "permissions": [
       "dashboard.view",
       "inventory.view",
-      "inventory.add_manual_stock",
-      "inventory.view_history",
       "inventory.adjust",
+      "recipes.view",
+      "recipes.create",
+      "recipes.edit",
       "batches.view",
       "batches.create",
       "batches.edit",
       "batches.finish",
-      "batches.cancel",
-      "recipes.view",
-      "recipes.create",
-      "recipes.edit",
-      "conversion.units",
-      "expiration.view_alerts"
+      "batches.cancel"
     ],
     "feature_groups": [
+      "basic_dashboard",
       "full_dashboard",
-      "full_inventory",
-      "batch_production",
-      "recipe_management"
+      "limited_inventory",
+      "batch_production"
     ],
-    "stripe_lookup_key": "solo-plan",
+    "stripe_lookup_key": "batchtrack_solo_monthly",
     "user_limit": 1,
     "is_customer_facing": true,
     "is_available": true,
@@ -68,7 +64,9 @@
     "stripe_features": [],
     "stripe_price_monthly": null,
     "stripe_price_yearly": null,
-    "last_synced": null
+    "last_synced": null,
+    "fallback_price_monthly": "$0",
+    "fallback_price_yearly": "$0"
   },
   "team": {
     "name": "Team Plan",
