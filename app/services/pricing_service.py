@@ -6,6 +6,105 @@ from ..services.stripe_service import StripeService
 logger = logging.getLogger(__name__)
 
 class PricingService:
+    """Service for handling subscription pricing and Stripe integration"""
+    
+    @staticmethod
+    def get_pricing_data():
+        """Get pricing data from Stripe, with fallback to local config"""
+        if not StripeService.initialize_stripe():
+            logger.warning("Stripe not initialized - using fallback pricing")
+            return PricingService._get_fallback_pricing()
+        
+        try:
+            # Get live pricing from Stripe
+            pricing_data = PricingService._get_stripe_pricing()
+            if pricing_data:
+                return pricing_data
+        except Exception as e:
+            logger.error(f"Failed to get Stripe pricing: {str(e)}")
+        
+        # Fallback to local config
+        return PricingService._get_fallback_pricing()
+    
+    @staticmethod
+    def _get_stripe_pricing():
+        """Get pricing directly from Stripe API"""
+        from ..blueprints.developer.subscription_tiers import load_tiers_config
+        tiers_config = load_tiers_config()
+        pricing_data = {}
+        
+        logger.info("=== FETCHING STRIPE PRICING ===")
+        
+        for tier_key, tier_data in tiers_config.items():
+            if not tier_data.get('is_stripe_ready', False):
+                continue
+                
+            lookup_key = tier_data.get('stripe_lookup_key')
+            if not lookup_key:
+                continue
+            
+            logger.info(f"Looking up Stripe product for tier {tier_key} with lookup_key: {lookup_key}")
+            
+            try:
+                # Search for products using expand to get prices
+                products = stripe.Product.search(
+                    query=f"metadata['lookup_key']:'{lookup_key}'",
+                    expand=['data.default_price']
+                )
+                
+                logger.info(f"Found {len(products.data)} products for lookup_key: {lookup_key}")
+                
+                if products.data:
+                    product = products.data[0]
+                    
+                    # Get the default price
+                    if product.default_price:
+                        price = product.default_price
+                        
+                        pricing_data[tier_key] = {
+                            'name': product.name,
+                            'price': f"${price.unit_amount / 100:.0f}",
+                            'features': tier_data.get('fallback_features', []),
+                            'stripe_price_id_monthly': price.id if price.recurring and price.recurring.interval == 'month' else None,
+                            'stripe_product_id': product.id,
+                            'is_stripe_ready': True
+                        }
+                        
+                        logger.info(f"Successfully loaded pricing for {tier_key}: ${price.unit_amount / 100:.0f}")
+                    else:
+                        logger.warning(f"Product {product.id} has no default price")
+                else:
+                    logger.warning(f"No Stripe product found for lookup_key: {lookup_key}")
+                    
+            except stripe.error.StripeError as e:
+                logger.error(f"Stripe error for tier {tier_key}: {str(e)}")
+                continue
+            except Exception as e:
+                logger.error(f"Unexpected error for tier {tier_key}: {str(e)}")
+                continue
+        
+        logger.info(f"Retrieved pricing for {len(pricing_data)} tiers from Stripe")
+        return pricing_data
+    
+    @staticmethod
+    def _get_fallback_pricing():
+        """Get fallback pricing from local configuration"""
+        from ..blueprints.developer.subscription_tiers import load_tiers_config
+        tiers_config = load_tiers_config()
+        
+        pricing_data = {}
+        for tier_key, tier_data in tiers_config.items():
+            if tier_data.get('customer_facing', True) and tier_data.get('active', True):
+                pricing_data[tier_key] = {
+                    'name': tier_data.get('name', tier_key.title()),
+                    'price': tier_data.get('fallback_price_monthly', 'Contact Sales'),
+                    'features': tier_data.get('fallback_features', []),
+                    'is_fallback': True
+                }
+        
+        return pricing_data
+
+class PricingService:
     """Service for fetching pricing information from Stripe"""
 
     @staticmethod
