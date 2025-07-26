@@ -139,12 +139,17 @@
                                                     </td>
                                                     <td>{{ user.created_at.strftime('%Y-%m-%d') if user.created_at else 'N/A' }}</td>
                                                     <td>
-                                                        <form method="POST" action="{{ url_for('developer.toggle_user_active', user_id=user.id) }}" style="display: inline;">
-                                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                                            <button type="submit" class="btn btn-sm btn-{{ 'warning' if user.is_active else 'success' }}">
-                                                                {{ 'Deactivate' if user.is_active else 'Activate' }}
+                                                        <div class="btn-group btn-group-sm">
+                                                            <button class="btn btn-outline-primary" onclick="editCustomerUser({{ user.id }})">
+                                                                <i class="fas fa-edit"></i> Edit
                                                             </button>
-                                                        </form>
+                                                            <button class="btn btn-outline-info" onclick="loginAsUser({{ user.id }})">
+                                                                <i class="fas fa-sign-in-alt"></i> Login As
+                                                            </button>
+                                                            <button class="btn btn-outline-{{ 'warning' if user.is_active else 'success' }}" onclick="toggleUserStatus({{ user.id }}, {{ 'true' if user.is_active else 'false' }})">
+                                                                <i class="fas fa-{{ 'pause' if user.is_active else 'play' }}"></i> {{ 'Deactivate' if user.is_active else 'Activate' }}
+                                                            </button>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                                 {% endfor %}
@@ -221,12 +226,14 @@
                                                     </td>
                                                     <td>{{ user.created_at.strftime('%Y-%m-%d') if user.created_at else 'N/A' }}</td>
                                                     <td>
-                                                        <form method="POST" action="{{ url_for('developer.toggle_user_active', user_id=user.id) }}" style="display: inline;">
-                                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                                            <button type="submit" class="btn btn-sm btn-{{ 'warning' if user.is_active else 'success' }}">
-                                                                {{ 'Deactivate' if user.is_active else 'Activate' }}
+                                                        <div class="btn-group btn-group-sm">
+                                                            <button class="btn btn-outline-primary" onclick="editDeveloperUser({{ user.id }})">
+                                                                <i class="fas fa-edit"></i> Edit
                                                             </button>
-                                                        </form>
+                                                            <button class="btn btn-outline-{{ 'warning' if user.is_active else 'success' }}" onclick="toggleUserStatus({{ user.id }}, {{ 'true' if user.is_active else 'false' }})">
+                                                                <i class="fas fa-{{ 'pause' if user.is_active else 'play' }}"></i> {{ 'Deactivate' if user.is_active else 'Activate' }}
+                                                            </button>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                                 {% endfor %}
@@ -370,6 +377,26 @@ async function changePassword() {
     } catch (error) {
         alert('Network error occurred');
     }
+}
+
+function editCustomerUser(userId) {
+    // Implement edit customer user functionality here
+    alert('Edit customer user with ID: ' + userId);
+}
+
+function loginAsUser(userId) {
+    // Implement login as user functionality here
+    alert('Login as user with ID: ' + userId);
+}
+
+function toggleUserStatus(userId, isActive) {
+    // Implement toggle user status functionality here
+    alert('Toggle user status for user ID: ' + userId + ', Active: ' + isActive);
+}
+
+function editDeveloperUser(userId) {
+    // Implement edit developer user functionality here
+    alert('Edit developer user with ID: ' + userId);
 }
 </script>
 {% endblock %}
