@@ -1,34 +1,36 @@
 
-"""Models package - imports all models for the application"""
-from ..extensions import db
-from .mixins import ScopedModelMixin
-from .models import Organization, User
-from .inventory import InventoryItem, InventoryHistory, BatchInventoryLog
-from .recipe import Recipe, RecipeIngredient
-from .batch import Batch, BatchIngredient, BatchContainer, ExtraBatchContainer, BatchTimer, ExtraBatchIngredient
-from .unit import Unit, CustomUnitMapping, ConversionLog
-from .category import IngredientCategory, Tag
-from .product import Product, ProductVariant, ProductSKU, ProductSKUHistory
-from .reservation import Reservation
-from .role import Role
-from .permission import Permission, role_permission
-from .user_role_assignment import UserRoleAssignment
-from .user_preferences import *
-from .statistics import UserStats, OrganizationStats, Leaderboard
-from .subscription_tier import SubscriptionTier
-from .developer_permission import DeveloperPermission
+# Import models in dependency order to ensure proper table creation
+# Base models first (no foreign key dependencies)
+from .models import User, Organization
+from .permission import Permission
+from .developer_permission import DeveloperPermission  
 from .developer_role import DeveloperRole
+from .subscription_tier import SubscriptionTier
+from .role import Role
+from .user_role_assignment import UserRoleAssignment
+from .user_preferences import UserPreferences
 
-# Re-export everything for convenience
+# System reference data
+from .unit import Unit
+from .category import IngredientCategory
+
+# Business models that depend on User/Organization
+from .inventory import InventoryItem
+from .product import Product, ProductVariant, ProductSKU
+from .recipe import Recipe
+
+# Models that depend on multiple other models (should be last)
+from .batch import Batch
+from .reservation import Reservation
+from .billing_snapshot import BillingSnapshot
+from .pricing_snapshot import PricingSnapshot
+from .statistics import UserStats, OrganizationStats
+
+# Make sure all models are available for import
 __all__ = [
-    'db', 'ScopedModelMixin', 'Organization', 'User',
-    'InventoryItem', 'InventoryHistory', 'BatchInventoryLog',
-    'Recipe', 'RecipeIngredient',
-    'Batch', 'BatchIngredient', 'BatchContainer', 'ExtraBatchContainer', 'BatchTimer', 'ExtraBatchIngredient',
-    'Unit', 'CustomUnitMapping', 'ConversionLog',
-    'IngredientCategory', 'Tag',
-    'Product', 'ProductVariant', 'ProductSKU', 'ProductSKUHistory', 'Reservation', 
-    'Role', 'Permission', 'role_permission', 'UserRoleAssignment', 'UserStats', 
-    'OrganizationStats', 'Leaderboard', 'SubscriptionTier', 'DeveloperPermission', 'DeveloperRole',
-    '*'
+    'User', 'Organization', 'Permission', 'DeveloperPermission', 'DeveloperRole',
+    'SubscriptionTier', 'Role', 'UserRoleAssignment', 'UserPreferences',
+    'Unit', 'IngredientCategory', 'InventoryItem', 'Product', 'ProductVariant', 
+    'ProductSKU', 'Recipe', 'Batch', 'Reservation', 'BillingSnapshot',
+    'PricingSnapshot', 'UserStats', 'OrganizationStats'
 ]
