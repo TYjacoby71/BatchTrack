@@ -61,12 +61,17 @@
       "1 user account",
       "Email support"
     ],
-    "stripe_features": [],
-    "stripe_price_monthly": null,
-    "stripe_price_yearly": null,
-    "last_synced": null,
+    "stripe_features": [
+      "This subscription tier is for the solo maker that needs a place to log there work. No headache dealing with the team features",
+      "just you and your genius!"
+    ],
+    "stripe_price_monthly": "$8",
+    "stripe_price_yearly": "$0",
+    "last_synced": "2025-07-26T08:22:40.282532",
     "fallback_price_monthly": "$0",
-    "fallback_price_yearly": "$0"
+    "fallback_price_yearly": "$0",
+    "stripe_price_id_monthly": "price_1RnRlnF4Y9XQgiJBzKnYadVL",
+    "stripe_price_id_yearly": null
   },
   "team": {
     "name": "Team Plan",
