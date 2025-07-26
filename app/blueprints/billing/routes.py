@@ -59,7 +59,7 @@ def reconciliation_needed():
     latest_snapshot = BillingSnapshot.get_latest_valid_snapshot(current_user.organization.id)
     
     return render_template('billing/reconciliation_needed.html',
-                         requested_tier=current_user.organization.subscription.tier,
+                         requested_tier=current_user.organization.effective_subscription_tier,
                          grace_expires=latest_snapshot.period_end if latest_snapshot else None,
                          reason=reason)
 
@@ -111,11 +111,11 @@ def upgrade():
                          current_tier=current_tier,
                          pricing_data=available_tiers,
                          subscription_details={
-                             'status': organization.subscription.status if organization.subscription else 'inactive',
-                             'next_billing_date': organization.subscription.next_billing_date if organization.subscription else None,
+                             'status': 'active' if organization.tier else 'inactive',
+                             'next_billing_date': None,
                              'amount': None,
                              'interval': 'monthly',
-                             'trial_end': organization.subscription.trial_end if organization.subscription else None,
+                             'trial_end': None,
                              'cancel_at_period_end': False
                          })
 
@@ -471,14 +471,14 @@ def debug_billing():
                 'features': current_user.organization.get_subscription_features()
             },
             'subscription_info': {
-                'has_subscription': bool(current_user.organization),
-                'subscription_status': current_user.organization.subscription.status if current_user.organization.subscription else None,
-                'subscription_tier': current_user.organization.subscription.tier if current_user.organization.subscription else None
+                'has_subscription': bool(current_user.organization.tier),
+                'subscription_status': 'active' if current_user.organization.tier else 'inactive',
+                'subscription_tier': current_user.organization.effective_subscription_tier
             }
         }
 
         org = current_user.organization
-        subscription = org.subscription if org else None
+        subscription = org.tier if org else None
         debug_info = debug_data
         logger.info(f"Debug data generated successfully for user {current_user.id}")
         
