@@ -2,7 +2,8 @@
 import logging
 from flask import session, flash, current_app, redirect, url_for
 from flask_login import login_user
-from ..models import db, User, Organization, Role, Subscription
+from ..models import db, User, Organization, Role
+from ..models.subscription import Subscription
 from ..blueprints.developer.subscription_tiers import load_tiers_config
 from .stripe_service import StripeService
 
