@@ -19,7 +19,7 @@ from .category import IngredientCategory
 
 # Business models that depend on User/Organization
 from .inventory import InventoryItem
-from .product import Product, ProductVariant, ProductSKU
+from .product import Product, ProductVariant, ProductSKU, ProductSKUHistory
 from .recipe import Recipe
 
 # Models that depend on multiple other models (should be last)
@@ -34,6 +34,6 @@ __all__ = [
     'db', 'User', 'Organization', 'Permission', 'DeveloperPermission', 'DeveloperRole',
     'SubscriptionTier', 'Role', 'UserRoleAssignment', 'UserPreferences',
     'Unit', 'IngredientCategory', 'InventoryItem', 'Product', 'ProductVariant', 
-    'ProductSKU', 'Recipe', 'Batch', 'Reservation', 'BillingSnapshot',
+    'ProductSKU', 'ProductSKUHistory', 'Recipe', 'Batch', 'Reservation', 'BillingSnapshot',
     'PricingSnapshot', 'UserStats', 'OrganizationStats'
 ]
