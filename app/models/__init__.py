@@ -16,7 +16,6 @@ from .user_role_assignment import UserRoleAssignment
 from .user_preferences import *
 from .statistics import UserStats, OrganizationStats, Leaderboard
 from .subscription_tier import SubscriptionTier
-from .subscription import Subscription
 from .developer_permission import DeveloperPermission
 from .developer_role import DeveloperRole
 
@@ -30,6 +29,6 @@ __all__ = [
     'IngredientCategory', 'Tag',
     'Product', 'ProductVariant', 'ProductSKU', 'ProductSKUHistory', 'Reservation', 
     'Role', 'Permission', 'role_permission', 'UserRoleAssignment', 'UserStats', 
-    'OrganizationStats', 'Leaderboard', 'Subscription', 'DeveloperPermission', 'DeveloperRole',
+    'OrganizationStats', 'Leaderboard', 'SubscriptionTier', 'DeveloperPermission', 'DeveloperRole',
     '*'
 ]

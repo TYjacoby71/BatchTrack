@@ -2,8 +2,7 @@
 import logging
 from flask import session, flash, current_app, redirect, url_for
 from flask_login import login_user
-from ..models import db, User, Organization, Role
-from ..models.subscription import Subscription
+from ..models import db, User, Organization, Role, SubscriptionTier
 from ..blueprints.developer.subscription_tiers import load_tiers_config
 from .stripe_service import StripeService
 
@@ -52,6 +51,11 @@ class SignupService:
         logger.info(f"Final tier check - Stripe ready: {is_stripe_ready}, should match stripe_mode: {is_stripe_mode}")
 
         try:
+            # Get the subscription tier
+            subscription_tier = SubscriptionTier.query.filter_by(key=tier).first()
+            if not subscription_tier:
+                raise Exception(f"Subscription tier '{tier}' not found")
+
             # Create organization
             org = Organization(
                 name=pending_signup['org_name'],
@@ -59,22 +63,12 @@ class SignupService:
                 is_active=True,
                 signup_source=pending_signup['signup_source'],
                 promo_code=pending_signup.get('promo_code'),
-                referral_code=pending_signup.get('referral_code')
+                referral_code=pending_signup.get('referral_code'),
+                subscription_tier_id=subscription_tier.id
             )
             db.session.add(org)
             db.session.flush()  # Get the ID
-            logger.info(f"Created organization with ID: {org.id}")
-
-            # Create subscription record
-            subscription = Subscription(
-                organization_id=org.id,
-                tier=tier,
-                status='active',
-                notes=f"Created from signup for {tier} tier ({'Stripe' if is_stripe_mode else 'development'} mode)"
-            )
-            db.session.add(subscription)
-            db.session.flush()
-            logger.info(f"Created subscription with tier: {tier}")
+            logger.info(f"Created organization with ID: {org.id} and tier: {tier}")
 
             # Create organization owner user
             owner_user = User(

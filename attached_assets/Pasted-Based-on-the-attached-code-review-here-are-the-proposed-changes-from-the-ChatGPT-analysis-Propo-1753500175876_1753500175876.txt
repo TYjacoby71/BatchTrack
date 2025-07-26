@@ -1,0 +1,66 @@
+Based on the attached code review, here are the proposed changes from the ChatGPT analysis:
+
+Proposed Changes from the Review:
+Move business logic to service layer (120+ lines can be extracted):
+
+get_tier_permissions() and user_has_tier_permission() → subscription_service.py
+complete_signup_dev_mode() (≈120 lines) → signup_service.py
+Stripe event handling → StripeService.handle_webhook()
+Upgrade filtering logic → PricingService.get_available_tiers()
+Remove redundant debugging - All the DEBUG: billing_bp print statements
+
+Merge duplicate logic:
+
+Price key building logic appears in multiple places
+Stripe vs Dev mode activation logic
+Debug billing route duplicates organization methods
+Delete unused code:
+
+dev_activate_subscription (if not needed in production)
+Manual reconciliation logic (if no longer supported)
+Current Services Analysis:
+Looking at your /app/services/ directory and the codebase, here's what I found:
+
+Existing Services:
+combined_inventory_alerts.py - Stock alerts across products/ingredients
+dashboard_alerts.py - Dashboard alert aggregation
+inventory_adjustment.py - Centralized inventory changes
+inventory_alerts.py - Basic inventory alerts
+product_alerts.py - Product-specific alerts
+product_service.py - Product operations
+reservation_service.py - Product reservations
+stock_check.py - Real-time availability validation
+trial_management.py - Trial period management
+subscription_service.py - Subscription operations
+stripe_service.py - Stripe integration
+pricing_service.py - Pricing calculations
+unit_conversion.py - Unit conversions
+statistics_service.py - Analytics
+timer_service.py - Timer functionality
+Redundant/Outdated Services to Consolidate:
+Alert Services (3 services doing similar work):
+
+inventory_alerts.py - Basic inventory alerts
+product_alerts.py - Product-specific alerts
+combined_inventory_alerts.py - Unified alerts
+Recommendation: Keep combined_inventory_alerts.py, deprecate the other two.
+
+Trial Management vs Subscription Service:
+
+trial_management.py has trial logic
+subscription_service.py likely has similar logic
+Recommendation: Merge trial logic into subscription_service.py
+
+Missing Services (from the billing review):
+
+No billing_service.py - billing logic is in routes
+No signup_service.py - signup logic scattered
+Services That Need Updates:
+dashboard_alerts.py - References expired inventory and fault logs, but some alert logic is duplicated in inventory services
+
+stock_check.py - Good service authority, but should be the single source for all availability checks
+
+FIFO Service (app/blueprints/fifo/services.py) - This is actually well-designed and authoritative
+
+Would you like me to propose specific consolidations, such as creating the missing billing_service.py or merging the alert services?
+
