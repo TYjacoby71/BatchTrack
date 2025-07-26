@@ -13,9 +13,9 @@ import sys
 import os
 import json
 
-# Configuration - Use Replit URL or fallback to local
-REPL_URL = os.environ.get('REPL_URL', 'http://172.31.81.34:5000')
-BASE_URL = REPL_URL if REPL_URL != 'http://172.31.81.34:5000' else "http://172.31.81.34:5000"
+# Configuration - Use Replit URL or discover local IP
+REPL_URL = os.environ.get('REPL_URL', '')
+BASE_URL = REPL_URL if REPL_URL else "http://127.0.0.1:5000"
 
 def generate_random_string(length=8):
     """Generate random string for usernames/passwords"""
@@ -177,26 +177,52 @@ def check_app_running():
     """Check if the Flask app is running"""
     global BASE_URL
 
-    urls_to_try = [
+    # Get current Replit environment URLs
+    replit_urls = []
+    
+    # Try REPL_URL from environment first
+    if REPL_URL:
+        replit_urls.append(REPL_URL)
+    
+    # Try discovering local IP from console output or common patterns
+    import subprocess
+    import socket
+    try:
+        # Get the hostname and try to resolve internal IP
+        hostname = socket.gethostname()
+        local_ip = socket.gethostbyname(hostname)
+        if local_ip and local_ip != '127.0.0.1':
+            replit_urls.append(f"http://{local_ip}:5000")
+    except:
+        pass
+
+    # Standard fallback URLs
+    urls_to_try = replit_urls + [
         BASE_URL,
-        "http://127.0.0.1:5000", 
-        "http://172.31.81.34:5000",
-        "http://localhost:5000"
+        "http://127.0.0.1:5000",
+        "http://localhost:5000",
+        "http://172.31.72.98:5000",  # From console output
+        "http://0.0.0.0:5000"
     ]
+
+    # Remove duplicates while preserving order
+    seen = set()
+    urls_to_try = [x for x in urls_to_try if not (x in seen or seen.add(x))]
 
     for url in urls_to_try:
         try:
             print(f"   Trying {url}...")
-            response = requests.get(f"{url}/", timeout=5, verify=False)
+            # Try the root route
+            response = requests.get(f"{url}/", timeout=3, verify=False, allow_redirects=True)
             if response.status_code in [200, 302]:
                 BASE_URL = url
                 print(f"   ✅ Connected to {url}")
                 return True
 
-            # Try specific routes
+            # Try specific routes that should always work
             for route in ['/homepage', '/auth/signup']:
                 try:
-                    response = requests.get(f"{url}{route}", timeout=5, verify=False)
+                    response = requests.get(f"{url}{route}", timeout=3, verify=False)
                     if response.status_code == 200:
                         BASE_URL = url
                         print(f"   ✅ Connected to {url}{route}")
@@ -205,7 +231,7 @@ def check_app_running():
                     continue
 
         except requests.exceptions.RequestException as e:
-            print(f"   ❌ {url} failed: {e}")
+            print(f"   ❌ {url} failed: {str(e)[:100]}...")
             continue
 
     return False
