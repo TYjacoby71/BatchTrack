@@ -39,7 +39,7 @@ class Organization(db.Model):
 
     # Relationships
     users = db.relationship('User', backref='organization')
-    tier = db.relationship('SubscriptionTier', foreign_keys=[subscription_tier_id], backref='assigned_organizations')
+    tier = db.relationship('SubscriptionTier', foreign_keys=[subscription_tier_id])
 
     @property
     def active_users_count(self):

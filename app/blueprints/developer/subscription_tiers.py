@@ -379,11 +379,18 @@ def load_tiers_config():
     if os.path.exists(TIERS_CONFIG_FILE):
         with open(TIERS_CONFIG_FILE, 'r') as f:
             loaded_tiers = json.load(f)
+            # Filter out metadata keys and invalid entries
+            valid_tiers = {}
+            for tier_key, tier_data in loaded_tiers.items():
+                # Skip metadata keys (start with underscore) and non-dict values
+                if not tier_key.startswith('_') and isinstance(tier_data, dict):
+                    valid_tiers[tier_key] = tier_data
+            
             # Merge with default tiers, keeping any customizations
             for tier_key, tier_data in default_tiers.items():
-                if tier_key not in loaded_tiers:
-                    loaded_tiers[tier_key] = tier_data
-            return loaded_tiers
+                if tier_key not in valid_tiers:
+                    valid_tiers[tier_key] = tier_data
+            return valid_tiers
 
     return default_tiers
 
