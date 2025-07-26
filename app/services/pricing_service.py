@@ -14,7 +14,8 @@ class PricingService:
         logger.info("=== PRICING SERVICE ===")
 
         # Check if we're in development mode (no webhook secret = dev mode)
-        is_dev_mode = not current_app.config.get('STRIPE_WEBHOOK_SECRET')
+        webhook_secret = current_app.config.get('STRIPE_WEBHOOK_SECRET')
+        is_dev_mode = not webhook_secret or webhook_secret.strip() == ''
         logger.info(f"Development mode: {is_dev_mode}")
 
         # Try to initialize Stripe first
