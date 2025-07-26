@@ -248,23 +248,25 @@ def sync_tier(tier_key):
         stripe.api_key = stripe_key
         logger.info(f"Stripe initialized for sync of tier {tier_key} with lookup key: {lookup_key}")
 
-        # Find products by lookup key using search API
+        # Find products by lookup key using list API (search doesn't support lookup_key)
         try:
-            # Use search API to find product by lookup key
-            search_results = stripe.Product.search(
-                query=f'lookup_key:"{lookup_key}"',
-                limit=1
-            )
+            # List all products and filter by lookup_key (Stripe doesn't support searching by lookup_key)
+            all_products = stripe.Product.list(limit=100, active=True)
+            product = None
+            
+            for p in all_products.data:
+                if p.lookup_key == lookup_key:
+                    product = p
+                    break
 
-            if not search_results.data:
+            if not product:
                 return jsonify({'error': f'No Stripe product found with lookup key: {lookup_key}'}), 404
 
-            product = search_results.data[0]
             logger.info(f"Found Stripe product: {product.id} for lookup key: {lookup_key}")
 
         except stripe.error.StripeError as search_error:
-            logger.error(f"Stripe search failed for lookup key {lookup_key}: {str(search_error)}")
-            return jsonify({'error': f'Stripe search failed: {str(search_error)}'}), 400
+            logger.error(f"Stripe API failed for lookup key {lookup_key}: {str(search_error)}")
+            return jsonify({'error': f'Stripe API failed: {str(search_error)}'}), 400
 
         # Get prices for this product
         try:
