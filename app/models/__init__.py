@@ -24,7 +24,7 @@ from .batch import Batch
 from .reservation import Reservation
 from .billing_snapshot import BillingSnapshot
 from .pricing_snapshot import PricingSnapshot
-from .statistics import Statistics
+from .statistics import UserStats, OrganizationStats
 
 # Make sure all models are available for import
 __all__ = [
@@ -32,5 +32,5 @@ __all__ = [
     'SubscriptionTier', 'Role', 'UserRoleAssignment', 'UserPreferences',
     'Unit', 'IngredientCategory', 'InventoryItem', 'Product', 'ProductVariant', 
     'ProductSKU', 'Recipe', 'Batch', 'Reservation', 'BillingSnapshot',
-    'PricingSnapshot', 'Statistics'
+    'PricingSnapshot', 'UserStats', 'OrganizationStats'
 ]
