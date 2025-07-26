@@ -1,0 +1,160 @@
+✅ Subscription tiers seeded successfully!
+=== Migrating Organizations to Tier IDs ===
+✅ Organization migration completed!
+✅ Subscription tiers seeding completed!
+   - Exempt tier created with unlimited permissions
+   - Additional tiers created from JSON configuration
+   - Ready for user seeder to create organizations
+=== Step 3: Setting up basic system data ===
+=== Step 4: Creating users and organization ===
+=== Creating Default Organization with Essential Users ===
+ℹ️  No organizations found - creating default organization
+✅ Created default organization: BatchTrack Organization (ID: 7)
+ℹ️  Using organization: BatchTrack Organization (ID: 7)
+   - Subscription tier: exempt (Exempt Plan)
+❌ Error initializing production database: (psycopg2.errors.StringDataRightTruncation) value too long for type character varying(128)
+
+[SQL: INSERT INTO "user" (username, password_hash, first_name, last_name, email, phone, organization_id, user_type, is_organization_owner, is_active, created_at, last_login, timezone, deleted_at, deleted_by, is_deleted) VALUES (%(username)s, %(password_hash)s, %(first_name)s, %(last_name)s, %(email)s, %(phone)s, %(organization_id)s, %(user_type)s, %(is_organization_owner)s, %(is_active)s, %(created_at)s, %(last_login)s, %(timezone)s, %(deleted_at)s, %(deleted_by)s, %(is_deleted)s) RETURNING "user".id]
+[parameters: {'username': 'dev', 'password_hash': 'scrypt:32768:8:1$6FFWMIA8T5tfz0vX$d2609037996de8e2c54241371d74537a1f3840dbc792a9e3e2ac2c16cd24176c225fecdbbd4d8646f6ec41a5857c00923c74389b3903ca1c2b573a554828b492', 'first_name': 'System', 'last_name': 'Developer', 'email': 'dev@batchtrack.com', 'phone': '000-000-0000', 'organization_id': None, 'user_type': 'developer', 'is_organization_owner': False, 'is_active': True, 'created_at': datetime.datetime(2025, 7, 26, 5, 59, 54, 353197), 'last_login': None, 'timezone': 'UTC', 'deleted_at': None, 'deleted_by': None, 'is_deleted': False}]
+(Background on this error at: https://sqlalche.me/e/20/9h9h)
+Traceback (most recent call last):
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.errors.StringDataRightTruncation: value too long for type character varying(128)
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/opt/render/project/src/.venv/bin/flask", line 8, in <module>
+    sys.exit(main())
+             ~~~~^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/flask/cli.py", line 1129, in main
+    cli.main()
+    ~~~~~~~~^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/click/core.py", line 1082, in main
+    rv = self.invoke(ctx)
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/click/core.py", line 1697, in invoke
+    return _process_result(sub_ctx.command.invoke(sub_ctx))
+                           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/click/core.py", line 1443, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+           ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/click/core.py", line 788, in invoke
+    return __callback(*args, **kwargs)
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/click/decorators.py", line 33, in new_func
+    return f(get_current_context(), *args, **kwargs)
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/flask/cli.py", line 400, in decorator
+    return ctx.invoke(f, *args, **kwargs)
+           ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/click/core.py", line 788, in invoke
+    return __callback(*args, **kwargs)
+  File "/opt/render/project/src/app/management.py", line 179, in init_production_command
+    seed_users_and_organization()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/opt/render/project/src/app/seeders/user_seeder.py", line 75, in seed_users_and_organization
+    db.session.flush()
+    ~~~~~~~~~~~~~~~~^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/orm/scoping.py", line 938, in flush
+    return self._proxied.flush(objects=objects)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py", line 4353, in flush
+    self._flush(objects)
+    ~~~~~~~~~~~^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py", line 4488, in _flush
+    with util.safe_reraise():
+         ~~~~~~~~~~~~~~~~~^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/util/langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py", line 4449, in _flush
+    flush_context.execute()
+    ~~~~~~~~~~~~~~~~~~~~~^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/orm/unitofwork.py", line 466, in execute
+    rec.execute(self)
+    ~~~~~~~~~~~^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/orm/unitofwork.py", line 642, in execute
+    util.preloaded.orm_persistence.save_obj(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self.mapper,
+        ^^^^^^^^^^^^
+        uow.states_for_mapper_hierarchy(self.mapper, False, False),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        uow,
+        ^^^^
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/orm/persistence.py", line 93, in save_obj
+    _emit_insert_statements(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        base_mapper,
+        ^^^^^^^^^^^^
+    ...<3 lines>...
+        insert,
+        ^^^^^^^
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/orm/persistence.py", line 1233, in _emit_insert_statements
+    result = connection.execute(
+        statement,
+        params,
+        execution_options=execution_options,
+    )
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1416, in execute
+    return meth(
+        self,
+        distilled_parameters,
+        execution_options or NO_OPTIONS,
+    )
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/sql/elements.py", line 523, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self, distilled_params, execution_options
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1638, in _execute_clauseelement
+    ret = self._execute_context(
+        dialect,
+    ...<8 lines>...
+        cache_hit=cache_hit,
+    )
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1843, in _execute_context
+    return self._exec_single_context(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        dialect, context, statement, parameters
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1983, in _exec_single_context
+    self._handle_dbapi_exception(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        e, str_statement, effective_parameters, cursor, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 2352, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+sqlalchemy.exc.DataError: (psycopg2.errors.StringDataRightTruncation) value too long for type character varying(128)
+
+[SQL: INSERT INTO "user" (username, password_hash, first_name, last_name, email, phone, organization_id, user_type, is_organization_owner, is_active, created_at, last_login, timezone, deleted_at, deleted_by, is_deleted) VALUES (%(username)s, %(password_hash)s, %(first_name)s, %(last_name)s, %(email)s, %(phone)s, %(organization_id)s, %(user_type)s, %(is_organization_owner)s, %(is_active)s, %(created_at)s, %(last_login)s, %(timezone)s, %(deleted_at)s, %(deleted_by)s, %(is_deleted)s) RETURNING "user".id]
+[parameters: {'username': 'dev', 'password_hash': 'scrypt:32768:8:1$6FFWMIA8T5tfz0vX$d2609037996de8e2c54241371d74537a1f3840dbc792a9e3e2ac2c16cd24176c225fecdbbd4d8646f6ec41a5857c00923c74389b3903ca1c2b573a554828b492', 'first_name': 'System', 'last_name': 'Developer', 'email': 'dev@batchtrack.com', 'phone': '000-000-0000', 'organization_id': None, 'user_type': 'developer', 'is_organization_owner': False, 'is_active': True, 'created_at': datetime.datetime(2025, 7, 26, 5, 59, 54, 353197), 'last_login': None, 'timezone': 'UTC', 'deleted_at': None, 'deleted_by': None, 'is_deleted': False}]
+(Background on this error at: https://sqlalche.me/e/20/9h9h)
+render@srv-d21alungi27c73dn1440-64bd84cd5f-8bxft:~/project/src$ 

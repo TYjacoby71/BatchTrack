@@ -1,36 +1,48 @@
 
-# Import models in dependency order to ensure proper table creation
-# Base models first (no foreign key dependencies)
-from .models import User, Organization
-from .permission import Permission
-from .developer_permission import DeveloperPermission  
-from .developer_role import DeveloperRole
+"""Models package - imports all models for the application"""
+from ..extensions import db
+from .mixins import ScopedModelMixin
+
+# Import in dependency order for PostgreSQL table creation
+# 1. Base models with no dependencies
+from .models import Organization, User
 from .subscription_tier import SubscriptionTier
+from .unit import Unit
+from .category import IngredientCategory, Tag
+
+# 2. Permission system models
+from .permission import Permission, role_permission
+from .developer_permission import DeveloperPermission
+from .developer_role import DeveloperRole
 from .role import Role
 from .user_role_assignment import UserRoleAssignment
+
+# 3. User-related models that depend on User
 from .user_preferences import UserPreferences
-
-# System reference data
-from .unit import Unit
-from .category import IngredientCategory
-
-# Business models that depend on User/Organization
-from .inventory import InventoryItem
-from .product import Product, ProductVariant, ProductSKU
-from .recipe import Recipe
-
-# Models that depend on multiple other models (should be last)
-from .batch import Batch
-from .reservation import Reservation
-from .billing_snapshot import BillingSnapshot
-from .pricing_snapshot import PricingSnapshot
 from .statistics import UserStats, OrganizationStats
 
-# Make sure all models are available for import
+# 4. Business models that depend on basic models
+from .inventory import InventoryItem, InventoryHistory, BatchInventoryLog
+from .recipe import Recipe, RecipeIngredient
+from .product import Product, ProductVariant, ProductSKU, ProductSKUHistory
+
+# 5. Complex models with multiple dependencies (load last)
+from .batch import Batch, BatchIngredient, BatchContainer, ExtraBatchContainer, BatchTimer, ExtraBatchIngredient
+from .reservation import Reservation
+from .unit import CustomUnitMapping, ConversionLog
+from .billing_snapshot import BillingSnapshot
+from .pricing_snapshot import PricingSnapshot
+
+# Re-export everything for convenience
 __all__ = [
-    'User', 'Organization', 'Permission', 'DeveloperPermission', 'DeveloperRole',
-    'SubscriptionTier', 'Role', 'UserRoleAssignment', 'UserPreferences',
-    'Unit', 'IngredientCategory', 'InventoryItem', 'Product', 'ProductVariant', 
-    'ProductSKU', 'Recipe', 'Batch', 'Reservation', 'BillingSnapshot',
-    'PricingSnapshot', 'UserStats', 'OrganizationStats'
+    'db', 'ScopedModelMixin', 'Organization', 'User',
+    'InventoryItem', 'InventoryHistory', 'BatchInventoryLog',
+    'Recipe', 'RecipeIngredient',
+    'Batch', 'BatchIngredient', 'BatchContainer', 'ExtraBatchContainer', 'BatchTimer', 'ExtraBatchIngredient',
+    'Unit', 'CustomUnitMapping', 'ConversionLog',
+    'IngredientCategory', 'Tag',
+    'Product', 'ProductVariant', 'ProductSKU', 'ProductSKUHistory', 'Reservation', 
+    'Role', 'Permission', 'role_permission', 'UserRoleAssignment', 'UserPreferences', 'UserStats', 
+    'OrganizationStats', 'SubscriptionTier', 'DeveloperPermission', 'DeveloperRole',
+    'BillingSnapshot', 'PricingSnapshot'
 ]
