@@ -239,13 +239,30 @@ def sync_tier(tier_key):
 
         stripe.api_key = stripe_key
 
-        # Find products by lookup key
-        products = stripe.Product.list(lookup_keys=[lookup_key], limit=1)
+        # Find products by lookup key using search API
+        try:
+            # Use search API to find product by lookup key
+            search_results = stripe.Product.search(
+                query=f'lookup_key:"{lookup_key}"',
+                limit=1
+            )
 
-        if not products.data:
-            return jsonify({'error': f'No Stripe product found with lookup key: {lookup_key}'}), 404
+            if not search_results.data:
+                return jsonify({'error': f'No Stripe product found with lookup key: {lookup_key}'}), 404
 
-        product = products.data[0]
+            product = search_results.data[0]
+        except stripe.error.StripeError as search_error:
+            # Fallback: try to list all products and filter (less efficient but works)
+            logger.warning(f"Search API failed, trying fallback method: {str(search_error)}")
+            all_products = stripe.Product.list(limit=100)
+            product = None
+            for p in all_products.data:
+                if p.lookup_key == lookup_key:
+                    product = p
+                    break
+            
+            if not product:
+                return jsonify({'error': f'No Stripe product found with lookup key: {lookup_key}'}), 404
 
         # Get prices for this product
         prices = stripe.Price.list(product=product.id)
