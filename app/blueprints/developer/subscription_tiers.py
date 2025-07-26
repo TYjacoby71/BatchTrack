@@ -248,21 +248,38 @@ def sync_tier(tier_key):
         stripe.api_key = stripe_key
         logger.info(f"Stripe initialized for sync of tier {tier_key} with lookup key: {lookup_key}")
 
-        # Find products by lookup key using list API (search doesn't support lookup_key)
+        # Find products by name matching tier (since lookup_key isn't working as expected)
         try:
-            # List all products and filter by lookup_key (Stripe doesn't support searching by lookup_key)
+            # List all products and filter by name matching tier
             all_products = stripe.Product.list(limit=100, active=True)
             product = None
-            
+
+            # Try to match by product name containing tier key
+            tier_name_variations = [
+                f"BatchTrack {tier_key.title()}",  # "BatchTrack Solo"
+                f"BatchTrack {tier['name']}",      # "BatchTrack Solo Plan"
+                tier_key.title(),                  # "Solo"
+                tier['name']                       # "Solo Plan"
+            ]
+
+            logger.info(f"Searching for product matching tier '{tier_key}' in {len(all_products.data)} products")
+
             for p in all_products.data:
-                if p.lookup_key == lookup_key:
-                    product = p
+                logger.info(f"Checking product: {p.name} (ID: {p.id})")
+                # Try name matching
+                for name_variation in tier_name_variations:
+                    if name_variation.lower() in p.name.lower():
+                        product = p
+                        logger.info(f"Found matching product: {p.name} for variation: {name_variation}")
+                        break
+                if product:
                     break
 
             if not product:
-                return jsonify({'error': f'No Stripe product found with lookup key: {lookup_key}'}), 404
+                available_products = [p.name for p in all_products.data]
+                return jsonify({'error': f'No Stripe product found for tier: {tier_key}. Available products: {available_products}'}), 404
 
-            logger.info(f"Found Stripe product: {product.id} for lookup key: {lookup_key}")
+            logger.info(f"Found Stripe product: {product.id} ({product.name})")
 
         except stripe.error.StripeError as search_error:
             logger.error(f"Stripe API failed for lookup key {lookup_key}: {str(search_error)}")
@@ -270,18 +287,30 @@ def sync_tier(tier_key):
 
         # Get prices for this product
         try:
-            prices = stripe.Price.list(product=product.id, active=True)
-
+            # First check if product has a default price
             monthly_price = None
             yearly_price = None
             monthly_price_id = None
             yearly_price_id = None
 
+            if product.default_price:
+                # Expand the default price to get full details
+                default_price = stripe.Price.retrieve(product.default_price)
+                if default_price.recurring:
+                    if default_price.recurring.interval == 'month':
+                        monthly_price = f"${default_price.unit_amount / 100:.0f}"
+                        monthly_price_id = default_price.id
+                    elif default_price.recurring.interval == 'year':
+                        yearly_price = f"${default_price.unit_amount / 100:.0f}"
+                        yearly_price_id = default_price.id
+
+            # Also check for additional prices
+            prices = stripe.Price.list(product=product.id, active=True)
             for price in prices.data:
-                if price.recurring and price.recurring.interval == 'month':
+                if price.recurring and price.recurring.interval == 'month' and not monthly_price_id:
                     monthly_price = f"${price.unit_amount / 100:.0f}"
                     monthly_price_id = price.id
-                elif price.recurring and price.recurring.interval == 'year':
+                elif price.recurring and price.recurring.interval == 'year' and not yearly_price_id:
                     yearly_price = f"${price.unit_amount / 100:.0f}"
                     yearly_price_id = price.id
 
