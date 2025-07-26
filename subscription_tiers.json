@@ -66,12 +66,12 @@
       "just you and your genius!"
     ],
     "stripe_price_monthly": "$8",
-    "stripe_price_yearly": "$0",
-    "last_synced": "2025-07-26T08:22:40.282532",
+    "stripe_price_yearly": "$85",
+    "last_synced": "2025-07-26T08:40:59.628795",
     "fallback_price_monthly": "$0",
     "fallback_price_yearly": "$0",
     "stripe_price_id_monthly": "price_1RnRlnF4Y9XQgiJBzKnYadVL",
-    "stripe_price_id_yearly": null
+    "stripe_price_id_yearly": "price_1RnS1vF4Y9XQgiJBZUqN2aWW"
   },
   "team": {
     "name": "Team Plan",
@@ -121,58 +121,48 @@
       "Basic reporting and analytics",
       "Priority email support"
     ],
-    "stripe_features": [],
-    "stripe_price_monthly": null,
-    "stripe_price_yearly": null,
-    "last_synced": null
+    "stripe_features": [
+      "BatchTrack Team PlanUnlock full BatchTrack functionality with an organization dashboard and three included team seats (one organization owner and two team members). Perfect for small teams managing production and inventory collaboratively."
+    ],
+    "stripe_price_monthly": "$15",
+    "stripe_price_yearly": "$160",
+    "last_synced": "2025-07-26T08:35:16.215151",
+    "stripe_price_id_monthly": "price_1RnRzOF4Y9XQgiJB7cuiGZf4",
+    "stripe_price_id_yearly": "price_1RnSCIF4Y9XQgiJBeA7UZPzD"
   },
   "enterprise": {
     "name": "Enterprise Plan",
     "permissions": [
       "dashboard.view",
       "inventory.view",
-      "inventory.add_manual_stock",
-      "inventory.view_history",
       "inventory.adjust",
+      "recipes.view",
+      "recipes.create",
+      "recipes.edit",
       "batches.view",
       "batches.create",
       "batches.edit",
       "batches.finish",
       "batches.cancel",
-      "recipes.view",
-      "recipes.create",
-      "recipes.edit",
       "products.view",
       "products.create",
       "products.edit",
       "products.manage_variants",
       "organization.manage_users",
       "organization.manage_roles",
-      "organization.view_settings",
-      "conversion.units",
-      "expiration.view_alerts",
-      "reports.basic",
-      "reports.advanced",
-      "api.access",
-      "integrations.pos",
-      "integrations.accounting"
+      "reports.advanced"
     ],
     "feature_groups": [
+      "basic_dashboard",
       "full_dashboard",
-      "full_inventory",
-      "batch_production",
-      "recipe_management",
-      "product_catalog",
-      "team_management",
-      "advanced_reports",
-      "api_access",
-      "integrations"
+      "limited_inventory",
+      "batch_production"
     ],
     "stripe_lookup_key": "enterprise-plan",
     "user_limit": -1,
     "is_customer_facing": true,
     "is_available": true,
-    "is_stripe_ready": false,
+    "is_stripe_ready": true,
     "fallback_features": [
       "Everything in Team Plan",
       "Unlimited users and organizations",
@@ -183,10 +173,18 @@
       "Dedicated account manager",
       "Priority phone support"
     ],
-    "stripe_features": [],
-    "stripe_price_monthly": null,
-    "stripe_price_yearly": null,
-    "last_synced": null
+    "stripe_features": [
+      "Manage production at scale with all BatchTrack features",
+      "organization dashboard access",
+      "and five team seats (one organization owner plus four team members). Ideal for growing brands and boutique manufacturers needing full team collaboration."
+    ],
+    "stripe_price_monthly": "$20",
+    "stripe_price_yearly": "$220",
+    "last_synced": "2025-07-26T08:39:25.496679",
+    "fallback_price_monthly": "$0",
+    "fallback_price_yearly": "$0",
+    "stripe_price_id_monthly": "price_1RnS8pF4Y9XQgiJBr3Wq1LIH",
+    "stripe_price_id_yearly": "price_1RnSArF4Y9XQgiJBmKTnZhSo"
   },
   "exempt": {
     "name": "Exempt Plan",
