@@ -25,7 +25,7 @@ def load_tiers_config():
                 if not tier_key.startswith('_') and isinstance(tier_data, dict):
                     valid_tiers[tier_key] = tier_data
             return valid_tiers
-    
+
     # If no JSON file exists, return empty dict - force creation of subscription_tiers.json
     print("WARNING: No subscription_tiers.json found - tiers must be configured in JSON file")
     return {}
@@ -40,36 +40,36 @@ def sync_tier_to_database(tier_key, tier_config):
     # Skip exempt tier - it's handled by seeder
     if tier_key == 'exempt':
         return
-    
+
     # Find or create tier record
     tier_record = SubscriptionTier.query.filter_by(key=tier_key).first()
     if not tier_record:
         tier_record = SubscriptionTier(key=tier_key)
         db.session.add(tier_record)
-    
+
     # Update tier fields
     tier_record.name = tier_config.get('name', tier_key)
     tier_record.description = tier_config.get('description', '')
     tier_record.user_limit = tier_config.get('user_limit', 1)
     tier_record.is_customer_facing = tier_config.get('is_customer_facing', True)
     tier_record.is_available = tier_config.get('is_available', True)
-    
+
     # Only update stripe_lookup_key if it's actually provided in config
     # This preserves manually set lookup keys from being overwritten
     lookup_key_from_config = tier_config.get('stripe_lookup_key')
     if lookup_key_from_config is not None:
         tier_record.stripe_lookup_key = lookup_key_from_config
-    
+
     tier_record.fallback_price_monthly = tier_config.get('fallback_price_monthly', '$0')
     tier_record.fallback_price_yearly = tier_config.get('fallback_price_yearly', '$0')
-    
+
     # Handle permissions
     permission_names = tier_config.get('permissions', [])
     permissions = Permission.query.filter(Permission.name.in_(permission_names)).all()
     tier_record.permissions = permissions
-    
+
     db.session.commit()
-    
+
     return tier_record
 
 @subscription_tiers_bp.route('/')
@@ -107,7 +107,7 @@ def create_tier():
 
         user_limit = int(request.form.get('user_limit', 1))
         # Only exempt tier can have unlimited users (-1)
-        
+
         new_tier = {
             'name': tier_name,
             'permissions': permissions,
@@ -150,8 +150,13 @@ def edit_tier(tier_key):
     if request.method == 'POST':
         tier = tiers[tier_key]
 
-        # Update tier data
+        # Update tier data from form
         tier['name'] = request.form.get('tier_name', tier['name'])
+        tier['user_limit'] = int(request.form.get('user_limit', tier.get('user_limit', 1)))
+        tier['is_customer_facing'] = 'is_customer_facing' in request.form
+        tier['is_available'] = 'is_available' in request.form
+        tier['is_stripe_ready'] = 'is_stripe_ready' in request.form
+
         tier['permissions'] = request.form.getlist('permissions')
         tier['feature_groups'] = request.form.getlist('feature_groups')
         tier['stripe_lookup_key'] = request.form.get('stripe_lookup_key', '')
@@ -161,7 +166,7 @@ def edit_tier(tier_key):
             user_limit = int(user_limit_str)
         except (ValueError, TypeError):
             user_limit = 1  # Default fallback
-        
+
         tier['user_limit'] = user_limit
 
         # Update visibility controls
@@ -264,7 +269,7 @@ def sync_tier(tier_key):
         # Get prices for this product
         try:
             prices = stripe.Price.list(product=product.id, active=True)
-            
+
             monthly_price = None
             yearly_price = None
             monthly_price_id = None
@@ -299,7 +304,7 @@ def sync_tier(tier_key):
         tier['stripe_price_id_monthly'] = monthly_price_id
         tier['stripe_price_id_yearly'] = yearly_price_id
         tier['last_synced'] = datetime.now().isoformat()
-        
+
         # Preserve existing stripe_lookup_key - this is the user's manual configuration
         # and should NEVER be overwritten by sync operations
 
@@ -324,7 +329,7 @@ def sync_tier(tier_key):
                 if p.lookup_key == lookup_key:
                     product = p
                     break
-            
+
             if not product:
                 return jsonify({'error': f'No Stripe product found with lookup key: {lookup_key}'}), 404
 
@@ -350,7 +355,7 @@ def sync_tier(tier_key):
         tier['stripe_price_monthly'] = monthly_price
         tier['stripe_price_yearly'] = yearly_price
         tier['last_synced'] = datetime.now().isoformat()
-        
+
         # Preserve existing stripe_lookup_key - this is the user's manual configuration
         # and should NEVER be overwritten by sync operations
 
