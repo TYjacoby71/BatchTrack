@@ -4,6 +4,9 @@ from app.models import db, Permission, SubscriptionTier
 from app.extensions import db
 import json
 import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 subscription_tiers_bp = Blueprint('subscription_tiers', __name__, url_prefix='/subscription-tiers')
 
@@ -238,6 +241,7 @@ def sync_tier(tier_key):
             return jsonify({'error': 'Stripe secret key not configured in secrets'}), 400
 
         stripe.api_key = stripe_key
+        logger.info(f"Stripe initialized for sync of tier {tier_key} with lookup key: {lookup_key}")
 
         # Find products by lookup key using search API
         try:
@@ -248,6 +252,66 @@ def sync_tier(tier_key):
             )
 
             if not search_results.data:
+                return jsonify({'error': f'No Stripe product found with lookup key: {lookup_key}'}), 404
+
+            product = search_results.data[0]
+            logger.info(f"Found Stripe product: {product.id} for lookup key: {lookup_key}")
+
+        except stripe.error.StripeError as search_error:
+            logger.error(f"Stripe search failed for lookup key {lookup_key}: {str(search_error)}")
+            return jsonify({'error': f'Stripe search failed: {str(search_error)}'}), 400
+
+        # Get prices for this product
+        try:
+            prices = stripe.Price.list(product=product.id, active=True)
+            
+            monthly_price = None
+            yearly_price = None
+            monthly_price_id = None
+            yearly_price_id = None
+
+            for price in prices.data:
+                if price.recurring and price.recurring.interval == 'month':
+                    monthly_price = f"${price.unit_amount / 100:.0f}"
+                    monthly_price_id = price.id
+                elif price.recurring and price.recurring.interval == 'year':
+                    yearly_price = f"${price.unit_amount / 100:.0f}"
+                    yearly_price_id = price.id
+
+            logger.info(f"Found prices - Monthly: {monthly_price} ({monthly_price_id}), Yearly: {yearly_price} ({yearly_price_id})")
+
+        except stripe.error.StripeError as price_error:
+            logger.error(f"Failed to fetch prices for product {product.id}: {str(price_error)}")
+            return jsonify({'error': f'Failed to fetch prices: {str(price_error)}'}), 400
+
+        # Extract features from product metadata or description
+        features = []
+        if product.metadata.get('features'):
+            features = product.metadata['features'].split(',')
+        elif product.description:
+            # Try to extract features from description
+            features = [f.strip() for f in product.description.split(',') if f.strip()]
+
+        # Update tier with Stripe data - NEVER overwrite manually set lookup key
+        tier['stripe_features'] = features
+        tier['stripe_price_monthly'] = monthly_price or tier.get('fallback_price_monthly', '$0')
+        tier['stripe_price_yearly'] = yearly_price or tier.get('fallback_price_yearly', '$0')
+        tier['stripe_price_id_monthly'] = monthly_price_id
+        tier['stripe_price_id_yearly'] = yearly_price_id
+        tier['last_synced'] = datetime.now().isoformat()
+        
+        # Preserve existing stripe_lookup_key - this is the user's manual configuration
+        # and should NEVER be overwritten by sync operations
+
+        save_tiers_config(tiers)
+
+        logger.info(f"Synced tier {tier_key} with Stripe - preserved lookup key: {lookup_key}")
+
+        return jsonify({
+            'success': True,
+            'tier': tier,
+            'message': f'Successfully synced {tier["name"]} with Stripe (lookup key preserved)'
+        })
                 return jsonify({'error': f'No Stripe product found with lookup key: {lookup_key}'}), 404
 
             product = search_results.data[0]
