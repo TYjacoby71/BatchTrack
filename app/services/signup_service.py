@@ -92,9 +92,13 @@ class SignupService:
                 owner_user.assign_role(org_owner_role)
                 logger.info("Assigned organization_owner role")
 
-            # All signups must go through Stripe - no dev mode bypass
-            if not is_stripe_mode:
-                raise Exception("All paid subscriptions must be processed through Stripe")
+            # All paid signups require Stripe payment processing
+            if tier != 'free' and not is_stripe_mode:
+                raise Exception("All paid subscriptions must be processed through Stripe payment system")
+            
+            # Free tier is the only exception - no payment required
+            if tier == 'free' and is_stripe_mode:
+                logger.warning("Free tier should not go through Stripe payment flow")
 
             # Subscription tracking is now handled by the SubscriptionTier relationship
             # The organization is already assigned to the correct tier above

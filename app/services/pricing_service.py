@@ -11,13 +11,20 @@ class PricingService:
     @staticmethod
     def get_pricing_data():
         """Get pricing data from Stripe - no dev mode fallback"""
+        # Always require Stripe to be configured
+        import os
+        stripe_secret = os.environ.get('STRIPE_SECRET_KEY') or current_app.config.get('STRIPE_SECRET_KEY')
+        if not stripe_secret:
+            logger.error("Stripe not configured - cannot provide pricing data")
+            return {}
+        
         # Always try to get live Stripe data first
         try:
-            return PricingService._get_stripe_pricing_data()
+            return PricingService._get_stripe_pricing()
         except Exception as e:
             logger.error(f"Failed to get Stripe pricing data: {str(e)}")
-            # If Stripe fails, use cached snapshots
-            logger.info("Stripe unavailable - using cached snapshots")
+            # If Stripe fails, use cached snapshots from PricingSnapshot model
+            logger.info("Stripe unavailable - using cached pricing snapshots")
             return PricingService._get_snapshot_pricing_data()
 
     @staticmethod
@@ -250,44 +257,42 @@ class PricingService:
         return pricing_data
 
     @staticmethod
-    def _get_fallback_pricing_data():
-        """Get fallback pricing data for development mode"""
-        from ..blueprints.developer.subscription_tiers import load_tiers_config
-
-        tiers_config = load_tiers_config()
-        pricing_data = {}
-
-        logger.info(f"Dev mode pricing data keys: {list(tiers_config.keys())}")
-
-        # Check if Stripe secrets are configured
-        import os
-        stripe_secret = os.environ.get('STRIPE_SECRET_KEY') or current_app.config.get('STRIPE_SECRET_KEY')
-        webhook_secret = os.environ.get('STRIPE_WEBHOOK_SECRET') or current_app.config.get('STRIPE_WEBHOOK_SECRET')
-        stripe_configured = bool(stripe_secret and webhook_secret)
-
-        for tier_key, tier_data in tiers_config.items():
-            # Only include customer-facing tiers
-            if not tier_data.get('is_customer_facing', True):
-                continue
-
-            # In fallback mode, respect tier's stripe_ready flag only if Stripe is configured
-            tier_is_stripe_ready = tier_data.get('is_stripe_ready', False)
-            effective_stripe_ready = tier_is_stripe_ready and stripe_configured
-
-            pricing_entry = {
-                'name': tier_data.get('name', tier_key.title()),
-                'price': tier_data.get('price_display', '$0'),
-                'features': tier_data.get('fallback_features', []),
-                'user_limit': tier_data.get('user_limit', 1),
-                'is_stripe_ready': effective_stripe_ready
-            }
-
-            # Add display pricing
-            if tier_data.get('price_monthly'):
-                pricing_entry['price_monthly'] = float(tier_data['price_monthly'])
-            if tier_data.get('price_yearly'):
-                pricing_entry['price_yearly'] = float(tier_data['price_yearly'])
-
-            pricing_data[tier_key] = pricing_entry
-
-        return pricing_data
+    def _get_snapshot_pricing_data():
+        """Get pricing data from cached PricingSnapshot records when Stripe is unavailable"""
+        try:
+            from ..models.pricing_snapshot import PricingSnapshot
+            from ..blueprints.developer.subscription_tiers import load_tiers_config
+            
+            tiers_config = load_tiers_config()
+            pricing_data = {}
+            
+            for tier_key, tier_data in tiers_config.items():
+                # Only include customer-facing and available tiers
+                if not (tier_data.get('is_customer_facing', True) and tier_data.get('is_available', True)):
+                    continue
+                
+                # Try to get cached pricing from snapshots
+                snapshot = PricingSnapshot.get_latest_for_tier(tier_key)
+                
+                if snapshot:
+                    pricing_data[tier_key] = {
+                        'name': tier_data.get('name', tier_key.title()),
+                        'price': f"${snapshot.monthly_price:.0f}" if snapshot.monthly_price else '$0',
+                        'price_yearly': f"${snapshot.yearly_price:.0f}" if snapshot.yearly_price else '$0',
+                        'features': tier_data.get('fallback_features', []),
+                        'description': tier_data.get('description', f"Perfect for {tier_key} operations"),
+                        'user_limit': tier_data.get('user_limit', 1),
+                        'stripe_lookup_key': tier_data.get('stripe_lookup_key', ''),
+                        'is_stripe_ready': True,  # Snapshots are from Stripe data
+                        'is_cached': True
+                    }
+                else:
+                    # No snapshot available - tier unavailable for purchase
+                    logger.warning(f"No pricing snapshot available for tier {tier_key}")
+            
+            logger.info(f"Retrieved cached pricing for {len(pricing_data)} tiers from snapshots")
+            return pricing_data
+            
+        except Exception as e:
+            logger.error(f"Failed to get cached pricing data: {str(e)}")
+            return {}
