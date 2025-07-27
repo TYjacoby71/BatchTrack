@@ -191,7 +191,12 @@ function populateUserManagementModal(user) {
     document.getElementById('modalUserEmail').value = user.email || '';
     document.getElementById('modalUserPhone').value = user.phone || '';
     document.getElementById('modalUserType').value = user.user_type || 'customer';
-    document.getElementById('modalUserIsOwner').checked = user.is_organization_owner || false;
+    
+    // Handle organization owner status - check multiple possible property names
+    const isOwner = user.is_organization_owner === true || user._is_organization_owner === true || 
+                   (user.display_role && user.display_role.includes('Owner'));
+    document.getElementById('modalUserIsOwner').checked = isOwner;
+    
     document.getElementById('modalUserIsActive').checked = user.is_active;
     document.getElementById('modalUserUsername').textContent = user.username;
     document.getElementById('modalUserLastLogin').textContent = user.last_login || 'Never';
@@ -204,6 +209,15 @@ function populateUserManagementModal(user) {
         document.getElementById('modalUserOrganization').value = 'No Organization';
         document.getElementById('modalUserOrgId').textContent = 'N/A';
     }
+    
+    // Debug logging to see what we're getting
+    console.log('User data in modal:', {
+        id: user.id,
+        is_organization_owner: user.is_organization_owner,
+        _is_organization_owner: user._is_organization_owner,
+        display_role: user.display_role,
+        resolved_isOwner: isOwner
+    });
 }
 
 async function saveModalUser() {
