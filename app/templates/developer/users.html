@@ -121,9 +121,11 @@
                                                         {% endif %}
                                                     </td>
                                                     <td>
-                                                        <span class="badge bg-{{ 'primary' if user.user_type == 'organization_owner' else 'secondary' }}">
-                                                            {{ user.user_type.replace('_', ' ').title() }}
-                                                        </span>
+                                                        {% if user.is_organization_owner %}
+                                                        <span class="badge bg-primary">Customer (Owner)</span>
+                                                        {% else %}
+                                                        <span class="badge bg-secondary">{{ user.user_type.replace('_', ' ').title() }}</span>
+                                                        {% endif %}
                                                     </td>
                                                     <td>
                                                         <span class="badge bg-{{ 'success' if user.is_active else 'danger' }}">
@@ -139,12 +141,17 @@
                                                     </td>
                                                     <td>{{ user.created_at.strftime('%Y-%m-%d') if user.created_at else 'N/A' }}</td>
                                                     <td>
-                                                        <form method="POST" action="{{ url_for('developer.toggle_user_active', user_id=user.id) }}" style="display: inline;">
-                                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                                            <button type="submit" class="btn btn-sm btn-{{ 'warning' if user.is_active else 'success' }}">
-                                                                {{ 'Deactivate' if user.is_active else 'Activate' }}
+                                                        <div class="btn-group btn-group-sm">
+                                                            <button class="btn btn-outline-primary" onclick="editCustomerUser({{ user.id }})">
+                                                                <i class="fas fa-edit"></i> Edit
                                                             </button>
-                                                        </form>
+                                                            <button class="btn btn-outline-info" onclick="loginAsUser({{ user.id }})">
+                                                                <i class="fas fa-sign-in-alt"></i> Login As
+                                                            </button>
+                                                            <button class="btn btn-outline-{{ 'warning' if user.is_active else 'success' }}" onclick="toggleUserStatus({{ user.id }}, {{ 'true' if user.is_active else 'false' }})">
+                                                                <i class="fas fa-{{ 'pause' if user.is_active else 'play' }}"></i> {{ 'Deactivate' if user.is_active else 'Activate' }}
+                                                            </button>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                                 {% endfor %}
@@ -221,12 +228,14 @@
                                                     </td>
                                                     <td>{{ user.created_at.strftime('%Y-%m-%d') if user.created_at else 'N/A' }}</td>
                                                     <td>
-                                                        <form method="POST" action="{{ url_for('developer.toggle_user_active', user_id=user.id) }}" style="display: inline;">
-                                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                                            <button type="submit" class="btn btn-sm btn-{{ 'warning' if user.is_active else 'success' }}">
-                                                                {{ 'Deactivate' if user.is_active else 'Activate' }}
+                                                        <div class="btn-group btn-group-sm">
+                                                            <button class="btn btn-outline-primary" onclick="editDeveloperUser({{ user.id }})">
+                                                                <i class="fas fa-edit"></i> Edit
                                                             </button>
-                                                        </form>
+                                                            <button class="btn btn-outline-{{ 'warning' if user.is_active else 'success' }}" onclick="toggleUserStatus({{ user.id }}, {{ 'true' if user.is_active else 'false' }})">
+                                                                <i class="fas fa-{{ 'pause' if user.is_active else 'play' }}"></i> {{ 'Deactivate' if user.is_active else 'Activate' }}
+                                                            </button>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                                 {% endfor %}
@@ -305,7 +314,13 @@
     </div>
 </div>
 
+<!-- Include User Management Modal Component -->
+{% include 'components/modals/user_management_modal.html' %}
+
 <script>
+// Global variable to store current user data
+let currentUser = null;
+
 async function saveProfile() {
     const profileData = {
         first_name: document.getElementById('firstName').value,
@@ -369,6 +384,42 @@ async function changePassword() {
         }
     } catch (error) {
         alert('Network error occurred');
+    }
+}
+
+// User Management Functions
+function editCustomerUser(userId) {
+    openUserManagementModal(userId, 'general');
+}
+
+function editDeveloperUser(userId) {
+    openUserManagementModal(userId, 'developer');
+}
+
+async function toggleUserStatus(userId, isActive) {
+    try {
+        const response = await fetch(`/developer/users/${userId}/toggle-active`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
+            }
+        });
+
+        if (response.ok) {
+            location.reload();
+        } else {
+            alert('Error toggling user status');
+        }
+    } catch (error) {
+        alert('Network error occurred');
+    }
+}
+
+function loginAsUser(userId = null) {
+    if (userId) {
+        if (confirm('Login as this user? This will open a new tab with their session.')) {
+            window.open(`/developer/login-as/${userId}`, '_blank');
+        }
     }
 }
 </script>

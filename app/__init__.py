@@ -163,15 +163,16 @@ def create_app():
         from .routes import bulk_stock_routes
         from .routes import fault_log_routes
         from .routes import tag_manager_routes
-        
+
         # Register admin blueprints
         from .blueprints.admin.admin_routes import admin_bp
         app.register_blueprint(admin_bp)
-        
+
         # Register API blueprints
         from .blueprints.api.stock_routes import stock_api_bp
         from .blueprints.api.ingredient_routes import ingredient_api_bp
-        
+        from .blueprints.api.container_routes import container_api_bp # Added to register the container_api_bp
+
     except ImportError as e:
         print(f"Warning: Failed to import some blueprints: {e}")
 
@@ -226,7 +227,7 @@ def create_app():
     app.register_blueprint(expiration_bp, url_prefix='/expiration')
     app.register_blueprint(settings_bp, url_prefix='/settings')
     app.register_blueprint(timers_bp, url_prefix='/timers')
-    app.register_blueprint(quick_add_bp, url_prefix='/quick_add')
+    app.register_blueprint(quick_add_bp, url_prefix='/quick-add')
     app.register_blueprint(app_routes.app_routes_bp)
     app.register_blueprint(fifo_bp)
     app.register_blueprint(add_extra_bp, url_prefix='/add-extra')
@@ -248,6 +249,8 @@ def create_app():
     app.register_blueprint(stock_api_bp)
     app.register_blueprint(dashboard_api_bp)
     app.register_blueprint(unit_api_bp)
+    app.register_blueprint(container_api_bp) # Register container API blueprint
+
 
     # Ensure all API routes are loaded
     with app.app_context():

@@ -1,0 +1,41 @@
+-07-26 09:39:53,785] INFO in signup_service: Final tier check - Stripe ready: True, should match stripe_mode: False
+INFO:app.services.signup_service:Final tier check - Stripe ready: True, should match stripe_mode: False
+[2025-07-26 09:39:53,790] INFO in signup_service: Created organization with ID: 12 and tier: solo
+INFO:app.services.signup_service:Created organization with ID: 12 and tier: solo
+[2025-07-26 09:39:53,982] INFO in signup_service: Created user with ID: 8
+INFO:app.services.signup_service:Created user with ID: 8
+[2025-07-26 09:39:53,992] INFO in signup_service: Assigned organization_owner role
+INFO:app.services.signup_service:Assigned organization_owner role
+[2025-07-26 09:39:53,996] INFO in stripe_service: Simulating subscription for org 12, tier: solo
+INFO:app.services.stripe_service:Simulating subscription for org 12, tier: solo
+[2025-07-26 09:39:53,996] WARNING in stripe_service: Tier solo is stripe-ready - simulation blocked, must use real Stripe
+WARNING:app.services.stripe_service:Tier solo is stripe-ready - simulation blocked, must use real Stripe
+[2025-07-26 09:39:53,998] ERROR in signup_service: Error creating account: Failed to activate development subscription
+ERROR:app.services.signup_service:Error creating account: Failed to activate development subscription
+10.229.174.1 - - [26/Jul/2025:09:39:53 +0000] "POST /auth/signup?source=homepage_trial HTTP/1.1" 302 211 "https://www.batchtrack.com/auth/signup?source=homepage_trial" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+[2025-07-26 09:39:54,139] INFO in pricing_service: === PRICING SERVICE ===
+INFO:app.services.pricing_service:=== PRICING SERVICE ===
+[2025-07-26 09:39:54,139] INFO in pricing_service: Development mode: True
+INFO:app.services.pricing_service:Development mode: True
+[2025-07-26 09:39:54,139] INFO in stripe_service: === STRIPE INITIALIZATION ===
+INFO:app.services.stripe_service:=== STRIPE INITIALIZATION ===
+[2025-07-26 09:39:54,139] INFO in stripe_service: Stripe secret key configured: False
+INFO:app.services.stripe_service:Stripe secret key configured: False
+[2025-07-26 09:39:54,139] WARNING in stripe_service: Stripe secret key not configured
+WARNING:app.services.stripe_service:Stripe secret key not configured
+[2025-07-26 09:39:54,139] INFO in pricing_service: Stripe initialization result: False
+INFO:app.services.pricing_service:Stripe initialization result: False
+[2025-07-26 09:39:54,140] INFO in pricing_service: Development mode: Using fallback pricing data
+INFO:app.services.pricing_service:Development mode: Using fallback pricing data
+[2025-07-26 09:39:54,140] INFO in pricing_service: Dev mode pricing data keys: ['solo', 'team', 'enterprise']
+INFO:app.services.pricing_service:Dev mode pricing data keys: ['solo', 'team', 'enterprise']
+10.229.210.4 - - [26/Jul/2025:09:39:54 +0000] "GET /auth/signup HTTP/1.1" 200 30857 "https://www.batchtrack.com/auth/signup?source=homepage_trial" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+10.229.210.4 - - [26/Jul/2025:09:39:54 +0000] "GET /static/js/utils/utils.js HTTP/1.1" 304 0 "https://www.batchtrack.com/auth/signup" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+10.229.91.69 - - [26/Jul/2025:09:39:54 +0000] "GET /static/style.css HTTP/1.1" 304 0 "https://www.batchtrack.com/auth/signup" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+10.229.91.69 - - [26/Jul/2025:09:39:54 +0000] "GET /static/js/inventory/inventory_adjust.js HTTP/1.1" 304 0 "https://www.batchtrack.com/auth/signup" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+10.229.174.1 - - [26/Jul/2025:09:39:54 +0000] "GET /static/js/expiration_alerts.js HTTP/1.1" 304 0 "https://www.batchtrack.com/auth/signup" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+10.229.85.65 - - [26/Jul/2025:09:39:54 +0000] "GET /static/js/conversion/unit_converter.js HTTP/1.1" 304 0 "https://www.batchtrack.com/auth/signup" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+10.229.91.69 - - [26/Jul/2025:09:39:54 +0000] "GET /static/js/main.js HTTP/1.1" 304 0 "https://www.batchtrack.com/auth/signup" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+10.229.91.69 - - [26/Jul/2025:09:39:54 +0000] "GET /static/style.css HTTP/1.1" 304 0 "https://www.batchtrack.com/auth/signup" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+10.229.91.69 - - [26/Jul/2025:09:39:54 +0000] "GET /favicon.ico HTTP/1.1" 302 209 "https://www.batchtrack.com/auth/signup" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+10.229.210.4 - - [26/Jul/2025:09:39:54 +0000] "GET /auth/login HTTP/1.1" 200 15626 "https://www.batchtrack.com/auth/signup" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"

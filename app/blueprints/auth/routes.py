@@ -94,13 +94,12 @@ def signup():
     pricing_data = PricingService.get_pricing_data()
     tiers_config = load_tiers_config()
 
-    # Only show customer-facing tiers with proper Stripe configuration
+    # Show all customer-facing tiers - individual failures are handled gracefully
     available_tiers = {}
     for tier_key, tier_data in pricing_data.items():
         tier_config = tiers_config.get(tier_key, {})
         if (tier_config.get('is_customer_facing', True) and 
-            tier_config.get('is_available', True) and 
-            tier_config.get('stripe_lookup_key')):
+            tier_config.get('is_available', True)):
 
             price_str = tier_data.get('price', '$0').replace('$', '')
             try:
@@ -198,12 +197,15 @@ def signup():
             'referral_code': referral_code
         }
 
-        # Check if we should use Stripe or development mode
-        if is_stripe_ready and current_app.config.get('STRIPE_SECRET_KEY'):
-            # Stripe is configured and tier is ready - use real payment
+        # Check if we should use Stripe or development mode for this specific tier
+        tier_pricing = pricing_data.get(selected_tier, {})
+        tier_stripe_ready = tier_pricing.get('is_stripe_ready', False)
+        
+        if tier_stripe_ready and current_app.config.get('STRIPE_SECRET_KEY'):
+            # Stripe is configured and this specific tier is ready - use real payment
             return redirect(url_for('billing.checkout', tier=selected_tier))
         else:
-            # Development mode or tier not Stripe-ready - use signup service
+            # Development mode or this tier not Stripe-ready - use signup service
             from ...services.signup_service import SignupService
             return SignupService.complete_signup(selected_tier, is_stripe_mode=False)
 

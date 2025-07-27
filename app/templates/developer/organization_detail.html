@@ -2,6 +2,10 @@
 
 {% block title %}{{ organization.name }} - Organization Details{% endblock %}
 
+{% block head %}
+<meta name="csrf-token" content="{{ csrf_token() }}">
+{% endblock %}
+
 {% block content %}
 <div class="container-fluid py-4">
     <!-- Header -->
@@ -13,8 +17,8 @@
                         <div>
                             <h2 class="mb-2">{{ organization.name }}</h2>
                             <p class="text-muted mb-0">
-                                <span class="badge bg-{{ 'success' if organization.subscription_tier == 'enterprise' else 'warning' if organization.subscription_tier == 'team' else 'secondary' }}">
-                                    {{ organization.subscription_tier|title }}
+                                <span class="badge bg-{{ 'success' if organization.tier and organization.tier.key == 'enterprise' else 'warning' if organization.tier and organization.tier.key == 'team' else 'secondary' }}">
+                                    {{ organization.tier.name if organization.tier else 'Free' }}
                                 </span>
                                 <span class="badge bg-{{ 'success' if organization.is_active else 'danger' }}">
                                     {{ 'Active' if organization.is_active else 'Inactive' }}
@@ -61,7 +65,7 @@
                             {% if config.get('DEBUG') %}
                             <div class="alert alert-info small">
                                 <strong>Debug:</strong> Current tier = "{{ current_tier }}", 
-                                Has subscription = {{ organization.subscription is not none }},
+                                Has tier record = {{ organization.tier is not none }},
                                 Available tiers = {{ tiers_config.keys() | list }}
                             </div>
                             {% endif %}
@@ -115,7 +119,7 @@
                 <div class="card-body">
                     <div class="row text-center">
                         <div class="col-6">
-                            <h4>{{ users|length }}</h4>
+                            <h4>{{ users_objects|length }}</h4>
                             <small class="text-muted">Total Users</small>
                         </div>
                         <div class="col-6">
@@ -136,31 +140,68 @@
             <div class="card">
                 <div class="card-header">
                     <h5 class="mb-0">
-                        <i class="fas fa-users"></i> Users ({{ users|length }})
+                        <i class="fas fa-users"></i> Users ({{ users_objects|length }})
                     </h5>
                 </div>
                 <div class="card-body">
-                    {% if users %}
-                    <div class="list-group list-group-flush">
-                        {% for user in users %}
-                        <div class="list-group-item d-flex justify-content-between align-items-center">
-                            <div>
-                                <strong>{{ user.full_name or user.username }}</strong>
-                                <small class="text-muted d-block">{{ user.email }}</small>
-                                <span class="badge bg-{{ 'primary' if user.user_type == 'organization_owner' else 'secondary' }}">
-                                    {{ user.user_type.replace('_', ' ')|title }}
-                                </span>
-                                {% if not user.is_active %}
-                                <span class="badge bg-danger">Inactive</span>
-                                {% endif %}
-                            </div>
-                            <div>
-                                <small class="text-muted">
-                                    {{ user.created_at.strftime('%m/%d/%y') if user.created_at }}
-                                </small>
-                            </div>
-                        </div>
-                        {% endfor %}
+                    {% if users_objects %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>User</th>
+                                    <th>Role</th>
+                                    <th>Status</th>
+                                    <th>Created</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for user in users_objects %}
+                                <tr class="user-row" data-user-id="{{ user.id }}">
+                                    <td>
+                                        <div>
+                                            <strong>{{ user.full_name or user.username }}</strong>
+                                            <br>
+                                            <small class="text-muted">{{ user.username }}</small>
+                                            {% if user.email %}
+                                            <br>
+                                            <small class="text-info">{{ user.email }}</small>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                    <td class="owner-status">
+                                        {% if user.is_organization_owner %}
+                                            <span class="badge bg-warning text-dark">Organization Owner</span>
+                                        {% elif user.user_type %}
+                                            <span class="badge bg-secondary">{{ user.user_type.replace('_', ' ').title() }}</span>
+                                        {% else %}
+                                            <span class="text-muted">Unassigned</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{{ 'success' if user.is_active else 'danger' }}">
+                                            {{ 'Active' if user.is_active else 'Inactive' }}
+                                        </span>
+                                    </td>
+                                    <td>{{ user.created_at.strftime('%m/%d/%y') if user.created_at else 'N/A' }}</td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <button class="btn btn-outline-primary" onclick="editOrgUser({{ user.id }})">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="btn btn-outline-info" onclick="loginAsOrgUser({{ user.id }})">
+                                                <i class="fas fa-sign-in-alt"></i>
+                                            </button>
+                                            <button class="btn btn-outline-{{ 'warning' if user.is_active else 'success' }}" onclick="toggleOrgUserStatus({{ user.id }}, {{ 'true' if user.is_active else 'false' }})">
+                                                <i class="fas fa-{{ 'pause' if user.is_active else 'play' }}"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
                     </div>
                     {% else %}
                     <div class="text-center py-4">
@@ -190,7 +231,7 @@
                     <h5 class="alert-heading">⚠️ CRITICAL WARNING</h5>
                     <p class="mb-2">This action will <strong>PERMANENTLY DELETE</strong> the organization "<strong>{{ organization.name }}</strong>" and ALL associated data:</p>
                     <ul class="mb-0">
-                        <li>All users ({{ users|length }} users will lose access)</li>
+                        <li>All users ({{ users_objects|length }} users will lose access)</li>
                         <li>All batches and production history</li>
                         <li>All inventory records and FIFO lots</li>
                         <li>All recipes and formulations</li>
@@ -229,7 +270,7 @@
                         <div class="form-check">
                             <input class="form-check-input" type="checkbox" id="confirmUsers" required>
                             <label class="form-check-label text-danger" for="confirmUsers">
-                                <strong>I understand {{ users|length }} users will immediately lose access to their accounts</strong>
+                                <strong>I understand {{ users_objects|length }} users will immediately lose access to their accounts</strong>
                             </label>
                         </div>
                     </div>
@@ -249,7 +290,50 @@
     </div>
 </div>
 
+<!-- Include User Management Modal Component -->
+{% include 'components/modals/user_management_modal.html' %}
+
 <script>
+// Global variable to store current organization user data
+let currentOrgUser = null;
+
+// Organization User Management Functions
+async function editOrgUser(userId) {
+    const organizationData = {
+        id: {{ organization.id }},
+        name: "{{ organization.name }}"
+    };
+    await openUserManagementModal(userId, 'organization', organizationData);
+}
+
+function loginAsOrgUser(userId = null) {
+    if (userId) {
+        if (confirm('Login as this user? This will open a new tab with their session.')) {
+            window.open(`/developer/login-as/${userId}`, '_blank');
+        }
+    }
+}
+
+function toggleOrgUserStatus(userId, currentStatus) {
+    fetch(`/developer/users/${userId}/toggle-active`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
+        }
+    })
+    .then(response => {
+        if (response.ok) {
+            location.reload();
+        } else {
+            alert('Error toggling user status');
+        }
+    })
+    .catch(error => {
+        alert('Network error occurred');
+    });
+}
+
+// Organization deletion function
 function deleteOrganization() {
     const form = document.getElementById('deleteOrgForm');
     const password = document.getElementById('developerPassword').value;

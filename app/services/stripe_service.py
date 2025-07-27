@@ -1,4 +1,3 @@
-
 import stripe
 import logging
 from flask import current_app, url_for
@@ -9,28 +8,29 @@ logger = logging.getLogger(__name__)
 
 class StripeService:
     """Service for handling Stripe payment operations"""
-    
+
     @staticmethod
     def initialize_stripe():
         """Initialize Stripe with API key"""
         logger.info("=== STRIPE INITIALIZATION ===")
-        stripe_key = current_app.config.get('STRIPE_SECRET_KEY')
-        logger.info(f"Stripe secret key configured: {bool(stripe_key)}")
-        if stripe_key:
-            logger.info(f"Stripe key prefix: {stripe_key[:7]}...")
-        
-        if not stripe_key:
+        import os
+        stripe_secret = os.environ.get('STRIPE_SECRET_KEY') or current_app.config.get('STRIPE_SECRET_KEY')
+        logger.info(f"Stripe secret key configured: {bool(stripe_secret)}")
+        if stripe_secret:
+            logger.info(f"Stripe key prefix: {stripe_secret[:7]}...")
+
+        if not stripe_secret:
             logger.warning("Stripe secret key not configured")
             return False
-        stripe.api_key = stripe_key
+        stripe.api_key = stripe_secret
         logger.info("Stripe API key set successfully")
         return True
-    
+
     @staticmethod
     def create_customer(organization):
         """Create a Stripe customer for an organization"""
         StripeService.initialize_stripe()
-        
+
         try:
             customer = stripe.Customer.create(
                 email=organization.contact_email,
@@ -39,18 +39,18 @@ class StripeService:
                     'organization_id': organization.id
                 }
             )
-            
+
             # For now, we don't have a separate Subscription model
             # This would need to be implemented when you add the Subscription model
             logger.info(f"Created Stripe customer {customer.id} for org {organization.id} (no subscription model to update)")
-            
+
             logger.info(f"Created Stripe customer {customer.id} for org {organization.id}")
             return customer
-            
+
         except stripe.error.StripeError as e:
             logger.error(f"Failed to create Stripe customer for org {organization.id}: {str(e)}")
             return None
-    
+
     @staticmethod
     def create_checkout_session(organization, tier):
         """Create a Stripe checkout session for subscription"""
@@ -58,25 +58,25 @@ class StripeService:
         from ..blueprints.developer.subscription_tiers import load_tiers_config
         tiers_config = load_tiers_config()
         tier_data = tiers_config.get(tier, {})
-        
+
         StripeService.initialize_stripe()
-        
+
         # Try to get price ID from tier config first
         price_id = tier_data.get('stripe_price_id_monthly')
-        
+
         # Fallback to hardcoded config if not found in tier
         if not price_id:
             price_id = current_app.config.get('STRIPE_PRICE_IDS', {}).get(tier)
-        
+
         if not price_id:
             logger.error(f"No Stripe price ID configured for tier: {tier}")
             return None
-        
+
         # For now, create a new customer for each checkout
         customer = StripeService.create_customer(organization)
         if not customer:
             return None
-        
+
         try:
             session = stripe.checkout.Session.create(
                 customer=customer.id,
@@ -93,40 +93,40 @@ class StripeService:
                     'tier': tier
                 }
             )
-            
+
             logger.info(f"Created checkout session {session.id} for org {organization.id}")
             return session
-            
+
         except stripe.error.StripeError as e:
             logger.error(f"Failed to create checkout session for org {organization.id}: {str(e)}")
             return None
-    
+
     @staticmethod
     def handle_subscription_created(stripe_subscription):
         """Handle successful subscription creation from webhook"""
         try:
             customer_id = stripe_subscription['customer']
             subscription_id = stripe_subscription['id']
-            
+
             # Find organization by customer metadata or signup metadata
             organization = None
             metadata = stripe_subscription.get('metadata', {})
-            
+
             # Try to find organization from subscription metadata first
             if 'organization_id' in metadata:
                 organization = Organization.query.get(metadata['organization_id'])
-            
+
             # If not found, try to find by customer
             if not organization:
                 # Get customer to check for organization_id in metadata
                 customer = stripe.Customer.retrieve(customer_id)
                 if customer.metadata.get('organization_id'):
                     organization = Organization.query.get(customer.metadata['organization_id'])
-            
+
             if not organization:
                 logger.error(f"No organization found for subscription {subscription_id}")
                 return False
-            
+
             # Set subscription tier based on metadata
             tier_key = metadata.get('tier')
             if tier_key:
@@ -137,7 +137,7 @@ class StripeService:
                 else:
                     logger.error(f"Tier '{tier_key}' not found for organization {organization.id}")
                     return False
-            
+
             # Create billing snapshot for resilience
             try:
                 from ..models.billing_snapshot import BillingSnapshot
@@ -148,37 +148,37 @@ class StripeService:
                     logger.info(f"Created billing snapshot for org {organization.id}")
             except Exception as e:
                 logger.warning(f"Failed to create billing snapshot: {str(e)}")
-            
+
             db.session.commit()
             logger.info(f"Activated subscription for org {organization.id} (tier: {tier_key})")
             return True
-            
+
         except Exception as e:
             logger.error(f"Failed to handle subscription creation: {str(e)}")
             db.session.rollback()
             return False
-    
+
     @staticmethod
     def handle_subscription_updated(stripe_subscription):
         """Handle subscription updates from webhook"""
         try:
             subscription_id = stripe_subscription['id']
             customer_id = stripe_subscription['customer']
-            
+
             # Find organization by customer metadata
             organization = None
             customer = stripe.Customer.retrieve(customer_id)
             if customer.metadata.get('organization_id'):
                 organization = Organization.query.get(customer.metadata['organization_id'])
-            
+
             if not organization:
                 logger.error(f"No organization found for subscription update {subscription_id}")
                 return False
-            
+
             # Handle subscription status changes
             status = stripe_subscription['status']
             logger.info(f"Subscription {subscription_id} status: {status} for org {organization.id}")
-            
+
             # If subscription is canceled, deactivate the organization entirely
             if status == 'canceled':
                 organization.is_active = False
@@ -191,7 +191,7 @@ class StripeService:
                 # Reactivate if subscription becomes active again
                 organization.is_active = True
                 logger.info(f"Reactivated org {organization.id} due to active subscription")
-            
+
             # Create/update billing snapshot for resilience
             try:
                 from ..models.billing_snapshot import BillingSnapshot
@@ -202,60 +202,60 @@ class StripeService:
                     logger.info(f"Updated billing snapshot for org {organization.id}")
             except Exception as e:
                 logger.warning(f"Failed to update billing snapshot: {str(e)}")
-            
+
             db.session.commit()
             logger.info(f"Updated subscription for org {organization.id} from webhook")
             return True
-            
+
         except Exception as e:
             logger.error(f"Failed to handle subscription update: {str(e)}")
             db.session.rollback()
             return False
-    
+
     @staticmethod
     def cancel_subscription(organization):
         """Cancel a Stripe subscription and deactivate organization"""
         if not StripeService.initialize_stripe():
             logger.error("Stripe not configured")
             return False
-        
+
         # Find customer by organization
         try:
             customers = stripe.Customer.list(
                 metadata={'organization_id': str(organization.id)},
                 limit=1
             )
-            
+
             if not customers.data:
                 logger.error(f"No Stripe customer found for org {organization.id}")
                 return False
-            
+
             customer = customers.data[0]
-            
+
             # Get active subscriptions for this customer
             subscriptions = stripe.Subscription.list(
                 customer=customer.id,
                 status='active',
                 limit=1
             )
-            
+
             if not subscriptions.data:
                 logger.error(f"No active subscription found for org {organization.id}")
                 return False
-            
+
             subscription = subscriptions.data[0]
-            
+
             # Cancel the subscription
             stripe.Subscription.delete(subscription.id)
-            
+
             # Deactivate the organization - no access at all
             organization.is_active = False
-            
+
             db.session.commit()
-            
+
             logger.info(f"Canceled subscription and deactivated org {organization.id}")
             return True
-            
+
         except stripe.error.StripeError as e:
             logger.error(f"Failed to cancel subscription for org {organization.id}: {str(e)}")
             return False
@@ -266,20 +266,20 @@ class StripeService:
         try:
             subscription_id = stripe_subscription['id']
             customer_id = stripe_subscription['customer']
-            
+
             # Find organization by customer metadata
             organization = None
             customer = stripe.Customer.retrieve(customer_id)
             if customer.metadata.get('organization_id'):
                 organization = Organization.query.get(customer.metadata['organization_id'])
-            
+
             if not organization:
                 logger.error(f"No organization found for subscription deletion {subscription_id}")
                 return False
-            
+
             # Deactivate the organization entirely - no access
             organization.is_active = False
-            
+
             # Create billing snapshot for record keeping
             try:
                 from ..models.billing_snapshot import BillingSnapshot
@@ -290,11 +290,11 @@ class StripeService:
                     logger.info(f"Created final billing snapshot for org {organization.id}")
             except Exception as e:
                 logger.warning(f"Failed to create final billing snapshot: {str(e)}")
-            
+
             db.session.commit()
             logger.info(f"Deactivated org {organization.id} due to subscription deletion")
             return True
-            
+
         except Exception as e:
             logger.error(f"Failed to handle subscription deletion: {str(e)}")
             db.session.rollback()
@@ -306,28 +306,28 @@ class StripeService:
         if not StripeService.initialize_stripe():
             logger.error("Stripe not configured")
             return None
-        
+
         try:
             # Find customer by organization metadata
             customers = stripe.Customer.list(
                 metadata={'organization_id': str(organization.id)},
                 limit=1
             )
-            
+
             if not customers.data:
                 logger.error(f"No Stripe customer found for org {organization.id}")
                 return None
-            
+
             customer = customers.data[0]
-            
+
             session = stripe.billing_portal.Session.create(
                 customer=customer.id,
                 return_url=return_url,
             )
-            
+
             logger.info(f"Created customer portal session for org {organization.id}")
             return session
-            
+
         except stripe.error.StripeError as e:
             logger.error(f"Failed to create customer portal session for org {organization.id}: {str(e)}")
             return None
@@ -370,12 +370,12 @@ class StripeService:
 
         # Get tier from price key
         tier = price_key.replace('_yearly', '').replace('_monthly', '')
-        
+
         # Validate tier configuration
         from ..blueprints.developer.subscription_tiers import load_tiers_config
         tiers_config = load_tiers_config()
         tier_data = tiers_config.get(tier, {})
-        
+
         # Get Stripe price ID
         if 'yearly' in price_key:
             price_id = tier_data.get('stripe_price_id_yearly')
@@ -406,52 +406,12 @@ class StripeService:
                     'price_key': price_key
                 }
             )
-            
+
             logger.info(f"Created signup checkout session {session.id} for tier {tier}")
             return session
-            
+
         except stripe.error.StripeError as e:
             logger.error(f"Failed to create signup checkout session: {str(e)}")
             return None
 
-    @staticmethod
-    def simulate_subscription_success(organization, tier='team'):
-        """Simulate successful subscription for development/testing ONLY"""
-        from flask import current_app
-        from datetime import timedelta
-        from ..models import SubscriptionTier
-        
-        logger.info(f"Simulating subscription for org {organization.id}, tier: {tier}")
-        
-        # PRIMARY CONTROL: Only allow simulation if tier is explicitly marked as NOT stripe-ready
-        from ..blueprints.developer.subscription_tiers import load_tiers_config
-        tiers_config = load_tiers_config()
-        tier_data = tiers_config.get(tier, {})
-        is_stripe_ready = tier_data.get('is_stripe_ready', False)
-        
-        # If stripe_ready is checked, force production mode - no simulation allowed
-        if is_stripe_ready:
-            logger.warning(f"Tier {tier} is stripe-ready - simulation blocked, must use real Stripe")
-            return False
-            
-        # Development mode or non-stripe-ready tier - simulate subscription activation
-        logger.info(f"Simulating subscription activation for organization {organization.id}")
-        
-        # Find the tier object
-        tier_obj = SubscriptionTier.query.filter_by(key=tier).first()
-        if not tier_obj:
-            logger.error(f"Tier '{tier}' not found in database")
-            return False
-        
-        # Update organization with the new tier
-        organization.subscription_tier_id = tier_obj.id
-        logger.info(f"Set organization {organization.id} to tier {tier} (ID: {tier_obj.id})")
-        
-        try:
-            db.session.commit()
-            logger.info(f"Successfully simulated subscription activation for org {organization.id}, tier: {tier}")
-            return True
-        except Exception as e:
-            logger.error(f"Failed to simulate subscription for org {organization.id}: {str(e)}")
-            db.session.rollback()
-            return False
+    

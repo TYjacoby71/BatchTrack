@@ -93,6 +93,11 @@
                                                 {% endif %}
                                             </ul>
                                         </div>
+                                        <button type="button" class="btn btn-primary tier-select-btn w-100" 
+                                            data-tier="{{ tier_key }}"
+                                            onclick="selectTier('{{ tier_key }}')">
+                                        Choose {{ tier_data.name }}
+                                    </button>
                                     </div>
                                 </div>
                                 {% endfor %}
@@ -383,7 +388,7 @@ document.addEventListener('DOMContentLoaded', function() {
             for (let [key, value] of formData.entries()) {
                 console.log(`${key}: ${value}`);
             }
-            
+
             if (!selectedTier) {
                 console.error('No tier selected!');
                 e.preventDefault();

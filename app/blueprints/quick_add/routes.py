@@ -8,6 +8,15 @@ def quick_add_product():
     try:
         from flask_login import current_user
         from ...models import InventoryHistory
+        from ...utils.permissions import get_effective_organization_id
+
+        # Ensure user is authenticated and get organization context
+        if not current_user.is_authenticated:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        organization_id = get_effective_organization_id()
+        if not organization_id and current_user.user_type != 'developer':
+            return jsonify({'error': 'No organization context'}), 403
 
         data = request.get_json()
         if not data:
@@ -17,7 +26,8 @@ def quick_add_product():
             name=data['name'],
             type='product',
             unit=data.get('unit', 'count'),
-            quantity=0
+            quantity=0,
+            organization_id=organization_id
         )
 
         db.session.add(product)
@@ -34,7 +44,8 @@ def quick_add_product():
             note='Initial product creation via quick add',
             created_by=current_user.id if current_user else None,
             quantity_used=0,
-            is_perishable=False
+            is_perishable=False,
+            organization_id=organization_id
         )
         db.session.add(history)
         db.session.commit()
@@ -57,6 +68,15 @@ def quick_add_container():
     try:
         from flask_login import current_user
         from ...models import InventoryHistory
+        from ...utils.permissions import get_effective_organization_id
+
+        # Ensure user is authenticated and get organization context
+        if not current_user.is_authenticated:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        organization_id = get_effective_organization_id()
+        if not organization_id and current_user.user_type != 'developer':
+            return jsonify({'error': 'No organization context'}), 403
 
         data = request.get_json()
         if not data:
@@ -68,7 +88,8 @@ def quick_add_container():
             unit='',  # Containers have empty unit field
             storage_amount=float(data['storage_amount']),
             storage_unit=data['storage_unit'],
-            quantity=0
+            quantity=0,
+            organization_id=organization_id
         )
 
         db.session.add(container)
@@ -85,7 +106,8 @@ def quick_add_container():
             note='Initial container creation via quick add',
             created_by=current_user.id if current_user else None,
             quantity_used=0,  # Required field for FIFO tracking
-            is_perishable=False
+            is_perishable=False,
+            organization_id=organization_id
         )
         db.session.add(history)
         db.session.commit()
@@ -154,6 +176,17 @@ def quick_add_unit():
 
 @quick_add_bp.route('/ingredient', methods=['GET', 'POST'])
 def quick_add_ingredient():
+    from flask_login import current_user
+    from ...utils.permissions import get_effective_organization_id
+    
+    # Ensure user is authenticated and get organization context
+    if not current_user.is_authenticated:
+        return jsonify({"error": "Authentication required"}), 401
+    
+    organization_id = get_effective_organization_id()
+    if not organization_id and current_user.user_type != 'developer':
+        return jsonify({"error": "No organization context"}), 403
+
     # If GET request, return the modal with units
     if request.method == 'GET':
         from ...models import Unit
@@ -168,8 +201,12 @@ def quick_add_ingredient():
         if not name or not unit:
             return jsonify({"error": "Missing name or unit"}), 400
 
-        # Check for existing
-        existing = InventoryItem.query.filter_by(name=name).first()
+        # Check for existing within organization scope
+        query = InventoryItem.query.filter_by(name=name)
+        if organization_id:
+            query = query.filter_by(organization_id=organization_id)
+        existing = query.first()
+        
         if existing:
             return jsonify({"id": existing.id, "name": existing.name, "unit": existing.unit}), 200
 
@@ -182,11 +219,18 @@ def quick_add_ingredient():
                 unit=unit, 
                 quantity=0.0, 
                 cost_per_unit=0.0,
-                density=1.0  # Default water density
+                density=1.0,  # Default water density
+                organization_id=organization_id
             )
             message = "Added with default water density (1.0 g/mL). Update if needed."
         else:
-            new_item = InventoryItem(name=name, unit=unit, quantity=0.0, cost_per_unit=0.0)
+            new_item = InventoryItem(
+                name=name, 
+                unit=unit, 
+                quantity=0.0, 
+                cost_per_unit=0.0,
+                organization_id=organization_id
+            )
             message = "Added successfully."
 
         db.session.add(new_item)

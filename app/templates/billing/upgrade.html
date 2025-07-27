@@ -18,8 +18,9 @@
                 <strong>Stripe Configuration:</strong>
                 <ul class="mb-2">
                     <li>Secret Key: {{ '✓ Configured' if config.get('STRIPE_SECRET_KEY') else '✗ Missing' }}</li>
+                    <li>Publishable Key: {{ '✓ Configured' if config.get('STRIPE_PUBLISHABLE_KEY') else '✗ Missing' }}</li>
                     <li>Webhook Secret: {{ '✓ Configured' if config.get('STRIPE_WEBHOOK_SECRET') else '✗ Missing (Dev Mode)' }}</li>
-                    <li>Operating Mode: {{ 'Production' if config.get('STRIPE_WEBHOOK_SECRET') else 'Development' }}</li>
+                    <li>Operating Mode: {{ 'Production' if (config.get('STRIPE_WEBHOOK_SECRET') and config.get('STRIPE_SECRET_KEY')) else 'Development' }}</li>
                 </ul>
             </div>
             <div class="col-md-6">
@@ -137,42 +138,29 @@
 
                 <div class="card-footer text-center">
                     {% if current_tier != tier_name %}
-                    <!-- Debug Info -->
-                    {% if config.get('DEBUG') %}
-                    <div class="alert alert-info small mb-2">
-                      <strong>Debug:</strong> is_stripe_ready: {{ tier_data.get('is_stripe_ready', False) }}, 
-                      Stripe configured: {{ config.get('STRIPE_SECRET_KEY') is not none }}
-                    </div>
-                    {% endif %}
-
-                    {% if tier_data.get('is_stripe_ready', False) and config.get('STRIPE_SECRET_KEY') %}
-                      <!-- Stripe Ready Tier - Real Payment Required -->
+                    <!-- All tiers now require Stripe configuration -->
+                    {% if tier_data.get('stripe_price_id_monthly') or tier_data.get('stripe_price_id_yearly') %}
+                      <!-- Tier has Stripe configuration - allow checkout -->
                       <form method="POST" action="{{ url_for('billing.checkout', tier=tier_name) }}" class="d-inline">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                         <button type="submit" class="btn btn-primary btn-lg w-100 mb-2">
                           <i class="fas fa-credit-card"></i> Upgrade to {{ tier_data.get('name', tier_name.title()) }}
                         </button>
                       </form>
-                    {% elif not tier_data.get('is_stripe_ready', False) %}
-                      <!-- Development/Simulation Tier -->
-                      <form method="POST" action="{{ url_for('billing.dev_activate_subscription', tier=tier_name) }}" class="d-inline">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                        <button type="submit" class="btn btn-success btn-lg w-100 mb-2">
-                          <i class="fas fa-play"></i> Activate {{ tier_data.get('name', tier_name.title()) }} (Dev Mode)
-                        </button>
-                      </form>
+                      {% if tier_data.get('price_yearly') %}
+                      <a href="{{ url_for('billing.checkout', tier=tier_name, billing_cycle='yearly') }}" 
+                         class="btn btn-outline-success btn-sm mt-2">
+                          Choose Yearly
+                      </a>
+                      {% endif %}
                     {% else %}
-                      <!-- Stripe Ready but not configured -->
+                      <!-- Tier not configured in Stripe -->
                       <div class="alert alert-warning">
-                        <strong>Configuration Required:</strong> This tier requires Stripe configuration. 
-                        <a href="/secrets" target="_blank">Add Stripe secrets</a> to enable payments.
+                        <strong>Not Available:</strong> This tier requires Stripe configuration.
+                        {% if config.get('DEBUG') %}
+                        <br>Use the sync button in the developer interface to configure this tier.
+                        {% endif %}
                       </div>
-                    {% endif %}
-                    {% if tier_data.get('price_yearly') %}
-                    <a href="{{ url_for('billing.checkout', tier=tier_name, billing_cycle='yearly') }}" 
-                       class="btn btn-outline-success btn-sm mt-2">
-                        Choose Yearly
-                    </a>
                     {% endif %}
                     {% else %}
                     <button class="btn btn-secondary btn-block" disabled>Current Plan</button>
@@ -199,37 +187,36 @@ function debugCheckout(tierKey, tierName, isStripeReady) {
     }
 
     function loadDebugData() {
-        // Make an API request to fetch detailed debug information
         fetch('/billing/debug', {
             headers: {
                 'Accept': 'application/json'
             }
         })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                const debugJsonElement = document.getElementById('debug-json');
-                const debugDetailsElement = document.getElementById('debug-details');
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            const debugJsonElement = document.getElementById('debug-json');
+            const debugDetailsElement = document.getElementById('debug-details');
 
-                if (debugJsonElement) {
-                    debugJsonElement.textContent = JSON.stringify(data, null, 2);
-                }
+            if (debugJsonElement) {
+                debugJsonElement.textContent = JSON.stringify(data, null, 2);
+            }
 
-                if (debugDetailsElement) {
-                    debugDetailsElement.style.display = 'block';
-                }
-            })
-            .catch(error => {
-                console.error('Error fetching debug data:', error);
-                const debugJsonElement = document.getElementById('debug-json');
-                if (debugJsonElement) {
-                    debugJsonElement.textContent = 'Error: ' + error.message;
-                }
-            });
+            if (debugDetailsElement) {
+                debugDetailsElement.style.display = 'block';
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching debug data:', error);
+            const debugJsonElement = document.getElementById('debug-json');
+            if (debugJsonElement) {
+                debugJsonElement.textContent = 'Error: ' + error.message;
+            }
+        });
     }
 </script>
 {% endblock %}

@@ -157,6 +157,12 @@ class User(UserMixin, db.Model):
         # Auto-assign role when flag is set to True
         if value is True and self.user_type == 'customer' and self.id:
             self.ensure_organization_owner_role()
+        # When setting to False, remove the organization owner role
+        elif value is False and self.id:
+            from .role import Role
+            org_owner_role = Role.query.filter_by(name='organization_owner', is_system_role=True).first()
+            if org_owner_role:
+                self.remove_role(org_owner_role)
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
     last_login = db.Column(db.DateTime, nullable=True)
