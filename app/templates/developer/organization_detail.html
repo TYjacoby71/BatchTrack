@@ -2,6 +2,10 @@
 
 {% block title %}{{ organization.name }} - Organization Details{% endblock %}
 
+{% block head %}
+<meta name="csrf-token" content="{{ csrf_token() }}">
+{% endblock %}
+
 {% block content %}
 <div class="container-fluid py-4">
     <!-- Header -->
@@ -334,8 +338,15 @@
                             <label class="form-label fw-bold">User Type</label>
                             <select class="form-select" id="orgUserType">
                                 <option value="customer">Customer</option>
-                                <option value="organization_owner">Organization Owner</option>
                             </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="orgUserIsOwner">
+                                <label class="form-check-label fw-bold" for="orgUserIsOwner">
+                                    Organization Owner
+                                </label>
+                            </div>
                         </div>
                         <div class="col-12 mb-3">
                             <div class="form-check">
@@ -442,6 +453,7 @@ function populateOrgUserModal(user) {
     document.getElementById('orgUserEmail').value = user.email || '';
     document.getElementById('orgUserPhone').value = user.phone || '';
     document.getElementById('orgUserType').value = user.user_type || 'customer';
+    document.getElementById('orgUserIsOwner').checked = user.is_organization_owner || false;
     document.getElementById('orgUserIsActive').checked = user.is_active;
     document.getElementById('orgUserUsername').textContent = user.username;
     document.getElementById('orgUserLastLogin').textContent = user.last_login || 'Never';
@@ -456,6 +468,7 @@ async function saveOrgUser() {
         email: document.getElementById('orgUserEmail').value,
         phone: document.getElementById('orgUserPhone').value,
         user_type: document.getElementById('orgUserType').value,
+        is_organization_owner: document.getElementById('orgUserIsOwner').checked,
         is_active: document.getElementById('orgUserIsActive').checked
     };
 
