@@ -1,4 +1,3 @@
-
 import logging
 from flask import current_app
 from ..models import db, Organization, Permission
@@ -44,13 +43,13 @@ class BillingService:
     def get_available_tiers(customer_facing=True, active=True):
         """Get available subscription tiers with filtering"""
         tiers_config = load_tiers_config()
-        
+
         available_tiers = {}
         for tier_key, tier_data in tiers_config.items():
             # Skip if tier_data is not a dictionary
             if not isinstance(tier_data, dict):
                 continue
-                
+
             # Apply filters
             if customer_facing and not tier_data.get('is_customer_facing', True):
                 continue
@@ -62,17 +61,23 @@ class BillingService:
         return available_tiers
 
     @staticmethod
-    def build_price_key(tier, billing_cycle='monthly'):
-        """Build consistent price key for tiers"""
-        if billing_cycle == 'yearly':
-            return f"{tier}_yearly"
-        return tier
+    def validate_tier_availability(tier_key):
+        """Validate that a tier is available for purchase"""
+        available_tiers = BillingService.get_available_tiers()
+        if tier_key not in available_tiers:
+            return False
+
+        tier_data = available_tiers[tier_key]
+        # Check if tier is ready for Stripe checkout
+        return tier_data.get('is_stripe_ready', False)
 
     @staticmethod
-    def validate_tier_availability(tier):
-        """Validate if a tier is available for purchase"""
-        available_tiers = BillingService.get_available_tiers()
-        return tier in available_tiers
+    def build_price_key(tier, billing_cycle='monthly'):
+        """Build Stripe price lookup key from tier and billing cycle"""
+        if billing_cycle == 'yearly':
+            return f"batchtrack_{tier}_yearly"
+        else:
+            return f"batchtrack_{tier}_monthly"
 
     @staticmethod
     def check_subscription_access(organization):
@@ -97,7 +102,7 @@ class BillingService:
 
         # Get current tier
         current_tier = organization.effective_subscription_tier
-        
+
         # Check if subscription is active
         has_access, reason = BillingService.check_subscription_access(organization)
 

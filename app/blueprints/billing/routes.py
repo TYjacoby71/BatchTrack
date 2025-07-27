@@ -57,22 +57,21 @@ def upgrade():
         flash('No organization found', 'error')
         return redirect(url_for('app_routes.dashboard'))
 
-    # Get available tiers using BillingService
-    customer_facing = request.args.get('customer_facing', 'true').lower() == 'true'
-    active = request.args.get('active', 'true').lower() == 'true'
+    # Get pricing data from PricingService (handles Stripe integration and fallbacks)
+    from ...services.pricing_service import PricingService
+    pricing_data = PricingService.get_pricing_data()
     
-    available_tiers = BillingService.get_available_tiers(
-        customer_facing=customer_facing,
-        active=active
-    )
+    logger.info(f"Pricing data retrieved for upgrade page: {len(pricing_data)} tiers")
+    for tier_key, tier_info in pricing_data.items():
+        logger.info(f"Tier {tier_key}: {tier_info.get('name', 'Unknown')} - Stripe Ready: {tier_info.get('is_stripe_ready', False)}")
 
     current_tier = organization.effective_subscription_tier
 
     return render_template('billing/upgrade.html',
                          organization=organization,
-                         tiers=available_tiers,
+                         tiers=pricing_data,
                          current_tier=current_tier,
-                         pricing_data=available_tiers,
+                         pricing_data=pricing_data,
                          subscription_details={
                              'status': 'active' if organization.tier else 'inactive',
                              'next_billing_date': None,
