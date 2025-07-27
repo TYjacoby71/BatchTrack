@@ -1,4 +1,5 @@
 
+
 <!-- User Management Modal Component -->
 <div class="modal fade" id="userManagementModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
@@ -36,28 +37,22 @@
                         </div>
                     </div>
 
-                    <!-- Organization Context Section -->
-                    <div class="row mb-4" id="organizationSection">
+                    <!-- Role and Organization Section -->
+                    <div class="row mb-4" id="roleSection">
                         <div class="col-12">
-                            <h6 class="text-muted mb-3">Organization Context</h6>
+                            <h6 class="text-muted mb-3">Role & Organization</h6>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label fw-bold">Organization</label>
-                            <input type="text" class="form-control" id="modalUserOrganization" readonly>
-                        </div>
-                        <div class="col-md-6 mb-3" id="userTypeSection">
-                            <label class="form-label fw-bold">User Type</label>
-                            <select class="form-select" id="modalUserType">
-                                <option value="customer">Customer</option>
-                                <option value="developer">Developer</option>
-                            </select>
+                            <label class="form-label fw-bold">Current Role</label>
+                            <input type="text" class="form-control" id="modalUserCurrentRole" readonly>
                         </div>
                         <div class="col-md-6 mb-3" id="ownerSection">
-                            <div class="form-check">
+                            <div class="form-check mt-4">
                                 <input class="form-check-input" type="checkbox" id="modalUserIsOwner">
                                 <label class="form-check-label fw-bold" for="modalUserIsOwner">
                                     Organization Owner
                                 </label>
+                                <small class="form-text text-muted d-block">Only one user can be the organization owner</small>
                             </div>
                         </div>
                         <div class="col-12 mb-3">
@@ -99,7 +94,8 @@
                             <div class="alert alert-light border">
                                 <h6 class="mb-2">Account Information</h6>
                                 <p class="mb-1"><strong>Username:</strong> <span id="modalUserUsername"></span></p>
-                                <p class="mb-1" id="orgIdRow"><strong>Organization ID:</strong> <span id="modalUserOrgId"></span></p>
+                                <p class="mb-1"><strong>Organization:</strong> <span id="modalUserOrganizationName"></span></p>
+                                <p class="mb-1"><strong>Organization ID:</strong> <span id="modalUserOrgId"></span></p>
                                 <p class="mb-1"><strong>Last Login:</strong> <span id="modalUserLastLogin"></span></p>
                                 <p class="mb-0"><strong>Created:</strong> <span id="modalUserCreatedAt"></span></p>
                             </div>
@@ -137,38 +133,33 @@
 let currentModalUser = null;
 let modalContext = 'general'; // 'general', 'organization', 'developer'
 
-function openUserManagementModal(userId, context = 'general', organizationData = null) {
+async function openUserManagementModal(userId, context = 'general', organizationData = null) {
     modalContext = context;
     
     // Configure modal based on context
     if (context === 'organization') {
         document.getElementById('modalTitle').textContent = 'Manage Organization User';
         document.getElementById('customerSupportBtn').style.display = 'block';
-        document.getElementById('userTypeSection').style.display = 'none';
-        document.getElementById('modalUserType').value = 'customer';
-        if (organizationData) {
-            document.getElementById('modalUserOrganization').value = organizationData.name;
-            document.getElementById('modalUserOrgId').textContent = organizationData.id;
-        }
     } else if (context === 'developer') {
         document.getElementById('modalTitle').textContent = 'Manage Developer User';
         document.getElementById('customerSupportBtn').style.display = 'none';
         document.getElementById('ownerSection').style.display = 'none';
-        document.getElementById('orgIdRow').style.display = 'none';
     } else {
         document.getElementById('modalTitle').textContent = 'Manage User';
         document.getElementById('customerSupportBtn').style.display = 'none';
     }
 
-    // Fetch user data and populate modal
-    fetch(`/developer/api/user/${userId}`, {
-        method: 'GET',
-        headers: {
-            'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
+    try {
+        // Fetch user data and populate modal
+        const response = await fetch(`/developer/api/user/${userId}`, {
+            method: 'GET',
+            headers: {
+                'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
+            }
+        });
+
+        const data = await response.json();
+        
         if (data.success) {
             currentModalUser = data.user;
             populateUserManagementModal(data.user);
@@ -176,10 +167,10 @@ function openUserManagementModal(userId, context = 'general', organizationData =
         } else {
             alert('Error loading user data: ' + data.error);
         }
-    })
-    .catch(error => {
+    } catch (error) {
+        console.error('Error loading user data:', error);
         alert('Network error occurred');
-    });
+    }
 }
 
 function populateUserManagementModal(user) {
@@ -188,28 +179,46 @@ function populateUserManagementModal(user) {
     document.getElementById('modalUserLastName').value = user.last_name || '';
     document.getElementById('modalUserEmail').value = user.email || '';
     document.getElementById('modalUserPhone').value = user.phone || '';
-    document.getElementById('modalUserType').value = user.user_type || 'customer';
-    document.getElementById('modalUserIsOwner').checked = user.is_organization_owner || false;
+    
+    // Handle organization owner status - check multiple possible property names
+    const isOwner = user.is_organization_owner === true || user._is_organization_owner === true || 
+                   (user.display_role && user.display_role.includes('Owner'));
+    document.getElementById('modalUserIsOwner').checked = isOwner;
+    
     document.getElementById('modalUserIsActive').checked = user.is_active;
     document.getElementById('modalUserUsername').textContent = user.username;
     document.getElementById('modalUserLastLogin').textContent = user.last_login || 'Never';
     document.getElementById('modalUserCreatedAt').textContent = user.created_at || 'N/A';
     
+    // Display current role
+    document.getElementById('modalUserCurrentRole').value = user.display_role || 'No Role Assigned';
+    
+    // Display organization information
     if (user.organization) {
-        document.getElementById('modalUserOrganization').value = user.organization.name;
+        document.getElementById('modalUserOrganizationName').textContent = user.organization.name;
         document.getElementById('modalUserOrgId').textContent = user.organization.id;
     } else {
-        document.getElementById('modalUserOrganization').value = 'No Organization';
+        document.getElementById('modalUserOrganizationName').textContent = 'No Organization';
         document.getElementById('modalUserOrgId').textContent = 'N/A';
     }
+    
+    // Debug logging to see what we're getting
+    console.log('User data in modal:', {
+        id: user.id,
+        is_organization_owner: user.is_organization_owner,
+        _is_organization_owner: user._is_organization_owner,
+        display_role: user.display_role,
+        resolved_isOwner: isOwner
+    });
 }
 
-function saveModalUser() {
+async function saveModalUser() {
     const userId = document.getElementById('modalUserId').value;
     const isOwnerChecked = document.getElementById('modalUserIsOwner').checked;
+    const wasOwnerBefore = currentModalUser && (currentModalUser.is_organization_owner === true || currentModalUser._is_organization_owner === true);
 
     // Check if trying to make this user an owner when another owner already exists (for organization context)
-    if (modalContext === 'organization' && isOwnerChecked) {
+    if (modalContext === 'organization' && isOwnerChecked && !wasOwnerBefore) {
         const currentOwners = Array.from(document.querySelectorAll('.user-row')).filter(row => {
             const ownerCell = row.querySelector('.owner-status');
             const rowUserId = row.dataset.userId;
@@ -217,33 +226,36 @@ function saveModalUser() {
         });
 
         if (currentOwners.length > 0) {
-            if (!confirm('Making this user an organization owner will remove owner status from the current owner. Continue?')) {
+            if (!confirm('Making this user an organization owner will remove owner status and role from the current owner and transfer it to this user. Continue?')) {
                 return;
             }
         }
     }
 
     const userData = {
-        user_id: document.getElementById('modalUserId').value,
+        user_id: userId,
         first_name: document.getElementById('modalUserFirstName').value,
         last_name: document.getElementById('modalUserLastName').value,
         email: document.getElementById('modalUserEmail').value,
         phone: document.getElementById('modalUserPhone').value,
-        user_type: document.getElementById('modalUserType').value,
+        user_type: 'customer', // Default to customer since we removed the user type field
         is_organization_owner: isOwnerChecked,
-        is_active: document.getElementById('modalUserIsActive').checked
+        is_active: document.getElementById('modalUserIsActive').checked,
+        transfer_owner_role: isOwnerChecked && !wasOwnerBefore // Flag to indicate role transfer is needed
     };
 
-    fetch('/developer/api/user/update', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
-        },
-        body: JSON.stringify(userData)
-    })
-    .then(response => response.json())
-    .then(data => {
+    try {
+        const response = await fetch('/developer/api/user/update', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
+            },
+            body: JSON.stringify(userData)
+        });
+
+        const data = await response.json();
+        
         if (data.success) {
             alert('User updated successfully!');
             bootstrap.Modal.getInstance(document.getElementById('userManagementModal')).hide();
@@ -251,40 +263,42 @@ function saveModalUser() {
         } else {
             alert('Error updating user: ' + data.error);
         }
-    })
-    .catch(error => {
+    } catch (error) {
+        console.error('Error updating user:', error);
         alert('Network error occurred');
-    });
+    }
 }
 
-function resetModalUserPassword() {
+async function resetModalUserPassword() {
     if (!currentModalUser) return;
 
     const newPassword = prompt('Enter new password for user:');
     if (!newPassword) return;
 
-    fetch('/developer/api/user/reset-password', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
-        },
-        body: JSON.stringify({
-            user_id: currentModalUser.id,
-            new_password: newPassword
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
+    try {
+        const response = await fetch('/developer/api/user/reset-password', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
+            },
+            body: JSON.stringify({
+                user_id: currentModalUser.id,
+                new_password: newPassword
+            })
+        });
+
+        const data = await response.json();
+        
         if (data.success) {
             alert('Password reset successfully!');
         } else {
             alert('Error resetting password: ' + data.error);
         }
-    })
-    .catch(error => {
+    } catch (error) {
+        console.error('Error resetting password:', error);
         alert('Network error occurred');
-    });
+    }
 }
 
 function loginAsModalUser() {
@@ -302,25 +316,27 @@ function viewAsCustomerSupport() {
     window.open(`/developer/select-org/${currentModalUser.organization.id}`, '_blank');
 }
 
-function softDeleteModalUser() {
+async function softDeleteModalUser() {
     if (!currentModalUser) return;
 
     if (!confirm(`Soft delete user ${currentModalUser.username}? This will deactivate their account and remove access while preserving data.`)) {
         return;
     }
 
-    fetch('/developer/api/user/soft-delete', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
-        },
-        body: JSON.stringify({
-            user_id: currentModalUser.id
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
+    try {
+        const response = await fetch('/developer/api/user/soft-delete', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
+            },
+            body: JSON.stringify({
+                user_id: currentModalUser.id
+            })
+        });
+
+        const data = await response.json();
+        
         if (data.success) {
             alert('User soft deleted successfully!');
             bootstrap.Modal.getInstance(document.getElementById('userManagementModal')).hide();
@@ -328,9 +344,10 @@ function softDeleteModalUser() {
         } else {
             alert('Error soft deleting user: ' + data.error);
         }
-    })
-    .catch(error => {
+    } catch (error) {
+        console.error('Error soft deleting user:', error);
         alert('Network error occurred');
-    });
+    }
 }
 </script>
+

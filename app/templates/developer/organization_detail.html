@@ -298,12 +298,12 @@
 let currentOrgUser = null;
 
 // Organization User Management Functions
-function editOrgUser(userId) {
+async function editOrgUser(userId) {
     const organizationData = {
-        name: '{{ organization.name }}',
-        id: {{ organization.id }}
+        id: {{ organization.id }},
+        name: "{{ organization.name }}"
     };
-    openUserManagementModal(userId, 'organization', organizationData);
+    await openUserManagementModal(userId, 'organization', organizationData);
 }
 
 function loginAsOrgUser(userId = null) {

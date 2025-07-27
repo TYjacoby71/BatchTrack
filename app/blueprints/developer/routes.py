@@ -217,7 +217,7 @@ def organization_detail(org_id):
     # Load subscription tiers config for the dropdown
     from .subscription_tiers import load_tiers_config
     all_tiers_config = load_tiers_config()
-    
+
     # Filter to only include dictionary objects (valid tier configurations)
     tiers_config = {}
     for tier_key, tier_data in all_tiers_config.items():
@@ -227,7 +227,7 @@ def organization_detail(org_id):
     # Debug subscription info
     current_tier = org.effective_subscription_tier
     tier_record = org.tier
-    
+
     print(f"DEBUG: Organization {org.name} (ID: {org.id})")
     print(f"DEBUG: Has tier record: {tier_record is not None}")
     if tier_record:
@@ -251,7 +251,7 @@ def edit_organization(org_id):
 
     # Debug form data
     print(f"DEBUG: Form data received: {dict(request.form)}")
-    
+
     old_name = org.name
     old_active = org.is_active
     old_tier = org.effective_subscription_tier
@@ -262,7 +262,7 @@ def edit_organization(org_id):
     # Update subscription tier if provided
     new_tier = request.form.get('subscription_tier')
     print(f"DEBUG: Updating tier from '{old_tier}' to '{new_tier}'")
-    
+
     if new_tier:
         from app.models.subscription_tier import SubscriptionTier
         tier_record = SubscriptionTier.query.filter_by(key=new_tier).first()
@@ -295,7 +295,7 @@ def upgrade_organization(org_id):
 
     from app.models.subscription_tier import SubscriptionTier
     tier_record = SubscriptionTier.query.filter_by(key=new_tier).first()
-    
+
     if tier_record:
         org.subscription_tier_id = tier_record.id
         db.session.commit()
@@ -508,7 +508,7 @@ def get_user_details(user_id):
     """Get detailed user information for editing"""
     try:
         user = User.query.get_or_404(user_id)
-        
+
         # Don't allow developers to edit other developer accounts through this endpoint
         if user.user_type != 'developer':
             user_data = {
@@ -528,7 +528,7 @@ def get_user_details(user_id):
             return jsonify({'success': True, 'user': user_data})
         else:
             return jsonify({'success': False, 'error': 'Cannot edit developer users through this endpoint'})
-            
+
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
@@ -538,20 +538,20 @@ def get_developer_user_details(user_id):
     """Get detailed developer user information for editing"""
     try:
         user = User.query.get_or_404(user_id)
-        
+
         if user.user_type == 'developer':
             # Get available developer roles
             from app.models.developer_role import DeveloperRole
             from app.models.user_role_assignment import UserRoleAssignment
-            
+
             all_dev_roles = DeveloperRole.query.filter_by(is_active=True).all()
             user_role_assignments = UserRoleAssignment.query.filter_by(
                 user_id=user_id,
                 is_active=True
             ).filter(UserRoleAssignment.developer_role_id.isnot(None)).all()
-            
+
             assigned_role_ids = [assignment.developer_role_id for assignment in user_role_assignments]
-            
+
             roles_data = []
             for role in all_dev_roles:
                 roles_data.append({
@@ -560,7 +560,7 @@ def get_developer_user_details(user_id):
                     'description': role.description,
                     'assigned': role.id in assigned_role_ids
                 })
-            
+
             user_data = {
                 'id': user.id,
                 'username': user.username,
@@ -576,7 +576,7 @@ def get_developer_user_details(user_id):
             return jsonify({'success': True, 'user': user_data})
         else:
             return jsonify({'success': False, 'error': 'User is not a developer'})
-            
+
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
@@ -587,13 +587,13 @@ def update_user():
     try:
         data = request.get_json()
         user_id = data.get('user_id')
-        
+
         user = User.query.get_or_404(user_id)
-        
+
         # Don't allow editing developer users through this endpoint
         if user.user_type == 'developer':
             return jsonify({'success': False, 'error': 'Cannot edit developer users through this endpoint'})
-        
+
         # Update user fields
         user.first_name = data.get('first_name', user.first_name)
         user.last_name = data.get('last_name', user.last_name)
@@ -601,37 +601,56 @@ def update_user():
         user.phone = data.get('phone', user.phone)
         user.user_type = data.get('user_type', user.user_type)
         user.is_active = data.get('is_active', user.is_active)
-        
-        # Handle organization owner flag with single owner constraint
-        new_owner_status = data.get('is_organization_owner', False)
-        
-        if new_owner_status and not user.is_organization_owner:
-            # User is being made an organization owner
-            # First, remove organization owner status from all other users in this org
-            other_owners = User.query.filter(
-                User.organization_id == user.organization_id,
-                User.id != user.id,
-                User._is_organization_owner == True
-            ).all()
-            
-            for other_owner in other_owners:
-                other_owner.is_organization_owner = False
-                # Remove the organization owner role from other owners
+
+        # Handle organization owner flag with single owner constraint and role transfer
+        if 'is_organization_owner' in data:
+            new_owner_status = data['is_organization_owner']
+            transfer_role = data.get('transfer_owner_role', False)
+
+            if new_owner_status and not user.is_organization_owner:
+                # User is being made an organization owner
+                # First, remove organization owner status and role from all other users in this org
+                other_owners = User.query.filter(
+                    User.organization_id == user.organization_id,
+                    User.id != user.id,
+                    User._is_organization_owner == True
+                ).all()
+
+                from app.models.role import Role
+                org_owner_role = Role.query.filter_by(name='organization_owner', is_system_role=True).first()
+
+                for other_owner in other_owners:
+                    print(f"Removing owner status from user {other_owner.id} ({other_owner.username})")
+                    other_owner.is_organization_owner = False
+                    # Remove the organization owner role from other owners
+                    if org_owner_role:
+                        other_owner.remove_role(org_owner_role)
+
+                # Now set this user as the owner and assign the role
+                user.is_organization_owner = True
+                print(f"Setting user {user.id} ({user.username}) as organization owner")
+
+                # Ensure the organization owner role is assigned
+                if org_owner_role:
+                    user.assign_role(org_owner_role, assigned_by=current_user)
+                    print(f"Assigned organization_owner role to user {user.id}")
+
+            elif not new_owner_status and user.is_organization_owner:
+                # User is being removed as organization owner
+                print(f"Removing organization owner status from user {user.id} ({user.username})")
+                user.is_organization_owner = False
+
+                # Remove the organization owner role
                 from app.models.role import Role
                 org_owner_role = Role.query.filter_by(name='organization_owner', is_system_role=True).first()
                 if org_owner_role:
-                    other_owner.remove_role(org_owner_role)
-                
-            # Now set this user as the owner
-            user.is_organization_owner = True
-        elif not new_owner_status:
-            # User is being removed as organization owner
-            user.is_organization_owner = False
-        
+                    user.remove_role(org_owner_role)
+                    print(f"Removed organization_owner role from user {user.id}")
+
         db.session.commit()
-        
+
         return jsonify({'success': True, 'message': 'User updated successfully'})
-        
+
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)})
@@ -643,31 +662,31 @@ def update_developer_user():
     try:
         data = request.get_json()
         user_id = data.get('user_id')
-        
+
         user = User.query.get_or_404(user_id)
-        
+
         if user.user_type != 'developer':
             return jsonify({'success': False, 'error': 'User is not a developer'})
-        
+
         # Update user fields
         user.first_name = data.get('first_name', user.first_name)
         user.last_name = data.get('last_name', user.last_name)
         user.email = data.get('email', user.email)
         user.phone = data.get('phone', user.phone)
         user.is_active = data.get('is_active', user.is_active)
-        
+
         # Update developer role assignments
         from app.models.user_role_assignment import UserRoleAssignment
-        
+
         # Deactivate existing developer role assignments
         existing_assignments = UserRoleAssignment.query.filter_by(
             user_id=user_id,
             is_active=True
         ).filter(UserRoleAssignment.developer_role_id.isnot(None)).all()
-        
+
         for assignment in existing_assignments:
             assignment.is_active = False
-        
+
         # Add new role assignments
         new_role_ids = data.get('roles', [])
         for role_id in new_role_ids:
@@ -676,7 +695,7 @@ def update_developer_user():
                 user_id=user_id,
                 developer_role_id=role_id
             ).first()
-            
+
             if existing:
                 existing.is_active = True
                 existing.assigned_at = datetime.utcnow()
@@ -689,11 +708,11 @@ def update_developer_user():
                     is_active=True
                 )
                 db.session.add(new_assignment)
-        
+
         db.session.commit()
-        
+
         return jsonify({'success': True, 'message': 'Developer user updated successfully'})
-        
+
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)})
@@ -706,16 +725,16 @@ def reset_user_password():
         data = request.get_json()
         user_id = data.get('user_id')
         new_password = data.get('new_password')
-        
+
         if not new_password:
             return jsonify({'success': False, 'error': 'New password is required'})
-        
+
         user = User.query.get_or_404(user_id)
         user.set_password(new_password)
         db.session.commit()
-        
+
         return jsonify({'success': True, 'message': 'Password reset successfully'})
-        
+
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)})
@@ -727,17 +746,17 @@ def soft_delete_user():
     try:
         data = request.get_json()
         user_id = data.get('user_id')
-        
+
         user = User.query.get_or_404(user_id)
-        
+
         # Don't allow soft deleting developer users
         if user.user_type == 'developer':
             return jsonify({'success': False, 'error': 'Cannot soft delete developer users'})
-        
+
         user.soft_delete(current_user)
-        
+
         return jsonify({'success': True, 'message': 'User soft deleted successfully'})
-        
+
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)})
@@ -748,27 +767,65 @@ def login_as_user(user_id):
     """Login as another user for customer support"""
     try:
         target_user = User.query.get_or_404(user_id)
-        
+
         # Don't allow logging in as other developers
         if target_user.user_type == 'developer':
             flash('Cannot login as another developer user', 'error')
             return redirect(url_for('developer.users'))
-        
+
         # Log this action for security audit
         import logging
         logging.warning(f"DEVELOPER LOGIN AS USER: Developer {current_user.username} logged in as user {target_user.username} (ID: {target_user.id})")
-        
+
         # Store the original developer user in session before switching
         session['original_developer_id'] = current_user.id
         session['is_developer_impersonation'] = True
-        
+
         # Login as the target user
         from flask_login import login_user
         login_user(target_user)
-        
+
         flash(f'Logged in as {target_user.username} (Developer Impersonation Mode)', 'info')
         return redirect(url_for('app_routes.dashboard'))
-        
+
     except Exception as e:
         flash(f'Error logging in as user: {str(e)}', 'error')
         return redirect(url_for('developer.users'))
+
+@developer_bp.route('/api/user/<int:user_id>')
+@login_required
+def get_user_api(user_id):
+    """Get user data for management modal"""
+    try:
+        user = User.query.get_or_404(user_id)
+
+        # Get the actual organization owner status
+        is_org_owner = getattr(user, 'is_organization_owner', False)
+
+        user_data = {
+            'id': user.id,
+            'username': user.username,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'email': user.email,
+            'phone': user.phone,
+            'user_type': user.user_type,
+            'is_organization_owner': is_org_owner,
+            '_is_organization_owner': getattr(user, '_is_organization_owner', False),  # Also include the private field
+            'is_active': user.is_active,
+            'display_role': user.display_role,  # Include display role for additional context
+            'created_at': user.created_at.strftime('%Y-%m-%d %H:%M:%S') if user.created_at else None,
+            'last_login': user.last_login.strftime('%Y-%m-%d %H:%M:%S') if user.last_login else None,
+            'organization': {
+                'id': user.organization.id,
+                'name': user.organization.name
+            } if user.organization else None
+        }
+
+        # Debug logging
+        print(f"API returning user {user_id} with is_organization_owner: {is_org_owner}")
+
+        return jsonify({'success': True, 'user': user_data})
+
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
