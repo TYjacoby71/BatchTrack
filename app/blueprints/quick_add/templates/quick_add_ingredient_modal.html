@@ -42,7 +42,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const form = document.getElementById('quickAddIngredientForm');
   if (!form) return;
 
-  form.addEventListener('submit', async function(e) {
+  form.addEventListener('submit', function(e) {
     e.preventDefault();
 
     const nameInput = document.getElementById('new-ingredient-name');
@@ -60,21 +60,20 @@ document.addEventListener('DOMContentLoaded', function() {
     submitBtn.disabled = true;
     submitBtn.textContent = 'Adding...';
 
-    try {
-      const response = await fetch('/quick-add/ingredient', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content,
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify({ name, unit })
-      });
-
+    fetch('/quick-add/ingredient', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content,
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({ name, unit })
+    })
+    .then(response => {
       if (!response.ok) throw new Error('Failed to add ingredient');
-
-      const data = await response.json();
-
+      return response.json();
+    })
+    .then(data => {
       // Add to dropdowns
       document.querySelectorAll('select[name="ingredient_ids[]"]').forEach(select => {
         const option = new Option(data.name, data.id);
@@ -91,14 +90,15 @@ document.addEventListener('DOMContentLoaded', function() {
       
       // Reload page to refresh dropdowns
       window.location.reload();
-
-    } catch (error) {
+    })
+    .catch(error => {
       console.error('Error:', error);
       alert('Failed to add ingredient');
-    } finally {
+    })
+    .finally(() => {
       submitBtn.disabled = false;
       submitBtn.textContent = 'Add Ingredient';
-    }
+    });
   });
 
   // Quick Add Unit Handler
