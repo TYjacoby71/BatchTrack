@@ -15,7 +15,6 @@
     "user_limit": 1,
     "is_customer_facing": false,
     "is_available": true,
-    "is_stripe_ready": false,
     "fallback_features": [
       "View inventory levels",
       "Manual stock adjustments only",
@@ -52,7 +51,6 @@
     "user_limit": 1,
     "is_customer_facing": true,
     "is_available": true,
-    "is_stripe_ready": false,
     "fallback_features": [
       "Complete batch tracking with FIFO",
       "Recipe management and scaling",
@@ -104,7 +102,6 @@
     "user_limit": 10,
     "is_customer_facing": true,
     "is_available": true,
-    "is_stripe_ready": false,
     "fallback_features": [
       "Everything in Solo Plan",
       "Product catalog with variants",
@@ -156,7 +153,6 @@
     "user_limit": -1,
     "is_customer_facing": true,
     "is_available": true,
-    "is_stripe_ready": false,
     "fallback_features": [
       "Everything in Team Plan",
       "Unlimited users and organizations",
@@ -245,7 +241,6 @@
     "user_limit": -1,
     "is_customer_facing": false,
     "is_available": true,
-    "is_stripe_ready": false,
     "fallback_features": [
       "All Enterprise features",
       "System administration access",

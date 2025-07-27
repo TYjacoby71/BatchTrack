@@ -155,7 +155,7 @@ def edit_tier(tier_key):
         tier['user_limit'] = int(request.form.get('user_limit', tier.get('user_limit', 1)))
         tier['is_customer_facing'] = 'is_customer_facing' in request.form
         tier['is_available'] = 'is_available' in request.form
-        tier['is_stripe_ready'] = 'is_stripe_ready' in request.form
+
 
         tier['permissions'] = request.form.getlist('permissions')
         tier['feature_groups'] = request.form.getlist('feature_groups')
