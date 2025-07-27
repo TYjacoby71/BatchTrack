@@ -52,16 +52,8 @@
                 {% if sku.inventory_item.cost_per_unit %}
                   {% set ns.total_cost = ns.total_cost + (sku.inventory_item.quantity * sku.inventory_item.cost_per_unit) %}
                 {% endif %}
-                {% if sku.price %}
-                  {% set ns.total_value = ns.total_value + (sku.inventory_item.quantity * sku.price) %}
-                {% endif %}
-              {% endif %}
-            {% endfor %}
-          {% endfor %}
-                  {% set ns.total_cost = ns.total_cost + (sku.inventory_item.cost_per_unit * sku.inventory_item.quantity) %}
-                {% endif %}
                 {% if sku.retail_price %}
-                  {% set ns.total_value = ns.total_value + (sku.retail_price * sku.inventory_item.quantity) %}
+                  {% set ns.total_value = ns.total_value + (sku.inventory_item.quantity * sku.retail_price) %}
                 {% endif %}
               {% endif %}
             {% endfor %}
