@@ -215,9 +215,10 @@ function populateUserManagementModal(user) {
 async function saveModalUser() {
     const userId = document.getElementById('modalUserId').value;
     const isOwnerChecked = document.getElementById('modalUserIsOwner').checked;
+    const wasOwnerBefore = currentModalUser && (currentModalUser.is_organization_owner === true || currentModalUser._is_organization_owner === true);
 
     // Check if trying to make this user an owner when another owner already exists (for organization context)
-    if (modalContext === 'organization' && isOwnerChecked) {
+    if (modalContext === 'organization' && isOwnerChecked && !wasOwnerBefore) {
         const currentOwners = Array.from(document.querySelectorAll('.user-row')).filter(row => {
             const ownerCell = row.querySelector('.owner-status');
             const rowUserId = row.dataset.userId;
@@ -225,7 +226,7 @@ async function saveModalUser() {
         });
 
         if (currentOwners.length > 0) {
-            if (!confirm('Making this user an organization owner will remove owner status from the current owner. Continue?')) {
+            if (!confirm('Making this user an organization owner will remove owner status and role from the current owner and transfer it to this user. Continue?')) {
                 return;
             }
         }
@@ -239,7 +240,8 @@ async function saveModalUser() {
         phone: document.getElementById('modalUserPhone').value,
         user_type: 'customer', // Default to customer since we removed the user type field
         is_organization_owner: isOwnerChecked,
-        is_active: document.getElementById('modalUserIsActive').checked
+        is_active: document.getElementById('modalUserIsActive').checked,
+        transfer_owner_role: isOwnerChecked && !wasOwnerBefore // Flag to indicate role transfer is needed
     };
 
     try {
