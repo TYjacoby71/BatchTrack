@@ -426,26 +426,24 @@
 let currentOrgUser = null;
 
 // Organization User Management Functions
-async function editOrgUser(userId) {
-    try {
-        const response = await fetch(`/developer/api/user/${userId}`, {
-            method: 'GET',
-            headers: {
-                'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
-            }
-        });
+function editOrgUser(userId) {
+    const user = {{ users|tojson }}.find(u => u.id === userId);
+    if (!user) return;
 
-        const data = await response.json();
-        if (data.success) {
-            currentOrgUser = data.user;
-            populateOrgUserModal(data.user);
-            new bootstrap.Modal(document.getElementById('editOrgUserModal')).show();
-        } else {
-            alert('Error loading user data: ' + data.error);
-        }
-    } catch (error) {
-        alert('Network error occurred');
-    }
+    // Populate modal fields
+    document.getElementById('orgUserId').value = user.id;
+    document.getElementById('orgUserFirstName').value = user.first_name || '';
+    document.getElementById('orgUserLastName').value = user.last_name || '';
+    document.getElementById('orgUserEmail').value = user.email || '';
+    document.getElementById('orgUserPhone').value = user.phone || '';
+    document.getElementById('orgUserIsOwner').checked = user.is_organization_owner || false;
+    document.getElementById('orgUserIsActive').checked = user.is_active || false;
+    document.getElementById('orgUserType').textContent = user.user_type || 'customer';
+    document.getElementById('orgUserCreatedAt').textContent = user.created_at || 'N/A';
+
+    // Show the modal
+    const modal = new bootstrap.Modal(document.getElementById('editOrgUserModal'));
+    modal.show();
 }
 
 function populateOrgUserModal(user) {

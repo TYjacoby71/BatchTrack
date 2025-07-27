@@ -596,6 +596,11 @@ def update_user():
             
             for other_owner in other_owners:
                 other_owner.is_organization_owner = False
+                # Remove the organization owner role from other owners
+                from app.models.role import Role
+                org_owner_role = Role.query.filter_by(name='organization_owner', is_system_role=True).first()
+                if org_owner_role:
+                    other_owner.remove_role(org_owner_role)
                 
             # Now set this user as the owner
             user.is_organization_owner = True
