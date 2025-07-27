@@ -428,7 +428,9 @@ let currentOrgUser = null;
 
 // Organization User Management Functions
 function editOrgUser(userId) {
-    const user = {{ users|tojson }}.find(u => u.id === userId);
+    // Get users data from template
+    const users = {{ users_objects|tojson }};
+    const user = users.find(u => u.id === userId);
     if (!user) return;
 
     // Store current user for other functions
