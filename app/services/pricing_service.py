@@ -10,27 +10,53 @@ class PricingService:
 
     @staticmethod
     def get_pricing_data():
-        """Get pricing data from Stripe with graceful fallbacks"""
+        """Get pricing data from Stripe with graceful fallbacks and tier-level resilience"""
+        final_pricing_data = {}
+        
         # Always try to get live Stripe data first
         try:
             pricing_data = PricingService._get_stripe_pricing()
             if pricing_data:
-                return pricing_data
+                final_pricing_data.update(pricing_data)
+                logger.info(f"Successfully retrieved pricing for {len(pricing_data)} tiers from Stripe")
         except Exception as e:
             logger.error(f"Failed to get Stripe pricing data: {str(e)}")
         
-        # If Stripe fails, try cached snapshots from PricingSnapshot model
-        logger.info("Stripe unavailable - trying cached pricing snapshots")
-        try:
-            snapshot_data = PricingService._get_snapshot_pricing_data()
-            if snapshot_data:
-                return snapshot_data
-        except Exception as e:
-            logger.error(f"Failed to get cached pricing data: {str(e)}")
+        # If we don't have complete data, try cached snapshots for missing tiers
+        all_tiers = PricingService._load_tiers_config()
+        missing_tiers = []
         
-        # Final fallback - use configuration data
-        logger.info("No Stripe or snapshot data available - using configuration fallback")
-        return PricingService._get_fallback_pricing()
+        for tier_key, tier_data in all_tiers.items():
+            if not isinstance(tier_data, dict):
+                continue
+            if not (tier_data.get('is_customer_facing', True) and tier_data.get('is_available', True)):
+                continue
+            if tier_key not in final_pricing_data:
+                missing_tiers.append(tier_key)
+        
+        if missing_tiers:
+            logger.info(f"Trying cached snapshots for missing tiers: {missing_tiers}")
+            try:
+                snapshot_data = PricingService._get_snapshot_pricing_data()
+                for tier_key in missing_tiers:
+                    if tier_key in snapshot_data:
+                        final_pricing_data[tier_key] = snapshot_data[tier_key]
+                        logger.info(f"Retrieved tier {tier_key} from cached snapshots")
+            except Exception as e:
+                logger.error(f"Failed to get cached pricing data: {str(e)}")
+        
+        # For any remaining missing tiers, use configuration fallback
+        still_missing = [tier for tier in missing_tiers if tier not in final_pricing_data]
+        if still_missing:
+            logger.info(f"Using configuration fallback for remaining tiers: {still_missing}")
+            fallback_data = PricingService._get_fallback_pricing()
+            for tier_key in still_missing:
+                if tier_key in fallback_data:
+                    final_pricing_data[tier_key] = fallback_data[tier_key]
+                    logger.info(f"Using fallback data for tier {tier_key}")
+        
+        logger.info(f"Final pricing data assembled for {len(final_pricing_data)} tiers")
+        return final_pricing_data
 
     @staticmethod
     def _load_tiers_config():
@@ -100,8 +126,11 @@ class PricingService:
         # Load dynamic tiers configuration
         all_tiers = PricingService._load_tiers_config()
 
-        # Start with fallback data structure
+        # Start with fallback data structure - ensure we always have something for each tier
         pricing_data = {}
+        successful_tiers = 0
+        failed_tiers = 0
+        
         for tier_key, tier_data in all_tiers.items():
             # Skip if tier_data is not a dictionary
             if not isinstance(tier_data, dict):
@@ -109,8 +138,12 @@ class PricingService:
             if not (tier_data.get('is_customer_facing', True) and tier_data.get('is_available', True)):
                 continue
 
+            # Always start with fallback data - guarantees we have something
+            pricing_data[tier_key] = PricingService._get_tier_fallback_data(tier_key, tier_data)
+
             lookup_key = tier_data.get('stripe_lookup_key')
             if not lookup_key:
+                logger.info(f"Tier {tier_key} has no Stripe lookup key - using fallback only")
                 continue
 
             logger.info(f"Looking up Stripe product for tier {tier_key} with lookup_key: {lookup_key}")
@@ -125,34 +158,32 @@ class PricingService:
                     price = prices.data[0]
                     product = stripe.Product.retrieve(price.product)
 
-                    pricing_data[tier_key] = {
+                    # Update with Stripe data - overlay on top of fallback
+                    pricing_data[tier_key].update({
                         'name': product.name or tier_data.get('name', tier_key.title()),
                         'price': f"${price.unit_amount / 100:.0f}",
-                        'features': tier_data.get('fallback_features', []),
                         'description': product.description or tier_data.get('description', f"Perfect for {tier_key} operations"),
-                        'user_limit': tier_data.get('user_limit', 1),
                         'stripe_lookup_key': lookup_key,
                         'stripe_price_id_monthly': price.id if price.recurring and price.recurring.interval == 'month' else None,
                         'stripe_product_id': product.id,
-                        'is_stripe_ready': True
-                    }
+                        'is_stripe_ready': True,
+                        'is_fallback': False
+                    })
 
-                    logger.info(f"Successfully loaded pricing for {tier_key}: ${price.unit_amount / 100:.0f}")
+                    successful_tiers += 1
+                    logger.info(f"Successfully loaded Stripe pricing for {tier_key}: ${price.unit_amount / 100:.0f}")
                 else:
-                    logger.warning(f"No Stripe price found for lookup_key: {lookup_key}")
-                    # Fallback to config data
-                    pricing_data[tier_key] = PricingService._get_tier_fallback_data(tier_key, tier_data)
+                    logger.warning(f"No Stripe price found for lookup_key: {lookup_key} - using fallback for {tier_key}")
+                    failed_tiers += 1
 
             except stripe.error.StripeError as e:
-                logger.error(f"Stripe error for tier {tier_key}: {str(e)}")
-                # Fallback to config data
-                pricing_data[tier_key] = PricingService._get_tier_fallback_data(tier_key, tier_data)
+                logger.error(f"Stripe error for tier {tier_key}: {str(e)} - using fallback")
+                failed_tiers += 1
             except Exception as e:
-                logger.error(f"Unexpected error for tier {tier_key}: {str(e)}")
-                # Fallback to config data
-                pricing_data[tier_key] = PricingService._get_tier_fallback_data(tier_key, tier_data)
+                logger.error(f"Unexpected error for tier {tier_key}: {str(e)} - using fallback")
+                failed_tiers += 1
 
-        logger.info(f"Retrieved pricing for {len(pricing_data)} tiers from Stripe")
+        logger.info(f"Pricing retrieval complete: {successful_tiers} tiers from Stripe, {failed_tiers} using fallback, {len(pricing_data)} total available")
         return pricing_data
 
     @staticmethod

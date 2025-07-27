@@ -224,7 +224,7 @@ def delete_tier(tier_key):
 @subscription_tiers_bp.route('/sync/<tier_key>', methods=['POST'])
 @login_required
 def sync_tier(tier_key):
-    """Sync a tier with Stripe pricing and features"""
+    """Sync a tier with Stripe pricing and features - resilient to failures"""
     import stripe
     from datetime import datetime
 
@@ -248,7 +248,7 @@ def sync_tier(tier_key):
         stripe.api_key = stripe_key
         logger.info(f"Stripe initialized for sync of tier {tier_key} with lookup key: {lookup_key}")
 
-        # First try to find product by lookup key in prices, then fall back to name matching
+        # Wrap the entire sync operation in try-catch to ensure failures are contained
         try:
             product = None
             
@@ -265,38 +265,52 @@ def sync_tier(tier_key):
             # Method 2: If lookup key failed, fall back to name matching
             if not product:
                 logger.info(f"Lookup key '{lookup_key}' not found, falling back to name matching")
-                all_products = stripe.Product.list(limit=100, active=True)
-                
-                # Try to match by product name containing tier key
-                tier_name_variations = [
-                    f"BatchTrack {tier_key.title()}",  # "BatchTrack Solo"
-                    f"BatchTrack {tier['name']}",      # "BatchTrack Solo Plan"
-                    tier_key.title(),                  # "Solo"
-                    tier['name']                       # "Solo Plan"
-                ]
+                try:
+                    all_products = stripe.Product.list(limit=100, active=True)
+                    
+                    # Try to match by product name containing tier key
+                    tier_name_variations = [
+                        f"BatchTrack {tier_key.title()}",  # "BatchTrack Solo"
+                        f"BatchTrack {tier['name']}",      # "BatchTrack Solo Plan"
+                        tier_key.title(),                  # "Solo"
+                        tier['name']                       # "Solo Plan"
+                    ]
 
-                logger.info(f"Searching for product matching tier '{tier_key}' in {len(all_products.data)} products")
+                    logger.info(f"Searching for product matching tier '{tier_key}' in {len(all_products.data)} products")
 
-                for p in all_products.data:
-                    logger.info(f"Checking product: {p.name} (ID: {p.id})")
-                    # Try name matching
-                    for name_variation in tier_name_variations:
-                        if name_variation.lower() in p.name.lower():
-                            product = p
-                            logger.info(f"Found matching product: {p.name} for variation: {name_variation}")
+                    for p in all_products.data:
+                        logger.info(f"Checking product: {p.name} (ID: {p.id})")
+                        # Try name matching
+                        for name_variation in tier_name_variations:
+                            if name_variation.lower() in p.name.lower():
+                                product = p
+                                logger.info(f"Found matching product: {p.name} for variation: {name_variation}")
+                                break
+                        if product:
                             break
-                    if product:
-                        break
+                except stripe.error.StripeError as product_list_error:
+                    logger.error(f"Failed to list products for name matching: {str(product_list_error)}")
 
             if not product:
-                available_products = [p.name for p in stripe.Product.list(limit=100, active=True).data]
-                return jsonify({'error': f'No Stripe product found for tier: {tier_key} (lookup key: {lookup_key}). Available products: {available_products}'}), 404
+                # Don't fail the entire operation - just return a warning
+                logger.warning(f"No Stripe product found for tier: {tier_key} (lookup key: {lookup_key})")
+                return jsonify({
+                    'success': False,
+                    'error': f'No Stripe product found for tier: {tier_key} (lookup key: {lookup_key}). Check your Stripe dashboard.',
+                    'tier': tier,
+                    'fallback_used': True
+                }), 404
 
             logger.info(f"Found Stripe product: {product.id} ({product.name})")
 
         except stripe.error.StripeError as search_error:
             logger.error(f"Stripe API failed for lookup key {lookup_key}: {str(search_error)}")
-            return jsonify({'error': f'Stripe API failed: {str(search_error)}'}), 400
+            return jsonify({
+                'success': False,
+                'error': f'Stripe API error: {str(search_error)}',
+                'tier': tier,
+                'fallback_used': True
+            }), 400
 
         # Get prices for this product
         try:
