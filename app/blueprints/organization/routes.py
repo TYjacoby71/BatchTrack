@@ -550,6 +550,28 @@ def update_user(user_id):
             role = Role.query.filter_by(id=data['role_id']).first()
             if role and role.name not in ['developer', 'organization_owner']:
                 user.role_id = data['role_id']
+        
+        # Handle organization owner flag with single owner constraint
+        if 'is_organization_owner' in data:
+            new_owner_status = data['is_organization_owner']
+            
+            if new_owner_status and not user.is_organization_owner:
+                # User is being made an organization owner
+                # First, remove organization owner status from all other users in this org
+                other_owners = User.query.filter(
+                    User.organization_id == user.organization_id,
+                    User.id != user.id,
+                    User._is_organization_owner == True
+                ).all()
+                
+                for other_owner in other_owners:
+                    other_owner.is_organization_owner = False
+                    
+                # Now set this user as the owner
+                user.is_organization_owner = True
+            elif not new_owner_status:
+                # User is being removed as organization owner
+                user.is_organization_owner = False
 
         # Handle status changes - check subscription limits for activation
         if 'is_active' in data:

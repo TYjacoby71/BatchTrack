@@ -582,8 +582,26 @@ def update_user():
         user.user_type = data.get('user_type', user.user_type)
         user.is_active = data.get('is_active', user.is_active)
         
-        # Handle organization owner flag
-        user.is_organization_owner = data.get('is_organization_owner', False)
+        # Handle organization owner flag with single owner constraint
+        new_owner_status = data.get('is_organization_owner', False)
+        
+        if new_owner_status and not user.is_organization_owner:
+            # User is being made an organization owner
+            # First, remove organization owner status from all other users in this org
+            other_owners = User.query.filter(
+                User.organization_id == user.organization_id,
+                User.id != user.id,
+                User._is_organization_owner == True
+            ).all()
+            
+            for other_owner in other_owners:
+                other_owner.is_organization_owner = False
+                
+            # Now set this user as the owner
+            user.is_organization_owner = True
+        elif not new_owner_status:
+            # User is being removed as organization owner
+            user.is_organization_owner = False
         
         db.session.commit()
         

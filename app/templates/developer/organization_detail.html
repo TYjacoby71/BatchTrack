@@ -158,7 +158,7 @@
                             </thead>
                             <tbody>
                                 {% for user in users %}
-                                <tr>
+                                <tr class="user-row" data-user-id="{{ user.id }}">
                                     <td>
                                         <div>
                                             <strong>{{ user.full_name or user.username }}</strong>
@@ -170,11 +170,13 @@
                                             {% endif %}
                                         </div>
                                     </td>
-                                    <td>
+                                    <td class="owner-status">
                                         {% if user.is_organization_owner %}
-                                        <span class="badge bg-primary">Customer (Owner)</span>
+                                            <span class="badge bg-warning text-dark">Organization Owner</span>
+                                        {% elif user.user_type %}
+                                            <span class="badge bg-secondary">{{ user.user_type.replace('_', ' ').title() }}</span>
                                         {% else %}
-                                        <span class="badge bg-secondary">{{ user.user_type.replace('_', ' ').title() }}</span>
+                                            <span class="text-muted">Unassigned</span>
                                         {% endif %}
                                     </td>
                                     <td>
@@ -460,7 +462,25 @@ function populateOrgUserModal(user) {
     document.getElementById('orgUserCreatedAt').textContent = user.created_at || 'N/A';
 }
 
-async function saveOrgUser() {
+function saveOrgUser() {
+    const userId = document.getElementById('orgUserId').value;
+    const isOwnerChecked = document.getElementById('orgUserIsOwner').checked;
+
+    // Check if trying to make this user an owner when another owner already exists
+    if (isOwnerChecked) {
+        const currentOwners = Array.from(document.querySelectorAll('.user-row')).filter(row => {
+            const ownerCell = row.querySelector('.owner-status');
+            const rowUserId = row.dataset.userId;
+            return ownerCell && ownerCell.textContent.includes('Organization Owner') && rowUserId !== userId;
+        });
+
+        if (currentOwners.length > 0) {
+            if (!confirm('Making this user an organization owner will remove owner status from the current owner. Continue?')) {
+                return;
+            }
+        }
+    }
+
     const userData = {
         user_id: document.getElementById('orgUserId').value,
         first_name: document.getElementById('orgUserFirstName').value,
@@ -468,7 +488,7 @@ async function saveOrgUser() {
         email: document.getElementById('orgUserEmail').value,
         phone: document.getElementById('orgUserPhone').value,
         user_type: document.getElementById('orgUserType').value,
-        is_organization_owner: document.getElementById('orgUserIsOwner').checked,
+        is_organization_owner: isOwnerChecked,
         is_active: document.getElementById('orgUserIsActive').checked
     };
 
