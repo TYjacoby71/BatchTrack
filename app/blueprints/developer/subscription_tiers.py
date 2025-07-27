@@ -357,6 +357,10 @@ def sync_tier(tier_key):
 
         # Preserve existing stripe_lookup_key - this is the user's manual configuration
         # and should NEVER be overwritten by sync operations
+        
+        # Ensure the lookup key is preserved in the tier data
+        if not tier.get('stripe_lookup_key'):
+            logger.warning(f"No stripe_lookup_key found for tier {tier_key} - this should be set manually")
 
         # Update pricing snapshots for resilience
         try:
@@ -381,6 +385,9 @@ def sync_tier(tier_key):
             # Don't fail the sync if snapshots fail
 
         save_tiers_config(tiers)
+
+        # Also update database record with the current lookup key
+        sync_tier_to_database(tier_key, tier)
 
         logger.info(f"Synced tier {tier_key} with Stripe - preserved lookup key: {lookup_key}")
 

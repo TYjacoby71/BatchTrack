@@ -52,7 +52,7 @@
     "user_limit": 1,
     "is_customer_facing": true,
     "is_available": true,
-    "is_stripe_ready": true,
+    "is_stripe_ready": false,
     "fallback_features": [
       "Complete batch tracking with FIFO",
       "Recipe management and scaling",
@@ -152,11 +152,11 @@
       "limited_inventory",
       "batch_production"
     ],
-    "stripe_lookup_key": "batchtrack_enterprise_plan",
+    "stripe_lookup_key": "batchtrack_enterprise_monthly",
     "user_limit": -1,
     "is_customer_facing": true,
     "is_available": true,
-    "is_stripe_ready": true,
+    "is_stripe_ready": false,
     "fallback_features": [
       "Everything in Team Plan",
       "Unlimited users and organizations",
@@ -174,7 +174,7 @@
     ],
     "stripe_price_monthly": "$20",
     "stripe_price_yearly": "$220",
-    "last_synced": "2025-07-26T08:39:25.496679",
+    "last_synced": "2025-07-27T06:56:32.065039",
     "fallback_price_monthly": "$0",
     "fallback_price_yearly": "$0",
     "stripe_price_id_monthly": "price_1RnS8pF4Y9XQgiJBr3Wq1LIH",

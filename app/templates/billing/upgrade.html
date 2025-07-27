@@ -138,50 +138,29 @@
 
                 <div class="card-footer text-center">
                     {% if current_tier != tier_name %}
-                    <!-- Debug Info - Only show in DEBUG mode -->
-                    {% if config.get('DEBUG') %}
-                    <div class="alert alert-info small mb-2">
-                      <strong>Debug:</strong> is_stripe_ready: {{ tier_data.get('is_stripe_ready', False) }}, 
-                      Stripe configured: {{ config.get('STRIPE_SECRET_KEY') is not none }}
-                    </div>
-                    {% endif %}
-
-                    {% if tier_data.get('is_stripe_ready', False) %}
-                      <!-- Stripe Ready Tier - Real Payment Required -->
+                    <!-- All tiers now require Stripe configuration -->
+                    {% if tier_data.get('stripe_price_id_monthly') or tier_data.get('stripe_price_id_yearly') %}
+                      <!-- Tier has Stripe configuration - allow checkout -->
                       <form method="POST" action="{{ url_for('billing.checkout', tier=tier_name) }}" class="d-inline">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                         <button type="submit" class="btn btn-primary btn-lg w-100 mb-2">
                           <i class="fas fa-credit-card"></i> Upgrade to {{ tier_data.get('name', tier_name.title()) }}
                         </button>
                       </form>
-                    {% elif not tier_data.get('is_stripe_ready', False) %}
-                      <!-- Development/Simulation Tier -->
-                      <form method="POST" action="{{ url_for('billing.dev_activate_subscription', tier=tier_name) }}" class="d-inline">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                        <button type="submit" class="btn btn-success btn-lg w-100 mb-2">
-                          <i class="fas fa-play"></i> Activate {{ tier_data.get('name', tier_name.title()) }} (Dev Mode)
-                        </button>
-                      </form>
-                    {% else %}
-                      <!-- Stripe Ready but not configured - Only show in DEBUG mode -->
-                      {% if config.get('DEBUG') %}
-                      <div class="alert alert-warning">
-                        <strong>Configuration Required:</strong> This tier requires Stripe configuration. 
-                        <a href="/secrets" target="_blank">Add Stripe secrets</a> to enable payments.
-                      </div>
-                      {% else %}
-                      <!-- In production, show contact support message instead -->
-                      <div class="alert alert-info">
-                        <strong>Contact Sales:</strong> This tier requires setup assistance. 
-                        Please contact our support team to enable this plan.
-                      </div>
+                      {% if tier_data.get('price_yearly') %}
+                      <a href="{{ url_for('billing.checkout', tier=tier_name, billing_cycle='yearly') }}" 
+                         class="btn btn-outline-success btn-sm mt-2">
+                          Choose Yearly
+                      </a>
                       {% endif %}
-                    {% endif %}
-                    {% if tier_data.get('price_yearly') %}
-                    <a href="{{ url_for('billing.checkout', tier=tier_name, billing_cycle='yearly') }}" 
-                       class="btn btn-outline-success btn-sm mt-2">
-                        Choose Yearly
-                    </a>
+                    {% else %}
+                      <!-- Tier not configured in Stripe -->
+                      <div class="alert alert-warning">
+                        <strong>Not Available:</strong> This tier requires Stripe configuration.
+                        {% if config.get('DEBUG') %}
+                        <br>Use the sync button in the developer interface to configure this tier.
+                        {% endif %}
+                      </div>
                     {% endif %}
                     {% else %}
                     <button class="btn btn-secondary btn-block" disabled>Current Plan</button>
@@ -207,20 +186,19 @@ function debugCheckout(tierKey, tierName, isStripeReady) {
         // Additional debug info can be added here as needed.
     }
 
-    async function loadDebugData() {
-        try {
-            // Make an API request to fetch detailed debug information
-            const response = await fetch('/billing/debug', {
-                headers: {
-                    'Accept': 'application/json'
-                }
-            });
-
+    function loadDebugData() {
+        fetch('/billing/debug', {
+            headers: {
+                'Accept': 'application/json'
+            }
+        })
+        .then(response => {
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
-
-            const data = await response.json();
+            return response.json();
+        })
+        .then(data => {
             const debugJsonElement = document.getElementById('debug-json');
             const debugDetailsElement = document.getElementById('debug-details');
 
@@ -231,13 +209,14 @@ function debugCheckout(tierKey, tierName, isStripeReady) {
             if (debugDetailsElement) {
                 debugDetailsElement.style.display = 'block';
             }
-        } catch (error) {
+        })
+        .catch(error => {
             console.error('Error fetching debug data:', error);
             const debugJsonElement = document.getElementById('debug-json');
             if (debugJsonElement) {
                 debugJsonElement.textContent = 'Error: ' + error.message;
             }
-        }
+        });
     }
 </script>
 {% endblock %}

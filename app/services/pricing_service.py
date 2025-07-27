@@ -10,32 +10,27 @@ class PricingService:
 
     @staticmethod
     def get_pricing_data():
-        """Get pricing data with proper fallback handling"""
-        logger.info("=== PRICING SERVICE ===")
-
-        # Check if we're in development mode based on webhook secret
-        import os
-        webhook_secret = os.environ.get('STRIPE_WEBHOOK_SECRET') or current_app.config.get('STRIPE_WEBHOOK_SECRET')
-        secret_key = os.environ.get('STRIPE_SECRET_KEY') or current_app.config.get('STRIPE_SECRET_KEY')
-        publishable_key = os.environ.get('STRIPE_PUBLISHABLE_KEY') or current_app.config.get('STRIPE_PUBLISHABLE_KEY')
+        """Get pricing data from Stripe with graceful fallbacks"""
+        # Always try to get live Stripe data first
+        try:
+            pricing_data = PricingService._get_stripe_pricing()
+            if pricing_data:
+                return pricing_data
+        except Exception as e:
+            logger.error(f"Failed to get Stripe pricing data: {str(e)}")
         
-        is_development = not webhook_secret
-        logger.info(f"Development mode: {is_development}")
-        logger.info(f"Stripe secret key configured: {bool(secret_key)}")
-        logger.info(f"Stripe webhook secret configured: {bool(webhook_secret)}")
-        logger.info(f"Stripe publishable key configured: {bool(publishable_key)}")
-
-        # Try to initialize Stripe
-        stripe_initialized = StripeService.initialize_stripe()
-        logger.info(f"Stripe initialization result: {stripe_initialized}")
-
-        if is_development or not stripe_initialized:
-            logger.info("Development mode: Using fallback pricing data")
-            return PricingService._get_fallback_pricing_data()
-
-        # Production mode - get pricing from Stripe or tier config
-        logger.info("Production mode: Getting pricing from tiers config")
-        return PricingService._get_tier_based_pricing_data()
+        # If Stripe fails, try cached snapshots from PricingSnapshot model
+        logger.info("Stripe unavailable - trying cached pricing snapshots")
+        try:
+            snapshot_data = PricingService._get_snapshot_pricing_data()
+            if snapshot_data:
+                return snapshot_data
+        except Exception as e:
+            logger.error(f"Failed to get cached pricing data: {str(e)}")
+        
+        # Final fallback - use configuration data
+        logger.info("No Stripe or snapshot data available - using configuration fallback")
+        return PricingService._get_fallback_pricing()
 
     @staticmethod
     def _load_tiers_config():
@@ -90,6 +85,18 @@ class PricingService:
     @staticmethod
     def _get_stripe_pricing():
         """Get comprehensive pricing data from Stripe for customer-facing and available tiers only"""
+        import stripe
+        import os
+        
+        # Check if Stripe is configured
+        stripe_secret = os.environ.get('STRIPE_SECRET_KEY') or current_app.config.get('STRIPE_SECRET_KEY')
+        if not stripe_secret:
+            logger.warning("Stripe API key not configured")
+            return {}
+        
+        # Set the API key
+        stripe.api_key = stripe_secret
+        
         # Load dynamic tiers configuration
         all_tiers = PricingService._load_tiers_config()
 
@@ -109,40 +116,30 @@ class PricingService:
             logger.info(f"Looking up Stripe product for tier {tier_key} with lookup_key: {lookup_key}")
 
             try:
-                # Search for products using lookup key
-                products = stripe.Product.search(
-                    query=f"metadata['lookup_key']:'{lookup_key}'",
-                    expand=['data.default_price']
-                )
+                # Search for prices using lookup key, then get the product
+                prices = stripe.Price.list(lookup_keys=[lookup_key], limit=1, active=True)
+                
+                logger.info(f"Found {len(prices.data)} prices for lookup_key: {lookup_key}")
 
-                logger.info(f"Found {len(products.data)} products for lookup_key: {lookup_key}")
+                if prices.data:
+                    price = prices.data[0]
+                    product = stripe.Product.retrieve(price.product)
 
-                if products.data:
-                    product = products.data[0]
+                    pricing_data[tier_key] = {
+                        'name': product.name or tier_data.get('name', tier_key.title()),
+                        'price': f"${price.unit_amount / 100:.0f}",
+                        'features': tier_data.get('fallback_features', []),
+                        'description': product.description or tier_data.get('description', f"Perfect for {tier_key} operations"),
+                        'user_limit': tier_data.get('user_limit', 1),
+                        'stripe_lookup_key': lookup_key,
+                        'stripe_price_id_monthly': price.id if price.recurring and price.recurring.interval == 'month' else None,
+                        'stripe_product_id': product.id,
+                        'is_stripe_ready': True
+                    }
 
-                    # Get the default price
-                    if product.default_price:
-                        price = product.default_price
-
-                        pricing_data[tier_key] = {
-                            'name': product.name or tier_data.get('name', tier_key.title()),
-                            'price': f"${price.unit_amount / 100:.0f}",
-                            'features': tier_data.get('fallback_features', []),
-                            'description': product.description or tier_data.get('description', f"Perfect for {tier_key} operations"),
-                            'user_limit': tier_data.get('user_limit', 1),
-                            'stripe_lookup_key': lookup_key,
-                            'stripe_price_id_monthly': price.id if price.recurring and price.recurring.interval == 'month' else None,
-                            'stripe_product_id': product.id,
-                            'is_stripe_ready': True
-                        }
-
-                        logger.info(f"Successfully loaded pricing for {tier_key}: ${price.unit_amount / 100:.0f}")
-                    else:
-                        logger.warning(f"Product {product.id} has no default price")
-                        # Fallback to config data
-                        pricing_data[tier_key] = PricingService._get_tier_fallback_data(tier_key, tier_data)
+                    logger.info(f"Successfully loaded pricing for {tier_key}: ${price.unit_amount / 100:.0f}")
                 else:
-                    logger.warning(f"No Stripe product found for lookup_key: {lookup_key}")
+                    logger.warning(f"No Stripe price found for lookup_key: {lookup_key}")
                     # Fallback to config data
                     pricing_data[tier_key] = PricingService._get_tier_fallback_data(tier_key, tier_data)
 
@@ -161,10 +158,23 @@ class PricingService:
     @staticmethod
     def _get_tier_fallback_data(tier_key, tier_data):
         """Get fallback data structure for a single tier"""
+        # Extract numeric price values for consistency with signup page expectations
+        price_monthly = tier_data.get('fallback_price_monthly', 0)
+        if isinstance(price_monthly, str):
+            # Remove $ sign and convert to float
+            price_monthly = float(price_monthly.replace('$', '').replace(',', '') or 0)
+        
+        price_yearly = tier_data.get('fallback_price_yearly', 0)
+        if isinstance(price_yearly, str):
+            # Remove $ sign and convert to float
+            price_yearly = float(price_yearly.replace('$', '').replace(',', '') or 0)
+        
         return {
             'name': tier_data.get('name', tier_key.title()),
-            'price': tier_data.get('fallback_price_monthly', '$0'),
-            'price_yearly': tier_data.get('fallback_price_yearly', '$0'),
+            'price': f"${price_monthly:.0f}" if price_monthly > 0 else '$0',
+            'price_display': f"${price_monthly:.0f}" if price_monthly > 0 else 'Free',
+            'price_monthly': price_monthly,
+            'price_yearly': price_yearly,
             'features': tier_data.get('fallback_features', []),
             'description': tier_data.get('description', f"Perfect for {tier_key} operations"),
             'user_limit': tier_data.get('user_limit', 1),
@@ -267,44 +277,42 @@ class PricingService:
         return pricing_data
 
     @staticmethod
-    def _get_fallback_pricing_data():
-        """Get fallback pricing data for development mode"""
-        from ..blueprints.developer.subscription_tiers import load_tiers_config
-
-        tiers_config = load_tiers_config()
-        pricing_data = {}
-
-        logger.info(f"Dev mode pricing data keys: {list(tiers_config.keys())}")
-
-        # Check if Stripe secrets are configured
-        import os
-        stripe_secret = os.environ.get('STRIPE_SECRET_KEY') or current_app.config.get('STRIPE_SECRET_KEY')
-        webhook_secret = os.environ.get('STRIPE_WEBHOOK_SECRET') or current_app.config.get('STRIPE_WEBHOOK_SECRET')
-        stripe_configured = bool(stripe_secret and webhook_secret)
-
-        for tier_key, tier_data in tiers_config.items():
-            # Only include customer-facing tiers
-            if not tier_data.get('is_customer_facing', True):
-                continue
-
-            # In fallback mode, respect tier's stripe_ready flag only if Stripe is configured
-            tier_is_stripe_ready = tier_data.get('is_stripe_ready', False)
-            effective_stripe_ready = tier_is_stripe_ready and stripe_configured
-
-            pricing_entry = {
-                'name': tier_data.get('name', tier_key.title()),
-                'price': tier_data.get('price_display', '$0'),
-                'features': tier_data.get('fallback_features', []),
-                'user_limit': tier_data.get('user_limit', 1),
-                'is_stripe_ready': effective_stripe_ready
-            }
-
-            # Add display pricing
-            if tier_data.get('price_monthly'):
-                pricing_entry['price_monthly'] = float(tier_data['price_monthly'])
-            if tier_data.get('price_yearly'):
-                pricing_entry['price_yearly'] = float(tier_data['price_yearly'])
-
-            pricing_data[tier_key] = pricing_entry
-
-        return pricing_data
+    def _get_snapshot_pricing_data():
+        """Get pricing data from cached PricingSnapshot records when Stripe is unavailable"""
+        try:
+            from ..models.pricing_snapshot import PricingSnapshot
+            from ..blueprints.developer.subscription_tiers import load_tiers_config
+            
+            tiers_config = load_tiers_config()
+            pricing_data = {}
+            
+            for tier_key, tier_data in tiers_config.items():
+                # Only include customer-facing and available tiers
+                if not (tier_data.get('is_customer_facing', True) and tier_data.get('is_available', True)):
+                    continue
+                
+                # Try to get cached pricing from snapshots
+                snapshot = PricingSnapshot.get_latest_for_tier(tier_key)
+                
+                if snapshot:
+                    pricing_data[tier_key] = {
+                        'name': tier_data.get('name', tier_key.title()),
+                        'price': f"${snapshot.monthly_price:.0f}" if snapshot.monthly_price else '$0',
+                        'price_yearly': f"${snapshot.yearly_price:.0f}" if snapshot.yearly_price else '$0',
+                        'features': tier_data.get('fallback_features', []),
+                        'description': tier_data.get('description', f"Perfect for {tier_key} operations"),
+                        'user_limit': tier_data.get('user_limit', 1),
+                        'stripe_lookup_key': tier_data.get('stripe_lookup_key', ''),
+                        'is_stripe_ready': True,  # Snapshots are from Stripe data
+                        'is_cached': True
+                    }
+                else:
+                    # No snapshot available - tier unavailable for purchase
+                    logger.warning(f"No pricing snapshot available for tier {tier_key}")
+            
+            logger.info(f"Retrieved cached pricing for {len(pricing_data)} tiers from snapshots")
+            return pricing_data
+            
+        except Exception as e:
+            logger.error(f"Failed to get cached pricing data: {str(e)}")
+            return {}
