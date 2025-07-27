@@ -1,5 +1,3 @@
-
-
 <!-- User Management Modal Component -->
 <div class="modal fade" id="userManagementModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
@@ -135,7 +133,7 @@ let modalContext = 'general'; // 'general', 'organization', 'developer'
 
 async function openUserManagementModal(userId, context = 'general', organizationData = null) {
     modalContext = context;
-    
+
     // Configure modal based on context
     if (context === 'organization') {
         document.getElementById('modalTitle').textContent = 'Manage Organization User';
@@ -159,7 +157,7 @@ async function openUserManagementModal(userId, context = 'general', organization
         });
 
         const data = await response.json();
-        
+
         if (data.success) {
             currentModalUser = data.user;
             populateUserManagementModal(data.user);
@@ -179,20 +177,20 @@ function populateUserManagementModal(user) {
     document.getElementById('modalUserLastName').value = user.last_name || '';
     document.getElementById('modalUserEmail').value = user.email || '';
     document.getElementById('modalUserPhone').value = user.phone || '';
-    
+
     // Handle organization owner status - check multiple possible property names
     const isOwner = user.is_organization_owner === true || user._is_organization_owner === true || 
                    (user.display_role && user.display_role.includes('Owner'));
     document.getElementById('modalUserIsOwner').checked = isOwner;
-    
+
     document.getElementById('modalUserIsActive').checked = user.is_active;
     document.getElementById('modalUserUsername').textContent = user.username;
     document.getElementById('modalUserLastLogin').textContent = user.last_login || 'Never';
     document.getElementById('modalUserCreatedAt').textContent = user.created_at || 'N/A';
-    
+
     // Display current role
     document.getElementById('modalUserCurrentRole').value = user.display_role || 'No Role Assigned';
-    
+
     // Display organization information
     if (user.organization) {
         document.getElementById('modalUserOrganizationName').textContent = user.organization.name;
@@ -201,7 +199,7 @@ function populateUserManagementModal(user) {
         document.getElementById('modalUserOrganizationName').textContent = 'No Organization';
         document.getElementById('modalUserOrgId').textContent = 'N/A';
     }
-    
+
     // Debug logging to see what we're getting
     console.log('User data in modal:', {
         id: user.id,
@@ -255,7 +253,7 @@ async function saveModalUser() {
         });
 
         const data = await response.json();
-        
+
         if (data.success) {
             alert('User updated successfully!');
             bootstrap.Modal.getInstance(document.getElementById('userManagementModal')).hide();
@@ -289,7 +287,7 @@ async function resetModalUserPassword() {
         });
 
         const data = await response.json();
-        
+
         if (data.success) {
             alert('Password reset successfully!');
         } else {
@@ -336,7 +334,7 @@ async function softDeleteModalUser() {
         });
 
         const data = await response.json();
-        
+
         if (data.success) {
             alert('User soft deleted successfully!');
             bootstrap.Modal.getInstance(document.getElementById('userManagementModal')).hide();
@@ -349,5 +347,69 @@ async function softDeleteModalUser() {
         alert('Network error occurred');
     }
 }
-</script>
 
+function openUserModal(userId) {
+    console.log('User data in modal:', { id: userId });
+
+    if (!userId) {
+        console.error('No user ID provided to openUserModal');
+        return;
+    }
+
+    // Reset form
+    document.getElementById('userForm').reset();
+    document.getElementById('userId').value = userId;
+
+    // Fetch user data
+    fetch(`/organization/user/${userId}`)
+        .then(response => response.json())
+        .then(user => {
+            // Populate form fields
+            document.getElementById('first_name').value = user.first_name || '';
+            document.getElementById('last_name').value = user.last_name || '';
+            document.getElementById('email').value = user.email || '';
+            document.getElementById('phone').value = user.phone || '';
+            document.getElementById('is_active').checked = user.is_active;
+
+            // Handle organization owner checkbox
+            const isOwnerCheckbox = document.getElementById('is_organization_owner');
+            if (isOwnerCheckbox) {
+                isOwnerCheckbox.checked = user.is_organization_owner || false;
+            }
+
+            // Show organization and user ID info at bottom
+            const orgInfo = document.getElementById('organization-info');
+            if (orgInfo && user.organization) {
+                orgInfo.innerHTML = `
+                    <small class="text-muted">
+                        <strong>Organization:</strong> ${user.organization.name} (ID: ${user.organization.id})<br>
+                        <strong>User ID:</strong> ${user.id}
+                    </small>
+                `;
+            }
+
+            // Show current role
+            const roleDisplay = document.getElementById('current-role-display');
+            if (roleDisplay) {
+                if (user.roles && user.roles.length > 0) {
+                    roleDisplay.innerHTML = `<strong>Current Role:</strong> ${user.roles.join(', ')}`;
+                } else {
+                    roleDisplay.innerHTML = `<strong>Current Role:</strong> No roles assigned`;
+                }
+            }
+
+            // Show the modal
+            const modal = new bootstrap.Modal(document.getElementById('userManagementModal'));
+            modal.show();
+        })
+        .catch(error => {
+            console.error('Error fetching user data:', error);
+            alert('Error loading user data');
+        });
+}
+
+// Add the missing editOrgUser function
+function editOrgUser(userId) {
+    openUserModal(userId);
+}
+</script>
