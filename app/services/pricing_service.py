@@ -14,12 +14,16 @@ class PricingService:
         logger.info("=== PRICING SERVICE ===")
 
         # Check if we're in development mode based on webhook secret
-        webhook_secret = current_app.config.get('STRIPE_WEBHOOK_SECRET')
-        secret_key = current_app.config.get('STRIPE_SECRET_KEY')
+        import os
+        webhook_secret = os.environ.get('STRIPE_WEBHOOK_SECRET') or current_app.config.get('STRIPE_WEBHOOK_SECRET')
+        secret_key = os.environ.get('STRIPE_SECRET_KEY') or current_app.config.get('STRIPE_SECRET_KEY')
+        publishable_key = os.environ.get('STRIPE_PUBLISHABLE_KEY') or current_app.config.get('STRIPE_PUBLISHABLE_KEY')
+        
         is_development = not webhook_secret
         logger.info(f"Development mode: {is_development}")
         logger.info(f"Stripe secret key configured: {bool(secret_key)}")
         logger.info(f"Stripe webhook secret configured: {bool(webhook_secret)}")
+        logger.info(f"Stripe publishable key configured: {bool(publishable_key)}")
 
         # Try to initialize Stripe
         stripe_initialized = StripeService.initialize_stripe()
@@ -229,8 +233,9 @@ class PricingService:
         pricing_data = {}
 
         # Check if Stripe is properly configured
-        stripe_secret = current_app.config.get('STRIPE_SECRET_KEY')
-        webhook_secret = current_app.config.get('STRIPE_WEBHOOK_SECRET')
+        import os
+        stripe_secret = os.environ.get('STRIPE_SECRET_KEY') or current_app.config.get('STRIPE_SECRET_KEY')
+        webhook_secret = os.environ.get('STRIPE_WEBHOOK_SECRET') or current_app.config.get('STRIPE_WEBHOOK_SECRET')
         stripe_configured = bool(stripe_secret and webhook_secret)
 
         for tier_key, tier_data in tiers_config.items():
@@ -272,8 +277,9 @@ class PricingService:
         logger.info(f"Dev mode pricing data keys: {list(tiers_config.keys())}")
 
         # Check if Stripe secrets are configured
-        stripe_secret = current_app.config.get('STRIPE_SECRET_KEY')
-        webhook_secret = current_app.config.get('STRIPE_WEBHOOK_SECRET')
+        import os
+        stripe_secret = os.environ.get('STRIPE_SECRET_KEY') or current_app.config.get('STRIPE_SECRET_KEY')
+        webhook_secret = os.environ.get('STRIPE_WEBHOOK_SECRET') or current_app.config.get('STRIPE_WEBHOOK_SECRET')
         stripe_configured = bool(stripe_secret and webhook_secret)
 
         for tier_key, tier_data in tiers_config.items():

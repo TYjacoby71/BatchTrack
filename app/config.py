@@ -11,10 +11,15 @@ class Config:
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'sqlite:///batchtrack.db'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
-    # Stripe Configuration
-    STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY', '')
-    STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY', '')
-    STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET', '')
+    # Stripe Configuration - Load from environment variables
+    STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY')
+    STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY')
+    STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET')
+
+    # Debug Stripe configuration
+    print(f"DEBUG: STRIPE_SECRET_KEY configured: {bool(STRIPE_SECRET_KEY)}")
+    print(f"DEBUG: STRIPE_PUBLISHABLE_KEY configured: {bool(STRIPE_PUBLISHABLE_KEY)}")
+    print(f"DEBUG: STRIPE_WEBHOOK_SECRET configured: {bool(STRIPE_WEBHOOK_SECRET)}")
 
     # Stripe Price IDs for subscription tiers
     STRIPE_PRICE_IDS = {
