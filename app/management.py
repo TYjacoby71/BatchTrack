@@ -160,10 +160,9 @@ def init_production_command():
         from flask_migrate import upgrade
         upgrade()
 
-        # CORRECTED SEEDING ORDER:
-        # 1. Permissions and roles MUST come first
-        print("=== Step 1: Setting up permissions and roles ===")
-        print("=== Seeding Consolidated Permissions ===")
+        # CORRECTED SEEDING ORDER - PERMISSIONS MUST BE FULLY SET UP FIRST:
+        # 1. Consolidated permissions system (creates permissions AND assigns them to roles)
+        print("=== Step 1: Setting up complete permissions system ===")
         seed_consolidated_permissions()
 
         # 2. Subscription tiers (creates exempt tier)
@@ -195,6 +194,73 @@ def init_production_command():
         print(f'❌ Error initializing production database: {str(e)}')
         raise
 
+@click.command('redeploy-init')
+@with_appcontext
+def redeploy_init_command():
+    """Complete redeployment initialization - safe for production redeployments"""
+    try:
+        print("🚀 Starting comprehensive redeployment initialization...")
+
+        # Apply any pending migrations
+        from flask_migrate import upgrade
+        print("=== Step 1: Applying database migrations ===")
+        upgrade()
+
+        # Refresh permissions system (updates existing, adds new)
+        print("=== Step 2: Refreshing permissions and roles system ===")
+        seed_consolidated_permissions()
+
+        # Update subscription tiers (adds new tiers, updates existing)
+        print("=== Step 3: Updating subscription tiers ===")
+        seed_subscriptions()
+
+        # Ensure system units are up to date
+        print("=== Step 4: Updating system units ===")
+        seed_units()
+
+        # Ensure default users exist (won't override existing)
+        print("=== Step 5: Ensuring default users exist ===")
+        seed_users_and_organization()
+
+        # Verify role permissions are correctly assigned
+        print("=== Step 6: Verifying role permissions ===")
+        from .models.role import Role
+        from .models import Permission
+        
+        org_owner_role = Role.query.filter_by(name='organization_owner', is_system_role=True).first()
+        if org_owner_role:
+            customer_permissions = Permission.query.filter(
+                Permission.category.in_(['app', 'organization']),
+                Permission.is_active == True
+            ).all()
+            
+            if len(org_owner_role.permissions) != len(customer_permissions):
+                print("🔧 Fixing organization_owner role permissions...")
+                org_owner_role.permissions = customer_permissions
+                db.session.commit()
+                print(f"✅ Updated organization_owner role with {len(customer_permissions)} permissions")
+            else:
+                print(f"✅ organization_owner role has correct {len(customer_permissions)} permissions")
+
+        # Update categories for existing organizations
+        print("=== Step 7: Updating categories for all organizations ===")
+        from .models import Organization
+        orgs = Organization.query.all()
+        for org in orgs:
+            try:
+                seed_categories(organization_id=org.id)
+                print(f"✅ Updated categories for organization: {org.name}")
+            except Exception as e:
+                print(f"⚠️  Failed to update categories for {org.name}: {str(e)}")
+
+        print('✅ Redeployment initialization completed successfully!')
+        print('🔄 All systems refreshed and verified')
+
+    except Exception as e:
+        print(f'❌ Error during redeployment initialization: {str(e)}')
+        db.session.rollback()
+        raise
+
 def register_commands(app):
     """Register CLI commands"""
     app.cli.add_command(seed_all)
@@ -206,3 +272,4 @@ def register_commands(app):
     app.cli.add_command(update_user_roles_command)
     app.cli.add_command(activate_users)
     app.cli.add_command(init_production_command)
+    app.cli.add_command(redeploy_init_command)
