@@ -300,8 +300,8 @@ let currentOrgUser = null;
 // Organization User Management Functions
 function editOrgUser(userId) {
     const organizationData = {
-        name: '{{ organization.name }}',
-        id: {{ organization.id }}
+        id: {{ organization.id }},
+        name: "{{ organization.name }}"
     };
     openUserManagementModal(userId, 'organization', organizationData);
 }
