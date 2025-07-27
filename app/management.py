@@ -261,6 +261,29 @@ def redeploy_init_command():
         db.session.rollback()
         raise
 
+@click.command('force-sync-tiers')
+@with_appcontext
+def force_sync_tiers_command():
+    """FORCE sync subscription tiers from JSON - OVERWRITES existing configurations"""
+    try:
+        print("⚠️  WARNING: This will overwrite existing subscription tier configurations!")
+        confirm = input("Type 'YES' to continue: ")
+        
+        if confirm != 'YES':
+            print("❌ Operation cancelled")
+            return
+            
+        from .seeders.subscription_seeder import force_sync_tiers_from_json
+        force_sync_tiers_from_json()
+        
+        print('✅ Force sync completed successfully!')
+        print('🔄 All subscription tiers have been updated from JSON configuration')
+
+    except Exception as e:
+        print(f'❌ Error during force sync: {str(e)}')
+        db.session.rollback()
+        raise
+
 def register_commands(app):
     """Register CLI commands"""
     app.cli.add_command(seed_all)
@@ -273,3 +296,4 @@ def register_commands(app):
     app.cli.add_command(activate_users)
     app.cli.add_command(init_production_command)
     app.cli.add_command(redeploy_init_command)
+    app.cli.add_command(force_sync_tiers_command)
