@@ -472,7 +472,7 @@ function populateOrgUserModal(user) {
     document.getElementById('orgUserCreatedAt').textContent = user.created_at || 'N/A';
 }
 
-async function saveOrgUser() {
+function saveOrgUser() {
     const userId = document.getElementById('orgUserId').value;
     const isOwnerChecked = document.getElementById('orgUserIsOwner').checked;
 
@@ -502,17 +502,16 @@ async function saveOrgUser() {
         is_active: document.getElementById('orgUserIsActive').checked
     };
 
-    try {
-        const response = await fetch('/developer/api/user/update', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
-            },
-            body: JSON.stringify(userData)
-        });
-
-        const data = await response.json();
+    fetch('/developer/api/user/update', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
+        },
+        body: JSON.stringify(userData)
+    })
+    .then(response => response.json())
+    .then(data => {
         if (data.success) {
             alert('User updated successfully!');
             bootstrap.Modal.getInstance(document.getElementById('editOrgUserModal')).hide();
@@ -520,39 +519,40 @@ async function saveOrgUser() {
         } else {
             alert('Error updating user: ' + data.error);
         }
-    } catch (error) {
+    })
+    .catch(error => {
         alert('Network error occurred');
-    }
+    });
 }
 
-async function resetOrgUserPassword() {
+function resetOrgUserPassword() {
     if (!currentOrgUser) return;
 
     const newPassword = prompt('Enter new password for user:');
     if (!newPassword) return;
 
-    try {
-        const response = await fetch('/developer/api/user/reset-password', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
-            },
-            body: JSON.stringify({
-                user_id: currentOrgUser.id,
-                new_password: newPassword
-            })
-        });
-
-        const data = await response.json();
+    fetch('/developer/api/user/reset-password', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
+        },
+        body: JSON.stringify({
+            user_id: currentOrgUser.id,
+            new_password: newPassword
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
         if (data.success) {
             alert('Password reset successfully!');
         } else {
             alert('Error resetting password: ' + data.error);
         }
-    } catch (error) {
+    })
+    .catch(error => {
         alert('Network error occurred');
-    }
+    });
 }
 
 function loginAsOrgUser(userId = null) {
@@ -571,26 +571,25 @@ function viewAsCustomerSupport() {
     window.open(`/developer/select-org/{{ organization.id }}`, '_blank');
 }
 
-async function softDeleteOrgUser() {
+function softDeleteOrgUser() {
     if (!currentOrgUser) return;
 
     if (!confirm(`Soft delete user ${currentOrgUser.username}? This will deactivate their account and remove access while preserving data.`)) {
         return;
     }
 
-    try {
-        const response = await fetch('/developer/api/user/soft-delete', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
-            },
-            body: JSON.stringify({
-                user_id: currentOrgUser.id
-            })
-        });
-
-        const data = await response.json();
+    fetch('/developer/api/user/soft-delete', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
+        },
+        body: JSON.stringify({
+            user_id: currentOrgUser.id
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
         if (data.success) {
             alert('User soft deleted successfully!');
             bootstrap.Modal.getInstance(document.getElementById('editOrgUserModal')).hide();
@@ -598,28 +597,29 @@ async function softDeleteOrgUser() {
         } else {
             alert('Error soft deleting user: ' + data.error);
         }
-    } catch (error) {
+    })
+    .catch(error => {
         alert('Network error occurred');
-    }
+    });
 }
 
-async function toggleOrgUserStatus(userId, currentStatus) {
-    try {
-        const response = await fetch(`/developer/users/${userId}/toggle-active`, {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
-            }
-        });
-
+function toggleOrgUserStatus(userId, currentStatus) {
+    fetch(`/developer/users/${userId}/toggle-active`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
+        }
+    })
+    .then(response => {
         if (response.ok) {
             location.reload();
         } else {
             alert('Error toggling user status');
         }
-    } catch (error) {
+    })
+    .catch(error => {
         alert('Network error occurred');
-    }
+    });
 }
 
 // Organization deletion function
