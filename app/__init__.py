@@ -226,7 +226,7 @@ def create_app():
     app.register_blueprint(expiration_bp, url_prefix='/expiration')
     app.register_blueprint(settings_bp, url_prefix='/settings')
     app.register_blueprint(timers_bp, url_prefix='/timers')
-    app.register_blueprint(quick_add_bp, url_prefix='/quick_add')
+    app.register_blueprint(quick_add_bp, url_prefix='/quick-add')
     app.register_blueprint(app_routes.app_routes_bp)
     app.register_blueprint(fifo_bp)
     app.register_blueprint(add_extra_bp, url_prefix='/add-extra')
