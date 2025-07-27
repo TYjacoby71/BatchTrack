@@ -389,7 +389,8 @@
                             <div class="alert alert-light border">
                                 <h6 class="mb-2">Account Information</h6>
                                 <p class="mb-1"><strong>Username:</strong> <span id="orgUserUsername"></span></p>
-                                <p class="mb-1"><strong>Last Login:</strong> <span id="orgUserLastLogin"></span></p>
+                                <p class="mb-1"><strong>Organization ID:</strong> {{ organization.id }}</p>
+                                <p class="mb-1"><strong>Last Login:</strong> <span id="orgUserLastLogin">N/A</span></p>
                                 <p class="mb-0"><strong>Created:</strong> <span id="orgUserCreatedAt"></span></p>
                             </div>
                         </div>
@@ -430,6 +431,9 @@ function editOrgUser(userId) {
     const user = {{ users|tojson }}.find(u => u.id === userId);
     if (!user) return;
 
+    // Store current user for other functions
+    currentOrgUser = user;
+
     // Populate modal fields
     document.getElementById('orgUserId').value = user.id;
     document.getElementById('orgUserFirstName').value = user.first_name || '';
@@ -438,8 +442,14 @@ function editOrgUser(userId) {
     document.getElementById('orgUserPhone').value = user.phone || '';
     document.getElementById('orgUserIsOwner').checked = user.is_organization_owner || false;
     document.getElementById('orgUserIsActive').checked = user.is_active || false;
-    document.getElementById('orgUserType').textContent = user.user_type || 'customer';
+    document.getElementById('orgUserType').value = user.user_type || 'customer';
+    
+    // Populate account information section
+    document.getElementById('orgUserUsername').textContent = user.username || 'N/A';
     document.getElementById('orgUserCreatedAt').textContent = user.created_at || 'N/A';
+    
+    // The organization field is already set to "{{ organization.name }}" in the template
+    // so no need to update it dynamically
 
     // Show the modal
     const modal = new bootstrap.Modal(document.getElementById('editOrgUserModal'));
