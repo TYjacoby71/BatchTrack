@@ -229,18 +229,17 @@ def redeploy_init_command():
         
         org_owner_role = Role.query.filter_by(name='organization_owner', is_system_role=True).first()
         if org_owner_role:
-            customer_permissions = Permission.query.filter(
-                Permission.category.in_(['app', 'organization']),
-                Permission.is_active == True
-            ).all()
+            # Get ALL active permissions (not just specific categories)
+            all_permissions = Permission.query.filter_by(is_active=True).all()
             
-            if len(org_owner_role.permissions) != len(customer_permissions):
-                print("🔧 Fixing organization_owner role permissions...")
-                org_owner_role.permissions = customer_permissions
-                db.session.commit()
-                print(f"✅ Updated organization_owner role with {len(customer_permissions)} permissions")
-            else:
-                print(f"✅ organization_owner role has correct {len(customer_permissions)} permissions")
+            print(f"Found {len(all_permissions)} active permissions in system")
+            print(f"Organization owner role currently has {len(org_owner_role.permissions)} permissions")
+            
+            # Always restore all permissions to organization owner
+            print("🔧 Restoring all permissions to organization_owner role...")
+            org_owner_role.permissions = all_permissions
+            db.session.commit()
+            print(f"✅ Updated organization_owner role with all {len(all_permissions)} permissions")
 
         # Update categories for existing organizations
         print("=== Step 7: Updating categories for all organizations ===")
