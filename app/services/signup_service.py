@@ -1,9 +1,9 @@
+
 import logging
 from flask import session, flash, current_app, redirect, url_for
 from flask_login import login_user
 from ..models import db, User, Organization, Role, SubscriptionTier
 from ..blueprints.developer.subscription_tiers import load_tiers_config
-from .stripe_service import StripeService
 
 logger = logging.getLogger(__name__)
 
@@ -11,16 +11,12 @@ class SignupService:
     """Service for handling complete signup and organization creation"""
 
     @staticmethod
-    def complete_signup(tier, is_stripe_mode=False):
+    def complete_signup(tier):
         """Complete organization creation and user signup"""
         logger.info(f"=== SIGNUP COMPLETION START ===")
         logger.info(f"Requested tier: {tier}")
-        logger.info(f"Stripe mode: {is_stripe_mode}")
 
-        if is_stripe_mode:
-            flash('Processing payment and creating account...', 'info')
-        else:
-            flash('Creating your account now...', 'info')
+        flash('Creating your account now...', 'info')
 
         # Get pending signup data from session
         pending_signup = session.get('pending_signup')
@@ -47,7 +43,7 @@ class SignupService:
         try:
             tiers_config = load_tiers_config()
             tier_data = tiers_config.get(tier, {})
-            logger.info(f"Final tier check - tier '{tier}' being processed, stripe_mode: {is_stripe_mode}")
+            logger.info(f"Final tier check - tier '{tier}' being processed")
         except Exception as config_error:
             logger.warning(f"Could not load tier configuration, proceeding anyway: {str(config_error)}")
             # Don't fail signup just because we can't load tier config
@@ -94,14 +90,6 @@ class SignupService:
             if org_owner_role:
                 owner_user.assign_role(org_owner_role)
                 logger.info("Assigned organization_owner role")
-
-            # All paid signups require Stripe payment processing
-            if tier != 'free' and not is_stripe_mode:
-                raise Exception("All paid subscriptions must be processed through Stripe payment system")
-            
-            # Free tier is the only exception - no payment required
-            if tier == 'free' and is_stripe_mode:
-                logger.warning("Free tier should not go through Stripe payment flow")
 
             # Subscription tracking is now handled by the SubscriptionTier relationship
             # The organization is already assigned to the correct tier above

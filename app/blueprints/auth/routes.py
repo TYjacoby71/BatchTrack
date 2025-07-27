@@ -197,17 +197,13 @@ def signup():
             'referral_code': referral_code
         }
 
-        # Check if we should use Stripe or development mode for this specific tier
-        tier_pricing = pricing_data.get(selected_tier, {})
-        tier_stripe_ready = tier_pricing.get('is_stripe_ready', False)
-        
-        if tier_stripe_ready and current_app.config.get('STRIPE_SECRET_KEY'):
-            # Stripe is configured and this specific tier is ready - use real payment
+        # For paid tiers, redirect to Stripe checkout
+        if selected_tier != 'free' and current_app.config.get('STRIPE_SECRET_KEY'):
             return redirect(url_for('billing.checkout', tier=selected_tier))
         else:
-            # Development mode or this tier not Stripe-ready - use signup service
+            # Free tier or no Stripe - complete signup directly
             from ...services.signup_service import SignupService
-            return SignupService.complete_signup(selected_tier, is_stripe_mode=False)
+            return SignupService.complete_signup(selected_tier)
 
     return render_template('auth/signup.html', 
                          signup_source=signup_source,
