@@ -10,22 +10,27 @@ class PricingService:
 
     @staticmethod
     def get_pricing_data():
-        """Get pricing data from Stripe - no dev mode fallback"""
-        # Always require Stripe to be configured
-        import os
-        stripe_secret = os.environ.get('STRIPE_SECRET_KEY') or current_app.config.get('STRIPE_SECRET_KEY')
-        if not stripe_secret:
-            logger.error("Stripe not configured - cannot provide pricing data")
-            return {}
-        
+        """Get pricing data from Stripe with graceful fallbacks"""
         # Always try to get live Stripe data first
         try:
-            return PricingService._get_stripe_pricing()
+            pricing_data = PricingService._get_stripe_pricing()
+            if pricing_data:
+                return pricing_data
         except Exception as e:
             logger.error(f"Failed to get Stripe pricing data: {str(e)}")
-            # If Stripe fails, use cached snapshots from PricingSnapshot model
-            logger.info("Stripe unavailable - using cached pricing snapshots")
-            return PricingService._get_snapshot_pricing_data()
+        
+        # If Stripe fails, try cached snapshots from PricingSnapshot model
+        logger.info("Stripe unavailable - trying cached pricing snapshots")
+        try:
+            snapshot_data = PricingService._get_snapshot_pricing_data()
+            if snapshot_data:
+                return snapshot_data
+        except Exception as e:
+            logger.error(f"Failed to get cached pricing data: {str(e)}")
+        
+        # Final fallback - use configuration data
+        logger.info("No Stripe or snapshot data available - using configuration fallback")
+        return PricingService._get_fallback_pricing()
 
     @staticmethod
     def _load_tiers_config():
@@ -80,6 +85,18 @@ class PricingService:
     @staticmethod
     def _get_stripe_pricing():
         """Get comprehensive pricing data from Stripe for customer-facing and available tiers only"""
+        import stripe
+        import os
+        
+        # Check if Stripe is configured
+        stripe_secret = os.environ.get('STRIPE_SECRET_KEY') or current_app.config.get('STRIPE_SECRET_KEY')
+        if not stripe_secret:
+            logger.warning("Stripe API key not configured")
+            return {}
+        
+        # Set the API key
+        stripe.api_key = stripe_secret
+        
         # Load dynamic tiers configuration
         all_tiers = PricingService._load_tiers_config()
 
@@ -151,10 +168,23 @@ class PricingService:
     @staticmethod
     def _get_tier_fallback_data(tier_key, tier_data):
         """Get fallback data structure for a single tier"""
+        # Extract numeric price values for consistency with signup page expectations
+        price_monthly = tier_data.get('fallback_price_monthly', 0)
+        if isinstance(price_monthly, str):
+            # Remove $ sign and convert to float
+            price_monthly = float(price_monthly.replace('$', '').replace(',', '') or 0)
+        
+        price_yearly = tier_data.get('fallback_price_yearly', 0)
+        if isinstance(price_yearly, str):
+            # Remove $ sign and convert to float
+            price_yearly = float(price_yearly.replace('$', '').replace(',', '') or 0)
+        
         return {
             'name': tier_data.get('name', tier_key.title()),
-            'price': tier_data.get('fallback_price_monthly', '$0'),
-            'price_yearly': tier_data.get('fallback_price_yearly', '$0'),
+            'price': f"${price_monthly:.0f}" if price_monthly > 0 else '$0',
+            'price_display': f"${price_monthly:.0f}" if price_monthly > 0 else 'Free',
+            'price_monthly': price_monthly,
+            'price_yearly': price_yearly,
             'features': tier_data.get('fallback_features', []),
             'description': tier_data.get('description', f"Perfect for {tier_key} operations"),
             'user_limit': tier_data.get('user_limit', 1),
