@@ -116,40 +116,30 @@ class PricingService:
             logger.info(f"Looking up Stripe product for tier {tier_key} with lookup_key: {lookup_key}")
 
             try:
-                # Search for products using lookup key
-                products = stripe.Product.search(
-                    query=f"metadata['lookup_key']:'{lookup_key}'",
-                    expand=['data.default_price']
-                )
+                # Search for prices using lookup key, then get the product
+                prices = stripe.Price.list(lookup_keys=[lookup_key], limit=1, active=True)
+                
+                logger.info(f"Found {len(prices.data)} prices for lookup_key: {lookup_key}")
 
-                logger.info(f"Found {len(products.data)} products for lookup_key: {lookup_key}")
+                if prices.data:
+                    price = prices.data[0]
+                    product = stripe.Product.retrieve(price.product)
 
-                if products.data:
-                    product = products.data[0]
+                    pricing_data[tier_key] = {
+                        'name': product.name or tier_data.get('name', tier_key.title()),
+                        'price': f"${price.unit_amount / 100:.0f}",
+                        'features': tier_data.get('fallback_features', []),
+                        'description': product.description or tier_data.get('description', f"Perfect for {tier_key} operations"),
+                        'user_limit': tier_data.get('user_limit', 1),
+                        'stripe_lookup_key': lookup_key,
+                        'stripe_price_id_monthly': price.id if price.recurring and price.recurring.interval == 'month' else None,
+                        'stripe_product_id': product.id,
+                        'is_stripe_ready': True
+                    }
 
-                    # Get the default price
-                    if product.default_price:
-                        price = product.default_price
-
-                        pricing_data[tier_key] = {
-                            'name': product.name or tier_data.get('name', tier_key.title()),
-                            'price': f"${price.unit_amount / 100:.0f}",
-                            'features': tier_data.get('fallback_features', []),
-                            'description': product.description or tier_data.get('description', f"Perfect for {tier_key} operations"),
-                            'user_limit': tier_data.get('user_limit', 1),
-                            'stripe_lookup_key': lookup_key,
-                            'stripe_price_id_monthly': price.id if price.recurring and price.recurring.interval == 'month' else None,
-                            'stripe_product_id': product.id,
-                            'is_stripe_ready': True
-                        }
-
-                        logger.info(f"Successfully loaded pricing for {tier_key}: ${price.unit_amount / 100:.0f}")
-                    else:
-                        logger.warning(f"Product {product.id} has no default price")
-                        # Fallback to config data
-                        pricing_data[tier_key] = PricingService._get_tier_fallback_data(tier_key, tier_data)
+                    logger.info(f"Successfully loaded pricing for {tier_key}: ${price.unit_amount / 100:.0f}")
                 else:
-                    logger.warning(f"No Stripe product found for lookup_key: {lookup_key}")
+                    logger.warning(f"No Stripe price found for lookup_key: {lookup_key}")
                     # Fallback to config data
                     pricing_data[tier_key] = PricingService._get_tier_fallback_data(tier_key, tier_data)
 
