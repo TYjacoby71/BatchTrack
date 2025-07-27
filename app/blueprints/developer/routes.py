@@ -193,7 +193,26 @@ def create_organization():
 def organization_detail(org_id):
     """Detailed organization management"""
     org = Organization.query.get_or_404(org_id)
-    users = User.query.filter_by(organization_id=org_id).all()
+    users_query = User.query.filter_by(organization_id=org_id).all()
+
+    # Convert User objects to dictionaries for JSON serialization
+    users = []
+    for user in users_query:
+        user_dict = {
+            'id': user.id,
+            'username': user.username,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'email': user.email,
+            'phone': user.phone,
+            'user_type': user.user_type,
+            'is_organization_owner': user.is_organization_owner,
+            'is_active': user.is_active,
+            'created_at': user.created_at.strftime('%Y-%m-%d') if user.created_at else None,
+            'last_login': user.last_login.strftime('%Y-%m-%d %H:%M') if user.last_login else None,
+            'full_name': user.full_name
+        }
+        users.append(user_dict)
 
     # Load subscription tiers config for the dropdown
     from .subscription_tiers import load_tiers_config
@@ -220,6 +239,7 @@ def organization_detail(org_id):
     return render_template('developer/organization_detail.html',
                          organization=org,
                          users=users,
+                         users_objects=users_query,  # Pass original objects for template iteration
                          tiers_config=tiers_config,
                          current_tier=current_tier)
 
@@ -582,8 +602,31 @@ def update_user():
         user.user_type = data.get('user_type', user.user_type)
         user.is_active = data.get('is_active', user.is_active)
         
-        # Handle organization owner flag
-        user.is_organization_owner = data.get('is_organization_owner', False)
+        # Handle organization owner flag with single owner constraint
+        new_owner_status = data.get('is_organization_owner', False)
+        
+        if new_owner_status and not user.is_organization_owner:
+            # User is being made an organization owner
+            # First, remove organization owner status from all other users in this org
+            other_owners = User.query.filter(
+                User.organization_id == user.organization_id,
+                User.id != user.id,
+                User._is_organization_owner == True
+            ).all()
+            
+            for other_owner in other_owners:
+                other_owner.is_organization_owner = False
+                # Remove the organization owner role from other owners
+                from app.models.role import Role
+                org_owner_role = Role.query.filter_by(name='organization_owner', is_system_role=True).first()
+                if org_owner_role:
+                    other_owner.remove_role(org_owner_role)
+                
+            # Now set this user as the owner
+            user.is_organization_owner = True
+        elif not new_owner_status:
+            # User is being removed as organization owner
+            user.is_organization_owner = False
         
         db.session.commit()
         
