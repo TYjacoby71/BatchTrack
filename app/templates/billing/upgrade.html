@@ -138,8 +138,8 @@
 
                 <div class="card-footer text-center">
                     {% if current_tier != tier_name %}
-                    <!-- All tiers now require Stripe configuration -->
-                    {% if tier_data.get('stripe_price_id_monthly') or tier_data.get('stripe_price_id_yearly') %}
+                    <!-- Check if tier is available for checkout -->
+                    {% if tier_data.get('is_stripe_ready') %}
                       <!-- Tier has Stripe configuration - allow checkout -->
                       <form method="POST" action="{{ url_for('billing.checkout', tier=tier_name) }}" class="d-inline">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
@@ -147,12 +147,17 @@
                           <i class="fas fa-credit-card"></i> Upgrade to {{ tier_data.get('name', tier_name.title()) }}
                         </button>
                       </form>
-                      {% if tier_data.get('price_yearly') %}
+                      {% if tier_data.get('price_yearly') and tier_data.get('price_yearly') != '$0' %}
                       <a href="{{ url_for('billing.checkout', tier=tier_name, billing_cycle='yearly') }}" 
                          class="btn btn-outline-success btn-sm mt-2">
                           Choose Yearly
                       </a>
                       {% endif %}
+                    {% elif tier_data.get('is_fallback') %}
+                      <!-- Tier using fallback data - Stripe temporarily unavailable -->
+                      <div class="alert alert-warning">
+                        <strong>Temporarily Unavailable:</strong> Payment system is currently unavailable for this tier. Please try again later.
+                      </div>
                     {% else %}
                       <!-- Tier not configured in Stripe -->
                       <div class="alert alert-warning">
