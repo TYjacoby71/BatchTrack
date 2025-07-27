@@ -428,8 +428,8 @@ let currentOrgUser = null;
 
 // Organization User Management Functions
 function editOrgUser(userId) {
-    // Get users data from template
-    const users = {{ users_objects|tojson }};
+    // Get users data from template (using the serializable users dict instead of users_objects)
+    const users = {{ users|tojson }};
     const user = users.find(u => u.id === userId);
     if (!user) return;
 
