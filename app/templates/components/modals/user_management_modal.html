@@ -137,7 +137,7 @@
 let currentModalUser = null;
 let modalContext = 'general'; // 'general', 'organization', 'developer'
 
-function openUserManagementModal(userId, context = 'general', organizationData = null) {
+async function openUserManagementModal(userId, context = 'general', organizationData = null) {
     modalContext = context;
     
     // Configure modal based on context
@@ -160,15 +160,17 @@ function openUserManagementModal(userId, context = 'general', organizationData =
         document.getElementById('customerSupportBtn').style.display = 'none';
     }
 
-    // Fetch user data and populate modal
-    fetch(`/developer/api/user/${userId}`, {
-        method: 'GET',
-        headers: {
-            'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
+    try {
+        // Fetch user data and populate modal
+        const response = await fetch(`/developer/api/user/${userId}`, {
+            method: 'GET',
+            headers: {
+                'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
+            }
+        });
+
+        const data = await response.json();
+        
         if (data.success) {
             currentModalUser = data.user;
             populateUserManagementModal(data.user);
@@ -176,10 +178,10 @@ function openUserManagementModal(userId, context = 'general', organizationData =
         } else {
             alert('Error loading user data: ' + data.error);
         }
-    })
-    .catch(error => {
+    } catch (error) {
+        console.error('Error loading user data:', error);
         alert('Network error occurred');
-    });
+    }
 }
 
 function populateUserManagementModal(user) {
@@ -204,7 +206,7 @@ function populateUserManagementModal(user) {
     }
 }
 
-function saveModalUser() {
+async function saveModalUser() {
     const userId = document.getElementById('modalUserId').value;
     const isOwnerChecked = document.getElementById('modalUserIsOwner').checked;
 
@@ -224,7 +226,7 @@ function saveModalUser() {
     }
 
     const userData = {
-        user_id: document.getElementById('modalUserId').value,
+        user_id: userId,
         first_name: document.getElementById('modalUserFirstName').value,
         last_name: document.getElementById('modalUserLastName').value,
         email: document.getElementById('modalUserEmail').value,
@@ -234,16 +236,18 @@ function saveModalUser() {
         is_active: document.getElementById('modalUserIsActive').checked
     };
 
-    fetch('/developer/api/user/update', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
-        },
-        body: JSON.stringify(userData)
-    })
-    .then(response => response.json())
-    .then(data => {
+    try {
+        const response = await fetch('/developer/api/user/update', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
+            },
+            body: JSON.stringify(userData)
+        });
+
+        const data = await response.json();
+        
         if (data.success) {
             alert('User updated successfully!');
             bootstrap.Modal.getInstance(document.getElementById('userManagementModal')).hide();
@@ -251,40 +255,42 @@ function saveModalUser() {
         } else {
             alert('Error updating user: ' + data.error);
         }
-    })
-    .catch(error => {
+    } catch (error) {
+        console.error('Error updating user:', error);
         alert('Network error occurred');
-    });
+    }
 }
 
-function resetModalUserPassword() {
+async function resetModalUserPassword() {
     if (!currentModalUser) return;
 
     const newPassword = prompt('Enter new password for user:');
     if (!newPassword) return;
 
-    fetch('/developer/api/user/reset-password', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
-        },
-        body: JSON.stringify({
-            user_id: currentModalUser.id,
-            new_password: newPassword
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
+    try {
+        const response = await fetch('/developer/api/user/reset-password', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
+            },
+            body: JSON.stringify({
+                user_id: currentModalUser.id,
+                new_password: newPassword
+            })
+        });
+
+        const data = await response.json();
+        
         if (data.success) {
             alert('Password reset successfully!');
         } else {
             alert('Error resetting password: ' + data.error);
         }
-    })
-    .catch(error => {
+    } catch (error) {
+        console.error('Error resetting password:', error);
         alert('Network error occurred');
-    });
+    }
 }
 
 function loginAsModalUser() {
@@ -302,25 +308,27 @@ function viewAsCustomerSupport() {
     window.open(`/developer/select-org/${currentModalUser.organization.id}`, '_blank');
 }
 
-function softDeleteModalUser() {
+async function softDeleteModalUser() {
     if (!currentModalUser) return;
 
     if (!confirm(`Soft delete user ${currentModalUser.username}? This will deactivate their account and remove access while preserving data.`)) {
         return;
     }
 
-    fetch('/developer/api/user/soft-delete', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
-        },
-        body: JSON.stringify({
-            user_id: currentModalUser.id
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
+    try {
+        const response = await fetch('/developer/api/user/soft-delete', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
+            },
+            body: JSON.stringify({
+                user_id: currentModalUser.id
+            })
+        });
+
+        const data = await response.json();
+        
         if (data.success) {
             alert('User soft deleted successfully!');
             bootstrap.Modal.getInstance(document.getElementById('userManagementModal')).hide();
@@ -328,9 +336,9 @@ function softDeleteModalUser() {
         } else {
             alert('Error soft deleting user: ' + data.error);
         }
-    })
-    .catch(error => {
+    } catch (error) {
+        console.error('Error soft deleting user:', error);
         alert('Network error occurred');
-    });
+    }
 }
 </script>
