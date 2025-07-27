@@ -69,14 +69,7 @@
                             </div>
                         </div>
 
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="is_stripe_ready" name="is_stripe_ready" 
-                                   {% if tier.get('is_stripe_ready', False) %}checked{% endif %}>
-                            <label class="form-check-label" for="is_stripe_ready">
-                                <i class="fab fa-stripe"></i> Stripe Ready/Production Mode
-                            </label>
-                            <small class="form-text text-muted">When checked, uses real Stripe integration. When unchecked, uses development simulation mode.</small>
-                        </div>
+                        
                     </div>
                 </div>
             </div>

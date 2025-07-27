@@ -414,44 +414,4 @@ class StripeService:
             logger.error(f"Failed to create signup checkout session: {str(e)}")
             return None
 
-    @staticmethod
-    def simulate_subscription_success(organization, tier='team'):
-        """Simulate successful subscription for development/testing ONLY"""
-        from flask import current_app
-        from datetime import timedelta
-        from ..models import SubscriptionTier
-
-        logger.info(f"Simulating subscription for org {organization.id}, tier: {tier}")
-
-        # PRIMARY CONTROL: Only allow simulation if tier is explicitly marked as NOT stripe-ready
-        from ..blueprints.developer.subscription_tiers import load_tiers_config
-        tiers_config = load_tiers_config()
-        tier_data = tiers_config.get(tier, {})
-        is_stripe_ready = tier_data.get('is_stripe_ready', False)
-
-        # If stripe_ready is checked, force production mode - no simulation allowed
-        if is_stripe_ready:
-            logger.warning(f"Tier {tier} is stripe-ready - simulation blocked, must use real Stripe")
-            return False
-
-        # Development mode or non-stripe-ready tier - simulate subscription activation
-        logger.info(f"Simulating subscription activation for organization {organization.id}")
-
-        # Find the tier object
-        tier_obj = SubscriptionTier.query.filter_by(key=tier).first()
-        if not tier_obj:
-            logger.error(f"Tier '{tier}' not found in database")
-            return False
-
-        # Update organization with the new tier
-        organization.subscription_tier_id = tier_obj.id
-        logger.info(f"Set organization {organization.id} to tier {tier} (ID: {tier_obj.id})")
-
-        try:
-            db.session.commit()
-            logger.info(f"Successfully simulated subscription activation for org {organization.id}, tier: {tier}")
-            return True
-        except Exception as e:
-            logger.error(f"Failed to simulate subscription for org {organization.id}: {str(e)}")
-            db.session.rollback()
-            return False
+    

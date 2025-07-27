@@ -90,7 +90,7 @@ def checkout(tier, billing_cycle='monthly'):
     """Create Stripe checkout session for subscription payment"""
     from flask import session
 
-    # Validate tier availability
+    # Validate tier availability and Stripe configuration
     if not BillingService.validate_tier_availability(tier):
         flash('Invalid subscription tier selected.', 'error')
         return redirect(url_for('billing.upgrade'))
@@ -98,13 +98,23 @@ def checkout(tier, billing_cycle='monthly'):
     if billing_cycle not in ['monthly', 'yearly']:
         billing_cycle = 'monthly'
 
+    # Check if tier is configured in Stripe
+    from ..blueprints.developer.subscription_tiers import load_tiers_config
+    tiers_config = load_tiers_config()
+    tier_data = tiers_config.get(tier, {})
+    
+    if billing_cycle == 'yearly' and not tier_data.get('stripe_price_id_yearly'):
+        flash('Yearly billing not available for this tier.', 'error')
+        return redirect(url_for('billing.upgrade'))
+    elif billing_cycle == 'monthly' and not tier_data.get('stripe_price_id_monthly'):
+        flash('This tier is not configured for billing.', 'error')
+        return redirect(url_for('billing.upgrade'))
+
     # Handle new signups vs existing user upgrades
     if not current_user.is_authenticated and session.get('pending_signup'):
         # New customer signup flow
         try:
             price_key = BillingService.build_price_key(tier, billing_cycle)
-
-            # Create Stripe checkout session for new customer
             signup_data = session['pending_signup']
             checkout_session = StripeService.create_checkout_session_for_signup(
                 signup_data, price_key
@@ -241,45 +251,7 @@ def complete_signup_from_stripe():
     pending_signup = session.get('pending_signup')
     return SignupService.complete_signup(pending_signup['selected_tier'], is_stripe_mode=True)
 
-@billing_bp.route('/dev/activate/<tier>', methods=['POST'])
-@login_required
-def dev_activate_subscription(tier):
-    """Development-only route to simulate subscription activation"""
-    logger.info(f"=== DEV ACTIVATION REQUESTED ===")
-    logger.info(f"User: {current_user.id}, Org: {current_user.organization_id}, Tier: {tier}")
 
-    if not current_user.organization:
-        flash('Organization required for subscription', 'error')
-        logger.error("No organization found for user")
-        return redirect(url_for('billing.upgrade'))
-
-    # Check if tier is marked as stripe-ready (should block dev activation)
-    from ..developer.subscription_tiers import load_tiers_config
-    tiers_config = load_tiers_config()
-    tier_data = tiers_config.get(tier, {})
-    is_stripe_ready = tier_data.get('is_stripe_ready', False)
-
-    logger.info(f"Tier {tier} is_stripe_ready: {is_stripe_ready}")
-
-    if is_stripe_ready:
-        flash(f'Tier {tier} requires real Stripe payment - dev activation blocked', 'error')
-        logger.warning(f"Dev activation blocked for stripe-ready tier: {tier}")
-        return redirect(url_for('billing.upgrade'))
-
-    # Use Stripe service simulation
-    success = StripeService.simulate_subscription_success(
-        current_user.organization, 
-        tier=tier
-    )
-
-    if success:
-        flash(f'Successfully activated {tier.title()} subscription (Development Mode)', 'success')
-        logger.info(f"Dev activation successful for org {current_user.organization_id}")
-        return redirect(url_for('app_routes.dashboard'))
-    else:
-        flash('Failed to activate subscription - check logs for details', 'error')
-        logger.error(f"Dev activation failed for org {current_user.organization_id}")
-        return redirect(url_for('billing.upgrade'))
 
 @billing_bp.route('/debug')
 @login_required

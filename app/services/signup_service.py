@@ -92,12 +92,9 @@ class SignupService:
                 owner_user.assign_role(org_owner_role)
                 logger.info("Assigned organization_owner role")
 
-            # For development mode, activate subscription
+            # All signups must go through Stripe - no dev mode bypass
             if not is_stripe_mode:
-                success = StripeService.simulate_subscription_success(org, tier)
-                if not success:
-                    raise Exception("Failed to activate development subscription")
-                logger.info("Activated development subscription")
+                raise Exception("All paid subscriptions must be processed through Stripe")
 
             # Subscription tracking is now handled by the SubscriptionTier relationship
             # The organization is already assigned to the correct tier above

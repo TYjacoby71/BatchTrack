@@ -10,32 +10,15 @@ class PricingService:
 
     @staticmethod
     def get_pricing_data():
-        """Get pricing data with proper fallback handling"""
-        logger.info("=== PRICING SERVICE ===")
-
-        # Check if we're in development mode based on webhook secret
-        import os
-        webhook_secret = os.environ.get('STRIPE_WEBHOOK_SECRET') or current_app.config.get('STRIPE_WEBHOOK_SECRET')
-        secret_key = os.environ.get('STRIPE_SECRET_KEY') or current_app.config.get('STRIPE_SECRET_KEY')
-        publishable_key = os.environ.get('STRIPE_PUBLISHABLE_KEY') or current_app.config.get('STRIPE_PUBLISHABLE_KEY')
-        
-        is_development = not webhook_secret
-        logger.info(f"Development mode: {is_development}")
-        logger.info(f"Stripe secret key configured: {bool(secret_key)}")
-        logger.info(f"Stripe webhook secret configured: {bool(webhook_secret)}")
-        logger.info(f"Stripe publishable key configured: {bool(publishable_key)}")
-
-        # Try to initialize Stripe
-        stripe_initialized = StripeService.initialize_stripe()
-        logger.info(f"Stripe initialization result: {stripe_initialized}")
-
-        if is_development or not stripe_initialized:
-            logger.info("Development mode: Using fallback pricing data")
-            return PricingService._get_fallback_pricing_data()
-
-        # Production mode - get pricing from Stripe or tier config
-        logger.info("Production mode: Getting pricing from tiers config")
-        return PricingService._get_tier_based_pricing_data()
+        """Get pricing data from Stripe - no dev mode fallback"""
+        # Always try to get live Stripe data first
+        try:
+            return PricingService._get_stripe_pricing_data()
+        except Exception as e:
+            logger.error(f"Failed to get Stripe pricing data: {str(e)}")
+            # If Stripe fails, use cached snapshots
+            logger.info("Stripe unavailable - using cached snapshots")
+            return PricingService._get_snapshot_pricing_data()
 
     @staticmethod
     def _load_tiers_config():
