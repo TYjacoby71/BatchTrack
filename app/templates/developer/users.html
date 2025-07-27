@@ -314,127 +314,8 @@
     </div>
 </div>
 
-<!-- User Management Modal for Developer Users -->
-<div class="modal fade" id="editUserModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header bg-success text-white">
-                <h5 class="modal-title">
-                    <i class="fas fa-user-edit me-2"></i>Manage User
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <form id="editUserForm">
-                    <input type="hidden" id="userId">
-
-                    <!-- User Information Section -->
-                    <div class="row mb-4">
-                        <div class="col-12">
-                            <h6 class="text-muted mb-3">User Information</h6>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-bold">First Name</label>
-                            <input type="text" class="form-control" id="userFirstName">
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-bold">Last Name</label>
-                            <input type="text" class="form-control" id="userLastName">
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-bold">Email</label>
-                            <input type="email" class="form-control" id="userEmail">
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-bold">Phone</label>
-                            <input type="tel" class="form-control" id="userPhone">
-                        </div>
-                    </div>
-
-                    <!-- Organization Context Section -->
-                    <div class="row mb-4">
-                        <div class="col-12">
-                            <h6 class="text-muted mb-3">Organization Context</h6>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-bold">Organization</label>
-                            <input type="text" class="form-control" id="userOrganization" readonly>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="userIsOwner">
-                                <label class="form-check-label fw-bold" for="userIsOwner">
-                                    Organization Owner
-                                </label>
-                            </div>
-                        </div>
-                        <div class="col-12 mb-3">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="userIsActive">
-                                <label class="form-check-label fw-bold" for="userIsActive">
-                                    User is active
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Developer Actions Section -->
-                    <div class="row mb-4">
-                        <div class="col-12">
-                            <h6 class="text-muted mb-3">Developer Actions</h6>
-                        </div>
-                        <div class="col-12">
-                            <div class="alert alert-success">
-                                <h6><i class="fas fa-tools me-2"></i>Quick Actions</h6>
-                                <div class="btn-group-vertical d-grid gap-2 col-6 mx-auto">
-                                    <button type="button" class="btn btn-outline-primary" onclick="resetUserPassword()">
-                                        <i class="fas fa-key me-2"></i>Reset Password
-                                    </button>
-                                    <button type="button" class="btn btn-outline-info" onclick="loginAsUser()">
-                                        <i class="fas fa-sign-in-alt me-2"></i>Login as This User
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Account Information -->
-                    <div class="row mb-3">
-                        <div class="col-12">
-                            <div class="alert alert-light border">
-                                <h6 class="mb-2">Account Information</h6>
-                                <p class="mb-1"><strong>Username:</strong> <span id="userUsername"></span></p>
-                                <p class="mb-1"><strong>Last Login:</strong> <span id="userLastLogin"></span></p>
-                                <p class="mb-0"><strong>Created:</strong> <span id="userCreatedAt"></span></p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Danger Zone -->
-                    <div class="row">
-                        <div class="col-12">
-                            <div class="alert alert-danger border-danger">
-                                <h6 class="text-danger mb-2">
-                                    <i class="fas fa-exclamation-triangle me-2"></i>Danger Zone
-                                </h6>
-                                <p class="mb-3 small">Permanent actions that cannot be undone.</p>
-                                <button type="button" class="btn btn-outline-danger btn-sm" onclick="softDeleteUser()">
-                                    <i class="fas fa-user-slash me-2"></i>Soft Delete User
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-success" onclick="saveUser()">
-                    <i class="fas fa-save me-2"></i>Save Changes
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
+<!-- Include User Management Modal Component -->
+{% include 'components/modals/user_management_modal.html' %}
 
 <script>
 // Global variable to store current user data
@@ -507,145 +388,12 @@ async function changePassword() {
 }
 
 // User Management Functions
-async function editCustomerUser(userId) {
-    try {
-        const response = await fetch(`/developer/api/user/${userId}`, {
-            method: 'GET',
-            headers: {
-                'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
-            }
-        });
-
-        const data = await response.json();
-        if (data.success) {
-            currentUser = data.user;
-            populateUserModal(data.user);
-            new bootstrap.Modal(document.getElementById('editUserModal')).show();
-        } else {
-            alert('Error loading user data: ' + data.error);
-        }
-    } catch (error) {
-        alert('Network error occurred');
-    }
+function editCustomerUser(userId) {
+    openUserManagementModal(userId, 'general');
 }
 
-function populateUserModal(user) {
-    document.getElementById('userId').value = user.id;
-    document.getElementById('userFirstName').value = user.first_name || '';
-    document.getElementById('userLastName').value = user.last_name || '';
-    document.getElementById('userEmail').value = user.email || '';
-    document.getElementById('userPhone').value = user.phone || '';
-    document.getElementById('userOrganization').value = user.organization ? user.organization.name : 'No Organization';
-    document.getElementById('userIsOwner').checked = user.is_organization_owner || false;
-    document.getElementById('userIsActive').checked = user.is_active;
-    document.getElementById('userUsername').textContent = user.username;
-    document.getElementById('userLastLogin').textContent = user.last_login || 'Never';
-    document.getElementById('userCreatedAt').textContent = user.created_at || 'N/A';
-}
-
-async function saveUser() {
-    const userData = {
-        user_id: document.getElementById('userId').value,
-        first_name: document.getElementById('userFirstName').value,
-        last_name: document.getElementById('userLastName').value,
-        email: document.getElementById('userEmail').value,
-        phone: document.getElementById('userPhone').value,
-        is_organization_owner: document.getElementById('userIsOwner').checked,
-        is_active: document.getElementById('userIsActive').checked
-    };
-
-    try {
-        const response = await fetch('/developer/api/user/update', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
-            },
-            body: JSON.stringify(userData)
-        });
-
-        const data = await response.json();
-        if (data.success) {
-            alert('User updated successfully!');
-            bootstrap.Modal.getInstance(document.getElementById('editUserModal')).hide();
-            location.reload();
-        } else {
-            alert('Error updating user: ' + data.error);
-        }
-    } catch (error) {
-        alert('Network error occurred');
-    }
-}
-
-async function resetUserPassword() {
-    if (!currentUser) return;
-
-    const newPassword = prompt('Enter new password for user:');
-    if (!newPassword) return;
-
-    try {
-        const response = await fetch('/developer/api/user/reset-password', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
-            },
-            body: JSON.stringify({
-                user_id: currentUser.id,
-                new_password: newPassword
-            })
-        });
-
-        const data = await response.json();
-        if (data.success) {
-            alert('Password reset successfully!');
-        } else {
-            alert('Error resetting password: ' + data.error);
-        }
-    } catch (error) {
-        alert('Network error occurred');
-    }
-}
-
-function loginAsUser(userId = null) {
-    const targetUserId = userId || (currentUser ? currentUser.id : null);
-    if (!targetUserId) return;
-
-    if (confirm('Login as this user? This will open a new tab with their session.')) {
-        window.open(`/developer/login-as/${targetUserId}`, '_blank');
-    }
-}
-
-async function softDeleteUser() {
-    if (!currentUser) return;
-
-    if (!confirm(`Soft delete user ${currentUser.username}? This will deactivate their account and remove access while preserving data.`)) {
-        return;
-    }
-
-    try {
-        const response = await fetch('/developer/api/user/soft-delete', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
-            },
-            body: JSON.stringify({
-                user_id: currentUser.id
-            })
-        });
-
-        const data = await response.json();
-        if (data.success) {
-            alert('User soft deleted successfully!');
-            bootstrap.Modal.getInstance(document.getElementById('editUserModal')).hide();
-            location.reload();
-        } else {
-            alert('Error soft deleting user: ' + data.error);
-        }
-    } catch (error) {
-        alert('Network error occurred');
-    }
+function editDeveloperUser(userId) {
+    openUserManagementModal(userId, 'developer');
 }
 
 async function toggleUserStatus(userId, isActive) {
@@ -667,9 +415,12 @@ async function toggleUserStatus(userId, isActive) {
     }
 }
 
-function editDeveloperUser(userId) {
-    // For developer users, use the same modal but populate differently
-    editCustomerUser(userId);
+function loginAsUser(userId = null) {
+    if (userId) {
+        if (confirm('Login as this user? This will open a new tab with their session.')) {
+            window.open(`/developer/login-as/${userId}`, '_blank');
+        }
+    }
 }
 </script>
 {% endblock %}
