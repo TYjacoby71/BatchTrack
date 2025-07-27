@@ -462,7 +462,7 @@ function populateOrgUserModal(user) {
     document.getElementById('orgUserCreatedAt').textContent = user.created_at || 'N/A';
 }
 
-function saveOrgUser() {
+async function saveOrgUser() {
     const userId = document.getElementById('orgUserId').value;
     const isOwnerChecked = document.getElementById('orgUserIsOwner').checked;
 
