@@ -66,7 +66,7 @@ class PricingSnapshot(db.Model):
             db.session.add(snapshot)
         
         # Update with latest data
-        snapshot.stripe_lookup_key = price_data.get('lookup_key', '')
+        snapshot.stripe_lookup_key = price_data.get('lookup_key') or None
         snapshot.stripe_product_id = price_data['product']
         snapshot.unit_amount = price_data['unit_amount']
         snapshot.currency = price_data['currency']
