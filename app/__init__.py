@@ -247,6 +247,7 @@ def create_app():
     from .blueprints.api.dashboard_routes import dashboard_api_bp  # Import dashboard API blueprint
     from .blueprints.api.unit_routes import unit_api_bp  # Import unit API blueprint
     app.register_blueprint(stock_api_bp)
+    app.register_blueprint(ingredient_api_bp)
     app.register_blueprint(dashboard_api_bp)
     app.register_blueprint(unit_api_bp)
     app.register_blueprint(container_api_bp) # Register container API blueprint
