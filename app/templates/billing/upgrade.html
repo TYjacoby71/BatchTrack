@@ -49,7 +49,7 @@
                 <strong>Available Tiers:</strong>
                 <ul class="mb-0">
                     {% for tier_key, tier_data in tiers.items() %}
-                    <li>{{ tier_key }}: {{ tier_data.name }} (Stripe Ready: {{ '✓' if tier_data.get('is_stripe_ready', False) else '✗' }})</li>
+                    <li>{{ tier_key }}: {{ tier_data.name }} (Available: {{ '✓' if tier_data.get('is_available', True) else '✗' }})</li>
                     {% endfor %}
                 </ul>
             </div>

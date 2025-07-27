@@ -60,12 +60,17 @@
                                 <div class="card-body">
                                     <h6>{{ tier_data.get('name', tier_key.title()) }}</h6>
                                     <small class="text-muted">
-                                        Stripe Ready: {{ '✓' if tier_data.get('is_stripe_ready', False) else '✗' }}<br>
-                                        Customer Facing: {{ '✓' if tier_data.get('is_customer_facing', True) else '✗' }}<br>
-                                        Available: {{ '✓' if tier_data.get('is_available', True) else '✗' }}
-                                    </small>
-                                    
-                                    {% if not tier_data.get('is_stripe_ready', False) %}
+                                        tier_key.title()) }}</h6>
+                                        <small class="text-muted">
+
+                                            Customer Facing: {{ '✓' if tier_data.get('is_customer_facing', True) else '✗' }}<br>
+                                            Available: {{ '✓' if tier_data.get('is_available', True) else '✗' }}
+                                        </small>
+
+                                        {% if tier_key != 'free' and tier_key != 'exempt' %}
+                                        <form method="POST" action="{{ url_for('billing.dev_activate_subscription', tier=tier_key) }}" class="mt-2">
+                                            {{ csrf_token() }}
+                                            <button type="submit" class="btn btn-sm btn-success">
                                     <form method="POST" action="{{ url_for('billing.dev_activate_subscription', tier=tier_key) }}" class="mt-2">
                                         {{ csrf_token() }}
                                         <button type="submit" class="btn btn-sm btn-success">
