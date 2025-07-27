@@ -137,7 +137,7 @@
 
                 <div class="card-footer text-center">
                     {% if current_tier != tier_name %}
-                    <!-- Debug Info -->
+                    <!-- Debug Info - Only show in DEBUG mode -->
                     {% if config.get('DEBUG') %}
                     <div class="alert alert-info small mb-2">
                       <strong>Debug:</strong> is_stripe_ready: {{ tier_data.get('is_stripe_ready', False) }}, 
@@ -162,11 +162,19 @@
                         </button>
                       </form>
                     {% else %}
-                      <!-- Stripe Ready but not configured -->
+                      <!-- Stripe Ready but not configured - Only show in DEBUG mode -->
+                      {% if config.get('DEBUG') %}
                       <div class="alert alert-warning">
                         <strong>Configuration Required:</strong> This tier requires Stripe configuration. 
                         <a href="/secrets" target="_blank">Add Stripe secrets</a> to enable payments.
                       </div>
+                      {% else %}
+                      <!-- In production, show contact support message instead -->
+                      <div class="alert alert-info">
+                        <strong>Contact Sales:</strong> This tier requires setup assistance. 
+                        Please contact our support team to enable this plan.
+                      </div>
+                      {% endif %}
                     {% endif %}
                     {% if tier_data.get('price_yearly') %}
                     <a href="{{ url_for('billing.checkout', tier=tier_name, billing_cycle='yearly') }}" 
