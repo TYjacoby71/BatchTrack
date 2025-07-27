@@ -18,8 +18,9 @@
                 <strong>Stripe Configuration:</strong>
                 <ul class="mb-2">
                     <li>Secret Key: {{ '✓ Configured' if config.get('STRIPE_SECRET_KEY') else '✗ Missing' }}</li>
+                    <li>Publishable Key: {{ '✓ Configured' if config.get('STRIPE_PUBLISHABLE_KEY') else '✗ Missing' }}</li>
                     <li>Webhook Secret: {{ '✓ Configured' if config.get('STRIPE_WEBHOOK_SECRET') else '✗ Missing (Dev Mode)' }}</li>
-                    <li>Operating Mode: {{ 'Production' if config.get('STRIPE_WEBHOOK_SECRET') else 'Development' }}</li>
+                    <li>Operating Mode: {{ 'Production' if (config.get('STRIPE_WEBHOOK_SECRET') and config.get('STRIPE_SECRET_KEY')) else 'Development' }}</li>
                 </ul>
             </div>
             <div class="col-md-6">
@@ -145,7 +146,7 @@
                     </div>
                     {% endif %}
 
-                    {% if tier_data.get('is_stripe_ready', False) and config.get('STRIPE_SECRET_KEY') %}
+                    {% if tier_data.get('is_stripe_ready', False) %}
                       <!-- Stripe Ready Tier - Real Payment Required -->
                       <form method="POST" action="{{ url_for('billing.checkout', tier=tier_name) }}" class="d-inline">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>

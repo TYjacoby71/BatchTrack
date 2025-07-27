@@ -10,46 +10,32 @@ class PricingService:
 
     @staticmethod
     def get_pricing_data():
-        """Get pricing data from Stripe or fallback to local config based on mode"""
+        """Get pricing data with proper fallback handling"""
         logger.info("=== PRICING SERVICE ===")
 
-        # Check if we're in development mode (no webhook secret = dev mode)
-        webhook_secret = current_app.config.get('STRIPE_WEBHOOK_SECRET')
-        is_dev_mode = not webhook_secret or webhook_secret.strip() == ''
-        logger.info(f"Development mode: {is_dev_mode}")
+        # Check if we're in development mode based on webhook secret
+        import os
+        webhook_secret = os.environ.get('STRIPE_WEBHOOK_SECRET') or current_app.config.get('STRIPE_WEBHOOK_SECRET')
+        secret_key = os.environ.get('STRIPE_SECRET_KEY') or current_app.config.get('STRIPE_SECRET_KEY')
+        publishable_key = os.environ.get('STRIPE_PUBLISHABLE_KEY') or current_app.config.get('STRIPE_PUBLISHABLE_KEY')
+        
+        is_development = not webhook_secret
+        logger.info(f"Development mode: {is_development}")
+        logger.info(f"Stripe secret key configured: {bool(secret_key)}")
+        logger.info(f"Stripe webhook secret configured: {bool(webhook_secret)}")
+        logger.info(f"Stripe publishable key configured: {bool(publishable_key)}")
 
-        # Try to initialize Stripe first
+        # Try to initialize Stripe
         stripe_initialized = StripeService.initialize_stripe()
         logger.info(f"Stripe initialization result: {stripe_initialized}")
 
-        # In development mode, always use fallback pricing
-        if is_dev_mode:
+        if is_development or not stripe_initialized:
             logger.info("Development mode: Using fallback pricing data")
-            pricing_data = PricingService._get_fallback_pricing()
-            # Mark all tiers as not stripe-ready in dev mode
-            for tier_data in pricing_data.values():
-                tier_data['is_stripe_ready'] = False
-            logger.info(f"Dev mode pricing data keys: {list(pricing_data.keys())}")
-            return pricing_data
+            return PricingService._get_fallback_pricing_data()
 
-        # Production mode: Require Stripe
-        if not stripe_initialized:
-            logger.error("Production mode but Stripe not configured - returning empty pricing")
-            return {}
-
-        try:
-            # Get pricing from Stripe
-            logger.info("Production mode: Attempting to get Stripe pricing...")
-            pricing_data = PricingService._get_stripe_pricing()
-            # Mark all tiers as stripe-ready in production mode
-            for tier_data in pricing_data.values():
-                tier_data['is_stripe_ready'] = True
-            logger.info(f"Production mode pricing data keys: {list(pricing_data.keys())}")
-            return pricing_data
-        except Exception as e:
-            logger.error(f"Production mode: Failed to get Stripe pricing: {str(e)}")
-            # In production, don't fallback - return empty to prevent access
-            return {}
+        # Production mode - get pricing from Stripe or tier config
+        logger.info("Production mode: Getting pricing from tiers config")
+        return PricingService._get_tier_based_pricing_data()
 
     @staticmethod
     def _load_tiers_config():
@@ -237,3 +223,88 @@ class PricingService:
         tiers_config = PricingService._load_tiers_config()
         tier_data = tiers_config.get(tier, {})
         return tier_data.get('user_limit', 1)
+
+    @staticmethod
+    def _get_tier_based_pricing_data():
+        """Get pricing data from subscription tier configuration"""
+        from ..blueprints.developer.subscription_tiers import load_tiers_config
+
+        tiers_config = load_tiers_config()
+        pricing_data = {}
+
+        # Check if Stripe is properly configured
+        import os
+        stripe_secret = os.environ.get('STRIPE_SECRET_KEY') or current_app.config.get('STRIPE_SECRET_KEY')
+        webhook_secret = os.environ.get('STRIPE_WEBHOOK_SECRET') or current_app.config.get('STRIPE_WEBHOOK_SECRET')
+        stripe_configured = bool(stripe_secret and webhook_secret)
+
+        for tier_key, tier_data in tiers_config.items():
+            # Only include customer-facing tiers
+            if not tier_data.get('is_customer_facing', True):
+                continue
+
+            # Determine if tier should be stripe-ready based on configuration
+            tier_is_stripe_ready = tier_data.get('is_stripe_ready', False)
+            effective_stripe_ready = tier_is_stripe_ready and stripe_configured
+
+            # Build pricing entry
+            pricing_entry = {
+                'name': tier_data.get('name', tier_key.title()),
+                'price': tier_data.get('price_display', '$0'),
+                'features': tier_data.get('fallback_features', []),
+                'user_limit': tier_data.get('user_limit', 1),
+                'is_stripe_ready': effective_stripe_ready
+            }
+
+            # Add monthly/yearly pricing if available
+            if tier_data.get('stripe_price_monthly'):
+                pricing_entry['price_monthly'] = float(tier_data['stripe_price_monthly'])
+            if tier_data.get('stripe_price_yearly'):
+                pricing_entry['price_yearly'] = float(tier_data['stripe_price_yearly'])
+
+            pricing_data[tier_key] = pricing_entry
+
+        return pricing_data
+
+    @staticmethod
+    def _get_fallback_pricing_data():
+        """Get fallback pricing data for development mode"""
+        from ..blueprints.developer.subscription_tiers import load_tiers_config
+
+        tiers_config = load_tiers_config()
+        pricing_data = {}
+
+        logger.info(f"Dev mode pricing data keys: {list(tiers_config.keys())}")
+
+        # Check if Stripe secrets are configured
+        import os
+        stripe_secret = os.environ.get('STRIPE_SECRET_KEY') or current_app.config.get('STRIPE_SECRET_KEY')
+        webhook_secret = os.environ.get('STRIPE_WEBHOOK_SECRET') or current_app.config.get('STRIPE_WEBHOOK_SECRET')
+        stripe_configured = bool(stripe_secret and webhook_secret)
+
+        for tier_key, tier_data in tiers_config.items():
+            # Only include customer-facing tiers
+            if not tier_data.get('is_customer_facing', True):
+                continue
+
+            # In fallback mode, respect tier's stripe_ready flag only if Stripe is configured
+            tier_is_stripe_ready = tier_data.get('is_stripe_ready', False)
+            effective_stripe_ready = tier_is_stripe_ready and stripe_configured
+
+            pricing_entry = {
+                'name': tier_data.get('name', tier_key.title()),
+                'price': tier_data.get('price_display', '$0'),
+                'features': tier_data.get('fallback_features', []),
+                'user_limit': tier_data.get('user_limit', 1),
+                'is_stripe_ready': effective_stripe_ready
+            }
+
+            # Add display pricing
+            if tier_data.get('price_monthly'):
+                pricing_entry['price_monthly'] = float(tier_data['price_monthly'])
+            if tier_data.get('price_yearly'):
+                pricing_entry['price_yearly'] = float(tier_data['price_yearly'])
+
+            pricing_data[tier_key] = pricing_entry
+
+        return pricing_data
