@@ -67,9 +67,8 @@ class BillingService:
         if tier_key not in available_tiers:
             return False
 
-        tier_data = available_tiers[tier_key]
-        # Check if tier is ready for Stripe checkout
-        return tier_data.get('is_stripe_ready', False)
+        # All available tiers are ready for checkout
+        return True
 
     @staticmethod
     def build_price_key(tier, billing_cycle='monthly'):
