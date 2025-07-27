@@ -1,0 +1,336 @@
+
+<!-- User Management Modal Component -->
+<div class="modal fade" id="userManagementModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-user-edit me-2"></i><span id="modalTitle">Manage User</span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="userManagementForm">
+                    <input type="hidden" id="modalUserId">
+
+                    <!-- User Information Section -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-muted mb-3">User Information</h6>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">First Name</label>
+                            <input type="text" class="form-control" id="modalUserFirstName">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Last Name</label>
+                            <input type="text" class="form-control" id="modalUserLastName">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Email</label>
+                            <input type="email" class="form-control" id="modalUserEmail">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Phone</label>
+                            <input type="tel" class="form-control" id="modalUserPhone">
+                        </div>
+                    </div>
+
+                    <!-- Organization Context Section -->
+                    <div class="row mb-4" id="organizationSection">
+                        <div class="col-12">
+                            <h6 class="text-muted mb-3">Organization Context</h6>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Organization</label>
+                            <input type="text" class="form-control" id="modalUserOrganization" readonly>
+                        </div>
+                        <div class="col-md-6 mb-3" id="userTypeSection">
+                            <label class="form-label fw-bold">User Type</label>
+                            <select class="form-select" id="modalUserType">
+                                <option value="customer">Customer</option>
+                                <option value="developer">Developer</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3" id="ownerSection">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="modalUserIsOwner">
+                                <label class="form-check-label fw-bold" for="modalUserIsOwner">
+                                    Organization Owner
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-12 mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="modalUserIsActive">
+                                <label class="form-check-label fw-bold" for="modalUserIsActive">
+                                    User is active
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Developer Actions Section -->
+                    <div class="row mb-4" id="developerActionsSection">
+                        <div class="col-12">
+                            <h6 class="text-muted mb-3">Developer Actions</h6>
+                        </div>
+                        <div class="col-12">
+                            <div class="alert alert-success">
+                                <h6><i class="fas fa-tools me-2"></i>Quick Actions</h6>
+                                <div class="btn-group-vertical d-grid gap-2 col-6 mx-auto">
+                                    <button type="button" class="btn btn-outline-primary" onclick="resetModalUserPassword()">
+                                        <i class="fas fa-key me-2"></i>Reset Password
+                                    </button>
+                                    <button type="button" class="btn btn-outline-info" onclick="loginAsModalUser()">
+                                        <i class="fas fa-sign-in-alt me-2"></i>Login as This User
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary" id="customerSupportBtn" onclick="viewAsCustomerSupport()" style="display: none;">
+                                        <i class="fas fa-headset me-2"></i>Customer Support View
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Account Information -->
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <div class="alert alert-light border">
+                                <h6 class="mb-2">Account Information</h6>
+                                <p class="mb-1"><strong>Username:</strong> <span id="modalUserUsername"></span></p>
+                                <p class="mb-1" id="orgIdRow"><strong>Organization ID:</strong> <span id="modalUserOrgId"></span></p>
+                                <p class="mb-1"><strong>Last Login:</strong> <span id="modalUserLastLogin"></span></p>
+                                <p class="mb-0"><strong>Created:</strong> <span id="modalUserCreatedAt"></span></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Danger Zone -->
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="alert alert-danger border-danger">
+                                <h6 class="text-danger mb-2">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>Danger Zone
+                                </h6>
+                                <p class="mb-3 small">Permanent actions that cannot be undone.</p>
+                                <button type="button" class="btn btn-outline-danger btn-sm" onclick="softDeleteModalUser()">
+                                    <i class="fas fa-user-slash me-2"></i>Soft Delete User
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" onclick="saveModalUser()">
+                    <i class="fas fa-save me-2"></i>Save Changes
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Global variable to store current modal user data
+let currentModalUser = null;
+let modalContext = 'general'; // 'general', 'organization', 'developer'
+
+function openUserManagementModal(userId, context = 'general', organizationData = null) {
+    modalContext = context;
+    
+    // Configure modal based on context
+    if (context === 'organization') {
+        document.getElementById('modalTitle').textContent = 'Manage Organization User';
+        document.getElementById('customerSupportBtn').style.display = 'block';
+        document.getElementById('userTypeSection').style.display = 'none';
+        document.getElementById('modalUserType').value = 'customer';
+        if (organizationData) {
+            document.getElementById('modalUserOrganization').value = organizationData.name;
+            document.getElementById('modalUserOrgId').textContent = organizationData.id;
+        }
+    } else if (context === 'developer') {
+        document.getElementById('modalTitle').textContent = 'Manage Developer User';
+        document.getElementById('customerSupportBtn').style.display = 'none';
+        document.getElementById('ownerSection').style.display = 'none';
+        document.getElementById('orgIdRow').style.display = 'none';
+    } else {
+        document.getElementById('modalTitle').textContent = 'Manage User';
+        document.getElementById('customerSupportBtn').style.display = 'none';
+    }
+
+    // Fetch user data and populate modal
+    fetch(`/developer/api/user/${userId}`, {
+        method: 'GET',
+        headers: {
+            'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            currentModalUser = data.user;
+            populateUserManagementModal(data.user);
+            new bootstrap.Modal(document.getElementById('userManagementModal')).show();
+        } else {
+            alert('Error loading user data: ' + data.error);
+        }
+    })
+    .catch(error => {
+        alert('Network error occurred');
+    });
+}
+
+function populateUserManagementModal(user) {
+    document.getElementById('modalUserId').value = user.id;
+    document.getElementById('modalUserFirstName').value = user.first_name || '';
+    document.getElementById('modalUserLastName').value = user.last_name || '';
+    document.getElementById('modalUserEmail').value = user.email || '';
+    document.getElementById('modalUserPhone').value = user.phone || '';
+    document.getElementById('modalUserType').value = user.user_type || 'customer';
+    document.getElementById('modalUserIsOwner').checked = user.is_organization_owner || false;
+    document.getElementById('modalUserIsActive').checked = user.is_active;
+    document.getElementById('modalUserUsername').textContent = user.username;
+    document.getElementById('modalUserLastLogin').textContent = user.last_login || 'Never';
+    document.getElementById('modalUserCreatedAt').textContent = user.created_at || 'N/A';
+    
+    if (user.organization) {
+        document.getElementById('modalUserOrganization').value = user.organization.name;
+        document.getElementById('modalUserOrgId').textContent = user.organization.id;
+    } else {
+        document.getElementById('modalUserOrganization').value = 'No Organization';
+        document.getElementById('modalUserOrgId').textContent = 'N/A';
+    }
+}
+
+function saveModalUser() {
+    const userId = document.getElementById('modalUserId').value;
+    const isOwnerChecked = document.getElementById('modalUserIsOwner').checked;
+
+    // Check if trying to make this user an owner when another owner already exists (for organization context)
+    if (modalContext === 'organization' && isOwnerChecked) {
+        const currentOwners = Array.from(document.querySelectorAll('.user-row')).filter(row => {
+            const ownerCell = row.querySelector('.owner-status');
+            const rowUserId = row.dataset.userId;
+            return ownerCell && ownerCell.textContent.includes('Organization Owner') && rowUserId !== userId;
+        });
+
+        if (currentOwners.length > 0) {
+            if (!confirm('Making this user an organization owner will remove owner status from the current owner. Continue?')) {
+                return;
+            }
+        }
+    }
+
+    const userData = {
+        user_id: document.getElementById('modalUserId').value,
+        first_name: document.getElementById('modalUserFirstName').value,
+        last_name: document.getElementById('modalUserLastName').value,
+        email: document.getElementById('modalUserEmail').value,
+        phone: document.getElementById('modalUserPhone').value,
+        user_type: document.getElementById('modalUserType').value,
+        is_organization_owner: isOwnerChecked,
+        is_active: document.getElementById('modalUserIsActive').checked
+    };
+
+    fetch('/developer/api/user/update', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
+        },
+        body: JSON.stringify(userData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('User updated successfully!');
+            bootstrap.Modal.getInstance(document.getElementById('userManagementModal')).hide();
+            location.reload();
+        } else {
+            alert('Error updating user: ' + data.error);
+        }
+    })
+    .catch(error => {
+        alert('Network error occurred');
+    });
+}
+
+function resetModalUserPassword() {
+    if (!currentModalUser) return;
+
+    const newPassword = prompt('Enter new password for user:');
+    if (!newPassword) return;
+
+    fetch('/developer/api/user/reset-password', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
+        },
+        body: JSON.stringify({
+            user_id: currentModalUser.id,
+            new_password: newPassword
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Password reset successfully!');
+        } else {
+            alert('Error resetting password: ' + data.error);
+        }
+    })
+    .catch(error => {
+        alert('Network error occurred');
+    });
+}
+
+function loginAsModalUser() {
+    if (!currentModalUser) return;
+
+    if (confirm('Login as this user? This will open a new tab with their session.')) {
+        window.open(`/developer/login-as/${currentModalUser.id}`, '_blank');
+    }
+}
+
+function viewAsCustomerSupport() {
+    if (!currentModalUser || !currentModalUser.organization) return;
+
+    // Switch to customer support view for this organization
+    window.open(`/developer/select-org/${currentModalUser.organization.id}`, '_blank');
+}
+
+function softDeleteModalUser() {
+    if (!currentModalUser) return;
+
+    if (!confirm(`Soft delete user ${currentModalUser.username}? This will deactivate their account and remove access while preserving data.`)) {
+        return;
+    }
+
+    fetch('/developer/api/user/soft-delete', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
+        },
+        body: JSON.stringify({
+            user_id: currentModalUser.id
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('User soft deleted successfully!');
+            bootstrap.Modal.getInstance(document.getElementById('userManagementModal')).hide();
+            location.reload();
+        } else {
+            alert('Error soft deleting user: ' + data.error);
+        }
+    })
+    .catch(error => {
+        alert('Network error occurred');
+    });
+}
+</script>

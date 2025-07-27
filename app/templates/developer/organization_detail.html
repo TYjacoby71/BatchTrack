@@ -17,8 +17,8 @@
                         <div>
                             <h2 class="mb-2">{{ organization.name }}</h2>
                             <p class="text-muted mb-0">
-                                <span class="badge bg-{{ 'success' if organization.subscription_tier == 'enterprise' else 'warning' if organization.subscription_tier == 'team' else 'secondary' }}">
-                                    {{ organization.subscription_tier|title }}
+                                <span class="badge bg-{{ 'success' if organization.tier and organization.tier.key == 'enterprise' else 'warning' if organization.tier and organization.tier.key == 'team' else 'secondary' }}">
+                                    {{ organization.tier.name if organization.tier else 'Free' }}
                                 </span>
                                 <span class="badge bg-{{ 'success' if organization.is_active else 'danger' }}">
                                     {{ 'Active' if organization.is_active else 'Inactive' }}
@@ -65,7 +65,7 @@
                             {% if config.get('DEBUG') %}
                             <div class="alert alert-info small">
                                 <strong>Debug:</strong> Current tier = "{{ current_tier }}", 
-                                Has subscription = {{ organization.subscription is not none }},
+                                Has tier record = {{ organization.tier is not none }},
                                 Available tiers = {{ tiers_config.keys() | list }}
                             </div>
                             {% endif %}
@@ -290,137 +290,8 @@
     </div>
 </div>
 
-<!-- User Management Modal for Organization Detail -->
-<div class="modal fade" id="editOrgUserModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header bg-success text-white">
-                <h5 class="modal-title">
-                    <i class="fas fa-user-edit me-2"></i>Manage Organization User
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <form id="editOrgUserForm">
-                    <input type="hidden" id="orgUserId">
-
-                    <!-- User Information Section -->
-                    <div class="row mb-4">
-                        <div class="col-12">
-                            <h6 class="text-muted mb-3">User Information</h6>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-bold">First Name</label>
-                            <input type="text" class="form-control" id="orgUserFirstName">
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-bold">Last Name</label>
-                            <input type="text" class="form-control" id="orgUserLastName">
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-bold">Email</label>
-                            <input type="email" class="form-control" id="orgUserEmail">
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-bold">Phone</label>
-                            <input type="tel" class="form-control" id="orgUserPhone">
-                        </div>
-                    </div>
-
-                    <!-- Organization Context Section -->
-                    <div class="row mb-4">
-                        <div class="col-12">
-                            <h6 class="text-muted mb-3">Organization Context</h6>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-bold">Organization</label>
-                            <input type="text" class="form-control" value="{{ organization.name }}" readonly>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-bold">User Type</label>
-                            <select class="form-select" id="orgUserType">
-                                <option value="customer">Customer</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="orgUserIsOwner">
-                                <label class="form-check-label fw-bold" for="orgUserIsOwner">
-                                    Organization Owner
-                                </label>
-                            </div>
-                        </div>
-                        <div class="col-12 mb-3">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="orgUserIsActive">
-                                <label class="form-check-label fw-bold" for="orgUserIsActive">
-                                    User is active
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Developer Actions Section -->
-                    <div class="row mb-4">
-                        <div class="col-12">
-                            <h6 class="text-muted mb-3">Developer Actions</h6>
-                        </div>
-                        <div class="col-12">
-                            <div class="alert alert-success">
-                                <h6><i class="fas fa-tools me-2"></i>Quick Actions</h6>
-                                <div class="btn-group-vertical d-grid gap-2 col-6 mx-auto">
-                                    <button type="button" class="btn btn-outline-primary" onclick="resetOrgUserPassword()">
-                                        <i class="fas fa-key me-2"></i>Reset Password
-                                    </button>
-                                    <button type="button" class="btn btn-outline-info" onclick="loginAsOrgUser()">
-                                        <i class="fas fa-sign-in-alt me-2"></i>Login as This User
-                                    </button>
-                                    <button type="button" class="btn btn-outline-secondary" onclick="viewAsCustomerSupport()">
-                                        <i class="fas fa-headset me-2"></i>Customer Support View
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Account Information -->
-                    <div class="row mb-3">
-                        <div class="col-12">
-                            <div class="alert alert-light border">
-                                <h6 class="mb-2">Account Information</h6>
-                                <p class="mb-1"><strong>Username:</strong> <span id="orgUserUsername"></span></p>
-                                <p class="mb-1"><strong>Organization ID:</strong> {{ organization.id }}</p>
-                                <p class="mb-1"><strong>Last Login:</strong> <span id="orgUserLastLogin">N/A</span></p>
-                                <p class="mb-0"><strong>Created:</strong> <span id="orgUserCreatedAt"></span></p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Danger Zone -->
-                    <div class="row">
-                        <div class="col-12">
-                            <div class="alert alert-danger border-danger">
-                                <h6 class="text-danger mb-2">
-                                    <i class="fas fa-exclamation-triangle me-2"></i>Danger Zone
-                                </h6>
-                                <p class="mb-3 small">Permanent actions that cannot be undone.</p>
-                                <button type="button" class="btn btn-outline-danger btn-sm" onclick="softDeleteOrgUser()">
-                                    <i class="fas fa-user-slash me-2"></i>Soft Delete User
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-success" onclick="saveOrgUser()">
-                    <i class="fas fa-save me-2"></i>Save Changes
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
+<!-- Include User Management Modal Component -->
+{% include 'components/modals/user_management_modal.html' %}
 
 <script>
 // Global variable to store current organization user data
@@ -428,196 +299,38 @@ let currentOrgUser = null;
 
 // Organization User Management Functions
 function editOrgUser(userId) {
-    const user = {{ users|tojson }}.find(u => u.id === userId);
-    if (!user) return;
-
-    // Store current user for other functions
-    currentOrgUser = user;
-
-    // Populate modal fields
-    document.getElementById('orgUserId').value = user.id;
-    document.getElementById('orgUserFirstName').value = user.first_name || '';
-    document.getElementById('orgUserLastName').value = user.last_name || '';
-    document.getElementById('orgUserEmail').value = user.email || '';
-    document.getElementById('orgUserPhone').value = user.phone || '';
-    document.getElementById('orgUserIsOwner').checked = user.is_organization_owner || false;
-    document.getElementById('orgUserIsActive').checked = user.is_active || false;
-    document.getElementById('orgUserType').value = user.user_type || 'customer';
-    
-    // Populate account information section
-    document.getElementById('orgUserUsername').textContent = user.username || 'N/A';
-    document.getElementById('orgUserCreatedAt').textContent = user.created_at || 'N/A';
-    
-    // The organization field is already set to "{{ organization.name }}" in the template
-    // so no need to update it dynamically
-
-    // Show the modal
-    const modal = new bootstrap.Modal(document.getElementById('editOrgUserModal'));
-    modal.show();
-}
-
-function populateOrgUserModal(user) {
-    document.getElementById('orgUserId').value = user.id;
-    document.getElementById('orgUserFirstName').value = user.first_name || '';
-    document.getElementById('orgUserLastName').value = user.last_name || '';
-    document.getElementById('orgUserEmail').value = user.email || '';
-    document.getElementById('orgUserPhone').value = user.phone || '';
-    document.getElementById('orgUserType').value = user.user_type || 'customer';
-    document.getElementById('orgUserIsOwner').checked = user.is_organization_owner || false;
-    document.getElementById('orgUserIsActive').checked = user.is_active;
-    document.getElementById('orgUserUsername').textContent = user.username;
-    document.getElementById('orgUserLastLogin').textContent = user.last_login || 'Never';
-    document.getElementById('orgUserCreatedAt').textContent = user.created_at || 'N/A';
-}
-
-async function saveOrgUser() {
-    const userId = document.getElementById('orgUserId').value;
-    const isOwnerChecked = document.getElementById('orgUserIsOwner').checked;
-
-    // Check if trying to make this user an owner when another owner already exists
-    if (isOwnerChecked) {
-        const currentOwners = Array.from(document.querySelectorAll('.user-row')).filter(row => {
-            const ownerCell = row.querySelector('.owner-status');
-            const rowUserId = row.dataset.userId;
-            return ownerCell && ownerCell.textContent.includes('Organization Owner') && rowUserId !== userId;
-        });
-
-        if (currentOwners.length > 0) {
-            if (!confirm('Making this user an organization owner will remove owner status from the current owner. Continue?')) {
-                return;
-            }
-        }
-    }
-
-    const userData = {
-        user_id: document.getElementById('orgUserId').value,
-        first_name: document.getElementById('orgUserFirstName').value,
-        last_name: document.getElementById('orgUserLastName').value,
-        email: document.getElementById('orgUserEmail').value,
-        phone: document.getElementById('orgUserPhone').value,
-        user_type: document.getElementById('orgUserType').value,
-        is_organization_owner: isOwnerChecked,
-        is_active: document.getElementById('orgUserIsActive').checked
+    const organizationData = {
+        name: '{{ organization.name }}',
+        id: {{ organization.id }}
     };
-
-    try {
-        const response = await fetch('/developer/api/user/update', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
-            },
-            body: JSON.stringify(userData)
-        });
-
-        const data = await response.json();
-        if (data.success) {
-            alert('User updated successfully!');
-            bootstrap.Modal.getInstance(document.getElementById('editOrgUserModal')).hide();
-            location.reload();
-        } else {
-            alert('Error updating user: ' + data.error);
-        }
-    } catch (error) {
-        alert('Network error occurred');
-    }
-}
-
-async function resetOrgUserPassword() {
-    if (!currentOrgUser) return;
-
-    const newPassword = prompt('Enter new password for user:');
-    if (!newPassword) return;
-
-    try {
-        const response = await fetch('/developer/api/user/reset-password', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
-            },
-            body: JSON.stringify({
-                user_id: currentOrgUser.id,
-                new_password: newPassword
-            })
-        });
-
-        const data = await response.json();
-        if (data.success) {
-            alert('Password reset successfully!');
-        } else {
-            alert('Error resetting password: ' + data.error);
-        }
-    } catch (error) {
-        alert('Network error occurred');
-    }
+    openUserManagementModal(userId, 'organization', organizationData);
 }
 
 function loginAsOrgUser(userId = null) {
-    const targetUserId = userId || (currentOrgUser ? currentOrgUser.id : null);
-    if (!targetUserId) return;
-
-    if (confirm('Login as this user? This will open a new tab with their session.')) {
-        window.open(`/developer/login-as/${targetUserId}`, '_blank');
-    }
-}
-
-function viewAsCustomerSupport() {
-    if (!currentOrgUser) return;
-
-    // Switch to customer support view for this organization
-    window.open(`/developer/select-org/{{ organization.id }}`, '_blank');
-}
-
-async function softDeleteOrgUser() {
-    if (!currentOrgUser) return;
-
-    if (!confirm(`Soft delete user ${currentOrgUser.username}? This will deactivate their account and remove access while preserving data.`)) {
-        return;
-    }
-
-    try {
-        const response = await fetch('/developer/api/user/soft-delete', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
-            },
-            body: JSON.stringify({
-                user_id: currentOrgUser.id
-            })
-        });
-
-        const data = await response.json();
-        if (data.success) {
-            alert('User soft deleted successfully!');
-            bootstrap.Modal.getInstance(document.getElementById('editOrgUserModal')).hide();
-            location.reload();
-        } else {
-            alert('Error soft deleting user: ' + data.error);
+    if (userId) {
+        if (confirm('Login as this user? This will open a new tab with their session.')) {
+            window.open(`/developer/login-as/${userId}`, '_blank');
         }
-    } catch (error) {
-        alert('Network error occurred');
     }
 }
 
-async function toggleOrgUserStatus(userId, currentStatus) {
-    try {
-        const response = await fetch(`/developer/users/${userId}/toggle-active`, {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
-            }
-        });
-
+function toggleOrgUserStatus(userId, currentStatus) {
+    fetch(`/developer/users/${userId}/toggle-active`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
+        }
+    })
+    .then(response => {
         if (response.ok) {
             location.reload();
         } else {
             alert('Error toggling user status');
         }
-    } catch (error) {
+    })
+    .catch(error => {
         alert('Network error occurred');
-    }
+    });
 }
 
 // Organization deletion function
