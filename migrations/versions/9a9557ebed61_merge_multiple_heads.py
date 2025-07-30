@@ -1,7 +1,7 @@
 """merge multiple heads
 
 Revision ID: 9a9557ebed61
-Revises: f8e9d7c6b5a4
+Revises: requires_stripe_billing
 Create Date: 2025-07-30 19:25:40.657996
 
 """
