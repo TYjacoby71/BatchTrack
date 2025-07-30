@@ -1,0 +1,59 @@
+: ['/billing/reconciliation-needed', '/billing/reconcile-to-free', '/billing/upgrade', '/billing/checkout/<tier>/<billing_cycle>', '/billing/checkout/<tier>', '/billing/customer-portal', '/billing/cancel-subscription', '/billing/webhooks/stripe', '/billing/complete-signup-from-stripe', '/billing/debug']
+Billing endpoints: [('/billing/reconciliation-needed', 'billing.reconciliation_needed'), ('/billing/reconcile-to-free', 'billing.reconcile_to_free'), ('/billing/upgrade', 'billing.upgrade'), ('/billing/checkout/<tier>/<billing_cycle>', 'billing.checkout'), ('/billing/checkout/<tier>', 'billing.checkout'), ('/billing/customer-portal', 'billing.customer_portal'), ('/billing/cancel-subscription', 'billing.cancel_subscription'), ('/billing/webhooks/stripe', 'billing.stripe_webhook'), ('/billing/complete-signup-from-stripe', 'billing.complete_signup_from_stripe'), ('/billing/debug', 'billing.debug_billing')]
+[2025-07-30 21:00:27,320] INFO in unit_utils: BatchTrack startup
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/bin/flask", line 8, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/cli.py", line 1129, in main
+    cli.main()
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/click/core.py", line 1082, in main
+    rv = self.invoke(ctx)
+         ^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/click/core.py", line 1697, in invoke
+    return _process_result(sub_ctx.command.invoke(sub_ctx))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/click/core.py", line 1697, in invoke
+    return _process_result(sub_ctx.command.invoke(sub_ctx))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/click/core.py", line 1443, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/click/core.py", line 788, in invoke
+    return __callback(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/click/decorators.py", line 33, in new_func
+    return f(get_current_context(), *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/cli.py", line 400, in decorator
+    return ctx.invoke(f, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/click/core.py", line 788, in invoke
+    return __callback(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_migrate/cli.py", line 212, in heads
+    _heads(directory or g.directory, verbose, resolve_dependencies)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_migrate/__init__.py", line 111, in wrapped
+    f(*args, **kwargs)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_migrate/__init__.py", line 236, in heads
+    command.heads(config, verbose=verbose,
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/alembic/command.py", line 570, in heads
+    heads = script.get_revisions(script.get_heads())
+                                 ^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/alembic/script/base.py", line 414, in get_heads
+    return list(self.revision_map.heads)
+                ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py", line 1145, in __get__
+    obj.__dict__[self.__name__] = result = self.fget(obj)
+                                           ^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/alembic/script/revision.py", line 155, in heads
+    self._revision_map
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py", line 1145, in __get__
+    obj.__dict__[self.__name__] = result = self.fget(obj)
+                                           ^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/alembic/script/revision.py", line 255, in _revision_map
+    self._detect_cycles(rev_map, heads, bases, _real_heads, _real_bases)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/alembic/script/revision.py", line 278, in _detect_cycles
+    raise CycleDetected(list(rev_map))
+alembic.script.revision.CycleDetected: Cycle is detected in revisions (3d46e754118a, 6f7401b4d435, 73e07c67ddb0, 8a39f020e6ca, 9a9557ebed61, d4b5c89f1234, a1b2c3d4e5f6)
+~/workspace$ 
