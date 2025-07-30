@@ -138,17 +138,8 @@
 
                 <div class="card-footer text-center">
                     {% if current_tier != tier_name %}
-                    <!-- Check if tier requires billing -->
-                    {% if not tier_data.get('requires_stripe_billing', True) %}
-                      <!-- Tier doesn't require billing (exempt/free) - allow immediate activation -->
-                      <form method="POST" action="{{ url_for('billing.dev_activate_subscription', tier=tier_name) }}" class="d-inline">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                        <button type="submit" class="btn btn-success btn-lg w-100 mb-2">
-                          <i class="fas fa-check"></i> Activate {{ tier_data.get('name', tier_name.title()) }}
-                        </button>
-                      </form>
-                    {% else %}
-                      <!-- Tier requires billing - allow checkout -->
+                    {% if has_permission(current_user, 'organization.manage_billing') %}
+                      <!-- Standard billing flow for all paid tiers -->
                       <form method="POST" action="{{ url_for('billing.checkout', tier=tier_name) }}" class="d-inline">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                         <button type="submit" class="btn btn-primary btn-lg w-100 mb-2">
@@ -161,6 +152,10 @@
                           Choose Yearly
                       </a>
                       {% endif %}
+                    {% else %}
+                      <button class="btn btn-secondary btn-lg w-100" disabled>
+                        Contact Admin to Upgrade
+                      </button>
                     {% endif %}
                     {% else %}
                     <button class="btn btn-secondary btn-block" disabled>Current Plan</button>

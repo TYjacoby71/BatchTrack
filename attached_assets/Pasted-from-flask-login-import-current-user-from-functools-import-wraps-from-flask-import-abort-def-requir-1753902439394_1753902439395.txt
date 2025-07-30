@@ -678,19 +678,3 @@ def _has_tier_permission_for_org(org_id, permission_name):
     effective_tier = org.effective_subscription_tier
     return permission.is_available_for_tier(effective_tier)
 
-def has_permission(user, permission_name):
-    """Check if user has a specific permission - billing-agnostic"""
-    # Developers always have access
-    if user.user_type == 'developer':
-        return True
-
-    # Organization owners get all permissions available to their tier
-    if user.user_type == 'organization_owner' and user.organization:
-        from ..services.billing_access_control import BillingAccessControl
-        return BillingAccessControl.validate_tier_permission(user.organization, permission_name)
-
-    # Regular users: check their assigned permissions
-    if user.permissions:
-        return any(p.name == permission_name for p in user.permissions)
-
-    return False

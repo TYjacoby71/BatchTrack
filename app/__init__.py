@@ -486,4 +486,30 @@ def create_app():
             response.headers['X-XSS-Protection'] = '1; mode=block'
         return response
 
+    # Register error handlers
+    # Register error handlers
+
+    # Register billing access middleware
+    @app.before_request
+    def enforce_billing_access():
+        """Global middleware to enforce billing access control"""
+        from flask import request, session
+        from flask_login import current_user
+        from .services.billing_access_control import BillingAccessControl
+
+        # Skip for static files, auth routes, and billing routes
+        if (request.endpoint and (
+            request.endpoint.startswith('static') or
+            request.endpoint.startswith('auth.') or
+            request.endpoint.startswith('billing.') or
+            request.endpoint == 'billing.stripe_webhook'
+        )):
+            return
+
+        # Only check authenticated users with organizations
+        if current_user.is_authenticated and current_user.organization:
+            result = BillingAccessControl.enforce_billing_access(current_user.organization)
+            if result:  # If it returns a redirect
+                return result
+
     return app

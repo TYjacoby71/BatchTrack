@@ -5,6 +5,34 @@ from ...extensions import csrf
 import logging
 import stripe
 
+# Billing access control middleware
+@billing_bp.before_request
+def check_billing_access():
+    """Ensure organization has valid billing status for system access"""
+    # Skip billing checks for billing routes themselves and webhooks
+    if request.endpoint and (
+        request.endpoint.startswith('billing.') or 
+        request.endpoint == 'billing.stripe_webhook' or
+        request.endpoint == 'billing.upgrade' or
+        request.endpoint == 'billing.reconciliation_needed'
+    ):
+        return
+    
+    if current_user.is_authenticated and current_user.organization:
+        org = current_user.organization
+        
+        # Check if organization has access (billing current or exempt)
+        if not org.is_active:
+            flash('Your organization has been suspended. Please contact support.', 'error')
+            return redirect(url_for('billing.reconciliation_needed'))
+        
+        # Use resilient billing service for comprehensive check
+        from ...services.resilient_billing_service import ResilientBillingService
+        has_access, reason = ResilientBillingService.check_organization_access(org)
+        
+        if not has_access and reason != 'exempt':
+            return redirect(url_for('billing.reconciliation_needed'))
+
 # Debug statements removed for production readiness
 
 from ...services.stripe_service import StripeService
