@@ -1,0 +1,138 @@
+render@srv-d21alungi27c73dn1440-9ffbb979b-c8kjs:~/project/src$ python debu_org1_recipe_issue.py
+python: can't open file '/opt/render/project/src/debu_org1_recipe_issue.py': [Errno 2] No such file or directory
+render@srv-d21alungi27c73dn1440-9ffbb979b-c8kjs:~/project/src$ python debug_org1_recipe_issue.py
+DEBUG: Billing blueprint imported successfully: <Blueprint 'billing'>
+DEBUG: Billing blueprint name: billing
+DEBUG: Billing blueprint url_prefix: /billing
+DEBUG: Billing blueprint registered successfully
+Registered API routes: ['/api/reservations/create', '/api/reservations/release/<int:reservation_id>', '/api/reservations/convert-to-sale/<int:reservation_id>', '/api/reservations/expire-old', '/api/products/<int:product_id>/variants', '/api/dismiss-alert', '/api/dashboard-alerts', '/api/server-time', '/api/server-time', '/api/dismiss-alert', '/api/dashboard-alerts', '/api/check-stock', '/api/categories', '/api/ingredient/<int:id>/density', '/api/debug-containers', '/api/available-containers/<int:recipe_id>', '/api/containers/available', '/api/batches/<int:batch_id>/containers', '/api/batches/<int:batch_id>/containers/<int:container_id>', '/api/batches/<int:batch_id>/containers/<int:container_id>/adjust', '/api/api/fifo-details/<int:inventory_id>', '/api/api/batch-inventory-summary/<int:batch_id>', '/api/api/reservations/create', '/api/api/reservations/release/<int:reservation_id>', '/api/api/reservations/convert-to-sale/<int:reservation_id>', '/api/api/reservations/expire-old', '/api/dashboard-alerts', '/api/dismiss-alert', '/api/units', '/api/convert-units']
+Container routes found: ['/settings/bulk-update-containers', '/api/debug-containers', '/api/available-containers/<int:recipe_id>', '/api/containers/available', '/api/batches/<int:batch_id>/containers', '/api/batches/<int:batch_id>/containers/<int:container_id>', '/api/batches/<int:batch_id>/containers/<int:container_id>/adjust', '/debug-containers', '/available-containers/<int:recipe_id>', '/containers/available', '/batches/<int:batch_id>/containers', '/batches/<int:batch_id>/containers/<int:container_id>', '/batches/<int:batch_id>/containers/<int:container_id>/adjust']
+Billing routes found: ['/billing/reconciliation-needed', '/billing/reconcile-to-free', '/billing/upgrade', '/billing/checkout/<tier>/<billing_cycle>', '/billing/checkout/<tier>', '/billing/customer-portal', '/billing/cancel-subscription', '/billing/webhooks/stripe', '/billing/complete-signup-from-stripe', '/billing/debug']
+Billing endpoints: [('/billing/reconciliation-needed', 'billing.reconciliation_needed'), ('/billing/reconcile-to-free', 'billing.reconcile_to_free'), ('/billing/upgrade', 'billing.upgrade'), ('/billing/checkout/<tier>/<billing_cycle>', 'billing.checkout'), ('/billing/checkout/<tier>', 'billing.checkout'), ('/billing/customer-portal', 'billing.customer_portal'), ('/billing/cancel-subscription', 'billing.cancel_subscription'), ('/billing/webhooks/stripe', 'billing.stripe_webhook'), ('/billing/complete-signup-from-stripe', 'billing.complete_signup_from_stripe'), ('/billing/debug', 'billing.debug_billing')]
+[2025-07-30 08:06:35,983] INFO in unit_utils: BatchTrack startup
+=== DEBUGGING ORGANIZATION AND USER ISSUES ===
+
+=== ALL ORGANIZATIONS IN DATABASE (6) ===
+ID 10: test
+   Active: True
+   Subscription tier: solo
+   Users: 1
+   Active users: 1
+ID 12: test11
+   Active: True
+   Subscription tier: solo
+   Users: 1
+   Active users: 1
+ID 8: BatchTrack Organization
+   Active: True
+   Subscription tier: exempt
+   Users: 4
+   Active users: 3
+ID 13: test
+   Active: True
+   Subscription tier: solo
+   Users: 1
+   Active users: 1
+ID 14: t
+   Active: True
+   Subscription tier: solo
+   Users: 1
+   Active users: 1
+ID 16: test
+   Active: True
+   Subscription tier: team
+   Users: 1
+   Active users: 1
+
+=== ALL USERS IN DATABASE (9) ===
+ID 4: operator
+   Email: operator@example.com
+   Organization ID: 8
+   User Type: customer
+   Active: True
+/opt/render/project/src/debug_org1_recipe_issue.py:38: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+  org = Organization.query.get(user.organization_id)
+   Organization Name: BatchTrack Organization
+ID 6: test9
+   Email: test9@gmail.com
+   Organization ID: 10
+   User Type: customer
+   Active: True
+   Organization Name: test
+ID 1: dev
+   Email: dev@batchtrack.com
+   Organization ID: 8
+   User Type: developer
+   Active: True
+   Organization Name: BatchTrack Organization
+ID 3: manager
+   Email: manager@example.com
+   Organization ID: 8
+   User Type: customer
+   Active: True
+   Organization Name: BatchTrack Organization
+ID 2: admin
+   Email: jacobboulette@outlook.com
+   Organization ID: 8
+   User Type: customer
+   Active: True
+   Organization Name: BatchTrack Organization
+ID 9: test0
+   Email: test0@gmail.com
+   Organization ID: 13
+   User Type: customer
+   Active: True
+   Organization Name: test
+ID 8: test11
+   Email: test11@gmail.com
+   Organization ID: 12
+   User Type: customer
+   Active: True
+   Organization Name: test11
+ID 10: te
+   Email: t@gmail.com
+   Organization ID: 14
+   User Type: customer
+   Active: True
+   Organization Name: t
+ID 12: test09
+   Email: test09@gmail.com
+   Organization ID: 16
+   User Type: customer
+   Active: True
+   Organization Name: test
+
+=== CHECKING FOR SPECIFIC PROBLEM USERS ===
+✅ Found user 'admin' (ID: 2, Org: 8)
+     recipes.edit: ✅
+     recipes.view: ✅
+     inventory.view: ✅
+     inventory.edit: ✅
+✅ Found user 'manager' (ID: 3, Org: 8)
+     recipes.edit: ❌
+     recipes.view: ❌
+     inventory.view: ❌
+     inventory.edit: ❌
+✅ Found user 'operator' (ID: 4, Org: 8)
+     recipes.edit: ❌
+     recipes.view: ❌
+     inventory.view: ❌
+     inventory.edit: ❌
+
+=== INGREDIENTS BY ORGANIZATION ===
+Organization 10 (test): 0 ingredients
+Organization 12 (test11): 0 ingredients
+Organization 8 (BatchTrack Organization): 5 ingredients
+   - Glass Jar (Type: container)
+   - Pie Box (Type: container)
+   - Admin Apples (Type: ingredient)
+Organization 13 (test): 0 ingredients
+Organization 14 (t): 0 ingredients
+Organization 16 (test): 0 ingredients
+
+=== PERMISSION EXISTENCE CHECK ===
+✅ recipes.edit exists and is active
+✅ recipes.view exists and is active
+✅ inventory.view exists and is active
+✅ inventory.edit exists and is active
+render@srv-d21alungi27c73dn1440-9ffbb979b-c8kjs:~/project/src$ 
