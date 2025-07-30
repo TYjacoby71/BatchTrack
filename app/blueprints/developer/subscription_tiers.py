@@ -48,11 +48,12 @@ def sync_tier_to_database(tier_key, tier_config):
         db.session.add(tier_record)
 
     # Update tier fields
-    tier_record.name = tier_config.get('name', tier_key)
+    tier_record.name = tier_config.get('name', tier_key.title())
     tier_record.description = tier_config.get('description', '')
     tier_record.user_limit = tier_config.get('user_limit', 1)
     tier_record.is_customer_facing = tier_config.get('is_customer_facing', True)
     tier_record.is_available = tier_config.get('is_available', True)
+    tier_record.requires_stripe_billing = tier_config.get('requires_stripe_billing', True)
 
     # Only update stripe_lookup_key if it's actually provided in config
     # This preserves manually set lookup keys from being overwritten
@@ -155,6 +156,7 @@ def edit_tier(tier_key):
         tier['user_limit'] = int(request.form.get('user_limit', tier.get('user_limit', 1)))
         tier['is_customer_facing'] = 'is_customer_facing' in request.form
         tier['is_available'] = 'is_available' in request.form
+        tier['requires_stripe_billing'] = 'requires_stripe_billing' in request.form
 
 
         tier['permissions'] = request.form.getlist('permissions')
@@ -172,6 +174,7 @@ def edit_tier(tier_key):
         # Update visibility controls
         tier['is_customer_facing'] = request.form.get('is_customer_facing') == 'on'
         tier['is_available'] = request.form.get('is_available') == 'on'
+        tier['requires_stripe_billing'] = request.form.get('requires_stripe_billing') == 'on'
 
         tier['fallback_features'] = [f.strip() for f in request.form.get('fallback_features', '').split('\n') if f.strip()]
         tier['fallback_price_monthly'] = request.form.get('fallback_price_monthly', '$0')
@@ -251,7 +254,7 @@ def sync_tier(tier_key):
         # Wrap the entire sync operation in try-catch to ensure failures are contained
         try:
             product = None
-            
+
             # Method 1: Find by lookup key in prices (most reliable)
             try:
                 prices = stripe.Price.list(lookup_keys=[lookup_key], limit=1, active=True)
@@ -261,13 +264,13 @@ def sync_tier(tier_key):
                     logger.info(f"Found product via lookup key '{lookup_key}': {product.name} (ID: {product.id})")
             except stripe.error.StripeError as lookup_error:
                 logger.warning(f"Lookup key search failed for '{lookup_key}': {str(lookup_error)}")
-            
+
             # Method 2: If lookup key failed, fall back to name matching
             if not product:
                 logger.info(f"Lookup key '{lookup_key}' not found, falling back to name matching")
                 try:
                     all_products = stripe.Product.list(limit=100, active=True)
-                    
+
                     # Try to match by product name containing tier key
                     tier_name_variations = [
                         f"BatchTrack {tier_key.title()}",  # "BatchTrack Solo"
@@ -371,7 +374,7 @@ def sync_tier(tier_key):
 
         # Preserve existing stripe_lookup_key - this is the user's manual configuration
         # and should NEVER be overwritten by sync operations
-        
+
         # Ensure the lookup key is preserved in the tier data
         if not tier.get('stripe_lookup_key'):
             logger.warning(f"No stripe_lookup_key found for tier {tier_key} - this should be set manually")
@@ -379,21 +382,21 @@ def sync_tier(tier_key):
         # Update pricing snapshots for resilience
         try:
             from ...models.pricing_snapshot import PricingSnapshot
-            
+
             # Create/update snapshots for both monthly and yearly prices
             if monthly_price_id:
                 monthly_price_data = stripe.Price.retrieve(monthly_price_id)
                 PricingSnapshot.update_from_stripe_data(monthly_price_data, product)
                 logger.info(f"Updated pricing snapshot for monthly price: {monthly_price_id}")
-            
+
             if yearly_price_id:
                 yearly_price_data = stripe.Price.retrieve(yearly_price_id)
                 PricingSnapshot.update_from_stripe_data(yearly_price_data, product)
                 logger.info(f"Updated pricing snapshot for yearly price: {yearly_price_id}")
-                
+
             db.session.commit()
             logger.info(f"Pricing snapshots updated for tier {tier_key}")
-            
+
         except Exception as snapshot_error:
             logger.warning(f"Failed to update pricing snapshots for tier {tier_key}: {str(snapshot_error)}")
             # Don't fail the sync if snapshots fail
