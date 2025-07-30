@@ -2,7 +2,7 @@
 """Mock migration for missing revision
 
 Revision ID: d4b5c89f1234
-Revises: 8a39f020e6ca
+Revises: 6f7401b4d435
 Create Date: 2025-07-30 20:00:00.000000
 
 """
@@ -18,10 +18,11 @@ depends_on = None
 
 
 def upgrade():
-    # Mock migration - no actual changes
+    # Mock migration - no actual changes needed
+    # This fills the gap in the migration chain
     pass
 
 
 def downgrade():
-    # Mock migration - no actual changes
+    # Mock migration - no actual changes needed
     pass
