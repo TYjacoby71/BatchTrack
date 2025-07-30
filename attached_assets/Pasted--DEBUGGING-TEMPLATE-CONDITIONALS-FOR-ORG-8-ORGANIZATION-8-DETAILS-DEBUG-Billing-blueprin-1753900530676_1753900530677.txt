@@ -1,0 +1,640 @@
+🐛 DEBUGGING TEMPLATE CONDITIONALS FOR ORG 8
+
+=== ORGANIZATION 8 DETAILS ===
+DEBUG: Billing blueprint imported successfully: <Blueprint 'billing'>
+DEBUG: Billing blueprint name: billing
+DEBUG: Billing blueprint url_prefix: /billing
+DEBUG: Billing blueprint registered successfully
+Registered API routes: ['/api/reservations/create', '/api/reservations/release/<int:reservation_id>', '/api/reservations/convert-to-sale/<int:reservation_id>', '/api/reservations/expire-old', '/api/products/<int:product_id>/variants', '/api/dismiss-alert', '/api/dashboard-alerts', '/api/server-time', '/api/server-time', '/api/dismiss-alert', '/api/dashboard-alerts', '/api/check-stock', '/api/categories', '/api/ingredient/<int:id>/density', '/api/debug-containers', '/api/available-containers/<int:recipe_id>', '/api/containers/available', '/api/batches/<int:batch_id>/containers', '/api/batches/<int:batch_id>/containers/<int:container_id>', '/api/batches/<int:batch_id>/containers/<int:container_id>/adjust', '/api/api/fifo-details/<int:inventory_id>', '/api/api/batch-inventory-summary/<int:batch_id>', '/api/api/reservations/create', '/api/api/reservations/release/<int:reservation_id>', '/api/api/reservations/convert-to-sale/<int:reservation_id>', '/api/api/reservations/expire-old', '/api/dashboard-alerts', '/api/dismiss-alert', '/api/units', '/api/convert-units']
+Container routes found: ['/settings/bulk-update-containers', '/api/debug-containers', '/api/available-containers/<int:recipe_id>', '/api/containers/available', '/api/batches/<int:batch_id>/containers', '/api/batches/<int:batch_id>/containers/<int:container_id>', '/api/batches/<int:batch_id>/containers/<int:container_id>/adjust', '/debug-containers', '/available-containers/<int:recipe_id>', '/containers/available', '/batches/<int:batch_id>/containers', '/batches/<int:batch_id>/containers/<int:container_id>', '/batches/<int:batch_id>/containers/<int:container_id>/adjust']
+Billing routes found: ['/billing/reconciliation-needed', '/billing/reconcile-to-free', '/billing/upgrade', '/billing/checkout/<tier>/<billing_cycle>', '/billing/checkout/<tier>', '/billing/customer-portal', '/billing/cancel-subscription', '/billing/webhooks/stripe', '/billing/complete-signup-from-stripe', '/billing/debug']
+Billing endpoints: [('/billing/reconciliation-needed', 'billing.reconciliation_needed'), ('/billing/reconcile-to-free', 'billing.reconcile_to_free'), ('/billing/upgrade', 'billing.upgrade'), ('/billing/checkout/<tier>/<billing_cycle>', 'billing.checkout'), ('/billing/checkout/<tier>', 'billing.checkout'), ('/billing/customer-portal', 'billing.customer_portal'), ('/billing/cancel-subscription', 'billing.cancel_subscription'), ('/billing/webhooks/stripe', 'billing.stripe_webhook'), ('/billing/complete-signup-from-stripe', 'billing.complete_signup_from_stripe'), ('/billing/debug', 'billing.debug_billing')]
+[2025-07-30 18:34:41,615] INFO in unit_utils: BatchTrack startup
+/home/runner/workspace/debug_template_conditionals.py:71: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+  org8 = Organization.query.get(8)
+=== SCANNING FOR SUBSCRIPTION TIER CONDITIONALS ===
+
+🔍 app/templates/settings/index.html
+   Pattern: {% if.*tier.*%}
+   Matches: ["{% if is_org_owner and current_user.organization.effective_subscription_tier not in ['free', 'solo'] %}"]
+   Context (lines 15-19):
+       15:                     <p class="text-muted mb-0">Manage your preferences and system configuration</p>
+       16:                 </div>
+   >>> 17:                 {% if is_org_owner and current_user.organization.effective_subscription_tier not in ['free', 'solo'] %}
+       18:                 <a href="{{ url_for('organization.dashboard') }}" class="btn btn-outline-primary">
+       19:                     <i class="fas fa-crown"></i> Organization Dashboard
+
+🔍 app/templates/settings/index.html
+   Pattern: {% if.*subscription.*%}
+   Matches: ["{% if is_org_owner and current_user.organization.effective_subscription_tier not in ['free', 'solo'] %}"]
+   Context (lines 15-19):
+       15:                     <p class="text-muted mb-0">Manage your preferences and system configuration</p>
+       16:                 </div>
+   >>> 17:                 {% if is_org_owner and current_user.organization.effective_subscription_tier not in ['free', 'solo'] %}
+       18:                 <a href="{{ url_for('organization.dashboard') }}" class="btn btn-outline-primary">
+       19:                     <i class="fas fa-crown"></i> Organization Dashboard
+
+🔍 app/templates/settings/components/billing_tab.html
+   Pattern: {% if.*subscription.*%}
+   Matches: ['{% if org.subscription and org.subscription.stripe_customer_id %}']
+   Context (lines 62-66):
+       62:                 <div class="d-flex gap-2">
+       63:                     <a href="{{ url_for('billing.upgrade') }}" class="btn btn-light">View All Plans</a>
+   >>> 64:                     {% if org.subscription and org.subscription.stripe_customer_id %}
+       65:                     <a href="{{ url_for('billing.customer_portal') }}" class="btn btn-outline-secondary">
+       66:                         <i class="fas fa-cog"></i> Manage Billing
+
+🔍 app/templates/admin/dev_organizations.html
+   Pattern: subscription_tier\s*[!=><]+
+   Matches: ['subscription_tier ==', 'subscription_tier ==']
+   Context (lines 53-57):
+       53:                                     </td>
+       54:                                     <td>
+   >>> 55:                                         <span class="badge bg-{{ 'success' if org.subscription_tier == 'enterprise' else 'warning' if org.subscription_tier == 'team' else 'secondary' }}">
+       56:                                             {{ org.subscription_tier.title() }}
+       57:                                         </span>
+
+🔍 app/templates/auth/signup.html
+   Pattern: {% if.*tier.*%}
+   Matches: ["{% if tier_key == 'team' %}border-primary{% endif %}", "{% if tier_key == 'team' %}", '{% if tier_data.price_monthly == 0 %}', '{% if tier_data.user_limit == -1 %}', '{% if tier_data.features|length > 4 %}', '{% if not available_tiers %}disabled{% endif %}']
+   Context (lines 59-63):
+       59:                                 {% for tier_key, tier_data in available_tiers.items() %}
+       60:                                 <div class="col-md-4 mb-3">
+   >>> 61:                                     <div class="card tier-card h-100 {% if tier_key == 'team' %}border-primary{% endif %}" 
+       62:                                          data-tier="{{ tier_key }}" 
+       63:                                          style="cursor: pointer; transition: all 0.3s; border-width: 2px;"
+   Context (lines 64-68):
+       64:                                          onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 4px 15px rgba(0,0,0,0.1)'"
+       65:                                          onmouseout="if(!this.classList.contains('border-success')) { this.style.transform='translateY(0px)'; this.style.boxShadow='0 1px 3px rgba(0,0,0,0.1)'; }">
+   >>> 66:                                         {% if tier_key == 'team' %}
+       67:                                         <div class="card-header bg-primary text-white text-center py-1">
+       68:                                             <small><i class="fas fa-star"></i> Most Popular</small>
+   Context (lines 72-76):
+       72:                                             <h5 class="card-title">{{ tier_data.name }}</h5>
+       73:                                             <div class="h4 text-primary">
+   >>> 74:                                             {% if tier_data.price_monthly == 0 %}
+       75:                                                 {{ tier_data.price_display }}
+       76:                                             {% else %}
+   Context (lines 79-83):
+       79:                                         </div>
+       80:                                             <div class="text-muted mb-3">
+   >>> 81:                                                 {% if tier_data.user_limit == -1 %}
+       82:                                                     Unlimited users
+       83:                                                 {% else %}
+   Context (lines 89-93):
+       89:                                                 <li><i class="fas fa-check text-success me-1"></i>{{ feature }}</li>
+       90:                                                 {% endfor %}
+   >>> 91:                                                 {% if tier_data.features|length > 4 %}
+       92:                                                 <li class="text-muted">... and more</li>
+       93:                                                 {% endif %}
+   Context (lines 311-315):
+       311:                                         <i class="fas fa-sign-in-alt"></i> Already have an account? Login
+       312:                                     </a>
+   >>> 313:                                     <button type="submit" class="btn btn-success btn-lg px-4" {% if not available_tiers %}disabled{% endif %}>
+       314:                                         Continue to Payment
+       315:                                     </button>
+
+🔍 app/templates/organization/components/billing_tab.html
+   Pattern: organization\.subscription
+   Matches: ['organization.subscription', 'organization.subscription', 'organization.subscription', 'organization.subscription']
+   Context (lines 38-42):
+       38:                 <div class="d-flex gap-2">
+       39:                     <a href="{{ url_for('billing.upgrade') }}" class="btn btn-light">View All Plans</a>
+   >>> 40:                     {% if organization.subscription and organization.subscription.stripe_customer_id %}
+       41:                     <a href="{{ url_for('billing.customer_portal') }}" class="btn btn-outline-secondary">
+       42:                         <i class="fas fa-cog"></i> Manage Billing
+   Context (lines 45-49):
+       45:                 </div>
+       46:                 
+   >>> 47:                 {% if organization.subscription and organization.subscription.stripe_customer_id %}
+       48:                 <div class="mt-3">
+       49:                     <small class="text-muted">
+
+🔍 app/templates/organization/components/billing_tab.html
+   Pattern: {% if.*subscription.*%}
+   Matches: ['{% if organization.subscription and organization.subscription.stripe_customer_id %}', '{% if organization.subscription and organization.subscription.stripe_customer_id %}']
+   Context (lines 38-42):
+       38:                 <div class="d-flex gap-2">
+       39:                     <a href="{{ url_for('billing.upgrade') }}" class="btn btn-light">View All Plans</a>
+   >>> 40:                     {% if organization.subscription and organization.subscription.stripe_customer_id %}
+       41:                     <a href="{{ url_for('billing.customer_portal') }}" class="btn btn-outline-secondary">
+       42:                         <i class="fas fa-cog"></i> Manage Billing
+   Context (lines 45-49):
+       45:                 </div>
+       46:                 
+   >>> 47:                 {% if organization.subscription and organization.subscription.stripe_customer_id %}
+       48:                 <div class="mt-3">
+       49:                     <small class="text-muted">
+
+🔍 app/templates/organization/components/dashboard_metrics.html
+   Pattern: {% if.*tier.*%}
+   Matches: ['{% if tier_display %}']
+   Context (lines 25-29):
+       25:                 <!-- Show tier name only (no dropdown) -->
+       26:                 <h3 class="text-info mb-1">
+   >>> 27:                     {% if tier_display %}
+       28:                         {{ tier_display }}
+       29:                     {% elif current_tier and current_tier in tiers_config %}
+
+🔍 app/templates/developer/create_organization.html
+   Pattern: {% if.*tier.*%}
+   Matches: ["{% if tier_key == 'exempt' %}"]
+   Context (lines 30-34):
+       30:                                         <option value="{{ tier_key }}">
+       31:                                             {{ tier_data.name }}
+   >>> 32:                                             {% if tier_key == 'exempt' %}
+       33:                                             (No Billing)
+       34:                                             {% elif tier_key != 'free' %}
+
+🔍 app/templates/developer/subscription_tiers.html
+   Pattern: {% if.*tier.*%}
+   Matches: ["{% if not tier_data.get('is_customer_facing', True) %}border-secondary{% endif %}", '{% if tier_data.stripe_lookup_key and tier_data.last_synced %}', '{% if tier_data.user_limit == -1 %}', '{% if tier_data.stripe_features %}', "{% if tier_data.get('feature_groups', [])|length > 3 %}", '{% if tier_data.stripe_lookup_key %}', "{% if tier_key not in ['free', 'exempt'] %}"]
+   Context (lines 29-33):
+       29:              data-is-customer-facing="{{ tier_data.get('is_customer_facing', True) | lower }}"
+       30:              data-is-available="{{ tier_data.get('is_available', True) | lower }}">
+   >>> 31:             <div class="card h-100 {% if not tier_data.get('is_customer_facing', True) %}border-secondary{% endif %}">
+       32:                 <div class="card-header d-flex justify-content-between align-items-center">
+       33:                     <h5 class="mb-0">{{ tier_data.name }}</h5>
+   Context (lines 34-38):
+       34:                     <div>
+       35:                         <span class="badge bg-primary">{{ tier_key }}</span>
+   >>> 36:                         {% if tier_data.stripe_lookup_key and tier_data.last_synced %}
+       37:                             <span class="badge bg-success ms-1">Synced</span>
+       38:                         {% elif tier_data.stripe_lookup_key %}
+   Context (lines 50-54):
+       50:                             </p>
+       51:                             <p><strong>User Limit:</strong> 
+   >>> 52:                                 {% if tier_data.user_limit == -1 %}
+       53:                                     Unlimited
+       54:                                 {% else %}
+   Context (lines 78-82):
+       78:                     <div class="mt-3">
+       79:                         <h6>Features (from Stripe):</h6>
+   >>> 80:                         {% if tier_data.stripe_features %}
+       81:                             <ul class="list-unstyled">
+       82:                                 {% for feature in tier_data.stripe_features %}
+   Context (lines 95-99):
+       95:                                 <span class="badge bg-info me-1">{{ feature.replace('_', ' ').title() }}</span>
+       96:                             {% endfor %}
+   >>> 97:                             {% if tier_data.get('feature_groups', [])|length > 3 %}
+       98:                                 <span class="badge bg-light text-dark">+{{ tier_data.get('feature_groups', [])|length - 3 }} more</span>
+       99:                             {% endif %}
+   Context (lines 106-110):
+       106:                         <i class="fas fa-edit"></i> Edit
+       107:                     </a>
+   >>> 108:                      {% if tier_data.stripe_lookup_key %}
+       109:                         <button class="btn btn-outline-success btn-sm" onclick="syncTier('{{ tier_key }}')">
+       110:                             <i class="fas fa-sync"></i> Sync from Stripe
+   Context (lines 116-120):
+       116:                     {% endif %}
+       117: 
+   >>> 118:                     {% if tier_key not in ['free', 'exempt'] %}
+       119:                         <button class="btn btn-outline-danger btn-sm" 
+       120:                                 onclick="confirmDelete('{{ tier_key }}', '{{ tier_data.name }}')">
+
+🔍 app/templates/developer/organizations.html
+   Pattern: {% if.*tier.*%}
+   Matches: ['{% if org.tier %}']
+   Context (lines 30-34):
+       30:                                         <small class="text-muted">
+       31:                                             <i class="fas fa-layer-group"></i> 
+   >>> 32:                                             {% if org.tier %}
+       33:                                                 <span class="badge bg-{{ 'success' if org.tier.key == 'enterprise' else 'warning' if org.tier.key == 'team' else 'info' if org.tier.key == 'solo' else 'secondary' if org.tier.key == 'exempt' else 'light text-dark' }}">
+       34:                                                     {{ org.tier.name }}
+
+🔍 app/templates/developer/organization_detail.html
+   Pattern: tier\s*[!=><]+\s*[\'"]exempt[\'"]
+   Matches: ["tier == 'exempt'"]
+   Context (lines 86-90):
+       86:                                 <option value="team" {% if current_tier == 'team' %}selected{% endif %}>Team</option>
+       87:                                 <option value="enterprise" {% if current_tier == 'enterprise' %}selected{% endif %}>Enterprise</option>
+   >>> 88:                                 <option value="exempt" {% if current_tier == 'exempt' %}selected{% endif %}>Exempt</option>
+       89:                                 {% endif %}
+       90:                             </select>
+
+🔍 app/templates/developer/organization_detail.html
+   Pattern: exempt.*tier
+   Matches: ['exempt" {% if current_tier']
+   Context (lines 86-90):
+       86:                                 <option value="team" {% if current_tier == 'team' %}selected{% endif %}>Team</option>
+       87:                                 <option value="enterprise" {% if current_tier == 'enterprise' %}selected{% endif %}>Enterprise</option>
+   >>> 88:                                 <option value="exempt" {% if current_tier == 'exempt' %}selected{% endif %}>Exempt</option>
+       89:                                 {% endif %}
+       90:                             </select>
+
+🔍 app/templates/developer/organization_detail.html
+   Pattern: {% if.*tier.*%}
+   Matches: ['{% if tiers_config %}', "{% if tier_data.get('is_available', True) %}", '{% if tier_key == current_tier %}selected{% endif %}', "{% if current_tier == 'free' %}selected{% endif %}", "{% if current_tier == 'solo' %}selected{% endif %}", "{% if current_tier == 'team' %}selected{% endif %}", "{% if current_tier == 'enterprise' %}selected{% endif %}", "{% if current_tier == 'exempt' %}selected{% endif %}"]
+   Context (lines 71-75):
+       71:                             {% endif %}
+       72:                             <select class="form-select" id="subscription_tier" name="subscription_tier">
+   >>> 73:                                 {% if tiers_config %}
+       74:                                     {% for tier_key, tier_data in tiers_config.items() %}
+       75:                                         {% if tier_data.get('is_available', True) %}
+   Context (lines 73-77):
+       73:                                 {% if tiers_config %}
+       74:                                     {% for tier_key, tier_data in tiers_config.items() %}
+   >>> 75:                                         {% if tier_data.get('is_available', True) %}
+       76:                                         <option value="{{ tier_key }}" 
+       77:                                                 {% if tier_key == current_tier %}selected{% endif %}>
+   Context (lines 75-79):
+       75:                                         {% if tier_data.get('is_available', True) %}
+       76:                                         <option value="{{ tier_key }}" 
+   >>> 77:                                                 {% if tier_key == current_tier %}selected{% endif %}>
+       78:                                             {{ tier_data.get('name', tier_key.title()) }}
+       79:                                         </option>
+   Context (lines 82-86):
+       82:                                 {% else %}
+       83:                                 <!-- Fallback if tiers_config not available -->
+   >>> 84:                                 <option value="free" {% if current_tier == 'free' %}selected{% endif %}>Free</option>
+       85:                                 <option value="solo" {% if current_tier == 'solo' %}selected{% endif %}>Solo</option>
+       86:                                 <option value="team" {% if current_tier == 'team' %}selected{% endif %}>Team</option>
+   Context (lines 83-87):
+       83:                                 <!-- Fallback if tiers_config not available -->
+       84:                                 <option value="free" {% if current_tier == 'free' %}selected{% endif %}>Free</option>
+   >>> 85:                                 <option value="solo" {% if current_tier == 'solo' %}selected{% endif %}>Solo</option>
+       86:                                 <option value="team" {% if current_tier == 'team' %}selected{% endif %}>Team</option>
+       87:                                 <option value="enterprise" {% if current_tier == 'enterprise' %}selected{% endif %}>Enterprise</option>
+   Context (lines 84-88):
+       84:                                 <option value="free" {% if current_tier == 'free' %}selected{% endif %}>Free</option>
+       85:                                 <option value="solo" {% if current_tier == 'solo' %}selected{% endif %}>Solo</option>
+   >>> 86:                                 <option value="team" {% if current_tier == 'team' %}selected{% endif %}>Team</option>
+       87:                                 <option value="enterprise" {% if current_tier == 'enterprise' %}selected{% endif %}>Enterprise</option>
+       88:                                 <option value="exempt" {% if current_tier == 'exempt' %}selected{% endif %}>Exempt</option>
+   Context (lines 85-89):
+       85:                                 <option value="solo" {% if current_tier == 'solo' %}selected{% endif %}>Solo</option>
+       86:                                 <option value="team" {% if current_tier == 'team' %}selected{% endif %}>Team</option>
+   >>> 87:                                 <option value="enterprise" {% if current_tier == 'enterprise' %}selected{% endif %}>Enterprise</option>
+       88:                                 <option value="exempt" {% if current_tier == 'exempt' %}selected{% endif %}>Exempt</option>
+       89:                                 {% endif %}
+   Context (lines 86-90):
+       86:                                 <option value="team" {% if current_tier == 'team' %}selected{% endif %}>Team</option>
+       87:                                 <option value="enterprise" {% if current_tier == 'enterprise' %}selected{% endif %}>Enterprise</option>
+   >>> 88:                                 <option value="exempt" {% if current_tier == 'exempt' %}selected{% endif %}>Exempt</option>
+       89:                                 {% endif %}
+       90:                             </select>
+
+🔍 app/templates/developer/edit_tier.html
+   Pattern: exempt.*tier
+   Matches: ['exempt tier']
+   Context (lines 42-46):
+       42:                             <small class="form-text text-muted">
+       43:                                 {% if tier_key == 'exempt' %}
+   >>> 44:                                     Use -1 for unlimited users (exempt tier only)
+       45:                                 {% else %}
+       46:                                     Enter maximum number of users for this tier (use -1 for unlimited)
+
+🔍 app/templates/developer/edit_tier.html
+   Pattern: {% if.*tier.*%}
+   Matches: ["{% if tier_key == 'exempt' %}", "{% if tier.get('is_customer_facing', True) %}checked{% endif %}", "{% if tier.get('is_available', True) %}checked{% endif %}", "{% if permission.name in tier.get('permissions', []) %}checked{% endif %}", "{% if feature_group in tier.get('feature_groups', []) %}checked{% endif %}", '{% if tier.stripe_features %}']
+   Context (lines 41-45):
+       41:                                    placeholder="Enter number of users (use -1 for unlimited)">
+       42:                             <small class="form-text text-muted">
+   >>> 43:                                 {% if tier_key == 'exempt' %}
+       44:                                     Use -1 for unlimited users (exempt tier only)
+       45:                                 {% else %}
+   Context (lines 53-57):
+       53:                             <div class="form-check">
+       54:                                 <input class="form-check-input" type="checkbox" id="is_customer_facing" name="is_customer_facing"
+   >>> 55:                                        {% if tier.get('is_customer_facing', True) %}checked{% endif %}>
+       56:                                 <label class="form-check-label" for="is_customer_facing">
+       57:                                     Customer Facing (visible to customers)
+   Context (lines 63-67):
+       63:                             <div class="form-check">
+       64:                                 <input class="form-check-input" type="checkbox" id="is_available" name="is_available" 
+   >>> 65:                                    {% if tier.get('is_available', True) %}checked{% endif %}>
+       66:                                 <label class="form-check-label" for="is_available">
+       67:                                     Available for use
+   Context (lines 158-162):
+       158:                                                     <input class="form-check-input" type="checkbox" name="permissions" 
+       159:                                                            value="{{ permission.name }}" id="perm_{{ permission.id }}"
+   >>> 160:                                                            {% if permission.name in tier.get('permissions', []) %}checked{% endif %}>
+       161:                                                     <label class="form-check-label small" for="perm_{{ permission.id }}">
+       162:                                                         <strong>{{ permission.name }}</strong>
+   Context (lines 202-206):
+       202:                                         <input class="form-check-input" type="checkbox" name="feature_groups" 
+       203:                                                value="{{ feature_group }}" id="fg_{{ loop.index }}"
+   >>> 204:                                                {% if feature_group in tier.get('feature_groups', []) %}checked{% endif %}>
+       205:                                         <label class="form-check-label small" for="fg_{{ loop.index }}">
+       206:                                             {{ feature_group.replace('_', ' ').title() }}
+   Context (lines 217-221):
+       217:                                 <i class="fas fa-credit-card text-info"></i> Stripe Features
+       218:                             </label>
+   >>> 219:                             {% if tier.stripe_features %}
+       220:                                 <ul class="list-group">
+       221:                                     {% for feature in tier.stripe_features %}
+
+🔍 app/templates/developer/create_tier.html
+   Pattern: exempt.*tier
+   Matches: ['exempt tier']
+   Context (lines 44-48):
+       44:                             <label for="user_limit" class="form-label">User Limit</label>
+       45:                             <input type="number" class="form-control" id="user_limit" name="user_limit" value="1" min="-1">
+   >>> 46:                             <small class="form-text text-muted">Use -1 for unlimited users (recommended for exempt tier only)</small>
+       47:                         </div>
+       48: 
+
+🔍 app/templates/billing/debug.html
+   Pattern: {% if.*tier.*%}
+   Matches: ['{% if tiers_config %}', "{% if tier_key != 'free' and tier_key != 'exempt' %}"]
+   Context (lines 48-52):
+       48:             {% endif %}
+       49: 
+   >>> 50:             {% if tiers_config %}
+       51:             <div class="card mb-4">
+       52:                 <div class="card-header">
+   Context (lines 68-72):
+       68:                                         </small>
+       69: 
+   >>> 70:                                         {% if tier_key != 'free' and tier_key != 'exempt' %}
+       71:                                         <form method="POST" action="{{ url_for('billing.dev_activate_subscription', tier=tier_key) }}" class="mt-2">
+       72:                                             {{ csrf_token() }}
+
+🔍 app/templates/billing/debug.html
+   Pattern: {% if.*subscription.*%}
+   Matches: ['{% if subscription %}']
+   Context (lines 34-38):
+       34:                         </div>
+       35:                         <div class="col-md-6">
+   >>> 36:                             {% if subscription %}
+       37:                             <strong>Subscription Tier:</strong> {{ subscription.tier }}<br>
+       38:                             <strong>Status:</strong> {{ subscription.status }}<br>
+
+🔍 app/templates/billing/upgrade.html
+   Pattern: organization\.subscription
+   Matches: ['organization.subscription', 'organization.subscription', 'organization.subscription', 'organization.subscription']
+   Context (lines 39-43):
+       39:                 <ul class="mb-0">
+       40:                     <li>Status: {{ subscription_details.status }}</li>
+   >>> 41:                     <li>Has Subscription Record: {{ '✓ Yes' if organization.subscription else '✗ No' }}</li>
+       42:                     {% if organization.subscription %}
+       43:                     <li>Stripe Customer ID: {{ organization.subscription.stripe_customer_id or 'Not Set' }}</li>
+   Context (lines 40-44):
+       40:                     <li>Status: {{ subscription_details.status }}</li>
+       41:                     <li>Has Subscription Record: {{ '✓ Yes' if organization.subscription else '✗ No' }}</li>
+   >>> 42:                     {% if organization.subscription %}
+       43:                     <li>Stripe Customer ID: {{ organization.subscription.stripe_customer_id or 'Not Set' }}</li>
+       44:                     <li>Stripe Subscription ID: {{ organization.subscription.stripe_subscription_id or 'Not Set' }}</li>
+   Context (lines 41-45):
+       41:                     <li>Has Subscription Record: {{ '✓ Yes' if organization.subscription else '✗ No' }}</li>
+       42:                     {% if organization.subscription %}
+   >>> 43:                     <li>Stripe Customer ID: {{ organization.subscription.stripe_customer_id or 'Not Set' }}</li>
+       44:                     <li>Stripe Subscription ID: {{ organization.subscription.stripe_subscription_id or 'Not Set' }}</li>
+       45:                     {% endif %}
+   Context (lines 42-46):
+       42:                     {% if organization.subscription %}
+       43:                     <li>Stripe Customer ID: {{ organization.subscription.stripe_customer_id or 'Not Set' }}</li>
+   >>> 44:                     <li>Stripe Subscription ID: {{ organization.subscription.stripe_subscription_id or 'Not Set' }}</li>
+       45:                     {% endif %}
+       46:                 </ul>
+
+🔍 app/templates/billing/upgrade.html
+   Pattern: {% if.*tier.*%}
+   Matches: ["{% if tier_name == 'team' %}border-primary{% endif %}", "{% if tier_data.get('badge') %}", "{% if tier_data.get('description') %}", "{% if tier_data.get('price_yearly') %}", "{% if tier_data.get('user_limit') %}", '{% if tier_data.user_limit == -1 %}', '{% if current_tier != tier_name %}', "{% if tier_data.get('is_stripe_ready') %}", "{% if tier_data.get('price_yearly') and tier_data.get('price_yearly') != '$0' %}"]
+   Context (lines 93-97):
+       93:         {% for tier_name, tier_data in pricing_data.items() %}
+       94:         <div class="col-md-4 mb-4">
+   >>> 95:             <div class="card pricing-card h-100 {% if tier_name == 'team' %}border-primary{% endif %}">
+       96:                 {% if tier_data.get('badge') %}
+       97:                 <div class="card-header text-center bg-primary text-white">
+   Context (lines 94-98):
+       94:         <div class="col-md-4 mb-4">
+       95:             <div class="card pricing-card h-100 {% if tier_name == 'team' %}border-primary{% endif %}">
+   >>> 96:                 {% if tier_data.get('badge') %}
+       97:                 <div class="card-header text-center bg-primary text-white">
+       98:                     <span class="badge">{{ tier_data.badge }}</span>
+   Context (lines 103-107):
+       103:                     <h4 class="card-title">{{ tier_data.get('name', tier_name.title()) }}</h4>
+       104: 
+   >>> 105:                     {% if tier_data.get('description') %}
+       106:                     <p class="text-muted">{{ tier_data.description }}</p>
+       107:                     {% endif %}
+   Context (lines 110-114):
+       110:                         <h3 class="price text-primary">{{ tier_data.price }}</h3>
+       111:                         <small class="text-muted">/month</small>
+   >>> 112:                         {% if tier_data.get('price_yearly') %}
+       113:                         <div class="yearly-price mt-2">
+       114:                             <span class="text-success">{{ tier_data.price_yearly }}/year</span>
+   Context (lines 118-122):
+       118:                     </div>
+       119: 
+   >>> 120:                     {% if tier_data.get('user_limit') %}
+       121:                     <p class="mt-3">
+       122:                         <strong>
+   Context (lines 121-125):
+       121:                     <p class="mt-3">
+       122:                         <strong>
+   >>> 123:                             {% if tier_data.user_limit == -1 %}
+       124:                                 Unlimited users
+       125:                             {% else %}
+   Context (lines 138-142):
+       138: 
+       139:                 <div class="card-footer text-center">
+   >>> 140:                     {% if current_tier != tier_name %}
+       141:                     <!-- Check if tier is available for checkout -->
+       142:                     {% if tier_data.get('is_stripe_ready') %}
+   Context (lines 140-144):
+       140:                     {% if current_tier != tier_name %}
+       141:                     <!-- Check if tier is available for checkout -->
+   >>> 142:                     {% if tier_data.get('is_stripe_ready') %}
+       143:                       <!-- Tier has Stripe configuration - allow checkout -->
+       144:                       <form method="POST" action="{{ url_for('billing.checkout', tier=tier_name) }}" class="d-inline">
+   Context (lines 148-152):
+       148:                         </button>
+       149:                       </form>
+   >>> 150:                       {% if tier_data.get('price_yearly') and tier_data.get('price_yearly') != '$0' %}
+       151:                       <a href="{{ url_for('billing.checkout', tier=tier_name, billing_cycle='yearly') }}" 
+       152:                          class="btn btn-outline-success btn-sm mt-2">
+
+🔍 app/templates/billing/upgrade.html
+   Pattern: {% if.*subscription.*%}
+   Matches: ['{% if organization.subscription %}', "{% if subscription_details.status != 'inactive' %}", '{% if subscription_details.next_billing_date %}', '{% if subscription_details.amount %}', '{% if subscription_details.trial_end %}', '{% if subscription_details.cancel_at_period_end %}']
+   Context (lines 40-44):
+       40:                     <li>Status: {{ subscription_details.status }}</li>
+       41:                     <li>Has Subscription Record: {{ '✓ Yes' if organization.subscription else '✗ No' }}</li>
+   >>> 42:                     {% if organization.subscription %}
+       43:                     <li>Stripe Customer ID: {{ organization.subscription.stripe_customer_id or 'Not Set' }}</li>
+       44:                     <li>Stripe Subscription ID: {{ organization.subscription.stripe_subscription_id or 'Not Set' }}</li>
+   Context (lines 69-73):
+       69:             <div class="card-body">
+       70:                 <h3>Current Plan: {{ current_tier.title() }}</h3>
+   >>> 71:                 {% if subscription_details.status != 'inactive' %}
+       72:                 <div class="subscription-info">
+       73:                     <p><strong>Status:</strong> {{ subscription_details.status.title() }}</p>
+   Context (lines 72-76):
+       72:                 <div class="subscription-info">
+       73:                     <p><strong>Status:</strong> {{ subscription_details.status.title() }}</p>
+   >>> 74:                     {% if subscription_details.next_billing_date %}
+       75:                     <p><strong>Next Billing:</strong> {{ subscription_details.next_billing_date|timestamp_to_date }}</p>
+       76:                     {% endif %}
+   Context (lines 75-79):
+       75:                     <p><strong>Next Billing:</strong> {{ subscription_details.next_billing_date|timestamp_to_date }}</p>
+       76:                     {% endif %}
+   >>> 77:                     {% if subscription_details.amount %}
+       78:                     <p><strong>Amount:</strong> ${{ subscription_details.amount }}/{{ subscription_details.interval }}</p>
+       79:                     {% endif %}
+   Context (lines 78-82):
+       78:                     <p><strong>Amount:</strong> ${{ subscription_details.amount }}/{{ subscription_details.interval }}</p>
+       79:                     {% endif %}
+   >>> 80:                     {% if subscription_details.trial_end %}
+       81:                     <p><strong>Trial Ends:</strong> {{ subscription_details.trial_end|timestamp_to_date }}</p>
+       82:                     {% endif %}
+   Context (lines 81-85):
+       81:                     <p><strong>Trial Ends:</strong> {{ subscription_details.trial_end|timestamp_to_date }}</p>
+       82:                     {% endif %}
+   >>> 83:                     {% if subscription_details.cancel_at_period_end %}
+       84:                     <p class="text-warning"><strong>Scheduled for cancellation at period end</strong></p>
+       85:                     {% endif %}
+
+🔍 app/blueprints/organization/routes.py
+   Pattern: current_user\.organization\.subscription
+   Matches: ['current_user.organization.subscription', 'current_user.organization.subscription', 'current_user.organization.subscription']
+   Context (lines 292-296):
+       292:             return jsonify({
+       293:                 'success': False, 
+   >>> 294:                 'error': f'Organization has reached user limit ({current_count}/{max_users}) for {current_user.organization.subscription_tier} subscription'
+       295:             })
+       296: 
+   Context (lines 600-604):
+       600:                     return jsonify({
+       601:                         'success': False, 
+   >>> 602:                         'error': f'Cannot activate user. Organization has reached user limit ({current_count}/{max_users}) for {current_user.organization.subscription_tier} subscription'
+       603:                     })
+       604:             user.is_active = new_status
+   Context (lines 652-656):
+       652:                 return jsonify({
+       653:                     'success': False, 
+   >>> 654:                     'error': f'Cannot activate user. Organization has reached user limit ({current_count}/{max_users}) for {current_user.organization.subscription_tier} subscription'
+       655:                 })
+       656: 
+
+🔍 app/blueprints/organization/routes.py
+   Pattern: organization\.subscription
+   Matches: ['organization.subscription', 'organization.subscription', 'organization.subscription', 'organization.subscription']
+   Context (lines 217-221):
+       217:         # Update or create subscription
+       218:         from ...models.subscription import Subscription
+   >>> 219:         subscription = organization.subscription
+       220:         if not subscription:
+       221:             subscription = Subscription(
+   Context (lines 292-296):
+       292:             return jsonify({
+       293:                 'success': False, 
+   >>> 294:                 'error': f'Organization has reached user limit ({current_count}/{max_users}) for {current_user.organization.subscription_tier} subscription'
+       295:             })
+       296: 
+   Context (lines 600-604):
+       600:                     return jsonify({
+       601:                         'success': False, 
+   >>> 602:                         'error': f'Cannot activate user. Organization has reached user limit ({current_count}/{max_users}) for {current_user.organization.subscription_tier} subscription'
+       603:                     })
+       604:             user.is_active = new_status
+   Context (lines 652-656):
+       652:                 return jsonify({
+       653:                     'success': False, 
+   >>> 654:                     'error': f'Cannot activate user. Organization has reached user limit ({current_count}/{max_users}) for {current_user.organization.subscription_tier} subscription'
+       655:                 })
+       656: 
+
+🔍 app/blueprints/developer/subscription_tiers.py
+   Pattern: exempt.*tier
+   Matches: ['exempt tier', 'exempt tier']
+   Context (lines 38-42):
+       38: def sync_tier_to_database(tier_key, tier_config):
+       39:     """Sync a tier configuration to the database"""
+   >>> 40:     # Skip exempt tier - it's handled by seeder
+       41:     if tier_key == 'exempt':
+       42:         return
+   Context (lines 107-111):
+       107: 
+       108:         user_limit = int(request.form.get('user_limit', 1))
+   >>> 109:         # Only exempt tier can have unlimited users (-1)
+       110: 
+       111:         new_tier = {
+
+🔍 app/blueprints/developer/routes.py
+   Pattern: subscription_tier\s*[!=><]+
+   Matches: ['subscription_tier =']
+   Context (lines 99-103):
+       99:         # Organization details
+       100:         name = request.form.get('name')
+   >>> 101:         subscription_tier = request.form.get('subscription_tier', 'free')
+       102:         creation_reason = request.form.get('creation_reason')
+       103:         notes = request.form.get('notes', '')
+
+🔍 app/blueprints/developer/routes.py
+   Pattern: organization\.subscription
+   Matches: ['Organization.subscription']
+   Context (lines 42-46):
+       42:         SubscriptionTier.key,
+       43:         func.count(Organization.id).label('count')
+   >>> 44:     ).join(Organization, Organization.subscription_tier_id == SubscriptionTier.id).group_by(SubscriptionTier.key).all()
+       45: 
+       46:     # Recent organizations (last 30 days)
+
+🔍 app/blueprints/developer/routes.py
+   Pattern: exempt.*tier
+   Matches: ['exempt tier if tier', 'exempt_tier = SubscriptionTier', 'exempt_tier', 'exempt_tier']
+   Context (lines 150-154):
+       150:                 org.subscription_tier_id = tier_record.id
+       151:             else:
+   >>> 152:                 # Default to exempt tier if tier not found
+       153:                 exempt_tier = SubscriptionTier.query.filter_by(key='exempt').first()
+       154:                 if exempt_tier:
+   Context (lines 151-155):
+       151:             else:
+       152:                 # Default to exempt tier if tier not found
+   >>> 153:                 exempt_tier = SubscriptionTier.query.filter_by(key='exempt').first()
+       154:                 if exempt_tier:
+       155:                     org.subscription_tier_id = exempt_tier.id
+   Context (lines 152-156):
+       152:                 # Default to exempt tier if tier not found
+       153:                 exempt_tier = SubscriptionTier.query.filter_by(key='exempt').first()
+   >>> 154:                 if exempt_tier:
+       155:                     org.subscription_tier_id = exempt_tier.id
+       156: 
+   Context (lines 153-157):
+       153:                 exempt_tier = SubscriptionTier.query.filter_by(key='exempt').first()
+       154:                 if exempt_tier:
+   >>> 155:                     org.subscription_tier_id = exempt_tier.id
+       156: 
+       157:             # Create organization owner user
+
+🔍 app/blueprints/billing/routes.py
+   Pattern: current_user\.organization\.subscription
+   Matches: ['current_user.organization.subscription']
+   Context (lines 42-46):
+       42:     free_tier = SubscriptionTier.query.filter_by(key='free').first()
+       43:     if free_tier and current_user.organization:
+   >>> 44:         current_user.organization.subscription_tier_id = free_tier.id
+       45:         db.session.commit()
+       46:         flash('Your account has been updated to the free plan.', 'success')
+
+🔍 app/blueprints/billing/routes.py
+   Pattern: organization\.subscription
+   Matches: ['organization.subscription']
+   Context (lines 42-46):
+       42:     free_tier = SubscriptionTier.query.filter_by(key='free').first()
+       43:     if free_tier and current_user.organization:
+   >>> 44:         current_user.organization.subscription_tier_id = free_tier.id
+       45:         db.session.commit()
+       46:         flash('Your account has been updated to the free plan.', 'success')
+
+=== JAVASCRIPT INCLUSION PATTERNS ===
+
+📄 app/templates/recipe_form.html
+   Line 451: function addIngredient(preselectId = null, presetUnit = null) {
+
+📄 app/templates/plan_production.html
+   Line 625: <script src="{{ url_for('static', filename='js/recipes/plan_production.js') }}"></script>
+
+📄 app/templates/batches/view_batch.html
+   Line 489: <script src="{{ url_for('static', filename='js/batches/fifo_modal.js') }}"></script>
+
+📄 app/templates/batches/batch_in_progress.html
+   Line 382: <script src="{{ url_for('static', filename='js/batches/fifo_modal.js') }}"></script>
+
+
+📊 SUMMARY:
+Found 30 files with subscription tier conditionals
+This is likely causing the JavaScript loading issues for Org 8
