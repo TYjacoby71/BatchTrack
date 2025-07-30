@@ -338,6 +338,70 @@ def delete_organization(org_id):
         users_count = len(org.users)
 
         # Delete all organization data in the correct order to respect foreign key constraints
+        
+        # Import all models needed for deletion
+        from app.models import (
+            User, Batch, BatchIngredient, BatchContainer, ExtraBatchContainer, 
+            ExtraBatchIngredient, BatchTimer, Recipe, RecipeIngredient, 
+            InventoryItem, Category, Role, Permission, ProductSKU, Product,
+            Organization
+        )
+        from app.models.reservation import Reservation
+        from app.models.subscription_tier import Subscription
+        from app.models.user_role_assignment import UserRoleAssignment
+        
+        # Delete in proper order to avoid foreign key violations
+        
+        # 1. Delete batch-related data first (most dependent)
+        ExtraBatchContainer.query.filter_by(organization_id=org_id).delete()
+        ExtraBatchIngredient.query.filter_by(organization_id=org_id).delete()
+        BatchContainer.query.filter_by(organization_id=org_id).delete()
+        BatchIngredient.query.filter_by(organization_id=org_id).delete()
+        BatchTimer.query.filter_by(organization_id=org_id).delete()
+        
+        # 2. Delete batches
+        Batch.query.filter_by(organization_id=org_id).delete()
+        
+        # 3. Delete recipe ingredients, then recipes
+        recipe_ids = [r.id for r in Recipe.query.filter_by(organization_id=org_id).all()]
+        if recipe_ids:
+            RecipeIngredient.query.filter(RecipeIngredient.recipe_id.in_(recipe_ids)).delete()
+        Recipe.query.filter_by(organization_id=org_id).delete()
+        
+        # 4. Delete reservations
+        Reservation.query.filter_by(organization_id=org_id).delete()
+        
+        # 5. Delete product-related data
+        ProductSKU.query.filter_by(organization_id=org_id).delete()
+        Product.query.filter_by(organization_id=org_id).delete()
+        
+        # 6. Delete inventory items
+        InventoryItem.query.filter_by(organization_id=org_id).delete()
+        
+        # 7. Delete categories
+        Category.query.filter_by(organization_id=org_id).delete()
+        
+        # 8. Delete user role assignments for org users
+        org_user_ids = [u.id for u in User.query.filter_by(organization_id=org_id).all()]
+        if org_user_ids:
+            UserRoleAssignment.query.filter(UserRoleAssignment.user_id.in_(org_user_ids)).delete()
+        
+        # 9. Delete organization-specific roles (not system roles)
+        Role.query.filter_by(organization_id=org_id, is_system_role=False).delete()
+        
+        # 10. Delete subscription
+        subscription = Subscription.query.filter_by(organization_id=org_id).first()
+        if subscription:
+            db.session.delete(subscription)
+        
+        # 11. Delete users (this will handle the foreign key to organization)
+        User.query.filter_by(organization_id=org_id).delete()
+        
+        # 12. Finally delete the organization itself
+        db.session.delete(org)
+        
+        # Commit all deletions
+        db.session.commit()
 
         # 1. Delete user role assignments
         from app.models.user_role_assignment import UserRoleAssignment
