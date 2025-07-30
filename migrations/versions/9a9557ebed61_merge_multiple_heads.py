@@ -1,7 +1,8 @@
+
 """merge multiple heads
 
 Revision ID: 9a9557ebed61
-Revises: 6f7401b4d435, d4b5c89f1234, f8e9d7c6b5a4
+Revises: f8e9d7c6b5a4, 6f7401b4d435
 Create Date: 2025-07-30 19:25:40.657996
 
 """
@@ -11,7 +12,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = '9a9557ebed61'
-down_revision = ('f8e9d7c6b5a4', '6f7401b4d435', 'd4b5c89f1234')
+down_revision = ('f8e9d7c6b5a4', '6f7401b4d435')
 branch_labels = None
 depends_on = None
 
