@@ -67,8 +67,8 @@ def seed_users_and_organization():
             last_name='Developer',
             email='dev@batchtrack.com',
             phone='000-000-0000',
-            organization_id=None,  # Developers exist outside organizations
-            user_type='developer',
+            organization_id=None,  # Developers exist outside organizations - NEVER set org_id
+            user_type='developer',  # Must be 'developer' type
             is_active=True
         )
         db.session.add(developer_user)

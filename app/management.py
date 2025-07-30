@@ -89,10 +89,35 @@ def seed_users_command():
     """Seed users only"""
     try:
         seed_users_and_organization()
-        print('✅ Users seeded successfully!')
+        print("✅ Default organization and essential users created successfully!")
+
+        # Verify user types are correct
+        verify_user_types()
     except Exception as e:
         print(f'❌ Error seeding users: {str(e)}')
         raise
+
+def verify_user_types():
+    """Verify all users have correct types and organization assignments"""
+    print("=== Verifying User Types ===")
+
+    # Check developer users
+    dev_users = User.query.filter_by(user_type='developer').all()
+    for user in dev_users:
+        if user.organization_id is not None:
+            print(f"❌ CRITICAL: Developer user {user.username} has organization_id={user.organization_id}")
+        else:
+            print(f"✅ Developer user {user.username} correctly has no organization")
+
+    # Check customer users
+    customer_users = User.query.filter_by(user_type='customer').all()
+    for user in customer_users:
+        if user.organization_id is None:
+            print(f"❌ CRITICAL: Customer user {user.username} has no organization_id")
+        else:
+            print(f"✅ Customer user {user.username} correctly assigned to org {user.organization_id}")
+
+    print(f"📊 Total: {len(dev_users)} developers, {len(customer_users)} customers")
 
 @click.command('seed-subscriptions')
 @with_appcontext
@@ -222,19 +247,22 @@ def redeploy_init_command():
         print("=== Step 5: Ensuring default users exist ===")
         seed_users_and_organization()
 
+        # Import User here for verification
+        from .models import User
+
         # Verify role permissions are correctly assigned
         print("=== Step 6: Verifying role permissions ===")
         from .models.role import Role
         from .models import Permission
-        
+
         org_owner_role = Role.query.filter_by(name='organization_owner', is_system_role=True).first()
         if org_owner_role:
             # Get ALL active permissions (not just specific categories)
             all_permissions = Permission.query.filter_by(is_active=True).all()
-            
+
             print(f"Found {len(all_permissions)} active permissions in system")
             print(f"Organization owner role currently has {len(org_owner_role.permissions)} permissions")
-            
+
             # Always restore all permissions to organization owner
             print("🔧 Restoring all permissions to organization_owner role...")
             org_owner_role.permissions = all_permissions
@@ -267,14 +295,14 @@ def force_sync_tiers_command():
     try:
         print("⚠️  WARNING: This will overwrite existing subscription tier configurations!")
         confirm = input("Type 'YES' to continue: ")
-        
+
         if confirm != 'YES':
             print("❌ Operation cancelled")
             return
-            
+
         from .seeders.subscription_seeder import force_sync_tiers_from_json
         force_sync_tiers_from_json()
-        
+
         print('✅ Force sync completed successfully!')
         print('🔄 All subscription tiers have been updated from JSON configuration')
 
