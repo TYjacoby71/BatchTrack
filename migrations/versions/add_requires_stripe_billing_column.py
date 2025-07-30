@@ -1,4 +1,3 @@
-
 """Add requires_stripe_billing column to subscription_tier
 
 Revision ID: f8e9d7c6b5a4
