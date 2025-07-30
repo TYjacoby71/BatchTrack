@@ -134,6 +134,10 @@ class StripeService:
                 if tier:
                     organization.subscription_tier_id = tier.id
                     logger.info(f"Set organization {organization.id} to tier {tier_key}")
+                    
+                    # Sync permissions based on new tier
+                    from .billing_access_control import BillingAccessControl
+                    BillingAccessControl.sync_permissions_from_tier(organization)
                 else:
                     logger.error(f"Tier '{tier_key}' not found for organization {organization.id}")
                     return False
@@ -191,6 +195,10 @@ class StripeService:
                 # Reactivate if subscription becomes active again
                 organization.is_active = True
                 logger.info(f"Reactivated org {organization.id} due to active subscription")
+                
+                # Sync permissions when reactivated
+                from .billing_access_control import BillingAccessControl
+                BillingAccessControl.sync_permissions_from_tier(organization)
 
             # Create/update billing snapshot for resilience
             try:
