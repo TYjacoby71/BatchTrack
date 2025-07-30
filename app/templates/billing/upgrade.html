@@ -147,8 +147,8 @@
                           <i class="fas fa-check"></i> Activate {{ tier_data.get('name', tier_name.title()) }}
                         </button>
                       </form>
-                    {% elif tier_data.get('is_stripe_ready') %}
-                      <!-- Tier has Stripe configuration - allow checkout -->
+                    {% else %}
+                      <!-- Tier requires billing - allow checkout -->
                       <form method="POST" action="{{ url_for('billing.checkout', tier=tier_name) }}" class="d-inline">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                         <button type="submit" class="btn btn-primary btn-lg w-100 mb-2">
@@ -161,19 +161,6 @@
                           Choose Yearly
                       </a>
                       {% endif %}
-                    {% elif tier_data.get('is_fallback') %}
-                      <!-- Tier using fallback data - Stripe temporarily unavailable -->
-                      <div class="alert alert-warning">
-                        <strong>Temporarily Unavailable:</strong> Payment system is currently unavailable for this tier. Please try again later.
-                      </div>
-                    {% else %}
-                      <!-- Tier not configured in Stripe -->
-                      <div class="alert alert-warning">
-                        <strong>Not Available:</strong> This tier requires Stripe configuration.
-                        {% if config.get('DEBUG') %}
-                        <br>Use the sync button in the developer interface to configure this tier.
-                        {% endif %}
-                      </div>
                     {% endif %}
                     {% else %}
                     <button class="btn btn-secondary btn-block" disabled>Current Plan</button>
@@ -191,9 +178,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Cancel subscription functionality removed
 });
 
-function debugCheckout(tierKey, tierName, isStripeReady) {
+function debugCheckout(tierKey, tierName) {
         console.log(`Attempting checkout for tier: ${tierName} (${tierKey})`);
-        console.log(`Stripe Ready: ${isStripeReady}`);
         console.log(`Checkout URL: {{ url_for('billing.checkout', tier='__TIER__') }}`.replace('__TIER__', tierKey));
 
         // Additional debug info can be added here as needed.
