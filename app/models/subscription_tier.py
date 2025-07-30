@@ -15,6 +15,7 @@ class SubscriptionTier(db.Model):
     user_limit = db.Column(db.Integer, default=1)  # -1 for unlimited
     is_customer_facing = db.Column(db.Boolean, default=True)
     is_available = db.Column(db.Boolean, default=True)
+    requires_stripe_billing = db.Column(db.Boolean, default=True)  # False for exempt, free, or internal tiers
 
     # Stripe integration
     stripe_lookup_key = db.Column(db.String(128), nullable=True)
@@ -70,15 +71,13 @@ class SubscriptionTier(db.Model):
 
     @property
     def is_exempt_from_billing(self):
-        """Check if this tier is exempt from billing (exempt, free, or test tiers)"""
-        return self.key in ['exempt', 'free'] or not self.is_customer_facing
+        """Check if this tier is exempt from billing"""
+        return not self.requires_stripe_billing
 
     @property
-    def requires_stripe_billing(self):
-        """Check if this tier requires Stripe billing"""
-        return (self.is_customer_facing and 
-                self.key not in ['exempt', 'free'] and 
-                self.is_available)
+    def is_stripe_billing_required(self):
+        """Check if this tier requires Stripe billing (alias for clarity)"""
+        return self.requires_stripe_billing
 
     def __repr__(self):
         return f'<SubscriptionTier {self.key}: {self.name}>'
