@@ -155,21 +155,25 @@ def seed_developer_roles():
     print("✅ Developer roles seeded successfully!")
 
 def update_organization_owner_role():
-    """Update organization owner role with necessary permissions"""
+    """Update organization owner role with necessary permissions (only if empty)"""
     org_owner_role = Role.query.filter_by(name='organization_owner', is_system_role=True).first()
 
     if org_owner_role:
-        # Get all customer-facing permissions (app and organization categories)
-        customer_permissions = Permission.query.filter(
-            Permission.category.in_(['app', 'organization']),
-            Permission.is_active == True
-        ).all()
+        # Only assign permissions if the role has none (fresh install)
+        if len(org_owner_role.permissions) == 0:
+            # Get all customer-facing permissions (app and organization categories)
+            customer_permissions = Permission.query.filter(
+                Permission.category.in_(['app', 'organization']),
+                Permission.is_active == True
+            ).all()
 
-        # Update permissions to role
-        org_owner_role.permissions = customer_permissions
-        db.session.commit()
+            # Update permissions to role
+            org_owner_role.permissions = customer_permissions
+            db.session.commit()
 
-        print(f"✅ Updated organization owner role with {len(customer_permissions)} permissions")
+            print(f"✅ Assigned {len(customer_permissions)} permissions to fresh organization owner role")
+        else:
+            print(f"ℹ️  Organization owner role already has {len(org_owner_role.permissions)} permissions - preserving existing configuration")
     else:
         print("⚠️  organization_owner role not found - it should be created by seed_organization_roles()")
 
