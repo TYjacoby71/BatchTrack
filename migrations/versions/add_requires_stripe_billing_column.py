@@ -1,3 +1,4 @@
+
 """Add requires_stripe_billing column to subscription_tier
 
 Revision ID: f8e9d7c6b5a4
@@ -10,7 +11,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'f8e9d7c6b5a4'
+revision = 'requires_stripe_billing'
 down_revision = '9a9557ebed61'
 branch_labels = None
 depends_on = None
