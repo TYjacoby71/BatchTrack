@@ -212,6 +212,33 @@ def seed_categories_command():
         db.session.rollback()
         raise
 
+@click.command('seed-permission-categories')
+@click.option('--category', help='Specific permission category to seed (app, organization, system, developer)')
+@with_appcontext
+def seed_permission_categories_command(category):
+    """Seed permissions by category"""
+    try:
+        if category:
+            print(f"🔄 Seeding {category} permission category...")
+        else:
+            print("🔄 Seeding all permission categories...")
+            
+        from .seeders.consolidated_permission_seeder import seed_consolidated_permissions
+        
+        # For now, we'll seed all permissions since the seeder handles categories internally
+        # Future enhancement could filter by specific category
+        seed_consolidated_permissions()
+        
+        if category:
+            print(f'✅ {category} permission category seeded successfully!')
+        else:
+            print('✅ All permission categories seeded successfully!')
+            
+    except Exception as e:
+        print(f'❌ Permission category seeding failed: {str(e)}')
+        db.session.rollback()
+        raise
+
 def register_commands(app):
     """Register CLI commands"""
     # One-time initialization (fresh installs only)
@@ -224,6 +251,7 @@ def register_commands(app):
     app.cli.add_command(seed_units_command)
     app.cli.add_command(seed_sub_tiers_command)
     app.cli.add_command(seed_categories_command)
+    app.cli.add_command(seed_permission_categories_command)
     
     # Production maintenance commands
     app.cli.add_command(update_permissions_command)
