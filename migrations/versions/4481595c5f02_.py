@@ -316,7 +316,7 @@ def upgrade():
     sa.ForeignKeyConstraint(['created_by'], ['user.id'], ),
     sa.ForeignKeyConstraint(['organization_id'], ['organization.id'], ),
     sa.ForeignKeyConstraint(['recipe_id'], ['recipe.id'], ),
-    sa.ForeignKeyConstraint(['sku_id'], ['product_sku.inventory_item_id'], ),
+    sa.ForeignKeyConstraint(['sku_id'], ['product_sku.id'], ),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('label_code')
     )
