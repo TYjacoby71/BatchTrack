@@ -20,6 +20,7 @@ def create_exempt_tier():
             user_limit=-1,  # Unlimited users
             is_customer_facing=False,
             is_available=True,
+            requires_stripe_billing=False,  # Exempt from billing
             stripe_lookup_key='',
             fallback_price_monthly='$0',
             fallback_price_yearly='$0',
