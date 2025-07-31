@@ -66,14 +66,16 @@ def upgrade():
         batch_op.add_column(sa.Column('is_perishable', sa.Boolean(), nullable=True))
         batch_op.add_column(sa.Column('shelf_life_days', sa.Integer(), nullable=True))
 
-        # Add foreign key constraints
+    # Now add foreign key constraints in a separate batch operation
+    with op.batch_alter_table('product_sku', schema=None) as batch_op:
         batch_op.create_foreign_key('fk_product_sku_variant', 'product_variant', ['variant_id'], ['id'])
         batch_op.create_foreign_key('fk_product_sku_batch', 'batch', ['batch_id'], ['id'])
         batch_op.create_foreign_key('fk_product_sku_container', 'inventory_item', ['container_id'], ['id'])
         batch_op.create_foreign_key('fk_product_sku_created_by', 'user', ['created_by'], ['id'])
         batch_op.create_foreign_key('fk_product_sku_quality_checked_by', 'user', ['quality_checked_by'], ['id'])
 
-        # Now add unique constraints (after columns exist)
+    # Finally add unique constraints in a separate batch operation
+    with op.batch_alter_table('product_sku', schema=None) as batch_op:
         batch_op.create_unique_constraint('unique_barcode', ['barcode'])
         batch_op.create_unique_constraint('unique_upc', ['upc'])
 
