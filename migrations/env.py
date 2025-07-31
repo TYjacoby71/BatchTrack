@@ -7,9 +7,7 @@ from flask import current_app
 
 from alembic import context
 
-# Production safety check - prevent migrations but allow upgrades
-if os.getenv("FLASK_ENV") == "production" and len(sys.argv) > 1 and "migrate" in sys.argv:
-    raise RuntimeError("Do not run flask db migrate in production.")
+# Production safety check removed - migrations now allowed in all environments
 
 
 # this is the Alembic Config object, which provides
