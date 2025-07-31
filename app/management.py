@@ -43,100 +43,93 @@ def activate_users():
 @click.command('init-production')
 @with_appcontext
 def init_production_command():
-    """THE SINGLE LAUNCH COMMAND - Initialize production database with all essential data"""
+    """ONE-TIME ONLY: Initialize fresh production database"""
     try:
-        print("🚀 BatchTrack Production Initialization Starting...")
+        # Check if already initialized
+        from .models import Organization, User
+        if Organization.query.first() or User.query.first():
+            print("❌ Database already initialized! Use migrations for updates.")
+            print("   - For permission updates: flask db migrate && flask db upgrade")
+            print("   - For new features: Create proper migrations")
+            return
 
-        # Apply migrations first
+        print("🚀 BatchTrack Fresh Installation Starting...")
+
+        # Apply migrations
         from flask_migrate import upgrade
-        from sqlalchemy import text
-        print("=== Step 1: Applying database migrations ===")
-        
-        # Handle foreign key constraints for SQLite
-        if 'sqlite' in str(db.engine.url):
-            db.session.execute(text("PRAGMA foreign_keys=OFF"))
-            db.session.commit()
-        
+        print("=== Step 1: Database migrations ===")
         upgrade()
-        
-        if 'sqlite' in str(db.engine.url):
-            db.session.execute(text("PRAGMA foreign_keys=ON"))
-            db.session.commit()
 
-        # Complete system setup in correct order
-        print("=== Step 2: Setting up permissions system ===")
+        # One-time system setup
+        print("=== Step 2: System foundations ===")
         seed_consolidated_permissions()
-
-        print("=== Step 3: Setting up subscription tiers ===")
         seed_subscriptions()
-
-        print("=== Step 4: Setting up basic system data ===")
         seed_units()
 
-        print("=== Step 5: Creating users and organization ===")
+        # Create initial admin
+        print("=== Step 3: Initial admin setup ===")
         seed_users_and_organization()
 
-        print("=== Step 6: Setting up categories ===")
+        # Setup default categories for first org
         from .models import Organization
         org = Organization.query.first()
         if org:
             seed_categories(organization_id=org.id)
-            print(f"✅ Categories created for organization: {org.name}")
-        else:
-            print("⚠️  No organization found, skipping categories...")
 
-        # Verify setup
-        print("=== Step 7: Verifying setup ===")
-        from .models import User, Permission
-        
-        user_count = User.query.count()
-        permission_count = Permission.query.filter_by(is_active=True).count()
-        org_count = Organization.query.count()
-        
-        print(f"📊 Setup complete:")
-        print(f"   - Organizations: {org_count}")
-        print(f"   - Users: {user_count}")
-        print(f"   - Active permissions: {permission_count}")
-
-        print('✅ BatchTrack Production Ready!')
-        print('🔒 Default login: admin/admin (change password after first login)')
-        print('🌐 Your application is ready to use!')
+        print('✅ Fresh installation complete!')
+        print('🔒 Login: admin/admin (CHANGE IMMEDIATELY)')
+        print('⚠️  This command will refuse to run again - use migrations for updates')
 
     except Exception as e:
-        print(f'❌ Error during initialization: {str(e)}')
+        print(f'❌ Initialization failed: {str(e)}')
         db.session.rollback()
         raise
 
 
 
-@click.command('force-sync-tiers')
-@with_appcontext
-def force_sync_tiers_command():
-    """FORCE sync subscription tiers from JSON - OVERWRITES existing configurations"""
+@click.command('update-permissions')
+@with_appcontext  
+def update_permissions_command():
+    """Update permissions from consolidated JSON (production-safe)"""
     try:
-        print("⚠️  WARNING: This will overwrite existing subscription tier configurations!")
-        confirm = input("Type 'YES' to continue: ")
-
-        if confirm != 'YES':
-            print("❌ Operation cancelled")
-            return
-
-        from .seeders.subscription_seeder import force_sync_tiers_from_json
-        force_sync_tiers_from_json()
-
-        print('✅ Force sync completed successfully!')
-        print('🔄 All subscription tiers have been updated from JSON configuration')
-
+        print("🔄 Updating permissions from consolidated_permissions.json...")
+        
+        from .seeders.consolidated_permission_seeder import seed_consolidated_permissions
+        seed_consolidated_permissions()
+        
+        print('✅ Permissions updated successfully!')
+        print('   - New permissions added')
+        print('   - Existing permissions updated')
+        print('   - Old permissions deactivated')
+        
     except Exception as e:
-        print(f'❌ Error during force sync: {str(e)}')
+        print(f'❌ Permission update failed: {str(e)}')
+        db.session.rollback()
+        raise
+
+@click.command('update-subscription-tiers')
+@with_appcontext
+def update_subscription_tiers_command():
+    """Update subscription tiers (production-safe)"""
+    try:
+        print("🔄 Updating subscription tiers...")
+        
+        from .seeders.subscription_seeder import seed_subscriptions
+        seed_subscriptions()  # This should be update-safe
+        
+        print('✅ Subscription tiers updated!')
+        
+    except Exception as e:
+        print(f'❌ Subscription tier update failed: {str(e)}')
         db.session.rollback()
         raise
 
 def register_commands(app):
     """Register CLI commands"""
-    # Main launch command
+    # One-time initialization (fresh installs only)
     app.cli.add_command(init_production_command)
     
-    # Utility commands for maintenance
+    # Production maintenance commands
+    app.cli.add_command(update_permissions_command)
+    app.cli.add_command(update_subscription_tiers_command)
     app.cli.add_command(activate_users)
-    app.cli.add_command(force_sync_tiers_command)
