@@ -1,0 +1,525 @@
+render@srv-d21alungi27c73dn1440-5ff74c5b86-ljwvl:~/project/src$ flask db upgrade
+DEBUG: Billing blueprint imported successfully: <Blueprint 'billing'>
+DEBUG: Billing blueprint name: billing
+DEBUG: Billing blueprint url_prefix: /billing
+DEBUG: Billing blueprint registered successfully
+Registered API routes: ['/api/reservations/create', '/api/reservations/release/<int:reservation_id>', '/api/reservations/convert-to-sale/<int:reservation_id>', '/api/reservations/expire-old', '/api/products/<int:product_id>/variants', '/api/dismiss-alert', '/api/dashboard-alerts', '/api/server-time', '/api/server-time', '/api/dismiss-alert', '/api/dashboard-alerts', '/api/check-stock', '/api/categories', '/api/ingredient/<int:id>/density', '/api/debug-containers', '/api/available-containers/<int:recipe_id>', '/api/containers/available', '/api/batches/<int:batch_id>/containers', '/api/batches/<int:batch_id>/containers/<int:container_id>', '/api/batches/<int:batch_id>/containers/<int:container_id>/adjust', '/api/api/fifo-details/<int:inventory_id>', '/api/api/batch-inventory-summary/<int:batch_id>', '/api/api/reservations/create', '/api/api/reservations/release/<int:reservation_id>', '/api/api/reservations/convert-to-sale/<int:reservation_id>', '/api/api/reservations/expire-old', '/api/dashboard-alerts', '/api/dismiss-alert', '/api/units', '/api/convert-units']
+Container routes found: ['/settings/bulk-update-containers', '/api/debug-containers', '/api/available-containers/<int:recipe_id>', '/api/containers/available', '/api/batches/<int:batch_id>/containers', '/api/batches/<int:batch_id>/containers/<int:container_id>', '/api/batches/<int:batch_id>/containers/<int:container_id>/adjust', '/debug-containers', '/available-containers/<int:recipe_id>', '/containers/available', '/batches/<int:batch_id>/containers', '/batches/<int:batch_id>/containers/<int:container_id>', '/batches/<int:batch_id>/containers/<int:container_id>/adjust']
+Billing routes found: ['/billing/reconciliation-needed', '/billing/reconcile-to-free', '/billing/upgrade', '/billing/checkout/<tier>/<billing_cycle>', '/billing/checkout/<tier>', '/billing/customer-portal', '/billing/cancel-subscription', '/billing/webhooks/stripe', '/billing/complete-signup-from-stripe', '/billing/debug']
+Billing endpoints: [('/billing/reconciliation-needed', 'billing.reconciliation_needed'), ('/billing/reconcile-to-free', 'billing.reconcile_to_free'), ('/billing/upgrade', 'billing.upgrade'), ('/billing/checkout/<tier>/<billing_cycle>', 'billing.checkout'), ('/billing/checkout/<tier>', 'billing.checkout'), ('/billing/customer-portal', 'billing.customer_portal'), ('/billing/cancel-subscription', 'billing.cancel_subscription'), ('/billing/webhooks/stripe', 'billing.stripe_webhook'), ('/billing/complete-signup-from-stripe', 'billing.complete_signup_from_stripe'), ('/billing/debug', 'billing.debug_billing')]
+[2025-07-31 23:26:05,958] INFO in unit_utils: BatchTrack startup
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+render@srv-d21alungi27c73dn1440-5ff74c5b86-ljwvl:~/project/src$ flask sync-schema
+DEBUG: Billing blueprint imported successfully: <Blueprint 'billing'>
+DEBUG: Billing blueprint name: billing
+DEBUG: Billing blueprint url_prefix: /billing
+DEBUG: Billing blueprint registered successfully
+Registered API routes: ['/api/reservations/create', '/api/reservations/release/<int:reservation_id>', '/api/reservations/convert-to-sale/<int:reservation_id>', '/api/reservations/expire-old', '/api/products/<int:product_id>/variants', '/api/dismiss-alert', '/api/dashboard-alerts', '/api/server-time', '/api/server-time', '/api/dismiss-alert', '/api/dashboard-alerts', '/api/check-stock', '/api/categories', '/api/ingredient/<int:id>/density', '/api/debug-containers', '/api/available-containers/<int:recipe_id>', '/api/containers/available', '/api/batches/<int:batch_id>/containers', '/api/batches/<int:batch_id>/containers/<int:container_id>', '/api/batches/<int:batch_id>/containers/<int:container_id>/adjust', '/api/api/fifo-details/<int:inventory_id>', '/api/api/batch-inventory-summary/<int:batch_id>', '/api/api/reservations/create', '/api/api/reservations/release/<int:reservation_id>', '/api/api/reservations/convert-to-sale/<int:reservation_id>', '/api/api/reservations/expire-old', '/api/dashboard-alerts', '/api/dismiss-alert', '/api/units', '/api/convert-units']
+Container routes found: ['/settings/bulk-update-containers', '/api/debug-containers', '/api/available-containers/<int:recipe_id>', '/api/containers/available', '/api/batches/<int:batch_id>/containers', '/api/batches/<int:batch_id>/containers/<int:container_id>', '/api/batches/<int:batch_id>/containers/<int:container_id>/adjust', '/debug-containers', '/available-containers/<int:recipe_id>', '/containers/available', '/batches/<int:batch_id>/containers', '/batches/<int:batch_id>/containers/<int:container_id>', '/batches/<int:batch_id>/containers/<int:container_id>/adjust']
+Billing routes found: ['/billing/reconciliation-needed', '/billing/reconcile-to-free', '/billing/upgrade', '/billing/checkout/<tier>/<billing_cycle>', '/billing/checkout/<tier>', '/billing/customer-portal', '/billing/cancel-subscription', '/billing/webhooks/stripe', '/billing/complete-signup-from-stripe', '/billing/debug']
+Billing endpoints: [('/billing/reconciliation-needed', 'billing.reconciliation_needed'), ('/billing/reconcile-to-free', 'billing.reconcile_to_free'), ('/billing/upgrade', 'billing.upgrade'), ('/billing/checkout/<tier>/<billing_cycle>', 'billing.checkout'), ('/billing/checkout/<tier>', 'billing.checkout'), ('/billing/customer-portal', 'billing.customer_portal'), ('/billing/cancel-subscription', 'billing.cancel_subscription'), ('/billing/webhooks/stripe', 'billing.stripe_webhook'), ('/billing/complete-signup-from-stripe', 'billing.complete_signup_from_stripe'), ('/billing/debug', 'billing.debug_billing')]
+[2025-07-31 23:26:16,434] INFO in unit_utils: BatchTrack startup
+🚀 Syncing database schema to match models (safe mode)...
+📦 Dynamically importing all models...
+   ✓ Organization
+   ✓ User
+   ✓ InventoryItem
+   ✓ InventoryHistory
+   ✓ BatchInventoryLog
+   ✓ Recipe
+   ✓ RecipeIngredient
+   ✓ Batch
+   ✓ BatchIngredient
+   ✓ BatchContainer
+   ✓ ExtraBatchContainer
+   ✓ BatchTimer
+   ✓ ExtraBatchIngredient
+   ✓ Unit
+   ✓ CustomUnitMapping
+   ✓ ConversionLog
+   ✓ IngredientCategory
+   ✓ Tag
+   ✓ Product
+   ✓ ProductVariant
+   ✓ ProductSKU
+   ✓ ProductSKUHistory
+   ✓ Reservation
+   ✓ Role
+   ✓ Permission
+   ✓ UserRoleAssignment
+   ✓ UserPreferences
+   ✓ UserStats
+   ✓ OrganizationStats
+   ✓ SubscriptionTier
+   ✓ DeveloperPermission
+   ✓ DeveloperRole
+   ✓ BillingSnapshot
+   ✓ PricingSnapshot
+   ✓ Loaded models from batch.py
+   ✓ Loaded models from billing_snapshot.py
+   ✓ Loaded models from category.py
+   ✓ Loaded models from developer_permission.py
+   ✓ Loaded models from developer_role.py
+   ✓ Loaded models from inventory.py
+   ✓ Loaded models from mixins.py
+   ✓ Loaded models from models.py
+   ✓ Loaded models from permission.py
+   ✓ Loaded models from pricing_snapshot.py
+   ✓ Loaded models from product.py
+   ✓ Loaded models from recipe.py
+   ✓ Loaded models from reservation.py
+   ✓ Loaded models from role.py
+   ✓ Loaded models from statistics.py
+   ✓ Loaded models from subscription_tier.py
+   ✓ Loaded models from unit.py
+   ✓ Loaded models from user_preferences.py
+   ✓ Loaded models from user_role_assignment.py
+✅ 34 models imported dynamically
+📊 Found 40 existing tables
+🏗️  Creating any missing tables...
+✅ No new tables needed - schema is up to date
+📊 Total tables: 40
+✅ Database schema safely synced to match models!
+🔄 Note: This only adds missing tables - existing data is preserved
+render@srv-d21alungi27c73dn1440-5ff74c5b86-ljwvl:~/project/src$ flsak seed-consolidated-permissions
+bash: flsak: command not found
+render@srv-d21alungi27c73dn1440-5ff74c5b86-ljwvl:~/project/src$ flask
+DEBUG: Billing blueprint imported successfully: <Blueprint 'billing'>
+DEBUG: Billing blueprint name: billing
+DEBUG: Billing blueprint url_prefix: /billing
+DEBUG: Billing blueprint registered successfully
+Registered API routes: ['/api/reservations/create', '/api/reservations/release/<int:reservation_id>', '/api/reservations/convert-to-sale/<int:reservation_id>', '/api/reservations/expire-old', '/api/products/<int:product_id>/variants', '/api/dismiss-alert', '/api/dashboard-alerts', '/api/server-time', '/api/server-time', '/api/dismiss-alert', '/api/dashboard-alerts', '/api/check-stock', '/api/categories', '/api/ingredient/<int:id>/density', '/api/debug-containers', '/api/available-containers/<int:recipe_id>', '/api/containers/available', '/api/batches/<int:batch_id>/containers', '/api/batches/<int:batch_id>/containers/<int:container_id>', '/api/batches/<int:batch_id>/containers/<int:container_id>/adjust', '/api/api/fifo-details/<int:inventory_id>', '/api/api/batch-inventory-summary/<int:batch_id>', '/api/api/reservations/create', '/api/api/reservations/release/<int:reservation_id>', '/api/api/reservations/convert-to-sale/<int:reservation_id>', '/api/api/reservations/expire-old', '/api/dashboard-alerts', '/api/dismiss-alert', '/api/units', '/api/convert-units']
+Container routes found: ['/settings/bulk-update-containers', '/api/debug-containers', '/api/available-containers/<int:recipe_id>', '/api/containers/available', '/api/batches/<int:batch_id>/containers', '/api/batches/<int:batch_id>/containers/<int:container_id>', '/api/batches/<int:batch_id>/containers/<int:container_id>/adjust', '/debug-containers', '/available-containers/<int:recipe_id>', '/containers/available', '/batches/<int:batch_id>/containers', '/batches/<int:batch_id>/containers/<int:container_id>', '/batches/<int:batch_id>/containers/<int:container_id>/adjust']
+Billing routes found: ['/billing/reconciliation-needed', '/billing/reconcile-to-free', '/billing/upgrade', '/billing/checkout/<tier>/<billing_cycle>', '/billing/checkout/<tier>', '/billing/customer-portal', '/billing/cancel-subscription', '/billing/webhooks/stripe', '/billing/complete-signup-from-stripe', '/billing/debug']
+Billing endpoints: [('/billing/reconciliation-needed', 'billing.reconciliation_needed'), ('/billing/reconcile-to-free', 'billing.reconcile_to_free'), ('/billing/upgrade', 'billing.upgrade'), ('/billing/checkout/<tier>/<billing_cycle>', 'billing.checkout'), ('/billing/checkout/<tier>', 'billing.checkout'), ('/billing/customer-portal', 'billing.customer_portal'), ('/billing/cancel-subscription', 'billing.cancel_subscription'), ('/billing/webhooks/stripe', 'billing.stripe_webhook'), ('/billing/complete-signup-from-stripe', 'billing.complete_signup_from_stripe'), ('/billing/debug', 'billing.debug_billing')]
+[2025-07-31 23:26:33,434] INFO in unit_utils: BatchTrack startup
+Usage: flask [OPTIONS] COMMAND [ARGS]...
+
+  A general utility script for Flask applications.
+
+  An application to load must be given with the '--app' option, 'FLASK_APP'
+  environment variable, or with a 'wsgi.py' or 'app.py' file in the current
+  directory.
+
+Options:
+  -e, --env-file FILE   Load environment variables from this file, taking
+                        precedence over those set by '.env' and '.flaskenv'.
+                        Variables set directly in the environment take highest
+                        precedence. python-dotenv must be installed.
+  -A, --app IMPORT      The Flask application or factory function to load, in
+                        the form 'module:name'. Module can be a dotted import
+                        or file path. Name is not required if it is 'app',
+                        'application', 'create_app', or 'make_app', and can be
+                        'name(args)' to pass arguments.
+  --debug / --no-debug  Set debug mode.
+  --version             Show the Flask version.
+  --help                Show this message and exit.
+
+Commands:
+  activate-users              Activate all inactive users
+  create-app                  Initialize database and create all model...
+  db                          Perform database migrations.
+  init-production             Seed production database with essential...
+  routes                      Show the routes for the app.
+  run                         Run a development server.
+  seed-categories             Seed ingredient categories for first...
+  seed-organizations          Seed organizations (part of user seeding)
+  seed-permission-categories  Seed permissions by category
+  seed-permissions            Seed consolidated permissions
+  seed-sub-tiers              Seed subscription tiers
+  seed-units                  Seed measurement units
+  seed-users                  Seed users and organization
+  shell                       Run a shell in the app context.
+  sync-schema                 Safely sync database schema to match models...
+  update-permissions          Update permissions from consolidated JSON...
+  update-subscription-tiers   Update subscription tiers (production-safe)
+render@srv-d21alungi27c73dn1440-5ff74c5b86-ljwvl:~/project/src$ flask seed-sub-tiers
+DEBUG: Billing blueprint imported successfully: <Blueprint 'billing'>
+DEBUG: Billing blueprint name: billing
+DEBUG: Billing blueprint url_prefix: /billing
+DEBUG: Billing blueprint registered successfully
+Registered API routes: ['/api/reservations/create', '/api/reservations/release/<int:reservation_id>', '/api/reservations/convert-to-sale/<int:reservation_id>', '/api/reservations/expire-old', '/api/products/<int:product_id>/variants', '/api/dismiss-alert', '/api/dashboard-alerts', '/api/server-time', '/api/server-time', '/api/dismiss-alert', '/api/dashboard-alerts', '/api/check-stock', '/api/categories', '/api/ingredient/<int:id>/density', '/api/debug-containers', '/api/available-containers/<int:recipe_id>', '/api/containers/available', '/api/batches/<int:batch_id>/containers', '/api/batches/<int:batch_id>/containers/<int:container_id>', '/api/batches/<int:batch_id>/containers/<int:container_id>/adjust', '/api/api/fifo-details/<int:inventory_id>', '/api/api/batch-inventory-summary/<int:batch_id>', '/api/api/reservations/create', '/api/api/reservations/release/<int:reservation_id>', '/api/api/reservations/convert-to-sale/<int:reservation_id>', '/api/api/reservations/expire-old', '/api/dashboard-alerts', '/api/dismiss-alert', '/api/units', '/api/convert-units']
+Container routes found: ['/settings/bulk-update-containers', '/api/debug-containers', '/api/available-containers/<int:recipe_id>', '/api/containers/available', '/api/batches/<int:batch_id>/containers', '/api/batches/<int:batch_id>/containers/<int:container_id>', '/api/batches/<int:batch_id>/containers/<int:container_id>/adjust', '/debug-containers', '/available-containers/<int:recipe_id>', '/containers/available', '/batches/<int:batch_id>/containers', '/batches/<int:batch_id>/containers/<int:container_id>', '/batches/<int:batch_id>/containers/<int:container_id>/adjust']
+Billing routes found: ['/billing/reconciliation-needed', '/billing/reconcile-to-free', '/billing/upgrade', '/billing/checkout/<tier>/<billing_cycle>', '/billing/checkout/<tier>', '/billing/customer-portal', '/billing/cancel-subscription', '/billing/webhooks/stripe', '/billing/complete-signup-from-stripe', '/billing/debug']
+Billing endpoints: [('/billing/reconciliation-needed', 'billing.reconciliation_needed'), ('/billing/reconcile-to-free', 'billing.reconcile_to_free'), ('/billing/upgrade', 'billing.upgrade'), ('/billing/checkout/<tier>/<billing_cycle>', 'billing.checkout'), ('/billing/checkout/<tier>', 'billing.checkout'), ('/billing/customer-portal', 'billing.customer_portal'), ('/billing/cancel-subscription', 'billing.cancel_subscription'), ('/billing/webhooks/stripe', 'billing.stripe_webhook'), ('/billing/complete-signup-from-stripe', 'billing.complete_signup_from_stripe'), ('/billing/debug', 'billing.debug_billing')]
+[2025-07-31 23:26:45,267] INFO in unit_utils: BatchTrack startup
+🔄 Seeding subscription tiers...
+=== Seeding Subscription Tiers Only ===
+=== Seeding Subscription Tiers (Create Only Mode) ===
+❌ Subscription tier seeding failed: (psycopg2.errors.UndefinedColumn) column subscription_tier.key does not exist
+LINE 1: ...subscription_tier.name AS subscription_tier_name, subscripti...
+                                                             ^
+
+[SQL: SELECT subscription_tier.id AS subscription_tier_id, subscription_tier.name AS subscription_tier_name, subscription_tier.key AS subscription_tier_key, subscription_tier.description AS subscription_tier_description, subscription_tier.user_limit AS subscription_tier_user_limit, subscription_tier.is_customer_facing AS subscription_tier_is_customer_facing, subscription_tier.is_available AS subscription_tier_is_available, subscription_tier.requires_stripe_billing AS subscription_tier_requires_stripe_billing, subscription_tier.stripe_lookup_key AS subscription_tier_stripe_lookup_key, subscription_tier.stripe_customer_id AS subscription_tier_stripe_customer_id, subscription_tier.stripe_subscription_id AS subscription_tier_stripe_subscription_id, subscription_tier.stripe_price_id_monthly AS subscription_tier_stripe_price_id_monthly, subscription_tier.stripe_price_id_yearly AS subscription_tier_stripe_price_id_yearly, subscription_tier.fallback_price_monthly AS subscription_tier_fallback_price_monthly, subscription_tier.fallback_price_yearly AS subscription_tier_fallback_price_yearly, subscription_tier.stripe_price_monthly AS subscription_tier_stripe_price_monthly, subscription_tier.stripe_price_yearly AS subscription_tier_stripe_price_yearly, subscription_tier.last_synced AS subscription_tier_last_synced, subscription_tier.status AS subscription_tier_status, subscription_tier.current_period_start AS subscription_tier_current_period_start, subscription_tier.current_period_end AS subscription_tier_current_period_end, subscription_tier.next_billing_date AS subscription_tier_next_billing_date, subscription_tier.trial_start AS subscription_tier_trial_start, subscription_tier.trial_end AS subscription_tier_trial_end, subscription_tier.cancel_at_period_end AS subscription_tier_cancel_at_period_end, subscription_tier.created_at AS subscription_tier_created_at, subscription_tier.updated_at AS subscription_tier_updated_at 
+FROM subscription_tier 
+WHERE subscription_tier.key = %(key_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'key_1': 'exempt', 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+Traceback (most recent call last):
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.errors.UndefinedColumn: column subscription_tier.key does not exist
+LINE 1: ...subscription_tier.name AS subscription_tier_name, subscripti...
+                                                             ^
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/opt/render/project/src/.venv/bin/flask", line 8, in <module>
+    sys.exit(main())
+             ~~~~^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/flask/cli.py", line 1129, in main
+    cli.main()
+    ~~~~~~~~^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/click/core.py", line 1082, in main
+    rv = self.invoke(ctx)
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/click/core.py", line 1697, in invoke
+    return _process_result(sub_ctx.command.invoke(sub_ctx))
+                           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/click/core.py", line 1443, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+           ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/click/core.py", line 788, in invoke
+    return __callback(*args, **kwargs)
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/click/decorators.py", line 33, in new_func
+    return f(get_current_context(), *args, **kwargs)
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/flask/cli.py", line 400, in decorator
+    return ctx.invoke(f, *args, **kwargs)
+           ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/click/core.py", line 788, in invoke
+    return __callback(*args, **kwargs)
+  File "/opt/render/project/src/app/management.py", line 189, in seed_sub_tiers_command
+    seed_subscriptions()
+    ~~~~~~~~~~~~~~~~~~^^
+  File "/opt/render/project/src/app/seeders/subscription_seeder.py", line 215, in seed_subscriptions
+    seed_subscription_tiers()
+    ~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/opt/render/project/src/app/seeders/subscription_seeder.py", line 66, in seed_subscription_tiers
+    create_exempt_tier()
+    ~~~~~~~~~~~~~~~~~~^^
+  File "/opt/render/project/src/app/seeders/subscription_seeder.py", line 12, in create_exempt_tier
+    exempt_tier = SubscriptionTier.query.filter_by(key='exempt').first()
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/orm/query.py", line 2759, in first
+    return self.limit(1)._iter().first()  # type: ignore
+           ~~~~~~~~~~~~~~~~~~~^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/orm/query.py", line 2858, in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+                                                  ~~~~~~~~~~~~~~~~~~~~^
+        statement,
+        ^^^^^^^^^^
+        params,
+        ^^^^^^^
+        execution_options={"_sa_orm_load_options": self.load_options},
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py", line 2365, in execute
+    return self._execute_internal(
+           ~~~~~~~~~~~~~~~~~~~~~~^
+        statement,
+        ^^^^^^^^^^
+    ...<4 lines>...
+        _add_event=_add_event,
+        ^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py", line 2251, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self,
+        ^^^^^
+    ...<4 lines>...
+        conn,
+        ^^^^^
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/orm/context.py", line 306, in orm_execute_statement
+    result = conn.execute(
+        statement, params or {}, execution_options=execution_options
+    )
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1416, in execute
+    return meth(
+        self,
+        distilled_parameters,
+        execution_options or NO_OPTIONS,
+    )
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/sql/elements.py", line 523, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self, distilled_params, execution_options
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1638, in _execute_clauseelement
+    ret = self._execute_context(
+        dialect,
+    ...<8 lines>...
+        cache_hit=cache_hit,
+    )
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1843, in _execute_context
+    return self._exec_single_context(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        dialect, context, statement, parameters
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1983, in _exec_single_context
+    self._handle_dbapi_exception(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        e, str_statement, effective_parameters, cursor, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 2352, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+sqlalchemy.exc.ProgrammingError: (psycopg2.errors.UndefinedColumn) column subscription_tier.key does not exist
+LINE 1: ...subscription_tier.name AS subscription_tier_name, subscripti...
+                                                             ^
+
+[SQL: SELECT subscription_tier.id AS subscription_tier_id, subscription_tier.name AS subscription_tier_name, subscription_tier.key AS subscription_tier_key, subscription_tier.description AS subscription_tier_description, subscription_tier.user_limit AS subscription_tier_user_limit, subscription_tier.is_customer_facing AS subscription_tier_is_customer_facing, subscription_tier.is_available AS subscription_tier_is_available, subscription_tier.requires_stripe_billing AS subscription_tier_requires_stripe_billing, subscription_tier.stripe_lookup_key AS subscription_tier_stripe_lookup_key, subscription_tier.stripe_customer_id AS subscription_tier_stripe_customer_id, subscription_tier.stripe_subscription_id AS subscription_tier_stripe_subscription_id, subscription_tier.stripe_price_id_monthly AS subscription_tier_stripe_price_id_monthly, subscription_tier.stripe_price_id_yearly AS subscription_tier_stripe_price_id_yearly, subscription_tier.fallback_price_monthly AS subscription_tier_fallback_price_monthly, subscription_tier.fallback_price_yearly AS subscription_tier_fallback_price_yearly, subscription_tier.stripe_price_monthly AS subscription_tier_stripe_price_monthly, subscription_tier.stripe_price_yearly AS subscription_tier_stripe_price_yearly, subscription_tier.last_synced AS subscription_tier_last_synced, subscription_tier.status AS subscription_tier_status, subscription_tier.current_period_start AS subscription_tier_current_period_start, subscription_tier.current_period_end AS subscription_tier_current_period_end, subscription_tier.next_billing_date AS subscription_tier_next_billing_date, subscription_tier.trial_start AS subscription_tier_trial_start, subscription_tier.trial_end AS subscription_tier_trial_end, subscription_tier.cancel_at_period_end AS subscription_tier_cancel_at_period_end, subscription_tier.created_at AS subscription_tier_created_at, subscription_tier.updated_at AS subscription_tier_updated_at 
+FROM subscription_tier 
+WHERE subscription_tier.key = %(key_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'key_1': 'exempt', 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+render@srv-d21alungi27c73dn1440-5ff74c5b86-ljwvl:~/project/src$ flask 
+DEBUG: Billing blueprint imported successfully: <Blueprint 'billing'>
+DEBUG: Billing blueprint name: billing
+DEBUG: Billing blueprint url_prefix: /billing
+DEBUG: Billing blueprint registered successfully
+Registered API routes: ['/api/reservations/create', '/api/reservations/release/<int:reservation_id>', '/api/reservations/convert-to-sale/<int:reservation_id>', '/api/reservations/expire-old', '/api/products/<int:product_id>/variants', '/api/dismiss-alert', '/api/dashboard-alerts', '/api/server-time', '/api/server-time', '/api/dismiss-alert', '/api/dashboard-alerts', '/api/check-stock', '/api/categories', '/api/ingredient/<int:id>/density', '/api/debug-containers', '/api/available-containers/<int:recipe_id>', '/api/containers/available', '/api/batches/<int:batch_id>/containers', '/api/batches/<int:batch_id>/containers/<int:container_id>', '/api/batches/<int:batch_id>/containers/<int:container_id>/adjust', '/api/api/fifo-details/<int:inventory_id>', '/api/api/batch-inventory-summary/<int:batch_id>', '/api/api/reservations/create', '/api/api/reservations/release/<int:reservation_id>', '/api/api/reservations/convert-to-sale/<int:reservation_id>', '/api/api/reservations/expire-old', '/api/dashboard-alerts', '/api/dismiss-alert', '/api/units', '/api/convert-units']
+Container routes found: ['/settings/bulk-update-containers', '/api/debug-containers', '/api/available-containers/<int:recipe_id>', '/api/containers/available', '/api/batches/<int:batch_id>/containers', '/api/batches/<int:batch_id>/containers/<int:container_id>', '/api/batches/<int:batch_id>/containers/<int:container_id>/adjust', '/debug-containers', '/available-containers/<int:recipe_id>', '/containers/available', '/batches/<int:batch_id>/containers', '/batches/<int:batch_id>/containers/<int:container_id>', '/batches/<int:batch_id>/containers/<int:container_id>/adjust']
+Billing routes found: ['/billing/reconciliation-needed', '/billing/reconcile-to-free', '/billing/upgrade', '/billing/checkout/<tier>/<billing_cycle>', '/billing/checkout/<tier>', '/billing/customer-portal', '/billing/cancel-subscription', '/billing/webhooks/stripe', '/billing/complete-signup-from-stripe', '/billing/debug']
+Billing endpoints: [('/billing/reconciliation-needed', 'billing.reconciliation_needed'), ('/billing/reconcile-to-free', 'billing.reconcile_to_free'), ('/billing/upgrade', 'billing.upgrade'), ('/billing/checkout/<tier>/<billing_cycle>', 'billing.checkout'), ('/billing/checkout/<tier>', 'billing.checkout'), ('/billing/customer-portal', 'billing.customer_portal'), ('/billing/cancel-subscription', 'billing.cancel_subscription'), ('/billing/webhooks/stripe', 'billing.stripe_webhook'), ('/billing/complete-signup-from-stripe', 'billing.complete_signup_from_stripe'), ('/billing/debug', 'billing.debug_billing')]
+[2025-07-31 23:26:59,577] INFO in unit_utils: BatchTrack startup
+Usage: flask [OPTIONS] COMMAND [ARGS]...
+
+  A general utility script for Flask applications.
+
+  An application to load must be given with the '--app' option, 'FLASK_APP'
+  environment variable, or with a 'wsgi.py' or 'app.py' file in the current
+  directory.
+
+Options:
+  -e, --env-file FILE   Load environment variables from this file, taking
+                        precedence over those set by '.env' and '.flaskenv'.
+                        Variables set directly in the environment take highest
+                        precedence. python-dotenv must be installed.
+  -A, --app IMPORT      The Flask application or factory function to load, in
+                        the form 'module:name'. Module can be a dotted import
+                        or file path. Name is not required if it is 'app',
+                        'application', 'create_app', or 'make_app', and can be
+                        'name(args)' to pass arguments.
+  --debug / --no-debug  Set debug mode.
+  --version             Show the Flask version.
+  --help                Show this message and exit.
+
+Commands:
+  activate-users              Activate all inactive users
+  create-app                  Initialize database and create all model...
+  db                          Perform database migrations.
+  init-production             Seed production database with essential...
+  routes                      Show the routes for the app.
+  run                         Run a development server.
+  seed-categories             Seed ingredient categories for first...
+  seed-organizations          Seed organizations (part of user seeding)
+  seed-permission-categories  Seed permissions by category
+  seed-permissions            Seed consolidated permissions
+  seed-sub-tiers              Seed subscription tiers
+  seed-units                  Seed measurement units
+  seed-users                  Seed users and organization
+  shell                       Run a shell in the app context.
+  sync-schema                 Safely sync database schema to match models...
+  update-permissions          Update permissions from consolidated JSON...
+  update-subscription-tiers   Update subscription tiers (production-safe)
+render@srv-d21alungi27c73dn1440-5ff74c5b86-ljwvl:~/project/src$ flsk update-permissions
+bash: flsk: command not found
+render@srv-d21alungi27c73dn1440-5ff74c5b86-ljwvl:~/project/src$ flask update-permissions
+DEBUG: Billing blueprint imported successfully: <Blueprint 'billing'>
+DEBUG: Billing blueprint name: billing
+DEBUG: Billing blueprint url_prefix: /billing
+DEBUG: Billing blueprint registered successfully
+Registered API routes: ['/api/reservations/create', '/api/reservations/release/<int:reservation_id>', '/api/reservations/convert-to-sale/<int:reservation_id>', '/api/reservations/expire-old', '/api/products/<int:product_id>/variants', '/api/dismiss-alert', '/api/dashboard-alerts', '/api/server-time', '/api/server-time', '/api/dismiss-alert', '/api/dashboard-alerts', '/api/check-stock', '/api/categories', '/api/ingredient/<int:id>/density', '/api/debug-containers', '/api/available-containers/<int:recipe_id>', '/api/containers/available', '/api/batches/<int:batch_id>/containers', '/api/batches/<int:batch_id>/containers/<int:container_id>', '/api/batches/<int:batch_id>/containers/<int:container_id>/adjust', '/api/api/fifo-details/<int:inventory_id>', '/api/api/batch-inventory-summary/<int:batch_id>', '/api/api/reservations/create', '/api/api/reservations/release/<int:reservation_id>', '/api/api/reservations/convert-to-sale/<int:reservation_id>', '/api/api/reservations/expire-old', '/api/dashboard-alerts', '/api/dismiss-alert', '/api/units', '/api/convert-units']
+Container routes found: ['/settings/bulk-update-containers', '/api/debug-containers', '/api/available-containers/<int:recipe_id>', '/api/containers/available', '/api/batches/<int:batch_id>/containers', '/api/batches/<int:batch_id>/containers/<int:container_id>', '/api/batches/<int:batch_id>/containers/<int:container_id>/adjust', '/debug-containers', '/available-containers/<int:recipe_id>', '/containers/available', '/batches/<int:batch_id>/containers', '/batches/<int:batch_id>/containers/<int:container_id>', '/batches/<int:batch_id>/containers/<int:container_id>/adjust']
+Billing routes found: ['/billing/reconciliation-needed', '/billing/reconcile-to-free', '/billing/upgrade', '/billing/checkout/<tier>/<billing_cycle>', '/billing/checkout/<tier>', '/billing/customer-portal', '/billing/cancel-subscription', '/billing/webhooks/stripe', '/billing/complete-signup-from-stripe', '/billing/debug']
+Billing endpoints: [('/billing/reconciliation-needed', 'billing.reconciliation_needed'), ('/billing/reconcile-to-free', 'billing.reconcile_to_free'), ('/billing/upgrade', 'billing.upgrade'), ('/billing/checkout/<tier>/<billing_cycle>', 'billing.checkout'), ('/billing/checkout/<tier>', 'billing.checkout'), ('/billing/customer-portal', 'billing.customer_portal'), ('/billing/cancel-subscription', 'billing.cancel_subscription'), ('/billing/webhooks/stripe', 'billing.stripe_webhook'), ('/billing/complete-signup-from-stripe', 'billing.complete_signup_from_stripe'), ('/billing/debug', 'billing.debug_billing')]
+[2025-07-31 23:27:27,855] INFO in unit_utils: BatchTrack startup
+🔄 Updating permissions from consolidated_permissions.json...
+=== Seeding Consolidated Permissions System ===
+Seeding organization permissions...
+Processing category: Main dashboard and overview features
+❌ Permission update failed: (psycopg2.errors.UndefinedColumn) column permission.category does not exist
+LINE 1: ...permission.description AS permission_description, permission...
+                                                             ^
+
+[SQL: SELECT permission.id AS permission_id, permission.name AS permission_name, permission.description AS permission_description, permission.category AS permission_category, permission.is_active AS permission_is_active, permission.created_at AS permission_created_at 
+FROM permission 
+WHERE permission.name = %(name_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'name_1': 'dashboard.view', 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+Traceback (most recent call last):
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.errors.UndefinedColumn: column permission.category does not exist
+LINE 1: ...permission.description AS permission_description, permission...
+                                                             ^
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/opt/render/project/src/.venv/bin/flask", line 8, in <module>
+    sys.exit(main())
+             ~~~~^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/flask/cli.py", line 1129, in main
+    cli.main()
+    ~~~~~~~~^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/click/core.py", line 1082, in main
+    rv = self.invoke(ctx)
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/click/core.py", line 1697, in invoke
+    return _process_result(sub_ctx.command.invoke(sub_ctx))
+                           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/click/core.py", line 1443, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+           ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/click/core.py", line 788, in invoke
+    return __callback(*args, **kwargs)
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/click/decorators.py", line 33, in new_func
+    return f(get_current_context(), *args, **kwargs)
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/flask/cli.py", line 400, in decorator
+    return ctx.invoke(f, *args, **kwargs)
+           ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/click/core.py", line 788, in invoke
+    return __callback(*args, **kwargs)
+  File "/opt/render/project/src/app/management.py", line 97, in update_permissions_command
+    seed_consolidated_permissions()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/opt/render/project/src/app/seeders/consolidated_permission_seeder.py", line 252, in seed_consolidated_permissions
+    seed_organization_permissions()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/opt/render/project/src/app/seeders/consolidated_permission_seeder.py", line 32, in seed_organization_permissions
+    existing = Permission.query.filter_by(name=perm_data['name']).first()
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/orm/query.py", line 2759, in first
+    return self.limit(1)._iter().first()  # type: ignore
+           ~~~~~~~~~~~~~~~~~~~^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/orm/query.py", line 2858, in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+                                                  ~~~~~~~~~~~~~~~~~~~~^
+        statement,
+        ^^^^^^^^^^
+        params,
+        ^^^^^^^
+        execution_options={"_sa_orm_load_options": self.load_options},
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py", line 2365, in execute
+    return self._execute_internal(
+           ~~~~~~~~~~~~~~~~~~~~~~^
+        statement,
+        ^^^^^^^^^^
+    ...<4 lines>...
+        _add_event=_add_event,
+        ^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py", line 2251, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self,
+        ^^^^^
+    ...<4 lines>...
+        conn,
+        ^^^^^
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/orm/context.py", line 306, in orm_execute_statement
+    result = conn.execute(
+        statement, params or {}, execution_options=execution_options
+    )
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1416, in execute
+    return meth(
+        self,
+        distilled_parameters,
+        execution_options or NO_OPTIONS,
+    )
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/sql/elements.py", line 523, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self, distilled_params, execution_options
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1638, in _execute_clauseelement
+    ret = self._execute_context(
+        dialect,
+    ...<8 lines>...
+        cache_hit=cache_hit,
+    )
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1843, in _execute_context
+    return self._exec_single_context(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        dialect, context, statement, parameters
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1983, in _exec_single_context
+    self._handle_dbapi_exception(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        e, str_statement, effective_parameters, cursor, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 2352, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+sqlalchemy.exc.ProgrammingError: (psycopg2.errors.UndefinedColumn) column permission.category does not exist
+LINE 1: ...permission.description AS permission_description, permission...
+                                                             ^
+
+[SQL: SELECT permission.id AS permission_id, permission.name AS permission_name, permission.description AS permission_description, permission.category AS permission_category, permission.is_active AS permission_is_active, permission.created_at AS permission_created_at 
+FROM permission 
+WHERE permission.name = %(name_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'name_1': 'dashboard.view', 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+render@srv-d21alungi27c73dn1440-5ff74c5b86-ljwvl:~/project/src$ 
