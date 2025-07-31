@@ -226,10 +226,21 @@ def redeploy_init_command():
     try:
         print("🚀 Starting comprehensive redeployment initialization...")
 
-        # Apply any pending migrations
+        # Apply any pending migrations with foreign key constraints handled
         from flask_migrate import upgrade
+        from sqlalchemy import text
         print("=== Step 1: Applying database migrations ===")
+        
+        # For SQLite, temporarily disable foreign key constraints
+        if 'sqlite' in str(db.engine.url):
+            db.session.execute(text("PRAGMA foreign_keys=OFF"))
+            db.session.commit()
+        
         upgrade()
+        
+        if 'sqlite' in str(db.engine.url):
+            db.session.execute(text("PRAGMA foreign_keys=ON"))
+            db.session.commit()
 
         # Refresh permissions system (updates existing, adds new)
         print("=== Step 2: Refreshing permissions and roles system ===")
