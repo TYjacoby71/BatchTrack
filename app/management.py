@@ -248,31 +248,39 @@ def create_app_command():
         print("🚀 Creating BatchTrack application database...")
 
         # Import all models to ensure they're registered with SQLAlchemy
-        print("📦 Importing all models...")
+        print("📦 Dynamically importing all models...")
+        
+        # Import the models package - this triggers all model registrations
         from . import models
-
-        # Import models that exist in the codebase
-        from .models import (
-            User, Organization, Role, Permission, DeveloperRole, DeveloperPermission,
-            UserRoleAssignment, SubscriptionTier, Unit
-        )
-
-        # Try to import other models if they exist
-        try:
-            from .models import BillingSnapshot, PricingSnapshot, UserPreferences, Statistics
-        except ImportError:
-            print("ℹ️  Some optional models not found - skipping")
-
-        # Import models that might be in separate files
-        try:
-            from .models.batch import Batch
-            from .models.category import IngredientCategory  
-            from .models.product import Product
-            from .models.recipe import Recipe
-            from .models.reservation import Reservation
-        except ImportError:
-            print("ℹ️  Some production models not found - skipping")
-        print("✅ All models imported")
+        
+        # Import everything from models.__init__.py which imports all models
+        import importlib
+        import pkgutil
+        import os
+        
+        models_imported = 0
+        
+        # Get all model classes from the models.__init__.py __all__ list
+        if hasattr(models, '__all__'):
+            for model_name in models.__all__:
+                if hasattr(models, model_name):
+                    model_class = getattr(models, model_name)
+                    # Check if it's a SQLAlchemy model class
+                    if hasattr(model_class, '__tablename__'):
+                        models_imported += 1
+                        print(f"   ✓ {model_name}")
+        
+        # Also scan the models directory for any additional files
+        models_dir = os.path.join(os.path.dirname(__file__), 'models')
+        for finder, name, ispkg in pkgutil.iter_modules([models_dir]):
+            if name != '__init__' and not name.startswith('_'):
+                try:
+                    module = importlib.import_module(f'.models.{name}', package='app')
+                    print(f"   ✓ Loaded models from {name}.py")
+                except ImportError as e:
+                    print(f"   ⚠️  Could not import models.{name}: {e}")
+        
+        print(f"✅ {models_imported} models imported dynamically")
 
         # Create all tables
         print("🏗️  Creating database tables...")
@@ -304,31 +312,39 @@ def sync_schema_command():
         print("🚀 Syncing database schema to match models (safe mode)...")
 
         # Import all models to ensure they're registered with SQLAlchemy
-        print("📦 Importing all models...")
+        print("📦 Dynamically importing all models...")
+        
+        # Import the models package - this triggers all model registrations
         from . import models
-
-        # Import models that exist in the codebase
-        from .models import (
-            User, Organization, Role, Permission, DeveloperRole, DeveloperPermission,
-            UserRoleAssignment, SubscriptionTier, Unit
-        )
-
-        # Try to import other models if they exist
-        try:
-            from .models import BillingSnapshot, PricingSnapshot, UserPreferences, Statistics
-        except ImportError:
-            print("ℹ️  Some optional models not found - skipping")
-
-        # Import models that might be in separate files
-        try:
-            from .models.batch import Batch
-            from .models.category import IngredientCategory
-            from .models.product import Product
-            from .models.recipe import Recipe
-            from .models.reservation import Reservation
-        except ImportError:
-            print("ℹ️  Some production models not found - skipping")
-        print("✅ All models imported")
+        
+        # Import everything from models.__init__.py which imports all models
+        import importlib
+        import pkgutil
+        import os
+        
+        models_imported = 0
+        
+        # Get all model classes from the models.__init__.py __all__ list
+        if hasattr(models, '__all__'):
+            for model_name in models.__all__:
+                if hasattr(models, model_name):
+                    model_class = getattr(models, model_name)
+                    # Check if it's a SQLAlchemy model class
+                    if hasattr(model_class, '__tablename__'):
+                        models_imported += 1
+                        print(f"   ✓ {model_name}")
+        
+        # Also scan the models directory for any additional files
+        models_dir = os.path.join(os.path.dirname(__file__), 'models')
+        for finder, name, ispkg in pkgutil.iter_modules([models_dir]):
+            if name != '__init__' and not name.startswith('_'):
+                try:
+                    module = importlib.import_module(f'.models.{name}', package='app')
+                    print(f"   ✓ Loaded models from {name}.py")
+                except ImportError as e:
+                    print(f"   ⚠️  Could not import models.{name}: {e}")
+        
+        print(f"✅ {models_imported} models imported dynamically")
 
         # Get current database state
         from sqlalchemy import inspect
