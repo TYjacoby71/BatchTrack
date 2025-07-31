@@ -344,164 +344,148 @@ def check_javascript_includes():
 
 def check_all_organizations():
     """Debug all organizations in the system"""
-    app = create_app()
+    print("=== DEBUGGING ALL ORGANIZATIONS ===")
 
-    with app.app_context():
-        print("=== DEBUGGING ALL ORGANIZATIONS ===")
+    all_orgs = Organization.query.all()
+    print(f"\n=== ALL ORGANIZATIONS IN DATABASE ({len(all_orgs)}) ===")
 
-        all_orgs = Organization.query.all()
-        print(f"\n=== ALL ORGANIZATIONS IN DATABASE ({len(all_orgs)}) ===")
+    if len(all_orgs) == 0:
+        print("❌ NO ORGANIZATIONS FOUND IN DATABASE!")
+        return
 
-        if len(all_orgs) == 0:
-            print("❌ NO ORGANIZATIONS FOUND IN DATABASE!")
-            return
+    for org in all_orgs:
+        print(f"\nID {org.id}: {org.name}")
+        print(f"   Active: {org.is_active}")
+        print(f"   Subscription tier: {org.effective_subscription_tier}")
+        print(f"   Users: {len(org.users)}")
+        print(f"   Active users: {org.active_users_count}")
 
-        for org in all_orgs:
-            print(f"\nID {org.id}: {org.name}")
-            print(f"   Active: {org.is_active}")
-            print(f"   Subscription tier: {org.effective_subscription_tier}")
-            print(f"   Users: {len(org.users)}")
-            print(f"   Active users: {org.active_users_count}")
+        # Show users in this org
+        for user in org.users:
+            print(f"     - {user.username} (type: {user.user_type}, active: {user.is_active})")
 
-            # Show users in this org
-            for user in org.users:
-                print(f"     - {user.username} (type: {user.user_type}, active: {user.is_active})")
+    # Show all users and their org assignments
+    all_users = User.query.all()
+    print(f"\n=== ALL USERS IN DATABASE ({len(all_users)}) ===")
+    for user in all_users:
+        print(f"ID {user.id}: {user.username}")
+        print(f"   Email: {user.email}")
+        print(f"   Organization ID: {user.organization_id}")
+        print(f"   User Type: {user.user_type}")
+        print(f"   Active: {user.is_active}")
+        if user.organization_id:
+            org = Organization.query.get(user.organization_id)
+            print(f"   Organization Name: {org.name if org else 'NOT FOUND'}")
 
-        # Show all users and their org assignments
-        all_users = User.query.all()
-        print(f"\n=== ALL USERS IN DATABASE ({len(all_users)}) ===")
-        for user in all_users:
-            print(f"ID {user.id}: {user.username}")
-            print(f"   Email: {user.email}")
-            print(f"   Organization ID: {user.organization_id}")
-            print(f"   User Type: {user.user_type}")
-            print(f"   Active: {user.is_active}")
-            if user.organization_id:
-                org = Organization.query.get(user.organization_id)
-                print(f"   Organization Name: {org.name if org else 'NOT FOUND'}")
+    # Check for dev users wrongly assigned to organizations
+    print(f"\n=== DEV USER ISSUES CHECK ===")
+    dev_users = User.query.filter_by(user_type='developer').all()
+    for dev_user in dev_users:
+        if dev_user.organization_id is not None:
+            print(f"❌ PROBLEM: Dev user '{dev_user.username}' is assigned to organization {dev_user.organization_id}!")
+            print("   Dev users should have organization_id = None")
+        else:
+            print(f"✅ Dev user '{dev_user.username}' correctly has no organization assignment")
 
-        # Check for dev users wrongly assigned to organizations
-        print(f"\n=== DEV USER ISSUES CHECK ===")
-        dev_users = User.query.filter_by(user_type='developer').all()
-        for dev_user in dev_users:
-            if dev_user.organization_id is not None:
-                print(f"❌ PROBLEM: Dev user '{dev_user.username}' is assigned to organization {dev_user.organization_id}!")
-                print("   Dev users should have organization_id = None")
-            else:
-                print(f"✅ Dev user '{dev_user.username}' correctly has no organization assignment")
-
-        # Check permissions existence
-        print(f"\n=== PERMISSION EXISTENCE CHECK ===")
-        required_perms = ['recipes.edit', 'recipes.view', 'inventory.view', 'inventory.edit', 'dashboard.view', 'batches.view']
-        for perm_name in required_perms:
-            perm = Permission.query.filter_by(name=perm_name).first()
-            if perm:
-                print(f"✅ {perm_name} exists and is {'active' if perm.is_active else 'inactive'}")
-            else:
-                print(f"❌ {perm_name} MISSING from database!")
+    # Check permissions existence
+    print(f"\n=== PERMISSION EXISTENCE CHECK ===")
+    required_perms = ['recipes.edit', 'recipes.view', 'inventory.view', 'inventory.edit', 'dashboard.view', 'batches.view']
+    for perm_name in required_perms:
+        perm = Permission.query.filter_by(name=perm_name).first()
+        if perm:
+            print(f"✅ {perm_name} exists and is {'active' if perm.is_active else 'inactive'}")
+        else:
+            print(f"❌ {perm_name} MISSING from database!")
 
 def check_all_users_permissions():
     """Debug all users and their permissions in the system"""
-    app = create_app()
+    print("=== DEBUGGING ALL USERS AND PERMISSIONS ===")
 
-    with app.app_context():
-        print("=== DEBUGGING ALL USERS AND PERMISSIONS ===")
+    all_users = User.query.all()
+    print(f"\n=== ALL USERS IN DATABASE ({len(all_users)}) ===")
 
-        all_users = User.query.all()
-        print(f"\n=== ALL USERS IN DATABASE ({len(all_users)}) ===")
+    if len(all_users) == 0:
+        print("❌ NO USERS FOUND IN DATABASE!")
+        return
 
-        if len(all_users) == 0:
-            print("❌ NO USERS FOUND IN DATABASE!")
-            return
+    for user in all_users:
+        print(f"\nID {user.id}: {user.username}")
+        print(f"   Email: {user.email}")
+        print(f"   User Type: {user.user_type}")
+        print(f"   Active: {user.is_active}")
+        print(f"   Organization ID: {user.organization_id}")
+        if user.organization_id:
+            org = Organization.query.get(user.organization_id)
+            print(f"   Organization Name: {org.name if org else 'NOT FOUND'}")
 
-        for user in all_users:
-            print(f"\nID {user.id}: {user.username}")
-            print(f"   Email: {user.email}")
-            print(f"   User Type: {user.user_type}")
-            print(f"   Active: {user.is_active}")
-            print(f"   Organization ID: {user.organization_id}")
-            if user.organization_id:
-                org = Organization.query.get(user.organization_id)
-                print(f"   Organization Name: {org.name if org else 'NOT FOUND'}")
+        # Check role assignments
+        assignments = UserRoleAssignment.query.filter_by(
+            user_id=user.id,
+            is_active=True
+        ).all()
+        print(f"   Active Role Assignments: {len(assignments)}")
+        for assignment in assignments:
+            role = Role.query.get(assignment.role_id)
+            print(f"    - Role: {role.name if role else 'UNKNOWN'} (ID: {assignment.role_id})")
 
-            # Check role assignments
-            assignments = UserRoleAssignment.query.filter_by(
-                user_id=user.id,
-                is_active=True
-            ).all()
-            print(f"   Active Role Assignments: {len(assignments)}")
-            for assignment in assignments:
-                role = Role.query.get(assignment.role_id)
-                print(f"    - Role: {role.name if role else 'UNKNOWN'} (ID: {assignment.role_id})")
-
-            # Check permissions
-            print(f"  Key Permissions:")
-            for perm in ['recipes.edit', 'recipes.view', 'inventory.view', 'inventory.edit', 'dashboard.view', 'batches.view']:
-                has_perm = user.has_permission(perm)
-                status = "✅" if has_perm else "❌"
-                print(f"    {status} {perm}")
-            print()
+        # Check permissions
+        print(f"  Key Permissions:")
+        for perm in ['recipes.edit', 'recipes.view', 'inventory.view', 'inventory.edit', 'dashboard.view', 'batches.view']:
+            has_perm = user.has_permission(perm)
+            status = "✅" if has_perm else "❌"
+            print(f"    {status} {perm}")
+        print()
 
 def check_inventory_by_org():
     """Debug inventory for all organizations"""
-    app = create_app()
+    print("=== DEBUGGING INVENTORY BY ORGANIZATION ===")
 
-    with app.app_context():
-        print("=== DEBUGGING INVENTORY BY ORGANIZATION ===")
+    all_orgs = Organization.query.all()
+    print(f"\n=== ALL ORGANIZATIONS IN DATABASE ({len(all_orgs)}) ===")
 
-        all_orgs = Organization.query.all()
-        print(f"\n=== ALL ORGANIZATIONS IN DATABASE ({len(all_orgs)}) ===")
+    if len(all_orgs) == 0:
+        print("❌ NO ORGANIZATIONS FOUND IN DATABASE!")
+        return
 
-        if len(all_orgs) == 0:
-            print("❌ NO ORGANIZATIONS FOUND IN DATABASE!")
-            return
-
-        for org in all_orgs:
-            print(f"\n=== Organization {org.id}: {org.name} ===")
-            check_inventory_for_org(org.id)
+    for org in all_orgs:
+        print(f"\n=== Organization {org.id}: {org.name} ===")
+        check_inventory_for_org(org.id)
 
 def check_subscription_tiers():
     """Debug subscription tiers"""
-    app = create_app()
+    print("=== DEBUGGING SUBSCRIPTION TIERS ===")
 
-    with app.app_context():
-        print("=== DEBUGGING SUBSCRIPTION TIERS ===")
+    all_orgs = Organization.query.all()
+    print(f"\n=== ALL ORGANIZATIONS IN DATABASE ({len(all_orgs)}) ===")
 
-        all_orgs = Organization.query.all()
-        print(f"\n=== ALL ORGANIZATIONS IN DATABASE ({len(all_orgs)}) ===")
+    if len(all_orgs) == 0:
+        print("❌ NO ORGANIZATIONS FOUND IN DATABASE!")
+        return
 
-        if len(all_orgs) == 0:
-            print("❌ NO ORGANIZATIONS FOUND IN DATABASE!")
-            return
-
-        for org in all_orgs:
-            print(f"\n=== Organization {org.id}: {org.name} ===")
-            print(f"Subscription tier: {org.effective_subscription_tier}")
-            print(f"Active: {org.is_active}")
-            print(f"Users count: {len(org.users)}")
-            print(f"Active users: {org.active_users_count}")
+    for org in all_orgs:
+        print(f"\n=== Organization {org.id}: {org.name} ===")
+        print(f"Subscription tier: {org.effective_subscription_tier}")
+        print(f"Active: {org.is_active}")
+        print(f"Users count: {len(org.users)}")
+        print(f"Active users: {org.active_users_count}")
 
 def check_role_assignments():
     """Debug role assignments for all organizations"""
-    app = create_app()
+    print("=== DEBUGGING ROLE ASSIGNMENTS ===")
 
-    with app.app_context():
-        print("=== DEBUGGING ROLE ASSIGNMENTS ===")
+    all_orgs = Organization.query.all()
+    print(f"\n=== ALL ORGANIZATIONS IN DATABASE ({len(all_orgs)}) ===")
 
-        all_orgs = Organization.query.all()
-        print(f"\n=== ALL ORGANIZATIONS IN DATABASE ({len(all_orgs)}) ===")
+    if len(all_orgs) == 0:
+        print("❌ NO ORGANIZATIONS FOUND IN DATABASE!")
+        return
 
-        if len(all_orgs) == 0:
-            print("❌ NO ORGANIZATIONS FOUND IN DATABASE!")
-            return
-
-        for org in all_orgs:
-            print(f"\n=== Organization {org.id}: {org.name} ===")
-            check_roles_for_org(org.id)
+    for org in all_orgs:
+        print(f"\n=== Organization {org.id}: {org.name} ===")
+        check_roles_for_org(org.id)
 
 if __name__ == "__main__":
     main()
-```
 
 The code has been modified to consolidate debug functionality into a single script with interactive and command-line options, including organization selection and various checks.
 #!/usr/bin/env python3
