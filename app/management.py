@@ -122,10 +122,108 @@ def update_subscription_tiers_command():
         db.session.rollback()
         raise
 
+@click.command('seed-users')
+@with_appcontext
+def seed_users_command():
+    """Seed users and organization"""
+    try:
+        print("🔄 Seeding users and organization...")
+        from .seeders.user_seeder import seed_users_and_organization
+        seed_users_and_organization()
+        print('✅ Users and organization seeded successfully!')
+    except Exception as e:
+        print(f'❌ User seeding failed: {str(e)}')
+        db.session.rollback()
+        raise
+
+@click.command('seed-permissions')
+@with_appcontext
+def seed_permissions_command():
+    """Seed consolidated permissions"""
+    try:
+        print("🔄 Seeding permissions...")
+        from .seeders.consolidated_permission_seeder import seed_consolidated_permissions
+        seed_consolidated_permissions()
+        print('✅ Permissions seeded successfully!')
+    except Exception as e:
+        print(f'❌ Permission seeding failed: {str(e)}')
+        db.session.rollback()
+        raise
+
+@click.command('seed-organizations')
+@with_appcontext
+def seed_organizations_command():
+    """Seed organizations (part of user seeding)"""
+    try:
+        print("🔄 Seeding organizations...")
+        from .seeders.user_seeder import seed_users_and_organization
+        seed_users_and_organization()
+        print('✅ Organizations seeded successfully!')
+    except Exception as e:
+        print(f'❌ Organization seeding failed: {str(e)}')
+        db.session.rollback()
+        raise
+
+@click.command('seed-units')
+@with_appcontext
+def seed_units_command():
+    """Seed measurement units"""
+    try:
+        print("🔄 Seeding units...")
+        from .seeders.unit_seeder import seed_units
+        seed_units()
+        print('✅ Units seeded successfully!')
+    except Exception as e:
+        print(f'❌ Unit seeding failed: {str(e)}')
+        db.session.rollback()
+        raise
+
+@click.command('seed-sub-tiers')
+@with_appcontext
+def seed_sub_tiers_command():
+    """Seed subscription tiers"""
+    try:
+        print("🔄 Seeding subscription tiers...")
+        from .seeders.subscription_seeder import seed_subscriptions
+        seed_subscriptions()
+        print('✅ Subscription tiers seeded successfully!')
+    except Exception as e:
+        print(f'❌ Subscription tier seeding failed: {str(e)}')
+        db.session.rollback()
+        raise
+
+@click.command('seed-categories')
+@with_appcontext
+def seed_categories_command():
+    """Seed ingredient categories for first organization"""
+    try:
+        print("🔄 Seeding categories...")
+        from .models import Organization
+        from .seeders.ingredient_category_seeder import seed_categories
+        
+        org = Organization.query.first()
+        if org:
+            seed_categories(organization_id=org.id)
+            print('✅ Categories seeded successfully!')
+        else:
+            print('❌ No organization found - seed users first')
+    except Exception as e:
+        print(f'❌ Category seeding failed: {str(e)}')
+        db.session.rollback()
+        raise
+
 def register_commands(app):
     """Register CLI commands"""
     # One-time initialization (fresh installs only)
     app.cli.add_command(init_production_command)
+    
+    # Individual seeders
+    app.cli.add_command(seed_users_command)
+    app.cli.add_command(seed_permissions_command)
+    app.cli.add_command(seed_organizations_command)
+    app.cli.add_command(seed_units_command)
+    app.cli.add_command(seed_sub_tiers_command)
+    app.cli.add_command(seed_categories_command)
     
     # Production maintenance commands
     app.cli.add_command(update_permissions_command)
