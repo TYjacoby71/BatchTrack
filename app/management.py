@@ -59,16 +59,27 @@ def init_production_command():
         from flask_migrate import upgrade
         print("=== Step 1: Database migrations ===")
         upgrade()
+        
+        # Ensure all tables are created
+        print("=== Step 1.5: Verify database schema ===")
+        db.create_all()  # Ensure all tables exist before seeding
+        print("✅ Database schema verified")
 
-        # One-time system setup
+        # One-time system setup (STRICT DEPENDENCY ORDER)
         print("=== Step 2: System foundations ===")
-        seed_consolidated_permissions()
-        seed_subscriptions()
-        seed_units()
+        seed_consolidated_permissions()  # Must be FIRST - creates permissions
+        print("✅ Permissions seeded")
+        
+        seed_subscriptions()             # Must be SECOND - needs permissions, creates tiers
+        print("✅ Subscription tiers seeded")
+        
+        seed_units()                     # Independent - can run anytime
+        print("✅ Units seeded")
 
-        # Create initial admin
+        # Create initial admin (DEPENDS on subscription tiers existing)
         print("=== Step 3: Initial admin setup ===")
-        seed_users_and_organization()
+        seed_users_and_organization()    # DEPENDS on subscription tiers
+        print("✅ Users and organization seeded")
 
         # Setup default categories for first org
         from .models import Organization
