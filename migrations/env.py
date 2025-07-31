@@ -1,9 +1,16 @@
 import logging
+import os
+import sys
 from logging.config import fileConfig
 
 from flask import current_app
 
 from alembic import context
+
+# Production safety check - prevent migrations but allow upgrades
+if os.getenv("FLASK_ENV") == "production" and len(sys.argv) > 1 and "migrate" in sys.argv:
+    raise RuntimeError("Do not run flask db migrate in production.")
+
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
