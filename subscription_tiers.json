@@ -65,11 +65,12 @@
     ],
     "stripe_price_monthly": "$8",
     "stripe_price_yearly": "$85",
-    "last_synced": "2025-07-27T06:38:38.884102",
+    "last_synced": "2025-07-31T00:28:43.291934",
     "fallback_price_monthly": "$0",
     "fallback_price_yearly": "$0",
     "stripe_price_id_monthly": "price_1RnRlnF4Y9XQgiJBzKnYadVL",
-    "stripe_price_id_yearly": "price_1RnS1vF4Y9XQgiJBZUqN2aWW"
+    "stripe_price_id_yearly": "price_1RnS1vF4Y9XQgiJBZUqN2aWW",
+    "requires_stripe_billing": true
   },
   "team": {
     "name": "Team Plan",
@@ -115,7 +116,7 @@
     ],
     "stripe_price_monthly": "$15",
     "stripe_price_yearly": "$160",
-    "last_synced": "2025-07-27T06:16:18.735275",
+    "last_synced": "2025-07-31T00:28:48.498991",
     "stripe_price_id_monthly": "price_1RnRzOF4Y9XQgiJB7cuiGZf4",
     "stripe_price_id_yearly": "price_1RnSCIF4Y9XQgiJBeA7UZPzD",
     "fallback_price_monthly": "$0",
@@ -253,6 +254,7 @@
     "stripe_price_yearly": "Exempt",
     "last_synced": null,
     "fallback_price_monthly": "$0",
-    "fallback_price_yearly": "$0"
+    "fallback_price_yearly": "$0",
+    "requires_stripe_billing": false
   }
 }

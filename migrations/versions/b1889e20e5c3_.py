@@ -1,8 +1,8 @@
-"""Initial migration
+"""empty message
 
-Revision ID: 8a39f020e6ca
+Revision ID: b1889e20e5c3
 Revises: 
-Create Date: 2025-07-26 05:29:50.386737
+Create Date: 2025-07-31 03:05:08.547546
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '8a39f020e6ca'
+revision = 'b1889e20e5c3'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -179,6 +179,7 @@ def upgrade():
     sa.Column('user_limit', sa.Integer(), nullable=True),
     sa.Column('is_customer_facing', sa.Boolean(), nullable=True),
     sa.Column('is_available', sa.Boolean(), nullable=True),
+    sa.Column('requires_stripe_billing', sa.Boolean(), nullable=True),
     sa.Column('stripe_lookup_key', sa.String(length=128), nullable=True),
     sa.Column('stripe_customer_id', sa.String(length=128), nullable=True),
     sa.Column('stripe_subscription_id', sa.String(length=128), nullable=True),
@@ -268,7 +269,7 @@ def upgrade():
     op.create_table('user',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('username', sa.String(length=64), nullable=False),
-    sa.Column('password_hash', sa.String(length=128), nullable=False),
+    sa.Column('password_hash', sa.String(length=255), nullable=False),
     sa.Column('first_name', sa.String(length=64), nullable=True),
     sa.Column('last_name', sa.String(length=64), nullable=True),
     sa.Column('email', sa.String(length=120), nullable=True),

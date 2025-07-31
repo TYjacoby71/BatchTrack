@@ -52,7 +52,7 @@
     <nav class="navbar navbar-expand-lg navbar-light bg-light">
         <div class="container-fluid">
             <a class="navbar-brand" href="{% if current_user.is_authenticated %}{% if current_user.user_type == 'developer' %}{{ url_for('developer.dashboard') }}{% else %}{{ url_for('app_routes.dashboard') }}{% endif %}{% else %}{{ url_for('index') }}{% endif %}">
-                BatchTrack <small class="text-muted">production test</small>
+                BatchTrack <small class="text-muted">new database</small>
             </a>
             {% if current_user.is_authenticated %}
 
