@@ -1,0 +1,258 @@
+render@srv-d21alungi27c73dn1440-7f9b6f7d-pgnj7:~/project/src$ flask db upgrade 4481595c5f02
+DEBUG: Billing blueprint imported successfully: <Blueprint 'billing'>
+DEBUG: Billing blueprint name: billing
+DEBUG: Billing blueprint url_prefix: /billing
+DEBUG: Billing blueprint registered successfully
+Registered API routes: ['/api/reservations/create', '/api/reservations/release/<int:reservation_id>', '/api/reservations/convert-to-sale/<int:reservation_id>', '/api/reservations/expire-old', '/api/products/<int:product_id>/variants', '/api/dismiss-alert', '/api/dashboard-alerts', '/api/server-time', '/api/server-time', '/api/dismiss-alert', '/api/dashboard-alerts', '/api/check-stock', '/api/categories', '/api/ingredient/<int:id>/density', '/api/debug-containers', '/api/available-containers/<int:recipe_id>', '/api/containers/available', '/api/batches/<int:batch_id>/containers', '/api/batches/<int:batch_id>/containers/<int:container_id>', '/api/batches/<int:batch_id>/containers/<int:container_id>/adjust', '/api/api/fifo-details/<int:inventory_id>', '/api/api/batch-inventory-summary/<int:batch_id>', '/api/api/reservations/create', '/api/api/reservations/release/<int:reservation_id>', '/api/api/reservations/convert-to-sale/<int:reservation_id>', '/api/api/reservations/expire-old', '/api/dashboard-alerts', '/api/dismiss-alert', '/api/units', '/api/convert-units']
+Container routes found: ['/settings/bulk-update-containers', '/api/debug-containers', '/api/available-containers/<int:recipe_id>', '/api/containers/available', '/api/batches/<int:batch_id>/containers', '/api/batches/<int:batch_id>/containers/<int:container_id>', '/api/batches/<int:batch_id>/containers/<int:container_id>/adjust', '/debug-containers', '/available-containers/<int:recipe_id>', '/containers/available', '/batches/<int:batch_id>/containers', '/batches/<int:batch_id>/containers/<int:container_id>', '/batches/<int:batch_id>/containers/<int:container_id>/adjust']
+Billing routes found: ['/billing/reconciliation-needed', '/billing/reconcile-to-free', '/billing/upgrade', '/billing/checkout/<tier>/<billing_cycle>', '/billing/checkout/<tier>', '/billing/customer-portal', '/billing/cancel-subscription', '/billing/webhooks/stripe', '/billing/complete-signup-from-stripe', '/billing/debug']
+Billing endpoints: [('/billing/reconciliation-needed', 'billing.reconciliation_needed'), ('/billing/reconcile-to-free', 'billing.reconcile_to_free'), ('/billing/upgrade', 'billing.upgrade'), ('/billing/checkout/<tier>/<billing_cycle>', 'billing.checkout'), ('/billing/checkout/<tier>', 'billing.checkout'), ('/billing/customer-portal', 'billing.customer_portal'), ('/billing/cancel-subscription', 'billing.cancel_subscription'), ('/billing/webhooks/stripe', 'billing.stripe_webhook'), ('/billing/complete-signup-from-stripe', 'billing.complete_signup_from_stripe'), ('/billing/debug', 'billing.debug_billing')]
+[2025-07-31 18:21:26,890] INFO in unit_utils: BatchTrack startup
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 4481595c5f02, empty message
+Traceback (most recent call last):
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.errors.InvalidForeignKey: there is no unique constraint matching given keys for referenced table "product_sku"
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/opt/render/project/src/.venv/bin/flask", line 8, in <module>
+    sys.exit(main())
+             ~~~~^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/flask/cli.py", line 1129, in main
+    cli.main()
+    ~~~~~~~~^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/click/core.py", line 1082, in main
+    rv = self.invoke(ctx)
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/click/core.py", line 1697, in invoke
+    return _process_result(sub_ctx.command.invoke(sub_ctx))
+                           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/click/core.py", line 1697, in invoke
+    return _process_result(sub_ctx.command.invoke(sub_ctx))
+                           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/click/core.py", line 1443, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+           ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/click/core.py", line 788, in invoke
+    return __callback(*args, **kwargs)
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/click/decorators.py", line 33, in new_func
+    return f(get_current_context(), *args, **kwargs)
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/flask/cli.py", line 400, in decorator
+    return ctx.invoke(f, *args, **kwargs)
+           ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/click/core.py", line 788, in invoke
+    return __callback(*args, **kwargs)
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/flask_migrate/cli.py", line 157, in upgrade
+    _upgrade(directory or g.directory, revision, sql, tag, x_arg or g.x_arg)
+    ~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/flask_migrate/__init__.py", line 111, in wrapped
+    f(*args, **kwargs)
+    ~^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/flask_migrate/__init__.py", line 200, in upgrade
+    command.upgrade(config, revision, sql=sql, tag=tag)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/alembic/command.py", line 408, in upgrade
+    script.run_env()
+    ~~~~~~~~~~~~~~^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/alembic/script/base.py", line 586, in run_env
+    util.load_python_file(self.dir, "env.py")
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/alembic/util/pyfiles.py", line 95, in load_python_file
+    module = load_module_py(module_id, path)
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/alembic/util/pyfiles.py", line 113, in load_module_py
+    spec.loader.exec_module(module)  # type: ignore
+    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+  File "<frozen importlib._bootstrap_external>", line 1026, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/opt/render/project/src/migrations/env.py", line 120, in <module>
+    run_migrations_online()
+    ~~~~~~~~~~~~~~~~~~~~~^^
+  File "/opt/render/project/src/migrations/env.py", line 114, in run_migrations_online
+    context.run_migrations()
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "<string>", line 8, in run_migrations
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/alembic/runtime/environment.py", line 946, in run_migrations
+    self.get_context().run_migrations(**kw)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/alembic/runtime/migration.py", line 623, in run_migrations
+    step.migration_fn(**kw)
+    ~~~~~~~~~~~~~~~~~^^^^^^
+  File "/opt/render/project/src/migrations/versions/4481595c5f02_.py", line 289, in upgrade
+    op.create_table('batch',
+    ~~~~~~~~~~~~~~~^^^^^^^^^
+    sa.Column('id', sa.Integer(), nullable=False),
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<30 lines>...
+    sa.UniqueConstraint('label_code')
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "<string>", line 8, in create_table
+  File "<string>", line 3, in create_table
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/alembic/operations/ops.py", line 1317, in create_table
+    return operations.invoke(op)
+           ~~~~~~~~~~~~~~~~~^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/alembic/operations/base.py", line 441, in invoke
+    return fn(self, operation)
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/alembic/operations/toimpl.py", line 130, in create_table
+    operations.impl.create_table(table, **kw)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/alembic/ddl/impl.py", line 405, in create_table
+    self._exec(schema.CreateTable(table, **kw))
+    ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/alembic/ddl/impl.py", line 246, in _exec
+    return conn.execute(construct, params)
+           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1416, in execute
+    return meth(
+        self,
+        distilled_parameters,
+        execution_options or NO_OPTIONS,
+    )
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/sql/ddl.py", line 187, in _execute_on_connection
+    return connection._execute_ddl(
+           ~~~~~~~~~~~~~~~~~~~~~~~^
+        self, distilled_params, execution_options
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1527, in _execute_ddl
+    ret = self._execute_context(
+        dialect,
+    ...<4 lines>...
+        compiled,
+    )
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1843, in _execute_context
+    return self._exec_single_context(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        dialect, context, statement, parameters
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1983, in _exec_single_context
+    self._handle_dbapi_exception(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        e, str_statement, effective_parameters, cursor, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 2352, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+sqlalchemy.exc.ProgrammingError: (psycopg2.errors.InvalidForeignKey) there is no unique constraint matching given keys for referenced table "product_sku"
+
+[SQL: 
+CREATE TABLE batch (
+        id SERIAL NOT NULL, 
+        recipe_id INTEGER NOT NULL, 
+        label_code VARCHAR(32), 
+        batch_type VARCHAR(32) NOT NULL, 
+        projected_yield FLOAT, 
+        projected_yield_unit VARCHAR(50), 
+        sku_id INTEGER, 
+        final_quantity FLOAT, 
+        output_unit VARCHAR(50), 
+        scale FLOAT, 
+        status VARCHAR(50), 
+        status_reason TEXT, 
+        notes TEXT, 
+        tags TEXT, 
+        total_cost FLOAT, 
+        created_by INTEGER, 
+        organization_id INTEGER, 
+        started_at TIMESTAMP WITHOUT TIME ZONE, 
+        completed_at TIMESTAMP WITHOUT TIME ZONE, 
+        failed_at TIMESTAMP WITHOUT TIME ZONE, 
+        cancelled_at TIMESTAMP WITHOUT TIME ZONE, 
+        inventory_credited BOOLEAN, 
+        is_perishable BOOLEAN, 
+        shelf_life_days INTEGER, 
+        expiration_date TIMESTAMP WITHOUT TIME ZONE, 
+        remaining_quantity FLOAT, 
+        PRIMARY KEY (id), 
+        FOREIGN KEY(created_by) REFERENCES "user" (id), 
+        FOREIGN KEY(organization_id) REFERENCES organization (id), 
+        FOREIGN KEY(recipe_id) REFERENCES recipe (id), 
+        FOREIGN KEY(sku_id) REFERENCES product_sku (inventory_item_id), 
+        UNIQUE (label_code)
+)
+
+]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+render@srv-d21alungi27c73dn1440-7f9b6f7d-pgnj7:~/project/src$ 
+
+
+ChatGPT said:
+✅ Clear Root Cause:
+Your migration is trying to create a foreign key:
+
+sql
+Copy
+Edit
+FOREIGN KEY(sku_id) REFERENCES product_sku (inventory_item_id)
+But the product_sku table does not have a UNIQUE or PRIMARY KEY constraint on inventory_item_id.
+
+🔥 Why This Breaks:
+PostgreSQL requires that foreign keys only reference UNIQUE or PRIMARY columns. If product_sku.inventory_item_id is not unique, this error will be thrown.
+
+🛠️ Fix Option 1: Add a Unique Constraint to the Referenced Column
+In your model (ProductSKU), update this:
+
+python
+Copy
+Edit
+inventory_item_id = db.Column(db.Integer, nullable=False)
+⬇️ To this:
+
+python
+Copy
+Edit
+inventory_item_id = db.Column(db.Integer, nullable=False, unique=True)
+Then regenerate the migration:
+
+bash
+Copy
+Edit
+flask db migrate -m "Make inventory_item_id unique for FK"
+flask db upgrade
+🛠️ Fix Option 2: Change Foreign Key to Use Primary Key (id) Instead
+If sku_id on your Batch table is meant to point to the SKU itself, it should probably just reference product_sku.id, not inventory_item_id.
+
+Update your Batch model:
+
+python
+Copy
+Edit
+sku_id = db.Column(db.Integer, db.ForeignKey("product_sku.id"))
+Then:
+
+bash
+Copy
+Edit
+flask db migrate -m "Fix FK to product_sku.id"
+flask db upgrade
+✅ Recommendation:
+Use Option 2 unless you have a specific reason to key off inventory_item_id. The primary key (id) is more standard and guarantees referential integrity.
+
+Let me know if you want help auto-generating the exact migration file or confirming how product_sku and inventory_item_id are structured. You're nearly there.
