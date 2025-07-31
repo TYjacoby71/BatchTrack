@@ -239,8 +239,52 @@ def seed_permission_categories_command(category):
         db.session.rollback()
         raise
 
+@click.command('create-app')
+@with_appcontext
+def create_app_command():
+    """Initialize database and create all model tables"""
+    try:
+        print("🚀 Creating BatchTrack application database...")
+        
+        # Import all models to ensure they're registered with SQLAlchemy
+        print("📦 Importing all models...")
+        from . import models
+        from .models import (
+            User, Organization, Role, Permission, DeveloperRole, DeveloperPermission,
+            UserRoleAssignment, SubscriptionTier, Unit, IngredientCategory,
+            Ingredient, Recipe, RecipeIngredient, Batch, BatchIngredient,
+            Product, ProductSKU, ProductVariant, Reservation, BillingSnapshot,
+            PricingSnapshot, UserPreferences, Statistics
+        )
+        print("✅ All models imported")
+        
+        # Create all tables
+        print("🏗️  Creating database tables...")
+        db.create_all()
+        print("✅ Database tables created")
+        
+        # Verify tables were created
+        from sqlalchemy import inspect
+        inspector = inspect(db.engine)
+        tables = inspector.get_table_names()
+        print(f"📊 Created {len(tables)} tables: {', '.join(sorted(tables))}")
+        
+        print("✅ BatchTrack application database created successfully!")
+        print("🔄 Next steps:")
+        print("   1. Run: flask init-production (to seed initial data)")
+        print("   2. Or run individual seeders as needed")
+        
+    except Exception as e:
+        print(f'❌ Database creation failed: {str(e)}')
+        import traceback
+        traceback.print_exc()
+        raise
+
 def register_commands(app):
     """Register CLI commands"""
+    # Database initialization
+    app.cli.add_command(create_app_command)
+    
     # One-time initialization (fresh installs only)
     app.cli.add_command(init_production_command)
     
