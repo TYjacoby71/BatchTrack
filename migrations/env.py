@@ -41,8 +41,22 @@ def get_engine_url():
 
 # add your model's MetaData object here
 # for 'autogenerate' support
-# from myapp import mymodel
-# target_metadata = mymodel.Base.metadata
+# Import all models so Alembic can see them
+from app.models import *
+from app.models.batch import *
+from app.models.category import *
+from app.models.developer_permission import *
+from app.models.developer_role import *
+from app.models.inventory import *
+from app.models.permission import *
+from app.models.product import *
+from app.models.recipe import *
+from app.models.reservation import *
+from app.models.role import *
+from app.models.subscription_tier import *
+from app.models.unit import *
+from app.models.user_role_assignment import *
+
 config.set_main_option('sqlalchemy.url', get_engine_url())
 target_db = current_app.extensions['migrate'].db
 
