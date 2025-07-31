@@ -1,4 +1,3 @@
-
 from ..models import User, Organization, Role
 from ..extensions import db
 from werkzeug.security import generate_password_hash
@@ -20,23 +19,23 @@ def seed_users_and_organization():
 
     # Check if this is a fresh installation or re-initialization
     existing_orgs = Organization.query.count()
-    
+
     if existing_orgs > 0:
         print(f"ℹ️  Found {existing_orgs} existing organizations - using first organization")
         org = Organization.query.first()
     else:
         print("ℹ️  No organizations found - creating default organization")
-        
+
         # Get the exempt tier (must exist from subscription seeder)
         exempt_tier = SubscriptionTier.query.filter_by(key='exempt').first()
         if not exempt_tier:
             print("❌ Exempt tier not found! Run subscription seeder first.")
             return
-            
-        # Create the default BatchTrack organization
+
+        # Create the default BatchTrack organization  
+        # Note: contact_email will be set to organization owner's email after user creation
         org = Organization(
             name='BatchTrack Organization',
-            contact_email='admin@batchtrack.com',
             subscription_tier_id=exempt_tier.id,
             is_active=True
         )
@@ -108,8 +107,19 @@ def seed_users_and_organization():
 
         # Assign organization owner role
         admin_user.assign_role(org_owner_role)
+        
+        # Set organization contact email to admin user's email
+        if not org.contact_email:
+            org.contact_email = admin_user.email
+            print(f"✅ Set organization contact_email to: {admin_user.email}")
+        
         print(f"✅ Created admin user: admin/admin (organization owner)")
     else:
+        admin_user = User.query.filter_by(username='admin').first()
+        # Ensure existing organization has contact_email set
+        if admin_user and not org.contact_email:
+            org.contact_email = admin_user.email
+            print(f"✅ Updated organization contact_email to: {admin_user.email}")
         print(f"ℹ️  Admin user 'admin' already exists")
 
     # 3. Create manager user
