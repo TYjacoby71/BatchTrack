@@ -220,6 +220,7 @@
       "reports.custom",
       "integrations.shopify",
       "integrations.marketplace",
+      "integrations.api_access",
       "ai.recipe_optimization",
       "ai.demand_forecasting",
       "ai.quality_insights"
