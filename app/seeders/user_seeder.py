@@ -107,8 +107,19 @@ def seed_users_and_organization():
 
         # Assign organization owner role
         admin_user.assign_role(org_owner_role)
+        
+        # Set organization contact email to admin user's email
+        if not org.contact_email:
+            org.contact_email = admin_user.email
+            print(f"✅ Set organization contact_email to: {admin_user.email}")
+        
         print(f"✅ Created admin user: admin/admin (organization owner)")
     else:
+        admin_user = User.query.filter_by(username='admin').first()
+        # Ensure existing organization has contact_email set
+        if admin_user and not org.contact_email:
+            org.contact_email = admin_user.email
+            print(f"✅ Updated organization contact_email to: {admin_user.email}")
         print(f"ℹ️  Admin user 'admin' already exists")
 
     # 3. Create manager user
