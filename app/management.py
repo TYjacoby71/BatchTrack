@@ -43,30 +43,13 @@ def activate_users():
 @click.command('init-production')
 @with_appcontext
 def init_production_command():
-    """ONE-TIME ONLY: Initialize fresh production database"""
+    """Seed production database with essential data (run after migrations)"""
     try:
-        # Check if already initialized
-        from .models import Organization, User
-        if Organization.query.first() or User.query.first():
-            print("❌ Database already initialized! Use migrations for updates.")
-            print("   - For permission updates: flask db migrate && flask db upgrade")
-            print("   - For new features: Create proper migrations")
-            return
+        print("🚀 BatchTrack Production Seeding Starting...")
+        print("⚠️  Assumes database schema is already migrated (flask db upgrade)")
 
-        print("🚀 BatchTrack Fresh Installation Starting...")
-
-        # Apply migrations
-        from flask_migrate import upgrade
-        print("=== Step 1: Database migrations ===")
-        upgrade()
-        
-        # Ensure all tables are created
-        print("=== Step 1.5: Verify database schema ===")
-        db.create_all()  # Ensure all tables exist before seeding
-        print("✅ Database schema verified")
-
-        # One-time system setup (STRICT DEPENDENCY ORDER)
-        print("=== Step 2: System foundations ===")
+        # Essential system setup (STRICT DEPENDENCY ORDER)
+        print("=== Step 1: System foundations ===")
         seed_consolidated_permissions()  # Must be FIRST - creates permissions
         print("✅ Permissions seeded")
         
@@ -77,22 +60,26 @@ def init_production_command():
         print("✅ Units seeded")
 
         # Create initial admin (DEPENDS on subscription tiers existing)
-        print("=== Step 3: Initial admin setup ===")
+        print("=== Step 2: Initial admin setup ===")
         seed_users_and_organization()    # DEPENDS on subscription tiers
         print("✅ Users and organization seeded")
 
         # Setup default categories for first org
+        print("=== Step 3: Organization setup ===")
         from .models import Organization
         org = Organization.query.first()
         if org:
             seed_categories(organization_id=org.id)
+            print("✅ Categories seeded")
+        else:
+            print("⚠️  No organization found - categories not seeded")
 
-        print('✅ Fresh installation complete!')
+        print('✅ Production seeding complete!')
         print('🔒 Login: admin/admin (CHANGE IMMEDIATELY)')
-        print('⚠️  This command will refuse to run again - use migrations for updates')
+        print('📝 Note: This command can be run multiple times safely')
 
     except Exception as e:
-        print(f'❌ Initialization failed: {str(e)}')
+        print(f'❌ Production seeding failed: {str(e)}')
         db.session.rollback()
         raise
 
