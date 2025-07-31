@@ -347,7 +347,7 @@ def sync_schema_command():
         print(f"✅ {models_imported} models imported dynamically")
 
         # Get current database state
-        from sqlalchemy import inspect
+        from sqlalchemy import inspect, text
         inspector = inspect(db.engine)
         existing_tables = set(inspector.get_table_names())
         print(f"📊 Found {len(existing_tables)} existing tables")
@@ -367,16 +367,88 @@ def sync_schema_command():
         if new_tables:
             print(f"✅ Added {len(new_tables)} new tables: {', '.join(sorted(new_tables))}")
         else:
-            print("✅ No new tables needed - schema is up to date")
+            print("✅ No new tables needed")
+
+        # Now add missing columns to existing tables
+        print("🔧 Checking for missing columns in existing tables...")
+        columns_added = 0
+        
+        for table_name in existing_tables:
+            # Get existing columns in database
+            existing_columns = {col['name']: col for col in inspector.get_columns(table_name)}
+            
+            # Find the model class for this table
+            model_class = None
+            for model_name in models.__all__:
+                if hasattr(models, model_name):
+                    model_cls = getattr(models, model_name)
+                    if hasattr(model_cls, '__tablename__') and model_cls.__tablename__ == table_name:
+                        model_class = model_cls
+                        break
+            
+            if not model_class:
+                print(f"   ⚠️  No model found for table: {table_name}")
+                continue
+                
+            # Get expected columns from model
+            expected_columns = {}
+            for column_name, column in model_class.__table__.columns.items():
+                expected_columns[column_name] = column
+            
+            # Find missing columns
+            missing_columns = set(expected_columns.keys()) - set(existing_columns.keys())
+            
+            if missing_columns:
+                print(f"   📋 Table '{table_name}' missing columns: {', '.join(missing_columns)}")
+                
+                for column_name in missing_columns:
+                    column = expected_columns[column_name]
+                    
+                    try:
+                        # Build column definition
+                        column_type = column.type.compile(db.engine.dialect)
+                        nullable = "NULL" if column.nullable else "NOT NULL"
+                        
+                        # Handle default values
+                        default_clause = ""
+                        if column.default is not None:
+                            if hasattr(column.default, 'arg'):
+                                if callable(column.default.arg):
+                                    # For functions like datetime.utcnow, make nullable for safety
+                                    nullable = "NULL"
+                                else:
+                                    default_clause = f" DEFAULT {column.default.arg}"
+                            else:
+                                default_clause = f" DEFAULT {column.default}"
+                        
+                        # Make all new columns nullable for safety during migration
+                        nullable = "NULL"
+                        
+                        # Execute the ALTER TABLE command
+                        sql = f'ALTER TABLE "{table_name}" ADD COLUMN "{column_name}" {column_type} {nullable}{default_clause}'
+                        db.session.execute(text(sql))
+                        db.session.commit()
+                        
+                        columns_added += 1
+                        print(f"      ✅ Added column: {column_name} ({column_type})")
+                        
+                    except Exception as e:
+                        print(f"      ❌ Failed to add column {column_name}: {e}")
+                        db.session.rollback()
+            else:
+                print(f"   ✅ Table '{table_name}' schema is up to date")
 
         print(f"📊 Total tables: {len(tables_after)}")
+        print(f"📊 Total columns added: {columns_added}")
         print("✅ Database schema safely synced to match models!")
-        print("🔄 Note: This only adds missing tables - existing data is preserved")
+        print("🔄 Note: This only adds missing tables/columns - existing data is preserved")
+        print("⚠️  New columns are added as nullable for safety")
 
     except Exception as e:
         print(f'❌ Schema sync failed: {str(e)}')
         import traceback
         traceback.print_exc()
+        db.session.rollback()
         raise
 
 def register_commands(app):
