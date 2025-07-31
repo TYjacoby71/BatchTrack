@@ -1,6 +1,6 @@
 """empty message
 
-Revision ID: d4b5c89f1234
+Revision ID: 71d49b1cf360
 Revises: requires_stripe_billing
 Create Date: 2025-07-30 22:53:47.992722
 
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'd4b5c89f1234'
+revision = '71d49b1cf360'
 down_revision = 'requires_stripe_billing'
 branch_labels = None
 depends_on = None
