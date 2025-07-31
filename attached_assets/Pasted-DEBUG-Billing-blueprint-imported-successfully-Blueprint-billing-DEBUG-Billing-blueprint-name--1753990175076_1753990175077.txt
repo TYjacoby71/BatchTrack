@@ -1,0 +1,131 @@
+DEBUG: Billing blueprint imported successfully: <Blueprint 'billing'>
+DEBUG: Billing blueprint name: billing
+DEBUG: Billing blueprint url_prefix: /billing
+DEBUG: Billing blueprint registered successfully
+Registered API routes: ['/api/reservations/create', '/api/reservations/release/<int:reservation_id>', '/api/reservations/convert-to-sale/<int:reservation_id>', '/api/reservations/expire-old', '/api/products/<int:product_id>/variants', '/api/dismiss-alert', '/api/dashboard-alerts', '/api/server-time', '/api/server-time', '/api/dismiss-alert', '/api/dashboard-alerts', '/api/check-stock', '/api/categories', '/api/ingredient/<int:id>/density', '/api/debug-containers', '/api/available-containers/<int:recipe_id>', '/api/containers/available', '/api/batches/<int:batch_id>/containers', '/api/batches/<int:batch_id>/containers/<int:container_id>', '/api/batches/<int:batch_id>/containers/<int:container_id>/adjust', '/api/api/fifo-details/<int:inventory_id>', '/api/api/batch-inventory-summary/<int:batch_id>', '/api/api/reservations/create', '/api/api/reservations/release/<int:reservation_id>', '/api/api/reservations/convert-to-sale/<int:reservation_id>', '/api/api/reservations/expire-old', '/api/dashboard-alerts', '/api/dismiss-alert', '/api/units', '/api/convert-units']
+Container routes found: ['/settings/bulk-update-containers', '/api/debug-containers', '/api/available-containers/<int:recipe_id>', '/api/containers/available', '/api/batches/<int:batch_id>/containers', '/api/batches/<int:batch_id>/containers/<int:container_id>', '/api/batches/<int:batch_id>/containers/<int:container_id>/adjust', '/debug-containers', '/available-containers/<int:recipe_id>', '/containers/available', '/batches/<int:batch_id>/containers', '/batches/<int:batch_id>/containers/<int:container_id>', '/batches/<int:batch_id>/containers/<int:container_id>/adjust']
+Billing routes found: ['/billing/reconciliation-needed', '/billing/reconcile-to-free', '/billing/upgrade', '/billing/checkout/<tier>/<billing_cycle>', '/billing/checkout/<tier>', '/billing/customer-portal', '/billing/cancel-subscription', '/billing/webhooks/stripe', '/billing/complete-signup-from-stripe', '/billing/debug']
+Billing endpoints: [('/billing/reconciliation-needed', 'billing.reconciliation_needed'), ('/billing/reconcile-to-free', 'billing.reconcile_to_free'), ('/billing/upgrade', 'billing.upgrade'), ('/billing/checkout/<tier>/<billing_cycle>', 'billing.checkout'), ('/billing/checkout/<tier>', 'billing.checkout'), ('/billing/customer-portal', 'billing.customer_portal'), ('/billing/cancel-subscription', 'billing.cancel_subscription'), ('/billing/webhooks/stripe', 'billing.stripe_webhook'), ('/billing/complete-signup-from-stripe', 'billing.complete_signup_from_stripe'), ('/billing/debug', 'billing.debug_billing')]
+[2025-07-31 19:21:41,848] INFO in unit_utils: BatchTrack startup
+Tables in database: 38
+  - alembic_version
+  - batch
+  - batch_container
+  - batch_ingredient
+  - batch_inventory_log
+  - batch_timer
+  - billing_snapshots
+  - conversion_log
+  - custom_unit_mapping
+  - developer_permission
+  - developer_role
+  - developer_role_permission
+  - extra_batch_container
+  - extra_batch_ingredient
+  - ingredient_category
+  - inventory_history
+  - inventory_item
+  - organization
+  - organization_stats
+  - permission
+  - pricing_snapshots
+  - product
+  - product_sku
+  - product_sku_history
+  - product_variant
+  - recipe
+  - recipe_ingredient
+  - reservation
+  - role
+  - role_permission
+  - subscription_tier
+  - subscription_tier_permission
+  - tag
+  - unit
+  - user
+  - user_preferences
+  - user_role_assignment
+  - user_stats
+
+Recipe table columns (12):
+  - id: INTEGER
+  - name: VARCHAR(128)
+  - instructions: TEXT
+  - label_prefix: VARCHAR(8)
+  - qr_image: VARCHAR(128)
+  - parent_id: INTEGER
+  - is_locked: BOOLEAN
+  - predicted_yield: FLOAT
+  - predicted_yield_unit: VARCHAR(50)
+  - allowed_containers: BLOB
+  - created_by: INTEGER
+  - organization_id: INTEGER
+
+Product_sku table columns (49):
+  - inventory_item_id: INTEGER
+  - product_id: INTEGER
+  - variant_id: INTEGER
+  - size_label: VARCHAR(64)
+  - sku_code: VARCHAR(64)
+  - sku_name: VARCHAR(128)
+  - unit: VARCHAR(32)
+  - low_stock_threshold: FLOAT
+  - fifo_id: VARCHAR(32)
+  - batch_id: INTEGER
+  - container_id: INTEGER
+  - retail_price: FLOAT
+  - wholesale_price: FLOAT
+  - profit_margin_target: FLOAT
+  - category: VARCHAR(64)
+  - subcategory: VARCHAR(64)
+  - tags: TEXT
+  - description: TEXT
+  - is_active: BOOLEAN
+  - is_product_active: BOOLEAN
+  - is_discontinued: BOOLEAN
+  - created_at: DATETIME
+  - updated_at: DATETIME
+  - created_by: INTEGER
+  - supplier_name: VARCHAR(128)
+  - supplier_sku: VARCHAR(64)
+  - supplier_cost: FLOAT
+  - weight: FLOAT
+  - weight_unit: VARCHAR(16)
+  - dimensions: VARCHAR(64)
+  - barcode: VARCHAR(128)
+  - upc: VARCHAR(32)
+  - quality_status: VARCHAR(32)
+  - compliance_status: VARCHAR(32)
+  - quality_checked_by: INTEGER
+  - quality_checked_at: DATETIME
+  - location_id: VARCHAR(128)
+  - location_name: VARCHAR(128)
+  - temperature_at_time: FLOAT
+  - shopify_product_id: VARCHAR(64)
+  - shopify_variant_id: VARCHAR(64)
+  - etsy_listing_id: VARCHAR(64)
+  - amazon_asin: VARCHAR(64)
+  - marketplace_sync_status: VARCHAR(32)
+  - marketplace_last_sync: DATETIME
+  - expiration_date: DATETIME
+  - is_perishable: BOOLEAN
+  - shelf_life_days: INTEGER
+  - organization_id: INTEGER
+
+Product_sku unique constraints (4):
+  - unique_sku_combination: ['product_id', 'variant_id', 'size_label', 'fifo_id']
+  - unique_barcode: ['barcode']
+  - unique_upc: ['upc']
+  - None: ['sku_code']
+
+Organization table columns (10):
+  - id: INTEGER
+  - name: VARCHAR(128)
+  - contact_email: VARCHAR(256)
+  - created_at: DATETIME
+  - is_active: BOOLEAN
+  - signup_source: VARCHAR(64)
+  - promo_code: VARCHAR(32)
+  - referral_code: VARCHAR(32)
+  - subscription_tier_id: INTEGER
+  - subscription_tier: VARCHAR(32)
