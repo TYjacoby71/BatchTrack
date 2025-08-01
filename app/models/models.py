@@ -21,7 +21,8 @@ class Organization(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(128), nullable=False)
     contact_email = db.Column(db.String(256))
-    created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
+    created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now, nullable=False)
+    updated_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now, onupdate=TimezoneUtils.utc_now, nullable=False)
     is_active = db.Column(db.Boolean, default=True)
 
     # Basic signup tracking (keep these for analytics)
@@ -164,7 +165,8 @@ class User(UserMixin, db.Model):
             if org_owner_role:
                 self.remove_role(org_owner_role)
     is_active = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
+    created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now, nullable=False)
+    updated_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now, onupdate=TimezoneUtils.utc_now, nullable=False)
     last_login = db.Column(db.DateTime, nullable=True)
     timezone = db.Column(db.String(64), default='UTC')
     # role_id removed - using UserRoleAssignment table instead
