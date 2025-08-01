@@ -2,10 +2,10 @@
 {% block content %}
 <h2>All Units</h2>
 
-{% set types = units | map(attribute="type") | unique | list %}
+{% set types = units | map(attribute="unit_type") | unique | list %}
 
-{% for unit_type in types %}
-  <h3>{{ unit_type | title }} Units</h3>
+{% for unit_type_name in types %}
+  <h3>{{ unit_type_name | title }} Units</h3>
 
   <table class="table table-bordered">
     <thead>
@@ -18,7 +18,7 @@
       </tr>
     </thead>
     <tbody>
-      {% for unit in units if unit.type == unit_type %}
+      {% for unit in units if unit.unit_type == unit_type_name %}
         {% if unit.is_custom and loop.first %}
           <tr class="table-secondary">
             <td colspan="5"><strong>Custom Units</strong></td>
@@ -26,10 +26,15 @@
         {% endif %}
         <tr{% if unit.is_custom %} class="table-light"{% endif %}>
           <td>{{ unit.name }}</td>
-          <td>{{ unit.type }}</td>
+          <td>{{ unit.unit_type }}</td>
           <td>{{ unit.base_unit }}</td>
           <td>{{ "%.6f"|format(unit.conversion_factor or 1.0) }}</td>
-          <td>
+          <td></td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endfor %}
             <div class="btn-group" role="group">
               {% if unit.is_custom %}
                 {% if not unit.is_mapped %}
