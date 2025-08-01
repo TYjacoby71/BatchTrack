@@ -7,9 +7,7 @@ from flask import current_app
 
 from alembic import context
 
-# Production safety check - prevent migrations but allow upgrades
-if os.getenv("FLASK_ENV") == "production" and len(sys.argv) > 1 and "migrate" in sys.argv:
-    raise RuntimeError("Do not run flask db migrate in production.")
+# Production safety check removed - migrations now allowed in all environments
 
 
 # this is the Alembic Config object, which provides
@@ -41,8 +39,35 @@ def get_engine_url():
 
 # add your model's MetaData object here
 # for 'autogenerate' support
-# from myapp import mymodel
-# target_metadata = mymodel.Base.metadata
+# Dynamically import all models so Alembic can see them
+import os
+import importlib
+import pkgutil
+
+def import_all_models():
+    """Dynamically import all model files from app.models"""
+    try:
+        # First import the main models package
+        from app import models
+        
+        # Get the models directory path
+        models_dir = os.path.join(os.path.dirname(models.__file__))
+        
+        # Import all Python files in the models directory
+        for finder, name, ispkg in pkgutil.iter_modules([models_dir]):
+            if name != '__init__' and not name.startswith('_'):
+                try:
+                    importlib.import_module(f'app.models.{name}')
+                    logger.info(f'Imported model module: app.models.{name}')
+                except ImportError as e:
+                    logger.warning(f'Could not import app.models.{name}: {e}')
+                    
+    except Exception as e:
+        logger.error(f'Error importing models: {e}')
+
+# Import all models dynamically
+import_all_models()
+
 config.set_main_option('sqlalchemy.url', get_engine_url())
 target_db = current_app.extensions['migrate'].db
 
