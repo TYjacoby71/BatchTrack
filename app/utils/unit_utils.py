@@ -56,7 +56,7 @@ def get_global_unit_list():
             query = query.filter(Unit.is_custom == False)
 
         # Order by type and name for consistent display
-        units = query.order_by(Unit.type, Unit.name).all()
+        units = query.order_by(Unit.unit_type, Unit.name).all()
 
         if not units:
             logger.warning("No units found, creating fallback units")
@@ -87,10 +87,10 @@ def validate_density_requirements(from_unit, to_unit, ingredient=None):
     Validates density requirements for unit conversions
     Returns (needs_density: bool, message: str)
     """
-    if from_unit.type == to_unit.type:
+    if from_unit.unit_type == to_unit.unit_type:
         return False, None
 
-    if {'volume', 'weight'} <= {from_unit.type, to_unit.type}:
+    if {'volume', 'weight'} <= {from_unit.unit_type, to_unit.unit_type}:
         if not ingredient:
             return True, "Ingredient context required for volume ↔ weight conversion"
 

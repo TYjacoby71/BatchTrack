@@ -15,7 +15,7 @@ def new_recipe():
             if not label_prefix:
                 flash('Label prefix is required and cannot be empty.', 'error')
                 # Get all units for dropdowns
-                units = Unit.query.filter_by(is_active=True).order_by(Unit.type, Unit.name).all()
+                units = Unit.query.filter_by(is_active=True).order_by(Unit.unit_type, Unit.name).all()
                 return render_template('recipe_form.html', 
                                      recipe=None,
                                      all_ingredients=InventoryItem.query.all(),
@@ -27,7 +27,7 @@ def new_recipe():
             if existing_recipe:
                 flash(f'Label prefix "{label_prefix}" is already used by recipe "{existing_recipe.name}". Please choose a different prefix.', 'error')
                 # Get all units for dropdowns
-                units = Unit.query.filter_by(is_active=True).order_by(Unit.type, Unit.name).all()
+                units = Unit.query.filter_by(is_active=True).order_by(Unit.unit_type, Unit.name).all()
                 return render_template('recipe_form.html', 
                                      recipe=None,
                                      all_ingredients=InventoryItem.query.all(),
@@ -93,7 +93,7 @@ def new_recipe():
     all_ingredients = ingredients_query.all()
 
     # Get all units for dropdowns
-    units = Unit.query.filter_by(is_active=True).order_by(Unit.type, Unit.name).all()
+    units = Unit.query.filter_by(is_active=True).order_by(Unit.unit_type, Unit.name).all()
     inventory_units = get_global_unit_list()
     return render_template('recipe_form.html', recipe=None, all_ingredients=all_ingredients, inventory_units=inventory_units, units=units)
 
@@ -195,7 +195,7 @@ def create_variation(recipe_id):
             if not label_prefix:
                 flash('Label prefix is required and cannot be empty.', 'error')
                 # Get all units for dropdowns
-                units = Unit.query.filter_by(is_active=True).order_by(Unit.type, Unit.name).all()
+                units = Unit.query.filter_by(is_active=True).order_by(Unit.unit_type, Unit.name).all()
 
                 # Get scoped ingredients (exclude product types)
                 ingredients_query = InventoryItem.query.filter(
@@ -222,7 +222,7 @@ def create_variation(recipe_id):
             if existing_recipe:
                 flash(f'Label prefix "{label_prefix}" is already used by recipe "{existing_recipe.name}". Please choose a different prefix.', 'error')
                 # Get all units for dropdowns
-                units = Unit.query.filter_by(is_active=True).order_by(Unit.type, Unit.name).all()
+                units = Unit.query.filter_by(is_active=True).order_by(Unit.unit_type, Unit.name).all()
                 # Get scoped ingredients (exclude product types)
                 ingredients_query = InventoryItem.query.filter(
                     ~InventoryItem.type.in_(['product', 'product-reserved'])
@@ -291,7 +291,7 @@ def create_variation(recipe_id):
         all_ingredients = ingredients_query.all()
 
         # Get all units for dropdowns
-        units = Unit.query.filter_by(is_active=True).order_by(Unit.type, Unit.name).all()
+        units = Unit.query.filter_by(is_active=True).order_by(Unit.unit_type, Unit.name).all()
         inventory_units = get_global_unit_list()
         return render_template('recipe_form.html',
             recipe=new_variation,
@@ -377,7 +377,7 @@ def clone_recipe(recipe_id):
         all_ingredients = ingredients_query.all()
 
         # Get all units for dropdowns
-        units = Unit.query.filter_by(is_active=True).order_by(Unit.type, Unit.name).all()
+        units = Unit.query.filter_by(is_active=True).order_by(Unit.unit_type, Unit.name).all()
 
         return render_template('recipe_form.html',
                             recipe=new_recipe,
@@ -455,7 +455,7 @@ def edit_recipe(recipe_id):
 
     inventory_units = get_global_unit_list()
     # Get all units for dropdowns
-    units = Unit.query.filter_by(is_active=True).order_by(Unit.type, Unit.name).all()
+    units = Unit.query.filter_by(is_active=True).order_by(Unit.unit_type, Unit.name).all()
 
     if request.method == 'POST':
         try:

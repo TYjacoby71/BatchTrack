@@ -353,7 +353,7 @@ def handle_recount_adjustment(item_id, target_quantity, notes=None, created_by=N
         print(f"  Current FIFO Total: {current_fifo_total} (change: {fifo_change})")
 
         # Use same unit logic as other adjustments
-        history_unit = 'count' if item.type == 'container' else item.unit
+        history_unit = 'count' if getattr(item, 'type', None) == 'container' else item.unit
 
         # Handle FIFO adjustments first
         if fifo_change != 0:

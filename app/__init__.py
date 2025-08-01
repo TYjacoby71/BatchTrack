@@ -323,7 +323,7 @@ def create_app():
     # Context processors
     @app.context_processor
     def inject_units():
-        units = Unit.query.order_by(Unit.type, Unit.name).all()
+        units = Unit.query.order_by(Unit.unit_type, Unit.name).all()
         categories = IngredientCategory.query.order_by(IngredientCategory.name).all()
         return dict(units=units, categories=categories)
 
@@ -427,12 +427,12 @@ def create_app():
             # Get all units, filtering by is_active if the column exists
             units = Unit.query.filter(
                 db.or_(Unit.is_active == True, Unit.is_active.is_(None))
-            ).order_by(Unit.type, Unit.name).all()
+            ).order_by(Unit.unit_type, Unit.name).all()
             return dict(global_units=units)
         except:
             # Fallback to all units if filtering fails
             try:
-                units = Unit.query.order_by(Unit.type, Unit.name).all()
+                units = Unit.query.order_by(Unit.unit_type, Unit.name).all()
                 return dict(global_units=units)
             except:
                 return dict(global_units=[])
