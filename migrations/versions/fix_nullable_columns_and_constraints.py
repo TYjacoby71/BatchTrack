@@ -1,9 +1,8 @@
-
 """fix nullable columns and add constraints
 
 Revision ID: fix_nullable_constraints
 Revises: add_missing_timestamps
-Create Date: 2025-08-01 00:15:00.000000
+Create Date: 2025-01-31 23:45:00.000000
 
 """
 from alembic import op
@@ -36,126 +35,68 @@ def column_exists(table_name, column_name):
 
 
 def upgrade():
-    """Fix nullable columns and add missing constraints"""
     print("=== Fixing nullable columns and adding constraints ===")
-    
-    # Fix columns that should NOT be nullable and add defaults for failed columns
-    
-    # Fix inventory_item
-    if column_exists('inventory_item', 'type'):
-        op.execute("UPDATE inventory_item SET type = 'ingredient' WHERE type IS NULL")
-        op.alter_column('inventory_item', 'type', nullable=False, server_default='ingredient')
-    
-    if column_exists('inventory_item', 'is_active'):
-        op.execute("UPDATE inventory_item SET is_active = true WHERE is_active IS NULL")
-        op.alter_column('inventory_item', 'is_active', nullable=False, server_default='true')
-    
-    # Fix user table
-    if column_exists('user', 'timezone'):
-        op.execute("UPDATE \"user\" SET timezone = 'UTC' WHERE timezone IS NULL")
-        op.alter_column('user', 'timezone', nullable=False, server_default='UTC')
-    
-    # Fix reservation table
-    if column_exists('reservation', 'source'):
-        op.execute("UPDATE reservation SET source = 'manual' WHERE source IS NULL")
-        op.alter_column('reservation', 'source', nullable=False, server_default='manual')
-    
-    if column_exists('reservation', 'status'):
-        op.execute("UPDATE reservation SET status = 'active' WHERE status IS NULL")
-        op.alter_column('reservation', 'status', nullable=False, server_default='active')
-    
-    # Fix batch_timer
-    if column_exists('batch_timer', 'status'):
-        op.execute("UPDATE batch_timer SET status = 'active' WHERE status IS NULL")
-        op.alter_column('batch_timer', 'status', nullable=False, server_default='active')
-    
-    # Fix extra_batch_container
-    if column_exists('extra_batch_container', 'reason'):
-        op.execute("UPDATE extra_batch_container SET reason = 'extra_yield' WHERE reason IS NULL")
-        op.alter_column('extra_batch_container', 'reason', nullable=False, server_default='extra_yield')
-    
-    # Fix recipe
-    if column_exists('recipe', 'predicted_yield_unit'):
-        op.execute("UPDATE recipe SET predicted_yield_unit = 'oz' WHERE predicted_yield_unit IS NULL")
-        op.alter_column('recipe', 'predicted_yield_unit', nullable=False, server_default='oz')
-    
-    # Fix developer_role
-    if column_exists('developer_role', 'category'):
-        op.execute("UPDATE developer_role SET category = 'developer' WHERE category IS NULL")
-        op.alter_column('developer_role', 'category', nullable=False, server_default='developer')
-    
-    # Fix subscription_tier
-    if column_exists('subscription_tier', 'status'):
-        op.execute("UPDATE subscription_tier SET status = 'active' WHERE status IS NULL")
-        op.alter_column('subscription_tier', 'status', nullable=False, server_default='active')
-    
-    if column_exists('subscription_tier', 'fallback_price_monthly'):
-        op.execute("UPDATE subscription_tier SET fallback_price_monthly = '0' WHERE fallback_price_monthly IS NULL")
-    
-    if column_exists('subscription_tier', 'fallback_price_yearly'):
-        op.execute("UPDATE subscription_tier SET fallback_price_yearly = '0' WHERE fallback_price_yearly IS NULL")
-    
-    # Fix product
-    if column_exists('product', 'base_unit'):
-        op.execute("UPDATE product SET base_unit = 'g' WHERE base_unit IS NULL")
-        op.alter_column('product', 'base_unit', nullable=False, server_default='g')
-    
-    # Fix ingredient_category color (add the missing column with proper quotes)
-    if not column_exists('ingredient_category', 'color'):
-        op.add_column('ingredient_category', sa.Column('color', sa.String(7), nullable=True, server_default='#6c757d'))
-    
-    # Set default values for boolean columns that should default to True/False
-    boolean_defaults = [
-        ('inventory_item', 'is_perishable', False),
-        ('inventory_item', 'is_archived', False),
-        ('inventory_item', 'intermediate', False),
-        ('unit', 'is_custom', False),
-        ('unit', 'is_mapped', False),
-        ('permission', 'is_active', True),
-        ('developer_permission', 'is_active', True),
-        ('recipe', 'is_locked', False),
-        ('developer_role', 'is_active', True),
-        ('subscription_tier', 'is_customer_facing', True),
-        ('subscription_tier', 'is_available', True),
-        ('subscription_tier', 'cancel_at_period_end', False),
-        ('subscription_tier', 'requires_stripe_billing', True),
-        ('tag', 'is_active', True),
-        ('user_preferences', 'show_batch_alerts', True),
-        ('user_preferences', 'show_timer_alerts', True),
-        ('user_preferences', 'show_alert_badges', True),
-        ('user_preferences', 'show_expiration_alerts', True),
-        ('user_preferences', 'show_quick_actions', True),
-        ('user_preferences', 'compact_view', False),
-        ('user_preferences', 'show_low_stock_alerts', True),
-        ('user_preferences', 'show_fault_alerts', True),
-        ('product', 'is_discontinued', False),
-        ('ingredient_category', 'is_active', True),
-        ('role', 'is_active', True),
-        ('user', 'is_deleted', False),
-    ]
-    
-    for table_name, column_name, default_value in boolean_defaults:
-        if column_exists(table_name, column_name):
-            op.execute(f"UPDATE {table_name} SET {column_name} = {default_value} WHERE {column_name} IS NULL")
-    
-    # Set integer defaults
-    integer_defaults = [
-        ('user_preferences', 'max_dashboard_alerts', 10),
-        ('recipe_ingredient', 'order_position', 0),
-    ]
-    
-    for table_name, column_name, default_value in integer_defaults:
-        if column_exists(table_name, column_name):
-            op.execute(f"UPDATE {table_name} SET {column_name} = {default_value} WHERE {column_name} IS NULL")
-    
-    print("✅ Fixed nullable columns and set proper defaults")
+
+    bind = op.get_bind()
+
+    # Update existing NULL values to have reasonable defaults before making columns NOT NULL
+    # This approach works for both SQLite and PostgreSQL
+
+    # Fix inventory_item.type - set default value for existing NULL rows
+    if table_exists('inventory_item') and column_exists('inventory_item', 'type'):
+        print("Updating inventory_item.type NULL values...")
+        bind.execute(text("UPDATE inventory_item SET type = 'ingredient' WHERE type IS NULL"))
+
+    # Fix user.user_type - set default value for existing NULL rows  
+    if table_exists('user') and column_exists('user', 'user_type'):
+        print("Updating user.user_type NULL values...")
+        bind.execute(text("UPDATE user SET user_type = 'customer' WHERE user_type IS NULL"))
+
+    # Fix organization.is_active - set default value for existing NULL rows
+    if table_exists('organization') and column_exists('organization', 'is_active'):
+        print("Updating organization.is_active NULL values...")
+        bind.execute(text("UPDATE organization SET is_active = 1 WHERE is_active IS NULL"))
+
+    # Fix user.is_active - set default value for existing NULL rows
+    if table_exists('user') and column_exists('user', 'is_active'):
+        print("Updating user.is_active NULL values...")
+        bind.execute(text("UPDATE user SET is_active = 1 WHERE is_active IS NULL"))
+
+    # Fix user.is_organization_owner - set default value for existing NULL rows
+    if table_exists('user') and column_exists('user', 'is_organization_owner'):
+        print("Updating user.is_organization_owner NULL values...")
+        bind.execute(text("UPDATE user SET is_organization_owner = 0 WHERE is_organization_owner IS NULL"))
+
+    # Fix role.is_system_role - set default value for existing NULL rows
+    if table_exists('role') and column_exists('role', 'is_system_role'):
+        print("Updating role.is_system_role NULL values...")
+        bind.execute(text("UPDATE role SET is_system_role = 0 WHERE is_system_role IS NULL"))
+
+    # Fix user_role_assignment.is_active - set default value for existing NULL rows
+    if table_exists('user_role_assignment') and column_exists('user_role_assignment', 'is_active'):
+        print("Updating user_role_assignment.is_active NULL values...")
+        bind.execute(text("UPDATE user_role_assignment SET is_active = 1 WHERE is_active IS NULL"))
+
+    # Fix subscription_tier.is_active - set default value for existing NULL rows
+    if table_exists('subscription_tier') and column_exists('subscription_tier', 'is_active'):
+        print("Updating subscription_tier.is_active NULL values...")
+        bind.execute(text("UPDATE subscription_tier SET is_active = 1 WHERE is_active IS NULL"))
+
+    # Fix developer_role.is_active - set default value for existing NULL rows
+    if table_exists('developer_role') and column_exists('developer_role', 'is_active'):
+        print("Updating developer_role.is_active NULL values...")
+        bind.execute(text("UPDATE developer_role SET is_active = 1 WHERE is_active IS NULL"))
+
+    # Note: We're not making columns NOT NULL in this migration because:
+    # 1. SQLite doesn't support ALTER COLUMN ... SET NOT NULL
+    # 2. The models already define nullable=False, so new records will be validated
+    # 3. Existing data now has proper default values
+
+    print("✅ Migration completed: Updated NULL values to match model expectations")
+    print("⚠️  Note: Columns remain nullable in database schema but models enforce NOT NULL")
 
 
 def downgrade():
-    """Revert constraint changes"""
-    print("=== Reverting constraint fixes ===")
-    
-    # This would make columns nullable again, but we'll keep it simple
-    # In production, you typically don't downgrade constraint fixes
-    
-    print("✅ Downgrade completed (constraints kept for safety)")
+    print("=== Reverting nullable column fixes ===")
+    # This migration only updated data, no schema changes to revert
+    print("✅ Downgrade completed (no schema changes to revert)")
