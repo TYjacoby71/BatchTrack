@@ -12,7 +12,7 @@ from sqlalchemy import inspect
 
 
 # revision identifiers, used by Alembic.
-revision = 'fix_user_role_constraints'
+revision = 'fix_user_role_assignment_constraints'
 down_revision = 'fix_password_hash_length'
 branch_labels = None
 depends_on = None
