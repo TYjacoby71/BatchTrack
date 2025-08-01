@@ -12,7 +12,6 @@ class IngredientCategory(ScopedModelMixin, db.Model):
     default_density = db.Column(db.Float, nullable=True)  # Default density for category in g/ml
     is_active = db.Column(db.Boolean, default=True)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
-    created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
 
 class Tag(ScopedModelMixin, db.Model):
     """Tags for categorizing batches, products, etc."""
