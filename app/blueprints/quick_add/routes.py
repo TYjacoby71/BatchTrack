@@ -190,7 +190,7 @@ def quick_add_ingredient():
     # If GET request, return the modal with units
     if request.method == 'GET':
         from ...models import Unit
-        units = Unit.query.filter_by(is_active=True).order_by(Unit.type, Unit.name).all()
+        units = Unit.query.filter_by(is_active=True).order_by(Unit.unit_type, Unit.name).all()
         return render_template('quick_add_ingredient_modal.html', units=units)
 
     try:
@@ -212,7 +212,7 @@ def quick_add_ingredient():
 
         # Check if unit requires density
         from_unit = Unit.query.filter_by(name=unit).first()
-        if from_unit and from_unit.type in ['volume']:
+        if from_unit and from_unit.unit_type in ['volume']:
             # Set default water density for volume ingredients
             new_item = InventoryItem(
                 name=name, 
