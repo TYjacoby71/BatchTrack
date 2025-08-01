@@ -39,7 +39,7 @@ def add_timestamp_columns(table_name):
     """Add created_at and updated_at columns to a table if they don't exist"""
     if not table_exists(table_name):
         print(f"   ⚠️  Table '{table_name}' doesn't exist, skipping")
-        return
+        return 0
     
     print(f"   Checking table: {table_name}")
     columns_added = 0
