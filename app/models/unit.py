@@ -1,10 +1,11 @@
 
+from datetime import datetime
 from flask_login import current_user
 from ..extensions import db
-from .mixins import ScopedModelMixin
+from .mixins import ScopedModelMixin, TimestampMixin
 from ..utils.timezone_utils import TimezoneUtils
 
-class Unit(db.Model):
+class Unit(TimestampMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), nullable=False)
     symbol = db.Column(db.String(16), nullable=False)
@@ -16,7 +17,6 @@ class Unit(db.Model):
     is_mapped = db.Column(db.Boolean, default=True)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)  # Only for custom units
-    created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
 
     # Add unique constraints
     __table_args__ = (
@@ -45,20 +45,19 @@ class Unit(db.Model):
             return False
         return self.organization_id == current_user.organization_id
 
-class CustomUnitMapping(ScopedModelMixin, db.Model):
+class CustomUnitMapping(TimestampMixin, ScopedModelMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     from_unit = db.Column(db.String(64), nullable=False)
     to_unit = db.Column(db.String(64), nullable=False)
     conversion_factor = db.Column(db.Float, nullable=False)
     notes = db.Column(db.Text)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
-    created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
 
-class ConversionLog(ScopedModelMixin, db.Model):
+class ConversionLog(TimestampMixin, ScopedModelMixin, db.Model):
     __tablename__ = 'conversion_log'
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    timestamp = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow, nullable=True)
     amount = db.Column(db.Float, nullable=False)
     from_unit = db.Column(db.String(32), nullable=False)
     to_unit = db.Column(db.String(32), nullable=False)
