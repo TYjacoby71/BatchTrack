@@ -1,0 +1,336 @@
+render@srv-d21alungi27c73dn1440-6c4f66c7d-pkql4:~/project/src$ flask sync-schema
+DEBUG: Billing blueprint imported successfully: <Blueprint 'billing'>
+DEBUG: Billing blueprint name: billing
+DEBUG: Billing blueprint url_prefix: /billing
+DEBUG: Billing blueprint registered successfully
+Registered API routes: ['/api/reservations/create', '/api/reservations/release/<int:reservation_id>', '/api/reservations/convert-to-sale/<int:reservation_id>', '/api/reservations/expire-old', '/api/products/<int:product_id>/variants', '/api/dismiss-alert', '/api/dashboard-alerts', '/api/server-time', '/api/server-time', '/api/dismiss-alert', '/api/dashboard-alerts', '/api/check-stock', '/api/categories', '/api/ingredient/<int:id>/density', '/api/debug-containers', '/api/available-containers/<int:recipe_id>', '/api/containers/available', '/api/batches/<int:batch_id>/containers', '/api/batches/<int:batch_id>/containers/<int:container_id>', '/api/batches/<int:batch_id>/containers/<int:container_id>/adjust', '/api/api/fifo-details/<int:inventory_id>', '/api/api/batch-inventory-summary/<int:batch_id>', '/api/api/reservations/create', '/api/api/reservations/release/<int:reservation_id>', '/api/api/reservations/convert-to-sale/<int:reservation_id>', '/api/api/reservations/expire-old', '/api/dashboard-alerts', '/api/dismiss-alert', '/api/units', '/api/convert-units']
+Container routes found: ['/settings/bulk-update-containers', '/api/debug-containers', '/api/available-containers/<int:recipe_id>', '/api/containers/available', '/api/batches/<int:batch_id>/containers', '/api/batches/<int:batch_id>/containers/<int:container_id>', '/api/batches/<int:batch_id>/containers/<int:container_id>/adjust', '/debug-containers', '/available-containers/<int:recipe_id>', '/containers/available', '/batches/<int:batch_id>/containers', '/batches/<int:batch_id>/containers/<int:container_id>', '/batches/<int:batch_id>/containers/<int:container_id>/adjust']
+Billing routes found: ['/billing/reconciliation-needed', '/billing/reconcile-to-free', '/billing/upgrade', '/billing/checkout/<tier>/<billing_cycle>', '/billing/checkout/<tier>', '/billing/customer-portal', '/billing/cancel-subscription', '/billing/webhooks/stripe', '/billing/complete-signup-from-stripe', '/billing/debug']
+Billing endpoints: [('/billing/reconciliation-needed', 'billing.reconciliation_needed'), ('/billing/reconcile-to-free', 'billing.reconcile_to_free'), ('/billing/upgrade', 'billing.upgrade'), ('/billing/checkout/<tier>/<billing_cycle>', 'billing.checkout'), ('/billing/checkout/<tier>', 'billing.checkout'), ('/billing/customer-portal', 'billing.customer_portal'), ('/billing/cancel-subscription', 'billing.cancel_subscription'), ('/billing/webhooks/stripe', 'billing.stripe_webhook'), ('/billing/complete-signup-from-stripe', 'billing.complete_signup_from_stripe'), ('/billing/debug', 'billing.debug_billing')]
+[2025-08-01 00:01:40,992] INFO in unit_utils: BatchTrack startup
+🚀 Syncing database schema to match models (safe mode)...
+📦 Dynamically importing all models...
+   ✓ Organization
+   ✓ User
+   ✓ InventoryItem
+   ✓ InventoryHistory
+   ✓ BatchInventoryLog
+   ✓ Recipe
+   ✓ RecipeIngredient
+   ✓ Batch
+   ✓ BatchIngredient
+   ✓ BatchContainer
+   ✓ ExtraBatchContainer
+   ✓ BatchTimer
+   ✓ ExtraBatchIngredient
+   ✓ Unit
+   ✓ CustomUnitMapping
+   ✓ ConversionLog
+   ✓ IngredientCategory
+   ✓ Tag
+   ✓ Product
+   ✓ ProductVariant
+   ✓ ProductSKU
+   ✓ ProductSKUHistory
+   ✓ Reservation
+   ✓ Role
+   ✓ Permission
+   ✓ UserRoleAssignment
+   ✓ UserPreferences
+   ✓ UserStats
+   ✓ OrganizationStats
+   ✓ SubscriptionTier
+   ✓ DeveloperPermission
+   ✓ DeveloperRole
+   ✓ BillingSnapshot
+   ✓ PricingSnapshot
+   ✓ Loaded models from batch.py
+   ✓ Loaded models from billing_snapshot.py
+   ✓ Loaded models from category.py
+   ✓ Loaded models from developer_permission.py
+   ✓ Loaded models from developer_role.py
+   ✓ Loaded models from inventory.py
+   ✓ Loaded models from mixins.py
+   ✓ Loaded models from models.py
+   ✓ Loaded models from permission.py
+   ✓ Loaded models from pricing_snapshot.py
+   ✓ Loaded models from product.py
+   ✓ Loaded models from recipe.py
+   ✓ Loaded models from reservation.py
+   ✓ Loaded models from role.py
+   ✓ Loaded models from statistics.py
+   ✓ Loaded models from subscription_tier.py
+   ✓ Loaded models from unit.py
+   ✓ Loaded models from user_preferences.py
+   ✓ Loaded models from user_role_assignment.py
+✅ 34 models imported dynamically
+📊 Found 40 existing tables
+🏗️  Creating any missing tables...
+✅ No new tables needed
+🔧 Checking for missing columns in existing tables...
+   📋 Table 'inventory_item' missing columns: is_perishable, shelf_life_days, is_archived, is_active, density, type, storage_amount, intermediate, storage_unit, created_by
+      ✅ Added column: is_perishable (BOOLEAN)
+      ✅ Added column: shelf_life_days (INTEGER)
+      ✅ Added column: is_archived (BOOLEAN)
+      ✅ Added column: is_active (BOOLEAN)
+      ✅ Added column: density (FLOAT)
+      ❌ Failed to add column type: (psycopg2.errors.FeatureNotSupported) cannot use column reference in DEFAULT expression
+
+[SQL: ALTER TABLE "inventory_item" ADD COLUMN "type" VARCHAR(32) NULL DEFAULT ingredient]
+(Background on this error at: https://sqlalche.me/e/20/tw8g)
+      ✅ Added column: storage_amount (FLOAT)
+      ✅ Added column: intermediate (BOOLEAN)
+      ✅ Added column: storage_unit (VARCHAR(32))
+      ✅ Added column: created_by (INTEGER)
+   📋 Table 'unit' missing columns: is_custom, is_mapped, is_active, created_at, type, base_unit, created_by
+      ✅ Added column: is_custom (BOOLEAN)
+      ✅ Added column: is_mapped (BOOLEAN)
+      ✅ Added column: is_active (BOOLEAN)
+      ✅ Added column: created_at (TIMESTAMP WITHOUT TIME ZONE)
+      ✅ Added column: type (VARCHAR(32))
+      ✅ Added column: base_unit (VARCHAR(64))
+      ✅ Added column: created_by (INTEGER)
+   📋 Table 'custom_unit_mapping' missing columns: created_by
+      ✅ Added column: created_by (INTEGER)
+   📋 Table 'reservation' missing columns: source, source_batch_id, sale_price, order_id, unit_cost, converted_at, source_fifo_id, customer, status, product_item_id, reservation_id, reserved_item_id, released_at, created_by
+      ❌ Failed to add column source: (psycopg2.errors.FeatureNotSupported) cannot use column reference in DEFAULT expression
+
+[SQL: ALTER TABLE "reservation" ADD COLUMN "source" VARCHAR(64) NULL DEFAULT shopify]
+(Background on this error at: https://sqlalche.me/e/20/tw8g)
+      ✅ Added column: source_batch_id (INTEGER)
+      ✅ Added column: sale_price (FLOAT)
+      ✅ Added column: order_id (VARCHAR(128))
+      ✅ Added column: unit_cost (FLOAT)
+      ✅ Added column: converted_at (TIMESTAMP WITHOUT TIME ZONE)
+      ✅ Added column: source_fifo_id (INTEGER)
+      ✅ Added column: customer (VARCHAR(128))
+      ❌ Failed to add column status: (psycopg2.errors.FeatureNotSupported) cannot use column reference in DEFAULT expression
+
+[SQL: ALTER TABLE "reservation" ADD COLUMN "status" VARCHAR(32) NULL DEFAULT active]
+(Background on this error at: https://sqlalche.me/e/20/tw8g)
+      ✅ Added column: product_item_id (INTEGER)
+      ✅ Added column: reservation_id (VARCHAR(128))
+      ✅ Added column: reserved_item_id (INTEGER)
+      ✅ Added column: released_at (TIMESTAMP WITHOUT TIME ZONE)
+      ✅ Added column: created_by (INTEGER)
+   📋 Table 'permission' missing columns: created_at, category, is_active
+      ✅ Added column: created_at (TIMESTAMP WITHOUT TIME ZONE)
+      ✅ Added column: category (VARCHAR(64))
+      ✅ Added column: is_active (BOOLEAN)
+   ⚠️  No model found for table: developer_role_permission
+   📋 Table 'developer_permission' missing columns: created_at, category, is_active
+      ✅ Added column: created_at (TIMESTAMP WITHOUT TIME ZONE)
+      ✅ Added column: category (VARCHAR(64))
+      ✅ Added column: is_active (BOOLEAN)
+   📋 Table 'batch_timer' missing columns: name, organization_id, status, duration_seconds, created_by
+      ✅ Added column: name (VARCHAR(128))
+      ✅ Added column: organization_id (INTEGER)
+      ❌ Failed to add column status: (psycopg2.errors.FeatureNotSupported) cannot use column reference in DEFAULT expression
+
+[SQL: ALTER TABLE "batch_timer" ADD COLUMN "status" VARCHAR(32) NULL DEFAULT active]
+(Background on this error at: https://sqlalche.me/e/20/tw8g)
+      ✅ Added column: duration_seconds (INTEGER)
+      ✅ Added column: created_by (INTEGER)
+   📋 Table 'user' missing columns: deleted_by, timezone, is_deleted, deleted_at, last_login
+      ✅ Added column: deleted_by (INTEGER)
+      ❌ Failed to add column timezone: (psycopg2.errors.FeatureNotSupported) cannot use column reference in DEFAULT expression
+
+[SQL: ALTER TABLE "user" ADD COLUMN "timezone" VARCHAR(64) NULL DEFAULT UTC]
+(Background on this error at: https://sqlalche.me/e/20/tw8g)
+      ✅ Added column: is_deleted (BOOLEAN)
+      ✅ Added column: deleted_at (TIMESTAMP WITHOUT TIME ZONE)
+      ✅ Added column: last_login (TIMESTAMP WITHOUT TIME ZONE)
+   📋 Table 'conversion_log' missing columns: ingredient_name, result, conversion_type, amount
+      ✅ Added column: ingredient_name (VARCHAR(128))
+      ✅ Added column: result (FLOAT)
+      ✅ Added column: conversion_type (VARCHAR(64))
+      ✅ Added column: amount (FLOAT)
+   📋 Table 'product_sku_history' missing columns: organization_id
+      ✅ Added column: organization_id (INTEGER)
+   📋 Table 'organization' missing columns: promo_code, referral_code, signup_source
+      ✅ Added column: promo_code (VARCHAR(32))
+      ✅ Added column: referral_code (VARCHAR(32))
+      ✅ Added column: signup_source (VARCHAR(64))
+   ✅ Table 'user_role_assignment' schema is up to date
+   📋 Table 'extra_batch_container' missing columns: reason, fill_unit, quantity_used, container_quantity, container_id, organization_id, cost_each, fill_quantity
+      ❌ Failed to add column reason: (psycopg2.errors.FeatureNotSupported) cannot use column reference in DEFAULT expression
+
+[SQL: ALTER TABLE "extra_batch_container" ADD COLUMN "reason" VARCHAR(20) NULL DEFAULT extra_yield]
+(Background on this error at: https://sqlalche.me/e/20/tw8g)
+      ✅ Added column: fill_unit (VARCHAR(32))
+      ✅ Added column: quantity_used (INTEGER)
+      ✅ Added column: container_quantity (INTEGER)
+      ✅ Added column: container_id (INTEGER)
+      ✅ Added column: organization_id (INTEGER)
+      ✅ Added column: cost_each (FLOAT)
+      ✅ Added column: fill_quantity (FLOAT)
+   📋 Table 'recipe' missing columns: predicted_yield_unit, is_locked, predicted_yield, allowed_containers, parent_id, qr_image, label_prefix
+      ❌ Failed to add column predicted_yield_unit: (psycopg2.errors.FeatureNotSupported) cannot use column reference in DEFAULT expression
+
+[SQL: ALTER TABLE "recipe" ADD COLUMN "predicted_yield_unit" VARCHAR(50) NULL DEFAULT oz]
+(Background on this error at: https://sqlalche.me/e/20/tw8g)
+      ✅ Added column: is_locked (BOOLEAN)
+      ✅ Added column: predicted_yield (FLOAT)
+      ✅ Added column: allowed_containers (BYTEA)
+      ✅ Added column: parent_id (INTEGER)
+      ✅ Added column: qr_image (VARCHAR(128))
+      ✅ Added column: label_prefix (VARCHAR(8))
+   ✅ Table 'batch' schema is up to date
+   ✅ Table 'billing_snapshots' schema is up to date
+   📋 Table 'batch_inventory_log' missing columns: action, new_stock, quantity_change, old_stock, organization_id
+      ✅ Added column: action (VARCHAR(32))
+      ✅ Added column: new_stock (FLOAT)
+      ✅ Added column: quantity_change (FLOAT)
+      ✅ Added column: old_stock (FLOAT)
+      ✅ Added column: organization_id (INTEGER)
+   📋 Table 'batch_ingredient' missing columns: organization_id
+      ✅ Added column: organization_id (INTEGER)
+   📋 Table 'organization_stats' missing columns: total_inventory_value, failed_batches, total_products, active_users, total_products_made, created_at, last_updated, cancelled_batches, completed_batches
+      ✅ Added column: total_inventory_value (FLOAT)
+      ✅ Added column: failed_batches (INTEGER)
+      ✅ Added column: total_products (INTEGER)
+      ✅ Added column: active_users (INTEGER)
+      ✅ Added column: total_products_made (FLOAT)
+      ✅ Added column: created_at (TIMESTAMP WITHOUT TIME ZONE)
+      ✅ Added column: last_updated (TIMESTAMP WITHOUT TIME ZONE)
+      ✅ Added column: cancelled_batches (INTEGER)
+      ✅ Added column: completed_batches (INTEGER)
+   📋 Table 'developer_role' missing columns: created_at, category, is_active
+      ✅ Added column: created_at (TIMESTAMP WITHOUT TIME ZONE)
+      ❌ Failed to add column category: (psycopg2.errors.FeatureNotSupported) cannot use column reference in DEFAULT expression
+
+[SQL: ALTER TABLE "developer_role" ADD COLUMN "category" VARCHAR(32) NULL DEFAULT developer]
+(Background on this error at: https://sqlalche.me/e/20/tw8g)
+      ✅ Added column: is_active (BOOLEAN)
+   📋 Table 'recipe_ingredient' missing columns: order_position, organization_id
+      ✅ Added column: order_position (INTEGER)
+      ✅ Added column: organization_id (INTEGER)
+   📋 Table 'batch_container' missing columns: fill_unit, quantity_used, container_quantity, container_id, organization_id, cost_each, fill_quantity
+      ✅ Added column: fill_unit (VARCHAR(32))
+      ✅ Added column: quantity_used (INTEGER)
+      ✅ Added column: container_quantity (INTEGER)
+      ✅ Added column: container_id (INTEGER)
+      ✅ Added column: organization_id (INTEGER)
+      ✅ Added column: cost_each (FLOAT)
+      ✅ Added column: fill_quantity (FLOAT)
+   📋 Table 'extra_batch_ingredient' missing columns: organization_id
+      ✅ Added column: organization_id (INTEGER)
+   ✅ Table 'product_sku' schema is up to date
+   ⚠️  No model found for table: alembic_version
+   ⚠️  No model found for table: billing_snapshot
+   ⚠️  No model found for table: pricing_snapshot
+   📋 Table 'subscription_tier' missing columns: is_customer_facing, trial_start, is_available, last_synced, fallback_price_monthly, cancel_at_period_end, stripe_lookup_key, requires_stripe_billing, stripe_price_monthly, trial_end, stripe_price_yearly, status, current_period_start, fallback_price_yearly, stripe_subscription_id, stripe_customer_id, current_period_end, user_limit, next_billing_date
+      ✅ Added column: is_customer_facing (BOOLEAN)
+      ✅ Added column: trial_start (TIMESTAMP WITHOUT TIME ZONE)
+      ✅ Added column: is_available (BOOLEAN)
+      ✅ Added column: last_synced (TIMESTAMP WITHOUT TIME ZONE)
+      ❌ Failed to add column fallback_price_monthly: (psycopg2.errors.UndefinedParameter) there is no parameter $0
+
+[SQL: ALTER TABLE "subscription_tier" ADD COLUMN "fallback_price_monthly" VARCHAR(32) NULL DEFAULT $0]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+      ✅ Added column: cancel_at_period_end (BOOLEAN)
+      ✅ Added column: stripe_lookup_key (VARCHAR(128))
+      ✅ Added column: requires_stripe_billing (BOOLEAN)
+      ✅ Added column: stripe_price_monthly (VARCHAR(32))
+      ✅ Added column: trial_end (TIMESTAMP WITHOUT TIME ZONE)
+      ✅ Added column: stripe_price_yearly (VARCHAR(32))
+      ❌ Failed to add column status: (psycopg2.errors.FeatureNotSupported) cannot use column reference in DEFAULT expression
+
+[SQL: ALTER TABLE "subscription_tier" ADD COLUMN "status" VARCHAR(32) NULL DEFAULT inactive]
+(Background on this error at: https://sqlalche.me/e/20/tw8g)
+      ✅ Added column: current_period_start (TIMESTAMP WITHOUT TIME ZONE)
+      ❌ Failed to add column fallback_price_yearly: (psycopg2.errors.UndefinedParameter) there is no parameter $0
+
+[SQL: ALTER TABLE "subscription_tier" ADD COLUMN "fallback_price_yearly" VARCHAR(32) NULL DEFAULT $0]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+      ✅ Added column: stripe_subscription_id (VARCHAR(128))
+      ✅ Added column: stripe_customer_id (VARCHAR(128))
+      ✅ Added column: current_period_end (TIMESTAMP WITHOUT TIME ZONE)
+      ✅ Added column: user_limit (INTEGER)
+      ✅ Added column: next_billing_date (TIMESTAMP WITHOUT TIME ZONE)
+   ⚠️  No model found for table: subscription_tier_permission
+   📋 Table 'tag' missing columns: is_active, created_at, created_by, description
+      ✅ Added column: is_active (BOOLEAN)
+      ✅ Added column: created_at (TIMESTAMP WITHOUT TIME ZONE)
+      ✅ Added column: created_by (INTEGER)
+      ✅ Added column: description (TEXT)
+   📋 Table 'user_preferences' missing columns: show_batch_alerts, show_timer_alerts, show_alert_badges, show_expiration_alerts, organization_id, show_quick_actions, compact_view, max_dashboard_alerts, show_low_stock_alerts, show_fault_alerts, created_at, updated_at
+      ✅ Added column: show_batch_alerts (BOOLEAN)
+      ✅ Added column: show_timer_alerts (BOOLEAN)
+      ✅ Added column: show_alert_badges (BOOLEAN)
+      ✅ Added column: show_expiration_alerts (BOOLEAN)
+      ✅ Added column: organization_id (INTEGER)
+      ✅ Added column: show_quick_actions (BOOLEAN)
+      ✅ Added column: compact_view (BOOLEAN)
+      ✅ Added column: max_dashboard_alerts (INTEGER)
+      ✅ Added column: show_low_stock_alerts (BOOLEAN)
+      ✅ Added column: show_fault_alerts (BOOLEAN)
+      ✅ Added column: created_at (TIMESTAMP WITHOUT TIME ZONE)
+      ✅ Added column: updated_at (TIMESTAMP WITHOUT TIME ZONE)
+   📋 Table 'product' missing columns: etsy_shop_section_id, low_stock_threshold, is_discontinued, subcategory, created_by, base_unit, shopify_product_id
+      ✅ Added column: etsy_shop_section_id (VARCHAR(64))
+      ✅ Added column: low_stock_threshold (FLOAT)
+      ✅ Added column: is_discontinued (BOOLEAN)
+      ✅ Added column: subcategory (VARCHAR(64))
+      ✅ Added column: created_by (INTEGER)
+      ❌ Failed to add column base_unit: (psycopg2.errors.FeatureNotSupported) cannot use column reference in DEFAULT expression
+
+[SQL: ALTER TABLE "product" ADD COLUMN "base_unit" VARCHAR(32) NULL DEFAULT g]
+(Background on this error at: https://sqlalche.me/e/20/tw8g)
+      ✅ Added column: shopify_product_id (VARCHAR(64))
+   📋 Table 'user_stats' missing columns: failed_batches, products_created, total_recipes, inventory_adjustments, total_products_made, organization_id, created_at, last_updated, cancelled_batches, inventory_items_created, recipes_created, total_batches, completed_batches
+      ✅ Added column: failed_batches (INTEGER)
+      ✅ Added column: products_created (INTEGER)
+      ✅ Added column: total_recipes (INTEGER)
+      ✅ Added column: inventory_adjustments (INTEGER)
+      ✅ Added column: total_products_made (FLOAT)
+      ✅ Added column: organization_id (INTEGER)
+      ✅ Added column: created_at (TIMESTAMP WITHOUT TIME ZONE)
+      ✅ Added column: last_updated (TIMESTAMP WITHOUT TIME ZONE)
+      ✅ Added column: cancelled_batches (INTEGER)
+      ✅ Added column: inventory_items_created (INTEGER)
+      ✅ Added column: recipes_created (INTEGER)
+      ✅ Added column: total_batches (INTEGER)
+      ✅ Added column: completed_batches (INTEGER)
+   ⚠️  No model found for table: role_permission
+   📋 Table 'product_variant' missing columns: scent, material, organization_id, created_by, color
+      ✅ Added column: scent (VARCHAR(64))
+      ✅ Added column: material (VARCHAR(64))
+      ✅ Added column: organization_id (INTEGER)
+      ✅ Added column: created_by (INTEGER)
+      ✅ Added column: color (VARCHAR(32))
+   📋 Table 'inventory_history' missing columns: note, expiration_date, is_perishable, shelf_life_days, fifo_reference_id, quantity_used, unit_cost, organization_id, remaining_quantity, used_for_batch_id, created_by, fifo_code
+      ✅ Added column: note (TEXT)
+      ✅ Added column: expiration_date (TIMESTAMP WITHOUT TIME ZONE)
+      ✅ Added column: is_perishable (BOOLEAN)
+      ✅ Added column: shelf_life_days (INTEGER)
+      ✅ Added column: fifo_reference_id (INTEGER)
+      ✅ Added column: quantity_used (FLOAT)
+      ✅ Added column: unit_cost (FLOAT)
+      ✅ Added column: organization_id (INTEGER)
+      ✅ Added column: remaining_quantity (FLOAT)
+      ✅ Added column: used_for_batch_id (INTEGER)
+      ✅ Added column: created_by (INTEGER)
+      ✅ Added column: fifo_code (VARCHAR(32))
+   📋 Table 'ingredient_category' missing columns: description, is_active, created_at, default_density, created_by, color
+      ✅ Added column: description (TEXT)
+      ✅ Added column: is_active (BOOLEAN)
+      ✅ Added column: created_at (TIMESTAMP WITHOUT TIME ZONE)
+      ✅ Added column: default_density (FLOAT)
+      ✅ Added column: created_by (INTEGER)
+      ❌ Failed to add column color: (psycopg2.errors.SyntaxError) trailing junk after numeric literal at or near "6c757d"
+LINE 1: ...category" ADD COLUMN "color" VARCHAR(7) NULL DEFAULT #6c757d
+                                                                 ^
+
+[SQL: ALTER TABLE "ingredient_category" ADD COLUMN "color" VARCHAR(7) NULL DEFAULT #6c757d]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+   📋 Table 'role' missing columns: created_by, is_active
+      ✅ Added column: created_by (INTEGER)
+      ✅ Added column: is_active (BOOLEAN)
+   ✅ Table 'pricing_snapshots' schema is up to date
+📊 Total tables: 40
+📊 Total columns added: 166
+✅ Database schema safely synced to match models!
+🔄 Note: This only adds missing tables/columns - existing data is preserved
+⚠️  New columns are added as nullable for safety
+render@srv-d21alungi27c73dn1440-6c4f66c7d-pkql4:~/project/src$ 
