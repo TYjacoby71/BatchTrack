@@ -1,4 +1,3 @@
-
 """restore timestamp columns
 
 Revision ID: restore_timestamps  
@@ -37,9 +36,9 @@ def column_exists(table_name, column_name):
 
 def upgrade():
     print("=== Restoring and standardizing timestamp columns ===")
-    
+
     bind = op.get_bind()
-    
+
     # Tables that should have updated_at but might be missing it
     tables_needing_updated_at = [
         'organization',
@@ -51,14 +50,14 @@ def upgrade():
         'permission',
         'developer_permission'
     ]
-    
+
     for table_name in tables_needing_updated_at:
         if table_exists(table_name):
             if not column_exists(table_name, 'updated_at'):
                 print(f"Adding updated_at to {table_name}")
                 with op.batch_alter_table(table_name, schema=None) as batch_op:
                     batch_op.add_column(sa.Column('updated_at', sa.DateTime(), nullable=True))
-                    
+
                 # Set initial values to created_at if available, or current timestamp
                 if column_exists(table_name, 'created_at'):
                     if table_name == 'role' or table_name == 'user':
@@ -69,20 +68,24 @@ def upgrade():
                 else:
                     # Use current timestamp as fallback
                     if table_name == 'role' or table_name == 'user':
-                        bind.execute(text(f'UPDATE "{table_name}" SET updated_at = datetime("now") WHERE updated_at IS NULL'))
+                        # Set initial values for existing records - database agnostic
+                        from sqlalchemy import func
+                        bind.execute(text(f'UPDATE "{table_name}" SET updated_at = CURRENT_TIMESTAMP WHERE updated_at IS NULL'))
                     else:
-                        bind.execute(text(f'UPDATE {table_name} SET updated_at = datetime("now") WHERE updated_at IS NULL'))
+                        # Set initial values for existing records - database agnostic
+                        from sqlalchemy import func
+                        bind.execute(text(f'UPDATE {table_name} SET updated_at = CURRENT_TIMESTAMP WHERE updated_at IS NULL'))
             else:
                 print(f"✅ {table_name}.updated_at already exists")
         else:
             print(f"⚠️  Table {table_name} doesn't exist, skipping")
-    
+
     print("✅ Timestamp columns restored and standardized")
 
 
 def downgrade():
     print("=== Removing restored timestamp columns ===")
-    
+
     tables_to_clean = [
         'developer_permission',
         'permission',
@@ -93,11 +96,11 @@ def downgrade():
         'role',
         'organization'
     ]
-    
+
     for table_name in tables_to_clean:
         if table_exists(table_name) and column_exists(table_name, 'updated_at'):
             print(f"Removing updated_at from {table_name}")
             with op.batch_alter_table(table_name, schema=None) as batch_op:
                 batch_op.drop_column('updated_at')
-    
+
     print("✅ Timestamp columns removed")
