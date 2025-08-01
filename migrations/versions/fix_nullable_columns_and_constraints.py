@@ -45,32 +45,32 @@ def upgrade():
     # Fix inventory_item.type - set default value for existing NULL rows
     if table_exists('inventory_item') and column_exists('inventory_item', 'type'):
         print("Updating inventory_item.type NULL values...")
-        bind.execute(text("UPDATE inventory_item SET type = 'ingredient' WHERE type IS NULL"))
+        bind.execute(text('UPDATE inventory_item SET type = :default WHERE type IS NULL'), {"default": "ingredient"})
 
     # Fix user.user_type - set default value for existing NULL rows  
     if table_exists('user') and column_exists('user', 'user_type'):
         print("Updating user.user_type NULL values...")
-        bind.execute(text("UPDATE user SET user_type = 'customer' WHERE user_type IS NULL"))
+        bind.execute(text('UPDATE "user" SET user_type = :default WHERE user_type IS NULL'), {"default": "customer"})
 
     # Fix organization.is_active - set default value for existing NULL rows
     if table_exists('organization') and column_exists('organization', 'is_active'):
         print("Updating organization.is_active NULL values...")
-        bind.execute(text("UPDATE organization SET is_active = 1 WHERE is_active IS NULL"))
+        bind.execute(text('UPDATE organization SET is_active = :default WHERE is_active IS NULL'), {"default": True})
 
     # Fix user.is_active - set default value for existing NULL rows
     if table_exists('user') and column_exists('user', 'is_active'):
         print("Updating user.is_active NULL values...")
-        bind.execute(text("UPDATE user SET is_active = 1 WHERE is_active IS NULL"))
+        bind.execute(text('UPDATE "user" SET is_active = :default WHERE is_active IS NULL'), {"default": True})
 
     # Fix user.is_organization_owner - set default value for existing NULL rows
     if table_exists('user') and column_exists('user', 'is_organization_owner'):
         print("Updating user.is_organization_owner NULL values...")
-        bind.execute(text("UPDATE user SET is_organization_owner = 0 WHERE is_organization_owner IS NULL"))
+        bind.execute(text('UPDATE "user" SET is_organization_owner = :default WHERE is_organization_owner IS NULL'), {"default": False})
 
     # Fix role.is_system_role - set default value for existing NULL rows
     if table_exists('role') and column_exists('role', 'is_system_role'):
         print("Updating role.is_system_role NULL values...")
-        bind.execute(text("UPDATE role SET is_system_role = 0 WHERE is_system_role IS NULL"))
+        bind.execute(text('UPDATE "role" SET is_system_role = :default WHERE is_system_role IS NULL'), {"default": False})
 
     # Fix user_role_assignment.is_active - set default value for existing NULL rows
     if table_exists('user_role_assignment') and column_exists('user_role_assignment', 'is_active'):
