@@ -1,0 +1,74 @@
+UG: Billing blueprint imported successfully: <Blueprint 'billing'>
+DEBUG: Billing blueprint name: billing
+DEBUG: Billing blueprint url_prefix: /billing
+DEBUG: Billing blueprint registered successfully
+Registered API routes: ['/api/reservations/create', '/api/reservations/release/<int:reservation_id>', '/api/reservations/convert-to-sale/<int:reservation_id>', '/api/reservations/expire-old', '/api/products/<int:product_id>/variants', '/api/dismiss-alert', '/api/dashboard-alerts', '/api/server-time', '/api/server-time', '/api/dismiss-alert', '/api/dashboard-alerts', '/api/check-stock', '/api/categories', '/api/ingredient/<int:id>/density', '/api/debug-containers', '/api/available-containers/<int:recipe_id>', '/api/containers/available', '/api/batches/<int:batch_id>/containers', '/api/batches/<int:batch_id>/containers/<int:container_id>', '/api/batches/<int:batch_id>/containers/<int:container_id>/adjust', '/api/api/fifo-details/<int:inventory_id>', '/api/api/batch-inventory-summary/<int:batch_id>', '/api/api/reservations/create', '/api/api/reservations/release/<int:reservation_id>', '/api/api/reservations/convert-to-sale/<int:reservation_id>', '/api/api/reservations/expire-old', '/api/dashboard-alerts', '/api/dismiss-alert', '/api/units', '/api/convert-units']
+Container routes found: ['/settings/bulk-update-containers', '/api/debug-containers', '/api/available-containers/<int:recipe_id>', '/api/containers/available', '/api/batches/<int:batch_id>/containers', '/api/batches/<int:batch_id>/containers/<int:container_id>', '/api/batches/<int:batch_id>/containers/<int:container_id>/adjust', '/debug-containers', '/available-containers/<int:recipe_id>', '/containers/available', '/batches/<int:batch_id>/containers', '/batches/<int:batch_id>/containers/<int:container_id>', '/batches/<int:batch_id>/containers/<int:container_id>/adjust']
+Billing routes found: ['/billing/reconciliation-needed', '/billing/reconcile-to-free', '/billing/upgrade', '/billing/checkout/<tier>/<billing_cycle>', '/billing/checkout/<tier>', '/billing/customer-portal', '/billing/cancel-subscription', '/billing/webhooks/stripe', '/billing/complete-signup-from-stripe', '/billing/debug']
+Billing endpoints: [('/billing/reconciliation-needed', 'billing.reconciliation_needed'), ('/billing/reconcile-to-free', 'billing.reconcile_to_free'), ('/billing/upgrade', 'billing.upgrade'), ('/billing/checkout/<tier>/<billing_cycle>', 'billing.checkout'), ('/billing/checkout/<tier>', 'billing.checkout'), ('/billing/customer-portal', 'billing.customer_portal'), ('/billing/cancel-subscription', 'billing.cancel_subscription'), ('/billing/webhooks/stripe', 'billing.stripe_webhook'), ('/billing/complete-signup-from-stripe', 'billing.complete_signup_from_stripe'), ('/billing/debug', 'billing.debug_billing')]
+[2025-08-01 20:59:02,185] INFO in unit_utils: BatchTrack startup
+INFO  [alembic.env] Imported model module: app.models.batch
+INFO  [alembic.env] Imported model module: app.models.billing_snapshot
+INFO  [alembic.env] Imported model module: app.models.category
+INFO  [alembic.env] Imported model module: app.models.developer_permission
+INFO  [alembic.env] Imported model module: app.models.developer_role
+INFO  [alembic.env] Imported model module: app.models.inventory
+INFO  [alembic.env] Imported model module: app.models.mixins
+INFO  [alembic.env] Imported model module: app.models.models
+INFO  [alembic.env] Imported model module: app.models.permission
+INFO  [alembic.env] Imported model module: app.models.pricing_snapshot
+INFO  [alembic.env] Imported model module: app.models.product
+INFO  [alembic.env] Imported model module: app.models.recipe
+INFO  [alembic.env] Imported model module: app.models.reservation
+INFO  [alembic.env] Imported model module: app.models.role
+INFO  [alembic.env] Imported model module: app.models.statistics
+INFO  [alembic.env] Imported model module: app.models.subscription_tier
+INFO  [alembic.env] Imported model module: app.models.unit
+INFO  [alembic.env] Imported model module: app.models.user_preferences
+INFO  [alembic.env] Imported model module: app.models.user_role_assignment
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+INFO  [alembic.runtime.migration] Running downgrade fix_password_hash_length -> add_ingredient_category_updated_at, fix password hash column length
+=== Reverting password_hash column length ===
+✅ Password hash column length reverted to 120
+INFO  [alembic.runtime.migration] Running downgrade add_ingredient_category_updated_at -> 05fab1341ac5, add updated_at to ingredient_category table
+=== Removing updated_at column from ingredient_category ===
+Removing updated_at from ingredient_category
+✅ Downgrade completed
+INFO  [alembic.runtime.migration] Running downgrade 05fab1341ac5 -> be3cf5daaa4f, restore_timestamps, merge timestamp and unit_type migrations
+INFO  [alembic.runtime.migration] Running downgrade be3cf5daaa4f -> fix_nullable_constraints, add unit_type column to unit table
+=== Reverting unit_type column changes ===
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
+    cursor.execute(statement, parameters)
+sqlite3.OperationalError: duplicate column name: updated_at
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/bin/flask", line 8, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/cli.py", line 1129, in main
+    cli.main()
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/click/core.py", line 1082, in main
+    rv = self.invoke(ctx)
+         ^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/click/core.py", line 1697, in invoke
+    return _process_result(sub_ctx.command.invoke(sub_ctx))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/click/core.py", line 1697, in invoke
+    return _process_result(sub_ctx.command.invoke(sub_ctx))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/click/core.py", line 1443, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/click/core.py", line 788, in invoke
+    return __callback(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/click/decorators.py", line 33, in new_func
+    return f(get_current_context(), *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/cli.py", line 400, in decorator
