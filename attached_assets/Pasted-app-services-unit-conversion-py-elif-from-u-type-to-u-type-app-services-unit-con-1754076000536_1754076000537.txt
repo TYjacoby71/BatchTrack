@@ -1,0 +1,20 @@
+app/services/unit_conversion.py:                elif from_u.type == to_u.type:
+app/services/unit_conversion.py:                elif {'volume', 'weight'} <= {from_u.type, to_u.type}:
+app/services/unit_conversion.py:                    if from_u.type == 'volume':
+app/services/unit_conversion.py:                        raise ValueError(f"Cannot convert {from_unit} ({from_u.type}) to {to_unit} ({to_u.type}) without a custom mapping. Go to Unit Manager to create a mapping.")
+app/services/unit_conversion.py:                    raise ValueError(f"Cannot convert {from_unit} ({from_u.type}) to {to_unit} ({to_u.type}) without a custom mapping. Go to Unit Manager to create a mapping.")
+app/utils/unit_utils.py:        units = query.order_by(Unit.type, Unit.name).all()
+app/utils/unit_utils.py:    if from_unit.type == to_unit.type:
+app/utils/unit_utils.py:    if {'volume', 'weight'} <= {from_unit.type, to_unit.type}:
+app/blueprints/conversion/routes.py:            if custom_unit_obj.type != comparable_unit_obj.type:
+app/blueprints/conversion/routes.py:        if unit.type not in units_by_type:
+app/blueprints/conversion/routes.py:            units_by_type[unit.type] = []
+app/blueprints/conversion/routes.py:        units_by_type[unit.type].append(unit)
+app/blueprints/conversion/routes.py:    if from_unit.type == to_unit.type:
+app/blueprints/conversion/routes.py:    if {'volume', 'weight'} <= {from_unit.type, to_unit.type}:
+app/blueprints/conversion/routes.py:    if from_unit.type != to_unit.type:
+app/blueprints/conversion/routes.py:        if {'volume', 'weight'} <= {from_unit.type, to_unit.type}:
+app/templates/conversion/units.html:                  {% if from_unit_obj and to_unit_obj and from_unit_obj.type != to_unit_obj.type %}
+app/templates/conversion/units.html:              <small class="text-muted">({{ from_unit_obj.type }})</small>
+app/templates/conversion/units.html:              <small class="text-muted">({{ to_unit_obj.type }})</small>
+app/templates/conversion/units.html:            {% if from_unit_obj and to_unit_obj and from_unit_obj.type != to_unit_obj.type %}
