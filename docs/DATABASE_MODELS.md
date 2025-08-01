@@ -205,12 +205,36 @@ else:
     data = Model.for_organization(current_user.organization_id)
 ```
 
+## Timestamp Standards
+
+### TimestampMixin Implementation
+All models that need timestamps should use the standardized `TimestampMixin`:
+
+```python
+from .mixins import TimestampMixin
+
+class MyModel(TimestampMixin, db.Model):
+    # Model fields here
+    pass
+```
+
+### TimezoneUtils Requirement
+- **ALWAYS** use `TimezoneUtils.utc_now()` for timestamp defaults
+- **NEVER** use `datetime.utcnow()` directly
+- This ensures consistent timezone handling across the application
+
+### Models Without Timestamps
+Some models intentionally exclude timestamps:
+- `IngredientCategory` - Static reference data
+- `Unit` - Global system units
+- System configuration models
+
 ## Migration Guidelines
 
 ### Adding New Models
 1. Include `organization_id` for scoped models
 2. Add appropriate indexes for performance
-3. Include audit fields (`created_at`, `updated_at`)
+3. Use `TimestampMixin` for audit fields when needed
 4. Consider soft delete with `is_active`
 
 ### Modifying Existing Models
