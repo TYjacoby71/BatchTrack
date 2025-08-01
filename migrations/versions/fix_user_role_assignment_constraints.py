@@ -1,7 +1,7 @@
 
 """fix user_role_assignment constraints to allow NULL role_id for developer roles
 
-Revision ID: fix_user_role_assignment_constraints
+Revision ID: fix_user_role_constraints
 Revises: fix_password_hash_length
 Create Date: 2025-02-01 03:00:00.000000
 
@@ -12,7 +12,7 @@ from sqlalchemy import inspect
 
 
 # revision identifiers, used by Alembic.
-revision = 'fix_user_role_assignment_constraints'
+revision = 'fix_user_role_constraints'
 down_revision = 'fix_password_hash_length'
 branch_labels = None
 depends_on = None
