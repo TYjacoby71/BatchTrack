@@ -12,7 +12,7 @@ from sqlalchemy import inspect
 
 # revision identifiers, used by Alembic.
 revision = 'add_missing_table_schemas'
-down_revision = 'fix_user_role_constraints'
+down_revision = 'add_missing_created_at_columns'
 branch_labels = None
 depends_on = None
 
