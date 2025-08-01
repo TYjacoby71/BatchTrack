@@ -59,32 +59,42 @@ def seed_users_and_organization():
 
     # 1. Create developer user (system-wide, no organization)
     if not User.query.filter_by(username='dev').first():
-        developer_user = User(
-            username='dev',
-            password_hash=generate_password_hash('dev123'),
-            first_name='System',
-            last_name='Developer',
-            email='dev@batchtrack.com',
-            phone='000-000-0000',
-            organization_id=None,  # Developers exist outside organizations - NEVER set org_id
-            user_type='developer',  # Must be 'developer' type
-            is_active=True
-        )
-        db.session.add(developer_user)
-        db.session.flush()
-
-        # Assign system_admin developer role
-        if system_admin_dev_role:
-            assignment = UserRoleAssignment(
-                user_id=developer_user.id,
-                developer_role_id=system_admin_dev_role.id,
-                organization_id=None,
+        try:
+            developer_user = User(
+                username='dev',
+                password_hash=generate_password_hash('dev123'),
+                first_name='System',
+                last_name='Developer',
+                email='dev@batchtrack.com',
+                phone='000-000-0000',
+                organization_id=None,  # Developers exist outside organizations - NEVER set org_id
+                user_type='developer',  # Must be 'developer' type
                 is_active=True
             )
-            db.session.add(assignment)
-            print(f"✅ Created developer user: dev/dev123 with system_admin role")
-        else:
-            print(f"✅ Created developer user: dev/dev123 (no system_admin role found)")
+            db.session.add(developer_user)
+            db.session.flush()
+
+            # Assign system_admin developer role
+            if system_admin_dev_role:
+                try:
+                    assignment = UserRoleAssignment(
+                        user_id=developer_user.id,
+                        developer_role_id=system_admin_dev_role.id,
+                        role_id=None,  # Explicitly set to None for developer roles
+                        organization_id=None,
+                        is_active=True
+                    )
+                    db.session.add(assignment)
+                    db.session.flush()  # Flush to catch constraint errors early
+                    print(f"✅ Created developer user: dev/dev123 with system_admin role")
+                except Exception as role_error:
+                    print(f"⚠️  Developer role assignment failed: {role_error}")
+                    print(f"✅ Created developer user: dev/dev123 (role assignment failed)")
+            else:
+                print(f"✅ Created developer user: dev/dev123 (no system_admin role found)")
+        except Exception as user_error:
+            print(f"❌ Failed to create developer user: {user_error}")
+            db.session.rollback()
     else:
         print(f"ℹ️  Developer user 'dev' already exists")
 
@@ -107,12 +117,12 @@ def seed_users_and_organization():
 
         # Assign organization owner role
         admin_user.assign_role(org_owner_role)
-        
+
         # Set organization contact email to admin user's email
         if not org.contact_email:
             org.contact_email = admin_user.email
             print(f"✅ Set organization contact_email to: {admin_user.email}")
-        
+
         print(f"✅ Created admin user: admin/admin (organization owner)")
     else:
         admin_user = User.query.filter_by(username='admin').first()
