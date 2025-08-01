@@ -8,7 +8,7 @@ class Unit(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), nullable=False)
     symbol = db.Column(db.String(16), nullable=False)
-    type = db.Column(db.String(32), nullable=False)  # weight, volume, count, etc.
+    unit_type = db.Column(db.String(32), nullable=False)  # weight, volume, count, etc.
     base_unit = db.Column(db.String(64), nullable=True)  # For conversions
     conversion_factor = db.Column(db.Float, nullable=True)  # To base unit
     is_active = db.Column(db.Boolean, default=True)
