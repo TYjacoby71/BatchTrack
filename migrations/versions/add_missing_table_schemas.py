@@ -1,4 +1,3 @@
-
 """add missing table schemas for billing_snapshot, pricing_snapshot, and statistics
 
 Revision ID: add_missing_table_schemas
@@ -26,16 +25,22 @@ def table_exists(table_name):
 
 
 def upgrade():
-    """Add missing table schemas to match model definitions"""
     print("=== Adding missing table schemas ===")
-    
-    # Drop and recreate billing_snapshots table to match BillingSnapshot model
-    if table_exists('billing_snapshot'):
-        print("   Dropping existing billing_snapshot table...")
-        op.drop_table('billing_snapshot')
-    
-    print("   Creating billing_snapshots table...")
-    op.create_table('billing_snapshots',
+
+    # Check if tables exist before creating them
+    from alembic import op
+    import sqlalchemy as sa
+    from sqlalchemy import inspect
+
+    # Get database connection and inspector
+    connection = op.get_bind()
+    inspector = inspect(connection)
+    existing_tables = inspector.get_table_names()
+
+    # Create billing_snapshots table only if it doesn't exist
+    if 'billing_snapshots' not in existing_tables:
+        print("   Creating billing_snapshots table...")
+        op.create_table('billing_snapshots',
         sa.Column('id', sa.Integer(), nullable=False),
         sa.Column('organization_id', sa.Integer(), nullable=True),
         sa.Column('confirmed_tier', sa.String(length=32), nullable=True),
@@ -51,7 +56,9 @@ def upgrade():
         sa.Column('sync_source', sa.String(length=64), nullable=True),
         sa.PrimaryKeyConstraint('id')
     )
-    
+    else:
+        print("   billing_snapshots table already exists - skipping")
+
     # Add foreign key constraint separately if organization table exists
     if table_exists('organization'):
         try:
@@ -64,14 +71,11 @@ def upgrade():
             )
         except Exception as e:
             print(f"   Warning: Could not create billing_snapshots organization FK: {e}")
-    
-    # Drop and recreate pricing_snapshots table to match PricingSnapshot model
-    if table_exists('pricing_snapshot'):
-        print("   Dropping existing pricing_snapshot table...")
-        op.drop_table('pricing_snapshot')
-    
-    print("   Creating pricing_snapshots table...")
-    op.create_table('pricing_snapshots',
+
+    # Create pricing_snapshots table only if it doesn't exist
+    if 'pricing_snapshots' not in existing_tables:
+        print("   Creating pricing_snapshots table...")
+        op.create_table('pricing_snapshots',
         sa.Column('id', sa.Integer(), nullable=False),
         sa.Column('stripe_price_id', sa.String(length=128), nullable=True),
         sa.Column('stripe_lookup_key', sa.String(length=64), nullable=True),
@@ -89,7 +93,9 @@ def upgrade():
         sa.Column('is_active', sa.Boolean(), nullable=True),
         sa.PrimaryKeyConstraint('id')
     )
-    
+    else:
+        print("   pricing_snapshots table already exists - skipping")
+
     # Create user_stats table for UserStats model
     if not table_exists('user_stats'):
         print("   Creating user_stats table...")
@@ -112,7 +118,7 @@ def upgrade():
             sa.Column('updated_at', sa.DateTime(), nullable=True),
             sa.PrimaryKeyConstraint('id')
         )
-        
+
         # Add foreign key constraints separately if tables exist
         if table_exists('organization'):
             try:
@@ -125,7 +131,7 @@ def upgrade():
                 )
             except Exception as e:
                 print(f"   Warning: Could not create user_stats organization FK: {e}")
-                
+
         if table_exists('user'):
             try:
                 op.create_foreign_key(
@@ -137,7 +143,9 @@ def upgrade():
                 )
             except Exception as e:
                 print(f"   Warning: Could not create user_stats user FK: {e}")
-    
+    else:
+        print("   statistics table already exists - skipping")
+
     # organization_stats table already exists from previous migration, just add timestamps if needed
     if table_exists('organization_stats'):
         print("   Adding timestamps to existing organization_stats table...")
@@ -145,35 +153,35 @@ def upgrade():
         bind = op.get_bind()
         inspector = inspect(bind)
         columns = [col['name'] for col in inspector.get_columns('organization_stats')]
-        
+
         with op.batch_alter_table('organization_stats', schema=None) as batch_op:
             if 'created_at' not in columns:
                 batch_op.add_column(sa.Column('created_at', sa.DateTime(), nullable=True))
             if 'updated_at' not in columns:
                 batch_op.add_column(sa.Column('updated_at', sa.DateTime(), nullable=True))
-    
-    print("✅ Migration completed: Added missing table schemas with nullable columns")
+
+    print("✅ Missing table schemas processed successfully")
     print("⚠️  Note: Skipping ingredient_category as requested")
 
 
 def downgrade():
     """Remove the added tables"""
     print("=== Removing added table schemas ===")
-    
+
     # Drop the tables we created
     if table_exists('user_stats'):
         print("   Dropping user_stats table...")
         op.drop_table('user_stats')
-    
+
     if table_exists('pricing_snapshots'):
         print("   Dropping pricing_snapshots table...")
         op.drop_table('pricing_snapshots')
-    
+
     if table_exists('billing_snapshots'):
         print("   Dropping billing_snapshots table...")
         op.drop_table('billing_snapshots')
-    
+
     # Restore original tables if they existed (simplified recreation)
     print("   Note: Original table structures not restored - manual recreation required if needed")
-    
+
     print("✅ Downgrade completed")
