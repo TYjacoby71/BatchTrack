@@ -45,7 +45,7 @@ class ConversionEngine:
                     if start in visited:
                         return None
                     visited.add(start)
-                    
+
                     # Check direct mappings (both directions) with organization scoping
                     if current_user and current_user.is_authenticated and current_user.organization_id:
                         forward_mappings = CustomUnitMapping.query.filter_by(
@@ -60,7 +60,7 @@ class ConversionEngine:
                         # For unauthenticated users or developers, check all mappings
                         forward_mappings = CustomUnitMapping.query.filter_by(from_unit=start).all()
                         reverse_mappings = CustomUnitMapping.query.filter_by(to_unit=start).all()
-                    
+
                     # Try forward mappings
                     for mapping in forward_mappings:
                         if mapping.to_unit == end:
@@ -68,7 +68,7 @@ class ConversionEngine:
                         path = find_conversion_path(mapping.to_unit, end, visited.copy())
                         if path is not None:
                             return [mapping] + path
-                    
+
                     # Try reverse mappings (with inverted conversion factor)
                     for mapping in reverse_mappings:
                         if mapping.from_unit == end:
@@ -87,7 +87,7 @@ class ConversionEngine:
                                 'conversion_factor': 1.0 / mapping.conversion_factor
                             })()
                             return [reverse_mapping] + path
-                    
+
                     return None
 
                 conversion_path = find_conversion_path(from_unit, to_unit)
@@ -103,7 +103,7 @@ class ConversionEngine:
                     conversion_type = 'direct'
 
                 # 3. Same-type base conversion (volume → volume, weight → weight)
-                elif from_u.type == to_u.type:
+                elif from_u.unit_type == to_u.unit_type:
                     if from_unit == to_unit:
                         converted = amount
                     else:
@@ -117,7 +117,7 @@ class ConversionEngine:
                     conversion_type = 'direct'
 
                 # 4. Cross-type: volume ↔ weight
-                elif {'volume', 'weight'} <= {from_u.type, to_u.type}:
+                elif {'volume', 'weight'} <= {from_u.unit_type, to_u.unit_type}:
                     # Only use ingredient-level density
                     if density is None and ingredient_id:
                         ingredient = Ingredient.query.get(ingredient_id)
@@ -127,7 +127,7 @@ class ConversionEngine:
                         raise ValueError(f"Missing density for conversion from {from_u.name} to {to_u.name}")
                     used_density = density
 
-                    if from_u.type == 'volume':
+                    if from_u.unit_type == 'volume':
                         grams = amount * from_u.conversion_factor * density
                         converted = grams / to_u.conversion_factor
                     else:  # weight → volume
@@ -146,9 +146,9 @@ class ConversionEngine:
                             converted *= mapping.conversion_factor
                         conversion_type = 'custom_cross_type'
                     else:
-                        raise ValueError(f"Cannot convert {from_unit} ({from_u.type}) to {to_unit} ({to_u.type}) without a custom mapping. Go to Unit Manager to create a mapping.")
+                        raise ValueError(f"Cannot convert {from_unit} ({from_u.unit_type}) to {to_unit} ({to_u.unit_type}) without a custom mapping. Go to Unit Manager to create a mapping.")
                 else:
-                    raise ValueError(f"Cannot convert {from_unit} ({from_u.type}) to {to_unit} ({to_u.type}) without a custom mapping. Go to Unit Manager to create a mapping.")
+                    raise ValueError(f"Cannot convert {from_unit} ({from_u.unit_type}) to {to_unit} ({to_u.unit_type}) without a custom mapping. Go to Unit Manager to create a mapping.")
 
                 # Log it only if user is authenticated and has organization
                 if current_user and current_user.is_authenticated and current_user.organization_id:

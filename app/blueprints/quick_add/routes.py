@@ -157,9 +157,9 @@ def quick_add_unit():
 
         new_unit = Unit(
             name=name,
-            type=type_,
+            unit_type=type_,
             base_unit=base_unit,
-            multiplier_to_base=multiplier,
+            conversion_factor=multiplier,
             is_custom=True
         )
         db.session.add(new_unit)
@@ -167,7 +167,7 @@ def quick_add_unit():
 
         return jsonify({
             'name': new_unit.name,
-            'type': new_unit.type
+            'type': new_unit.unit_type
         }), 201
 
     except Exception as e:

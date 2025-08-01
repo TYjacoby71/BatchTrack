@@ -55,7 +55,7 @@
                   {% set mapping = custom_mappings[0] %}
                   {% set from_unit_obj = units | selectattr('name', 'equalto', mapping.from_unit) | first %}
                   {% set to_unit_obj = units | selectattr('name', 'equalto', mapping.to_unit) | first %}
-                  {% if from_unit_obj and to_unit_obj and from_unit_obj.type != to_unit_obj.type %}
+                  {% if from_unit_obj and to_unit_obj and from_unit_obj.unit_type != to_unit_obj.unit_type %}
                     <span class="badge bg-info">Cross-type mapped</span>
                   {% else %}
                     <span class="badge bg-success">Mapped</span>
@@ -184,18 +184,18 @@
           <td>
             {{ mapping.from_unit }}
             {% if from_unit_obj %}
-              <small class="text-muted">({{ from_unit_obj.type }})</small>
+              <small class="text-muted">({{ from_unit_obj.unit_type }})</small>
             {% endif %}
           </td>
           <td>
             {{ mapping.to_unit }}
             {% if to_unit_obj %}
-              <small class="text-muted">({{ to_unit_obj.type }})</small>
+              <small class="text-muted">({{ to_unit_obj.unit_type }})</small>
             {% endif %}
           </td>
           <td>{{ mapping.conversion_factor }}</td>
           <td>
-            {% if from_unit_obj and to_unit_obj and from_unit_obj.type != to_unit_obj.type %}
+            {% if from_unit_obj and to_unit_obj and from_unit_obj.unit_type != to_unit_obj.unit_type %}
               <span class="badge bg-info">Cross-type</span>
             {% else %}
               <span class="badge bg-success">Same-type</span>

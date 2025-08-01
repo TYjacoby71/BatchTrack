@@ -91,7 +91,7 @@ def manage_units():
                         ((Unit.is_custom == True) & (Unit.organization_id == current_user.organization_id)) |
                         (Unit.is_custom == False)
                     ).first()
-                
+
                 if existing:
                     if existing.is_custom and existing.organization_id == current_user.organization_id:
                         flash('A custom unit with this name already exists in your organization', 'error')
@@ -113,7 +113,7 @@ def manage_units():
                 new_unit = Unit(
                     name=name,
                     symbol=symbol,
-                    type=unit_type,
+                    unit_type=unit_type,
                     base_unit=base_units.get(unit_type, 'count'),
                     conversion_factor=1.0,
                     is_custom=True,
@@ -173,7 +173,7 @@ def manage_units():
 
             # For cross-type mappings (e.g., count to volume/weight), don't calculate base conversion
             # Instead, store the direct relationship in the mapping
-            if custom_unit_obj.type != comparable_unit_obj.type:
+            if custom_unit_obj.unit_type != comparable_unit_obj.unit_type:
                 # Cross-type mapping - store direct relationship only
                 mapping = CustomUnitMapping(
                     from_unit=custom_unit,
@@ -184,14 +184,14 @@ def manage_units():
                     organization_id=current_user.organization_id if current_user.is_authenticated else None
                 )
                 db.session.add(mapping)
-                
+
                 # Mark as mapped but don't set conversion_factor for cross-type
                 custom_unit_obj.is_mapped = True
                 # Leave conversion_factor as None for cross-type mappings
             else:
                 # Same-type mapping - calculate base conversion factor
                 base_conversion_factor = conversion_factor * comparable_unit_obj.conversion_factor
-                
+
                 mapping = CustomUnitMapping(
                     from_unit=custom_unit,
                     to_unit=comparable_unit,
@@ -201,7 +201,7 @@ def manage_units():
                     organization_id=current_user.organization_id if current_user.is_authenticated else None
                 )
                 db.session.add(mapping)
-                
+
                 # Mark as mapped and set conversion factor for same-type
                 custom_unit_obj.is_mapped = True
                 custom_unit_obj.conversion_factor = base_conversion_factor
@@ -213,7 +213,7 @@ def manage_units():
             return redirect(url_for('conversion_bp.manage_units'))
 
     units = get_global_unit_list()
-    
+
     # Get mappings scoped by organization
     if current_user and current_user.is_authenticated:
         if current_user.user_type == 'developer':
@@ -232,9 +232,9 @@ def manage_units():
 
     units_by_type = {}
     for unit in units:
-        if unit.type not in units_by_type:
-            units_by_type[unit.type] = []
-        units_by_type[unit.type].append(unit)
+        if unit.unit_type not in units_by_type:
+            units_by_type[unit.unit_type] = []
+        units_by_type[unit.unit_type].append(unit)
 
     return render_template('conversion/units.html', 
                          units=units, 
@@ -275,11 +275,11 @@ def validate_mapping():
     from_unit = Unit.query.filter_by(name=data['from_unit']).first()
     to_unit = Unit.query.filter_by(name=data['to_unit']).first()
 
-    if from_unit.type == to_unit.type:
+    if from_unit.unit_type == to_unit.unit_type:
         return jsonify({"valid": True})
 
     # Handle volume ↔ weight conversions
-    if {'volume', 'weight'} <= {from_unit.type, to_unit.type}:
+    if {'volume', 'weight'} <= {from_unit.unit_type, to_unit.unit_type}:
         if data.get('ingredient_id'):
             ingredient = InventoryItem.query.get(data['ingredient_id'])
             if not ingredient.density and not ingredient.category:
@@ -307,8 +307,8 @@ def add_mapping():
         return jsonify({"error": "Invalid units"}), 400
 
     # Cross-type validation
-    if from_unit.type != to_unit.type:
-        if {'volume', 'weight'} <= {from_unit.type, to_unit.type}:
+    if from_unit.unit_type != to_unit.unit_type:
+        if {'volume', 'weight'} <= {from_unit.unit_type, to_unit.unit_type}:
             if not data.get('density'):
                 return jsonify({
                     "error": "Density required for volume ↔ weight conversion"
