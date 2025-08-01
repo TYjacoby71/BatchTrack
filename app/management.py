@@ -417,9 +417,19 @@ def sync_schema_command():
                                     # For functions like datetime.utcnow, make nullable for safety
                                     nullable = "NULL"
                                 else:
-                                    default_clause = f" DEFAULT {column.default.arg}"
+                                    # Quote string defaults properly
+                                    default_value = column.default.arg
+                                    if isinstance(default_value, str):
+                                        default_clause = f" DEFAULT '{default_value}'"
+                                    else:
+                                        default_clause = f" DEFAULT {default_value}"
                             else:
-                                default_clause = f" DEFAULT {column.default}"
+                                # Quote string defaults properly
+                                default_value = column.default
+                                if isinstance(default_value, str):
+                                    default_clause = f" DEFAULT '{default_value}'"
+                                else:
+                                    default_clause = f" DEFAULT {default_value}"
                         
                         # Make all new columns nullable for safety during migration
                         nullable = "NULL"
