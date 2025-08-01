@@ -1,4 +1,4 @@
-"""Fix sync-schema command imports to use existing models only and create-app command imports"""
+"""Updated management commands for better error handling, database checks, and unit seeding."""
 """
 Management commands for deployment and maintenance
 """
@@ -49,35 +49,76 @@ def init_production_command():
         print("🚀 BatchTrack Production Seeding Starting...")
         print("⚠️  Assumes database schema is already migrated (flask db upgrade)")
 
+        # Check if database has basic tables
+        from sqlalchemy import inspect
+        inspector = inspect(db.engine)
+        tables = inspector.get_table_names()
+        required_tables = ['permission', 'subscription_tier', 'unit', 'organization', 'user']
+        missing_tables = [t for t in required_tables if t not in tables]
+
+        if missing_tables:
+            print(f"❌ Missing required tables: {missing_tables}")
+            print("   Run 'flask db upgrade' first to create database schema")
+            return
+
         # Essential system setup (STRICT DEPENDENCY ORDER)
         print("=== Step 1: System foundations ===")
-        seed_consolidated_permissions()  # Must be FIRST - creates permissions
-        print("✅ Permissions seeded")
+        try:
+            seed_consolidated_permissions()  # Must be FIRST - creates permissions
+            print("✅ Permissions seeded")
+        except Exception as e:
+            print(f"⚠️  Permission seeding issue: {e}")
+            print("   Continuing with remaining steps...")
 
-        seed_subscriptions()             # Must be SECOND - needs permissions, creates tiers
-        print("✅ Subscription tiers seeded")
+        try:
+            seed_subscriptions()             # Must be SECOND - needs permissions, creates tiers
+            print("✅ Subscription tiers seeded")
+        except Exception as e:
+            print(f"⚠️  Subscription seeding issue: {e}")
+            print("   Continuing with remaining steps...")
 
-        seed_units()                     # Independent - can run anytime
-        print("✅ Units seeded")
+        try:
+            seed_units()                     # Independent - can run anytime
+            print("✅ Units seeded")
+        except Exception as e:
+            print(f"⚠️  Unit seeding issue: {e}")
+            print("   Continuing with remaining steps...")
 
         # Create initial admin (DEPENDS on subscription tiers existing)
         print("=== Step 2: Initial admin setup ===")
-        seed_users_and_organization()    # DEPENDS on subscription tiers
-        print("✅ Users and organization seeded")
+        try:
+            seed_users_and_organization()    # DEPENDS on subscription tiers
+            print("✅ Users and organization seeded")
+        except Exception as e:
+            print(f"⚠️  User/organization seeding issue: {e}")
+            print("   Continuing with remaining steps...")
 
         # Setup default categories for first org
         print("=== Step 3: Organization setup ===")
-        from .models import Organization
-        org = Organization.query.first()
-        if org:
-            seed_categories(organization_id=org.id)
-            print("✅ Categories seeded")
-        else:
-            print("⚠️  No organization found - categories not seeded")
+        try:
+            from .models import Organization
+            org = Organization.query.first()
+            if org:
+                seed_categories(organization_id=org.id)
+                print("✅ Categories seeded")
+            else:
+                print("⚠️  No organization found, categories not seeded")
+        except Exception as e:
+            print(f"⚠️  Category seeding issue: {e}")
 
         print('✅ Production seeding complete!')
         print('🔒 Login: admin/admin (CHANGE IMMEDIATELY)')
         print('📝 Note: This command can be run multiple times safely')
+        print('📊 Database status:')
+        try:
+            from .models import Organization, User, Permission, SubscriptionTier, Unit
+            print(f'   - Organizations: {Organization.query.count()}')
+            print(f'   - Users: {User.query.count()}')
+            print(f'   - Permissions: {Permission.query.count()}')
+            print(f'   - Subscription Tiers: {SubscriptionTier.query.count()}')
+            print(f'   - Units: {Unit.query.count()}')
+        except Exception as e:
+            print(f'   - Status check failed: {e}')
 
     except Exception as e:
         print(f'❌ Production seeding failed: {str(e)}')
@@ -168,15 +209,36 @@ def seed_organizations_command():
 @click.command('seed-units')
 @with_appcontext
 def seed_units_command():
-    """Seed measurement units"""
+    """Seed standard system units"""
     try:
-        print("🔄 Seeding units...")
-        from .seeders.unit_seeder import seed_units
+        print("🔧 Seeding standard units...")
+
+        # Check if units table exists and has the required columns
+        from sqlalchemy import inspect
+        inspector = inspect(db.engine)
+        if 'unit' not in inspector.get_table_names():
+            print("❌ Unit table doesn't exist. Run 'flask db upgrade' first.")
+            return
+
+        # Check column structure
+        columns = [col['name'] for col in inspector.get_columns('unit')]
+        required_cols = ['id', 'name', 'symbol', 'unit_type', 'base_unit', 'conversion_factor']
+        missing_cols = [col for col in required_cols if col not in columns]
+        if missing_cols:
+            print(f"❌ Missing required columns in unit table: {missing_cols}")
+            return
+
+        # Check if we have timestamp columns
+        has_timestamps = 'created_at' in columns and 'updated_at' in columns
+        print(f"ℹ️  Unit table timestamp columns: {'✅ Present' if has_timestamps else '❌ Missing'}")
+
         seed_units()
-        print('✅ Units seeded successfully!')
+        print("✅ Units seeded successfully")
+
     except Exception as e:
         print(f'❌ Unit seeding failed: {str(e)}')
-        db.session.rollback()
+        import traceback
+        traceback.print_exc()
         raise
 
 @click.command('seed-sub-tiers')
@@ -249,17 +311,17 @@ def create_app_command():
 
         # Import all models to ensure they're registered with SQLAlchemy
         print("📦 Dynamically importing all models...")
-        
+
         # Import the models package - this triggers all model registrations
         from . import models
-        
+
         # Import everything from models.__init__.py which imports all models
         import importlib
         import pkgutil
         import os
-        
+
         models_imported = 0
-        
+
         # Get all model classes from the models.__init__.py __all__ list
         if hasattr(models, '__all__'):
             for model_name in models.__all__:
@@ -269,7 +331,7 @@ def create_app_command():
                     if hasattr(model_class, '__tablename__'):
                         models_imported += 1
                         print(f"   ✓ {model_name}")
-        
+
         # Also scan the models directory for any additional files
         models_dir = os.path.join(os.path.dirname(__file__), 'models')
         for finder, name, ispkg in pkgutil.iter_modules([models_dir]):
@@ -279,7 +341,7 @@ def create_app_command():
                     print(f"   ✓ Loaded models from {name}.py")
                 except ImportError as e:
                     print(f"   ⚠️  Could not import models.{name}: {e}")
-        
+
         print(f"✅ {models_imported} models imported dynamically")
 
         # Create all tables
@@ -313,17 +375,17 @@ def sync_schema_command():
 
         # Import all models to ensure they're registered with SQLAlchemy
         print("📦 Dynamically importing all models...")
-        
+
         # Import the models package - this triggers all model registrations
         from . import models
-        
+
         # Import everything from models.__init__.py which imports all models
         import importlib
         import pkgutil
         import os
-        
+
         models_imported = 0
-        
+
         # Get all model classes from the models.__init__.py __all__ list
         if hasattr(models, '__all__'):
             for model_name in models.__all__:
@@ -333,7 +395,7 @@ def sync_schema_command():
                     if hasattr(model_class, '__tablename__'):
                         models_imported += 1
                         print(f"   ✓ {model_name}")
-        
+
         # Also scan the models directory for any additional files
         models_dir = os.path.join(os.path.dirname(__file__), 'models')
         for finder, name, ispkg in pkgutil.iter_modules([models_dir]):
@@ -343,7 +405,7 @@ def sync_schema_command():
                     print(f"   ✓ Loaded models from {name}.py")
                 except ImportError as e:
                     print(f"   ⚠️  Could not import models.{name}: {e}")
-        
+
         print(f"✅ {models_imported} models imported dynamically")
 
         # Get current database state
@@ -372,11 +434,11 @@ def sync_schema_command():
         # Now add missing columns to existing tables
         print("🔧 Checking for missing columns in existing tables...")
         columns_added = 0
-        
+
         for table_name in existing_tables:
             # Get existing columns in database
             existing_columns = {col['name']: col for col in inspector.get_columns(table_name)}
-            
+
             # Find the model class for this table
             model_class = None
             for model_name in models.__all__:
@@ -385,30 +447,30 @@ def sync_schema_command():
                     if hasattr(model_cls, '__tablename__') and model_cls.__tablename__ == table_name:
                         model_class = model_cls
                         break
-            
+
             if not model_class:
                 print(f"   ⚠️  No model found for table: {table_name}")
                 continue
-                
+
             # Get expected columns from model
             expected_columns = {}
             for column_name, column in model_class.__table__.columns.items():
                 expected_columns[column_name] = column
-            
+
             # Find missing columns
             missing_columns = set(expected_columns.keys()) - set(existing_columns.keys())
-            
+
             if missing_columns:
                 print(f"   📋 Table '{table_name}' missing columns: {', '.join(missing_columns)}")
-                
+
                 for column_name in missing_columns:
                     column = expected_columns[column_name]
-                    
+
                     try:
                         # Build column definition
                         column_type = column.type.compile(db.engine.dialect)
                         nullable = "NULL" if column.nullable else "NOT NULL"
-                        
+
                         # Handle default values
                         default_clause = ""
                         if column.default is not None:
@@ -430,18 +492,18 @@ def sync_schema_command():
                                     default_clause = f" DEFAULT '{default_value}'"
                                 else:
                                     default_clause = f" DEFAULT {default_value}"
-                        
+
                         # Make all new columns nullable for safety during migration
                         nullable = "NULL"
-                        
+
                         # Execute the ALTER TABLE command
                         sql = f'ALTER TABLE "{table_name}" ADD COLUMN "{column_name}" {column_type} {nullable}{default_clause}'
                         db.session.execute(text(sql))
                         db.session.commit()
-                        
+
                         columns_added += 1
                         print(f"      ✅ Added column: {column_name} ({column_type})")
-                        
+
                     except Exception as e:
                         print(f"      ❌ Failed to add column {column_name}: {e}")
                         db.session.rollback()

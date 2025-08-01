@@ -13,10 +13,14 @@ pip install -r requirements.txt
 # Initialize database
 flask db upgrade
 
-# Seed initial data
-python seed_consolidated_permissions.py
-python -c "from app.seeders.unit_seeder import seed_units; seed_units()"
-python -c "from app.seeders.ingredient_category_seeder import seed_categories; seed_categories()"
+# Seed all essential data (recommended for new installations)
+flask init-production
+
+# OR seed components individually:
+# flask seed-permissions
+# flask seed-sub-tiers  
+# flask seed-units
+# flask seed-users
 
 # Run the application
 python run.py
