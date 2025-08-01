@@ -49,9 +49,21 @@ def upgrade():
         sa.Column('updated_at', sa.DateTime(), nullable=True),
         sa.Column('last_stripe_sync', sa.DateTime(), nullable=True),
         sa.Column('sync_source', sa.String(length=64), nullable=True),
-        sa.ForeignKeyConstraint(['organization_id'], ['organization.id'], ),
         sa.PrimaryKeyConstraint('id')
     )
+    
+    # Add foreign key constraint separately if organization table exists
+    if table_exists('organization'):
+        try:
+            op.create_foreign_key(
+                'fk_billing_snapshots_organization',
+                'billing_snapshots',
+                'organization',
+                ['organization_id'],
+                ['id']
+            )
+        except Exception as e:
+            print(f"   Warning: Could not create billing_snapshots organization FK: {e}")
     
     # Drop and recreate pricing_snapshots table to match PricingSnapshot model
     if table_exists('pricing_snapshot'):
@@ -98,10 +110,33 @@ def upgrade():
             sa.Column('last_updated', sa.DateTime(), nullable=True),
             sa.Column('created_at', sa.DateTime(), nullable=True),
             sa.Column('updated_at', sa.DateTime(), nullable=True),
-            sa.ForeignKeyConstraint(['organization_id'], ['organization.id'], ),
-            sa.ForeignKeyConstraint(['user_id'], ['user.id'], ),
             sa.PrimaryKeyConstraint('id')
         )
+        
+        # Add foreign key constraints separately if tables exist
+        if table_exists('organization'):
+            try:
+                op.create_foreign_key(
+                    'fk_user_stats_organization',
+                    'user_stats',
+                    'organization',
+                    ['organization_id'],
+                    ['id']
+                )
+            except Exception as e:
+                print(f"   Warning: Could not create user_stats organization FK: {e}")
+                
+        if table_exists('user'):
+            try:
+                op.create_foreign_key(
+                    'fk_user_stats_user',
+                    'user_stats',
+                    'user',
+                    ['user_id'],
+                    ['id']
+                )
+            except Exception as e:
+                print(f"   Warning: Could not create user_stats user FK: {e}")
     
     # organization_stats table already exists from previous migration, just add timestamps if needed
     if table_exists('organization_stats'):
