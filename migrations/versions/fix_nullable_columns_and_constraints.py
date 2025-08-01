@@ -75,17 +75,17 @@ def upgrade():
     # Fix user_role_assignment.is_active - set default value for existing NULL rows
     if table_exists('user_role_assignment') and column_exists('user_role_assignment', 'is_active'):
         print("Updating user_role_assignment.is_active NULL values...")
-        bind.execute(text("UPDATE user_role_assignment SET is_active = 1 WHERE is_active IS NULL"))
+        bind.execute(text('UPDATE user_role_assignment SET is_active = :default WHERE is_active IS NULL'), {"default": True})
 
     # Fix subscription_tier.is_active - set default value for existing NULL rows
     if table_exists('subscription_tier') and column_exists('subscription_tier', 'is_active'):
         print("Updating subscription_tier.is_active NULL values...")
-        bind.execute(text("UPDATE subscription_tier SET is_active = 1 WHERE is_active IS NULL"))
+        bind.execute(text('UPDATE subscription_tier SET is_active = :default WHERE is_active IS NULL'), {"default": True})
 
     # Fix developer_role.is_active - set default value for existing NULL rows
     if table_exists('developer_role') and column_exists('developer_role', 'is_active'):
         print("Updating developer_role.is_active NULL values...")
-        bind.execute(text("UPDATE developer_role SET is_active = 1 WHERE is_active IS NULL"))
+        bind.execute(text('UPDATE developer_role SET is_active = :default WHERE is_active IS NULL'), {"default": True})
 
     # Note: We're not making columns NOT NULL in this migration because:
     # 1. SQLite doesn't support ALTER COLUMN ... SET NOT NULL
