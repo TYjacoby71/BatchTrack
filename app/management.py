@@ -304,34 +304,6 @@ def create_app_command():
         traceback.print_exc()
         raise
 
-@click.command('cleanup-temp-tables')
-@with_appcontext
-def cleanup_temp_tables_command():
-    """Clean up temporary alembic tables from failed migrations"""
-    try:
-        print("🔧 Cleaning up temporary alembic tables...")
-        
-        # Get all table names that start with _alembic_tmp_
-        from sqlalchemy import text
-        result = db.session.execute(text("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE '_alembic_tmp_%'"))
-        temp_tables = [row[0] for row in result.fetchall()]
-        
-        if not temp_tables:
-            print("✅ No temporary alembic tables found")
-            return
-            
-        for table_name in temp_tables:
-            print(f"   Dropping temporary table: {table_name}")
-            db.session.execute(text(f"DROP TABLE IF EXISTS {table_name}"))
-        
-        db.session.commit()
-        print(f"✅ Cleaned up {len(temp_tables)} temporary tables")
-        
-    except Exception as e:
-        print(f'❌ Cleanup failed: {str(e)}')
-        db.session.rollback()
-        raise
-
 @click.command('sync-schema')
 @with_appcontext
 def sync_schema_command():

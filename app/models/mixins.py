@@ -1,10 +1,6 @@
 
 from flask_login import current_user
 from flask import session
-from app.extensions import db
-from datetime import datetime
-from ..utils.timezone_utils import TimezoneUtils
-
 
 class OrganizationScopedMixin:
     """Mixin to automatically scope queries by organization"""
@@ -43,7 +39,6 @@ class OrganizationScopedMixin:
         effective_org_id = session.get('dev_selected_org_id') if current_user.user_type == 'developer' else current_user.organization_id
         return self.organization_id == effective_org_id
 
-
 class PermissionRequiredMixin:
     """Mixin to enforce permissions on model operations"""
     
@@ -81,20 +76,19 @@ class PermissionRequiredMixin:
             return has_permission(self.VIEW_PERMISSION) and self.ensure_organization_scope()
         return self.ensure_organization_scope()
 
+from app.extensions import db
+from datetime import datetime
+from flask_login import current_user
+
 
 class TimestampMixin:
-    """Unified timestamp mixin - adds created_at and updated_at to models"""
-    created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now, nullable=False)
-    updated_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now, onupdate=TimezoneUtils.utc_now, nullable=False)
+    """Adds created_at and updated_at timestamps to models"""
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
 
 class ScopedModelMixin:
-    """Organization-scoped model with timestamps"""
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=False)
-    
-    # Add timestamps to all scoped models
-    created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now, nullable=False)  
-    updated_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now, onupdate=TimezoneUtils.utc_now, nullable=False)
 
     @classmethod
     def for_organization(cls, org_id):
@@ -124,3 +118,5 @@ class ScopedModelMixin:
         else:
             # No organization context - return empty for safety
             return cls.query.filter(False)
+
+    
