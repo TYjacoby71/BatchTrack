@@ -291,26 +291,53 @@ class User(UserMixin, db.Model):
     def assign_role(self, role, assigned_by=None):
         """Assign a role to this user"""
         from .user_role_assignment import UserRoleAssignment
+        from .developer_role import DeveloperRole
 
-        # Check if already assigned
-        existing = UserRoleAssignment.query.filter_by(
-            user_id=self.id,
-            role_id=role.id,
-            organization_id=self.organization_id
-        ).first()
+        # Determine if this is a developer role or organization role
+        is_developer_role = isinstance(role, DeveloperRole)
+        
+        if is_developer_role:
+            # Developer role assignment - no organization context
+            existing = UserRoleAssignment.query.filter_by(
+                user_id=self.id,
+                developer_role_id=role.id,
+                organization_id=None  # Developer roles never have organization_id
+            ).first()
 
-        if existing:
-            existing.is_active = True
-            existing.assigned_by = assigned_by.id if assigned_by else None
-            existing.assigned_at = TimezoneUtils.utc_now()
+            if existing:
+                existing.is_active = True
+                existing.assigned_by = assigned_by.id if assigned_by else None
+                existing.assigned_at = TimezoneUtils.utc_now()
+            else:
+                assignment = UserRoleAssignment(
+                    user_id=self.id,
+                    developer_role_id=role.id,
+                    role_id=None,  # No organization role
+                    organization_id=None,  # CRITICAL: No organization for developer roles
+                    assigned_by=assigned_by.id if assigned_by else None
+                )
+                db.session.add(assignment)
         else:
-            assignment = UserRoleAssignment(
+            # Organization role assignment - requires organization context
+            existing = UserRoleAssignment.query.filter_by(
                 user_id=self.id,
                 role_id=role.id,
-                organization_id=self.organization_id,
-                assigned_by=assigned_by.id if assigned_by else None
-            )
-            db.session.add(assignment)
+                organization_id=self.organization_id
+            ).first()
+
+            if existing:
+                existing.is_active = True
+                existing.assigned_by = assigned_by.id if assigned_by else None
+                existing.assigned_at = TimezoneUtils.utc_now()
+            else:
+                assignment = UserRoleAssignment(
+                    user_id=self.id,
+                    role_id=role.id,
+                    developer_role_id=None,  # No developer role
+                    organization_id=self.organization_id,
+                    assigned_by=assigned_by.id if assigned_by else None
+                )
+                db.session.add(assignment)
 
         db.session.commit()
 

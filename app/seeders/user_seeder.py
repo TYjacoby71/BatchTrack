@@ -81,7 +81,7 @@ def seed_users_and_organization():
                         user_id=developer_user.id,
                         developer_role_id=system_admin_dev_role.id,
                         role_id=None,  # Explicitly set to None for developer roles
-                        organization_id=None,
+                        organization_id=None,  # CRITICAL: Developers NEVER get organization_id
                         is_active=True
                     )
                     db.session.add(assignment)
@@ -90,6 +90,7 @@ def seed_users_and_organization():
                 except Exception as role_error:
                     print(f"⚠️  Developer role assignment failed: {role_error}")
                     print(f"✅ Created developer user: dev/dev123 (role assignment failed)")
+                    # Don't rollback here - let the user creation succeed even if role assignment fails
             else:
                 print(f"✅ Created developer user: dev/dev123 (no system_admin role found)")
         except Exception as user_error:
