@@ -1,0 +1,105 @@
+Your Organization and User models are well-structured, and you've already built in strong patterns for scalability, permissions, soft deletes, and subscription logic. That said, here’s a clean audit focusing on redundancies, conflicts, and edge case coverage:
+
+✅ No Major Redundancies Detected
+Most of your logic is modular and appropriately layered.
+
+⚠️ Possible Conflicts or Overlap
+1. is_organization_owner flag vs role assignment
+You currently maintain both:
+
+User._is_organization_owner (boolean flag)
+
+organization_owner role assigned via UserRoleAssignment
+
+These could become out of sync if:
+
+A user is manually assigned the role (bypassing flag logic)
+
+The flag is changed but assign_role() fails, or roles are reassigned manually
+
+🔧 Suggestion:
+
+Consider eliminating the _is_organization_owner boolean entirely and determine ownership solely based on role presence (UserRoleAssignment).
+
+If you keep the flag, enforce bidirectional sync at role assignment level (including remove_role() and external admin tooling).
+
+2. Redundant Subscription Tier Properties
+You have:
+
+subscription_tier (string) — marked deprecated
+
+subscription_tier_id — preferred
+
+tier relationship
+
+effective_subscription_tier method (performs query.get() again)
+
+🔧 Suggestion:
+
+You’re double-loading the tier in .tier and again in effective_subscription_tier. Unify them:
+
+python
+Copy
+Edit
+@property
+def effective_subscription_tier(self):
+    return self.tier.key if self.tier else 'free'
+Same with .subscription_tier_obj.
+
+3. is_org_owner() method vs is_organization_owner property
+These do similar things:
+
+.is_organization_owner checks the flag
+
+.is_org_owner() checks active role
+
+⚠️ This might lead to inconsistencies. Example:
+
+A user with the role but no flag will fail some if checks
+
+A user with the flag but missing role may appear to have more access than they do
+
+🔧 Recommendation:
+
+Prefer role-based checks (like .is_org_owner())
+
+Deprecate or rename is_organization_owner → was_org_owner_flag if you need it for legacy tracking
+
+4. Soft Delete – Role Deactivation
+Soft delete disables role assignments, but .restore() doesn't restore roles or is_active.
+
+📌 Might be worth adding a restore_roles() helper or a toggle prompt when restoring.
+
+✅ Strong Patterns & Praises
+👏 get_active_roles() is nicely protected with fallbacks.
+
+👏 assign_role() cleanly separates dev and org roles.
+
+👏 Permission logic respects tier constraints — excellent for scaling.
+
+👏 Imports from .role, .developer_role, etc. are deferred — keeps initial load clean.
+
+👏 owner() in Organization uses creation order — good MVP fallback.
+
+🧩 Expansion Thoughts
+Additions to future-proof:
+Organization.owner_id field (indexed) for fast access and filtering
+
+last_active on User (vs just last_login) to support user churn analysis
+
+Audit logging via UserEventLog for:
+
+role changes
+
+login attempts
+
+soft delete & restore
+
+Summary
+Area	Status	Note
+Ownership logic	⚠️ Potential sync conflict	Flag vs Role approach — consider consolidation
+Tier access	✅ Good	Just unify tier vs effective_subscription_tier
+Permission checks	✅ Strong	Scoped + respects tier-based entitlements
+Soft deletes	⚠️ Restore logic weak	Roles and active flag not restored by default
+Redundancies	🚫 None found	Only mild overlaps (roles vs flags)
+Forward compatibility	👍 High	Blueprint-ready, scalable structure
