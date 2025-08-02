@@ -57,6 +57,14 @@ def seed_users_and_organization():
         print("❌ organization_owner role not found! Run consolidated permissions seeder first.")
         return
 
+    # CRITICAL: Verify developer roles exist
+    if not system_admin_dev_role:
+        print("❌ system_admin developer role not found!")
+        print("   This means developer roles weren't seeded before user creation.")
+        print("   Developer user will be created without role assignment.")
+    else:
+        print(f"✅ Found system_admin developer role (ID: {system_admin_dev_role.id})")
+
     # 1. Create developer user (system-wide, no organization)
     if not User.query.filter_by(username='dev').first():
         try:

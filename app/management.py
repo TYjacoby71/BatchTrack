@@ -63,9 +63,11 @@ def init_production_command():
 
         # Essential system setup (STRICT DEPENDENCY ORDER)
         print("=== Step 1: System foundations (Organization Independent) ===")
+        
+        # CRITICAL: Seed permissions and developer roles FIRST
         try:
-            seed_consolidated_permissions()  # Must be FIRST - creates permissions & roles
-            print("✅ Permissions and system roles seeded")
+            seed_consolidated_permissions()  # Must be FIRST - creates permissions, org roles, AND developer roles
+            print("✅ Permissions, organization roles, and developer roles seeded")
         except Exception as e:
             print(f"⚠️  Permission seeding issue: {e}")
             print("   Continuing with remaining steps...")
@@ -86,8 +88,9 @@ def init_production_command():
 
         # Create organization and users (DEPENDS on system foundations)
         print("=== Step 2: Organization-dependent setup ===")
+        print("ℹ️  Developer roles should now exist for user assignment...")
         try:
-            seed_users_and_organization()    # Creates org + users (DEPENDS on tiers & roles)
+            seed_users_and_organization()    # Creates org + users (DEPENDS on tiers & developer roles)
             print("✅ Organization and users seeded")
         except Exception as e:
             print(f"⚠️  User/organization seeding issue: {e}")
