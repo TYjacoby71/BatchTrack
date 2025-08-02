@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy import inspect
 
 # revision identifiers
-revision = 'fix_inventory_history_constraints'
+revision = 'fix_inv_hist_constraints'
 down_revision = '8b7aa70df87d'
 branch_labels = None
 depends_on = None
