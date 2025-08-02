@@ -62,10 +62,10 @@ def init_production_command():
             return
 
         # Essential system setup (STRICT DEPENDENCY ORDER)
-        print("=== Step 1: System foundations ===")
+        print("=== Step 1: System foundations (Organization Independent) ===")
         try:
-            seed_consolidated_permissions()  # Must be FIRST - creates permissions
-            print("✅ Permissions seeded")
+            seed_consolidated_permissions()  # Must be FIRST - creates permissions & roles
+            print("✅ Permissions and system roles seeded")
         except Exception as e:
             print(f"⚠️  Permission seeding issue: {e}")
             print("   Continuing with remaining steps...")
@@ -84,23 +84,23 @@ def init_production_command():
             print(f"⚠️  Unit seeding issue: {e}")
             print("   Continuing with remaining steps...")
 
-        # Create initial admin (DEPENDS on subscription tiers existing)
-        print("=== Step 2: Initial admin setup ===")
+        # Create organization and users (DEPENDS on system foundations)
+        print("=== Step 2: Organization-dependent setup ===")
         try:
-            seed_users_and_organization()    # DEPENDS on subscription tiers
-            print("✅ Users and organization seeded")
+            seed_users_and_organization()    # Creates org + users (DEPENDS on tiers & roles)
+            print("✅ Organization and users seeded")
         except Exception as e:
             print(f"⚠️  User/organization seeding issue: {e}")
             print("   Continuing with remaining steps...")
 
-        # Setup default categories for first org
-        print("=== Step 3: Organization setup ===")
+        # Setup default categories for the organization
+        print("=== Step 3: Organization-specific data ===")
         try:
             from .models import Organization
             org = Organization.query.first()
             if org:
                 seed_categories(organization_id=org.id)
-                print("✅ Categories seeded")
+                print("✅ Categories seeded for organization")
             else:
                 print("⚠️  No organization found, categories not seeded")
         except Exception as e:
