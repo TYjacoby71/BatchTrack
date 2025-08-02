@@ -366,6 +366,108 @@ def create_app_command():
         traceback.print_exc()
         raise
 
+@click.command('clear-all-users')
+@with_appcontext
+def clear_all_users_command():
+    """Clear all user data while preserving schema"""
+    try:
+        print("🚨 DANGER: This will clear ALL user data!")
+        print("⚠️  This removes all users, organizations, and related data")
+        print("✅ Schema (permissions, roles, tiers) will be preserved")
+        
+        confirmation = input("Type 'CLEAR ALL USERS' to confirm: ")
+        if confirmation != 'CLEAR ALL USERS':
+            print("❌ Operation cancelled")
+            return
+        
+        from .models import (
+            User, Organization, UserRoleAssignment, 
+            UserStats, OrganizationStats, BillingSnapshot
+        )
+        
+        # Clear in dependency order
+        print("🗑️  Clearing user role assignments...")
+        UserRoleAssignment.query.delete()
+        
+        print("🗑️  Clearing user statistics...")
+        UserStats.query.delete()
+        
+        print("🗑️  Clearing organization statistics...")
+        OrganizationStats.query.delete()
+        
+        print("🗑️  Clearing billing snapshots...")
+        BillingSnapshot.query.delete()
+        
+        print("🗑️  Clearing all users...")
+        user_count = User.query.count()
+        User.query.delete()
+        
+        print("🗑️  Clearing all organizations...")
+        org_count = Organization.query.count()
+        Organization.query.delete()
+        
+        db.session.commit()
+        
+        print("✅ All user data cleared successfully!")
+        print(f"   - Removed {user_count} users")
+        print(f"   - Removed {org_count} organizations")
+        print("🔄 Run 'flask init-production' to recreate default data")
+        
+    except Exception as e:
+        print(f'❌ Error clearing user data: {str(e)}')
+        db.session.rollback()
+        raise
+
+@click.command('clear-dev-users')
+@with_appcontext
+def clear_dev_users_command():
+    """Clear only developer users"""
+    try:
+        print("🧹 Clearing developer users only...")
+        print("👥 Customer users and organizations will be preserved")
+        
+        from .models import User, UserRoleAssignment
+        
+        # Show current developer users
+        dev_users = User.query.filter_by(user_type='developer').all()
+        if not dev_users:
+            print("ℹ️  No developer users found")
+            return
+        
+        print(f"📋 Found {len(dev_users)} developer users:")
+        for user in dev_users:
+            print(f"   - {user.username} ({user.email})")
+        
+        confirmation = input("Type 'CLEAR DEVS' to confirm: ")
+        if confirmation != 'CLEAR DEVS':
+            print("❌ Operation cancelled")
+            return
+        
+        # Get developer user IDs for role assignment cleanup
+        dev_user_ids = [user.id for user in dev_users]
+        
+        # Clear developer role assignments
+        print("🗑️  Clearing developer role assignments...")
+        assignments_deleted = UserRoleAssignment.query.filter(
+            UserRoleAssignment.user_id.in_(dev_user_ids)
+        ).delete(synchronize_session=False)
+        
+        # Clear developer users
+        print("🗑️  Clearing developer users...")
+        users_deleted = User.query.filter_by(user_type='developer').delete()
+        
+        db.session.commit()
+        
+        print("✅ Developer users cleared successfully!")
+        print(f"   - Removed {users_deleted} developer users")
+        print(f"   - Removed {assignments_deleted} role assignments")
+        print("🔄 Run 'flask seed-users' to recreate developer user")
+        
+    except Exception as e:
+        print(f'❌ Error clearing developer users: {str(e)}')
+        db.session.rollback()
+        raise
+
 @click.command('sync-schema')
 @with_appcontext
 def sync_schema_command():
@@ -531,6 +633,10 @@ def register_commands(app):
 
     # One-time initialization (fresh installs only)
     app.cli.add_command(init_production_command)
+    
+    # Data clearing commands (DANGER ZONE)
+    app.cli.add_command(clear_all_users_command)
+    app.cli.add_command(clear_dev_users_command)
 
     # Individual seeders
     app.cli.add_command(seed_users_command)
