@@ -86,7 +86,8 @@ def seed_developer_permissions():
 
 def seed_developer_roles():
     """Create developer roles and assign permissions"""
-    print("Seeding developer roles...")
+    print("🔧 Seeding developer roles...")
+    print(f"   Current developer roles in DB: {DeveloperRole.query.count()}")
 
     # System Admin Role - full system access
     system_admin_role = DeveloperRole.query.filter_by(name='system_admin').first()
@@ -152,7 +153,15 @@ def seed_developer_roles():
     print(f"✅ Created/updated support role with {len(support_permissions)} permissions")
 
     db.session.commit()
-    print("✅ Developer roles seeded successfully!")
+    final_count = DeveloperRole.query.count()
+    print(f"✅ Developer roles seeded successfully! (Total: {final_count})")
+    
+    # Verify system_admin role exists
+    system_admin = DeveloperRole.query.filter_by(name='system_admin').first()
+    if system_admin:
+        print(f"   ✅ system_admin role confirmed (ID: {system_admin.id})")
+    else:
+        print("   ❌ system_admin role NOT found after seeding!")
 
 def update_organization_owner_role():
     """Update organization owner role with necessary permissions (only if empty)"""

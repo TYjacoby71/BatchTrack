@@ -57,6 +57,14 @@ def seed_users_and_organization():
         print("❌ organization_owner role not found! Run consolidated permissions seeder first.")
         return
 
+    # CRITICAL: Verify developer roles exist
+    if not system_admin_dev_role:
+        print("❌ system_admin developer role not found!")
+        print("   This means developer roles weren't seeded before user creation.")
+        print("   Developer user will be created without role assignment.")
+    else:
+        print(f"✅ Found system_admin developer role (ID: {system_admin_dev_role.id})")
+
     # 1. Create developer user (system-wide, no organization)
     if not User.query.filter_by(username='dev').first():
         try:
@@ -100,7 +108,8 @@ def seed_users_and_organization():
         print(f"ℹ️  Developer user 'dev' already exists")
 
     # 2. Create admin user (organization owner)
-    if not User.query.filter_by(username='admin').first():
+    existing_admin = User.query.filter_by(username='admin').first()
+    if not existing_admin:
         admin_user = User(
             username='admin',
             password_hash=generate_password_hash('admin'),
@@ -126,15 +135,30 @@ def seed_users_and_organization():
 
         print(f"✅ Created admin user: admin/admin (organization owner)")
     else:
-        admin_user = User.query.filter_by(username='admin').first()
-        # Ensure existing organization has contact_email set
-        if admin_user and not org.contact_email:
+        admin_user = existing_admin
+        # CRITICAL: Do NOT change organization_id on existing admin user
+        print(f"ℹ️  Admin user 'admin' already exists (org_id: {admin_user.organization_id})")
+        
+        # Only update organization contact_email if it's missing
+        if not org.contact_email:
             org.contact_email = admin_user.email
             print(f"✅ Updated organization contact_email to: {admin_user.email}")
-        print(f"ℹ️  Admin user 'admin' already exists")
+        
+        # Ensure admin has organization owner role assignment if missing
+        from ..models.user_role_assignment import UserRoleAssignment
+        existing_assignment = UserRoleAssignment.query.filter_by(
+            user_id=admin_user.id,
+            role_id=org_owner_role.id if org_owner_role else None,
+            is_active=True
+        ).first()
+        
+        if not existing_assignment and org_owner_role:
+            admin_user.assign_role(org_owner_role)
+            print(f"✅ Assigned missing organization owner role to existing admin")
 
     # 3. Create manager user
-    if not User.query.filter_by(username='manager').first():
+    existing_manager = User.query.filter_by(username='manager').first()
+    if not existing_manager:
         manager_user = User(
             username='manager',
             password_hash=generate_password_hash('manager123'),
@@ -157,10 +181,11 @@ def seed_users_and_organization():
         else:
             print(f"✅ Created manager user: manager/manager123 (no manager role found)")
     else:
-        print(f"ℹ️  Manager user 'manager' already exists")
+        print(f"ℹ️  Manager user 'manager' already exists (org_id: {existing_manager.organization_id})")
 
     # 4. Create operator user
-    if not User.query.filter_by(username='operator').first():
+    existing_operator = User.query.filter_by(username='operator').first()
+    if not existing_operator:
         operator_user = User(
             username='operator',
             password_hash=generate_password_hash('operator123'),
@@ -183,7 +208,7 @@ def seed_users_and_organization():
         else:
             print(f"✅ Created operator user: operator/operator123 (no operator role found)")
     else:
-        print(f"ℹ️  Operator user 'operator' already exists")
+        print(f"ℹ️  Operator user 'operator' already exists (org_id: {existing_operator.organization_id})")
 
     db.session.commit()
     print("✅ Default organization and essential users created successfully")
