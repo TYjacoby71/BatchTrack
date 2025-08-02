@@ -389,29 +389,73 @@ def clear_all_users_command():
         )
         from .models.user_preferences import UserPreferences
         
-        # Clear in dependency order
+        # Get organization IDs for bulk operations
+        org_ids = [o.id for o in Organization.query.all()]
+        user_ids = [u.id for u in User.query.all()]
+        
+        # Clear in proper dependency order to handle all PostgreSQL constraints
         print("🗑️  Clearing user role assignments...")
-        UserRoleAssignment.query.delete()
+        if user_ids:
+            db.session.execute(db.text("DELETE FROM user_role_assignment WHERE user_id = ANY(:user_ids)"), {"user_ids": user_ids})
         
         print("🗑️  Clearing user statistics...")
-        UserStats.query.delete()
+        if user_ids:
+            db.session.execute(db.text("DELETE FROM user_stats WHERE user_id = ANY(:user_ids)"), {"user_ids": user_ids})
         
         print("🗑️  Clearing organization statistics...")
-        OrganizationStats.query.delete()
+        if org_ids:
+            db.session.execute(db.text("DELETE FROM organization_stats WHERE organization_id = ANY(:org_ids)"), {"org_ids": org_ids})
         
         print("🗑️  Clearing billing snapshots...")
-        BillingSnapshot.query.delete()
+        if org_ids:
+            db.session.execute(db.text("DELETE FROM billing_snapshots WHERE organization_id = ANY(:org_ids)"), {"org_ids": org_ids})
         
         print("🗑️  Clearing user preferences...")
-        UserPreferences.query.delete()
+        if user_ids:
+            db.session.execute(db.text("DELETE FROM user_preferences WHERE user_id = ANY(:user_ids)"), {"user_ids": user_ids})
+        
+        # Clear organization-dependent tables that reference organization_id
+        print("🗑️  Clearing ingredient categories...")
+        if org_ids:
+            db.session.execute(db.text("DELETE FROM ingredient_category WHERE organization_id = ANY(:org_ids)"), {"org_ids": org_ids})
+        
+        print("🗑️  Clearing custom unit mappings...")
+        if org_ids:
+            db.session.execute(db.text("DELETE FROM custom_unit_mapping WHERE organization_id = ANY(:org_ids)"), {"org_ids": org_ids})
+        
+        # Clear other organization-scoped data
+        organization_tables = [
+            'recipe', 'batch', 'inventory_item', 'inventory_history',
+            'product', 'product_sku', 'product_variant', 'batch_inventory_log',
+            'reservation', 'conversion_log'
+        ]
+        
+        for table in organization_tables:
+            print(f"🗑️  Clearing {table}...")
+            try:
+                if org_ids:
+                    # Check if table exists and has organization_id column
+                    result = db.session.execute(db.text("""
+                        SELECT column_name FROM information_schema.columns 
+                        WHERE table_name = :table_name 
+                        AND column_name = 'organization_id'
+                    """), {"table_name": table}).fetchone()
+                    
+                    if result:
+                        db.session.execute(db.text(f"DELETE FROM {table} WHERE organization_id = ANY(:org_ids)"), {"org_ids": org_ids})
+                    else:
+                        print(f"   ⚠️  {table} doesn't have organization_id column - skipping")
+            except Exception as table_error:
+                print(f"   ⚠️  Could not clear {table}: {table_error}")
+                # Continue with other tables
         
         print("🗑️  Clearing all users...")
-        user_count = User.query.count()
-        User.query.delete()
+        user_count = len(user_ids)
+        db.session.execute(db.text("DELETE FROM \"user\""))
         
         print("🗑️  Clearing all organizations...")
-        org_count = Organization.query.count()
-        Organization.query.delete()
+        org_count = len(org_ids)
+        db.session.execute(db.text("DELETE FROM organization"))
         
         db.session.commit()
         
