@@ -11,6 +11,7 @@ from app.models import (
     User, Organization, UserRoleAssignment, 
     UserStats, OrganizationStats, BillingSnapshot
 )
+from app.models.user_preferences import UserPreferences
 
 def clear_all_user_data():
     """Clear all user-related data while preserving schema"""
@@ -38,6 +39,9 @@ def clear_all_user_data():
             
             print("🗑️  Clearing billing snapshots...")
             BillingSnapshot.query.delete()
+            
+            print("🗑️  Clearing user preferences...")
+            UserPreferences.query.delete()
             
             # Clear users (both customer and developer)
             print("🗑️  Clearing all users...")

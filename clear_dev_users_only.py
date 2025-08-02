@@ -8,6 +8,7 @@ This removes developer users and their role assignments while preserving custome
 from app import create_app
 from app.extensions import db
 from app.models import User, UserRoleAssignment
+from app.models.user_preferences import UserPreferences
 
 def clear_developer_users():
     """Clear only developer users and their assignments"""
@@ -43,6 +44,12 @@ def clear_developer_users():
                 UserRoleAssignment.user_id.in_(dev_user_ids)
             ).delete(synchronize_session=False)
             
+            # Clear developer user preferences
+            print("🗑️  Clearing developer user preferences...")
+            prefs_deleted = UserPreferences.query.filter(
+                UserPreferences.user_id.in_(dev_user_ids)
+            ).delete(synchronize_session=False)
+            
             # Clear developer users
             print("🗑️  Clearing developer users...")
             users_deleted = User.query.filter_by(user_type='developer').delete()
@@ -53,6 +60,7 @@ def clear_developer_users():
             print("✅ Developer users cleared successfully!")
             print(f"   - Removed {users_deleted} developer users")
             print(f"   - Removed {assignments_deleted} role assignments")
+            print(f"   - Removed {prefs_deleted} user preferences")
             print("👥 Customer users and organizations preserved")
             print("🔄 Run 'flask seed-users' to recreate developer user")
             

@@ -387,6 +387,7 @@ def clear_all_users_command():
             User, Organization, UserRoleAssignment, 
             UserStats, OrganizationStats, BillingSnapshot
         )
+        from .models.user_preferences import UserPreferences
         
         # Clear in dependency order
         print("🗑️  Clearing user role assignments...")
@@ -400,6 +401,9 @@ def clear_all_users_command():
         
         print("🗑️  Clearing billing snapshots...")
         BillingSnapshot.query.delete()
+        
+        print("🗑️  Clearing user preferences...")
+        UserPreferences.query.delete()
         
         print("🗑️  Clearing all users...")
         user_count = User.query.count()
@@ -430,6 +434,7 @@ def clear_dev_users_command():
         print("👥 Customer users and organizations will be preserved")
         
         from .models import User, UserRoleAssignment
+        from .models.user_preferences import UserPreferences
         
         # Show current developer users
         dev_users = User.query.filter_by(user_type='developer').all()
@@ -455,6 +460,12 @@ def clear_dev_users_command():
             UserRoleAssignment.user_id.in_(dev_user_ids)
         ).delete(synchronize_session=False)
         
+        # Clear developer user preferences  
+        print("🗑️  Clearing developer user preferences...")
+        prefs_deleted = UserPreferences.query.filter(
+            UserPreferences.user_id.in_(dev_user_ids)
+        ).delete(synchronize_session=False)
+        
         # Clear developer users
         print("🗑️  Clearing developer users...")
         users_deleted = User.query.filter_by(user_type='developer').delete()
@@ -464,6 +475,7 @@ def clear_dev_users_command():
         print("✅ Developer users cleared successfully!")
         print(f"   - Removed {users_deleted} developer users")
         print(f"   - Removed {assignments_deleted} role assignments")
+        print(f"   - Removed {prefs_deleted} user preferences")
         print("🔄 Run 'flask seed-users' to recreate developer user")
         
     except Exception as e:
