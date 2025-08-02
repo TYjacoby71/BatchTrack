@@ -76,20 +76,13 @@ class Organization(db.Model):
 
     @property
     def effective_subscription_tier(self):
-        """Get the effective subscription tier from SubscriptionTier model"""
-        if self.subscription_tier_id:
-            from .subscription_tier import SubscriptionTier
-            tier = SubscriptionTier.query.get(self.subscription_tier_id)
-            return tier.key if tier else 'free'
-        return 'free'
+        """Get the effective subscription tier key"""
+        return self.tier.key if self.tier else 'free'
 
     @property
     def subscription_tier_obj(self):
-        """Get the full SubscriptionTier object"""
-        if self.subscription_tier_id:
-            from .subscription_tier import SubscriptionTier
-            return SubscriptionTier.query.get(self.subscription_tier_id)
-        return None
+        """Get the full SubscriptionTier object (alias for .tier)"""
+        return self.tier
 
     def get_subscription_features(self):
         """Get list of features for current subscription tier"""
@@ -122,7 +115,8 @@ class Organization(db.Model):
 
     def is_owner(self, user):
         """Check if user is owner of this organization"""
-        return user.id == self.owner_id
+        owner = self.owner
+        return owner and user.id == owner.id
 
     def owner_has_permission(self, user, permission_name):
         """Check if owner has permission through subscription tier (no bypass)"""
@@ -147,18 +141,24 @@ class User(UserMixin, db.Model):
 
     @property
     def is_organization_owner(self):
-        """Unified organization owner check"""
-        return (self.user_type == 'customer' and 
-                self._is_organization_owner is True)
+        """Check if user has organization owner role - AUTHORITATIVE"""
+        if self.user_type != 'customer':
+            return False
+        
+        # Check active roles for organization_owner role
+        roles = self.get_active_roles()
+        return any(role.name == 'organization_owner' for role in roles)
 
     @is_organization_owner.setter
     def is_organization_owner(self, value):
+        """Sync the flag for legacy compatibility and assign/remove role"""
         self._is_organization_owner = value
-        # Auto-assign role when flag is set to True
+        
         if value is True and self.user_type == 'customer' and self.id:
+            # Ensure role is assigned
             self.ensure_organization_owner_role()
-        # When setting to False, remove the organization owner role
         elif value is False and self.id:
+            # Remove the role
             from .role import Role
             org_owner_role = Role.query.filter_by(name='organization_owner', is_system_role=True).first()
             if org_owner_role:
@@ -192,10 +192,7 @@ class User(UserMixin, db.Model):
             return self.last_name
         return self.username
 
-    def is_org_owner(self):
-        """Check if user has organization owner role"""
-        roles = self.get_active_roles()
-        return any(role.name == 'organization_owner' for role in roles)
+    
 
     def ensure_organization_owner_role(self):
         """Ensure organization owner has the proper role assigned"""
@@ -371,12 +368,22 @@ class User(UserMixin, db.Model):
 
         db.session.commit()
 
-    def restore(self, restored_by_user=None):
-        """Restore a soft-deleted user"""
+    def restore(self, restored_by_user=None, restore_roles=True, make_active=True):
+        """Restore a soft-deleted user with optional role and active status restoration"""
         self.is_deleted = False
         self.deleted_at = None
         self.deleted_by = None
-        # Note: is_active and role assignments need to be manually restored
+        
+        if make_active:
+            self.is_active = True
+            
+        if restore_roles:
+            # Reactivate all role assignments that were deactivated during soft delete
+            from .user_role_assignment import UserRoleAssignment
+            assignments = UserRoleAssignment.query.filter_by(user_id=self.id).all()
+            for assignment in assignments:
+                assignment.is_active = True
+                
         db.session.commit()
 
     @property
