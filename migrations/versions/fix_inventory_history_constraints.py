@@ -102,10 +102,18 @@ def upgrade():
     if column_exists('inventory_history', 'quantity_before'):
         print("   Dropping unwanted quantity_before column...")
         try:
-            op.drop_column('inventory_history', 'quantity_before')
+            # Use batch mode for SQLite compatibility
+            with op.batch_alter_table('inventory_history', schema=None) as batch_op:
+                batch_op.drop_column('quantity_before')
             print("   ✅ Dropped quantity_before column")
         except Exception as e:
             print(f"   ⚠️  Could not drop quantity_before column: {e}")
+            # Force drop if batch mode fails
+            try:
+                op.drop_column('inventory_history', 'quantity_before')
+                print("   ✅ Force dropped quantity_before column")
+            except Exception as e2:
+                print(f"   ❌ Failed to drop quantity_before column: {e2}")
     
     # 3. Add missing columns if they don't exist
     missing_columns = [
