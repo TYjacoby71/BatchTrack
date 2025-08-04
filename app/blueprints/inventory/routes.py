@@ -239,20 +239,25 @@ def add_inventory():
         if not notes:
             notes = 'Initial stock creation'
 
-        # Create history entry using FIFO service
-        from app.blueprints.fifo.services import FIFOService
+        # Use centralized inventory adjustment service for proper FIFO tracking
+        from app.services.inventory_adjustment import process_inventory_adjustment
 
-        history = FIFOService.add_fifo_entry(
-            inventory_item_id=item.id,
+        success = process_inventory_adjustment(
+            item_id=item.id,
             quantity=quantity,
             change_type='restock',
             unit=history_unit,
             notes=notes,
-            cost_per_unit=cost_per_unit,
             created_by=current_user.id,
-            expiration_date=item.expiration_date,
-            shelf_life_days=item.shelf_life_days
+            cost_override=cost_per_unit,
+            custom_expiration_date=item.expiration_date,
+            custom_shelf_life_days=item.shelf_life_days
         )
+
+        if not success:
+            db.session.rollback()
+            flash('Error creating inventory item - FIFO sync failed', 'error')
+            return redirect(url_for('inventory.list_inventory'))
 
         db.session.commit()
         flash('Inventory item added successfully.')
