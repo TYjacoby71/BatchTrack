@@ -44,26 +44,29 @@ def generate_fifo_code(change_type, remaining_quantity=0, batch_label=None):
         batch_label: If from batch, use batch label instead of generated code
 
     Returns:
-        String: FIFO code (e.g., 'LOT-A7B2C3D4' or 'SLD-X9Y8Z7W6')
+        String: FIFO code (e.g., 'LOT-A7B2C3D4' or 'RCN-X9Y8Z7W6')
     """
 
     # If from batch and has batch label, use batch label
     if batch_label:
         return f"BCH-{batch_label}"
 
-    # Determine if this is a lot (creates remaining quantity)
-    # Only these types with positive quantities create lots
-    lot_creation_types = [
-        'recount',  # positive overflow recount
-        'restock', 
-        'finished_batch', 
-        'manual_addition'  # adding existing quantities
-    ]
+    # Recount operations should ALWAYS use RCN prefix, never LOT
+    if change_type == 'recount':
+        prefix = 'RCN'
+    else:
+        # Determine if this is a lot (creates remaining quantity)
+        # Only these types with positive quantities create lots
+        lot_creation_types = [
+            'restock', 
+            'finished_batch', 
+            'manual_addition'  # adding existing quantities
+        ]
 
-    is_lot = change_type in lot_creation_types and remaining_quantity > 0
+        is_lot = change_type in lot_creation_types and remaining_quantity > 0
 
-    # Get prefix
-    prefix = get_fifo_prefix(change_type, is_lot)
+        # Get prefix
+        prefix = get_fifo_prefix(change_type, is_lot)
 
     # Generate base36 suffix (8 characters)
     suffix = int_to_base36(secrets.randbits(32))[:8].upper()
