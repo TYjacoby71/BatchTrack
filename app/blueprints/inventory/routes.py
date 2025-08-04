@@ -544,7 +544,9 @@ def edit_inventory(id):
         item.storage_unit = request.form.get('storage_unit')
     else:
         item.unit = request.form.get('unit')
-        item.category_id = request.form.get('category_id', None)
+        category_id = request.form.get('category_id')
+        # Convert empty string to None for PostgreSQL compatibility
+        item.category_id = None if not category_id or category_id == '' else int(category_id)
         if not item.category_id:  # Custom category selected
             item.density = float(request.form.get('density', 1.0))
         else:
@@ -562,7 +564,15 @@ def edit_inventory(id):
         import traceback
         traceback.print_exc()
         db.session.rollback()
-        flash(f'Error saving changes: {str(e)}', 'error')
+        
+        # Provide user-friendly error messages
+        error_msg = str(e)
+        if 'invalid input syntax for type integer' in error_msg and 'category_id' in error_msg:
+            flash('Invalid category selection. Please choose a valid category or leave blank for custom category.', 'error')
+        elif 'psycopg2.errors' in error_msg:
+            flash('Database error occurred while saving. Please check your input values and try again.', 'error')
+        else:
+            flash(f'Error saving changes: {str(e)}', 'error')
 
     return redirect(url_for('inventory.view_inventory', id=id))
 
