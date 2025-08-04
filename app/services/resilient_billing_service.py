@@ -14,14 +14,14 @@ class ResilientBillingService:
     @staticmethod
     def check_organization_access(organization):
         """Check if organization should have access, using snapshots during outages"""
-        subscription = organization.subscription
+        tier = organization.tier
 
-        # If no subscription at all, deny access
-        if not subscription:
-            return False, "No subscription found"
+        # If no tier at all, deny access
+        if not tier:
+            return False, "No subscription tier found"
 
-        # Try current subscription first (normal case)
-        if subscription.is_active and ResilientBillingService._is_stripe_healthy():
+        # Try current tier first (normal case)
+        if tier.is_available and ResilientBillingService._is_stripe_healthy():
             return True, "Active subscription confirmed"
 
         # If Stripe is down or subscription appears inactive, check snapshots
@@ -37,14 +37,14 @@ class ResilientBillingService:
     @staticmethod
     def get_effective_tier(organization):
         """Get effective tier, falling back to snapshots during outages"""
-        subscription = organization.subscription
+        tier = organization.tier
 
-        if not subscription:
+        if not tier:
             return 'free'
 
-        # Try current subscription data first
-        if subscription.is_active and ResilientBillingService._is_stripe_healthy():
-            return subscription.effective_tier
+        # Try current tier data first
+        if tier.is_available and ResilientBillingService._is_stripe_healthy():
+            return tier.key
 
         # Fall back to snapshot data
         latest_snapshot = BillingSnapshot.get_latest_valid_snapshot(organization.id)
@@ -118,14 +118,8 @@ class ResilientBillingService:
     @staticmethod
     def create_reconciliation_flow(organization, tier):
         """Create a reconciliation flow for users who signed up during outages"""
-        subscription = organization.subscription
-
-        if not subscription:
+        if not organization:
             return False
-
-        # Mark subscription as needing reconciliation
-        subscription.status = 'reconciliation_needed'
-        subscription.notes = f"{subscription.notes or ''}\nNeeds reconciliation: signed up during Stripe outage".strip()
 
         # Create a temporary grace period
         temp_snapshot = BillingSnapshot(
