@@ -51,28 +51,36 @@ class ExpirationService:
         return round(time_diff_seconds / 86400)
 
     @staticmethod
-    def get_life_remaining_percent(entry_date: datetime, expiration_date: datetime) -> Optional[float]:
-        """Calculate percentage of shelf life remaining"""
-        if not entry_date or not expiration_date:
+    def get_life_remaining_percent(entry_date: datetime, shelf_life_days: int) -> Optional[float]:
+        """Calculate percentage of shelf life remaining based on days since creation"""
+        if not entry_date or not shelf_life_days:
             return None
 
         from ...utils.timezone_utils import TimezoneUtils
+        from datetime import timezone
 
         try:
             # Get current UTC time for consistent comparison
             now_utc = TimezoneUtils.utc_now()
 
-            # Work entirely in UTC - no timezone conversions needed for math
-            # Calculate exact time progression
-            total_life_seconds = (expiration_date - entry_date).total_seconds()
-            time_remaining_seconds = (expiration_date - now_utc).total_seconds()
+            # Ensure entry_date is timezone-aware (convert to UTC if naive)
+            if entry_date.tzinfo is None:
+                entry_date = entry_date.replace(tzinfo=timezone.utc)
+            elif entry_date.tzinfo != timezone.utc:
+                entry_date = entry_date.astimezone(timezone.utc)
 
-            if total_life_seconds <= 0:
-                return 0.0
+            if now_utc.tzinfo is None:
+                now_utc = now_utc.replace(tzinfo=timezone.utc)
 
-            # Calculate percentage based on time remaining vs total life
-            life_remaining_percent = max(0.0, (time_remaining_seconds / total_life_seconds) * 100)
-            return min(100.0, life_remaining_percent)
+            # Calculate days since creation
+            days_since_creation = (now_utc - entry_date).days
+
+            # Calculate remaining life percentage
+            remaining_days = shelf_life_days - days_since_creation
+            life_remaining_percent = (remaining_days / shelf_life_days) * 100
+
+            # Clamp between 0 and 100
+            return max(0.0, min(100.0, life_remaining_percent))
         except (TypeError, AttributeError) as e:
             # Handle cases where date calculation fails
             logger.warning(f"Date calculation error in get_life_remaining_percent: {e}")
@@ -498,7 +506,7 @@ class ExpirationService:
             if expiration_date and entry.timestamp:
                 # Calculate freshness percentage
                 life_remaining_percent = ExpirationService.get_life_remaining_percent(
-                    entry.timestamp, expiration_date
+                    entry.timestamp, entry.inventory_item.shelf_life_days
                 )
 
                 if life_remaining_percent is not None:
