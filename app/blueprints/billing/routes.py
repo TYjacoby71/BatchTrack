@@ -276,7 +276,7 @@ def complete_signup_from_stripe():
         return redirect(url_for('auth.signup'))
 
     pending_signup = session.get('pending_signup')
-    return SignupService.complete_signup(pending_signup['selected_tier'], is_stripe_mode=True)
+    return SignupService.complete_signup(pending_signup['selected_tier'])
 
 
 
