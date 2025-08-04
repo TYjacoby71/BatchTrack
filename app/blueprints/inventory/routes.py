@@ -29,7 +29,7 @@ def list_inventory():
 
     if inventory_type:
         query = query.filter_by(type=inventory_type)
-    
+
     # Order by archived status (active items first) then by name
     query = query.order_by(InventoryItem.is_archived.asc(), InventoryItem.name.asc())
     inventory_items = query.all()
@@ -144,7 +144,7 @@ def view_inventory(id):
             )
         ).order_by(InventoryHistory.expiration_date.asc()).all()
         expired_total = sum(float(entry.remaining_quantity) for entry in expired_entries)
-    
+
     from ...utils.timezone_utils import TimezoneUtils
     return render_template('inventory/view.html',
                          abs=abs,
@@ -182,7 +182,7 @@ def add_inventory():
         # Handle cost entry type
         cost_entry_type = request.form.get('cost_entry_type', 'per_unit')
         cost_input = float(request.form.get('cost_per_unit', 0))
-        
+
         if cost_entry_type == 'total' and quantity > 0:
             cost_per_unit = cost_input / quantity
         else:
@@ -234,25 +234,25 @@ def add_inventory():
         db.session.add(item)
         db.session.flush()  # Get the ID without committing
 
-        # Create initial history entry for FIFO tracking
-        if quantity > 0:
-            history = InventoryHistory(
-                inventory_item_id=item.id,
-                change_type='restock',
-                quantity_change=quantity,
-                remaining_quantity=quantity,  # For FIFO tracking
-                unit=history_unit,  # Use the correct unit for history
-                unit_cost=cost_per_unit,
-                note='Initial stock creation',
-                created_by=current_user.id if current_user else None,
-                quantity_used=0.0,  # Restocks don't consume inventory - always 0
-                is_perishable=is_perishable,
-                shelf_life_days=shelf_life_days,
-                expiration_date=expiration_date,
-                organization_id=current_user.organization_id
-            )
-            db.session.add(history)
-            item.quantity = quantity  # Update the current quantity
+        # Set default notes if it's empty
+        notes = request.form.get('notes', '')
+        if not notes:
+            notes = 'Initial stock creation'
+
+        # Create history entry using FIFO service
+        from app.blueprints.fifo.services import FIFOService
+
+        history = FIFOService.add_fifo_entry(
+            inventory_item_id=item.id,
+            quantity=quantity,
+            change_type='restock',
+            unit=history_unit,
+            notes=notes,
+            cost_per_unit=cost_per_unit,
+            created_by=current_user.id,
+            expiration_date=item.expiration_date,
+            shelf_life_days=item.shelf_life_days
+        )
 
         db.session.commit()
         flash('Inventory item added successfully.')

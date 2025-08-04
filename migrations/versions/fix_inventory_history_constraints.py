@@ -102,18 +102,30 @@ def upgrade():
     if column_exists('inventory_history', 'quantity_before'):
         print("   Dropping unwanted quantity_before column...")
         try:
-            # Use batch mode for SQLite compatibility
-            with op.batch_alter_table('inventory_history', schema=None) as batch_op:
-                batch_op.drop_column('quantity_before')
-            print("   ✅ Dropped quantity_before column")
+            # For PostgreSQL, we need to drop the column directly
+            bind.execute(text("ALTER TABLE inventory_history DROP COLUMN IF EXISTS quantity_before CASCADE"))
+            print("   ✅ Dropped quantity_before column using direct SQL")
         except Exception as e:
-            print(f"   ⚠️  Could not drop quantity_before column: {e}")
-            # Force drop if batch mode fails
+            print(f"   ⚠️  Direct SQL drop failed: {e}")
             try:
-                op.drop_column('inventory_history', 'quantity_before')
-                print("   ✅ Force dropped quantity_before column")
+                # Use batch mode for SQLite compatibility
+                with op.batch_alter_table('inventory_history', schema=None) as batch_op:
+                    batch_op.drop_column('quantity_before')
+                print("   ✅ Dropped quantity_before column using batch mode")
             except Exception as e2:
-                print(f"   ❌ Failed to drop quantity_before column: {e2}")
+                print(f"   ⚠️  Batch mode failed: {e2}")
+                # Force drop if batch mode fails
+                try:
+                    op.drop_column('inventory_history', 'quantity_before')
+                    print("   ✅ Force dropped quantity_before column")
+                except Exception as e3:
+                    print(f"   ❌ All drop attempts failed: {e3}")
+                    # If we can't drop it, at least make it nullable temporarily
+                    try:
+                        bind.execute(text("ALTER TABLE inventory_history ALTER COLUMN quantity_before DROP NOT NULL"))
+                        print("   ⚠️  Made quantity_before nullable as fallback")
+                    except Exception as e4:
+                        print(f"   ❌ Could not even make column nullable: {e4}")
     
     # 3. Add missing columns if they don't exist
     missing_columns = [
