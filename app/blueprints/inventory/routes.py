@@ -544,7 +544,9 @@ def edit_inventory(id):
         item.storage_unit = request.form.get('storage_unit')
     else:
         item.unit = request.form.get('unit')
-        item.category_id = request.form.get('category_id', None)
+        category_id = request.form.get('category_id')
+        # Convert empty string to None for PostgreSQL compatibility
+        item.category_id = None if not category_id or category_id == '' else int(category_id)
         if not item.category_id:  # Custom category selected
             item.density = float(request.form.get('density', 1.0))
         else:
