@@ -45,6 +45,18 @@ def constraint_exists(table_name, constraint_name):
         return False
 
 
+def index_exists(table_name, index_name):
+    """Check if an index exists on a table"""
+    if not table_exists(table_name):
+        return False
+    try:
+        inspector = inspect(op.get_bind())
+        indexes = inspector.get_indexes(table_name)
+        return any(idx['name'] == index_name for idx in indexes)
+    except Exception:
+        return False
+
+
 def upgrade():
     """Fix inventory history constraints and ensure proper data integrity"""
     print("=== Fixing inventory history constraints ===")
@@ -57,36 +69,44 @@ def upgrade():
         op.create_table('inventory_history',
             sa.Column('id', sa.Integer(), nullable=False),
             sa.Column('inventory_item_id', sa.Integer(), nullable=False),
-            sa.Column('quantity', sa.Float(), nullable=False),
+            sa.Column('quantity_change', sa.Float(), nullable=False),
             sa.Column('remaining_quantity', sa.Float(), nullable=False, default=0.0),
             sa.Column('change_type', sa.String(50), nullable=False),
-            sa.Column('notes', sa.Text(), nullable=True),
+            sa.Column('note', sa.Text(), nullable=True),
             sa.Column('timestamp', sa.DateTime(), nullable=False),
             sa.Column('created_by', sa.Integer(), nullable=True),
             sa.Column('organization_id', sa.Integer(), nullable=False),
             sa.Column('batch_id', sa.Integer(), nullable=True),
             sa.Column('used_for_batch_id', sa.Integer(), nullable=True),
-            sa.Column('cost_per_unit', sa.Float(), nullable=True),
-            sa.Column('unit', sa.String(20), nullable=True),
+            sa.Column('unit_cost', sa.Float(), nullable=True),
+            sa.Column('unit', sa.String(32), nullable=True),
             sa.Column('fifo_code', sa.String(50), nullable=True),
             sa.Column('expiration_date', sa.Date(), nullable=True),
-            sa.Column('source', sa.String(100), nullable=True),
-            sa.Column('fifo_reference_id', sa.String(100), nullable=True),
-            sa.Column('order_id', sa.Integer(), nullable=True),
-            sa.PrimaryKeyConstraint('id')
+            sa.Column('fifo_reference_id', sa.Integer(), nullable=True),
+            sa.Column('quantity_used', sa.Float(), default=0.0),
+            sa.Column('is_perishable', sa.Boolean(), default=False),
+            sa.Column('shelf_life_days', sa.Integer(), nullable=True),
+            sa.PrimaryKeyConstraint('id'),
+            sa.ForeignKeyConstraint(['inventory_item_id'], ['inventory_item.id']),
+            sa.ForeignKeyConstraint(['batch_id'], ['batch.id']),
+            sa.ForeignKeyConstraint(['used_for_batch_id'], ['batch.id']),
+            sa.ForeignKeyConstraint(['created_by'], ['user.id']),
+            sa.ForeignKeyConstraint(['organization_id'], ['organization.id'])
         )
         print("   ✅ Created inventory_history table")
-    else:
-        print("   ✅ inventory_history table already exists")
+        return
+    
+    print("   ✅ inventory_history table already exists")
     
     # 2. Add missing columns if they don't exist
     missing_columns = [
         ('remaining_quantity', sa.Float(), False, 0.0),
         ('fifo_code', sa.String(50), True, None),
         ('expiration_date', sa.Date(), True, None),
-        ('source', sa.String(100), True, None),
-        ('fifo_reference_id', sa.String(100), True, None),
-        ('order_id', sa.Integer(), True, None),
+        ('fifo_reference_id', sa.Integer(), True, None),
+        ('quantity_used', sa.Float(), True, 0.0),
+        ('is_perishable', sa.Boolean(), True, False),
+        ('shelf_life_days', sa.Integer(), True, None),
     ]
     
     for col_name, col_type, nullable, default in missing_columns:
@@ -97,23 +117,45 @@ def upgrade():
             else:
                 op.add_column('inventory_history', sa.Column(col_name, col_type, nullable=nullable))
     
-    # 3. Fix remaining_quantity for existing records
+    # 3. Update remaining_quantity for existing records where it's missing or zero
     print("   Updating remaining_quantity for existing records...")
-    bind.execute(text("""
-        UPDATE inventory_history 
-        SET remaining_quantity = CASE 
-            WHEN change_type IN ('purchase', 'adjustment_increase', 'finished_batch', 'return', 'found') 
-            THEN quantity 
-            ELSE 0.0 
-        END 
-        WHERE remaining_quantity IS NULL OR remaining_quantity = 0
-    """))
+    try:
+        bind.execute(text("""
+            UPDATE inventory_history 
+            SET remaining_quantity = CASE 
+                WHEN change_type IN ('purchase', 'adjustment_increase', 'finished_batch', 'return', 'found', 'manual_addition') 
+                THEN ABS(quantity_change)
+                ELSE 0.0 
+            END 
+            WHERE remaining_quantity IS NULL OR remaining_quantity = 0
+        """))
+        print("   ✅ Updated remaining_quantity values")
+    except Exception as e:
+        print(f"   ⚠️  Could not update remaining_quantity: {e}")
     
-    # 4. Add constraints if they don't exist
+    # 4. Clean up any invalid data before adding constraints
+    print("   Cleaning up invalid data...")
+    try:
+        # Fix any negative remaining quantities
+        bind.execute(text("""
+            UPDATE inventory_history 
+            SET remaining_quantity = 0 
+            WHERE remaining_quantity < 0
+        """))
+        
+        # Fix any remaining quantities greater than absolute quantity change
+        bind.execute(text("""
+            UPDATE inventory_history 
+            SET remaining_quantity = ABS(quantity_change)
+            WHERE remaining_quantity > ABS(quantity_change) AND quantity_change > 0
+        """))
+        print("   ✅ Cleaned up invalid data")
+    except Exception as e:
+        print(f"   ⚠️  Could not clean up data: {e}")
+    
+    # 5. Add constraints if they don't exist
     constraints_to_add = [
-        ('ck_inventory_history_quantity_positive', 'quantity > 0'),
         ('ck_inventory_history_remaining_quantity_non_negative', 'remaining_quantity >= 0'),
-        ('ck_inventory_history_remaining_quantity_lte_quantity', 'remaining_quantity <= quantity'),
     ]
     
     for constraint_name, constraint_condition in constraints_to_add:
@@ -128,19 +170,20 @@ def upgrade():
             except Exception as e:
                 print(f"   ⚠️  Could not add constraint {constraint_name}: {e}")
     
-    # 5. Create indexes for performance
-    try:
-        op.create_index('idx_inventory_history_item_remaining', 'inventory_history', 
-                       ['inventory_item_id', 'remaining_quantity'])
-        print("   ✅ Created performance index on inventory_item_id, remaining_quantity")
-    except Exception as e:
-        print(f"   ⚠️  Index may already exist: {e}")
+    # 6. Create indexes for performance if they don't exist
+    indexes_to_add = [
+        ('idx_inventory_history_item_remaining', ['inventory_item_id', 'remaining_quantity']),
+        ('idx_inventory_history_fifo_code', ['fifo_code']),
+        ('idx_inventory_history_timestamp', ['timestamp']),
+    ]
     
-    try:
-        op.create_index('idx_inventory_history_fifo_code', 'inventory_history', ['fifo_code'])
-        print("   ✅ Created index on fifo_code")
-    except Exception as e:
-        print(f"   ⚠️  Index may already exist: {e}")
+    for index_name, columns in indexes_to_add:
+        if not index_exists('inventory_history', index_name):
+            try:
+                op.create_index(index_name, 'inventory_history', columns)
+                print(f"   ✅ Created index: {index_name}")
+            except Exception as e:
+                print(f"   ⚠️  Index may already exist: {e}")
     
     print("✅ Inventory history constraints fixed successfully")
 
@@ -151,9 +194,7 @@ def downgrade():
     
     # Remove constraints
     constraints_to_remove = [
-        'ck_inventory_history_quantity_positive',
-        'ck_inventory_history_remaining_quantity_non_negative', 
-        'ck_inventory_history_remaining_quantity_lte_quantity',
+        'ck_inventory_history_remaining_quantity_non_negative',
     ]
     
     for constraint_name in constraints_to_remove:
@@ -164,16 +205,17 @@ def downgrade():
             print(f"   ⚠️  Could not remove constraint {constraint_name}: {e}")
     
     # Remove indexes
-    try:
-        op.drop_index('idx_inventory_history_item_remaining', 'inventory_history')
-        print("   ✅ Removed index on inventory_item_id, remaining_quantity")
-    except Exception as e:
-        print(f"   ⚠️  Could not remove index: {e}")
+    indexes_to_remove = [
+        'idx_inventory_history_item_remaining',
+        'idx_inventory_history_fifo_code', 
+        'idx_inventory_history_timestamp',
+    ]
     
-    try:
-        op.drop_index('idx_inventory_history_fifo_code', 'inventory_history')
-        print("   ✅ Removed index on fifo_code")
-    except Exception as e:
-        print(f"   ⚠️  Could not remove index: {e}")
+    for index_name in indexes_to_remove:
+        try:
+            op.drop_index(index_name, 'inventory_history')
+            print(f"   ✅ Removed index: {index_name}")
+        except Exception as e:
+            print(f"   ⚠️  Could not remove index: {e}")
     
     print("✅ Downgrade completed")
