@@ -198,10 +198,10 @@ def signup():
         }
 
         # For paid tiers, redirect to Stripe checkout
-        if selected_tier != 'free' and current_app.config.get('STRIPE_SECRET_KEY'):
+        if selected_tier != 'free' and current_app.config.get('STRIPE_SECRET_KEY') and is_stripe_ready:
             return redirect(url_for('billing.checkout', tier=selected_tier))
         else:
-            # Free tier or no Stripe - complete signup directly
+            # Free tier or Stripe not ready - complete signup directly
             from ...services.signup_service import SignupService
             return SignupService.complete_signup(selected_tier)
 

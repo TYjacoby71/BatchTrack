@@ -94,8 +94,7 @@
                                             </ul>
                                         </div>
                                         <button type="button" class="btn btn-primary tier-select-btn w-100" 
-                                            data-tier="{{ tier_key }}"
-                                            onclick="selectTier('{{ tier_key }}')">
+                                            data-tier="{{ tier_key }}">
                                         Choose {{ tier_data.name }}
                                     </button>
                                     </div>
@@ -346,33 +345,50 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
 
+    // Function to select a tier
+    function selectTier(tier) {
+        console.log('=== TIER SELECTION ===');
+        console.log('Tier clicked:', tier);
+
+        // Remove active class from all cards
+        tierCards.forEach(c => {
+            c.classList.remove('active', 'border-primary');
+            console.log('Removed active from:', c.dataset.tier);
+        });
+
+        // Find and activate the clicked tier card
+        const targetCard = document.querySelector(`.tier-card[data-tier="${tier}"]`);
+        if (targetCard) {
+            targetCard.classList.add('active', 'border-primary');
+            console.log('Added active to:', tier);
+        }
+
+        // Update hidden input
+        if (selectedTierInput) {
+            const oldValue = selectedTierInput.value;
+            selectedTierInput.value = tier;
+            console.log('Tier input updated from:', oldValue, 'to:', tier);
+            console.log('Input element:', selectedTierInput);
+        } else {
+            console.error('selectedTierInput is null!');
+        }
+        console.log('==================');
+    }
+
+    // Add click handlers to cards and buttons
     tierCards.forEach(card => {
         card.addEventListener('click', function() {
             const tier = this.dataset.tier;
-            console.log('=== TIER SELECTION ===');
-            console.log('Tier clicked:', tier);
-            console.log('Card dataset:', this.dataset);
+            selectTier(tier);
+        });
+    });
 
-            // Remove active class from all cards
-            tierCards.forEach(c => {
-                c.classList.remove('active', 'border-primary');
-                console.log('Removed active from:', c.dataset.tier);
-            });
-
-            // Add active class to clicked card
-            this.classList.add('active', 'border-primary');
-            console.log('Added active to:', tier);
-
-            // Update hidden input
-            if (selectedTierInput) {
-                const oldValue = selectedTierInput.value;
-                selectedTierInput.value = tier;
-                console.log('Tier input updated from:', oldValue, 'to:', tier);
-                console.log('Input element:', selectedTierInput);
-            } else {
-                console.error('selectedTierInput is null!');
-            }
-            console.log('==================');
+    // Also handle button clicks specifically
+    document.querySelectorAll('.tier-select-btn').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.stopPropagation(); // Prevent card click from also firing
+            const tier = this.dataset.tier;
+            selectTier(tier);
         });
     });
 
