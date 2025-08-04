@@ -98,7 +98,16 @@ def upgrade():
     
     print("   ✅ inventory_history table already exists")
     
-    # 2. Add missing columns if they don't exist
+    # 2. Drop unwanted quantity_before column if it exists
+    if column_exists('inventory_history', 'quantity_before'):
+        print("   Dropping unwanted quantity_before column...")
+        try:
+            op.drop_column('inventory_history', 'quantity_before')
+            print("   ✅ Dropped quantity_before column")
+        except Exception as e:
+            print(f"   ⚠️  Could not drop quantity_before column: {e}")
+    
+    # 3. Add missing columns if they don't exist
     missing_columns = [
         ('remaining_quantity', sa.Float(), False, 0.0),
         ('fifo_code', sa.String(50), True, None),
@@ -117,7 +126,7 @@ def upgrade():
             else:
                 op.add_column('inventory_history', sa.Column(col_name, col_type, nullable=nullable))
     
-    # 3. Update remaining_quantity for existing records where it's missing or zero
+    # 4. Update remaining_quantity for existing records where it's missing or zero
     print("   Updating remaining_quantity for existing records...")
     try:
         bind.execute(text("""
@@ -133,7 +142,7 @@ def upgrade():
     except Exception as e:
         print(f"   ⚠️  Could not update remaining_quantity: {e}")
     
-    # 4. Clean up any invalid data before adding constraints
+    # 5. Clean up any invalid data before adding constraints
     print("   Cleaning up invalid data...")
     try:
         # Fix any negative remaining quantities
@@ -153,7 +162,7 @@ def upgrade():
     except Exception as e:
         print(f"   ⚠️  Could not clean up data: {e}")
     
-    # 5. Add constraints if they don't exist
+    # 6. Add constraints if they don't exist
     constraints_to_add = [
         ('ck_inventory_history_remaining_quantity_non_negative', 'remaining_quantity >= 0'),
     ]
@@ -170,7 +179,7 @@ def upgrade():
             except Exception as e:
                 print(f"   ⚠️  Could not add constraint {constraint_name}: {e}")
     
-    # 6. Create indexes for performance if they don't exist
+    # 7. Create indexes for performance if they don't exist
     indexes_to_add = [
         ('idx_inventory_history_item_remaining', ['inventory_item_id', 'remaining_quantity']),
         ('idx_inventory_history_fifo_code', ['fifo_code']),
