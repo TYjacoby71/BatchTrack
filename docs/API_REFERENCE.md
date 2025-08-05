@@ -208,8 +208,8 @@ POST /api/inventory/adjust
             "adjustment_type": "restock",
             "quantity": 100.0,
             "cost_per_unit": 0.16,
-            "reason": "New shipment received",
-            "expiration_date": "2024-12-31"
+            "expiration_date": "2024-12-31",
+            "reason": "New shipment received"
         }
     ],
     "notes": "Monthly restock order #12345"
@@ -487,6 +487,54 @@ POST /api/admin/switch-organization
 {
     "organization_id": 1
 }
+```
+
+## Billing Management
+
+### Upgrade Subscription
+```http
+POST /billing/upgrade
+```
+
+### Checkout
+```http
+POST /billing/checkout/<tier>/<billing_cycle>
+POST /billing/checkout/<tier>
+```
+
+### Customer Portal
+```http
+GET /billing/customer-portal
+```
+
+### Cancel Subscription
+```http
+POST /billing/cancel-subscription
+```
+
+### Stripe Webhook
+```http
+POST /billing/webhooks/stripe
+```
+
+## Container Management
+
+### Get Available Containers
+```http
+GET /api/available-containers/<int:recipe_id>
+GET /api/containers/available
+```
+
+### Batch Container Management
+```http
+GET /api/batches/<int:batch_id>/containers
+GET /api/batches/<int:batch_id>/containers/<int:container_id>
+POST /api/batches/<int:batch_id>/containers/<int:container_id>/adjust
+```
+
+### Debug Containers
+```http
+GET /api/debug-containers
 ```
 
 ## Error Codes

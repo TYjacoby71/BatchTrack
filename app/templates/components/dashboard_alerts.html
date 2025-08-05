@@ -83,10 +83,18 @@ async function dismissAlert(alertType) {
 
 async function refreshDashboardAlerts() {
     try {
-        const response = await fetch('/api/dashboard-alerts');
+        const response = await fetch('/api/dashboard-alerts', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('meta[name=csrf-token]')?.getAttribute('content')
+            }
+        });
         if (response.ok) {
             const alertData = await response.json();
             updateAlertContainer(alertData);
+        } else {
+            console.error('Failed to refresh alerts - response not ok');
         }
     } catch (error) {
         console.error('Error refreshing alerts:', error);

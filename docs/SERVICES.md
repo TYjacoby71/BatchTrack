@@ -130,6 +130,40 @@ availability = check_recipe_availability(
 
 **Authority:** Shelf-life calculations and expiration alerts
 
+### 6. Dashboard Alert Service (`app/services/dashboard_alerts.py`)
+
+**Authority:** Unified alert management with cognitive load considerations
+
+**Key Functions:**
+- `get_dashboard_alerts(max_alerts=None, dismissed_alerts=None)`
+- `get_alert_summary()`
+- `_get_timer_alerts()`
+- `_get_incomplete_batches()`
+
+**Usage Examples:**
+```python
+# Get prioritized dashboard alerts
+from app.services.dashboard_alerts import DashboardAlertService
+
+alerts = DashboardAlertService.get_dashboard_alerts(max_alerts=3)
+```
+
+### 7. Combined Inventory Alert Service (`app/services/combined_inventory_alerts.py`)
+
+**Authority:** Unified inventory alerting across expiration and stock levels
+
+### 8. Billing Service (`app/services/billing_service.py`)
+
+**Authority:** Stripe integration and subscription management
+
+### 9. Timer Service (`app/services/timer_service.py`)
+
+**Authority:** Production timer management
+
+### 10. Product Service (`app/services/product_service.py`)
+
+**Authority:** Product lifecycle and variant management
+
 **Key Functions:**
 - `calculate_batch_expiration(batch_id)`
 - `get_expiring_inventory(days_ahead=7)`

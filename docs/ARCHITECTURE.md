@@ -159,13 +159,21 @@ Subscription Tier → Available Features → User Limits → Team Members → Ac
 
 ## Service Layer Architecture
 
-### Core Services
+### Core Services (Never Bypass)
 
-- **FIFO Service** (`FifoService`) - Manages first-in-first-out inventory deduction
-- **Inventory Adjustment Service** (`InventoryAdjustmentService`) - Handles all inventory modifications
-- **Unit Conversion Service** (`ConversionEngine`) - Manages unit conversions and mappings
-- **Stock Check Service** (`universal_stock_check`) - Validates ingredient availability
-- **Dashboard Alerts Service** (`DashboardAlertService`) - Generates contextual alerts
+- **FIFO Service** (`app/blueprints/fifo/services.py`) - Manages first-in-first-out inventory deduction
+- **Inventory Adjustment Service** (`app/services/inventory_adjustment.py`) - Handles all inventory modifications
+- **Unit Conversion Service** (`app/services/unit_conversion.py`) - Manages unit conversions and mappings
+- **Stock Check Service** (`app/services/stock_check.py`) - Validates ingredient availability
+
+### Supporting Services
+
+- **Dashboard Alert Service** (`app/services/dashboard_alerts.py`) - Unified alert management with neurodivergent-friendly design
+- **Combined Inventory Alert Service** (`app/services/combined_inventory_alerts.py`) - Cross-service inventory alerting
+- **Billing Service** (`app/services/billing_service.py`) - Stripe integration and subscription management
+- **Product Service** (`app/services/product_service.py`) - Product lifecycle management
+- **Timer Service** (`app/services/timer_service.py`) - Production timer management
+- **Reservation Service** (`app/services/reservation_service.py`) - Product reservation system
 
 ---
 
