@@ -173,8 +173,8 @@
     "supports_stripe": true,
     "supports_whop": true,
     "whop_only": false,
-    "whop_product_key": "",
-    "whop_product_name": ""
+    "whop_product_key": "test",
+    "whop_product_name": "test"
   },
   "enterprise": {
     "name": "Enterprise Plan",
