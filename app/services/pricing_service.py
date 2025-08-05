@@ -138,9 +138,7 @@ class PricingService:
             if not (tier_data.get('is_customer_facing', True) and tier_data.get('is_available', True)):
                 continue
 
-            # Always start with fallback data - guarantees we have something
-            pricing_data[tier_key] = PricingService._get_tier_fallback_data(tier_key, tier_data)
-            failed_tiers += 1  # Start with assuming failure, then switch on success
+            # Initialize empty pricing data - will be populated from Stripe only
 
             lookup_key = tier_data.get('stripe_lookup_key')
             if not lookup_key:
@@ -182,22 +180,10 @@ class PricingService:
                 logger.error(f"Error loading pricing for tier {tier_key}: {str(e)}")
                 # Keep fallback data, already set above
 
-        logger.info(f"Pricing retrieval complete: {successful_tiers} tiers from Stripe, {failed_tiers} using fallback, {len(pricing_data)} total available")
+        logger.info(f"Pricing retrieval complete: {successful_tiers} tiers from Stripe, {len(pricing_data)} total available")
         return pricing_data
 
-    @staticmethod
-    def _get_tier_fallback_data(tier_key, tier_data):
-        """Get fallback data structure for a single tier"""
-        # Extract numeric price values for consistency with signup page expectations
-        price_monthly = tier_data.get('fallback_price_monthly', 0)
-        if isinstance(price_monthly, str):
-            # Remove $ sign and convert to float
-            price_monthly = float(price_monthly.replace('$', '').replace(',', '') or 0)
-
-        price_yearly = tier_data.get('fallback_price_yearly', 0)
-        if isinstance(price_yearly, str):
-            # Remove $ sign and convert to float
-            price_yearly = float(price_yearly.replace('$', '').replace(',', '') or 0)
+    
 
         return {
             'name': tier_data.get('name', tier_key.title()),

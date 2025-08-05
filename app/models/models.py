@@ -94,7 +94,7 @@ class Organization(db.Model):
         tiers_config = load_tiers_config()
 
         if self.tier.key in tiers_config:
-            return tiers_config[self.tier.key].get('fallback_features', [])
+            return tiers_config[self.tier.key].get('features', [])
 
         return []
 

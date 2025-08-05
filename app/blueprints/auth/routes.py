@@ -197,13 +197,17 @@ def signup():
             'referral_code': referral_code
         }
 
-        # For paid tiers, redirect to Stripe checkout
-        if selected_tier != 'free' and current_app.config.get('STRIPE_SECRET_KEY') and is_stripe_ready:
+        # All tiers require Stripe checkout
+        if current_app.config.get('STRIPE_SECRET_KEY') and is_stripe_ready:
             return redirect(url_for('billing.checkout', tier=selected_tier))
         else:
-            # Free tier or Stripe not ready - complete signup directly
-            from ...services.signup_service import SignupService
-            return SignupService.complete_signup(selected_tier)
+            flash('Payment system not available. Please try again later.', 'error')
+            return render_template('auth/signup.html', 
+                         signup_source=signup_source,
+                         referral_code=referral_code,
+                         promo_code=promo_code,
+                         available_tiers=available_tiers,
+                         form_data=request.form)
 
     return render_template('auth/signup.html', 
                          signup_source=signup_source,
@@ -211,19 +215,7 @@ def signup():
                          promo_code=promo_code,
                          available_tiers=available_tiers)
 
-@auth_bp.route('/complete-signup')
-@login_required
-def complete_signup():
-    """Complete signup after successful Stripe payment"""
-    # This route will be called by the billing system after successful payment
-    # The user should already be logged in with a temporary account
-    # and the organization should be created with the proper tier
 
-    # Clear any pending signup data
-    session.pop('pending_signup', None)
-
-    flash('Welcome! Your account has been successfully created.', 'success')
-    return redirect(url_for('app_routes.dashboard'))
 
 # Permission and Role Management Routes
 from .permissions import manage_permissions, manage_roles, create_role, update_role, toggle_permission_status

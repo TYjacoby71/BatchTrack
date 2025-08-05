@@ -154,4 +154,4 @@ def register_filters(app):
         from app.blueprints.developer.subscription_tiers import load_tiers_config
         tiers_config = load_tiers_config()
         tier_data = tiers_config.get(tier_key, {})
-        return tier_data.get('fallback_features', [])
+        return tier_data.get('features', [])
