@@ -402,23 +402,29 @@ def sync_tier(tier_key):
         if not tier.get('stripe_lookup_key'):
             logger.warning(f"No stripe_lookup_key found for tier {tier_key} - this should be set manually")
 
-        # Update pricing snapshots for resilience
+        # Update pricing snapshots for resilience - skip if model doesn't exist
         try:
-            from ...models.pricing_snapshot import PricingSnapshot
+            # Try to import and use pricing snapshots, but don't fail if unavailable
+            try:
+                from app.models.pricing_snapshot import PricingSnapshot
+                
+                # Create/update snapshots for both monthly and yearly prices
+                if monthly_price_id:
+                    monthly_price_data = stripe.Price.retrieve(monthly_price_id)
+                    PricingSnapshot.update_from_stripe_data(monthly_price_data, product)
+                    logger.info(f"Updated pricing snapshot for monthly price: {monthly_price_id}")
 
-            # Create/update snapshots for both monthly and yearly prices
-            if monthly_price_id:
-                monthly_price_data = stripe.Price.retrieve(monthly_price_id)
-                PricingSnapshot.update_from_stripe_data(monthly_price_data, product)
-                logger.info(f"Updated pricing snapshot for monthly price: {monthly_price_id}")
+                if yearly_price_id:
+                    yearly_price_data = stripe.Price.retrieve(yearly_price_id)
+                    PricingSnapshot.update_from_stripe_data(yearly_price_data, product)
+                    logger.info(f"Updated pricing snapshot for yearly price: {yearly_price_id}")
 
-            if yearly_price_id:
-                yearly_price_data = stripe.Price.retrieve(yearly_price_id)
-                PricingSnapshot.update_from_stripe_data(yearly_price_data, product)
-                logger.info(f"Updated pricing snapshot for yearly price: {yearly_price_id}")
-
-            db.session.commit()
-            logger.info(f"Pricing snapshots updated for tier {tier_key}")
+                db.session.commit()
+                logger.info(f"Pricing snapshots updated for tier {tier_key}")
+            except ImportError:
+                logger.info(f"PricingSnapshot model not available, skipping snapshots for tier {tier_key}")
+            except AttributeError as attr_error:
+                logger.warning(f"PricingSnapshot method not available: {str(attr_error)}")
 
         except Exception as snapshot_error:
             logger.warning(f"Failed to update pricing snapshots for tier {tier_key}: {str(snapshot_error)}")
@@ -438,9 +444,11 @@ def sync_tier(tier_key):
         })
 
     except stripe.error.StripeError as e:
-        return jsonify({'error': f'Stripe error: {str(e)}'}), 400
+        logger.error(f"Stripe error during sync of tier {tier_key}: {str(e)}")
+        return jsonify({'success': False, 'error': f'Stripe error: {str(e)}'}), 400
     except Exception as e:
-        return jsonify({'error': f'Sync failed: {str(e)}'}), 500
+        logger.error(f"Unexpected error during sync of tier {tier_key}: {str(e)}")
+        return jsonify({'success': False, 'error': f'Sync failed: {str(e)}'}), 500
 
 @subscription_tiers_bp.route('/api/tiers')
 @login_required 
