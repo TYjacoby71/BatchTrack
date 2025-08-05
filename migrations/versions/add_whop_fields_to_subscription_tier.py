@@ -10,7 +10,7 @@ from alembic import op
 import sqlalchemy as sa
 
 # revision identifiers
-revision = 'add_whop_tier_fields'
+revision = 'a1b2c3d4e5f6789012345678901234ab'
 down_revision = 'whop_integration'
 branch_labels = None
 depends_on = None
