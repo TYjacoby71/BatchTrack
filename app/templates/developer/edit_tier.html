@@ -107,28 +107,6 @@
                             </h5>
                         </div>
                         <div class="card-body">
-                            <div class="form-check mb-3">
-                                <input class="form-check-input" type="checkbox" name="supports_stripe" id="supports_stripe" 
-                                       {% if tier.get('supports_stripe', True) %}checked{% endif %}>
-                                <label class="form-check-label" for="supports_stripe">
-                                    Enable Stripe Support
-                                </label>
-                                <small class="form-text text-muted">
-                                    Allow customers to purchase this tier via Stripe
-                                </small>
-                            </div>
-
-                            <div class="form-check mb-3">
-                                <input class="form-check-input" type="checkbox" name="requires_stripe_billing" id="requires_stripe_billing" 
-                                       {% if tier.get('requires_stripe_billing', True) %}checked{% endif %}>
-                                <label class="form-check-label" for="requires_stripe_billing">
-                                    Requires Stripe Billing
-                                </label>
-                                <small class="form-text text-muted">
-                                    If unchecked, this tier will not require payment (like exempt tier)
-                                </small>
-                            </div>
-
                             <div class="form-group">
                                 <label for="stripe_lookup_key">Stripe Lookup Key</label>
                                 <input type="text" class="form-control" name="stripe_lookup_key" id="stripe_lookup_key" 
@@ -149,28 +127,6 @@
                             </h5>
                         </div>
                         <div class="card-body">
-                            <div class="form-check mb-3">
-                                <input class="form-check-input" type="checkbox" name="supports_whop" id="supports_whop" 
-                                       {% if tier.get('supports_whop', False) %}checked{% endif %}>
-                                <label class="form-check-label" for="supports_whop">
-                                    Enable Whop Support
-                                </label>
-                                <small class="form-text text-muted">
-                                    Allow customers to purchase this tier via Whop
-                                </small>
-                            </div>
-
-                            <div class="form-check mb-3">
-                                <input class="form-check-input" type="checkbox" name="whop_only" id="whop_only" 
-                                       {% if tier.get('whop_only', False) %}checked{% endif %}>
-                                <label class="form-check-label" for="whop_only">
-                                    Whop Only (Disable Stripe)
-                                </label>
-                                <small class="form-text text-muted">
-                                    This tier is only available through Whop (e.g., lifetime access)
-                                </small>
-                            </div>
-
                             <div class="form-group">
                                 <label for="whop_product_key">Whop Product Key</label>
                                 <input type="text" class="form-control" name="whop_product_key" id="whop_product_key" 
