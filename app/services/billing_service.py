@@ -102,7 +102,7 @@ class BillingService:
             return True, "exempt"
 
         # Developer accounts bypass billing checks
-        if organization.id == 1:  # Reserved dev org
+        if BillingService.is_reserved_organization(organization.id):
             return True, "developer"
 
         # Check if organization is active

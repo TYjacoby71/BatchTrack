@@ -39,10 +39,18 @@ class PricingSnapshot(db.Model):
 
     @property
     def features_list(self):
-        """Convert features text to list"""
+        """Get features as a list from the stored string"""
         if not self.features:
             return []
         return [f.strip() for f in self.features.split('\n') if f.strip()]
+
+    @classmethod
+    def get_latest_for_tier(cls, tier_key):
+        """Get the latest pricing snapshot for a specific tier"""
+        return cls.query.filter_by(
+            stripe_lookup_key=tier_key,
+            is_active=True
+        ).order_by(cls.last_stripe_sync.desc()).first()
 
     @classmethod
     def update_from_stripe_data(cls, stripe_price, stripe_product):
