@@ -31,105 +31,170 @@
             <div class="card h-100 {% if not tier_data.get('is_customer_facing', True) %}border-secondary{% endif %}">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">{{ tier_data.name }}</h5>
-                    <div>
-                        <span class="badge bg-primary">{{ tier_key }}</span>
-                        {% if tier_data.stripe_lookup_key and tier_data.last_synced %}
-                            <span class="badge bg-success ms-1">Synced</span>
-                        {% elif tier_data.stripe_lookup_key %}
-                            <span class="badge bg-warning ms-1">Not Synced</span>
-                        {% else %}
-                            <span class="badge bg-secondary ms-1">No Stripe Key</span>
-                        {% endif %}
-                    </div>
+                    <span class="badge bg-primary">{{ tier_key }}</span>
                 </div>
                 <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <p><strong>Stripe Lookup Key:</strong> 
-                                <code>{{ tier_data.stripe_lookup_key or 'Not configured' }}</code>
-                            </p>
-                            <p><strong>User Limit:</strong> 
+                    <!-- Pricing Section -->
+                    <div class="row mb-3">
+                        <div class="col-6 text-center">
+                            <div class="border rounded p-2">
+                                <small class="text-muted d-block">Monthly</small>
+                                <strong class="h5 text-{{ 'success' if tier_data.stripe_price_monthly else 'muted' }}">
+                                    {{ tier_data.stripe_price_monthly or tier_data.fallback_price_monthly or '$0' }}
+                                </strong>
+                            </div>
+                        </div>
+                        <div class="col-6 text-center">
+                            <div class="border rounded p-2">
+                                <small class="text-muted d-block">Yearly</small>
+                                <strong class="h5 text-{{ 'success' if tier_data.stripe_price_yearly else 'muted' }}">
+                                    {{ tier_data.stripe_price_yearly or tier_data.fallback_price_yearly or '$0' }}
+                                </strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sync Status -->
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <small class="text-muted">Stripe Sync:</small>
+                            {% if tier_data.stripe_lookup_key and tier_data.last_synced %}
+                                <span class="badge bg-success ms-1">{{ tier_data.last_synced[:10] if tier_data.last_synced else 'Never' }}</span>
+                            {% elif tier_data.stripe_lookup_key %}
+                                <span class="badge bg-warning ms-1">Not Synced</span>
+                            {% else %}
+                                <span class="badge bg-secondary ms-1">No Key</span>
+                            {% endif %}
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">Whop Sync:</small>
+                            {% if tier_data.whop_product_key and tier_data.get('whop_last_synced') %}
+                                <span class="badge bg-success ms-1">{{ tier_data.whop_last_synced[:10] if tier_data.whop_last_synced else 'Never' }}</span>
+                            {% elif tier_data.whop_product_key %}
+                                <span class="badge bg-warning ms-1">Not Synced</span>
+                            {% else %}
+                                <span class="badge bg-secondary ms-1">No Key</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Features -->
+                    <div class="mb-3">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-users me-2 text-primary"></i>
+                            <strong>User Limit:</strong>
+                            <span class="ms-2">
                                 {% if tier_data.user_limit == -1 %}
                                     Unlimited
                                 {% else %}
                                     {{ tier_data.user_limit }}
                                 {% endif %}
-                            </p>
-                            <p><strong>Monthly Price:</strong> 
-                                <span class="text-{{ 'success' if tier_data.stripe_price_monthly else 'muted' }}">
-                                    {{ tier_data.stripe_price_monthly or 'Not synced from Stripe' }}
-                                </span>
-                            </p>
+                            </span>
                         </div>
-                        <div class="col-md-6">
-                            <p><strong>Yearly Price:</strong> 
-                                <span class="text-{{ 'success' if tier_data.stripe_price_yearly else 'muted' }}">
-                                    {{ tier_data.stripe_price_yearly or 'Not synced from Stripe' }}
-                                </span>
-                            </p>
-                            <p><strong>Last Synced:</strong> 
-                                <small class="text-muted">
-                                    {{ tier_data.last_synced or 'Never' }}
-                                </small>
-                            </p>
-                        </div>
-                    </div>
-
-                    <div class="mt-3">
-                        <h6>Features (from Stripe):</h6>
-                        {% if tier_data.stripe_features %}
-                            <ul class="list-unstyled">
-                                {% for feature in tier_data.stripe_features %}
-                                    <li><i class="fas fa-check text-success me-2"></i>{{ feature }}</li>
+                        
+                        {% if tier_data.get('feature_groups') %}
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-star me-2 text-warning"></i>
+                            <strong>Features:</strong>
+                            <div class="ms-2">
+                                {% for feature in tier_data.get('feature_groups', [])[:3] %}
+                                    <span class="badge bg-info me-1">{{ feature.replace('_', ' ').title() }}</span>
                                 {% endfor %}
-                            </ul>
-                        {% else %}
-                            <p class="text-muted small">No features synced from Stripe. Configure in Stripe product metadata.</p>
+                                {% if tier_data.get('feature_groups', [])|length > 3 %}
+                                    <span class="badge bg-light text-dark">+{{ tier_data.get('feature_groups', [])|length - 3 }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
                         {% endif %}
                     </div>
 
-                    <div class="mt-3">
-                        <h6>Feature Groups:</h6>
-                        <div class="small">
-                            {% for feature in tier_data.get('feature_groups', [])[:3] %}
-                                <span class="badge bg-info me-1">{{ feature.replace('_', ' ').title() }}</span>
-                            {% endfor %}
-                            {% if tier_data.get('feature_groups', [])|length > 3 %}
-                                <span class="badge bg-light text-dark">+{{ tier_data.get('feature_groups', [])|length - 3 }} more</span>
-                            {% endif %}
+                    <!-- Current Settings Display -->
+                    <div class="row small mb-3">
+                        <div class="col-6">
+                            <div class="mb-1">
+                                <i class="fas fa-eye me-1"></i>
+                                <span class="badge bg-{{ 'success' if tier_data.get('is_customer_facing', True) else 'secondary' }}">
+                                    {{ 'Customer Facing' if tier_data.get('is_customer_facing', True) else 'Internal' }}
+                                </span>
+                            </div>
+                            <div class="mb-1">
+                                <i class="fas fa-toggle-{{ 'on' if tier_data.get('is_available', True) else 'off' }} me-1"></i>
+                                <span class="badge bg-{{ 'success' if tier_data.get('is_available', True) else 'secondary' }}">
+                                    {{ 'Available' if tier_data.get('is_available', True) else 'Unavailable' }}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="mb-1">
+                                <i class="fab fa-stripe me-1"></i>
+                                <span class="badge bg-{{ 'primary' if tier_data.get('requires_stripe_billing', True) else 'secondary' }}">
+                                    {{ 'Requires Stripe' if tier_data.get('requires_stripe_billing', True) else 'No Stripe' }}
+                                </span>
+                            </div>
+                            <div class="mb-1">
+                                <i class="fas fa-shopping-cart me-1"></i>
+                                <span class="badge bg-{{ 'success' if tier_data.get('supports_whop', False) else 'secondary' }}">
+                                    {{ 'Requires Whop' if tier_data.get('supports_whop', False) else 'No Whop' }}
+                                </span>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div class="card-footer d-flex justify-content-between align-items-center flex-wrap gap-2">
-                    <a href="{{ url_for('developer.subscription_tiers.edit_tier', tier_key=tier_key) }}" 
-                       class="btn btn-outline-primary btn-sm">
-                        <i class="fas fa-edit"></i> Edit
-                    </a>
-
-                    <div class="btn-group">
-                        {% if tier_data.get('stripe_lookup_key') %}
-                        <button type="button" class="btn btn-sm btn-outline-primary sync-tier" 
-                                data-tier-key="{{ tier_key }}" 
-                                data-lookup-key="{{ tier_data.get('stripe_lookup_key') }}">
-                            <i class="fas fa-sync"></i> Sync with Stripe
-                        </button>
-                        {% endif %}
-
-                        {% if tier_data.get('whop_product_key') %}
-                        <button type="button" class="btn btn-sm btn-outline-success sync-whop-tier" 
-                                data-tier-key="{{ tier_key }}" 
-                                data-product-key="{{ tier_data.get('whop_product_key') }}">
-                            <i class="fas fa-sync"></i> Sync with Whop
-                        </button>
+                
+                <!-- Modular Bottom Section -->
+                <div class="card-footer p-0">
+                    <!-- Sync Buttons Row -->
+                    {% set has_stripe = tier_data.get('stripe_lookup_key') %}
+                    {% set has_whop = tier_data.get('whop_product_key') %}
+                    {% if has_stripe or has_whop %}
+                    <div class="row g-0">
+                        {% if has_stripe and has_whop %}
+                            <!-- Both sync buttons - split the row -->
+                            <div class="col-6">
+                                <button type="button" class="btn btn-outline-primary btn-sm w-100 rounded-0 sync-tier" 
+                                        data-tier-key="{{ tier_key }}" 
+                                        data-lookup-key="{{ tier_data.get('stripe_lookup_key') }}">
+                                    <i class="fas fa-sync"></i> Sync Stripe
+                                </button>
+                            </div>
+                            <div class="col-6">
+                                <button type="button" class="btn btn-outline-success btn-sm w-100 rounded-0 sync-whop-tier" 
+                                        data-tier-key="{{ tier_key }}" 
+                                        data-product-key="{{ tier_data.get('whop_product_key') }}">
+                                    <i class="fas fa-sync"></i> Sync Whop
+                                </button>
+                            </div>
+                        {% elif has_stripe %}
+                            <!-- Only Stripe - full width -->
+                            <div class="col-12">
+                                <button type="button" class="btn btn-outline-primary btn-sm w-100 rounded-0 sync-tier" 
+                                        data-tier-key="{{ tier_key }}" 
+                                        data-lookup-key="{{ tier_data.get('stripe_lookup_key') }}">
+                                    <i class="fas fa-sync"></i> Sync with Stripe
+                                </button>
+                            </div>
+                        {% elif has_whop %}
+                            <!-- Only Whop - full width -->
+                            <div class="col-12">
+                                <button type="button" class="btn btn-outline-success btn-sm w-100 rounded-0 sync-whop-tier" 
+                                        data-tier-key="{{ tier_key }}" 
+                                        data-product-key="{{ tier_data.get('whop_product_key') }}">
+                                    <i class="fas fa-sync"></i> Sync with Whop
+                                </button>
+                            </div>
                         {% endif %}
                     </div>
-
-                    {% if tier_key != 'exempt' %}
-                    <button type="button" class="btn btn-sm btn-danger" 
-                            onclick="confirmDelete('{{ tier_key }}', '{{ tier_data.name }}')">
-                        <i class="fas fa-trash"></i> Delete
-                    </button>
                     {% endif %}
+                    
+                    <!-- Edit Button Row - Always spans full width -->
+                    <div class="row g-0">
+                        <div class="col-12">
+                            <a href="{{ url_for('developer.subscription_tiers.edit_tier', tier_key=tier_key) }}" 
+                               class="btn btn-primary btn-sm w-100 rounded-0 {{ 'rounded-bottom' if not (has_stripe or has_whop) else '' }}">
+                                <i class="fas fa-edit"></i> Edit Tier
+                            </a>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

@@ -158,10 +158,8 @@ def edit_tier(tier_key):
         tier['is_available'] = 'is_available' in request.form
         tier['requires_stripe_billing'] = 'requires_stripe_billing' in request.form
 
-        # Payment provider settings
-        tier['supports_stripe'] = 'supports_stripe' in request.form
+        # Payment provider settings - simplified
         tier['supports_whop'] = 'supports_whop' in request.form
-        tier['whop_only'] = 'whop_only' in request.form
 
         tier['permissions'] = request.form.getlist('permissions')
         tier['feature_groups'] = request.form.getlist('feature_groups')
