@@ -7,7 +7,11 @@ import logging
 logger = logging.getLogger(__name__)
 
 class BillingAccessControl:
-    """Centralized service for billing-based access control"""
+    """
+    Centralized service for billing-based access control
+    Note: This class is now a thin wrapper around BillingService
+    Consider using BillingService.check_organization_access() directly
+    """
 
     @staticmethod
     def check_organization_access(organization):
@@ -15,22 +19,7 @@ class BillingAccessControl:
         Check if organization has access to the system based on billing status.
         Returns (has_access: bool, reason: str)
         """
-        if not organization:
-            return False, "No organization found"
-
-        # Exempt organizations always have access
-        if organization.effective_subscription_tier == 'exempt':
-            return True, "exempt"
-
-        # Developer accounts bypass billing checks
-        if organization.id == 1:  # Reserved dev org
-            return True, "developer"
-
-        # Check if organization is active
-        if not organization.is_active:
-            return False, "organization_suspended"
-
-        # Use consolidated billing service for comprehensive check
+        # Use consolidated billing service for all access checks
         from .billing_service import BillingService
         return BillingService.check_organization_access(organization)
 

@@ -25,17 +25,16 @@ def check_billing_access():
     if current_user.is_authenticated and current_user.organization:
         org = current_user.organization
 
-        # Check if organization has access (billing current or exempt)
-        if not org.is_active:
-            flash('Your organization has been suspended. Please contact support.', 'error')
-            return redirect(url_for('billing.reconciliation_needed'))
-
         # Use consolidated billing service for comprehensive check
         has_access, reason = BillingService.check_organization_access(org)
 
-        if not has_access and reason != 'exempt':
-            flash('Subscription required to access the system.', 'error')
-            return redirect(url_for('billing.upgrade'))
+        if not has_access:
+            if reason == 'organization_suspended':
+                flash('Your organization has been suspended. Please contact support.', 'error')
+                return redirect(url_for('billing.upgrade'))
+            elif reason not in ['exempt', 'developer']:
+                flash('Subscription required to access the system.', 'error')
+                return redirect(url_for('billing.upgrade'))
 
 # Debug statements removed for production readiness
 
@@ -86,7 +85,7 @@ def upgrade():
 @billing_bp.route('/checkout/<tier>/<billing_cycle>')
 def checkout(tier, billing_cycle='monthly'):
     """Create Stripe checkout session for subscription payment"""
-    
+
     # Validate tier availability and Stripe configuration
     if not BillingService.validate_tier_availability(tier):
         flash('Invalid subscription tier selected.', 'error')
@@ -310,7 +309,7 @@ def debug_billing():
         return render_template('billing/debug.html', debug_info=error_response)
 
     # Load tier information for debug buttons using the consolidated service's config
-    tiers_config = BillingService.get_tiers_config()
+    tiers_config = BillingService._load_tiers_config()
 
     return render_template('billing/debug.html',
                          debug_info=debug_info,
