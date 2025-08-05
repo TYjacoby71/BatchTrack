@@ -32,6 +32,12 @@ class SubscriptionTier(db.Model):
     stripe_price = db.Column(db.String(32), nullable=True)
     last_synced = db.Column(db.DateTime, nullable=True)
 
+    # Whop integration
+    whop_product_key = db.Column(db.String(128), nullable=True)
+    whop_product_name = db.Column(db.String(256), nullable=True)
+    whop_last_synced = db.Column(db.DateTime, nullable=True)
+    requires_whop_billing = db.Column(db.Boolean, default=False)
+
     # Subscription status and billing info
     status = db.Column(db.String(32), default='inactive')  # active, trialing, canceled, etc.
     current_period_start = db.Column(db.DateTime, nullable=True)
