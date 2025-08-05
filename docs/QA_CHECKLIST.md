@@ -1,4 +1,3 @@
-
 # BatchTrack MVP Bug & QA Checklist
 
 ## 1. UNIVERSAL STOCK CHECK SERVICE (USCS)
@@ -52,6 +51,30 @@
 - [ ] Intermediate ingredient consumption tracked
 - [ ] Batch expiration tracking working
 
+## Billing Integration Testing
+
+### Stripe Integration
+- [ ] Subscription upgrade flow works
+- [ ] Webhook processing handles all Stripe events
+- [ ] Customer portal redirects correctly
+- [ ] Subscription cancellation updates organization
+- [ ] Billing reconciliation handles edge cases
+
+### Container Management Testing
+- [ ] Container availability checks work for recipes
+- [ ] Batch container assignment and tracking
+- [ ] Container adjustment logging
+- [ ] Debug container endpoint security
+
+## Alert System Testing
+
+### Dashboard Alerts
+- [ ] Alert prioritization respects user preferences
+- [ ] Session-based dismissal works across requests
+- [ ] Alert refresh doesn't cause infinite loops
+- [ ] Cognitive load management (max alerts) works
+- [ ] Timer alerts link to correct batches
+
 ## PRIORITY ORDER
 1. 🔴 FIFO Implementation
 2. 🔴 Batch Inventory Tracking
@@ -68,3 +91,9 @@
 6. FIFO deduction validation required
 7. Batch inventory log display needed
 8. Remaining quantity calculation verification needed
+
+## Testing Guidelines
+
+### Unit Tests
+```python
+def test_service_respects_organization_scoping():
