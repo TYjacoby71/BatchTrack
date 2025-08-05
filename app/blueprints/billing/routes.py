@@ -39,7 +39,6 @@ def check_billing_access():
 # Debug statements removed for production readiness
 
 from ...services.stripe_service import StripeService
-from ...services.subscription_service import SubscriptionService
 from ...services.billing_service import BillingService
 from ...services.signup_service import SignupService
 from ...utils.permissions import require_permission, has_permission
@@ -95,7 +94,8 @@ def checkout(tier, billing_cycle='monthly'):
         billing_cycle = 'monthly'
 
     # Check if tier is configured in Stripe using the consolidated service's tier data
-    tiers_config = BillingService.get_tiers_config() # Use consolidated method
+    from ...blueprints.developer.subscription_tiers import load_tiers_config
+    tiers_config = load_tiers_config()
     tier_data = tiers_config.get(tier, {})
 
     if billing_cycle == 'yearly' and not tier_data.get('stripe_price_id_yearly'):
@@ -309,7 +309,8 @@ def debug_billing():
         return render_template('billing/debug.html', debug_info=error_response)
 
     # Load tier information for debug buttons using the consolidated service's config
-    tiers_config = BillingService._load_tiers_config()
+    from ...blueprints.developer.subscription_tiers import load_tiers_config
+    tiers_config = load_tiers_config()
 
     return render_template('billing/debug.html',
                          debug_info=debug_info,
