@@ -115,8 +115,8 @@
                         </button>
                         {% endif %}
 
-                        {% if tier_data.get('whop_product_key') and tier_data.get('supports_whop') %}
-                        <button class="btn btn-sm btn-outline-success sync-whop-tier" 
+                        {% if tier_data.get('whop_product_key') %}
+                        <button type="button" class="btn btn-sm btn-outline-success sync-whop-tier" 
                                 data-tier-key="{{ tier_key }}" 
                                 data-product-key="{{ tier_data.get('whop_product_key') }}">
                             <i class="fas fa-sync"></i> Sync with Whop
