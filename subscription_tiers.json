@@ -164,7 +164,7 @@
     ],
     "stripe_price_monthly": "$15",
     "stripe_price_yearly": "$160",
-    "last_synced": "2025-08-05T22:07:39.029472",
+    "last_synced": "2025-08-05T22:30:30.706714",
     "stripe_price_id_monthly": "price_1RnRzOF4Y9XQgiJB7cuiGZf4",
     "stripe_price_id_yearly": "price_1RnSCIF4Y9XQgiJBeA7UZPzD",
     "fallback_price_monthly": "$0",
