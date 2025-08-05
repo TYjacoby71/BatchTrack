@@ -1,4 +1,3 @@
-
 from datetime import datetime, timedelta
 from flask import current_app
 from ..models import db, Organization
@@ -31,9 +30,9 @@ class BillingAccessControl:
         if not organization.is_active:
             return False, "organization_suspended"
 
-        # Use resilient billing service for comprehensive check
-        from .resilient_billing_service import ResilientBillingService
-        return ResilientBillingService.check_organization_access(organization)
+        # Use consolidated billing service for comprehensive check
+        from .billing_service import BillingService
+        return BillingService.check_organization_access(organization)
 
     @staticmethod
     def enforce_billing_access(organization):
