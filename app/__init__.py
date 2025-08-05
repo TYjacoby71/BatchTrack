@@ -495,7 +495,7 @@ def create_app():
         """Global middleware to enforce billing access control"""
         from flask import request, session
         from flask_login import current_user
-        from .services.billing_access_control import BillingAccessControl
+        from .services.billing_service import BillingService
 
         # Skip for static files, auth routes, and billing routes
         if (request.endpoint and (
@@ -508,8 +508,14 @@ def create_app():
 
         # Only check authenticated users with organizations
         if current_user.is_authenticated and current_user.organization:
-            result = BillingAccessControl.enforce_billing_access(current_user.organization)
-            if result:  # If it returns a redirect
-                return result
+            has_access, reason = BillingService.check_organization_access(current_user.organization)
+            if not has_access:
+                from flask import redirect, url_for, flash
+                if reason == 'organization_suspended':
+                    flash('Your organization has been suspended. Please contact support.', 'error')
+                    return redirect(url_for('billing.upgrade'))
+                elif reason not in ['exempt', 'developer']:
+                    flash('Subscription required to access the system.', 'error')
+                    return redirect(url_for('billing.upgrade'))
 
     return app
