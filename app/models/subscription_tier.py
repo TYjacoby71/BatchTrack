@@ -48,13 +48,13 @@ class SubscriptionTier(db.Model):
 
     @property
     def effective_price_monthly(self):
-        """Get effective monthly price (Stripe if available, fallback otherwise)"""
-        return self.stripe_price_monthly or self.fallback_price_monthly
+        """Get monthly price from Stripe"""
+        return self.stripe_price_monthly
 
     @property
     def effective_price_yearly(self):
-        """Get effective yearly price (Stripe if available, fallback otherwise)"""
-        return self.stripe_price_yearly or self.fallback_price_yearly
+        """Get yearly price from Stripe"""
+        return self.stripe_price_yearly
 
     @property
     def is_stripe_ready(self):

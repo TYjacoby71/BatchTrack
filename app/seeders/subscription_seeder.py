@@ -56,68 +56,18 @@ def load_subscription_tiers():
         return json.load(f)
 
 def seed_subscription_tiers():
-    """Create subscription tier records from JSON configuration (optional) - ONLY creates new tiers, preserves existing"""
+    """Create only the exempt subscription tier"""
     if not current_app:
         raise RuntimeError("seed_subscription_tiers() must be called within Flask application context")
 
-    print("=== Seeding Subscription Tiers (Create Only Mode) ===")
+    print("=== Seeding Subscription Tiers (Exempt Only) ===")
 
-    # Always create exempt tier first
+    # Only create exempt tier - no other tiers from JSON
     create_exempt_tier()
-
-    # Load additional tiers from JSON if available
-    tiers_data = load_subscription_tiers()
-
-    # Skip exempt tier if it's in JSON - we handle it separately
-    if 'exempt' in tiers_data:
-        del tiers_data['exempt']
-
-    for tier_key, tier_config in tiers_data.items():
-        # Skip metadata keys (they start with underscore)
-        if tier_key.startswith('_'):
-            print(f"ℹ️  Skipping metadata key: {tier_key}")
-            continue
-
-        # Skip if tier_config is not a dictionary
-        if not isinstance(tier_config, dict):
-            print(f"⚠️  Skipping invalid tier config for {tier_key}: {type(tier_config)}")
-            continue
-
-        # Check if tier already exists - SKIP if it does to preserve user modifications
-        existing_tier = SubscriptionTier.query.filter_by(key=tier_key).first()
-
-        if existing_tier:
-            print(f"ℹ️  Tier '{tier_key}' already exists - PRESERVING existing configuration")
-            continue  # Skip to preserve user modifications
-
-        # Only create NEW tiers from JSON
-        print(f"✅ Creating new tier from JSON: {tier_key}")
-        tier = SubscriptionTier(key=tier_key)
-        db.session.add(tier)
-
-        # Set tier properties from JSON for NEW tiers only
-        tier.name = tier_config.get('name', tier_key.title())
-        tier.description = tier_config.get('description', '')
-        tier.user_limit = tier_config.get('user_limit', 1)
-        tier.is_customer_facing = tier_config.get('is_customer_facing', True)
-        tier.is_available = tier_config.get('is_available', True)
-        tier.stripe_lookup_key = tier_config.get('stripe_lookup_key', '')
-        tier.fallback_price_monthly = tier_config.get('fallback_price_monthly', '$0')
-        tier.fallback_price_yearly = tier_config.get('fallback_price_yearly', '$0')
-        tier.stripe_price_monthly = tier_config.get('stripe_price_monthly')
-        tier.stripe_price_yearly = tier_config.get('stripe_price_yearly')
-
-        # Assign permissions for NEW tiers only
-        permission_names = tier_config.get('permissions', [])
-        permissions = Permission.query.filter(Permission.name.in_(permission_names)).all()
-        tier.permissions = permissions
-
-        print(f"   - {len(permissions)} permissions assigned to new tier")
 
     db.session.commit()
     print("✅ Subscription tiers seeded successfully!")
-    print("   - Existing tiers were PRESERVED and not modified")
-    print("   - Only new tiers were created from JSON configuration")
+    print("   - Only exempt tier created - all other tiers managed through Stripe")
 
 def migrate_existing_organizations():
     """Migrate existing organizations to use tier IDs"""
@@ -202,16 +152,16 @@ def force_sync_tiers_from_json():
     print("✅ FORCE sync completed - all tiers updated from JSON!")
 
 def seed_subscriptions():
-    """Seed subscription tiers only - organizations are created by user seeder"""
+    """Seed only exempt subscription tier - organizations are created by user seeder"""
     from flask import current_app
 
     # Ensure we're in an application context
     if not current_app:
         raise RuntimeError("seed_subscriptions() must be called within Flask application context")
 
-    print("=== Seeding Subscription Tiers Only ===")
+    print("=== Seeding Exempt Subscription Tier Only ===")
 
-    # Step 1: Create tier records (exempt + any NEW from JSON, preserves existing)
+    # Step 1: Create only exempt tier
     seed_subscription_tiers()
 
     # Step 2: Migrate existing organizations if any exist
@@ -219,6 +169,5 @@ def seed_subscriptions():
 
     print("✅ Subscription tiers seeding completed!")
     print("   - Exempt tier created with unlimited permissions")
-    print("   - New tiers created from JSON configuration")
-    print("   - Existing tier configurations were PRESERVED")
+    print("   - All other tiers managed through Stripe integration")
     print("   - Ready for user seeder to create organizations")

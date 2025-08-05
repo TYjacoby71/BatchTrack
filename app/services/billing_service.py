@@ -94,7 +94,7 @@ class BillingService:
         if not organization:
             return {
                 'has_subscription': False,
-                'tier': 'free',
+                'tier': 'exempt',
                 'status': 'none',
                 'is_active': False
             }
