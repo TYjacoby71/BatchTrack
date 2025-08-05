@@ -291,6 +291,7 @@ def edit_tier(tier_key):
             return redirect(url_for('subscription_tiers.edit_tier', tier_key=tier_key))
 
     # GET request - show form
+    tier = tiers[tier_key]  # Define tier variable for GET requests
     all_permissions = Permission.query.filter_by(is_active=True).all()
     # Group permissions by category for better display
     permissions_by_category = {}
