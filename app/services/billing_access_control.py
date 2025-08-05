@@ -7,7 +7,11 @@ import logging
 logger = logging.getLogger(__name__)
 
 class BillingAccessControl:
-    """Centralized service for billing-based access control"""
+    """
+    Centralized service for billing-based access control
+    Note: This class is now a thin wrapper around BillingService
+    Consider using BillingService.check_organization_access() directly
+    """
 
     @staticmethod
     def check_organization_access(organization):

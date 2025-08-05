@@ -85,7 +85,7 @@ def upgrade():
 @billing_bp.route('/checkout/<tier>/<billing_cycle>')
 def checkout(tier, billing_cycle='monthly'):
     """Create Stripe checkout session for subscription payment"""
-    
+
     # Validate tier availability and Stripe configuration
     if not BillingService.validate_tier_availability(tier):
         flash('Invalid subscription tier selected.', 'error')
@@ -309,7 +309,7 @@ def debug_billing():
         return render_template('billing/debug.html', debug_info=error_response)
 
     # Load tier information for debug buttons using the consolidated service's config
-    tiers_config = BillingService.get_tiers_config()
+    tiers_config = BillingService._load_tiers_config()
 
     return render_template('billing/debug.html',
                          debug_info=debug_info,
