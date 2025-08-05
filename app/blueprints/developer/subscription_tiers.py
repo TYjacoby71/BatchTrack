@@ -200,16 +200,20 @@ def edit_tier(tier_key):
 @login_required
 def delete_tier(tier_key):
     """Delete a subscription tier"""
-    # Prevent deletion of system tiers
-    if tier_key in ['free', 'exempt']:
-        flash(f'Cannot delete system tier: {tier_key}', 'error')
-        return redirect(url_for('developer.subscription_tiers.manage_tiers'))
+    if not current_user.is_developer:
+        flash('Developer access required', 'error')
+        return redirect(url_for('app_routes.dashboard'))
 
     tiers = load_tiers_config()
 
     if tier_key not in tiers:
         flash('Tier not found', 'error')
-        return redirect(url_for('developer.subscription_tiers.manage_tiers'))
+        return redirect(url_for('subscription_tiers_bp.index'))
+
+    # Only prevent deletion of exempt tier (system dependency)
+    if tier_key == 'exempt':
+        flash(f'Cannot delete {tier_key} tier - it is required for system operation', 'error')
+        return redirect(url_for('subscription_tiers_bp.index'))
 
     tier_name = tiers[tier_key]['name']
     del tiers[tier_key]
