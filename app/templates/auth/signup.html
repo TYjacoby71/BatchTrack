@@ -51,6 +51,7 @@
 
                         <!-- Hidden field for selected tier -->
                         <input type="hidden" name="subscription_tier" id="subscription_tier" value="team">
+                        <input type="hidden" name="tier" id="tier_hidden" value="team">
 
                         <!-- Tier Selection -->
                         <div class="mb-4">
@@ -58,11 +59,15 @@
                             <div class="row">
                                 {% for tier_key, tier_data in available_tiers.items() %}
                                 <div class="col-md-4 mb-3">
-                                    <div class="card tier-card h-100 {% if tier_key == 'team' %}border-primary{% endif %}" 
-                                         data-tier="{{ tier_key }}" 
+                                    <div class="card tier-card h-100 {% if tier_key == 'team' %}border-success selected{% endif %}" 
+                                         data-tier="{{ tier_key }}"
+                                         data-whop-available="{{ tier_data.get('whop_product_id', '') != '' }}"
+                                         data-stripe-available="true"
+                                         data-whop-only="{{ tier_data.get('whop_only', False) }}"
                                          style="cursor: pointer; transition: all 0.3s; border-width: 2px;"
+                                         onclick="selectTier('{{ tier_key }}')"
                                          onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 4px 15px rgba(0,0,0,0.1)'"
-                                         onmouseout="if(!this.classList.contains('border-success')) { this.style.transform='translateY(0px)'; this.style.boxShadow='0 1px 3px rgba(0,0,0,0.1)'; }">
+                                         onmouseout="if(!this.classList.contains('selected')) { this.style.transform='translateY(0px)'; this.style.boxShadow='0 1px 3px rgba(0,0,0,0.1)'; }">
                                         {% if tier_key == 'team' %}
                                         <div class="card-header bg-primary text-white text-center py-1">
                                             <small><i class="fas fa-star"></i> Most Popular</small>
@@ -93,50 +98,36 @@
                                                 {% endif %}
                                             </ul>
                                         </div>
-                                        <button type="button" class="btn btn-primary tier-select-btn w-100" 
-                                            data-tier="{{ tier_key }}">
-                                        Choose {{ tier_data.name }}
-                                    </button>
+                                        <div class="card-footer bg-transparent">
+                                            <div class="tier-selection-indicator text-center">
+                                                <i class="fas fa-check-circle text-success" style="display: {% if tier_key == 'team' %}inline{% else %}none{% endif %};"></i>
+                                                <span class="tier-status-text">{% if tier_key == 'team' %}Selected{% else %}Click to Select{% endif %}</span>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                                 {% endfor %}
                             </div>
                         </div>
 
-                        <!-- Updated Tier Selection and Payment Method -->
-                        <div class="mb-3">
-                        <label for="tier" class="form-label">Subscription Plan *</label>
-                        <select class="form-select" id="tier" name="tier" required onchange="updatePaymentOptions()">
-                            <option value="">Choose a plan...</option>
-                            {% for tier_key, tier_data in available_tiers.items() %}
-                            <option value="{{ tier_key }}" 
-                                    data-whop-available="{{ tier_data.get('whop_product_id', '') != '' }}"
-                                    data-stripe-available="{{ tier_data.get('stripe_price_id_monthly', '') != '' }}"
-                                    data-whop-only="{{ tier_data.get('whop_only', False) }}"
-                                    {% if request.form.get('tier') == tier_key %}selected{% endif %}>
-                                {{ tier_data.name }} - {{ tier_data.get('price_display', tier_data.get('price', 'Contact for pricing')) }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-
-                    <div class="mb-3" id="payment-method-section" style="display: none;">
-                        <label class="form-label">Payment Method</label>
-                        <div id="payment-options">
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="payment_method" id="stripe_payment" value="stripe" checked>
-                                <label class="form-check-label" for="stripe_payment">
-                                    Credit Card (Stripe)
-                                </label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="payment_method" id="whop_payment" value="whop">
-                                <label class="form-check-label" for="whop_payment">
-                                    Whop License
-                                </label>
+                        <!-- Payment Method -->
+                        <div class="mb-3" id="payment-method-section">
+                            <label class="form-label">Payment Method</label>
+                            <div id="payment-options">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="payment_method" id="stripe_payment" value="stripe" checked>
+                                    <label class="form-check-label" for="stripe_payment">
+                                        Credit Card (Stripe)
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="payment_method" id="whop_payment" value="whop">
+                                    <label class="form-check-label" for="whop_payment">
+                                        Whop License
+                                    </label>
+                                </div>
                             </div>
                         </div>
-                    </div>
 
                         <div class="row mb-3">
                             <!-- Left Column - Organization & Account -->
@@ -369,43 +360,86 @@ function formatCardNumber(input) {
 
 {% block scripts %}
 <script>
-function updatePaymentOptions() {
-    const tierSelect = document.getElementById('tier');
+function selectTier(tierKey) {
+    // Update hidden fields
+    document.getElementById('subscription_tier').value = tierKey;
+    document.getElementById('tier_hidden').value = tierKey;
+    
+    // Update visual selection
+    document.querySelectorAll('.tier-card').forEach(card => {
+        const isSelected = card.dataset.tier === tierKey;
+        
+        // Update card styling
+        if (isSelected) {
+            card.classList.remove('border-primary');
+            card.classList.add('border-success', 'selected');
+            card.style.transform = 'translateY(-4px)';
+            card.style.boxShadow = '0 4px 15px rgba(0,0,0,0.1)';
+        } else {
+            card.classList.remove('border-success', 'selected');
+            card.classList.add('border-primary');
+            card.style.transform = 'translateY(0px)';
+            card.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
+        }
+        
+        // Update status indicator
+        const checkIcon = card.querySelector('.fas.fa-check-circle');
+        const statusText = card.querySelector('.tier-status-text');
+        
+        if (checkIcon && statusText) {
+            if (isSelected) {
+                checkIcon.style.display = 'inline';
+                statusText.textContent = 'Selected';
+            } else {
+                checkIcon.style.display = 'none';
+                statusText.textContent = 'Click to Select';
+            }
+        }
+    });
+    
+    // Update payment options
+    updatePaymentOptions(tierKey);
+}
+
+function updatePaymentOptions(tierKey) {
     const paymentSection = document.getElementById('payment-method-section');
     const stripeOption = document.getElementById('stripe_payment');
     const whopOption = document.getElementById('whop_payment');
-
-    if (!tierSelect.value) {
+    
+    if (!tierKey) {
         paymentSection.style.display = 'none';
         return;
     }
-
-    const selectedOption = tierSelect.options[tierSelect.selectedIndex];
-    const whopAvailable = selectedOption.dataset.whopAvailable === 'true';
-    const stripeAvailable = selectedOption.dataset.stripeAvailable === 'true';
-    const whopOnly = selectedOption.dataset.whopOnly === 'true';
-
-    if (whopAvailable || stripeAvailable) {
-        paymentSection.style.display = 'block';
-
-        // Show/hide payment options based on availability
-        stripeOption.parentElement.style.display = stripeAvailable ? 'block' : 'none';
-        whopOption.parentElement.style.display = whopAvailable ? 'block' : 'none';
-
-        // Auto-select if only one option is available
-        if (whopOnly || !stripeAvailable) {
-            whopOption.checked = true;
-            stripeOption.checked = false;
-        } else if (!whopAvailable) {
-            stripeOption.checked = true;
-            whopOption.checked = false;
-        }
-    } else {
-        paymentSection.style.display = 'none';
+    
+    // Find the selected tier card to get data attributes
+    const selectedCard = document.querySelector(`.tier-card[data-tier="${tierKey}"]`);
+    if (!selectedCard) return;
+    
+    const whopAvailable = selectedCard.dataset.whopAvailable === 'true';
+    const stripeAvailable = selectedCard.dataset.stripeAvailable === 'true';
+    const whopOnly = selectedCard.dataset.whopOnly === 'true';
+    
+    // Always show payment section for now since we have both options
+    paymentSection.style.display = 'block';
+    
+    // Show/hide payment options based on availability
+    stripeOption.parentElement.style.display = stripeAvailable ? 'block' : 'none';
+    whopOption.parentElement.style.display = whopAvailable ? 'block' : 'none';
+    
+    // Auto-select if only one option is available
+    if (whopOnly || !stripeAvailable) {
+        whopOption.checked = true;
+        stripeOption.checked = false;
+    } else if (!whopAvailable) {
+        stripeOption.checked = true;
+        whopOption.checked = false;
     }
 }
 
 // Initialize on page load
-document.addEventListener('DOMContentLoaded', updatePaymentOptions);
+document.addEventListener('DOMContentLoaded', function() {
+    // Set initial tier selection
+    updatePaymentOptions('team');
+});
 </script>
 {% endblock %}
