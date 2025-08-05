@@ -1,4 +1,4 @@
-from flask import render_template, request, redirect, url_for, flash, session, current_app
+from flask import render_template, request, redirect, url_for, flash, session, current_app, jsonify, abort
 from flask_login import login_user, logout_user, current_user
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField
@@ -6,11 +6,12 @@ from wtforms.validators import DataRequired
 from werkzeug.security import generate_password_hash
 from . import auth_bp
 from ...extensions import db
-from ...models import User, Organization, Role
+from ...models import User, Organization, Role, Permission
 from ...utils.timezone_utils import TimezoneUtils
 from ...utils.permissions import require_permission
 from flask_login import login_required
 import logging
+from .whop_auth import WhopAuth # Import WhopAuth
 
 logger = logging.getLogger(__name__)
 
@@ -83,7 +84,7 @@ def dev_login():
 
 @auth_bp.route('/signup', methods=['GET', 'POST'])
 def signup():
-    """Production signup flow - collect user info then redirect to Stripe payment"""
+    """Production signup flow - collect user info then redirect to Whop payment"""
     if current_user.is_authenticated:
         return redirect(url_for('app_routes.dashboard'))
 
@@ -114,7 +115,7 @@ def signup():
                 'price_yearly': tier_data.get('price_yearly', '$0'),
                 'features': tier_data.get('features', []),
                 'user_limit': tier_data.get('user_limit', 1),
-                'stripe_lookup_key': tier_config.get('stripe_lookup_key', '')
+                'whop_product_id': tier_config.get('whop_product_id', '') # Use Whop Product ID
             }
 
     # Get signup tracking parameters
@@ -176,12 +177,6 @@ def signup():
                          available_tiers=available_tiers,
                          form_data=request.form)
 
-        # Check if tier is Stripe-ready before proceeding
-        from ...blueprints.developer.subscription_tiers import load_tiers_config
-        tiers_config = load_tiers_config()
-        tier_data = tiers_config.get(selected_tier, {})
-        is_stripe_ready = tier_data.get('is_stripe_ready', False)
-
         # Store signup data for post-payment completion
         session['pending_signup'] = {
             'org_name': org_name,
@@ -197,11 +192,12 @@ def signup():
             'referral_code': referral_code
         }
 
-        # All tiers require Stripe checkout
-        if current_app.config.get('STRIPE_SECRET_KEY') and is_stripe_ready:
-            return redirect(url_for('billing.checkout', tier=selected_tier))
+        # Redirect to Whop checkout
+        whop_product_id = available_tiers[selected_tier].get('whop_product_id')
+        if whop_product_id:
+            return redirect(url_for('billing.whop_checkout', product_id=whop_product_id))
         else:
-            flash('Payment system not available. Please try again later.', 'error')
+            flash('Subscription plan not configured for Whop. Please contact administrator.', 'error')
             return render_template('auth/signup.html', 
                          signup_source=signup_source,
                          referral_code=referral_code,
@@ -215,11 +211,55 @@ def signup():
                          promo_code=promo_code,
                          available_tiers=available_tiers)
 
+# Whop License Login Route
+@auth_bp.route('/whop-login', methods=['POST'])
+def whop_login():
+    """Authenticate user with Whop license key"""
+    license_key = request.form.get('license_key')
+    if not license_key:
+        flash('License key is required.', 'error')
+        return redirect(url_for('auth.login')) # Redirect to login or a dedicated license key entry page
 
+    whop_auth = WhopAuth(current_app.config.get('WHOP_API_KEY')) # Assuming WHOP_API_KEY is in config
+    user_data = whop_auth.validate_license(license_key)
+
+    if user_data:
+        # Attempt to find or create user based on Whop data
+        user = User.query.filter_by(email=user_data.get('email')).first()
+        if not user:
+            # Create a new user if they don't exist
+            # You'll need to decide on a username strategy if not provided by Whop
+            username = user_data.get('username', user_data.get('email').split('@')[0]) # Example username generation
+            user = User(
+                username=username,
+                email=user_data.get('email'),
+                first_name=user_data.get('first_name', ''),
+                last_name=user_data.get('last_name', ''),
+                is_active=True, # Assume active if they have a valid license
+                user_type='customer' # Default user type
+            )
+            # Password is not managed by Whop, so it won't be set here. Consider passwordless login or initial setup.
+            db.session.add(user)
+            db.session.flush() # Flush to get user.id
+
+        # Assign role/tier based on Whop data if available and map it to your internal roles
+        # This part is highly dependent on how you map Whop products/tiers to your app's roles
+        # Example:
+        # whop_product_id = user_data.get('product_id')
+        # role = Role.query.filter_by(whop_product_id=whop_product_id).first()
+        # if role:
+        #     user.roles.append(role) # Assuming a many-to-many relationship for roles
+
+        login_user(user)
+        user.last_login = TimezoneUtils.utc_now()
+        db.session.commit()
+        flash('Successfully logged in with Whop license.', 'success')
+        return redirect(url_for('app_routes.dashboard'))
+    else:
+        flash('Invalid license key or access denied.', 'error')
+        return redirect(url_for('auth.login'))
 
 # Permission and Role Management Routes
-from .permissions import manage_permissions, manage_roles, create_role, update_role, toggle_permission_status
-
 @auth_bp.route('/permissions')
 @require_permission('dev.system_admin')
 def permissions():
@@ -278,7 +318,6 @@ def get_role(role_id):
 @require_permission('organization.manage_roles')
 def permissions_api():
     """API endpoint for permissions data"""
-    from ...models import Permission # Import Permission model here
     permissions = Permission.query.filter_by(is_active=True).all()
 
     categories = {}
