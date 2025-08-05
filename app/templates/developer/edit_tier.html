@@ -80,7 +80,7 @@
                             </div>
                         </div>
 
-                        
+
                     </div>
                 </div>
             </div>
@@ -133,51 +133,39 @@
                     <div class="card-body">
                         <!-- Tier Permissions -->
                         <div class="mb-4">
-                            <label class="form-label">
-                                <i class="fas fa-key text-primary"></i> Tier Permissions
-                            </label>
-                            <div class="form-text mb-3">
-                                Select all permissions that should be included in this subscription tier. 
-                                Users with this tier will have access to these specific features and actions.
+                            <h6 class="text-muted mb-3">
+                                Tier Permissions 
+                                <small class="text-info">({{ permissions|length }} total)</small>
+                            </h6>
+
+                            <!-- Permission Selection Controls -->
+                            <div class="mb-3">
+                                <button type="button" class="btn btn-sm btn-outline-primary me-2" onclick="selectAllPermissions()">
+                                    Select All
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary me-2" onclick="deselectAllPermissions()">
+                                    Deselect All
+                                </button>
+                                <span class="text-muted small" id="selectedCount">
+                                    {{ tier.permissions|length if tier.permissions else 0 }} selected
+                                </span>
                             </div>
 
-                            <!-- Permission Categories -->
-                            <div class="permissions-container">
-                                {% set permission_categories = {} %}
-                                {% for permission in permissions %}
-                                    {% set category = permission.category or 'general' %}
-                                    {% if category not in permission_categories %}
-                                        {% set _ = permission_categories.update({category: []}) %}
-                                    {% endif %}
-                                    {% set _ = permission_categories[category].append(permission) %}
-                                {% endfor %}
-
+                            <!-- Scrollable Permissions Container -->
+                            <div class="permissions-container" style="max-height: 400px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 0.375rem; padding: 1rem; background-color: #f8f9fa;">
                                 <div class="row">
-                                    {% for category, perms in permission_categories.items() %}
-                                    <div class="col-lg-4 col-md-6 mb-3">
-                                        <div class="card h-100">
-                                            <div class="card-header py-2">
-                                                <h6 class="mb-0 text-capitalize">
-                                                    <i class="fas fa-folder-open text-secondary me-1"></i>
-                                                    {{ category.replace('_', ' ').title() }} 
-                                                    <small class="text-muted">({{ perms|length }})</small>
-                                                </h6>
-                                            </div>
-                                            <div class="card-body py-2" style="max-height: 300px; overflow-y: auto;">
-                                                {% for permission in perms %}
-                                                <div class="form-check mb-1">
-                                                    <input class="form-check-input" type="checkbox" name="permissions" 
-                                                           value="{{ permission.name }}" id="perm_{{ permission.id }}"
-                                                           {% if permission.name in tier.get('permissions', []) %}checked{% endif %}>
-                                                    <label class="form-check-label small" for="perm_{{ permission.id }}">
-                                                        <strong>{{ permission.name }}</strong>
-                                                        {% if permission.description %}
-                                                        <br><small class="text-muted">{{ permission.description }}</small>
-                                                        {% endif %}
-                                                    </label>
-                                                </div>
-                                                {% endfor %}
-                                            </div>
+                                    {% for permission in permissions %}
+                                    <div class="col-md-6 col-lg-4 mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input permission-checkbox" type="checkbox" 
+                                                   name="permissions" value="{{ permission.name }}" 
+                                                   id="perm_{{ permission.id }}"
+                                                   {% if permission.name in tier.permissions %}checked{% endif %}
+                                                   onchange="updateSelectedCount()">
+                                            <label class="form-check-label" for="perm_{{ permission.id }}" style="font-size: 0.875rem;">
+                                                <strong>{{ permission.name }}</strong><br>
+                                                <span class="text-muted" style="font-size: 0.75rem;">{{ permission.description or 'No description' }}</span>
+                                            </label>
                                         </div>
                                     </div>
                                     {% endfor %}
@@ -247,6 +235,27 @@
                             <textarea class="form-control" id="fallback_features" name="fallback_features" rows="4">{{ tier.fallback_features | join('\n') if tier.fallback_features else '' }}</textarea>
                             <small class="form-text text-muted">Used only if Stripe sync fails. One feature per line.</small>
                         </div>
+
+                        <!-- Fallback Pricing Section -->
+                        <hr class="my-4">
+                        <h6 class="text-muted">Fallback Pricing (used when Stripe is not available)</h6>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="fallback_price_monthly" class="form-label">Monthly Price</label>
+                                    <input type="text" class="form-control" id="fallback_price_monthly" name="fallback_price_monthly" 
+                                           value="{{ tier.get('fallback_price_monthly', '$0') }}">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="fallback_price_yearly" class="form-label">Yearly Price</label>
+                                    <input type="text" class="form-control" id="fallback_price_yearly" name="fallback_price_yearly" 
+                                           value="{{ tier.get('fallback_price_yearly', '$0') }}">
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -273,25 +282,32 @@
 
 {% block scripts %}
 <script>
+// Update visibility based on tier type changes
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize selected count
+    updateSelectedCount();
+});
+
 function selectAllPermissions() {
-    document.querySelectorAll('.permission-checkbox').forEach(checkbox => {
+    const checkboxes = document.querySelectorAll('.permission-checkbox');
+    checkboxes.forEach(checkbox => {
         checkbox.checked = true;
     });
+    updateSelectedCount();
 }
 
 function deselectAllPermissions() {
-    document.querySelectorAll('.permission-checkbox').forEach(checkbox => {
+    const checkboxes = document.querySelectorAll('.permission-checkbox');
+    checkboxes.forEach(checkbox => {
         checkbox.checked = false;
     });
+    updateSelectedCount();
 }
 
-function toggleCategoryPermissions(categoryName) {
-    const categoryCheckboxes = document.querySelectorAll(`.permission-checkbox[data-category="${categoryName}"]`);
-    const allChecked = Array.from(categoryCheckboxes).every(checkbox => checkbox.checked);
-
-    categoryCheckboxes.forEach(checkbox => {
-        checkbox.checked = !allChecked;
-    });
+function updateSelectedCount() {
+    const checkboxes = document.querySelectorAll('.permission-checkbox');
+    const selectedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
+    document.getElementById('selectedCount').textContent = selectedCount + ' selected';
 }
 
 function updatePricing() {
@@ -449,29 +465,3 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 {% endblock %}
-<div class="mb-3">
-                        <label for="fallback_features" class="form-label">Fallback Features (one per line)</label>
-                        <textarea class="form-control" id="fallback_features" name="fallback_features" rows="5">{{ '\n'.join(tier.get('fallback_features', [])) }}</textarea>
-                    </div>
-
-                    <hr class="my-4">
-                    <h6 class="text-muted">Fallback Pricing (used when Stripe is not available)</h6>
-
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="fallback_price_monthly" class="form-label">Monthly Price</label>
-                                <input type="text" class="form-control" id="fallback_price_monthly" name="fallback_price_monthly" 
-                                       value="{{ tier.get('fallback_price_monthly', '$0') }}">
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="fallback_price_yearly" class="form-label">Yearly Price</label>
-                                <input type="text" class="form-control" id="fallback_price_yearly" name="fallback_price_yearly" 
-                                       value="{{ tier.get('fallback_price_yearly', '$0') }}">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>

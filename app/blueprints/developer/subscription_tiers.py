@@ -208,12 +208,26 @@ def delete_tier(tier_key):
 
     if tier_key not in tiers:
         flash('Tier not found', 'error')
-        return redirect(url_for('subscription_tiers_bp.index'))
+        return redirect(url_for('developer.subscription_tiers.manage_tiers'))
 
     # Only prevent deletion of exempt tier (system dependency)
     if tier_key == 'exempt':
         flash(f'Cannot delete {tier_key} tier - it is required for system operation', 'error')
-        return redirect(url_for('subscription_tiers_bp.index'))
+        return redirect(url_for('developer.subscription_tiers.manage_tiers'))
+
+    # Check if any organizations are currently using this tier
+    from app.models import Organization
+    organizations_using_tier = Organization.query.filter_by(subscription_tier=tier_key).all()
+    
+    if organizations_using_tier:
+        org_names = [org.name for org in organizations_using_tier[:5]]  # Show first 5
+        if len(organizations_using_tier) > 5:
+            org_list = ', '.join(org_names) + f' and {len(organizations_using_tier) - 5} others'
+        else:
+            org_list = ', '.join(org_names)
+        
+        flash(f'Cannot delete "{tiers[tier_key]["name"]}" tier - it is currently being used by {len(organizations_using_tier)} organization(s): {org_list}. Please migrate these organizations to different tiers first.', 'error')
+        return redirect(url_for('developer.subscription_tiers.manage_tiers'))
 
     tier_name = tiers[tier_key]['name']
     del tiers[tier_key]
