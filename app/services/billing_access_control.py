@@ -50,7 +50,7 @@ class BillingAccessControl:
                 abort(403)
             elif reason in ["past_due", "unpaid", "canceled"]:
                 flash('Your subscription needs attention. Please update your billing.', 'warning')
-                return redirect(url_for('billing.reconciliation_needed'))
+                return redirect(url_for('billing.upgrade'))
             else:
                 flash('Billing verification required to access the system.', 'error')
                 return redirect(url_for('billing.upgrade'))

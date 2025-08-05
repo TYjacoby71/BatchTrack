@@ -18,8 +18,7 @@ def check_billing_access():
     if request.endpoint and (
         request.endpoint.startswith('billing.') or
         request.endpoint == 'billing.stripe_webhook' or
-        request.endpoint == 'billing.upgrade' or
-        request.endpoint == 'billing.reconciliation_needed'
+        request.endpoint == 'billing.upgrade'
     ):
         return
 
@@ -35,7 +34,8 @@ def check_billing_access():
         has_access, reason = BillingService.check_organization_access(org)
 
         if not has_access and reason != 'exempt':
-            return redirect(url_for('billing.reconciliation_needed'))
+            flash('Subscription required to access the system.', 'error')
+            return redirect(url_for('billing.upgrade'))
 
 # Debug statements removed for production readiness
 
@@ -47,41 +47,7 @@ from ...utils.permissions import require_permission, has_permission
 from ...models import db, Organization, Permission
 from ...models.billing_snapshot import BillingSnapshot
 
-@billing_bp.route('/reconciliation-needed')
-@login_required
-def reconciliation_needed():
-    """Show reconciliation flow for users who signed up during Stripe outages"""
-    
-    organization = current_user.organization
-    if not organization:
-        flash('No organization found.', 'error')
-        return redirect(url_for('app_routes.dashboard'))
-
-    needs_reconciliation, reason = BillingService.check_reconciliation_needed(organization)
-
-    if not needs_reconciliation:
-        return redirect(url_for('app_routes.dashboard'))
-
-    # Get grace period info from the latest valid snapshot
-    latest_snapshot = BillingSnapshot.get_latest_valid_snapshot(organization.id)
-
-    return render_template('billing/reconciliation_needed.html',
-                         requested_tier=organization.effective_subscription_tier,
-                         grace_expires=latest_snapshot.period_end if latest_snapshot else None,
-                         reason=reason)
-
-@billing_bp.route('/reconcile-to-free', methods=['POST'])
-@login_required
-def reconcile_to_free():
-    """Handle user choosing free plan during reconciliation"""
-    from app.models.subscription_tier import SubscriptionTier
-    free_tier = SubscriptionTier.query.filter_by(key='free').first()
-    if free_tier and current_user.organization:
-        current_user.organization.subscription_tier_id = free_tier.id
-        db.session.commit()
-        flash('Your account has been updated to the free plan.', 'success')
-
-    return redirect(url_for('app_routes.dashboard'))
+# Reconciliation routes removed - no more fallback logic needed
 
 @billing_bp.route('/upgrade')
 @login_required
