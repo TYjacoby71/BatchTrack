@@ -1,9 +1,14 @@
-from flask import render_template, request, jsonify, redirect, url_for, flash, current_app
+from flask import render_template, request, jsonify, redirect, url_for, flash, current_app, session
 from flask_login import login_required, current_user
 from . import billing_bp
 from ...extensions import csrf
 import logging
 import stripe
+
+logger = logging.getLogger(__name__)
+
+# Consolidated Billing Service and its related methods will be used throughout.
+# The ResilientBillingService is now deprecated and replaced by BillingService.
 
 # Billing access control middleware
 @billing_bp.before_request
@@ -11,25 +16,24 @@ def check_billing_access():
     """Ensure organization has valid billing status for system access"""
     # Skip billing checks for billing routes themselves and webhooks
     if request.endpoint and (
-        request.endpoint.startswith('billing.') or 
+        request.endpoint.startswith('billing.') or
         request.endpoint == 'billing.stripe_webhook' or
         request.endpoint == 'billing.upgrade' or
         request.endpoint == 'billing.reconciliation_needed'
     ):
         return
-    
+
     if current_user.is_authenticated and current_user.organization:
         org = current_user.organization
-        
+
         # Check if organization has access (billing current or exempt)
         if not org.is_active:
             flash('Your organization has been suspended. Please contact support.', 'error')
             return redirect(url_for('billing.reconciliation_needed'))
-        
-        # Use resilient billing service for comprehensive check
-        from ...services.resilient_billing_service import ResilientBillingService
-        has_access, reason = ResilientBillingService.check_organization_access(org)
-        
+
+        # Use consolidated billing service for comprehensive check
+        has_access, reason = BillingService.check_organization_access(org)
+
         if not has_access and reason != 'exempt':
             return redirect(url_for('billing.reconciliation_needed'))
 
@@ -41,24 +45,28 @@ from ...services.billing_service import BillingService
 from ...services.signup_service import SignupService
 from ...utils.permissions import require_permission, has_permission
 from ...models import db, Organization, Permission
+from ...models.billing_snapshot import BillingSnapshot
 
 @billing_bp.route('/reconciliation-needed')
 @login_required
 def reconciliation_needed():
     """Show reconciliation flow for users who signed up during Stripe outages"""
-    from ...services.resilient_billing_service import ResilientBillingService
     
-    needs_reconciliation, reason = ResilientBillingService.check_reconciliation_needed(current_user.organization)
-    
+    organization = current_user.organization
+    if not organization:
+        flash('No organization found.', 'error')
+        return redirect(url_for('app_routes.dashboard'))
+
+    needs_reconciliation, reason = BillingService.check_reconciliation_needed(organization)
+
     if not needs_reconciliation:
         return redirect(url_for('app_routes.dashboard'))
-    
-    # Get grace period info
-    from ...models.billing_snapshot import BillingSnapshot
-    latest_snapshot = BillingSnapshot.get_latest_valid_snapshot(current_user.organization.id)
-    
+
+    # Get grace period info from the latest valid snapshot
+    latest_snapshot = BillingSnapshot.get_latest_valid_snapshot(organization.id)
+
     return render_template('billing/reconciliation_needed.html',
-                         requested_tier=current_user.organization.effective_subscription_tier,
+                         requested_tier=organization.effective_subscription_tier,
                          grace_expires=latest_snapshot.period_end if latest_snapshot else None,
                          reason=reason)
 
@@ -72,13 +80,12 @@ def reconcile_to_free():
         current_user.organization.subscription_tier_id = free_tier.id
         db.session.commit()
         flash('Your account has been updated to the free plan.', 'success')
-    
+
     return redirect(url_for('app_routes.dashboard'))
 
 @billing_bp.route('/upgrade')
-@login_required 
+@login_required
 def upgrade():
-    print("DEBUG: billing.upgrade route called")
     """Show subscription upgrade options"""
     organization = current_user.organization
     if not organization:
@@ -86,9 +93,9 @@ def upgrade():
         return redirect(url_for('app_routes.dashboard'))
 
     # Get pricing data from PricingService (handles Stripe integration and fallbacks)
-    from ...services.pricing_service import PricingService
-    pricing_data = PricingService.get_pricing_data()
-    
+    # This now uses the consolidated BillingService which includes snapshot logic
+    pricing_data = BillingService.get_pricing_with_snapshots()
+
     logger.info(f"Pricing data retrieved for upgrade page: {len(pricing_data)} tiers")
     for tier_key, tier_info in pricing_data.items():
         logger.info(f"Tier {tier_key}: {tier_info.get('name', 'Unknown')} - Stripe Ready: {tier_info.get('is_stripe_ready', False)}")
@@ -109,14 +116,11 @@ def upgrade():
                              'cancel_at_period_end': False
                          })
 
-logger = logging.getLogger(__name__)
-
 @billing_bp.route('/checkout/<tier>')
 @billing_bp.route('/checkout/<tier>/<billing_cycle>')
 def checkout(tier, billing_cycle='monthly'):
     """Create Stripe checkout session for subscription payment"""
-    from flask import session
-
+    
     # Validate tier availability and Stripe configuration
     if not BillingService.validate_tier_availability(tier):
         flash('Invalid subscription tier selected.', 'error')
@@ -125,11 +129,10 @@ def checkout(tier, billing_cycle='monthly'):
     if billing_cycle not in ['monthly', 'yearly']:
         billing_cycle = 'monthly'
 
-    # Check if tier is configured in Stripe
-    from ..blueprints.developer.subscription_tiers import load_tiers_config
-    tiers_config = load_tiers_config()
+    # Check if tier is configured in Stripe using the consolidated service's tier data
+    tiers_config = BillingService.get_tiers_config() # Use consolidated method
     tier_data = tiers_config.get(tier, {})
-    
+
     if billing_cycle == 'yearly' and not tier_data.get('stripe_price_id_yearly'):
         flash('Yearly billing not available for this tier.', 'error')
         return redirect(url_for('billing.upgrade'))
@@ -256,9 +259,9 @@ def stripe_webhook():
         logger.error(f"Invalid signature in Stripe webhook: {str(e)}")
         return jsonify({'error': 'Invalid signature'}), 400
 
-    # Handle the event using centralized handler
+    # Handle the event using centralized handler from the consolidated BillingService
     success = StripeService.handle_webhook(event)
-    
+
     if success:
         return jsonify({'status': 'success'})
     else:
@@ -276,8 +279,11 @@ def complete_signup_from_stripe():
         return redirect(url_for('auth.signup'))
 
     pending_signup = session.get('pending_signup')
-    return SignupService.complete_signup(pending_signup['selected_tier'])
+    if not pending_signup:
+        flash('Signup session expired. Please sign up again.', 'error')
+        return redirect(url_for('auth.signup'))
 
+    return SignupService.complete_signup(pending_signup['selected_tier'])
 
 
 @billing_bp.route('/debug')
@@ -291,26 +297,27 @@ def debug_billing():
                 return jsonify(error_response), 400
             return render_template('billing/debug.html', debug_info=error_response)
 
-        max_users = current_user.organization.get_max_users()
+        organization = current_user.organization
+        max_users = organization.get_max_users()
 
         debug_data = {
             'user_id': current_user.id,
             'user_type': current_user.user_type,
-            'organization_id': current_user.organization_id,
-            'subscription_tier': current_user.organization.effective_subscription_tier,
+            'organization_id': organization.id,
+            'subscription_tier': organization.effective_subscription_tier,
             'stripe_configured': bool(current_app.config.get('STRIPE_SECRET_KEY')),
             'webhook_configured': bool(current_app.config.get('STRIPE_WEBHOOK_SECRET')),
             'organization_info': {
-                'id': current_user.organization.id,
-                'name': current_user.organization.name,
+                'id': organization.id,
+                'name': organization.name,
                 'max_users': max_users,
-                'active_users': current_user.organization.active_users_count,
-                'features': current_user.organization.get_subscription_features()
+                'active_users': organization.active_users_count,
+                'features': organization.get_subscription_features()
             },
             'subscription_info': {
-                'has_subscription': bool(current_user.organization.tier),
-                'subscription_status': 'active' if current_user.organization.tier else 'inactive',
-                'subscription_tier': current_user.organization.effective_subscription_tier
+                'has_subscription': bool(organization.tier),
+                'subscription_status': 'active' if organization.tier else 'inactive',
+                'subscription_tier': organization.effective_subscription_tier
             }
         }
 
@@ -318,11 +325,11 @@ def debug_billing():
         subscription = org.tier if org else None
         debug_info = debug_data
         logger.info(f"Debug data generated successfully for user {current_user.id}")
-        
+
         # Return JSON if requested via API
         if request.headers.get('Accept') == 'application/json':
             return jsonify(debug_info)
-            
+
     except AttributeError as e:
         logger.error(f"AttributeError in debug_billing: {e}")
         error_response = {'error': f'Attribute error - likely missing organization or subscription: {str(e)}'}
@@ -336,36 +343,11 @@ def debug_billing():
             return jsonify(error_response), 500
         return render_template('billing/debug.html', debug_info=error_response)
 
-    # Load tier information for debug buttons
-    from ..developer.subscription_tiers import load_tiers_config
-    tiers_config = load_tiers_config()
+    # Load tier information for debug buttons using the consolidated service's config
+    tiers_config = BillingService.get_tiers_config()
 
-    return render_template('billing/debug.html', 
+    return render_template('billing/debug.html',
                          debug_info=debug_info,
                          organization=org,
                          subscription=subscription,
                          tiers_config=tiers_config)
-
-    try:
-        event = stripe.Webhook.construct_event(
-            payload, sig_header, current_app.config['STRIPE_WEBHOOK_SECRET']
-        )
-    except ValueError:
-        logger.error("Invalid payload in Stripe webhook")
-        return jsonify({'error': 'Invalid payload'}), 400
-    except stripe.error.SignatureVerificationError:
-        logger.error("Invalid signature in Stripe webhook")
-        return jsonify({'error': 'Invalid signature'}), 400
-
-    # Handle the event
-    if event['type'] == 'customer.subscription.created':
-        StripeService.handle_subscription_created(event['data']['object'])
-    elif event['type'] == 'customer.subscription.updated':
-        StripeService.handle_subscription_updated(event['data']['object'])
-    elif event['type'] == 'customer.subscription.deleted':
-        # Handle subscription cancellation
-        pass
-    else:
-        logger.info(f"Unhandled Stripe webhook event: {event['type']}")
-
-    return jsonify({'status': 'success'})
