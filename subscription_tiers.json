@@ -33,21 +33,35 @@
     "permissions": [
       "dashboard.view",
       "inventory.view",
+      "inventory.edit",
       "inventory.adjust",
+      "inventory.reserve",
+      "inventory.delete",
+      "inventory.view_costs",
       "recipes.view",
       "recipes.create",
       "recipes.edit",
+      "recipes.delete",
+      "recipes.scale",
+      "recipes.plan_production",
       "batches.view",
       "batches.create",
       "batches.edit",
       "batches.finish",
-      "batches.cancel"
+      "batches.cancel",
+      "batches.view_costs",
+      "alerts.view",
+      "alerts.manage",
+      "alerts.dismiss"
     ],
     "feature_groups": [
       "basic_dashboard",
       "full_dashboard",
       "limited_inventory",
-      "batch_production"
+      "full_inventory",
+      "batch_production",
+      "recipe_management",
+      "system_admin"
     ],
     "stripe_lookup_key": "batchtrack_solo_monthly",
     "user_limit": 1,

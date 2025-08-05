@@ -166,7 +166,7 @@ class PricingService:
                         'stripe_lookup_key': lookup_key,
                         'stripe_price_id_monthly': price.id if price.recurring and price.recurring.interval == 'month' else None,
                         'stripe_product_id': product.id,
-                        'is_stripe_ready': True
+                        'requires_stripe_billing': tier_data.get('requires_stripe_billing', True)
                     }
 
                     logger.info(f"Successfully loaded pricing for {tier_key}: ${price.unit_amount / 100:.0f}")

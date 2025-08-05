@@ -56,11 +56,6 @@ class SubscriptionTier(db.Model):
         """Get yearly price from Stripe"""
         return self.stripe_price_yearly
 
-    @property
-    def is_stripe_ready(self):
-        """Check if tier is properly configured for Stripe"""
-        return bool(self.stripe_lookup_key and self.stripe_price_monthly)
-
     def get_permissions(self):
         """Get all permissions for this tier"""
         return [p.name for p in self.permissions]
@@ -78,6 +73,15 @@ class SubscriptionTier(db.Model):
     def is_stripe_billing_required(self):
         """Check if this tier requires Stripe billing (alias for clarity)"""
         return self.requires_stripe_billing
+
+    @property
+    def can_be_deleted(self):
+        """Check if this tier can be safely deleted"""
+        # Don't allow deletion of exempt tier (system dependency)
+        if self.key == 'exempt':
+            return False
+        # Allow deletion of other tiers including free
+        return True
 
     def __repr__(self):
         return f'<SubscriptionTier {self.key}: {self.name}>'
