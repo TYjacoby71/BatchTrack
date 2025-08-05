@@ -32,14 +32,18 @@ $(document).ready(function() {
                 if (response.success) {
                     // Update pricing display
                     updateTierDisplay(tierKey, response.tier);
-                    showAlert('success', response.message);
+                    showAlert('success', response.message || 'Sync completed successfully');
+                    // Reload page to show updated data
+                    setTimeout(() => location.reload(), 1500);
                 } else {
-                    showAlert('error', response.error || 'Sync failed');
+                    showAlert('error', response.error || response.message || 'Sync failed');
                 }
             },
             error: function(xhr) {
                 const response = xhr.responseJSON || {};
-                showAlert('error', response.error || 'Failed to sync with Stripe');
+                const errorMsg = response.error || response.message || 'Failed to sync with Stripe';
+                showAlert('error', errorMsg);
+                console.error('Sync error:', xhr);
             },
             complete: function() {
                 button.prop('disabled', false).html('<i class="fas fa-sync"></i> Sync with Stripe');
