@@ -31,6 +31,35 @@ $(document).ready(function() {
         });
     });
     
+    // Sync tier with Whop
+    $('.sync-whop-tier').on('click', function() {
+        const tierKey = $(this).data('tier-key');
+        const productKey = $(this).data('product-key');
+        const button = $(this);
+        
+        button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Syncing...');
+        
+        $.ajax({
+            url: `/developer/subscription-tiers/sync-whop/${tierKey}`,
+            method: 'POST',
+            dataType: 'json',
+            success: function(response) {
+                if (response.success) {
+                    showAlert('success', response.message);
+                } else {
+                    showAlert('error', response.error || 'Whop sync failed');
+                }
+            },
+            error: function(xhr) {
+                const response = xhr.responseJSON || {};
+                showAlert('error', response.error || 'Failed to sync with Whop');
+            },
+            complete: function() {
+                button.prop('disabled', false).html('<i class="fas fa-sync"></i> Sync with Whop');
+            }
+        });
+    });
+
     // Filter tiers by visibility
     $('#tier-filter').on('change', function() {
         const filterValue = $(this).val();
