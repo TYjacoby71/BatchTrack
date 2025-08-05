@@ -27,6 +27,7 @@ def check_container_availability(container_ids, scale=1):
 @app_routes_bp.route('/user_dashboard')
 @login_required
 def dashboard():
+    """Main dashboard view with stock checking and alerts"""
     # Developer users should only access this dashboard when viewing an organization
     if current_user.user_type == 'developer' and not session.get('dev_selected_org_id'):
         return redirect(url_for('developer.dashboard'))
@@ -183,53 +184,7 @@ def api_dashboard_alerts():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
-from flask_login import login_required, current_user
-from ..services.dashboard_alerts import DashboardAlertService
 
-app_routes_bp = Blueprint('app_routes', __name__)
-
-@app_routes_bp.route('/dashboard')
-@login_required
-def dashboard():
-    """Main dashboard view"""
-    # Developer users should only access this dashboard when viewing an organization
-    if current_user.user_type == 'developer' and not session.get('dev_selected_org_id'):
-        return redirect(url_for('developer.dashboard'))
-
-    from ..models import Recipe, Batch
-    
-    recipes_query = Recipe.query
-    if current_user.organization_id:
-        recipes_query = recipes_query.filter_by(organization_id=current_user.organization_id)
-    recipes = recipes_query.all()
-
-    batch_query = Batch.query.filter_by(status='in_progress')
-    if current_user.organization_id:
-        batch_query = batch_query.filter_by(organization_id=current_user.organization_id)
-    active_batch = batch_query.first()
-
-    # Get unified dashboard alerts with dismissed alerts from session
-    dismissed_alerts = session.get('dismissed_alerts', [])
-    alert_data = DashboardAlertService.get_dashboard_alerts(
-        max_alerts=3, 
-        dismissed_alerts=dismissed_alerts
-    )
-
-    # Get additional alert data for compatibility
-    low_stock_ingredients = CombinedInventoryAlertService.get_low_stock_ingredients()
-    
-    # Get expiration summary
-    from ..blueprints.expiration.services import ExpirationService
-    expiration_summary = ExpirationService.get_expiration_summary()
-
-    return render_template("dashboard.html", 
-                         recipes=recipes,
-                         active_batch=active_batch,
-                         current_user=current_user,
-                         alert_data=alert_data,
-                         low_stock_ingredients=low_stock_ingredients,
-                         expiration_summary=expiration_summary)
 
 @app_routes_bp.route('/fault-log')
 @login_required
