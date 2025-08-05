@@ -25,6 +25,8 @@
 - [ ] **BLOCKED**: Users can sign up with fake emails
 - [ ] **BLOCKED**: No password reset functionality
 - [ ] **BLOCKED**: No welcome email after signup
+- [ ] **MISSING**: Email templates and transactional email service (SendGrid/AWS SES)
+- [ ] **MISSING**: Email queue system for reliability
 
 ## 💳 Stripe Integration & Billing
 
@@ -98,6 +100,10 @@
 - [ ] **MISSING**: Application performance monitoring
 - [ ] **MISSING**: Database connection monitoring
 - [ ] **MISSING**: Payment failure alerting
+- [ ] **MISSING**: Consistent API response formats across all endpoints
+- [ ] **MISSING**: Centralized error handling middleware
+- [ ] **MISSING**: API rate limiting and request validation
+- [ ] **MISSING**: Request/response logging for debugging
 
 ### ⚠️ Error Recovery
 - [ ] **PARTIAL**: Basic error pages exist but incomplete
@@ -118,6 +124,10 @@
 - [ ] Database models and migrations complete
 - [ ] Blueprint organization clean and modular
 - [ ] Service layer architecture properly implemented
+- [ ] **VALIDATE**: Service boundaries clearly defined (no cross-service data access)
+- [ ] **VALIDATE**: Service authority never bypassed in any routes
+- [ ] **VALIDATE**: All inventory changes go through proper service layer
+- [ ] **VALIDATE**: Organization scoping enforced at database query level
 
 ## 📱 User Experience
 

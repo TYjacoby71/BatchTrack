@@ -97,3 +97,42 @@
 ### Unit Tests
 ```python
 def test_service_respects_organization_scoping():
+```
+
+## Core Business Logic Testing
+
+### FIFO Inventory System
+- [ ] FIFO deduction maintains proper chronological order
+- [ ] Lot tracking preserves complete audit trail
+- [ ] Cross-model FIFO works for both ingredients and products
+- [ ] Expiration date handling prevents expired inventory usage
+- [ ] Partial lot consumption updates quantities correctly
+
+## Service Architecture Validation
+
+### Service Authority Compliance
+- [ ] All inventory changes go through InventoryAdjustmentService
+- [ ] All FIFO operations use FIFOService exclusively
+- [ ] No direct model manipulation bypasses service layer
+- [ ] Unit conversions always use UnitConversionService
+- [ ] Stock checks use centralized StockCheckService
+
+### Service Boundary Testing
+- [ ] Services don't directly access other service's data
+- [ ] Each service maintains single responsibility
+- [ ] Service interfaces are clean and well-defined
+- [ ] Cross-service communication uses proper patterns
+
+## API Consistency Testing
+
+### Response Format Consistency
+- [ ] All API endpoints return consistent JSON structure
+- [ ] Error responses follow standardized format
+- [ ] Success responses include proper status codes
+- [ ] Pagination follows consistent pattern across endpoints
+
+### Error Handling Consistency
+- [ ] All endpoints return proper HTTP status codes
+- [ ] Error messages are user-friendly and actionable
+- [ ] Validation errors include field-specific details
+- [ ] System errors are logged but don't expose internals

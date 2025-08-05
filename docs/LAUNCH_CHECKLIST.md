@@ -96,6 +96,17 @@ python -c "from app.seeders.unit_seeder import seed_units; seed_units()"
 python -c "from app.seeders.ingredient_category_seeder import seed_categories; seed_categories()"
 ```
 
+## 📧 Day 2: Email Service Setup
+
+### Configure Transactional Email
+1. Set up SendGrid or AWS SES account
+2. Create email templates for:
+   - Welcome/verification emails
+   - Password reset emails
+   - Trial expiration notifications
+   - Payment failure alerts
+3. Add email service configuration to environment variables
+
 ## 🔧 Day 2-3: Code Updates
 
 ### Update Config for Production
@@ -166,6 +177,12 @@ Already set with: `gunicorn -w 4 -b 0.0.0.0:5000 run:app`
 3. **Multi-user Access**: Invite user, test permissions
 4. **Recipe Scaling**: Test ingredient calculations
 
+### Test API Consistency
+1. **Response Formats**: All API endpoints return consistent JSON structure
+2. **Error Handling**: All endpoints return proper error codes and messages
+3. **Service Layer**: Verify no routes bypass service authority
+4. **Organization Scoping**: Test cross-tenant data isolation
+
 ### Test Error Scenarios
 1. Failed payment handling
 2. Expired trial behavior
@@ -191,6 +208,10 @@ http --session=test POST https://your-app.replit.dev/auth/login email=test@examp
 - [ ] Database credentials secured
 - [ ] Rate limiting on auth endpoints
 - [ ] CSRF protection enabled
+- [ ] Input validation on all API endpoints
+- [ ] SQL injection protection validated
+- [ ] XSS protection headers configured
+- [ ] Service layer authorization checks implemented
 
 ### Legal Requirements
 - [ ] Terms of Service created and linked

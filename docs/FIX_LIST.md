@@ -46,4 +46,21 @@
 
 ## Fail Add Messages
 - *when adding extra ingredient with bad unit conversion or lacking custom mapping, it fails and shows failed with no other message of why.
+
+## API Response Consistency Issues
+- **Mixed Response Types**: Some endpoints return HTML redirects, others JSON
+- **Inconsistent Error Messages**: Error formats vary across different routes
+- **Missing Status Codes**: Some error responses don't include proper HTTP status codes
+- **Form vs API Confusion**: Same functionality sometimes has different response patterns
+
+## Service Architecture Violations
+- **Direct Model Access**: Some routes query models directly instead of using services
+- **Service Boundary Crossings**: Inventory changes sometimes bypass InventoryAdjustmentService
+- **Permission Checking Inconsistencies**: Some routes use hardcoded permission checks
+
+## Blueprint Organization Issues
+- **Mixed Responsibilities**: Some blueprints handle both UI and API concerns
+- **Duplicate Route Logic**: Similar functionality implemented differently across blueprints
+- **Template Logic Leakage**: Business logic sometimes embedded in templates
+
 ### Expiration Date from intermediate batches are genaric and not time stamped
