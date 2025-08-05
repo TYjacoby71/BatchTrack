@@ -91,7 +91,7 @@
                                 {% endif %}
                             </span>
                         </div>
-                        
+
                         {% if tier_data.get('feature_groups') %}
                         <div class="d-flex align-items-center">
                             <i class="fas fa-star me-2 text-warning"></i>
@@ -108,39 +108,42 @@
                         {% endif %}
                     </div>
 
-                    <!-- Current Settings Display -->
-                    <div class="row small mb-3">
-                        <div class="col-6">
-                            <div class="mb-1">
-                                <i class="fas fa-eye me-1"></i>
-                                <span class="badge bg-{{ 'success' if tier_data.get('is_customer_facing', True) else 'secondary' }}">
-                                    {{ 'Customer Facing' if tier_data.get('is_customer_facing', True) else 'Internal' }}
-                                </span>
-                            </div>
-                            <div class="mb-1">
-                                <i class="fas fa-toggle-{{ 'on' if tier_data.get('is_available', True) else 'off' }} me-1"></i>
-                                <span class="badge bg-{{ 'success' if tier_data.get('is_available', True) else 'secondary' }}">
-                                    {{ 'Available' if tier_data.get('is_available', True) else 'Unavailable' }}
-                                </span>
-                            </div>
+                    <!-- Settings Display -->
+                    <div class="card mb-3">
+                        <div class="card-header py-2">
+                            <h6 class="mb-0">Settings</h6>
                         </div>
-                        <div class="col-6">
-                            <div class="mb-1">
-                                <i class="fab fa-stripe me-1"></i>
-                                <span class="badge bg-{{ 'primary' if tier_data.get('requires_stripe_billing', True) else 'secondary' }}">
-                                    {{ 'Requires Stripe' if tier_data.get('requires_stripe_billing', True) else 'No Stripe' }}
-                                </span>
-                            </div>
-                            <div class="mb-1">
-                                <i class="fas fa-shopping-cart me-1"></i>
-                                <span class="badge bg-{{ 'success' if tier_data.get('supports_whop', False) else 'secondary' }}">
-                                    {{ 'Requires Whop' if tier_data.get('supports_whop', False) else 'No Whop' }}
-                                </span>
+                        <div class="card-body py-2">
+                            <div class="row small">
+                                <div class="col-6">
+                                    <div class="mb-1">
+                                        <span class="badge bg-{{ 'success' if tier_data.get('is_customer_facing', True) else 'danger' }}">
+                                            Customer Facing
+                                        </span>
+                                    </div>
+                                    <div class="mb-1">
+                                        <span class="badge bg-{{ 'success' if tier_data.get('is_available', True) else 'danger' }}">
+                                            Available
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="mb-1">
+                                        <span class="badge bg-{{ 'success' if tier_data.get('requires_stripe_billing', True) else 'danger' }}">
+                                            Requires Stripe
+                                        </span>
+                                    </div>
+                                    <div class="mb-1">
+                                        <span class="badge bg-{{ 'success' if tier_data.get('supports_whop', False) else 'danger' }}">
+                                            Requires Whop
+                                        </span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- Modular Bottom Section -->
                 <div class="card-footer p-0">
                     <!-- Sync Buttons Row -->
@@ -185,7 +188,7 @@
                         {% endif %}
                     </div>
                     {% endif %}
-                    
+
                     <!-- Edit Button Row - Always spans full width -->
                     <div class="row g-0">
                         <div class="col-12">
