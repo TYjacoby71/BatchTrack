@@ -1,5 +1,21 @@
 
 $(document).ready(function() {
+    // Get CSRF token from meta tag or form
+    function getCSRFToken() {
+        return $('meta[name=csrf-token]').attr('content') || 
+               $('input[name="csrf_token"]').val() || 
+               document.querySelector('input[name="csrf_token"]')?.value;
+    }
+
+    // Add CSRF token to AJAX requests
+    $.ajaxSetup({
+        beforeSend: function(xhr, settings) {
+            if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type) && !this.crossDomain) {
+                xhr.setRequestHeader("X-CSRFToken", getCSRFToken());
+            }
+        }
+    });
+
     // Sync tier with Stripe
     $('.sync-tier').on('click', function() {
         const tierKey = $(this).data('tier-key');
