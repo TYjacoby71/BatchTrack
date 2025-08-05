@@ -78,7 +78,10 @@
     "fallback_price_yearly": "$0",
     "stripe_price_id_monthly": "price_1RnRlnF4Y9XQgiJBzKnYadVL",
     "stripe_price_id_yearly": "price_1RnS1vF4Y9XQgiJBZUqN2aWW",
-    "requires_stripe_billing": true
+    "requires_stripe_billing": true,
+    "supports_stripe": true,
+    "supports_whop": false,
+    "whop_only": false
   },
   "team": {
     "name": "Team Plan",
@@ -164,7 +167,10 @@
     "stripe_price_id_yearly": "price_1RnSCIF4Y9XQgiJBeA7UZPzD",
     "fallback_price_monthly": "$0",
     "fallback_price_yearly": "$0",
-    "requires_stripe_billing": true
+    "requires_stripe_billing": true,
+    "supports_stripe": true,
+    "supports_whop": false,
+    "whop_only": false
   },
   "enterprise": {
     "name": "Enterprise Plan",
@@ -219,7 +225,10 @@
     "fallback_price_monthly": "$0",
     "fallback_price_yearly": "$0",
     "stripe_price_id_monthly": "price_1RnS8pF4Y9XQgiJBr3Wq1LIH",
-    "stripe_price_id_yearly": "price_1RnSArF4Y9XQgiJBmKTnZhSo"
+    "stripe_price_id_yearly": "price_1RnSArF4Y9XQgiJBmKTnZhSo",
+    "supports_stripe": true,
+    "supports_whop": false,
+    "whop_only": false
   },
   "exempt": {
     "name": "Exempt Plan",
@@ -300,6 +309,9 @@
     "last_synced": null,
     "fallback_price_monthly": "$0",
     "fallback_price_yearly": "$0",
-    "requires_stripe_billing": false
+    "requires_stripe_billing": false,
+    "supports_stripe": false,
+    "supports_whop": true,
+    "whop_only": true
   }
 }
