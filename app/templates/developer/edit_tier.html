@@ -34,55 +34,14 @@
                                    value="{{ tier.name }}" required>
                         </div>
 
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="tier_key" class="form-label">Tier Key</label>
-                                    <input type="text" class="form-control" id="tier_key" name="tier_key" 
-                                           value="{{ tier_key }}" required>
-                                    <div class="form-text">Used for system identification (e.g., 'solo-monthly')</div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="pricing_category" class="form-label">Pricing Category</label>
-                                    <select class="form-select" id="pricing_category" name="pricing_category">
-                                        <option value="standard" {% if tier.get('pricing_category', 'standard') == 'standard' %}selected{% endif %}>Standard</option>
-                                        <option value="promotional" {% if tier.get('pricing_category') == 'promotional' %}selected{% endif %}>Promotional</option>
-                                        <option value="enterprise" {% if tier.get('pricing_category') == 'enterprise' %}selected{% endif %}>Enterprise</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-4">
-                                <div class="mb-3">
-                                    <label for="billing_cycle" class="form-label">Billing Cycle</label>
-                                    <select class="form-select" id="billing_cycle" name="billing_cycle">
-                                        <option value="monthly" {% if tier.get('billing_cycle', 'monthly') == 'monthly' %}selected{% endif %}>Monthly</option>
-                                        <option value="yearly" {% if tier.get('billing_cycle') == 'yearly' %}selected{% endif %}>Yearly</option>
-                                        <option value="lifetime" {% if tier.get('billing_cycle') == 'lifetime' %}selected{% endif %}>Lifetime</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="mb-3">
-                                    <label for="price_amount" class="form-label">Price Amount</label>
-                                    <input type="number" class="form-control" id="price_amount" name="price_amount" 
-                                           value="{{ tier.get('price_amount', '') }}" step="0.01" min="0">
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="mb-3">
-                                    <label for="currency" class="form-label">Currency</label>
-                                    <select class="form-select" id="currency" name="currency">
-                                        <option value="USD" {% if tier.get('currency', 'USD') == 'USD' %}selected{% endif %}>USD</option>
-                                        <option value="EUR" {% if tier.get('currency') == 'EUR' %}selected{% endif %}>EUR</option>
-                                        <option value="GBP" {% if tier.get('currency') == 'GBP' %}selected{% endif %}>GBP</option>
-                                    </select>
-                                </div>
-                            </div>
+                        <div class="mb-3">
+                            <label for="pricing_category" class="form-label">Pricing Category</label>
+                            <select class="form-select" id="pricing_category" name="pricing_category">
+                                <option value="monthly" {% if tier.get('pricing_category', 'monthly') == 'monthly' %}selected{% endif %}>Monthly</option>
+                                <option value="yearly" {% if tier.get('pricing_category') == 'yearly' %}selected{% endif %}>Yearly</option>
+                                <option value="promotional" {% if tier.get('pricing_category') == 'promotional' %}selected{% endif %}>Promotional</option>
+                            </select>
+                            <div class="form-text">Billing cycle, price, and currency are managed by Stripe</div>
                         </div>
 
                         <div class="mb-3">
