@@ -101,8 +101,8 @@ def index():
     # Get available timezones grouped by region
     grouped_timezones = TimezoneUtils.get_grouped_timezones()
 
-    from ...services.pricing_service import PricingService
-    pricing_data = PricingService.get_pricing_data()
+    from ...services.billing_service import BillingService
+    pricing_data = BillingService.get_comprehensive_pricing_data()
 
     return render_template('settings/index.html',
                          user_prefs=user_prefs,
