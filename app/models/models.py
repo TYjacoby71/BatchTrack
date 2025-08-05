@@ -397,6 +397,11 @@ class User(UserMixin, db.Model):
         return self.is_deleted is True
 
     @property
+    def is_developer(self):
+        """Check if user is a developer"""
+        return self.user_type == 'developer'
+
+    @property
     def display_role(self):
         """Get display-friendly role description"""
         if self.user_type == 'developer':

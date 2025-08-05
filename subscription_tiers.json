@@ -1,33 +1,4 @@
 {
-  "free": {
-    "name": "Free Plan",
-    "permissions": [
-      "dashboard.view",
-      "inventory.view"
-    ],
-    "feature_groups": [
-      "basic_dashboard",
-      "full_dashboard",
-      "limited_inventory"
-    ],
-    "stripe_lookup_key": "",
-    "user_limit": 1,
-    "is_customer_facing": true,
-    "is_available": true,
-    "fallback_features": [
-      "View inventory levels",
-      "Manual stock adjustments only",
-      "1 user maximum",
-      "Community support only"
-    ],
-    "stripe_features": [],
-    "stripe_price_monthly": "Free",
-    "stripe_price_yearly": "Free",
-    "last_synced": null,
-    "requires_stripe_billing": true,
-    "fallback_price_monthly": "$0",
-    "fallback_price_yearly": "$0"
-  },
   "solo": {
     "name": "Solo Maker",
     "permissions": [
