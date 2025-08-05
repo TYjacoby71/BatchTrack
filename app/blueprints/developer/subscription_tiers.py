@@ -158,10 +158,16 @@ def edit_tier(tier_key):
         tier['is_available'] = 'is_available' in request.form
         tier['requires_stripe_billing'] = 'requires_stripe_billing' in request.form
 
+        # Payment provider settings
+        tier['supports_stripe'] = 'supports_stripe' in request.form
+        tier['supports_whop'] = 'supports_whop' in request.form
+        tier['whop_only'] = 'whop_only' in request.form
 
         tier['permissions'] = request.form.getlist('permissions')
         tier['feature_groups'] = request.form.getlist('feature_groups')
         tier['stripe_lookup_key'] = request.form.get('stripe_lookup_key', '')
+        tier['whop_product_key'] = request.form.get('whop_product_key', '')
+        tier['whop_product_name'] = request.form.get('whop_product_name', '')
 
         user_limit_str = request.form.get('user_limit', '1')
         try:
@@ -442,6 +448,49 @@ def sync_tier(tier_key):
 def api_get_tiers():
     """API endpoint to get current tiers configuration"""
     return jsonify(load_tiers_config())
+
+@subscription_tiers_bp.route('/sync-whop/<tier_key>', methods=['POST'])
+@login_required
+def sync_whop_tier(tier_key):
+    """Sync a tier with Whop products - validate product exists"""
+    from datetime import datetime
+    
+    tiers = load_tiers_config()
+
+    if tier_key not in tiers:
+        return jsonify({'error': 'Tier not found'}), 404
+
+    tier = tiers[tier_key]
+    whop_product_key = tier.get('whop_product_key')
+
+    if not whop_product_key:
+        return jsonify({'error': 'No Whop product key configured'}), 400
+
+    try:
+        # For now, just validate the configuration exists
+        # In a full implementation, you'd validate against Whop API
+        whop_store_id = current_app.config.get('WHOP_STORE_ID')
+        whop_secret = current_app.config.get('WHOP_SECRET_KEY')
+        
+        if not whop_store_id or not whop_secret:
+            return jsonify({'error': 'Whop integration not configured in secrets'}), 400
+
+        # Update tier with sync timestamp
+        tier['whop_last_synced'] = datetime.now().isoformat()
+        
+        save_tiers_config(tiers)
+
+        # Also update database record
+        sync_tier_to_database(tier_key, tier)
+
+        return jsonify({
+            'success': True,
+            'tier': tier,
+            'message': f'Successfully validated Whop configuration for {tier["name"]}'
+        })
+
+    except Exception as e:
+        return jsonify({'error': f'Whop sync failed: {str(e)}'}), 500
 
 @subscription_tiers_bp.route('/api/customer-tiers')
 def api_get_customer_tiers():

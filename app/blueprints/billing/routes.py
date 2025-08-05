@@ -39,11 +39,76 @@ def check_billing_access():
 # Debug statements removed for production readiness
 
 from ...services.stripe_service import StripeService
+from ...services.whop_service import WhopService
 from ...services.billing_service import BillingService
 from ...services.signup_service import SignupService
 from ...utils.permissions import require_permission, has_permission
 from ...models import db, Organization, Permission
 from ...models.billing_snapshot import BillingSnapshot
+
+@billing_bp.route('/whop-checkout/<product_id>')
+def whop_checkout(product_id):
+    """Redirect to Whop checkout for a specific product"""
+    checkout_url = WhopService.get_whop_checkout_url(product_id)
+    if checkout_url:
+        return redirect(checkout_url)
+    else:
+        flash('Whop checkout not available. Please contact support.', 'error')
+        return redirect(url_for('auth.signup'))
+
+@billing_bp.route('/complete-signup-from-whop')
+def complete_signup_from_whop():
+    """Handle completion of signup from Whop (license key validation)"""
+    license_key = request.args.get('license_key')
+    if not license_key:
+        flash('License key required to complete signup.', 'error')
+        return redirect(url_for('auth.login'))
+    
+    # Validate license and create/update user
+    from ...blueprints.auth.whop_auth import WhopAuth
+    
+    # Get license data
+    license_data = WhopService.validate_license_key(license_key)
+    if not license_data:
+        flash('Invalid or expired license key.', 'error')
+        return redirect(url_for('auth.login'))
+    
+    # Create user and organization
+    from ...models import User
+    user = User.query.filter_by(email=license_data['email']).first()
+    
+    if not user:
+        # Create new user and organization
+        organization = WhopService.create_organization_from_whop(license_key, license_data)
+        user = User(
+            email=license_data['email'],
+            username=license_data['email'].split('@')[0],
+            organization_id=organization.id,
+            is_active=True,
+            user_type='customer'
+        )
+        # Set a temporary password - user should reset it
+        user.set_password('temporary_password_please_reset')
+        db.session.add(user)
+        db.session.commit()
+        
+        flash('Account created successfully! Please set your password.', 'success')
+        return redirect(url_for('auth.reset_password', email=user.email))
+    else:
+        # Update existing user's organization
+        if user.organization:
+            WhopService.sync_organization_from_whop(user.organization, {
+                **license_data,
+                'license_key': license_key
+            })
+        else:
+            organization = WhopService.create_organization_from_whop(license_key, license_data)
+            user.organization_id = organization.id
+            db.session.commit()
+        
+        flash('Whop license activated successfully!', 'success')
+        login_user(user)
+        return redirect(url_for('dashboard.index'))
 
 # Reconciliation routes removed - no more fallback logic needed
 

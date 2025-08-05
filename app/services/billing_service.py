@@ -88,7 +88,7 @@ class BillingService:
     @staticmethod
     def check_organization_access(organization):
         """
-        Check if organization should have access, supporting both Stripe and Whop.
+        Check if organization should have access, supporting both Stripe and Whop in parallel.
         """
         if not organization:
             return False, "no_organization"
@@ -112,24 +112,28 @@ class BillingService:
         if not tier_key or tier_key == 'none':
             return False, "no_subscription"
 
-        # Check Whop access first (preferred)
+        # Check Whop access first (if license key exists)
         if hasattr(organization, 'whop_license_key') and organization.whop_license_key:
             from ..services.whop_service import WhopService
             has_whop_access, whop_reason = WhopService.check_whop_access(organization)
             if has_whop_access:
                 return True, "whop_verified"
-            else:
-                return False, whop_reason
+            # If Whop access fails, continue to check Stripe as fallback
 
-        # Fall back to Stripe logic for legacy users
-        if BillingService._is_stripe_healthy() and organization.tier:
-            return True, "active_subscription"
+        # Check Stripe access (existing users or fallback)
+        if organization.stripe_customer_id or organization.stripe_subscription_id:
+            if BillingService._is_stripe_healthy() and organization.tier:
+                return True, "stripe_active"
+            
+            # If Stripe is down, check snapshots
+            latest_snapshot = BillingSnapshot.get_latest_valid_snapshot(organization.id)
+            if latest_snapshot and latest_snapshot.is_valid_for_access:
+                days_left = latest_snapshot.days_until_grace_expires
+                return True, f"stripe_snapshot_grace_{days_left}_days"
 
-        # If Stripe is down, check snapshots
-        latest_snapshot = BillingSnapshot.get_latest_valid_snapshot(organization.id)
-        if latest_snapshot and latest_snapshot.is_valid_for_access:
-            days_left = latest_snapshot.days_until_grace_expires
-            return True, f"snapshot_grace_{days_left}_days"
+        # For organizations with tier but no payment method (legacy free accounts)
+        if organization.tier and tier_key in ['free', 'trial']:
+            return True, "legacy_free_tier"
 
         # No valid confirmation found
         return False, "billing_unconfirmed"

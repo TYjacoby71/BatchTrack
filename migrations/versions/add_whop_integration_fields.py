@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers
 revision = 'whop_integration'
-down_revision = '132971c1d456'
+down_revision = 'add_billing_columns_org'
 branch_labels = None
 depends_on = None
 

@@ -51,6 +51,7 @@
 
                         <!-- Hidden field for selected tier -->
                         <input type="hidden" name="subscription_tier" id="subscription_tier" value="team">
+                        <input type="hidden" name="tier" id="tier_hidden" value="team">
 
                         <!-- Tier Selection -->
                         <div class="mb-4">
@@ -58,11 +59,15 @@
                             <div class="row">
                                 {% for tier_key, tier_data in available_tiers.items() %}
                                 <div class="col-md-4 mb-3">
-                                    <div class="card tier-card h-100 {% if tier_key == 'team' %}border-primary{% endif %}" 
-                                         data-tier="{{ tier_key }}" 
+                                    <div class="card tier-card h-100 {% if tier_key == 'team' %}border-success selected{% endif %}" 
+                                         data-tier="{{ tier_key }}"
+                                         data-whop-available="{{ tier_data.get('whop_product_id', '') != '' }}"
+                                         data-stripe-available="true"
+                                         data-whop-only="{{ tier_data.get('whop_only', False) }}"
                                          style="cursor: pointer; transition: all 0.3s; border-width: 2px;"
+                                         onclick="selectTier('{{ tier_key }}')"
                                          onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 4px 15px rgba(0,0,0,0.1)'"
-                                         onmouseout="if(!this.classList.contains('border-success')) { this.style.transform='translateY(0px)'; this.style.boxShadow='0 1px 3px rgba(0,0,0,0.1)'; }">
+                                         onmouseout="if(!this.classList.contains('selected')) { this.style.transform='translateY(0px)'; this.style.boxShadow='0 1px 3px rgba(0,0,0,0.1)'; }">
                                         {% if tier_key == 'team' %}
                                         <div class="card-header bg-primary text-white text-center py-1">
                                             <small><i class="fas fa-star"></i> Most Popular</small>
@@ -93,13 +98,34 @@
                                                 {% endif %}
                                             </ul>
                                         </div>
-                                        <button type="button" class="btn btn-primary tier-select-btn w-100" 
-                                            data-tier="{{ tier_key }}">
-                                        Choose {{ tier_data.name }}
-                                    </button>
+                                        <div class="card-footer bg-transparent">
+                                            <div class="tier-selection-indicator text-center">
+                                                <i class="fas fa-check-circle text-success" style="display: {% if tier_key == 'team' %}inline{% else %}none{% endif %};"></i>
+                                                <span class="tier-status-text">{% if tier_key == 'team' %}Selected{% else %}Click to Select{% endif %}</span>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                                 {% endfor %}
+                            </div>
+                        </div>
+
+                        <!-- Payment Method -->
+                        <div class="mb-3" id="payment-method-section">
+                            <label class="form-label">Payment Method</label>
+                            <div id="payment-options">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="payment_method" id="stripe_payment" value="stripe" checked>
+                                    <label class="form-check-label" for="stripe_payment">
+                                        Credit Card (Stripe)
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="payment_method" id="whop_payment" value="whop">
+                                    <label class="form-check-label" for="whop_payment">
+                                        Whop License
+                                    </label>
+                                </div>
                             </div>
                         </div>
 
@@ -334,119 +360,86 @@ function formatCardNumber(input) {
 
 {% block scripts %}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Tier selection handling
-    const tierCards = document.querySelectorAll('.tier-card');
-    const selectedTierInput = document.getElementById('subscription_tier');
+function selectTier(tierKey) {
+    // Update hidden fields
+    document.getElementById('subscription_tier').value = tierKey;
+    document.getElementById('tier_hidden').value = tierKey;
+    
+    // Update visual selection
+    document.querySelectorAll('.tier-card').forEach(card => {
+        const isSelected = card.dataset.tier === tierKey;
+        
+        // Update card styling
+        if (isSelected) {
+            card.classList.remove('border-primary');
+            card.classList.add('border-success', 'selected');
+            card.style.transform = 'translateY(-4px)';
+            card.style.boxShadow = '0 4px 15px rgba(0,0,0,0.1)';
+        } else {
+            card.classList.remove('border-success', 'selected');
+            card.classList.add('border-primary');
+            card.style.transform = 'translateY(0px)';
+            card.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
+        }
+        
+        // Update status indicator
+        const checkIcon = card.querySelector('.fas.fa-check-circle');
+        const statusText = card.querySelector('.tier-status-text');
+        
+        if (checkIcon && statusText) {
+            if (isSelected) {
+                checkIcon.style.display = 'inline';
+                statusText.textContent = 'Selected';
+            } else {
+                checkIcon.style.display = 'none';
+                statusText.textContent = 'Click to Select';
+            }
+        }
+    });
+    
+    // Update payment options
+    updatePaymentOptions(tierKey);
+}
 
-    // Check if elements exist before adding listeners
-    if (!selectedTierInput) {
-        console.error('subscription_tier input not found');
+function updatePaymentOptions(tierKey) {
+    const paymentSection = document.getElementById('payment-method-section');
+    const stripeOption = document.getElementById('stripe_payment');
+    const whopOption = document.getElementById('whop_payment');
+    
+    if (!tierKey) {
+        paymentSection.style.display = 'none';
         return;
     }
-
-    // Function to select a tier
-    function selectTier(tier) {
-        console.log('=== TIER SELECTION ===');
-        console.log('Tier clicked:', tier);
-
-        // Remove active class from all cards
-        tierCards.forEach(c => {
-            c.classList.remove('active', 'border-primary');
-            console.log('Removed active from:', c.dataset.tier);
-        });
-
-        // Find and activate the clicked tier card
-        const targetCard = document.querySelector(`.tier-card[data-tier="${tier}"]`);
-        if (targetCard) {
-            targetCard.classList.add('active', 'border-primary');
-            console.log('Added active to:', tier);
-        }
-
-        // Update hidden input
-        if (selectedTierInput) {
-            const oldValue = selectedTierInput.value;
-            selectedTierInput.value = tier;
-            console.log('Tier input updated from:', oldValue, 'to:', tier);
-            console.log('Input element:', selectedTierInput);
-        } else {
-            console.error('selectedTierInput is null!');
-        }
-        console.log('==================');
+    
+    // Find the selected tier card to get data attributes
+    const selectedCard = document.querySelector(`.tier-card[data-tier="${tierKey}"]`);
+    if (!selectedCard) return;
+    
+    const whopAvailable = selectedCard.dataset.whopAvailable === 'true';
+    const stripeAvailable = selectedCard.dataset.stripeAvailable === 'true';
+    const whopOnly = selectedCard.dataset.whopOnly === 'true';
+    
+    // Always show payment section for now since we have both options
+    paymentSection.style.display = 'block';
+    
+    // Show/hide payment options based on availability
+    stripeOption.parentElement.style.display = stripeAvailable ? 'block' : 'none';
+    whopOption.parentElement.style.display = whopAvailable ? 'block' : 'none';
+    
+    // Auto-select if only one option is available
+    if (whopOnly || !stripeAvailable) {
+        whopOption.checked = true;
+        stripeOption.checked = false;
+    } else if (!whopAvailable) {
+        stripeOption.checked = true;
+        whopOption.checked = false;
     }
+}
 
-    // Add click handlers to cards and buttons
-    tierCards.forEach(card => {
-        card.addEventListener('click', function() {
-            const tier = this.dataset.tier;
-            selectTier(tier);
-        });
-    });
-
-    // Also handle button clicks specifically
-    document.querySelectorAll('.tier-select-btn').forEach(button => {
-        button.addEventListener('click', function(e) {
-            e.stopPropagation(); // Prevent card click from also firing
-            const tier = this.dataset.tier;
-            selectTier(tier);
-        });
-    });
-
-    // Form validation
-    const form = document.getElementById('signupForm');
-    if (form) {
-        form.addEventListener('submit', function(e) {
-            console.log('=== FORM SUBMISSION ===');
-            const selectedTier = selectedTierInput ? selectedTierInput.value : '';
-            console.log('Selected tier on submit:', selectedTier);
-            console.log('Form data at submit:');
-            const formData = new FormData(form);
-            for (let [key, value] of formData.entries()) {
-                console.log(`${key}: ${value}`);
-            }
-
-            if (!selectedTier) {
-                console.error('No tier selected!');
-                e.preventDefault();
-                alert('Please select a subscription plan');
-                return false;
-            }
-
-            // Validate required fields
-            const requiredFields = ['org_name', 'username', 'email', 'password', 'confirm_password'];
-            let hasErrors = false;
-
-            requiredFields.forEach(fieldName => {
-                const field = document.querySelector(`[name="${fieldName}"]`);
-                if (field && !field.value.trim()) {
-                    hasErrors = true;
-                    field.classList.add('is-invalid');
-                    console.log(`Missing required field: ${fieldName}`);
-                } else if (field) {
-                    field.classList.remove('is-invalid');
-                }
-            });
-
-            // Check password match
-            const password = document.querySelector('[name="password"]');
-            const confirmPassword = document.querySelector('[name="confirm_password"]');
-            if (password && confirmPassword && password.value !== confirmPassword.value) {
-                hasErrors = true;
-                confirmPassword.classList.add('is-invalid');
-                alert('Passwords do not match');
-                console.log('Password mismatch!');
-            }
-
-            if (hasErrors) {
-                console.log('Form has errors, preventing submission');
-                e.preventDefault();
-                return false;
-            }
-
-            console.log('Form submission proceeding with tier:', selectedTier);
-            console.log('===================');
-        });
-    }
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    // Set initial tier selection
+    updatePaymentOptions('team');
 });
 </script>
 {% endblock %}

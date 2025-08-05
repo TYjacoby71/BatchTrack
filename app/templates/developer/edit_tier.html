@@ -85,41 +85,101 @@
                 </div>
             </div>
 
-            <!-- Stripe Configuration -->
-            <div class="col-md-6">
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="mb-0">Stripe Integration</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="mb-3">
-                            <label for="stripe_lookup_key" class="form-label">Stripe Lookup Key</label>
-                            <input type="text" class="form-control" id="stripe_lookup_key" name="stripe_lookup_key"
-                                   value="{{ tier.stripe_lookup_key or '' }}" 
-                                   placeholder="e.g., solo-plan, team-plan">
-                            <small class="form-text text-muted">
-                                This should match the lookup key in your Stripe product configuration.
-                                <br>Used to sync pricing and features from Stripe.
-                            </small>
-                        </div>
+            <!-- Payment Integration Sections -->
 
-                        <div class="alert alert-info">
-                            <h6><i class="fas fa-info-circle"></i> Stripe Configuration</h6>
-                            <p class="mb-2">Configure your Stripe secrets in the <a href="/secrets" target="_blank">Secrets tab</a>:</p>
-                            <ul class="mb-0">
-                                <li><code>STRIPE_SECRET_KEY</code> - Your Stripe secret key</li>
-                                <li><code>STRIPE_PUBLISHABLE_KEY</code> - Your Stripe publishable key</li>
-                            </ul>
+                    <!-- Stripe Integration Section -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0">
+                                <i class="fab fa-stripe text-primary"></i> Stripe Integration
+                            </h5>
                         </div>
+                        <div class="card-body">
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" name="supports_stripe" id="supports_stripe" 
+                                       {% if tier.get('supports_stripe', True) %}checked{% endif %}>
+                                <label class="form-check-label" for="supports_stripe">
+                                    Enable Stripe Support
+                                </label>
+                                <small class="form-text text-muted">
+                                    Allow customers to purchase this tier via Stripe
+                                </small>
+                            </div>
 
-                        <div class="mt-3">
-                            <h6>Current Stripe Data:</h6>
-                            <p><strong>Monthly Price:</strong> {{ tier.stripe_price_monthly or 'Not synced' }}</p>
-                            <p><strong>Yearly Price:</strong> {{ tier.stripe_price_yearly or 'Not synced' }}</p>
-                            <p><strong>Last Synced:</strong> {{ tier.last_synced or 'Never' }}</p>
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" name="requires_stripe_billing" id="requires_stripe_billing" 
+                                       {% if tier.get('requires_stripe_billing', True) %}checked{% endif %}>
+                                <label class="form-check-label" for="requires_stripe_billing">
+                                    Requires Stripe Billing
+                                </label>
+                                <small class="form-text text-muted">
+                                    If unchecked, this tier will not require payment (like exempt tier)
+                                </small>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="stripe_lookup_key">Stripe Lookup Key</label>
+                                <input type="text" class="form-control" name="stripe_lookup_key" id="stripe_lookup_key" 
+                                       value="{{ tier.get('stripe_lookup_key', '') }}" 
+                                       placeholder="e.g., batchtrack_solo_monthly">
+                                <small class="form-text text-muted">
+                                    This key links the tier to Stripe products. Must match your Stripe product configuration.
+                                </small>
+                            </div>
                         </div>
                     </div>
-                </div>
+
+                    <!-- Whop Integration Section -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0">
+                                <i class="fas fa-shopping-cart text-success"></i> Whop Integration
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" name="supports_whop" id="supports_whop" 
+                                       {% if tier.get('supports_whop', False) %}checked{% endif %}>
+                                <label class="form-check-label" for="supports_whop">
+                                    Enable Whop Support
+                                </label>
+                                <small class="form-text text-muted">
+                                    Allow customers to purchase this tier via Whop
+                                </small>
+                            </div>
+
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" name="whop_only" id="whop_only" 
+                                       {% if tier.get('whop_only', False) %}checked{% endif %}>
+                                <label class="form-check-label" for="whop_only">
+                                    Whop Only (Disable Stripe)
+                                </label>
+                                <small class="form-text text-muted">
+                                    This tier is only available through Whop (e.g., lifetime access)
+                                </small>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="whop_product_key">Whop Product Key</label>
+                                <input type="text" class="form-control" name="whop_product_key" id="whop_product_key" 
+                                       value="{{ tier.get('whop_product_key', '') }}" 
+                                       placeholder="e.g., batchtrack-lifetime">
+                                <small class="form-text text-muted">
+                                    Unique key to identify this product in Whop
+                                </small>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="whop_product_name">Whop Product Name</label>
+                                <input type="text" class="form-control" name="whop_product_name" id="whop_product_name" 
+                                       value="{{ tier.get('whop_product_name', '') }}" 
+                                       placeholder="e.g., BatchTrack Lifetime Access">
+                                <small class="form-text text-muted">
+                                    Display name for the product in Whop
+                                </small>
+                            </div>
+                        </div>
+                    </div>
             </div>
         </div>
 

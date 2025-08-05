@@ -115,6 +115,22 @@
                         </button>
                     {% endif %}
 
+                    {% if tier_data.get('stripe_lookup_key') %}
+                        <button type="button" class="btn btn-sm btn-outline-primary sync-tier" 
+                                data-tier-key="{{ tier_key }}" 
+                                data-lookup-key="{{ tier_data.get('stripe_lookup_key') }}">
+                            <i class="fas fa-sync"></i> Sync with Stripe
+                        </button>
+                        {% endif %}
+
+                        {% if tier_data.get('whop_product_key') %}
+                        <button type="button" class="btn btn-sm btn-outline-success sync-whop-tier" 
+                                data-tier-key="{{ tier_key }}" 
+                                data-product-key="{{ tier_data.get('whop_product_key') }}">
+                            <i class="fas fa-sync"></i> Sync with Whop
+                        </button>
+                        {% endif %}
+
                     {% if tier_key != 'exempt' %}
                             <form method="POST" action="{{ url_for('developer.subscription_tiers.delete_tier', tier_key=tier_key) }}" 
                                   style="display: inline;" 
