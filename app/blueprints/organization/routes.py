@@ -27,8 +27,8 @@ def dashboard():
         flash('You do not have permission to access the organization dashboard.', 'error')
         return redirect(url_for('settings.index'))
 
-    from ...services.pricing_service import PricingService
-    pricing_data = PricingService.get_pricing_data()
+    from ...services.billing_service import BillingService
+    pricing_data = BillingService.get_comprehensive_pricing_data()
 
     # Load subscription tiers config for tier display (needed for both developer and customer views)
     from ...blueprints.developer.subscription_tiers import load_tiers_config
