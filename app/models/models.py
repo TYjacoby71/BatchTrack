@@ -33,6 +33,11 @@ class Organization(db.Model):
 
     # Subscription tier (relationship to SubscriptionTier) - SINGLE SOURCE OF TRUTH
     subscription_tier_id = db.Column(db.Integer, db.ForeignKey('subscription_tier.id'), nullable=True)
+    stripe_subscription_id = db.Column(db.String(128), nullable=True)  # Link to Stripe subscription
+    stripe_customer_id = db.Column(db.String(128), nullable=True)  # Link to Stripe customer
+    billing_info = db.Column(db.Text, nullable=True)  # JSON field for billing details
+    next_billing_date = db.Column(db.Date, nullable=True)
+    subscription_status = db.Column(db.String(32), default='inactive')  # active, past_due, canceled, etc.
 
     # Keep old string field for migration compatibility only (DO NOT USE)
     subscription_tier = db.Column(db.String(32), default='free')  # DEPRECATED - use tier relationship
@@ -144,7 +149,7 @@ class User(UserMixin, db.Model):
         """Check if user has organization owner role - AUTHORITATIVE"""
         if self.user_type != 'customer':
             return False
-        
+
         # Check active roles for organization_owner role
         roles = self.get_active_roles()
         return any(role.name == 'organization_owner' for role in roles)
@@ -153,7 +158,7 @@ class User(UserMixin, db.Model):
     def is_organization_owner(self, value):
         """Sync the flag for legacy compatibility and assign/remove role"""
         self._is_organization_owner = value
-        
+
         if value is True and self.user_type == 'customer' and self.id:
             # Ensure role is assigned
             self.ensure_organization_owner_role()
@@ -192,7 +197,7 @@ class User(UserMixin, db.Model):
             return self.last_name
         return self.username
 
-    
+
 
     def ensure_organization_owner_role(self):
         """Ensure organization owner has the proper role assigned"""
@@ -292,7 +297,7 @@ class User(UserMixin, db.Model):
 
         # Determine if this is a developer role or organization role
         is_developer_role = isinstance(role, DeveloperRole)
-        
+
         if is_developer_role:
             # Developer role assignment - no organization context
             existing = UserRoleAssignment.query.filter_by(
@@ -373,17 +378,17 @@ class User(UserMixin, db.Model):
         self.is_deleted = False
         self.deleted_at = None
         self.deleted_by = None
-        
+
         if make_active:
             self.is_active = True
-            
+
         if restore_roles:
             # Reactivate all role assignments that were deactivated during soft delete
             from .user_role_assignment import UserRoleAssignment
             assignments = UserRoleAssignment.query.filter_by(user_id=self.id).all()
             for assignment in assignments:
                 assignment.is_active = True
-                
+
         db.session.commit()
 
     @property
