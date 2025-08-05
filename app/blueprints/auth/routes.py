@@ -88,10 +88,10 @@ def signup():
         return redirect(url_for('app_routes.dashboard'))
 
     # Get pricing data for customer-facing tiers only
-    from ...services.pricing_service import PricingService
+    from ...services.billing_service import BillingService
     from ...blueprints.developer.subscription_tiers import load_tiers_config
 
-    pricing_data = PricingService.get_pricing_data()
+    pricing_data = BillingService.get_comprehensive_pricing_data()
     tiers_config = load_tiers_config()
 
     # Show all customer-facing tiers - individual failures are handled gracefully
@@ -227,21 +227,25 @@ def permissions():
 
 @auth_bp.route('/permissions/toggle-status', methods=['POST'])
 @require_permission('dev.system_admin')
+@login_required # Added login_required as it's a common requirement for protected routes
 def toggle_permission_status_route():
     return toggle_permission_status()
 
 @auth_bp.route('/roles')
 @require_permission('organization.manage_roles')
+@login_required # Added login_required
 def roles():
     return manage_roles()
 
 @auth_bp.route('/roles', methods=['POST'])
 @require_permission('organization.manage_roles')
+@login_required # Added login_required
 def create_role_route():
     return create_role()
 
 @auth_bp.route('/roles/<int:role_id>', methods=['PUT'])
 @require_permission('organization.manage_roles')
+@login_required # Added login_required
 def update_role_route(role_id):
     return update_role(role_id)
 
@@ -274,6 +278,7 @@ def get_role(role_id):
 @require_permission('organization.manage_roles')
 def permissions_api():
     """API endpoint for permissions data"""
+    from ...models import Permission # Import Permission model here
     permissions = Permission.query.filter_by(is_active=True).all()
 
     categories = {}
