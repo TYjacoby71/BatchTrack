@@ -16,17 +16,20 @@ class SubscriptionTier(db.Model):
     is_customer_facing = db.Column(db.Boolean, default=True)
     is_available = db.Column(db.Boolean, default=True)
     requires_stripe_billing = db.Column(db.Boolean, default=True)  # False for exempt, free, or internal tiers
+    
+    # Pricing structure
+    billing_cycle = db.Column(db.String(16), default='monthly')  # monthly, yearly, lifetime
+    pricing_category = db.Column(db.String(32), default='standard')  # standard, promotional, enterprise
+    price_amount = db.Column(db.Numeric(10, 2), nullable=True)  # Single price for this tier
+    currency = db.Column(db.String(3), default='USD')
 
     # Stripe integration
     stripe_lookup_key = db.Column(db.String(128), nullable=True)
     stripe_customer_id = db.Column(db.String(128), nullable=True)
     stripe_subscription_id = db.Column(db.String(128), nullable=True)
-    stripe_price_id_monthly = db.Column(db.String(128), nullable=True)
-    stripe_price_id_yearly = db.Column(db.String(128), nullable=True)
-    fallback_price_monthly = db.Column(db.String(32), default='$0')
-    fallback_price_yearly = db.Column(db.String(32), default='$0')
-    stripe_price_monthly = db.Column(db.String(32), nullable=True)
-    stripe_price_yearly = db.Column(db.String(32), nullable=True)
+    stripe_price_id = db.Column(db.String(128), nullable=True)  # Single price ID for this tier
+    fallback_price = db.Column(db.String(32), default='$0')
+    stripe_price = db.Column(db.String(32), nullable=True)
     last_synced = db.Column(db.DateTime, nullable=True)
 
     # Subscription status and billing info
@@ -47,14 +50,19 @@ class SubscriptionTier(db.Model):
                                  backref=db.backref('tiers', lazy='dynamic'))
 
     @property
-    def effective_price_monthly(self):
-        """Get monthly price from Stripe"""
-        return self.stripe_price_monthly
-
+    def effective_price(self):
+        """Get price from Stripe or fallback"""
+        return self.stripe_price or self.fallback_price
+    
     @property
-    def effective_price_yearly(self):
-        """Get yearly price from Stripe"""
-        return self.stripe_price_yearly
+    def display_price(self):
+        """Get formatted price for display"""
+        price = self.effective_price
+        if price and price.startswith('$'):
+            return price
+        elif self.price_amount:
+            return f"${self.price_amount:.0f}"
+        return self.fallback_price
 
     def get_permissions(self):
         """Get all permissions for this tier"""

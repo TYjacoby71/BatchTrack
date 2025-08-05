@@ -35,21 +35,20 @@
                 </div>
                 <div class="card-body">
                     <!-- Pricing Section -->
-                    <div class="row mb-3">
-                        <div class="col-6 text-center">
-                            <div class="border rounded p-2">
-                                <small class="text-muted d-block">Monthly</small>
-                                <strong class="h5 text-{{ 'success' if tier_data.stripe_price_monthly else 'muted' }}">
-                                    {{ tier_data.stripe_price_monthly or tier_data.fallback_price_monthly or '$0' }}
-                                </strong>
-                            </div>
-                        </div>
-                        <div class="col-6 text-center">
-                            <div class="border rounded p-2">
-                                <small class="text-muted d-block">Yearly</small>
-                                <strong class="h5 text-{{ 'success' if tier_data.stripe_price_yearly else 'muted' }}">
-                                    {{ tier_data.stripe_price_yearly or tier_data.fallback_price_yearly or '$0' }}
-                                </strong>
+                    <div class="text-center mb-3">
+                        <div class="border rounded p-3">
+                            <div class="row">
+                                <div class="col-8">
+                                    <strong class="h4 text-{{ 'success' if tier_data.stripe_price else 'muted' }}">
+                                        {{ tier_data.stripe_price or tier_data.fallback_price or '$0' }}
+                                    </strong>
+                                    <small class="text-muted d-block">{{ tier_data.get('billing_cycle', 'monthly').title() }}</small>
+                                </div>
+                                <div class="col-4">
+                                    <span class="badge bg-{{ 'warning' if tier_data.get('pricing_category') == 'promotional' else 'primary' if tier_data.get('pricing_category') == 'enterprise' else 'secondary' }}">
+                                        {{ tier_data.get('pricing_category', 'standard').title() }}
+                                    </span>
+                                </div>
                             </div>
                         </div>
                     </div>
