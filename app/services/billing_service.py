@@ -33,8 +33,8 @@ class BillingService:
         if not user.organization:
             return False
 
-        # Get organization's subscription tier
-        current_tier = user.organization.effective_subscription_tier
+        # Get organization's effective tier using standardized method
+        current_tier = BillingService.get_effective_tier(user.organization)
 
         # Get tier permissions
         tiers_config = load_tiers_config()
@@ -89,10 +89,13 @@ class BillingService:
         Consolidated method that includes resilient billing logic.
         """
         if not organization:
-            return False, "No organization found"
+            return False, "no_organization"
+
+        # Get normalized tier key
+        tier_key = BillingService._get_tier_key(organization)
 
         # Exempt organizations always have access
-        if organization.effective_subscription_tier == 'exempt':
+        if tier_key == 'exempt':
             return True, "exempt"
 
         # Developer accounts bypass billing checks
@@ -103,30 +106,36 @@ class BillingService:
         if not organization.is_active:
             return False, "organization_suspended"
 
-        tier = organization.tier
-
         # If no tier at all, deny access
-        if not tier:
-            return False, "No subscription tier found"
+        if not tier_key or tier_key == 'none':
+            return False, "no_subscription"
 
         # Try current tier first (normal case)
-        if tier.is_available and BillingService._is_stripe_healthy():
-            return True, "Active subscription confirmed"
+        if BillingService._is_stripe_healthy() and organization.tier:
+            return True, "active_subscription"
 
-        # If Stripe is down or subscription appears inactive, check snapshots
+        # If Stripe is down, check snapshots
         latest_snapshot = BillingSnapshot.get_latest_valid_snapshot(organization.id)
 
         if latest_snapshot and latest_snapshot.is_valid_for_access:
             days_left = latest_snapshot.days_until_grace_expires
-            return True, f"Access granted via billing snapshot (grace period: {days_left} days)"
+            return True, f"snapshot_grace_{days_left}_days"
 
-        # No valid snapshot found
-        return False, "No valid billing confirmation found"
+        # No valid confirmation found
+        return False, "billing_unconfirmed"
+
+    
 
     @staticmethod
-    def check_subscription_access(organization):
-        """Alias for check_organization_access for backward compatibility"""
-        return BillingService.check_organization_access(organization)
+    def _get_tier_key(organization):
+        """Internal helper to get consistent tier key from organization"""
+        if not organization:
+            return 'exempt'
+        
+        if hasattr(organization, 'tier') and organization.tier:
+            return organization.tier.key
+        
+        return 'exempt'
 
     @staticmethod
     def get_effective_tier(organization):
@@ -134,14 +143,14 @@ class BillingService:
         if not organization:
             return 'exempt'
 
-        tier = organization.tier
+        tier_key = BillingService._get_tier_key(organization)
 
-        if not tier:
+        if tier_key == 'exempt':
             return 'exempt'
 
         # Try current tier data first
-        if tier.is_available and BillingService._is_stripe_healthy():
-            return tier.key
+        if BillingService._is_stripe_healthy() and organization.tier:
+            return tier_key
 
         # Fall back to snapshot data
         latest_snapshot = BillingSnapshot.get_latest_valid_snapshot(organization.id)
@@ -218,14 +227,13 @@ class BillingService:
             return {
                 'has_subscription': False,
                 'tier': 'exempt',
-                'status': 'none',
-                'is_active': False
+                'status': 'inactive',
+                'is_active': False,
+                'reason': 'no_organization'
             }
 
-        # Get current tier
+        # Get current tier and access status
         current_tier = BillingService.get_effective_tier(organization)
-
-        # Check if subscription is active
         has_access, reason = BillingService.check_organization_access(organization)
 
         return {
@@ -234,8 +242,8 @@ class BillingService:
             'status': 'active' if has_access else 'inactive',
             'is_active': has_access,
             'reason': reason,
-            'max_users': organization.get_max_users(),
-            'current_users': organization.active_users_count
+            'max_users': organization.get_max_users() if hasattr(organization, 'get_max_users') else 0,
+            'current_users': organization.active_users_count if hasattr(organization, 'active_users_count') else 0
         }
 
     @staticmethod
