@@ -1,4 +1,3 @@
-
 {% extends 'layout.html' %}
 
 {% block title %}Create Subscription Tier - Developer{% endblock %}
@@ -8,358 +7,207 @@
     <div class="row">
         <div class="col-12">
             <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <div>
-                        <h3 class="mb-0">
-                            <i class="fas fa-plus text-success"></i> Create New Subscription Tier
-                        </h3>
-                        <p class="text-muted mb-0">Configure a new subscription tier with permissions and pricing</p>
-                    </div>
-                    <a href="{{ url_for('developer.subscription_tiers.manage_tiers') }}" class="btn btn-secondary">
-                        <i class="fas fa-arrow-left"></i> Back to Tiers
-                    </a>
-                </div>
-                <div class="card-body">
-                    <form method="POST" id="create-tier-form">
-                        <div class="row">
-                            <!-- Basic Configuration -->
-                            <div class="col-md-6">
-                                <div class="card mb-4">
-                                    <div class="card-header">
-                                        <h5 class="mb-0"><i class="fas fa-cog text-primary"></i> Basic Configuration</h5>
-                                    </div>
-                                    <div class="card-body">
-                                        <div class="mb-3">
-                                            <label for="tier_key" class="form-label">Tier Key <span class="text-danger">*</span></label>
-                                            <input type="text" class="form-control" id="tier_key" name="tier_key" required 
-                                                   placeholder="e.g., premium" pattern="[a-z_]+" 
-                                                   title="Only lowercase letters and underscores allowed">
-                                            <div class="form-text">Unique identifier (lowercase, underscores only)</div>
-                                        </div>
-
-                                        <div class="mb-3">
-                                            <label for="name" class="form-label">Display Name <span class="text-danger">*</span></label>
-                                            <input type="text" class="form-control" id="name" name="name" required 
-                                                   placeholder="e.g., Premium Plan">
-                                        </div>
-
-                                        <div class="mb-3">
-                                            <label for="description" class="form-label">Description</label>
-                                            <textarea class="form-control" id="description" name="description" rows="3" 
-                                                      placeholder="Describe what this tier includes..."></textarea>
-                                        </div>
-
-                                        <div class="mb-3">
-                                            <label for="user_limit" class="form-label">User Limit</label>
-                                            <input type="number" class="form-control" id="user_limit" name="user_limit" 
-                                                   value="1" min="-1" placeholder="Enter -1 for unlimited">
-                                            <div class="form-text">Maximum users allowed (-1 for unlimited)</div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Billing Configuration -->
-                                <div class="card mb-4">
-                                    <div class="card-header">
-                                        <h5 class="mb-0"><i class="fas fa-credit-card text-info"></i> Billing Configuration</h5>
-                                    </div>
-                                    <div class="card-body">
-                                        <div class="mb-3">
-                                            <label class="form-label">Billing Provider <span class="text-danger">*</span></label>
-                                            <div class="row">
-                                                <div class="col-6">
-                                                    <div class="card billing-provider-card" data-provider="stripe">
-                                                        <div class="card-body text-center p-3">
-                                                            <i class="fab fa-stripe fa-2x text-primary mb-2"></i>
-                                                            <h6 class="mb-0">Stripe</h6>
-                                                            <small class="text-muted">Credit cards, subscriptions</small>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div class="col-6">
-                                                    <div class="card billing-provider-card" data-provider="whop">
-                                                        <div class="card-body text-center p-3">
-                                                            <i class="fas fa-shopping-cart fa-2x text-warning mb-2"></i>
-                                                            <h6 class="mb-0">Whop</h6>
-                                                            <small class="text-muted">Digital products, licensing</small>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <input type="hidden" id="requires_whop_billing" name="requires_whop_billing" value="false">
-                                            <input type="hidden" id="requires_stripe_billing" name="requires_stripe_billing" value="true">
-                                        </div>
-
-                                        <!-- Stripe Configuration -->
-                                        <div id="stripe-config" class="billing-config">
-                                            <div class="mb-3">
-                                                <label for="stripe_lookup_key" class="form-label">Stripe Lookup Key</label>
-                                                <input type="text" class="form-control" id="stripe_lookup_key" name="stripe_lookup_key" 
-                                                       placeholder="e.g., batchtrack_premium_monthly">
-                                                <div class="form-text">Used to find the price in Stripe</div>
-                                            </div>
-                                        </div>
-
-                                        <!-- Whop Configuration -->
-                                        <div id="whop-config" class="billing-config" style="display: none;">
-                                            <div class="mb-3">
-                                                <label for="whop_product_key" class="form-label">Whop Product Key</label>
-                                                <input type="text" class="form-control" id="whop_product_key" name="whop_product_key" 
-                                                       placeholder="e.g., premium_access">
-                                                <div class="form-text">Product identifier in Whop</div>
-                                            </div>
-
-                                            <div class="mb-3">
-                                                <label for="whop_product_name" class="form-label">Whop Product Name</label>
-                                                <input type="text" class="form-control" id="whop_product_name" name="whop_product_name" 
-                                                       placeholder="e.g., Premium Access">
-                                            </div>
-                                        </div>
-
-                                        <div class="mb-3">
-                                            <label for="fallback_price_monthly" class="form-label">Fallback Price (Monthly)</label>
-                                            <input type="text" class="form-control" id="fallback_price_monthly" name="fallback_price_monthly" 
-                                                   placeholder="e.g., $19.99" value="$0">
-                                            <div class="form-text">Displayed if API pricing unavailable</div>
-                                        </div>
-
-                                        <div class="mb-3">
-                                            <label for="fallback_price_yearly" class="form-label">Fallback Price (Yearly)</label>
-                                            <input type="text" class="form-control" id="fallback_price_yearly" name="fallback_price_yearly" 
-                                                   placeholder="e.g., $199.99" value="$0">
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Availability Settings -->
-                                <div class="card">
-                                    <div class="card-header">
-                                        <h5 class="mb-0"><i class="fas fa-toggle-on text-success"></i> Availability</h5>
-                                    </div>
-                                    <div class="card-body">
-                                        <div class="form-check mb-2">
-                                            <input type="checkbox" class="form-check-input" id="is_customer_facing" name="is_customer_facing" checked>
-                                            <label class="form-check-label" for="is_customer_facing">
-                                                <strong>Customer Facing</strong>
-                                                <br><small class="text-muted">Show this tier to customers during signup</small>
-                                            </label>
-                                        </div>
-
-                                        <div class="form-check">
-                                            <input type="checkbox" class="form-check-input" id="is_available" name="is_available" checked>
-                                            <label class="form-check-label" for="is_available">
-                                                <strong>Available for Purchase</strong>
-                                                <br><small class="text-muted">Allow new subscriptions to this tier</small>
-                                            </label>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Permissions Configuration -->
-                            <div class="col-md-6">
-                                <div class="card">
-                                    <div class="card-header d-flex justify-content-between align-items-center">
-                                        <h5 class="mb-0"><i class="fas fa-shield-alt text-warning"></i> Permissions</h5>
-                                        <div>
-                                            <button type="button" class="btn btn-sm btn-outline-success" id="select-all-permissions">
-                                                <i class="fas fa-check-double"></i> Select All
-                                            </button>
-                                            <button type="button" class="btn btn-sm btn-outline-danger" id="clear-all-permissions">
-                                                <i class="fas fa-times"></i> Clear All
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <div class="card-body" style="max-height: 600px; overflow-y: auto;">
-                                        {% set grouped_permissions = {} %}
-                                        {% for permission in all_permissions %}
-                                            {% set category = permission.category or 'uncategorized' %}
-                                            {% if category not in grouped_permissions %}
-                                                {% set _ = grouped_permissions.update({category: []}) %}
-                                            {% endif %}
-                                            {% set _ = grouped_permissions[category].append(permission) %}
-                                        {% endfor %}
-
-                                        {% for category, permissions in grouped_permissions.items() %}
-                                        <div class="permission-category mb-4">
-                                            <div class="category-header d-flex justify-content-between align-items-center mb-2">
-                                                <h6 class="mb-0 text-primary">
-                                                    <i class="fas fa-folder"></i> {{ category.title() }}
-                                                    <span class="badge bg-light text-dark">{{ permissions|length }}</span>
-                                                </h6>
-                                                <div>
-                                                    <button type="button" class="btn btn-sm btn-outline-primary category-select-all" 
-                                                            data-category="{{ category }}">
-                                                        <i class="fas fa-check"></i> All
-                                                    </button>
-                                                    <button type="button" class="btn btn-sm btn-outline-secondary category-select-none" 
-                                                            data-category="{{ category }}">
-                                                        <i class="fas fa-times"></i> None
-                                                    </button>
-                                                </div>
-                                            </div>
-                                            
-                                            <div class="row">
-                                                {% for permission in permissions %}
-                                                <div class="col-12 mb-2">
-                                                    <div class="form-check permission-item">
-                                                        <input type="checkbox" class="form-check-input permission-checkbox" 
-                                                               id="perm_{{ permission.id }}" 
-                                                               name="permissions" 
-                                                               value="{{ permission.name }}"
-                                                               data-category="{{ category }}">
-                                                        <label class="form-check-label w-100" for="perm_{{ permission.id }}">
-                                                            <div class="d-flex justify-content-between align-items-start">
-                                                                <div>
-                                                                    <strong>{{ permission.name }}</strong>
-                                                                    {% if permission.description %}
-                                                                    <br><small class="text-muted">{{ permission.description }}</small>
-                                                                    {% endif %}
-                                                                </div>
-                                                            </div>
-                                                        </label>
-                                                    </div>
-                                                </div>
-                                                {% endfor %}
-                                            </div>
-                                        </div>
-                                        {% endfor %}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="row mt-4">
-                            <div class="col-12">
-                                <div class="d-flex justify-content-between">
-                                    <a href="{{ url_for('developer.subscription_tiers.manage_tiers') }}" class="btn btn-secondary">
-                                        <i class="fas fa-arrow-left"></i> Cancel
-                                    </a>
-                                    <button type="submit" class="btn btn-success">
-                                        <i class="fas fa-plus"></i> Create Tier
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </form>
+                <div class="card-header">
+                    <h3 class="mb-0">
+                        <i class="fas fa-plus text-primary"></i> Create New Subscription Tier
+                    </h3>
+                    <p class="text-muted mb-0">Configure a new subscription tier with permissions and pricing</p>
                 </div>
             </div>
         </div>
     </div>
+
+    <form method="post">
+        <div class="row mt-4">
+            <!-- Basic Information -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Basic Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="tier_key" class="form-label">Tier Key</label>
+                            <input type="text" class="form-control" id="tier_key" name="tier_key" required
+                                   placeholder="e.g., startup, professional" 
+                                   pattern="[a-z_]+" title="Use lowercase letters and underscores only">
+                            <small class="form-text text-muted">Internal identifier (lowercase, underscores only)</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="tier_name" class="form-label">Display Name *</label>
+                            <input type="text" class="form-control" id="tier_name" name="tier_name" required
+                                   placeholder="e.g., Startup Plan, Professional Plan">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="user_limit" class="form-label">User Limit</label>
+                            <input type="number" class="form-control" id="user_limit" name="user_limit" value="1" min="-1">
+                            <small class="form-text text-muted">Use -1 for unlimited users (recommended for exempt tier only)</small>
+                        </div>
+
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="is_available" name="is_available" checked>
+                            <label class="form-check-label" for="is_available">
+                                Available for use
+                            </label>
+                            <small class="form-text text-muted">Unchecked tiers won't be shown anywhere</small>
+                        </div>
+
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="requires_stripe_billing" name="requires_stripe_billing" checked>
+                            <label class="form-check-label" for="requires_stripe_billing">
+                                Requires Stripe billing
+                            </label>
+                            <small class="form-text text-muted">Uncheck for exempt, free, or internal tiers that don't need payment</small>
+                        </div>
+
+
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pricing Information -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Pricing Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="stripe_price_id" class="form-label">Stripe Monthly Price ID</label>
+                            <input type="text" class="form-control" id="stripe_price_id" name="stripe_price_id"
+                                   placeholder="price_1234567890">
+                            <small class="form-text text-muted">From Stripe Dashboard</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="stripe_yearly_price_id" class="form-label">Stripe Yearly Price ID</label>
+                            <input type="text" class="form-control" id="stripe_yearly_price_id" name="stripe_yearly_price_id"
+                                   placeholder="price_0987654321">
+                        </div>
+
+                        <div class="row">
+                            <div class="col-6">
+                                <div class="mb-3">
+                                    <label for="price_display" class="form-label">Monthly Price Display</label>
+                                    <input type="text" class="form-control" id="price_display" name="price_display"
+                                           placeholder="$49" value="$0">
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="mb-3">
+                                    <label for="price_yearly_display" class="form-label">Yearly Price Display</label>
+                                    <input type="text" class="form-control" id="price_yearly_display" name="price_yearly_display"
+                                           placeholder="$490" value="$0">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-4">
+            <!-- Features -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Features</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="features" class="form-label">Feature List</label>
+                            <textarea class="form-control" id="features" name="features" rows="8"
+                                      placeholder="One feature per line:&#10;Up to 25 users&#10;Advanced reporting&#10;Priority support&#10;Custom integrations"></textarea>
+                            <small class="form-text text-muted">Enter one feature per line</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Permissions -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Permissions</h5>
+                    </div>
+                    <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                        {% set current_category = '' %}
+                        {% for permission in permissions %}
+                            {% if permission.category != current_category %}
+                                {% set current_category = permission.category %}
+                                <h6 class="mt-3 mb-2 text-primary">{{ current_category|title }}</h6>
+                            {% endif %}
+
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" 
+                                       id="perm_{{ permission.id }}" name="permissions" value="{{ permission.name }}">
+                                <label class="form-check-label" for="perm_{{ permission.id }}">
+                                    <strong>{{ permission.name }}</strong>
+                                    {% if permission.description %}
+                                        <br><small class="text-muted">{{ permission.description }}</small>
+                                    {% endif %}
+                                </label>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+                <div class="row mt-4">
+            <!-- Fallback -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Fallback</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="fallback_features" class="form-label">Fallback Features (one per line)</label>
+                            <textarea class="form-control" id="fallback_features" name="fallback_features" rows="5" 
+                                  placeholder="Enter features, one per line"></textarea>
+                    </div>
+
+                    <hr class="my-4">
+                    <h6 class="text-muted">Fallback Pricing (used when Stripe is not available)</h6>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="fallback_price_monthly" class="form-label">Monthly Price</label>
+                                <input type="text" class="form-control" id="fallback_price_monthly" name="fallback_price_monthly" 
+                                       placeholder="$19" value="$0">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="fallback_price_yearly" class="form-label">Yearly Price</label>
+                                <input type="text" class="form-control" id="fallback_price_yearly" name="fallback_price_yearly" 
+                                       placeholder="$190" value="$0">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- Actions -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body text-end">
+                        <a href="{{ url_for('developer.subscription_tiers.manage_tiers') }}" class="btn btn-secondary me-2">
+                            Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Create Tier
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
 </div>
-
-<style>
-.billing-provider-card {
-    cursor: pointer;
-    transition: all 0.2s;
-    border: 2px solid transparent;
-}
-
-.billing-provider-card:hover {
-    border-color: #007bff;
-    transform: translateY(-2px);
-}
-
-.billing-provider-card.selected {
-    border-color: #28a745;
-    background-color: #f8f9fa;
-}
-
-.permission-category {
-    border: 1px solid #e9ecef;
-    border-radius: 0.375rem;
-    padding: 1rem;
-    background-color: #f8f9fa;
-}
-
-.category-header {
-    border-bottom: 1px solid #dee2e6;
-    padding-bottom: 0.5rem;
-    margin-bottom: 0.75rem;
-}
-
-.permission-item {
-    background: white;
-    border: 1px solid #e9ecef;
-    border-radius: 0.25rem;
-    padding: 0.75rem;
-    transition: background-color 0.2s;
-}
-
-.permission-item:hover {
-    background-color: #f1f3f5;
-}
-
-.permission-checkbox:checked + label .permission-item {
-    background-color: #e7f3ff;
-    border-color: #007bff;
-}
-</style>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Billing provider selection
-    const providerCards = document.querySelectorAll('.billing-provider-card');
-    const whopBillingInput = document.getElementById('requires_whop_billing');
-    const stripeBillingInput = document.getElementById('requires_stripe_billing');
-    const stripeConfig = document.getElementById('stripe-config');
-    const whopConfig = document.getElementById('whop-config');
-
-    providerCards.forEach(card => {
-        card.addEventListener('click', function() {
-            // Remove selected class from all cards
-            providerCards.forEach(c => c.classList.remove('selected'));
-            
-            // Add selected class to clicked card
-            this.classList.add('selected');
-            
-            const provider = this.dataset.provider;
-            
-            if (provider === 'whop') {
-                whopBillingInput.value = 'true';
-                stripeBillingInput.value = 'false';
-                stripeConfig.style.display = 'none';
-                whopConfig.style.display = 'block';
-            } else {
-                whopBillingInput.value = 'false';
-                stripeBillingInput.value = 'true';
-                stripeConfig.style.display = 'block';
-                whopConfig.style.display = 'none';
-            }
-        });
-    });
-
-    // Default select Stripe
-    document.querySelector('[data-provider="stripe"]').click();
-
-    // Permission management
-    const selectAllBtn = document.getElementById('select-all-permissions');
-    const clearAllBtn = document.getElementById('clear-all-permissions');
-    const categorySelectAllBtns = document.querySelectorAll('.category-select-all');
-    const categorySelectNoneBtns = document.querySelectorAll('.category-select-none');
-
-    selectAllBtn.addEventListener('click', function() {
-        document.querySelectorAll('.permission-checkbox').forEach(cb => cb.checked = true);
-    });
-
-    clearAllBtn.addEventListener('click', function() {
-        document.querySelectorAll('.permission-checkbox').forEach(cb => cb.checked = false);
-    });
-
-    categorySelectAllBtns.forEach(btn => {
-        btn.addEventListener('click', function() {
-            const category = this.dataset.category;
-            document.querySelectorAll(`[data-category="${category}"]`).forEach(cb => cb.checked = true);
-        });
-    });
-
-    categorySelectNoneBtns.forEach(btn => {
-        btn.addEventListener('click', function() {
-            const category = this.dataset.category;
-            document.querySelectorAll(`[data-category="${category}"]`).forEach(cb => cb.checked = false);
-        });
-    });
-});
-</script>
-
 {% endblock %}
