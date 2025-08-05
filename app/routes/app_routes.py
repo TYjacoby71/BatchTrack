@@ -183,10 +183,19 @@ def api_dashboard_alerts():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-from flask import Blueprint
-app_routes = Blueprint('app_routes', __name__)
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
+from flask_login import login_required, current_user
+from ..services.dashboard_alerts import DashboardAlertService
 
-@app_routes.route('/fault-log')
+app_routes_bp = Blueprint('app_routes', __name__)
+
+@app_routes_bp.route('/dashboard')
+@login_required
+def dashboard():
+    """Main dashboard view"""
+    return render_template('dashboard.html')
+
+@app_routes_bp.route('/fault-log')
 @login_required
 def view_fault_log():
     try:
