@@ -107,7 +107,16 @@ def create_tier():
         fallback_features = [f.strip() for f in request.form.get('fallback_features', '').split('\n') if f.strip()]
 
         user_limit = int(request.form.get('user_limit', 1))
-        # Only exempt tier can have unlimited users (-1)
+        
+        # Handle price amount
+        price_amount = request.form.get('price_amount')
+        if price_amount:
+            try:
+                price_amount = float(price_amount)
+            except (ValueError, TypeError):
+                price_amount = None
+        else:
+            price_amount = None
 
         new_tier = {
             'name': tier_name,
@@ -117,12 +126,15 @@ def create_tier():
             'user_limit': user_limit,
             'is_customer_facing': request.form.get('is_customer_facing') == 'on',
             'is_available': request.form.get('is_available') == 'on',
+            'billing_cycle': request.form.get('billing_cycle', 'monthly'),
+            'pricing_category': request.form.get('pricing_category', 'standard'),
+            'price_amount': price_amount,
+            'currency': request.form.get('currency', 'USD'),
             'fallback_features': fallback_features,
-            'fallback_price_monthly': request.form.get('fallback_price_monthly', '$0'),
-            'fallback_price_yearly': request.form.get('fallback_price_yearly', '$0'),
+            'fallback_price': request.form.get('fallback_price', '$0'),
             'stripe_features': [],
-            'stripe_price_monthly': None,
-            'stripe_price_yearly': None,
+            'stripe_price': None,
+            'stripe_price_id': None,
             'last_synced': None
         }
 
@@ -158,6 +170,21 @@ def edit_tier(tier_key):
         tier['is_available'] = 'is_available' in request.form
         tier['requires_stripe_billing'] = 'requires_stripe_billing' in request.form
 
+        # Pricing configuration
+        tier['billing_cycle'] = request.form.get('billing_cycle', 'monthly')
+        tier['pricing_category'] = request.form.get('pricing_category', 'standard')
+        tier['currency'] = request.form.get('currency', 'USD')
+        
+        # Handle price amount
+        price_amount = request.form.get('price_amount')
+        if price_amount:
+            try:
+                tier['price_amount'] = float(price_amount)
+            except (ValueError, TypeError):
+                tier['price_amount'] = None
+        else:
+            tier['price_amount'] = None
+
         # Payment provider settings - simplified
         tier['supports_whop'] = 'supports_whop' in request.form
 
@@ -181,8 +208,7 @@ def edit_tier(tier_key):
         tier['requires_stripe_billing'] = request.form.get('requires_stripe_billing') == 'on'
 
         tier['fallback_features'] = [f.strip() for f in request.form.get('fallback_features', '').split('\n') if f.strip()]
-        tier['fallback_price_monthly'] = request.form.get('fallback_price_monthly', '$0')
-        tier['fallback_price_yearly'] = request.form.get('fallback_price_yearly', '$0')
+        tier['fallback_price'] = request.form.get('fallback_price', '$0')
 
         save_tiers_config(tiers)
 
@@ -499,3 +525,27 @@ def api_get_customer_tiers():
         if tier.get('is_customer_facing', True) and tier.get('is_available', True)
     }
     return jsonify(customer_tiers)
+
+@subscription_tiers_bp.route('/api/tiers/by-category/<category>')
+def api_get_tiers_by_category(category):
+    """API endpoint to get tiers by pricing category"""
+    all_tiers = load_tiers_config()
+    filtered_tiers = {
+        key: tier for key, tier in all_tiers.items() 
+        if (tier.get('pricing_category', 'standard') == category and 
+            tier.get('is_customer_facing', True) and 
+            tier.get('is_available', True))
+    }
+    return jsonify(filtered_tiers)
+
+@subscription_tiers_bp.route('/api/tiers/by-cycle/<cycle>')
+def api_get_tiers_by_cycle(cycle):
+    """API endpoint to get tiers by billing cycle"""
+    all_tiers = load_tiers_config()
+    filtered_tiers = {
+        key: tier for key, tier in all_tiers.items() 
+        if (tier.get('billing_cycle', 'monthly') == cycle and 
+            tier.get('is_customer_facing', True) and 
+            tier.get('is_available', True))
+    }
+    return jsonify(filtered_tiers)

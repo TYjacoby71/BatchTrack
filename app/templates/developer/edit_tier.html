@@ -29,9 +29,60 @@
                     </div>
                     <div class="card-body">
                         <div class="mb-3">
-                            <label for="tier_name" class="form-label">Display Name *</label>
+                            <label for="tier_name" class="form-label">Tier Name</label>
                             <input type="text" class="form-control" id="tier_name" name="tier_name" 
                                    value="{{ tier.name }}" required>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="tier_key" class="form-label">Tier Key</label>
+                                    <input type="text" class="form-control" id="tier_key" name="tier_key" 
+                                           value="{{ tier_key }}" required>
+                                    <div class="form-text">Used for system identification (e.g., 'solo-monthly')</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="pricing_category" class="form-label">Pricing Category</label>
+                                    <select class="form-select" id="pricing_category" name="pricing_category">
+                                        <option value="standard" {% if tier.get('pricing_category', 'standard') == 'standard' %}selected{% endif %}>Standard</option>
+                                        <option value="promotional" {% if tier.get('pricing_category') == 'promotional' %}selected{% endif %}>Promotional</option>
+                                        <option value="enterprise" {% if tier.get('pricing_category') == 'enterprise' %}selected{% endif %}>Enterprise</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="billing_cycle" class="form-label">Billing Cycle</label>
+                                    <select class="form-select" id="billing_cycle" name="billing_cycle">
+                                        <option value="monthly" {% if tier.get('billing_cycle', 'monthly') == 'monthly' %}selected{% endif %}>Monthly</option>
+                                        <option value="yearly" {% if tier.get('billing_cycle') == 'yearly' %}selected{% endif %}>Yearly</option>
+                                        <option value="lifetime" {% if tier.get('billing_cycle') == 'lifetime' %}selected{% endif %}>Lifetime</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="price_amount" class="form-label">Price Amount</label>
+                                    <input type="number" class="form-control" id="price_amount" name="price_amount" 
+                                           value="{{ tier.get('price_amount', '') }}" step="0.01" min="0">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="currency" class="form-label">Currency</label>
+                                    <select class="form-select" id="currency" name="currency">
+                                        <option value="USD" {% if tier.get('currency', 'USD') == 'USD' %}selected{% endif %}>USD</option>
+                                        <option value="EUR" {% if tier.get('currency') == 'EUR' %}selected{% endif %}>EUR</option>
+                                        <option value="GBP" {% if tier.get('currency') == 'GBP' %}selected{% endif %}>GBP</option>
+                                    </select>
+                                </div>
+                            </div>
                         </div>
 
                         <div class="mb-3">
@@ -268,21 +319,11 @@
                         <hr class="my-4">
                         <h6 class="text-muted">Fallback Pricing (used when Stripe is not available)</h6>
 
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="fallback_price_monthly" class="form-label">Monthly Price</label>
-                                    <input type="text" class="form-control" id="fallback_price_monthly" name="fallback_price_monthly" 
-                                           value="{{ tier.get('fallback_price_monthly', '$0') }}">
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="fallback_price_yearly" class="form-label">Yearly Price</label>
-                                    <input type="text" class="form-control" id="fallback_price_yearly" name="fallback_price_yearly" 
-                                           value="{{ tier.get('fallback_price_yearly', '$0') }}">
-                                </div>
-                            </div>
+                        <div class="mb-3">
+                            <label for="fallback_price" class="form-label">Fallback Price</label>
+                            <input type="text" class="form-control" id="fallback_price" name="fallback_price" 
+                                   value="{{ tier.get('fallback_price', '$0') }}">
+                            <div class="form-text">Displayed when Stripe sync unavailable (e.g., '$15', '$150')</div>
                         </div>
                     </div>
                 </div>
