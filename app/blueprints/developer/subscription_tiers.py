@@ -108,16 +108,6 @@ def create_tier():
 
         user_limit = int(request.form.get('user_limit', 1))
         
-        # Handle price amount
-        price_amount = request.form.get('price_amount')
-        if price_amount:
-            try:
-                price_amount = float(price_amount)
-            except (ValueError, TypeError):
-                price_amount = None
-        else:
-            price_amount = None
-
         new_tier = {
             'name': tier_name,
             'permissions': permissions,
@@ -126,10 +116,7 @@ def create_tier():
             'user_limit': user_limit,
             'is_customer_facing': request.form.get('is_customer_facing') == 'on',
             'is_available': request.form.get('is_available') == 'on',
-            'billing_cycle': request.form.get('billing_cycle', 'monthly'),
-            'pricing_category': request.form.get('pricing_category', 'standard'),
-            'price_amount': price_amount,
-            'currency': request.form.get('currency', 'USD'),
+            'pricing_category': request.form.get('pricing_category', 'monthly'),
             'fallback_features': fallback_features,
             'fallback_price': request.form.get('fallback_price', '$0'),
             'stripe_features': [],
@@ -170,20 +157,8 @@ def edit_tier(tier_key):
         tier['is_available'] = 'is_available' in request.form
         tier['requires_stripe_billing'] = 'requires_stripe_billing' in request.form
 
-        # Pricing configuration
-        tier['billing_cycle'] = request.form.get('billing_cycle', 'monthly')
-        tier['pricing_category'] = request.form.get('pricing_category', 'standard')
-        tier['currency'] = request.form.get('currency', 'USD')
-        
-        # Handle price amount
-        price_amount = request.form.get('price_amount')
-        if price_amount:
-            try:
-                tier['price_amount'] = float(price_amount)
-            except (ValueError, TypeError):
-                tier['price_amount'] = None
-        else:
-            tier['price_amount'] = None
+        # Pricing configuration (simplified - Stripe handles billing cycle, price, currency)
+        tier['pricing_category'] = request.form.get('pricing_category', 'monthly')
 
         # Payment provider settings - simplified
         tier['supports_whop'] = 'supports_whop' in request.form
