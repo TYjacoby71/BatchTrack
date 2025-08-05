@@ -27,6 +27,7 @@ def check_container_availability(container_ids, scale=1):
 @app_routes_bp.route('/user_dashboard')
 @login_required
 def dashboard():
+    """Main dashboard view with stock checking and alerts"""
     # Developer users should only access this dashboard when viewing an organization
     if current_user.user_type == 'developer' and not session.get('dev_selected_org_id'):
         return redirect(url_for('developer.dashboard'))
@@ -183,10 +184,9 @@ def api_dashboard_alerts():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-from flask import Blueprint
-app_routes = Blueprint('app_routes', __name__)
 
-@app_routes.route('/fault-log')
+
+@app_routes_bp.route('/fault-log')
 @login_required
 def view_fault_log():
     try:

@@ -157,7 +157,7 @@ def create_app():
         from .blueprints.settings import settings_bp
         from .blueprints.timers import timers_bp
         from .blueprints.quick_add import quick_add_bp
-        from .routes import app_routes
+        from .routes.app_routes import app_routes_bp
         from .blueprints.fifo import fifo_bp
         from .blueprints.batches.add_extra import add_extra_bp
         from .routes import bulk_stock_routes
@@ -228,7 +228,7 @@ def create_app():
     app.register_blueprint(settings_bp, url_prefix='/settings')
     app.register_blueprint(timers_bp, url_prefix='/timers')
     app.register_blueprint(quick_add_bp, url_prefix='/quick-add')
-    app.register_blueprint(app_routes.app_routes_bp)
+    app.register_blueprint(app_routes_bp)
     app.register_blueprint(fifo_bp)
     app.register_blueprint(add_extra_bp, url_prefix='/add-extra')
     app.register_blueprint(bulk_stock_routes.bulk_stock_bp, url_prefix='/bulk_stock')
