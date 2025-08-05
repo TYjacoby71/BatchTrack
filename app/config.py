@@ -11,10 +11,15 @@ class Config:
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'sqlite:///batchtrack.db'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
-    # Stripe Configuration - Load from environment variables
+    # Payment Configuration
+    # Stripe Configuration (legacy)
     STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY')
     STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY')
     STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET')
+
+    # Whop Configuration (preferred)
+    WHOP_SECRET_KEY = os.environ.get('WHOP_SECRET_KEY')
+    WHOP_STORE_ID = os.environ.get('WHOP_STORE_ID')
 
     # Debug Stripe configuration
     print(f"DEBUG: STRIPE_SECRET_KEY configured: {bool(STRIPE_SECRET_KEY)}")

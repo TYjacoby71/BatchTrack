@@ -88,8 +88,7 @@ class BillingService:
     @staticmethod
     def check_organization_access(organization):
         """
-        Check if organization should have access, using snapshots during outages.
-        Consolidated method that includes resilient billing logic.
+        Check if organization should have access, supporting both Stripe and Whop.
         """
         if not organization:
             return False, "no_organization"
@@ -113,13 +112,21 @@ class BillingService:
         if not tier_key or tier_key == 'none':
             return False, "no_subscription"
 
-        # Try current tier first (normal case)
+        # Check Whop access first (preferred)
+        if hasattr(organization, 'whop_license_key') and organization.whop_license_key:
+            from ..services.whop_service import WhopService
+            has_whop_access, whop_reason = WhopService.check_whop_access(organization)
+            if has_whop_access:
+                return True, "whop_verified"
+            else:
+                return False, whop_reason
+
+        # Fall back to Stripe logic for legacy users
         if BillingService._is_stripe_healthy() and organization.tier:
             return True, "active_subscription"
 
         # If Stripe is down, check snapshots
         latest_snapshot = BillingSnapshot.get_latest_valid_snapshot(organization.id)
-
         if latest_snapshot and latest_snapshot.is_valid_for_access:
             days_left = latest_snapshot.days_until_grace_expires
             return True, f"snapshot_grace_{days_left}_days"
