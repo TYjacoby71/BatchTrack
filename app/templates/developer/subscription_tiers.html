@@ -105,9 +105,17 @@
                        class="btn btn-outline-primary btn-sm">
                         <i class="fas fa-edit"></i> Edit
                     </a>
+                     {% if tier_data.stripe_lookup_key %}
+                        <button class="btn btn-outline-success btn-sm" onclick="syncTier('{{ tier_key }}')">
+                            <i class="fas fa-sync"></i> Sync from Stripe
+                        </button>
+                    {% else %}
+                        <button class="btn btn-outline-secondary btn-sm" disabled title="No Stripe lookup key configured">
+                            <i class="fas fa-sync"></i> No Sync Available
+                        </button>
+                    {% endif %}
 
-                    <div class="btn-group">
-                        {% if tier_data.get('stripe_lookup_key') %}
+                    {% if tier_data.get('stripe_lookup_key') %}
                         <button type="button" class="btn btn-sm btn-outline-primary sync-tier" 
                                 data-tier-key="{{ tier_key }}" 
                                 data-lookup-key="{{ tier_data.get('stripe_lookup_key') }}">
@@ -122,16 +130,19 @@
                             <i class="fas fa-sync"></i> Sync with Whop
                         </button>
                         {% endif %}
-                    </div>
 
                     {% if tier_key != 'exempt' %}
-                    <form method="POST" action="{{ url_for('developer.subscription_tiers.delete_tier', tier_key=tier_key) }}" 
-                          style="display: inline;" 
-                          onsubmit="return confirm('Are you sure you want to delete the {{ tier_data.name }} tier?')">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                        <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                            <form method="POST" action="{{ url_for('developer.subscription_tiers.delete_tier', tier_key=tier_key) }}" 
+                                  style="display: inline;" 
+                                  onsubmit="return confirm('Are you sure you want to delete the {{ tier_data.name }} tier?')">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                            </form>
+                            {% endif %}
+
+                    <form id="deleteForm{{ tier_key }}" method="post" action="{{ url_for('developer.subscription_tiers.delete_tier', tier_key=tier_key) }}" style="display: none;">
+                        <!-- Hidden form for delete action -->
                     </form>
-                    {% endif %}
                 </div>
             </div>
         </div>
