@@ -119,6 +119,7 @@
                             <form method="POST" action="{{ url_for('developer.subscription_tiers.delete_tier', tier_key=tier_key) }}" 
                                   style="display: inline;" 
                                   onsubmit="return confirm('Are you sure you want to delete the {{ tier_data.name }} tier?')">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                                 <button type="submit" class="btn btn-sm btn-danger">Delete</button>
                             </form>
                             {% endif %}
