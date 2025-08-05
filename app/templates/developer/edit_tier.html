@@ -49,44 +49,56 @@
                         </div>
 
                         <!-- Visibility Controls -->
-                        <div class="mb-3">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="is_customer_facing" name="is_customer_facing"
-                                       {% if tier.get('is_customer_facing', True) %}checked{% endif %}>
-                                <label class="form-check-label" for="is_customer_facing">
-                                    Customer Facing (visible to customers)
-                                </label>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="is_customer_facing" name="is_customer_facing"
+                                               {% if tier.get('is_customer_facing', True) %}checked{% endif %}>
+                                        <label class="form-check-label" for="is_customer_facing">
+                                            Customer Facing
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="is_available" name="is_available" 
+                                           {% if tier.get('is_available', True) %}checked{% endif %}>
+                                        <label class="form-check-label" for="is_available">
+                                            Available
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="requires_stripe_billing" name="requires_stripe_billing"
+                                               {% if tier.get('requires_stripe_billing', True) %}checked{% endif %}>
+                                        <label class="form-check-label" for="requires_stripe_billing">
+                                            Requires Stripe
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="supports_whop" name="supports_whop"
+                                               {% if tier.get('supports_whop', False) %}checked{% endif %}>
+                                        <label class="form-check-label" for="supports_whop">
+                                            Requires Whop
+                                        </label>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-
-                        <div class="mb-3">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="is_available" name="is_available" 
-                                   {% if tier.get('is_available', True) %}checked{% endif %}>
-                                <label class="form-check-label" for="is_available">
-                                    Available for use
-                                </label>
-                            </div>
-                        </div>
-
-                        <div class="mb-3">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="requires_stripe_billing" name="requires_stripe_billing" 
-                                   {% if tier.get('requires_stripe_billing', True) %}checked{% endif %}>
-                                <label class="form-check-label" for="requires_stripe_billing">
-                                    Requires Stripe billing
-                                </label>
-                                <small class="form-text text-muted">Uncheck for exempt, free, or internal tiers</small>
-                            </div>
-                        </div>
-
-
                     </div>
                 </div>
             </div>
 
             <!-- Payment Integration Sections -->
-
+            <div class="col-md-6">
                     <!-- Stripe Integration Section -->
                     <div class="card mb-4">
                         <div class="card-header">
