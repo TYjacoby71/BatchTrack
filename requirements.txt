@@ -28,3 +28,6 @@ gunicorn
 psycopg2-binary
 beautifulsoup4
 requests
+flask-mail
+google-auth
+google-auth-oauthlib

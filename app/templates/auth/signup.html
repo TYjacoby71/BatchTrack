@@ -41,7 +41,25 @@
                     </div>
                     {% endif %}
 
-                    <form method="POST" id="signupForm">
+                    {% if not oauth_user_info and oauth_available %}
+                        <div class="text-center mb-4">
+                            <a href="{{ url_for('auth.oauth_google') }}" class="btn btn-outline-danger w-100">
+                                <i class="fab fa-google me-2"></i>Sign up with Google
+                            </a>
+                            <div class="divider mt-3">
+                                <span class="divider-text">or create account manually</span>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if oauth_user_info %}
+                        <div class="alert alert-success">
+                            <i class="fas fa-check-circle me-2"></i>
+                            Signed in with Google as <strong>{{ oauth_user_info.email }}</strong>
+                        </div>
+                        {% endif %}
+
+                    <form method="POST">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <!-- Hidden fields for tracking -->
                         <input type="hidden" name="signup_source" value="{{ signup_source }}">
@@ -154,46 +172,42 @@
 
                                 <div class="mb-3">
                                     <label for="email" class="form-label">Email Address *</label>
-                                    <input type="email" class="form-control" id="email" name="email" required
-                                           value="{{ form_data.email if form_data else '' }}"
-                                           placeholder="your@email.com">
+                                    <input type="email" class="form-control" id="email" name="email" 
+                                           value="{{ oauth_user_info.email if oauth_user_info else (form_data.email if form_data else '') }}" 
+                                           {% if oauth_user_info %}readonly{% endif %} required>
+                                    {% if oauth_user_info %}
+                                    <small class="text-muted">This email is verified through Google</small>
+                                    {% endif %}
                                 </div>
 
                                 <div class="row">
                                     <div class="col-md-6">
                                         <div class="mb-3">
                                             <label for="first_name" class="form-label">First Name</label>
-                                            <input type="text" class="form-control" id="first_name" name="first_name"
-                                                   value="{{ form_data.first_name if form_data else '' }}"
-                                                   placeholder="First Name">
+                                            <input type="text" class="form-control" id="first_name" name="first_name" 
+                                                   value="{{ oauth_user_info.first_name if oauth_user_info else (form_data.first_name if form_data else '') }}" required>
                                         </div>
                                     </div>
                                     <div class="col-md-6">
                                         <div class="mb-3">
                                             <label for="last_name" class="form-label">Last Name</label>
-                                            <input type="text" class="form-control" id="last_name" name="last_name"
-                                                   value="{{ form_data.last_name if form_data else '' }}"
-                                                   placeholder="Last Name">
+                                            <input type="text" class="form-control" id="last_name" name="last_name" 
+                                                   value="{{ oauth_user_info.last_name if oauth_user_info else (form_data.last_name if form_data else '') }}" required>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label for="password" class="form-label">Password *</label>
-                                            <input type="password" class="form-control" id="password" name="password" required
-                                                   placeholder="Create a secure password">
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label for="confirm_password" class="form-label">Confirm Password *</label>
-                                            <input type="password" class="form-control" id="confirm_password" name="confirm_password" required
-                                                   placeholder="Confirm your password">
-                                        </div>
-                                    </div>
+                                {% if not oauth_user_info %}
+                                <div class="mb-3">
+                                    <label for="password" class="form-label">Password</label>
+                                    <input type="password" class="form-control" id="password" name="password" required>
                                 </div>
+
+                                <div class="mb-3">
+                                    <label for="confirm_password" class="form-label">Confirm Password</label>
+                                    <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
+                                </div>
+                                {% endif %}
 
                                 <div class="mb-3">
                                     <label for="phone" class="form-label">Phone Number</label>
@@ -364,11 +378,11 @@ function selectTier(tierKey) {
     // Update hidden fields
     document.getElementById('subscription_tier').value = tierKey;
     document.getElementById('tier_hidden').value = tierKey;
-    
+
     // Update visual selection
     document.querySelectorAll('.tier-card').forEach(card => {
         const isSelected = card.dataset.tier === tierKey;
-        
+
         // Update card styling
         if (isSelected) {
             card.classList.remove('border-primary');
@@ -381,11 +395,11 @@ function selectTier(tierKey) {
             card.style.transform = 'translateY(0px)';
             card.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
         }
-        
+
         // Update status indicator
         const checkIcon = card.querySelector('.fas.fa-check-circle');
         const statusText = card.querySelector('.tier-status-text');
-        
+
         if (checkIcon && statusText) {
             if (isSelected) {
                 checkIcon.style.display = 'inline';
@@ -396,7 +410,7 @@ function selectTier(tierKey) {
             }
         }
     });
-    
+
     // Update payment options
     updatePaymentOptions(tierKey);
 }
@@ -405,27 +419,27 @@ function updatePaymentOptions(tierKey) {
     const paymentSection = document.getElementById('payment-method-section');
     const stripeOption = document.getElementById('stripe_payment');
     const whopOption = document.getElementById('whop_payment');
-    
+
     if (!tierKey) {
         paymentSection.style.display = 'none';
         return;
     }
-    
+
     // Find the selected tier card to get data attributes
     const selectedCard = document.querySelector(`.tier-card[data-tier="${tierKey}"]`);
     if (!selectedCard) return;
-    
+
     const whopAvailable = selectedCard.dataset.whopAvailable === 'true';
     const stripeAvailable = selectedCard.dataset.stripeAvailable === 'true';
     const whopOnly = selectedCard.dataset.whopOnly === 'true';
-    
+
     // Always show payment section for now since we have both options
     paymentSection.style.display = 'block';
-    
+
     // Show/hide payment options based on availability
     stripeOption.parentElement.style.display = stripeAvailable ? 'block' : 'none';
     whopOption.parentElement.style.display = whopAvailable ? 'block' : 'none';
-    
+
     // Auto-select if only one option is available
     if (whopOnly || !stripeAvailable) {
         whopOption.checked = true;

@@ -1,16 +1,17 @@
 from flask_sqlalchemy import SQLAlchemy
 from flask_wtf.csrf import CSRFProtect
-
-db = SQLAlchemy()
-csrf = CSRFProtect()
+from flask_mail import Mail
 from flask_login import LoginManager
 from flask_migrate import Migrate
 from flask_bcrypt import Bcrypt
 
+db = SQLAlchemy()
+csrf = CSRFProtect()
 # Initialize extensions
 login_manager = LoginManager()
 migrate = Migrate()
 bcrypt = Bcrypt()
+mail = Mail()
 
 # Configure login manager
 login_manager.login_view = 'auth.login'

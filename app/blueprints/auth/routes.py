@@ -12,6 +12,9 @@ from ...utils.permissions import require_permission
 from flask_login import login_required
 import logging
 from .whop_auth import WhopAuth # Import WhopAuth
+from ...services.oauth_service import OAuthService
+from ...services.email_service import EmailService
+from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +61,157 @@ def login():
             flash('Invalid username or password')
             return render_template('auth/login.html', form=form)
 
-    return render_template('auth/login.html', form=form)
+    return render_template('auth/login.html', form=form, oauth_available=OAuthService.is_oauth_configured())
+
+@auth_bp.route('/oauth/google')
+def oauth_google():
+    """Initiate Google OAuth flow"""
+    if not OAuthService.is_oauth_configured():
+        flash('OAuth is not configured. Please contact administrator.', 'error')
+        return redirect(url_for('auth.login'))
+    
+    authorization_url, state = OAuthService.get_authorization_url()
+    if not authorization_url:
+        flash('Unable to initiate OAuth. Please try again.', 'error')
+        return redirect(url_for('auth.login'))
+    
+    session['oauth_state'] = state
+    return redirect(authorization_url)
+
+@auth_bp.route('/oauth/callback')
+def oauth_callback():
+    """Handle OAuth callback"""
+    try:
+        # Get state and code from callback
+        state = request.args.get('state')
+        code = request.args.get('code')
+        
+        if not state or not code:
+            flash('OAuth callback missing required parameters.', 'error')
+            return redirect(url_for('auth.login'))
+        
+        # Exchange code for credentials
+        credentials = OAuthService.exchange_code_for_token(code, state)
+        if not credentials:
+            flash('OAuth authentication failed. Please try again.', 'error')
+            return redirect(url_for('auth.login'))
+        
+        # Get user info from Google
+        user_info = OAuthService.get_user_info(credentials)
+        if not user_info:
+            flash('Unable to retrieve user information. Please try again.', 'error')
+            return redirect(url_for('auth.login'))
+        
+        email = user_info.get('email')
+        first_name = user_info.get('given_name', '')
+        last_name = user_info.get('family_name', '')
+        oauth_id = user_info.get('sub')
+        
+        if not email:
+            flash('Email address is required for account creation.', 'error')
+            return redirect(url_for('auth.login'))
+        
+        # Check if user exists
+        user = User.query.filter_by(email=email).first()
+        
+        if user:
+            # Existing user - update OAuth info if needed
+            if not user.oauth_provider:
+                user.oauth_provider = 'google'
+                user.oauth_provider_id = oauth_id
+                user.email_verified = True  # OAuth emails are pre-verified
+                db.session.commit()
+            
+            # Log them in
+            login_user(user)
+            user.last_login = TimezoneUtils.utc_now()
+            db.session.commit()
+            
+            flash(f'Welcome back, {user.first_name}!', 'success')
+            
+            if user.user_type == 'developer':
+                return redirect(url_for('developer.dashboard'))
+            else:
+                return redirect(url_for('app_routes.dashboard'))
+        
+        else:
+            # New user - store info for signup flow
+            session['oauth_user_info'] = {
+                'email': email,
+                'first_name': first_name,
+                'last_name': last_name,
+                'oauth_provider': 'google',
+                'oauth_provider_id': oauth_id,
+                'email_verified': True
+            }
+            
+            flash('Please complete your account setup by selecting a subscription plan.', 'info')
+            return redirect(url_for('auth.signup'))
+    
+    except Exception as e:
+        logger.error(f"OAuth callback error: {str(e)}")
+        flash('OAuth authentication failed. Please try again.', 'error')
+        return redirect(url_for('auth.login'))
+
+@auth_bp.route('/verify-email/<token>')
+def verify_email(token):
+    """Verify email address"""
+    try:
+        # Find user with this verification token
+        user = User.query.filter_by(email_verification_token=token).first()
+        
+        if not user:
+            flash('Invalid verification link.', 'error')
+            return redirect(url_for('auth.login'))
+        
+        # Check if token is expired (24 hours)
+        if user.email_verification_sent_at:
+            expires_at = user.email_verification_sent_at + timedelta(hours=24)
+            if TimezoneUtils.utc_now() > expires_at:
+                flash('Verification link has expired. Please request a new one.', 'error')
+                return redirect(url_for('auth.resend_verification'))
+        
+        # Verify the email
+        user.email_verified = True
+        user.email_verification_token = None
+        user.email_verification_sent_at = None
+        db.session.commit()
+        
+        flash('Email verified successfully! You can now log in.', 'success')
+        return redirect(url_for('auth.login'))
+        
+    except Exception as e:
+        logger.error(f"Email verification error: {str(e)}")
+        flash('Email verification failed. Please try again.', 'error')
+        return redirect(url_for('auth.login'))
+
+@auth_bp.route('/resend-verification', methods=['GET', 'POST'])
+def resend_verification():
+    """Resend email verification"""
+    if request.method == 'POST':
+        email = request.form.get('email')
+        
+        user = User.query.filter_by(email=email).first()
+        if user and not user.email_verified:
+            # Generate new verification token
+            user.email_verification_token = EmailService.generate_verification_token(email)
+            user.email_verification_sent_at = TimezoneUtils.utc_now()
+            db.session.commit()
+            
+            # Send verification email
+            EmailService.send_verification_email(
+                email, 
+                user.email_verification_token, 
+                user.first_name
+            )
+            
+            flash('Verification email sent! Please check your inbox.', 'success')
+        else:
+            flash('If an account with that email exists and is unverified, a verification email has been sent.', 'info')
+        
+        return redirect(url_for('auth.login'))
+    
+    return render_template('auth/resend_verification.html')
 
 @auth_bp.route('/logout')
 def logout():
@@ -118,21 +271,28 @@ def signup():
     signup_source = request.args.get('source', request.form.get('source', 'direct'))
     referral_code = request.args.get('ref', request.form.get('ref'))
     promo_code = request.args.get('promo', request.form.get('promo'))
-
+    
+    # Check for OAuth user info from session
+    oauth_user_info = session.get('oauth_user_info')
+    
     if request.method == 'POST':
-        # Extract form data
+        # Extract form data, with OAuth overrides
         org_name = request.form.get('org_name')
         username = request.form.get('username')
-        email = request.form.get('email')
-        first_name = request.form.get('first_name')
-        last_name = request.form.get('last_name')
-        password = request.form.get('password')
-        confirm_password = request.form.get('confirm_password')
+        email = oauth_user_info.get('email') if oauth_user_info else request.form.get('email')
+        first_name = oauth_user_info.get('first_name') if oauth_user_info else request.form.get('first_name')
+        last_name = oauth_user_info.get('last_name') if oauth_user_info else request.form.get('last_name')
+        password = request.form.get('password') if not oauth_user_info else None
+        confirm_password = request.form.get('confirm_password') if not oauth_user_info else None
         phone = request.form.get('phone')
         selected_tier = request.form.get('subscription_tier')
 
-        # Validation
-        required_fields = [org_name, username, email, password, confirm_password, selected_tier]
+        # Validation - OAuth users don't need passwords
+        if oauth_user_info:
+            required_fields = [org_name, username, email, selected_tier]
+        else:
+            required_fields = [org_name, username, email, password, confirm_password, selected_tier]
+            
         if not all(required_fields):
             flash('Please fill in all required fields and select a subscription plan', 'error')
             return render_template('auth/signup.html',
@@ -140,15 +300,17 @@ def signup():
                          referral_code=referral_code,
                          promo_code=promo_code,
                          available_tiers=available_tiers,
+                         oauth_user_info=oauth_user_info,
                          form_data=request.form)
 
-        if password != confirm_password:
+        if not oauth_user_info and password != confirm_password:
             flash('Passwords do not match', 'error')
             return render_template('auth/signup.html',
                          signup_source=signup_source,
                          referral_code=referral_code,
                          promo_code=promo_code,
                          available_tiers=available_tiers,
+                         oauth_user_info=oauth_user_info,
                          form_data=request.form)
 
         if selected_tier not in available_tiers:
@@ -203,16 +365,34 @@ def signup():
 
         if stripe_session:
             # Store signup data in session for completion
-            session['pending_signup'] = {
+            signup_data = {
                 'org_name': org_name,
                 'username': username,
                 'email': email,
                 'first_name': first_name,
                 'last_name': last_name,
                 'phone': phone,
-                'password_hash': generate_password_hash(password),
-                'selected_tier': selected_tier
+                'selected_tier': selected_tier,
+                'signup_source': signup_source,
+                'referral_code': referral_code,
+                'promo_code': promo_code
             }
+            
+            # Add OAuth info if present
+            if oauth_user_info:
+                signup_data.update({
+                    'oauth_provider': oauth_user_info.get('oauth_provider'),
+                    'oauth_provider_id': oauth_user_info.get('oauth_provider_id'),
+                    'email_verified': True,
+                    'password_hash': None  # No password for OAuth users
+                })
+                # Clear OAuth session data
+                session.pop('oauth_user_info', None)
+            else:
+                signup_data['password_hash'] = generate_password_hash(password)
+                signup_data['email_verified'] = False
+            
+            session['pending_signup'] = signup_data
             return redirect(stripe_session.url)
         else:
             flash('Payment system temporarily unavailable. Please try again later.', 'error')
@@ -228,7 +408,9 @@ def signup():
                          signup_source=signup_source,
                          referral_code=referral_code,
                          promo_code=promo_code,
-                         available_tiers=available_tiers)
+                         available_tiers=available_tiers,
+                         oauth_user_info=oauth_user_info,
+                         oauth_available=OAuthService.is_oauth_configured())
 
 # Whop License Login Route
 @auth_bp.route('/whop-login', methods=['POST'])

@@ -190,6 +190,19 @@ class User(UserMixin, db.Model):
     timezone = db.Column(db.String(64), default='UTC')
     # role_id removed - using UserRoleAssignment table instead
 
+    # Email verification fields
+    email_verified = db.Column(db.Boolean, default=False)
+    email_verification_token = db.Column(db.String(255), nullable=True)
+    email_verification_sent_at = db.Column(db.DateTime, nullable=True)
+    
+    # OAuth fields
+    oauth_provider = db.Column(db.String(50), nullable=True)  # 'google', etc.
+    oauth_provider_id = db.Column(db.String(255), nullable=True)
+    
+    # Password reset fields
+    password_reset_token = db.Column(db.String(255), nullable=True)
+    password_reset_sent_at = db.Column(db.DateTime, nullable=True)
+
     # Soft delete fields
     deleted_at = db.Column(db.DateTime, nullable=True)
     deleted_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
