@@ -42,24 +42,30 @@
                             </div>
 
                             <button type="submit" class="btn btn-primary w-100">Login</button>
-                </form>
+                        </form>
 
-                {% if oauth_available %}
+                        {% if oauth_available %}
+                        <div class="text-center mt-3">
+                            <div class="divider">
+                                <span class="divider-text">or</span>
+                            </div>
+                            <a href="{{ url_for('auth.oauth_google') }}" class="btn btn-outline-danger w-100 mt-2">
+                                <i class="fab fa-google me-2"></i>Continue with Google
+                            </a>
+                        </div>
+                        {% elif config.DEBUG %}
+                        <div class="text-center mt-3">
+                            <div class="alert alert-info small">
+                                OAuth not configured. Add Google OAuth secrets to enable social login.
+                            </div>
+                        </div>
+                        {% endif %}
+
                 <div class="text-center mt-3">
-                    <div class="divider">
-                        <span class="divider-text">or</span>
+                            <p class="mb-0"><a href="{{ url_for('auth.signup') }}">Don't have an account? Sign up</a></p>
+                            <p class="mb-0"><small><a href="{{ url_for('auth.resend_verification') }}">Resend verification email</a></small></p>
+                        </div>
                     </div>
-                    <a href="{{ url_for('auth.oauth_google') }}" class="btn btn-outline-danger w-100 mt-2">
-                        <i class="fab fa-google me-2"></i>Continue with Google
-                    </a>
-                </div>
-                {% endif %}
-
-                <div class="text-center mt-3">
-                    <p class="mb-0"><a href="{{ url_for('auth.signup') }}">Don't have an account? Sign up</a></p>
-                    <p class="mb-0"><small><a href="{{ url_for('auth.resend_verification') }}">Resend verification email</a></small></p>
-                </div>
-            </div>
         </div>
     </div>
 </div>
