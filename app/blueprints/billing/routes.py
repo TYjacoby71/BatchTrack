@@ -121,15 +121,16 @@ def upgrade():
         flash('No organization found', 'error')
         return redirect(url_for('app_routes.dashboard'))
 
-    # Get pricing data from PricingService (handles Stripe integration and fallbacks)
-    # This now uses the consolidated BillingService which includes snapshot logic
-    pricing_data = BillingService.get_pricing_with_snapshots()
+    # Get simple pricing data for both online and offline use
+    pricing_data = BillingService.get_simple_pricing_data()
 
     logger.info(f"Pricing data retrieved for upgrade page: {len(pricing_data)} tiers")
-    for tier_key, tier_info in pricing_data.items():
-        logger.info(f"Tier {tier_key}: {tier_info.get('name', 'Unknown')} - Stripe Ready: {tier_info.get('is_stripe_ready', False)}")
-
+    
     current_tier = organization.effective_subscription_tier
+    
+    # Cache current tier for offline use
+    from ...services.offline_billing_service import OfflineBillingService
+    OfflineBillingService.cache_tier_for_offline(organization)
 
     return render_template('billing/upgrade.html',
                          organization=organization,
