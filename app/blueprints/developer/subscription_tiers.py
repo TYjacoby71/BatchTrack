@@ -112,20 +112,19 @@ def create_tier():
             return redirect(url_for('developer.subscription_tiers.manage_tiers'))
 
         # Get form data
-        permissions = request.form.getlist('permissions')
         fallback_features = [f.strip() for f in request.form.get('fallback_features', '').split('\n') if f.strip()]
-
         user_limit = int(request.form.get('user_limit', 1))
 
         new_tier = {
             'name': tier_name,
-            'permissions': permissions,
-            'feature_groups': request.form.getlist('feature_groups'),
+            'permissions': [],  # Will be configured on edit page
             'stripe_lookup_key': request.form.get('stripe_lookup_key', ''),
+            'whop_product_key': request.form.get('whop_product_key', ''),
             'user_limit': user_limit,
             'is_customer_facing': request.form.get('is_customer_facing') == 'on',
             'is_available': request.form.get('is_available') == 'on',
-            'pricing_category': request.form.get('pricing_category', 'monthly'),
+            'requires_stripe_billing': request.form.get('requires_stripe_billing') == 'on',
+            'requires_whop_billing': request.form.get('supports_whop') == 'on',
             'fallback_features': fallback_features,
             'fallback_price': request.form.get('fallback_price', '$0'),
             'stripe_features': [],
@@ -143,8 +142,7 @@ def create_tier():
         flash(f'Subscription tier "{tier_name}" created successfully', 'success')
         return redirect(url_for('developer.subscription_tiers.manage_tiers'))
 
-    all_permissions = Permission.query.filter_by(is_active=True).all()
-    return render_template('developer/create_tier.html', permissions=all_permissions)
+    return render_template('developer/create_tier.html')
 
 @subscription_tiers_bp.route('/edit/<tier_key>', methods=['GET', 'POST'])
 @login_required
