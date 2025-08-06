@@ -16,11 +16,23 @@ class OAuthService:
     def create_google_oauth_flow():
         """Create Google OAuth flow"""
         try:
+            # Check if OAuth is configured first
+            if not OAuthService.is_oauth_configured():
+                logger.warning("OAuth not configured - missing client ID or secret")
+                return None
+                
+            client_id = current_app.config.get('GOOGLE_OAUTH_CLIENT_ID')
+            client_secret = current_app.config.get('GOOGLE_OAUTH_CLIENT_SECRET')
+            
+            if not client_id or not client_secret:
+                logger.error("Missing OAuth credentials")
+                return None
+            
             # OAuth configuration
             client_config = {
                 "web": {
-                    "client_id": current_app.config['GOOGLE_OAUTH_CLIENT_ID'],
-                    "client_secret": current_app.config['GOOGLE_OAUTH_CLIENT_SECRET'],
+                    "client_id": client_id,
+                    "client_secret": client_secret,
                     "auth_uri": "https://accounts.google.com/o/oauth2/auth",
                     "token_uri": "https://oauth2.googleapis.com/token",
                     "redirect_uris": [url_for('auth.oauth_callback', _external=True)]
@@ -39,6 +51,7 @@ class OAuthService:
             # Set redirect URI
             flow.redirect_uri = url_for('auth.oauth_callback', _external=True)
             
+            logger.info("OAuth flow created successfully")
             return flow
             
         except Exception as e:
@@ -111,7 +124,28 @@ class OAuthService:
     @staticmethod
     def is_oauth_configured():
         """Check if OAuth is properly configured"""
-        return bool(
-            current_app.config.get('GOOGLE_OAUTH_CLIENT_ID') and
-            current_app.config.get('GOOGLE_OAUTH_CLIENT_SECRET')
-        )
+        client_id = current_app.config.get('GOOGLE_OAUTH_CLIENT_ID')
+        client_secret = current_app.config.get('GOOGLE_OAUTH_CLIENT_SECRET')
+        
+        configured = bool(client_id and client_secret)
+        
+        if not configured:
+            logger.debug(f"OAuth configuration check: Client ID present: {bool(client_id)}, Client Secret present: {bool(client_secret)}")
+        else:
+            logger.debug("OAuth is properly configured")
+            
+        return configured
+        
+    @staticmethod
+    def get_configuration_status():
+        """Get detailed OAuth configuration status for debugging"""
+        client_id = current_app.config.get('GOOGLE_OAUTH_CLIENT_ID')
+        client_secret = current_app.config.get('GOOGLE_OAUTH_CLIENT_SECRET')
+        
+        return {
+            'is_configured': bool(client_id and client_secret),
+            'has_client_id': bool(client_id),
+            'has_client_secret': bool(client_secret),
+            'client_id_length': len(client_id) if client_id else 0,
+            'client_secret_length': len(client_secret) if client_secret else 0
+        }
