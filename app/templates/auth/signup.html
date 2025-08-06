@@ -1,368 +1,121 @@
+
 {% extends 'layout.html' %}
 
-{% block title %}Sign Up - BatchTrack{% endblock %}
+{% block title %}Choose Your Plan - BatchTrack{% endblock %}
 
 {% block content %}
 <div class="container py-5">
     <div class="row justify-content-center">
         <div class="col-md-10">
             <div class="card">
-                <div class="card-header">
-                    <div class="row align-items-center">
-                        <div class="col">
-                            <h4 class="mb-0">
-                                <i class="fas fa-user-plus"></i> 
-                                {{ current_offer.name if current_offer else "Create Account" }}
-                            </h4>
-                        </div>
-                        <div class="col-auto">
-                            {% if current_offer %}
-                            <span class="badge bg-success fs-6">
-                                {{ current_offer.days }} Days FREE
-                            </span>
-                            {% endif %}
-                        </div>
-                    </div>
+                <div class="card-header text-center">
+                    <h2 class="mb-0">
+                        <i class="fas fa-rocket me-2"></i>
+                        Choose Your BatchTrack Plan
+                    </h2>
+                    <p class="text-muted mb-0">Select the plan that fits your business needs</p>
                 </div>
-                <div class="card-body">
-                    <!-- Trial Offer Banner -->
-                    {% if current_offer %}
+                <div class="card-body p-5">
+                    {% if oauth_user_info %}
                     <div class="alert alert-success mb-4">
-                        <div class="row align-items-center">
-                            <div class="col">
-                                <i class="fas fa-gift me-2"></i>
-                                <strong>{{ current_offer.name }}:</strong> 
-                                {{ current_offer.days }} days of full access to your chosen plan.
-                                {% if current_offer.requires_billing %}
-                                A payment method is required but you won't be charged until your trial ends.
-                                {% endif %}
-                            </div>
-                        </div>
+                        <i class="fas fa-check-circle me-2"></i>
+                        Signed in with Google as <strong>{{ oauth_user_info.email }}</strong>
                     </div>
                     {% endif %}
 
-                    {% if not oauth_user_info and oauth_available %}
-                        <div class="text-center mb-4">
-                            <a href="{{ url_for('auth.oauth_google') }}" class="btn btn-outline-danger w-100">
-                                <i class="fab fa-google me-2"></i>Sign up with Google
-                            </a>
-                            <div class="divider mt-3">
-                                <span class="divider-text">or create account manually</span>
-                            </div>
-                        </div>
-                    {% elif not oauth_user_info %}
-                        <!-- OAuth not configured - show debug info in development -->
-                        {% if config.DEBUG %}
-                        <div class="alert alert-info">
-                            <small>OAuth not configured. Add Google OAuth secrets to enable social signup.</small>
-                        </div>
-                        {% endif %}
-                    {% endif %}
-
-                        {% if oauth_user_info %}
-                        <div class="alert alert-success">
-                            <i class="fas fa-check-circle me-2"></i>
-                            Signed in with Google as <strong>{{ oauth_user_info.email }}</strong>
-                        </div>
-                        {% endif %}
-
-                    <form method="POST">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <!-- Hidden fields for tracking -->
-                        <input type="hidden" name="signup_source" value="{{ signup_source }}">
-                        {% if referral_code %}
-                        <input type="hidden" name="referral_code" value="{{ referral_code }}">
-                        {% endif %}
-
-                        <!-- Hidden field for selected tier -->
-                        <input type="hidden" name="subscription_tier" id="subscription_tier" value="team">
-                        <input type="hidden" name="tier" id="tier_hidden" value="team">
-
-                        <!-- Tier Selection -->
-                        <div class="mb-4">
-                            <label class="form-label">Choose Your Plan</label>
-                            <div class="row">
-                                {% for tier_key, tier_data in available_tiers.items() %}
-                                <div class="col-md-4 mb-3">
-                                    <div class="card tier-card h-100 {% if tier_key == 'team' %}border-success selected{% endif %}" 
-                                         data-tier="{{ tier_key }}"
-                                         data-whop-available="{{ tier_data.get('whop_product_id', '') != '' }}"
-                                         data-stripe-available="true"
-                                         data-whop-only="{{ tier_data.get('whop_only', False) }}"
-                                         style="cursor: pointer; transition: all 0.3s; border-width: 2px;"
-                                         onclick="selectTier('{{ tier_key }}')"
-                                         onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 4px 15px rgba(0,0,0,0.1)'"
-                                         onmouseout="if(!this.classList.contains('selected')) { this.style.transform='translateY(0px)'; this.style.boxShadow='0 1px 3px rgba(0,0,0,0.1)'; }">
-                                        {% if tier_key == 'team' %}
-                                        <div class="card-header bg-primary text-white text-center py-1">
-                                            <small><i class="fas fa-star"></i> Most Popular</small>
-                                        </div>
-                                        {% endif %}
-                                        <div class="card-body text-center">
-                                            <h5 class="card-title">{{ tier_data.name }}</h5>
-                                            <div class="h4 text-primary">
-                                            {% if tier_data.price_monthly == 0 %}
-                                                {{ tier_data.price_display }}
-                                            {% else %}
-                                                ${{ "%.0f"|format(tier_data.price_monthly) }}<small class="text-muted">/mo</small>
-                                            {% endif %}
-                                        </div>
-                                            <div class="text-muted mb-3">
-                                                {% if tier_data.user_limit == -1 %}
-                                                    Unlimited users
-                                                {% else %}
-                                                    {{ tier_data.user_limit }} user{{ 's' if tier_data.user_limit != 1 else '' }}
-                                                {% endif %}
-                                            </div>
-                                            <ul class="list-unstyled small">
-                                                {% for feature in tier_data.features[:4] %}
-                                                <li><i class="fas fa-check text-success me-1"></i>{{ feature }}</li>
-                                                {% endfor %}
-                                                {% if tier_data.features|length > 4 %}
-                                                <li class="text-muted">... and more</li>
-                                                {% endif %}
-                                            </ul>
-                                        </div>
-                                        <div class="card-footer bg-transparent">
-                                            <div class="tier-selection-indicator text-center">
-                                                <i class="fas fa-check-circle text-success" style="display: {% if tier_key == 'team' %}inline{% else %}none{% endif %};"></i>
-                                                <span class="tier-status-text">{% if tier_key == 'team' %}Selected{% else %}Click to Select{% endif %}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                {% endfor %}
-                            </div>
-                        </div>
-
-                        <!-- Payment Method -->
-                        <div class="mb-3" id="payment-method-section">
-                            <label class="form-label">Payment Method</label>
-                            <div id="payment-options">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="payment_method" id="stripe_payment" value="stripe" checked>
-                                    <label class="form-check-label" for="stripe_payment">
-                                        Credit Card (Stripe)
-                                    </label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="payment_method" id="whop_payment" value="whop">
-                                    <label class="form-check-label" for="whop_payment">
-                                        Whop License
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="row mb-3">
-                            <!-- Left Column - Organization & Account -->
-                            <div class="col-md-6">
-                                <div class="mb-4">
-                                    <h5 class="text-muted">Organization Details</h5>
-                                    <div class="mb-3">
-                                        <label for="org_name" class="form-label">Organization Name *</label>
-                                        <input type="text" class="form-control" id="org_name" name="org_name" required 
-                                               value="{{ form_data.org_name if form_data else '' }}"
-                                               placeholder="Your Company Name">
-                                    </div>
-                                </div>
-
-                                <hr class="my-4">
-                                <h5 class="text-muted">Your Account Details</h5>
-
-                                <div class="mb-3">
-                                    <label for="username" class="form-label">Username *</label>
-                                    <input type="text" class="form-control" id="username" name="username" required
-                                           value="{{ form_data.username if form_data else '' }}"
-                                           placeholder="Choose a username">
-                                </div>
-
-                                <div class="mb-3">
-                                    <label for="email" class="form-label">Email Address *</label>
-                                    <input type="email" class="form-control" id="email" name="email" 
-                                           value="{{ oauth_user_info.email if oauth_user_info else (form_data.email if form_data else '') }}" 
-                                           {% if oauth_user_info %}readonly{% endif %} required>
-                                    {% if oauth_user_info %}
-                                    <small class="text-muted">This email is verified through Google</small>
-                                    {% endif %}
-                                </div>
-
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label for="first_name" class="form-label">First Name</label>
-                                            <input type="text" class="form-control" id="first_name" name="first_name" 
-                                                   value="{{ oauth_user_info.first_name if oauth_user_info else (form_data.first_name if form_data else '') }}" required>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label for="last_name" class="form-label">Last Name</label>
-                                            <input type="text" class="form-control" id="last_name" name="last_name" 
-                                                   value="{{ oauth_user_info.last_name if oauth_user_info else (form_data.last_name if form_data else '') }}" required>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {% if not oauth_user_info %}
-                                <div class="mb-3">
-                                    <label for="password" class="form-label">Password</label>
-                                    <input type="password" class="form-control" id="password" name="password" required>
-                                </div>
-
-                                <div class="mb-3">
-                                    <label for="confirm_password" class="form-label">Confirm Password</label>
-                                    <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
+                    <!-- Tier Selection -->
+                    <div class="row" id="tierSelection">
+                        {% for tier_key, tier_data in available_tiers.items() %}
+                        <div class="col-lg-4 col-md-6 mb-4">
+                            <div class="card tier-card h-100 {% if tier_key == 'team' %}border-success border-3{% else %}border-2{% endif %}" 
+                                 data-tier="{{ tier_key }}"
+                                 style="cursor: pointer; transition: all 0.3s; position: relative;"
+                                 onclick="selectTier('{{ tier_key }}')"
+                                 onmouseover="this.style.transform='translateY(-8px)'; this.style.boxShadow='0 8px 25px rgba(0,0,0,0.15)'"
+                                 onmouseout="if(!this.classList.contains('selected')) { this.style.transform='translateY(0px)'; this.style.boxShadow='0 2px 10px rgba(0,0,0,0.1)'; }">
+                                
+                                {% if tier_key == 'team' %}
+                                <div class="position-absolute top-0 end-0 p-2">
+                                    <span class="badge bg-primary">
+                                        <i class="fas fa-star me-1"></i>Most Popular
+                                    </span>
                                 </div>
                                 {% endif %}
 
-                                <div class="mb-3">
-                                    <label for="phone" class="form-label">Phone Number</label>
-                                    <input type="tel" class="form-control" id="phone" name="phone"
-                                           value="{{ form_data.phone if form_data else '' }}"
-                                           placeholder="Your phone number">
-                                </div>
-                            </div>
-
-                            <!-- Right Column - Billing Information (if needed) -->
-                            <div class="col-md-6">
-                                {% if current_offer and current_offer.requires_billing %}
-                                <div class="mb-4">
-                                    <h5 class="text-muted">
-                                        <i class="fas fa-credit-card me-2"></i>Payment Information
-                                    </h5>
-                                    <div class="alert alert-warning small">
-                                        <i class="fas fa-lock me-1"></i>
-                                        Required for trial. You won't be charged until {{ current_offer.days }} days from now.
-                                    </div>
-
-                                    <div class="mb-3">
-                                        <label for="card_number" class="form-label">Card Number *</label>
-                                        <input type="text" class="form-control" id="card_number" name="card_number" required
-                                               placeholder="1234 5678 9012 3456" maxlength="19"
-                                               oninput="formatCardNumber(this)">
-                                    </div>
-
-                                    <div class="row">
-                                        <div class="col-md-4">
-                                            <div class="mb-3">
-                                                <label for="card_exp_month" class="form-label">Month *</label>
-                                                <select class="form-select" id="card_exp_month" name="card_exp_month" required>
-                                                    <option value="">MM</option>
-                                                    {% for i in range(1, 13) %}
-                                                    <option value="{{ '%02d'|format(i) }}">{{ '%02d'|format(i) }}</option>
-                                                    {% endfor %}
-                                                </select>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <div class="mb-3">
-                                                <label for="card_exp_year" class="form-label">Year *</label>
-                                                <select class="form-select" id="card_exp_year" name="card_exp_year" required>
-                                                    <option value="">YYYY</option>
-                                                    {% for year in range(2024, 2035) %}
-                                                    <option value="{{ year }}">{{ year }}</option>
-                                                    {% endfor %}
-                                                </select>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <div class="mb-3">
-                                                <label for="card_cvc" class="form-label">CVC *</label>
-                                                <input type="text" class="form-control" id="card_cvc" name="card_cvc" required
-                                                       placeholder="123" maxlength="4">
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="mb-3">
-                                        <label for="billing_name" class="form-label">Name on Card *</label>
-                                        <input type="text" class="form-control" id="billing_name" name="billing_name" required
-                                               value="{{ form_data.billing_name if form_data else '' }}"
-                                               placeholder="Full name as it appears on card">
-                                    </div>
-
-                                    <hr class="my-3">
-                                    <h6 class="text-muted">Billing Address</h6>
-
-                                    <div class="mb-3">
-                                        <label for="billing_address" class="form-label">Street Address</label>
-                                        <input type="text" class="form-control" id="billing_address" name="billing_address"
-                                               value="{{ form_data.billing_address if form_data else '' }}"
-                                               placeholder="123 Main Street">
-                                    </div>
-
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <div class="mb-3">
-                                                <label for="billing_city" class="form-label">City</label>
-                                                <input type="text" class="form-control" id="billing_city" name="billing_city"
-                                                       value="{{ form_data.billing_city if form_data else '' }}"
-                                                       placeholder="Your City">
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="mb-3">
-                                                <label for="billing_state" class="form-label">State/Province</label>
-                                                <input type="text" class="form-control" id="billing_state" name="billing_state"
-                                                       value="{{ form_data.billing_state if form_data else '' }}"
-                                                       placeholder="State">
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <div class="mb-3">
-                                                <label for="billing_zip" class="form-label">ZIP/Postal Code</label>
-                                                <input type="text" class="form-control" id="billing_zip" name="billing_zip"
-                                                       value="{{ form_data.billing_zip if form_data else '' }}"
-                                                       placeholder="12345">
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="mb-3">
-                                                <label for="billing_country" class="form-label">Country</label>
-                                                <select class="form-select" id="billing_country" name="billing_country">
-                                                    <option value="US" selected>United States</option>
-                                                    <option value="CA">Canada</option>
-                                                    <option value="GB">United Kingdom</option>
-                                                    <option value="AU">Australia</option>
-                                                </select>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                {% endif %}
-                            </div>
-                        </div>
-
-                        <!-- Terms and Submit -->
-                        <hr class="my-4">
-                        <div class="row">
-                            <div class="col-12">
-                                <div class="form-check mb-3">
-                                    <input class="form-check-input" type="checkbox" id="terms_agreed" required>
-                                    <label class="form-check-label small" for="terms_agreed">
-                                        I agree to the <a href="/terms" target="_blank">Terms of Service</a> and 
-                                        <a href="/privacy" target="_blank">Privacy Policy</a>. 
-                                        {% if current_offer and current_offer.requires_billing %}
-                                        I understand my trial will automatically convert to a paid subscription after {{ current_offer.days }} days.
+                                <div class="card-body text-center p-4">
+                                    <h3 class="card-title fw-bold">{{ tier_data.name }}</h3>
+                                    <div class="h1 text-primary mb-3">
+                                        {% if tier_data.price_monthly == 0 %}
+                                            {{ tier_data.price_display }}
+                                        {% else %}
+                                            ${{ "%.0f"|format(tier_data.price_monthly) }}<small class="text-muted fs-6">/mo</small>
                                         {% endif %}
-                                    </label>
-                                </div>
+                                    </div>
+                                    
+                                    <div class="text-muted mb-4">
+                                        {% if tier_data.user_limit == -1 %}
+                                            <strong>Unlimited users</strong>
+                                        {% else %}
+                                            <strong>{{ tier_data.user_limit }} user{{ 's' if tier_data.user_limit != 1 else '' }}</strong>
+                                        {% endif %}
+                                    </div>
 
-                                <div class="d-flex gap-2 justify-content-between">
-                                    <a href="{{ url_for('auth.login') }}" class="btn btn-outline-secondary">
-                                        <i class="fas fa-sign-in-alt"></i> Already have an account? Login
-                                    </a>
-                                    <button type="submit" class="btn btn-success btn-lg px-4" {% if not available_tiers %}disabled{% endif %}>
-                                        Continue to Payment
-                                    </button>
+                                    <ul class="list-unstyled text-start">
+                                        {% for feature in tier_data.features[:6] %}
+                                        <li class="mb-2">
+                                            <i class="fas fa-check text-success me-2"></i>{{ feature }}
+                                        </li>
+                                        {% endfor %}
+                                        {% if tier_data.features|length > 6 %}
+                                        <li class="text-muted">
+                                            <i class="fas fa-plus me-2"></i>{{ tier_data.features|length - 6 }} more features
+                                        </li>
+                                        {% endif %}
+                                    </ul>
+                                </div>
+                                
+                                <div class="card-footer bg-transparent text-center">
+                                    <div class="tier-selection-indicator">
+                                        <i class="fas fa-check-circle text-success fs-4" style="display: {% if tier_key == 'team' %}inline{% else %}none{% endif %};"></i>
+                                        <div class="tier-status-text mt-2">
+                                            <span class="badge {% if tier_key == 'team' %}bg-success{% else %}bg-outline-primary{% endif %} px-3 py-2">
+                                                {% if tier_key == 'team' %}Selected{% else %}Click to Select{% endif %}
+                                            </span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </form>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Selected Tier Confirmation -->
+                    <div class="text-center mt-5" id="confirmationSection">
+                        <div class="row justify-content-center">
+                            <div class="col-md-8">
+                                <div class="card bg-light border-0">
+                                    <div class="card-body py-4">
+                                        <h5 class="mb-3">
+                                            <i class="fas fa-shopping-cart me-2"></i>
+                                            Ready to get started?
+                                        </h5>
+                                        <p class="text-muted mb-4" id="selectedTierText">
+                                            You've selected the <strong>Team Plan</strong>. Click continue to proceed with payment.
+                                        </p>
+                                        
+                                        <div class="d-flex gap-3 justify-content-center">
+                                            <a href="{{ url_for('auth.login') }}" class="btn btn-outline-secondary">
+                                                <i class="fas fa-arrow-left me-2"></i>Back to Login
+                                            </a>
+                                            <button type="button" class="btn btn-success btn-lg px-4" id="continueBtn" onclick="proceedToPayment()">
+                                                <i class="fas fa-credit-card me-2"></i>Continue to Payment
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -370,97 +123,112 @@
 </div>
 
 <script>
-function formatCardNumber(input) {
-    let value = input.value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
-    let formattedValue = value.match(/.{1,4}/g)?.join(' ') || value;
-    if (formattedValue.length > 19) formattedValue = formattedValue.substr(0, 19);
-    input.value = formattedValue;
-}
-</script>
-{% endblock %}
+let selectedTier = 'team'; // Default selection
+let availableTiers = {{ available_tiers|tojson }};
 
-{% block scripts %}
-<script>
 function selectTier(tierKey) {
-    // Update hidden fields
-    document.getElementById('subscription_tier').value = tierKey;
-    document.getElementById('tier_hidden').value = tierKey;
-
+    selectedTier = tierKey;
+    
     // Update visual selection
     document.querySelectorAll('.tier-card').forEach(card => {
         const isSelected = card.dataset.tier === tierKey;
+        const tierData = availableTiers[tierKey];
 
         // Update card styling
         if (isSelected) {
             card.classList.remove('border-primary');
-            card.classList.add('border-success', 'selected');
-            card.style.transform = 'translateY(-4px)';
-            card.style.boxShadow = '0 4px 15px rgba(0,0,0,0.1)';
+            card.classList.add('border-success', 'border-3', 'selected');
+            card.style.transform = 'translateY(-8px)';
+            card.style.boxShadow = '0 8px 25px rgba(0,0,0,0.15)';
         } else {
-            card.classList.remove('border-success', 'selected');
+            card.classList.remove('border-success', 'border-3', 'selected');
             card.classList.add('border-primary');
             card.style.transform = 'translateY(0px)';
-            card.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
+            card.style.boxShadow = '0 2px 10px rgba(0,0,0,0.1)';
         }
 
         // Update status indicator
         const checkIcon = card.querySelector('.fas.fa-check-circle');
-        const statusText = card.querySelector('.tier-status-text');
+        const statusBadge = card.querySelector('.tier-status-text .badge');
 
-        if (checkIcon && statusText) {
+        if (checkIcon && statusBadge) {
             if (isSelected) {
                 checkIcon.style.display = 'inline';
-                statusText.textContent = 'Selected';
+                statusBadge.textContent = 'Selected';
+                statusBadge.className = 'badge bg-success px-3 py-2';
             } else {
                 checkIcon.style.display = 'none';
-                statusText.textContent = 'Click to Select';
+                statusBadge.textContent = 'Click to Select';
+                statusBadge.className = 'badge bg-outline-primary px-3 py-2';
             }
         }
     });
 
-    // Update payment options
-    updatePaymentOptions(tierKey);
+    // Update confirmation text
+    const tierData = availableTiers[tierKey];
+    const selectedText = document.getElementById('selectedTierText');
+    if (selectedText && tierData) {
+        selectedText.innerHTML = `You've selected the <strong>${tierData.name}</strong>. Click continue to proceed with payment.`;
+    }
 }
 
-function updatePaymentOptions(tierKey) {
-    const paymentSection = document.getElementById('payment-method-section');
-    const stripeOption = document.getElementById('stripe_payment');
-    const whopOption = document.getElementById('whop_payment');
-
-    if (!tierKey) {
-        paymentSection.style.display = 'none';
+function proceedToPayment() {
+    if (!selectedTier) {
+        alert('Please select a plan first.');
         return;
     }
-
-    // Find the selected tier card to get data attributes
-    const selectedCard = document.querySelector(`.tier-card[data-tier="${tierKey}"]`);
-    if (!selectedCard) return;
-
-    const whopAvailable = selectedCard.dataset.whopAvailable === 'true';
-    const stripeAvailable = selectedCard.dataset.stripeAvailable === 'true';
-    const whopOnly = selectedCard.dataset.whopOnly === 'true';
-
-    // Always show payment section for now since we have both options
-    paymentSection.style.display = 'block';
-
-    // Show/hide payment options based on availability
-    stripeOption.parentElement.style.display = stripeAvailable ? 'block' : 'none';
-    whopOption.parentElement.style.display = whopAvailable ? 'block' : 'none';
-
-    // Auto-select if only one option is available
-    if (whopOnly || !stripeAvailable) {
-        whopOption.checked = true;
-        stripeOption.checked = false;
-    } else if (!whopAvailable) {
-        stripeOption.checked = true;
-        whopOption.checked = false;
-    }
+    
+    // Create a form to submit the tier selection
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '{{ url_for("auth.signup") }}';
+    
+    // Add CSRF token
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = 'csrf_token';
+    csrfInput.value = '{{ csrf_token() }}';
+    form.appendChild(csrfInput);
+    
+    // Add selected tier
+    const tierInput = document.createElement('input');
+    tierInput.type = 'hidden';
+    tierInput.name = 'selected_tier';
+    tierInput.value = selectedTier;
+    form.appendChild(tierInput);
+    
+    // Add OAuth info if present
+    {% if oauth_user_info %}
+    const oauthInput = document.createElement('input');
+    oauthInput.type = 'hidden';
+    oauthInput.name = 'oauth_signup';
+    oauthInput.value = 'true';
+    form.appendChild(oauthInput);
+    {% endif %}
+    
+    document.body.appendChild(form);
+    form.submit();
 }
 
-// Initialize on page load
+// Initialize with team tier selected
 document.addEventListener('DOMContentLoaded', function() {
-    // Set initial tier selection
-    updatePaymentOptions('team');
+    selectTier('team');
 });
 </script>
+
+<style>
+.tier-card {
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.tier-card.selected {
+    transform: translateY(-8px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+
+.tier-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+</style>
 {% endblock %}
