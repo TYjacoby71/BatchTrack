@@ -32,3 +32,4 @@ flask-mail
 google-auth
 google-auth-oauthlib
 Flask-Mail
+flask-mail

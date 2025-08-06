@@ -11,22 +11,9 @@ from flask_login import current_user
 def create_app():
     app = Flask(__name__, static_folder='static', static_url_path='/static')
 
-    # Configuration
-    app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', 'devkey-please-change-in-production')
-
-    # Database configuration - use PostgreSQL if available, fallback to SQLite
-    database_url = os.environ.get('DATABASE_URL')
-    if database_url:
-        # Use PostgreSQL from Replit
-        app.config['SQLALCHEMY_DATABASE_URI'] = database_url
-    else:
-        # Fallback to SQLite for local development
-        instance_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', 'instance')
-        os.makedirs(instance_path, exist_ok=True)
-        os.chmod(instance_path, 0o777)
-        app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(instance_path, 'batchtrack.db')
-
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    # Load configuration
+    app.config.from_object('app.config.Config')
+    
     app.config['UPLOAD_FOLDER'] = 'static/product_images'
     os.makedirs('static/product_images', exist_ok=True)
 
@@ -39,14 +26,11 @@ def create_app():
         app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
     # Initialize extensions
-    from .extensions import db, migrate, login_manager, mail
+    from .extensions import db, migrate, login_manager, mail, csrf
     db.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
     mail.init_app(app)
-
-    # Initialize CSRF protection
-    from .extensions import csrf
     csrf.init_app(app)
 
     # Exempt Stripe webhooks from CSRF protection

@@ -1,12 +1,13 @@
 from flask_sqlalchemy import SQLAlchemy
 from flask_wtf import FlaskForm
+from flask_wtf.csrf import CSRFProtect
 from flask_mail import Mail
 from flask_login import LoginManager
 from flask_migrate import Migrate
 from flask_bcrypt import Bcrypt
 
 db = SQLAlchemy()
-# csrf = CSRFProtect() # CSRFProtect is not used in the provided snippet
+csrf = CSRFProtect()
 # Initialize extensions
 login_manager = LoginManager()
 migrate = Migrate()
