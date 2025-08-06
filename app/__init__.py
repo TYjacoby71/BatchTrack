@@ -41,6 +41,10 @@ def create_app():
     # Initialize extensions
     db.init_app(app)
     migrate = Migrate(app, db)
+    
+    # Initialize email
+    from .extensions import mail
+    mail.init_app(app)
 
     # Initialize CSRF protection
     from .extensions import csrf

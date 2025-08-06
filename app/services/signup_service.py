@@ -78,9 +78,18 @@ class SignupService:
                 organization_id=org.id,
                 user_type='customer',
                 is_organization_owner=True,
-                is_active=True
+                is_active=True,
+                email_verified=pending_signup.get('email_verified', False),
+                oauth_provider=pending_signup.get('oauth_provider'),
+                oauth_provider_id=pending_signup.get('oauth_provider_id')
             )
-            owner_user.set_password(pending_signup['password'])
+            
+            # Set password only for non-OAuth users
+            if pending_signup.get('password_hash'):
+                owner_user.password_hash = pending_signup['password_hash']
+            elif pending_signup.get('password'):
+                owner_user.set_password(pending_signup['password'])
+            
             db.session.add(owner_user)
             db.session.flush()
             logger.info(f"Created user with ID: {owner_user.id}")
@@ -100,16 +109,42 @@ class SignupService:
             db.session.commit()
             logger.info("Database changes committed successfully")
 
-            # Log in the user
-            login_user(owner_user)
-            logger.info(f"User {owner_user.username} logged in successfully")
+            # Send welcome email
+            from ..services.email_service import EmailService
+            EmailService.send_welcome_email(
+                owner_user.email,
+                owner_user.first_name,
+                org.name,
+                tier.title()
+            )
 
-            # Clear pending signup data
-            session.pop('pending_signup', None)
-            logger.info("Cleared pending signup data from session")
+            # Send verification email if needed
+            if not owner_user.email_verified:
+                owner_user.email_verification_token = EmailService.generate_verification_token(owner_user.email)
+                owner_user.email_verification_sent_at = TimezoneUtils.utc_now()
+                db.session.commit()
+                
+                EmailService.send_verification_email(
+                    owner_user.email,
+                    owner_user.email_verification_token,
+                    owner_user.first_name
+                )
+                
+                flash(f'Account created! Please check your email to verify your account before logging in.', 'success')
+                # Clear pending signup data
+                session.pop('pending_signup', None)
+                return redirect(url_for('auth.login'))
+            else:
+                # OAuth user - log them in immediately
+                login_user(owner_user)
+                logger.info(f"User {owner_user.username} logged in successfully")
 
-            flash(f'Welcome to BatchTrack! Your {tier.title()} account is ready to use.', 'success')
-            return redirect(url_for('app_routes.dashboard'))
+                # Clear pending signup data
+                session.pop('pending_signup', None)
+                logger.info("Cleared pending signup data from session")
+
+                flash(f'Welcome to BatchTrack! Your {tier.title()} account is ready to use.', 'success')
+                return redirect(url_for('app_routes.dashboard'))
 
         except Exception as e:
             db.session.rollback()

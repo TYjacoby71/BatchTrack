@@ -1,0 +1,167 @@
+
+import logging
+from flask import current_app, render_template, url_for
+from flask_mail import Message
+from ..extensions import mail
+from ..utils.timezone_utils import TimezoneUtils
+import secrets
+import hashlib
+
+logger = logging.getLogger(__name__)
+
+class EmailService:
+    """Service for sending emails"""
+
+    @staticmethod
+    def send_verification_email(user_email, verification_token, user_name=None):
+        """Send email verification link"""
+        try:
+            verification_url = url_for('auth.verify_email', 
+                                     token=verification_token, 
+                                     _external=True)
+            
+            subject = "Verify your BatchTrack account"
+            
+            html_body = f"""
+            <h2>Welcome to BatchTrack!</h2>
+            <p>Hi {user_name or 'there'},</p>
+            <p>Thank you for signing up for BatchTrack. Please verify your email address by clicking the link below:</p>
+            <p><a href="{verification_url}" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Verify Email Address</a></p>
+            <p>If the button doesn't work, copy and paste this link into your browser:</p>
+            <p>{verification_url}</p>
+            <p>This link will expire in 24 hours.</p>
+            <p>If you didn't create an account with BatchTrack, please ignore this email.</p>
+            <br>
+            <p>Best regards,<br>The BatchTrack Team</p>
+            """
+            
+            text_body = f"""
+            Welcome to BatchTrack!
+            
+            Hi {user_name or 'there'},
+            
+            Thank you for signing up for BatchTrack. Please verify your email address by visiting:
+            {verification_url}
+            
+            This link will expire in 24 hours.
+            
+            If you didn't create an account with BatchTrack, please ignore this email.
+            
+            Best regards,
+            The BatchTrack Team
+            """
+
+            return EmailService._send_email(
+                recipient=user_email,
+                subject=subject,
+                html_body=html_body,
+                text_body=text_body
+            )
+            
+        except Exception as e:
+            logger.error(f"Error sending verification email: {str(e)}")
+            return False
+
+    @staticmethod
+    def send_welcome_email(user_email, user_name, organization_name, tier_name):
+        """Send welcome email after successful signup"""
+        try:
+            subject = f"Welcome to BatchTrack - Your {tier_name} account is ready!"
+            
+            dashboard_url = url_for('app_routes.dashboard', _external=True)
+            
+            html_body = f"""
+            <h2>Welcome to BatchTrack, {user_name}!</h2>
+            <p>Your {tier_name} account for <strong>{organization_name}</strong> has been successfully created and is ready to use.</p>
+            
+            <h3>Getting Started:</h3>
+            <ul>
+                <li><a href="{dashboard_url}">Access your dashboard</a></li>
+                <li>Set up your first ingredients and recipes</li>
+                <li>Start tracking your production batches</li>
+                <li>Manage your inventory with FIFO tracking</li>
+            </ul>
+            
+            <p>Need help? Check out our documentation or contact support.</p>
+            
+            <p><a href="{dashboard_url}" style="background-color: #28a745; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px;">Go to Dashboard</a></p>
+            
+            <br>
+            <p>Happy making!<br>The BatchTrack Team</p>
+            """
+            
+            return EmailService._send_email(
+                recipient=user_email,
+                subject=subject,
+                html_body=html_body
+            )
+            
+        except Exception as e:
+            logger.error(f"Error sending welcome email: {str(e)}")
+            return False
+
+    @staticmethod
+    def send_password_reset_email(user_email, reset_token, user_name=None):
+        """Send password reset email"""
+        try:
+            reset_url = url_for('auth.reset_password', 
+                              token=reset_token, 
+                              _external=True)
+            
+            subject = "Reset your BatchTrack password"
+            
+            html_body = f"""
+            <h2>Password Reset Request</h2>
+            <p>Hi {user_name or 'there'},</p>
+            <p>You requested a password reset for your BatchTrack account. Click the link below to set a new password:</p>
+            <p><a href="{reset_url}" style="background-color: #dc3545; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Reset Password</a></p>
+            <p>If the button doesn't work, copy and paste this link into your browser:</p>
+            <p>{reset_url}</p>
+            <p>This link will expire in 1 hour.</p>
+            <p>If you didn't request this reset, please ignore this email.</p>
+            <br>
+            <p>Best regards,<br>The BatchTrack Team</p>
+            """
+
+            return EmailService._send_email(
+                recipient=user_email,
+                subject=subject,
+                html_body=html_body
+            )
+            
+        except Exception as e:
+            logger.error(f"Error sending password reset email: {str(e)}")
+            return False
+
+    @staticmethod
+    def _send_email(recipient, subject, html_body, text_body=None):
+        """Internal method to send email"""
+        try:
+            msg = Message(
+                subject=subject,
+                recipients=[recipient],
+                html=html_body,
+                body=text_body
+            )
+            
+            mail.send(msg)
+            logger.info(f"Email sent successfully to {recipient}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to send email to {recipient}: {str(e)}")
+            return False
+
+    @staticmethod
+    def generate_verification_token(email):
+        """Generate a secure verification token"""
+        timestamp = str(TimezoneUtils.utc_now().timestamp())
+        data = f"{email}:{timestamp}:{secrets.token_hex(16)}"
+        return hashlib.sha256(data.encode()).hexdigest()
+
+    @staticmethod
+    def generate_reset_token(user_id):
+        """Generate a secure password reset token"""
+        timestamp = str(TimezoneUtils.utc_now().timestamp())
+        data = f"{user_id}:{timestamp}:{secrets.token_hex(16)}"
+        return hashlib.sha256(data.encode()).hexdigest()
