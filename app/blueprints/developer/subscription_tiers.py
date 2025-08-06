@@ -281,9 +281,13 @@ def sync_tier(tier_key):
 
                 if pricing_data:
                     # Update the tier config with fresh pricing data
-                    tier_config['name'] = pricing_data.get('name', tier_config.get('name'))
-                    tier_config['fallback_price'] = pricing_data.get('price', tier_config.get('fallback_price', '$0'))
                     tier_config['stripe_price'] = pricing_data.get('price', '')
+                    tier_config['stripe_price_id'] = pricing_data.get('price_id', '')
+                    tier_config['last_synced'] = pricing_data.get('last_synced')
+                    
+                    # Update fallback price only if no existing fallback price
+                    if not tier_config.get('fallback_price') or tier_config.get('fallback_price') == '$0':
+                        tier_config['fallback_price'] = pricing_data.get('price', '$0')
 
                     logger.info(f"Updated pricing for tier {tier_key}: {pricing_data.get('price', 'N/A')}")
                 else:
