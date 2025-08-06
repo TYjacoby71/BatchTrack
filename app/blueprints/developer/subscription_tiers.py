@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import login_required, current_user
 from app.models import db, Permission, SubscriptionTier
 from app.extensions import db
+from app.utils.timezone_utils import TimezoneUtils
 import json
 import os
 import logging
@@ -307,19 +308,21 @@ def sync_tier(tier_key):
         if stripe_lookup_key:
             try:
                 from app.services.stripe_service import StripeService
-                # Correctly call get_stripe_pricing_for_lookup_key
-                pricing_data = StripeService.get_stripe_pricing_for_lookup_key(stripe_lookup_key)
+                # Get the tier object and fetch live pricing
+                tier_obj = SubscriptionTier.query.filter_by(key=tier_key).first()
+                if tier_obj:
+                    pricing_data = StripeService.get_live_pricing_for_tier(tier_obj)
 
                 if pricing_data:
-                    # Update the tier config with fresh pricing data
-                    tier_config['stripe_price'] = pricing_data.get('price', '')
-                    tier_config['stripe_price_id'] = pricing_data.get('price_id', '')
-                    tier_config['last_synced'] = pricing_data.get('last_synced')
+                        # Update the tier config with fresh pricing data
+                        tier_config['stripe_price'] = pricing_data.get('formatted_price', '')
+                        tier_config['stripe_price_id'] = pricing_data.get('price_id', '')
+                        tier_config['last_synced'] = TimezoneUtils.utc_now().isoformat()
 
-                    # Update fallback price from Stripe pricing
-                    tier_config['fallback_price'] = pricing_data.get('price', tier_config.get('fallback_price', '$0'))
+                        # Update fallback price from Stripe pricing
+                        tier_config['fallback_price'] = pricing_data.get('formatted_price', tier_config.get('fallback_price', '$0'))
 
-                    logger.info(f"Updated pricing for tier {tier_key}: {pricing_data.get('price', 'N/A')}")
+                        logger.info(f"Updated pricing for tier {tier_key}: {pricing_data.get('formatted_price', 'N/A')}")
                 else:
                     logger.warning(f"No Stripe pricing found for lookup key: {stripe_lookup_key}")
             except Exception as e:

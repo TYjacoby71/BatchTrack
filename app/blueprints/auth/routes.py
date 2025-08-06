@@ -327,11 +327,20 @@ def signup():
         if tier_config:
             # Get features from the correct JSON structure
             features = tier_config.get('fallback_features', [])
+            
+            # Use synced Stripe pricing if available
+            stripe_price = tier_config.get('stripe_price', tier_obj.fallback_price)
+            if stripe_price and stripe_price != '$0':
+                price_display = stripe_price
+                price_monthly = float(stripe_price.replace('$', '')) if stripe_price.startswith('$') else 0
+            else:
+                price_display = tier_obj.fallback_price
+                price_monthly = 0
 
             available_tiers[tier_obj.key] = {
                 'name': tier_obj.name,
-                'price_monthly': 0,  # Will be populated from Stripe/Whop
-                'price_display': tier_obj.fallback_price,
+                'price_monthly': price_monthly,
+                'price_display': price_display,
                 'price_yearly': '$0',  # Will be populated from Stripe/Whop
                 'features': features,
                 'user_limit': tier_obj.user_limit,

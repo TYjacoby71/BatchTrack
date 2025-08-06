@@ -73,7 +73,7 @@
     ],
     "stripe_price_monthly": "$8",
     "stripe_price_yearly": "$85",
-    "last_synced": "2025-08-06T05:17:53.412267",
+    "last_synced": "2025-08-06T22:51:18.077767",
     "fallback_price_monthly": "$0",
     "fallback_price_yearly": "$0",
     "stripe_price_id_monthly": "price_1RnRlnF4Y9XQgiJBzKnYadVL",
@@ -85,7 +85,7 @@
     "whop_product_key": "",
     "whop_product_name": "",
     "pricing_category": "monthly",
-    "fallback_price": "$8",
+    "fallback_price": "$7",
     "stripe_price": "$7",
     "stripe_price_id": "price_1RnRlnF4Y9XQgiJBzKnYadVL"
   },
