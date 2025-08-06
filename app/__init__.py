@@ -493,9 +493,8 @@ def create_app():
     @app.before_request
     def enforce_billing_access():
         """Global middleware to enforce billing access control"""
-        from flask import request, session
+        from flask import request, session, redirect, url_for, flash
         from flask_login import current_user
-        from .services.billing_service import BillingService # This import is no longer strictly needed for the check itself, but might be for other billing logic.
 
         # Skip for static files, auth routes, and billing routes
         if (request.endpoint and (
@@ -508,11 +507,10 @@ def create_app():
 
         # Only check authenticated users with organizations
         if current_user.is_authenticated and current_user.organization:
-            # Check organization access authorization
-            from .utils.permissions import check_organization_access
-            has_access, reason = check_organization_access(current_user.organization)
+            # Check organization access authorization using the new authorization system
+            from .utils.authorization import AuthorizationHierarchy
+            has_access, reason = AuthorizationHierarchy.check_organization_access(current_user.organization)
             if not has_access:
-                from flask import redirect, url_for, flash
                 if reason == 'organization_suspended':
                     flash('Your organization has been suspended. Please contact support.', 'error')
                     return redirect(url_for('billing.upgrade'))

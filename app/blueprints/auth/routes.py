@@ -294,35 +294,7 @@ def whop_login():
         flash('Invalid license key or access denied.', 'error')
         return redirect(url_for('auth.login'))
 
-# Permission and Role Management Routes
-@auth_bp.route('/permissions')
-@require_permission('dev.system_admin')
-def permissions():
-    return manage_permissions()
-
-@auth_bp.route('/permissions/toggle-status', methods=['POST'])
-@require_permission('dev.system_admin')
-@login_required # Added login_required as it's a common requirement for protected routes
-def toggle_permission_status_route():
-    return toggle_permission_status()
-
-@auth_bp.route('/roles')
-@require_permission('organization.manage_roles')
-@login_required # Added login_required
-def roles():
-    return manage_roles()
-
-@auth_bp.route('/roles', methods=['POST'])
-@require_permission('organization.manage_roles')
-@login_required # Added login_required
-def create_role_route():
-    return create_role()
-
-@auth_bp.route('/roles/<int:role_id>', methods=['PUT'])
-@require_permission('organization.manage_roles')
-@login_required # Added login_required
-def update_role_route(role_id):
-    return update_role(role_id)
+# Permission and Role Management Routes have been moved to organization blueprint
 
 @auth_bp.route('/roles/<int:role_id>')
 @login_required
