@@ -2,7 +2,7 @@
 """Add offline billing support
 
 Revision ID: add_offline_billing_support
-Revises: 8b7aa70df87d
+Revises: drop_deprecated_billing_columns
 Create Date: 2025-08-06 05:30:00.000000
 
 """
