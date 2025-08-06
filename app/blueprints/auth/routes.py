@@ -92,30 +92,23 @@ def signup():
     from ...services.billing_service import BillingService
     from ...blueprints.developer.subscription_tiers import load_tiers_config
 
-    pricing_data = BillingService.get_comprehensive_pricing_data()
+    # Get available tiers from billing service
+    available_tiers_db = BillingService.get_available_tiers()
     tiers_config = load_tiers_config()
 
-    # Show all customer-facing tiers - individual failures are handled gracefully
+    # Show all customer-facing tiers
     available_tiers = {}
-    for tier_key, tier_data in pricing_data.items():
-        tier_config = tiers_config.get(tier_key, {})
-        if (tier_config.get('is_customer_facing', True) and 
-            tier_config.get('is_available', True)):
-
-            price_str = tier_data.get('price', '$0').replace('$', '')
-            try:
-                price_monthly = float(price_str) if price_str.replace('.', '').isdigit() else 0
-            except (ValueError, AttributeError):
-                price_monthly = 0
-
-            available_tiers[tier_key] = {
-                'name': tier_data.get('name', tier_key.title()),
-                'price_monthly': price_monthly,
-                'price_display': tier_data.get('price', '$0'),
-                'price_yearly': tier_data.get('price_yearly', '$0'),
-                'features': tier_data.get('features', []),
-                'user_limit': tier_data.get('user_limit', 1),
-                'whop_product_id': tier_config.get('whop_product_id', '') # Use Whop Product ID
+    for tier_obj in available_tiers_db:
+        tier_config = tiers_config.get(tier_obj.key, {})
+        if tier_config:
+            available_tiers[tier_obj.key] = {
+                'name': tier_obj.name,
+                'price_monthly': 0,  # Will be populated from Stripe/Whop
+                'price_display': tier_obj.fallback_price,
+                'price_yearly': '$0',  # Will be populated from Stripe/Whop
+                'features': tier_config.get('features', []),
+                'user_limit': tier_obj.user_limit,
+                'whop_product_id': tier_config.get('whop_product_id', '')
             }
 
     # Get signup tracking parameters
