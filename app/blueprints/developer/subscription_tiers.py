@@ -60,7 +60,7 @@ def sync_tier_to_database(tier_key, tier_config):
     stripe_lookup_key = tier_config.get('stripe_lookup_key')
     if stripe_lookup_key is not None:
         tier_record.stripe_lookup_key = stripe_lookup_key
-        
+
     whop_product_key = tier_config.get('whop_product_key') 
     if whop_product_key is not None:
         tier_record.whop_product_key = whop_product_key
@@ -116,7 +116,7 @@ def create_tier():
         fallback_features = [f.strip() for f in request.form.get('fallback_features', '').split('\n') if f.strip()]
 
         user_limit = int(request.form.get('user_limit', 1))
-        
+
         new_tier = {
             'name': tier_name,
             'permissions': permissions,
@@ -232,14 +232,14 @@ def delete_tier(tier_key):
     # Check if any organizations are currently using this tier
     from app.models import Organization
     organizations_using_tier = Organization.query.filter_by(subscription_tier=tier_key).all()
-    
+
     if organizations_using_tier:
         org_names = [org.name for org in organizations_using_tier[:5]]  # Show first 5
         if len(organizations_using_tier) > 5:
             org_list = ', '.join(org_names) + f' and {len(organizations_using_tier) - 5} others'
         else:
             org_list = ', '.join(org_names)
-        
+
         flash(f'Cannot delete "{tiers[tier_key]["name"]}" tier - it is currently being used by {len(organizations_using_tier)} organization(s): {org_list}. Please migrate these organizations to different tiers first.', 'error')
         return redirect(url_for('developer.subscription_tiers.manage_tiers'))
 
@@ -265,50 +265,80 @@ def sync_tier(tier_key):
     if tier_key not in tiers:
         return jsonify({'error': 'Tier not found'}), 404
 
-    tier = tiers[tier_key]
-    stripe_lookup_key = tier.get('stripe_lookup_key')
-    
+    tier_config = tiers[tier_key] # Renamed from 'tier' to 'tier_config' for clarity
+    stripe_lookup_key = tier_config.get('stripe_lookup_key')
+
     try:
         # Sync the tier configuration to database
-        sync_tier_to_database(tier_key, tier)
-        
+        sync_tier_to_database(tier_key, tier_config)
+
         # If tier has Stripe lookup key, fetch pricing from Stripe
         if stripe_lookup_key:
             try:
                 from app.services.stripe_service import StripeService
+                # Correctly call get_stripe_pricing_for_lookup_key
                 pricing_data = StripeService.get_stripe_pricing_for_lookup_key(stripe_lookup_key)
-                
+
                 if pricing_data:
                     # Update the tier config with fresh pricing data
-                    tier['stripe_price'] = pricing_data.get('formatted_price', tier.get('fallback_price', '$0'))
-                    tier['stripe_price_id'] = pricing_data.get('price_id')
-                    tier['billing_cycle'] = pricing_data.get('billing_cycle', 'monthly')
-                    tier['last_synced'] = pricing_data.get('last_synced')
+                    tier_config['stripe_price'] = pricing_data.get('price', '')
+                    tier_config['stripe_price_id'] = pricing_data.get('price_id', '')
+                    tier_config['last_synced'] = pricing_data.get('last_synced')
                     
-                    # Save updated pricing back to JSON
-                    save_tiers_config(tiers)
-                    
-                    logger.info(f"Synced tier {tier_key} with Stripe pricing: {tier['stripe_price']}")
+                    # Update fallback price only if no existing fallback price
+                    if not tier_config.get('fallback_price') or tier_config.get('fallback_price') == '$0':
+                        tier_config['fallback_price'] = pricing_data.get('price', '$0')
+
+                    logger.info(f"Updated pricing for tier {tier_key}: {pricing_data.get('price', 'N/A')}")
                 else:
                     logger.warning(f"No Stripe pricing found for lookup key: {stripe_lookup_key}")
-                    
-            except Exception as stripe_error:
-                logger.error(f"Failed to fetch Stripe pricing for {tier_key}: {str(stripe_error)}")
-                # Continue without Stripe pricing - fallback to config values
-        
+            except Exception as e:
+                logger.error(f"Error fetching Stripe pricing for {tier_key}: {e}")
+
+        # Sync tier to database using only the fields that exist in the model
+        try:
+            tier_obj = SubscriptionTier.query.filter_by(key=tier_key).first()
+            if not tier_obj:
+                tier_obj = SubscriptionTier(key=tier_key)
+                db.session.add(tier_obj)
+
+            # Update only the fields that exist in the current model
+            tier_obj.name = tier_config.get('name', tier_key.title())
+            tier_obj.description = tier_config.get('description', '')
+            tier_obj.user_limit = tier_config.get('user_limit', 1)
+            tier_obj.is_customer_facing = tier_config.get('is_customer_facing', True)
+            tier_obj.is_available = tier_config.get('is_available', True)
+            tier_obj.requires_stripe_billing = tier_config.get('requires_stripe_billing', True)
+            tier_obj.requires_whop_billing = tier_config.get('requires_whop_billing', False)
+            tier_obj.stripe_lookup_key = tier_config.get('stripe_lookup_key')
+            tier_obj.whop_product_key = tier_config.get('whop_product_key')
+            tier_obj.fallback_price = tier_config.get('fallback_price', '$0')
+
+            db.session.commit()
+            logger.info(f"Synced tier to database: {tier_key}")
+
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Error syncing tier {tier_key} to database: {e}")
+            return jsonify({'success': False, 'error': f'Database sync failed: {str(e)}'}), 500
+
+        # Save updated pricing and other config changes back to JSON if they occurred
+        save_tiers_config(tiers)
+
         return jsonify({
             'success': True,
-            'tier': tier,
-            'message': f'Successfully synced {tier["name"]} configuration' + 
-                      (f' with Stripe pricing' if stripe_lookup_key else '')
+            'tier': tier_config,
+            'message': f'Successfully synced {tier_config["name"]} configuration' +
+                       (f' with Stripe pricing' if stripe_lookup_key else '')
         })
 
     except Exception as e:
         logger.error(f"Unexpected error during sync of tier {tier_key}: {str(e)}")
         return jsonify({'success': False, 'error': f'Sync failed: {str(e)}'}), 500
 
+
 @subscription_tiers_bp.route('/api/tiers')
-@login_required 
+@login_required
 def api_get_tiers():
     """API endpoint to get current tiers configuration"""
     return jsonify(load_tiers_config())
@@ -346,7 +376,7 @@ def api_get_customer_tiers():
     """API endpoint to get customer-facing tiers only"""
     all_tiers = load_tiers_config()
     customer_tiers = {
-        key: tier for key, tier in all_tiers.items() 
+        key: tier for key, tier in all_tiers.items()
         if tier.get('is_customer_facing', True) and tier.get('is_available', True)
     }
     return jsonify(customer_tiers)
@@ -356,9 +386,9 @@ def api_get_tiers_by_category(category):
     """API endpoint to get tiers by pricing category"""
     all_tiers = load_tiers_config()
     filtered_tiers = {
-        key: tier for key, tier in all_tiers.items() 
-        if (tier.get('pricing_category', 'standard') == category and 
-            tier.get('is_customer_facing', True) and 
+        key: tier for key, tier in all_tiers.items()
+        if (tier.get('pricing_category', 'standard') == category and
+            tier.get('is_customer_facing', True) and
             tier.get('is_available', True))
     }
     return jsonify(filtered_tiers)
@@ -368,9 +398,9 @@ def api_get_tiers_by_cycle(cycle):
     """API endpoint to get tiers by billing cycle"""
     all_tiers = load_tiers_config()
     filtered_tiers = {
-        key: tier for key, tier in all_tiers.items() 
-        if (tier.get('billing_cycle', 'monthly') == cycle and 
-            tier.get('is_customer_facing', True) and 
+        key: tier for key, tier in all_tiers.items()
+        if (tier.get('billing_cycle', 'monthly') == cycle and
+            tier.get('is_customer_facing', True) and
             tier.get('is_available', True))
     }
     return jsonify(filtered_tiers)

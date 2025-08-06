@@ -73,7 +73,7 @@
     ],
     "stripe_price_monthly": "$8",
     "stripe_price_yearly": "$85",
-    "last_synced": "2025-08-05T23:56:31.469854",
+    "last_synced": "2025-08-06T00:43:26.796664",
     "fallback_price_monthly": "$0",
     "fallback_price_yearly": "$0",
     "stripe_price_id_monthly": "price_1RnRlnF4Y9XQgiJBzKnYadVL",
@@ -85,7 +85,9 @@
     "whop_product_key": "",
     "whop_product_name": "",
     "pricing_category": "monthly",
-    "fallback_price": "$0"
+    "fallback_price": "$8",
+    "stripe_price": "$7",
+    "stripe_price_id": "price_1RnRlnF4Y9XQgiJBzKnYadVL"
   },
   "team": {
     "name": "Team Plan",
@@ -166,7 +168,7 @@
     ],
     "stripe_price_monthly": "$15",
     "stripe_price_yearly": "$160",
-    "last_synced": "2025-08-05T23:45:14.481949",
+    "last_synced": "2025-08-06T00:40:59.056902",
     "stripe_price_id_monthly": "price_1RnRzOF4Y9XQgiJB7cuiGZf4",
     "stripe_price_id_yearly": "price_1RnSCIF4Y9XQgiJBeA7UZPzD",
     "fallback_price_monthly": "$0",
@@ -176,7 +178,10 @@
     "supports_whop": true,
     "whop_only": false,
     "whop_product_key": "test",
-    "whop_product_name": "test"
+    "whop_product_name": "test",
+    "stripe_price": "$15",
+    "stripe_price_id": "price_1RnRzOF4Y9XQgiJB7cuiGZf4",
+    "fallback_price": "$15"
   },
   "enterprise": {
     "name": "Enterprise Plan",
@@ -227,7 +232,7 @@
     ],
     "stripe_price_monthly": "$20",
     "stripe_price_yearly": "$220",
-    "last_synced": "2025-08-05T22:07:18.814212",
+    "last_synced": "2025-08-06T00:41:03.050906",
     "fallback_price_monthly": "$0",
     "fallback_price_yearly": "$0",
     "stripe_price_id_monthly": "price_1RnS8pF4Y9XQgiJBr3Wq1LIH",
@@ -236,7 +241,10 @@
     "supports_whop": true,
     "whop_only": false,
     "whop_product_key": "",
-    "whop_product_name": ""
+    "whop_product_name": "",
+    "stripe_price": "$20",
+    "stripe_price_id": "price_1RnS8pF4Y9XQgiJBr3Wq1LIH",
+    "fallback_price": "$20"
   },
   "exempt": {
     "name": "Exempt Plan",

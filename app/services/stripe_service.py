@@ -425,7 +425,8 @@ class StripeService:
     @staticmethod
     def get_stripe_pricing_for_lookup_key(lookup_key):
         """Get pricing information from Stripe for a given lookup key"""
-        if not stripe:
+        if not StripeService.initialize_stripe():
+            logger.warning("Stripe not configured - cannot fetch pricing")
             return None
 
         try:
@@ -450,6 +451,7 @@ class StripeService:
 
             return {
                 'price_id': price.id,
+                'price': f'${amount:.0f}',
                 'formatted_price': f'${amount:.0f}',
                 'amount': amount,
                 'currency': currency,

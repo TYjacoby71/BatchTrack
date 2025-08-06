@@ -1,4 +1,24 @@
 
+// Update tier pricing display after sync
+function updateTierPricing(tierKey, tierData) {
+    const tierCard = $(`.tier-card[data-tier-key="${tierKey}"]`);
+    if (tierCard.length) {
+        const pricingDiv = tierCard.find('.tier-pricing');
+        const priceDisplay = pricingDiv.find('.price-display');
+        const priceInfo = pricingDiv.find('small');
+        
+        if (tierData.stripe_price) {
+            priceDisplay.text(tierData.stripe_price).addClass('text-success');
+            priceInfo.html(`From Stripe: ${tierData.stripe_lookup_key || ''}<br>Just synced`);
+        } else {
+            priceDisplay.text(tierData.fallback_price || '$0').removeClass('text-success');
+            priceInfo.text('Sync completed - no pricing found');
+        }
+    }
+}
+
+
+
 $(document).ready(function() {
     // Get CSRF token from meta tag or form
     function getCSRFToken() {
@@ -30,11 +50,11 @@ $(document).ready(function() {
             dataType: 'json',
             success: function(response) {
                 if (response.success) {
-                    // Update pricing display
-                    updateTierDisplay(tierKey, response.tier);
+                    // Update pricing display immediately
+                    updateTierPricing(tierKey, response.tier);
                     showAlert('success', response.message || 'Sync completed successfully');
                     // Reload page to show updated data
-                    setTimeout(() => location.reload(), 1500);
+                    setTimeout(() => location.reload(), 1000);
                 } else {
                     showAlert('error', response.error || response.message || 'Sync failed');
                 }

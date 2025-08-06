@@ -278,12 +278,22 @@
                         <hr class="my-4">
                         <h6 class="text-muted">Fallback Pricing (used when Stripe is not available)</h6>
 
-                        <div class="mb-3">
-                            <label for="fallback_price" class="form-label">Fallback Price</label>
-                            <input type="text" class="form-control" id="fallback_price" name="fallback_price" 
-                                   value="{{ tier.get('fallback_price', '$0') }}">
-                            <div class="form-text">Displayed when Stripe sync unavailable (e.g., '$15', '$150')</div>
-                        </div>
+                        <!-- Pricing Configuration -->
+            <div class="form-group">
+                <label for="fallback_price">Fallback Price (display only):</label>
+                <input type="text" id="fallback_price" name="fallback_price" class="form-control" 
+                       value="{{ tier.fallback_price or '$0' }}">
+                <small class="form-text text-muted">Price shown when Stripe pricing is unavailable. Will be auto-updated when synced with Stripe.</small>
+            </div>
+
+            {% if tier.stripe_price %}
+            <div class="alert alert-success">
+                <strong>Current Stripe Price:</strong> {{ tier.stripe_price }}
+                {% if tier.last_synced %}
+                <br><small>Last synced: {{ tier.last_synced }}</small>
+                {% endif %}
+            </div>
+            {% endif %}
                     </div>
                 </div>
             </div>

@@ -2,6 +2,7 @@ import logging
 from flask import current_app
 from ..models import db, SubscriptionTier, Organization
 from ..utils.timezone_utils import TimezoneUtils
+from ..blueprints.developer.subscription_tiers import load_tiers_config
 
 logger = logging.getLogger(__name__)
 
@@ -72,6 +73,25 @@ class BillingService:
             is_customer_facing=True,
             is_available=True
         ).all()
+
+    @staticmethod
+    def get_simple_pricing_data():
+        """Get basic pricing data for tiers - simple version for signup"""
+        tiers_config = load_tiers_config()
+        pricing_data = {}
+        
+        for tier_obj in BillingService.get_available_tiers():
+            tier_config = tiers_config.get(tier_obj.key, {})
+            pricing_data[tier_obj.key] = {
+                'name': tier_obj.name,
+                'price': tier_obj.fallback_price,
+                'features': tier_config.get('features', []),
+                'user_limit': tier_obj.user_limit,
+                'stripe_lookup_key': tier_obj.stripe_lookup_key,
+                'whop_product_key': tier_obj.whop_product_key
+            }
+        
+        return pricing_data
 
     @staticmethod
     def validate_tier_access(organization):
