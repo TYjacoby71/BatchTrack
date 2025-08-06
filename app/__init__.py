@@ -82,11 +82,11 @@ def create_app():
         from app.utils.permissions import has_permission, get_effective_organization_id
 
         # Skip for static files and auth routes
-        if (request.path.startswith('/static/') or 
-            request.path.startswith('/auth/login') or 
+        if (request.path.startswith('/static/') or
+            request.path.startswith('/auth/login') or
             request.path.startswith('/auth/logout') or
             request.path.startswith('/auth/signup') or
-            request.path == '/' or 
+            request.path == '/' or
             request.path == '/homepage'):
             return None
 
@@ -297,7 +297,7 @@ def create_app():
         pass
 
     # Register template filters
-    from .utils.template_filters import register_filters
+    from .filters.product_filters import register_filters
     register_filters(app)
 
     # Register filters
@@ -495,7 +495,7 @@ def create_app():
         """Global middleware to enforce billing access control"""
         from flask import request, session
         from flask_login import current_user
-        from .services.billing_service import BillingService
+        from .services.billing_service import BillingService # This import is no longer strictly needed for the check itself, but might be for other billing logic.
 
         # Skip for static files, auth routes, and billing routes
         if (request.endpoint and (
@@ -508,7 +508,9 @@ def create_app():
 
         # Only check authenticated users with organizations
         if current_user.is_authenticated and current_user.organization:
-            has_access, reason = BillingService.check_organization_access(current_user.organization)
+            # Check organization access authorization
+            from .utils.permissions import check_organization_access
+            has_access, reason = check_organization_access(current_user.organization)
             if not has_access:
                 from flask import redirect, url_for, flash
                 if reason == 'organization_suspended':
