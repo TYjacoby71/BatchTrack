@@ -282,6 +282,41 @@ def change_password():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@settings_bp.route('/set-backup-password', methods=['POST'])
+@login_required
+def set_backup_password():
+    """Set backup password for OAuth users"""
+    try:
+        # Only allow OAuth users who don't have a password yet
+        if not current_user.oauth_provider:
+            return jsonify({'error': 'This feature is only for OAuth users'}), 400
+            
+        if current_user.password_hash:
+            return jsonify({'error': 'You already have a password set'}), 400
+
+        data = request.get_json()
+        password = data.get('password')
+        confirm_password = data.get('confirm_password')
+        
+        if not password or not confirm_password:
+            return jsonify({'error': 'Both password fields are required'}), 400
+        
+        if password != confirm_password:
+            return jsonify({'error': 'Passwords do not match'}), 400
+        
+        if len(password) < 8:
+            return jsonify({'error': 'Password must be at least 8 characters'}), 400
+        
+        # Set the password
+        current_user.set_password(password)
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': 'Backup password set successfully'})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
 @settings_bp.route('/bulk-update-ingredients', methods=['POST'])
 @login_required
 @require_permission('inventory.edit')

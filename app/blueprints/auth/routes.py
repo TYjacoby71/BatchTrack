@@ -96,14 +96,24 @@ def oauth_callback():
         # Get state and code from callback
         state = request.args.get('state')
         code = request.args.get('code')
+        error = request.args.get('error')
+        
+        logger.info(f"OAuth callback received - state: {state[:10] if state else None}, code: {code[:10] if code else None}, error: {error}")
+        
+        if error:
+            logger.error(f"OAuth callback error: {error}")
+            flash(f'OAuth authentication failed: {error}', 'error')
+            return redirect(url_for('auth.login'))
         
         if not state or not code:
+            logger.error("OAuth callback missing required parameters")
             flash('OAuth callback missing required parameters.', 'error')
             return redirect(url_for('auth.login'))
         
         # Exchange code for credentials
         credentials = OAuthService.exchange_code_for_token(code, state)
         if not credentials:
+            logger.error("Failed to exchange OAuth code for credentials")
             flash('OAuth authentication failed. Please try again.', 'error')
             return redirect(url_for('auth.login'))
         

@@ -130,6 +130,11 @@ function settingsData() {
             new: '',
             confirm: ''
         },
+        backupPassword: {
+            new: '',
+            confirm: ''
+        },
+        backupPasswordSet: false,
         saving: false,
 
         async saveProfile() {
@@ -206,6 +211,48 @@ function settingsData() {
             } catch (error) {
                 this.showToast('Error changing password', 'error');
                 console.error('Error:', error);
+            }
+        },
+
+        async setBackupPassword() {
+            if (this.backupPassword.new !== this.backupPassword.confirm) {
+                this.showToast('Passwords do not match', 'error');
+                return;
+            }
+
+            if (this.backupPassword.new.length < 8) {
+                this.showToast('Password must be at least 8 characters', 'error');
+                return;
+            }
+
+            try {
+                this.saving = true;
+                
+                const response = await fetch('/settings/set-backup-password', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
+                    },
+                    body: JSON.stringify({
+                        password: this.backupPassword.new,
+                        confirm_password: this.backupPassword.confirm
+                    })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    this.showToast('Backup password set successfully!', 'success');
+                    this.backupPassword = { new: '', confirm: '' };
+                    this.backupPasswordSet = true;
+                } else {
+                    this.showToast(result.error || 'Failed to set backup password', 'error');
+                }
+            } catch (error) {
+                this.showToast('Error setting backup password', 'error');
+                console.error('Error:', error);
+            } finally {
+                this.saving = false;
             }
         },
 

@@ -28,6 +28,10 @@ class OAuthService:
                 logger.error("Missing OAuth credentials")
                 return None
             
+            # Get redirect URI and ensure it uses HTTPS for external access
+            redirect_uri = url_for('auth.oauth_callback', _external=True).replace('http://', 'https://')
+            logger.info(f"OAuth redirect URI: {redirect_uri}")
+            
             # OAuth configuration
             client_config = {
                 "web": {
@@ -35,7 +39,7 @@ class OAuthService:
                     "client_secret": client_secret,
                     "auth_uri": "https://accounts.google.com/o/oauth2/auth",
                     "token_uri": "https://oauth2.googleapis.com/token",
-                    "redirect_uris": [url_for('auth.oauth_callback', _external=True)]
+                    "redirect_uris": [redirect_uri]
                 }
             }
 
@@ -48,8 +52,8 @@ class OAuthService:
                 ]
             )
 
-            # Set redirect URI
-            flow.redirect_uri = url_for('auth.oauth_callback', _external=True)
+            # Set redirect URI with HTTPS
+            flow.redirect_uri = redirect_uri
             
             logger.info("OAuth flow created successfully")
             return flow
@@ -90,8 +94,12 @@ class OAuthService:
                 logger.error("OAuth state mismatch")
                 return None
 
+            # Fix URL protocol for Replit (convert http to https)
+            authorization_response = request.url.replace('http://', 'https://')
+            logger.info(f"OAuth callback URL: {authorization_response}")
+            
             # Exchange code for token
-            flow.fetch_token(authorization_response=request.url)
+            flow.fetch_token(authorization_response=authorization_response)
             
             return flow.credentials
             
