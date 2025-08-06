@@ -298,7 +298,7 @@ def debug_oauth_config():
 
 @auth_bp.route('/signup', methods=['GET', 'POST'])
 def signup():
-    """Production signup flow - collect user info then redirect to Whop payment"""
+    """Simplified signup flow - tier selection only, then redirect to payment"""
     if current_user.is_authenticated:
         return redirect(url_for('app_routes.dashboard'))
 
@@ -338,42 +338,17 @@ def signup():
     oauth_user_info = session.get('oauth_user_info')
     
     if request.method == 'POST':
-        # Extract form data, with OAuth overrides
-        org_name = request.form.get('org_name')
-        username = request.form.get('username')
-        email = oauth_user_info.get('email') if oauth_user_info else request.form.get('email')
-        first_name = oauth_user_info.get('first_name') if oauth_user_info else request.form.get('first_name')
-        last_name = oauth_user_info.get('last_name') if oauth_user_info else request.form.get('last_name')
-        password = request.form.get('password') if not oauth_user_info else None
-        confirm_password = request.form.get('confirm_password') if not oauth_user_info else None
-        phone = request.form.get('phone')
-        selected_tier = request.form.get('subscription_tier')
+        selected_tier = request.form.get('selected_tier')
+        oauth_signup = request.form.get('oauth_signup') == 'true'
 
-        # Validation - OAuth users don't need passwords
-        if oauth_user_info:
-            required_fields = [org_name, username, email, selected_tier]
-        else:
-            required_fields = [org_name, username, email, password, confirm_password, selected_tier]
-            
-        if not all(required_fields):
-            flash('Please fill in all required fields and select a subscription plan', 'error')
+        if not selected_tier:
+            flash('Please select a subscription plan', 'error')
             return render_template('auth/signup.html',
                          signup_source=signup_source,
                          referral_code=referral_code,
                          promo_code=promo_code,
                          available_tiers=available_tiers,
-                         oauth_user_info=oauth_user_info,
-                         form_data=request.form)
-
-        if not oauth_user_info and password != confirm_password:
-            flash('Passwords do not match', 'error')
-            return render_template('auth/signup.html',
-                         signup_source=signup_source,
-                         referral_code=referral_code,
-                         promo_code=promo_code,
-                         available_tiers=available_tiers,
-                         oauth_user_info=oauth_user_info,
-                         form_data=request.form)
+                         oauth_user_info=oauth_user_info)
 
         if selected_tier not in available_tiers:
             flash('Invalid subscription plan selected', 'error')
@@ -382,89 +357,64 @@ def signup():
                          referral_code=referral_code,
                          promo_code=promo_code,
                          available_tiers=available_tiers,
-                         form_data=request.form)
+                         oauth_user_info=oauth_user_info)
 
-        # Check for existing users
-        existing_user = User.query.filter(
-            (User.username == username) | (User.email == email)
-        ).first()
-        if existing_user:
-            flash('Username or email already exists', 'error')
-            return render_template('auth/signup.html',
-                         signup_source=signup_source,
-                         referral_code=referral_code,
-                         promo_code=promo_code,
-                         available_tiers=available_tiers,
-                         form_data=request.form)
-
-        # Simplified Stripe checkout
+        # Create Stripe checkout session
         from ...services.stripe_service import StripeService
         from ...models import SubscriptionTier
         
         tier_obj = SubscriptionTier.query.filter_by(key=selected_tier).first()
         if not tier_obj:
             flash('Invalid subscription plan', 'error')
-            return render_template('auth/signup.html', **locals())
+            return render_template('auth/signup.html',
+                         signup_source=signup_source,
+                         referral_code=referral_code,
+                         promo_code=promo_code,
+                         available_tiers=available_tiers,
+                         oauth_user_info=oauth_user_info)
 
-        # Simple metadata for Stripe
+        # Metadata for Stripe (minimal for now)
         metadata = {
-            'email': email,
             'tier': selected_tier,
-            'signup_type': 'direct'
+            'signup_source': signup_source,
+            'oauth_signup': str(oauth_signup)
         }
+        
+        if oauth_user_info:
+            metadata['oauth_email'] = oauth_user_info.get('email', '')
+            metadata['oauth_provider'] = oauth_user_info.get('oauth_provider', '')
+            metadata['oauth_provider_id'] = oauth_user_info.get('oauth_provider_id', '')
+        
+        if referral_code:
+            metadata['referral_code'] = referral_code
+        if promo_code:
+            metadata['promo_code'] = promo_code
         
         success_url = url_for('billing.complete_signup_from_stripe', _external=True) + '?session_id={CHECKOUT_SESSION_ID}'
         cancel_url = url_for('auth.signup', _external=True)
         
+        # Let Stripe collect all user info
         stripe_session = StripeService.create_checkout_session_for_tier(
             tier_obj,
-            email,
-            f"{first_name} {last_name}",
-            success_url,
-            cancel_url,
-            metadata
+            customer_email=oauth_user_info.get('email') if oauth_user_info else None,
+            customer_name=None,  # Let Stripe collect this
+            success_url=success_url,
+            cancel_url=cancel_url,
+            metadata=metadata
         )
 
         if stripe_session:
-            # Store signup data in session for completion
-            signup_data = {
-                'org_name': org_name,
-                'username': username,
-                'email': email,
-                'first_name': first_name,
-                'last_name': last_name,
-                'phone': phone,
+            # Store minimal signup info for completion
+            session['pending_signup'] = {
                 'selected_tier': selected_tier,
                 'signup_source': signup_source,
                 'referral_code': referral_code,
-                'promo_code': promo_code
+                'promo_code': promo_code,
+                'oauth_user_info': oauth_user_info
             }
-            
-            # Add OAuth info if present
-            if oauth_user_info:
-                signup_data.update({
-                    'oauth_provider': oauth_user_info.get('oauth_provider'),
-                    'oauth_provider_id': oauth_user_info.get('oauth_provider_id'),
-                    'email_verified': True,
-                    'password_hash': None  # No password for OAuth users
-                })
-                # Clear OAuth session data
-                session.pop('oauth_user_info', None)
-            else:
-                signup_data['password_hash'] = generate_password_hash(password)
-                signup_data['email_verified'] = False
-            
-            session['pending_signup'] = signup_data
             return redirect(stripe_session.url)
         else:
             flash('Payment system temporarily unavailable. Please try again later.', 'error')
-
-        return render_template('auth/signup.html',
-                     signup_source=signup_source,
-                     referral_code=referral_code,
-                     promo_code=promo_code,
-                     available_tiers=available_tiers,
-                     form_data=request.form)
 
     return render_template('auth/signup.html',
                          signup_source=signup_source,

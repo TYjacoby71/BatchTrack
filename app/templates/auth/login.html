@@ -13,61 +13,79 @@
                     <p class="mb-0 opacity-75">Production Management System</p>
                 </div>
                 <div class="card-body p-5">
-                    <!-- Toggle between Login and Register -->
-                    <div class="text-center mb-4">
-                        <div class="btn-group w-100" role="group">
-                            <button type="button" class="btn btn-outline-primary" id="loginTab" onclick="showLogin()">Login</button>
-                            <button type="button" class="btn btn-outline-primary" id="registerTab" onclick="showRegister()">Register</button>
-                        </div>
-                    </div>
-
                     <!-- Login Form -->
-                    <div id="loginForm">
-                        <form method="post" action="{{ url_for('auth.login') }}">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <input type="hidden" name="form_type" value="login">
+                    <form method="post" action="{{ url_for('auth.login') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="form_type" value="login">
 
-                            <div class="mb-3">
-                                <label for="login_username" class="form-label">
-                                    <i class="fas fa-user me-1"></i>Username
-                                </label>
-                                <input type="text" id="login_username" name="username" class="form-control form-control-lg" placeholder="Enter your username" required>
-                            </div>
-
-                            <div class="mb-4">
-                                <label for="login_password" class="form-label">
-                                    <i class="fas fa-lock me-1"></i>Password
-                                </label>
-                                <input type="password" id="login_password" name="password" class="form-control form-control-lg" placeholder="Enter your password" required>
-                            </div>
-
-                            <button type="submit" class="btn btn-primary w-100">Login</button>
-                        </form>
-
-                        {% if oauth_available %}
-                        <div class="text-center mt-3">
-                            <div class="divider">
-                                <span class="divider-text">or</span>
-                            </div>
-                            <a href="{{ url_for('auth.oauth_google') }}" class="btn btn-outline-danger w-100 mt-2">
-                                <i class="fab fa-google me-2"></i>Continue with Google
-                            </a>
+                        <div class="mb-3">
+                            <label for="login_username" class="form-label">
+                                <i class="fas fa-user me-1"></i>Username
+                            </label>
+                            <input type="text" id="login_username" name="username" class="form-control form-control-lg" placeholder="Enter your username" required>
                         </div>
-                        {% elif config.DEBUG %}
-                        <div class="text-center mt-3">
-                            <div class="alert alert-warning small">
-                                <strong>OAuth Debug:</strong> Not configured.<br>
-                                <small>Add GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_CLIENT_SECRET to Replit Secrets.</small><br>
-                                <a href="{{ url_for('auth.debug_oauth_config') }}" class="small text-muted">Check OAuth config</a>
-                            </div>
-                        </div>
-                        {% endif %}
 
-                <div class="text-center mt-3">
-                            <p class="mb-0"><a href="{{ url_for('auth.signup') }}">Don't have an account? Sign up</a></p>
-                            <p class="mb-0"><small><a href="{{ url_for('auth.resend_verification') }}">Resend verification email</a></small></p>
+                        <div class="mb-4">
+                            <label for="login_password" class="form-label">
+                                <i class="fas fa-lock me-1"></i>Password
+                            </label>
+                            <input type="password" id="login_password" name="password" class="form-control form-control-lg" placeholder="Enter your password" required>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100 btn-lg mb-3">Login</button>
+                    </form>
+
+                    {% if oauth_available %}
+                    <div class="text-center mb-3">
+                        <div class="divider">
+                            <span class="divider-text">or</span>
+                        </div>
+                        <a href="{{ url_for('auth.oauth_google') }}" class="btn btn-outline-danger w-100 mt-2">
+                            <i class="fab fa-google me-2"></i>Continue with Google
+                        </a>
+                    </div>
+                    {% elif config.DEBUG %}
+                    <div class="text-center mb-3">
+                        <div class="alert alert-warning small">
+                            <strong>OAuth Debug:</strong> Not configured.<br>
+                            <small>Add GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_CLIENT_SECRET to Replit Secrets.</small><br>
+                            <a href="{{ url_for('auth.debug_oauth_config') }}" class="small text-muted">Check OAuth config</a>
                         </div>
                     </div>
+                    {% endif %}
+
+                    <div class="text-center">
+                        <p class="mb-2">
+                            <a href="{{ url_for('auth.signup') }}" class="btn btn-outline-success w-100">
+                                <i class="fas fa-user-plus me-2"></i>Create New Account
+                            </a>
+                        </p>
+                        <p class="mb-0">
+                            <small><a href="{{ url_for('auth.resend_verification') }}">Resend verification email</a></small>
+                        </p>
+                    </div>
+
+                    <!-- Dev Login Button -->
+                    <div class="text-center mt-3">
+                        <a href="/dev-login" class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-code me-1"></i>Developer Access
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Flash Messages -->
+                {% with messages = get_flashed_messages() %}
+                    {% if messages %}
+                        <div class="card-footer">
+                            {% for message in messages %}
+                                <div class="alert alert-danger mb-0">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>{{ message }}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                {% endwith %}
+            </div>
         </div>
     </div>
 </div>
@@ -96,188 +114,4 @@
     font-size: 14px;
 }
 </style>
-
-                    <!-- Register Form -->
-                    <div id="registerForm" style="display: none;">
-                        {% if oauth_available %}
-                        <div class="text-center mb-4">
-                            <a href="{{ url_for('auth.oauth_google') }}" class="btn btn-outline-danger w-100">
-                                <i class="fab fa-google me-2"></i>Sign up with Google
-                            </a>
-                            <div class="divider mt-3">
-                                <span class="divider-text">or</span>
-                            </div>
-                        </div>
-                        {% endif %}
-
-                        <div class="text-center mb-4">
-                            <h5 class="mb-3">Choose Your Plan</h5>
-                            <div id="tierSelection" class="mb-3">
-                                <!-- Tier selection will be loaded here -->
-                            </div>
-                            <button type="button" class="btn btn-success btn-lg w-100" onclick="startSignupWithTier()">
-                                <i class="fas fa-rocket me-2"></i>Continue with Selected Plan
-                            </button>
-                        </div>
-
-                        <div class="text-center mt-3">
-                            <button type="button" class="btn btn-outline-secondary" onclick="showLogin()">
-                                <i class="fas fa-arrow-left me-2"></i>Back to Login
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Dev Login Button -->
-                    <div class="text-center">
-                        <a href="/dev-login" class="btn btn-outline-secondary btn-sm">
-                            <i class="fas fa-code me-1"></i>Developer Access
-                        </a>
-                    </div>
-                </div>
-
-                <!-- Flash Messages -->
-                {% with messages = get_flashed_messages() %}
-                    {% if messages %}
-                        <div class="card-footer">
-                            {% for message in messages %}
-                                <div class="alert alert-danger mb-0">
-                                    <i class="fas fa-exclamation-triangle me-2"></i>{{ message }}
-                                </div>
-                            {% endfor %}
-                        </div>
-                    {% endif %}
-                {% endwith %}
-            </div>
-        </div>
-    </div>
-</div>
-
-<script>
-let selectedTier = 'team'; // Default selection
-let availableTiers = {};
-
-function showLogin() {
-    document.getElementById('loginForm').style.display = 'block';
-    document.getElementById('registerForm').style.display = 'none';
-    document.getElementById('loginTab').classList.add('btn-primary');
-    document.getElementById('loginTab').classList.remove('btn-outline-primary');
-    document.getElementById('registerTab').classList.add('btn-outline-primary');
-    document.getElementById('registerTab').classList.remove('btn-primary');
-}
-
-function showRegister() {
-    document.getElementById('loginForm').style.display = 'none';
-    document.getElementById('registerForm').style.display = 'block';
-    document.getElementById('registerTab').classList.add('btn-primary');
-    document.getElementById('registerTab').classList.remove('btn-outline-primary');
-    document.getElementById('loginTab').classList.add('btn-outline-primary');
-    document.getElementById('loginTab').classList.remove('btn-primary');
-    
-    // Load tiers when showing register form
-    loadAvailableTiers();
-}
-
-function loadAvailableTiers() {
-    // Get tiers from the signup endpoint
-    fetch('/auth/signup-data')
-        .then(response => response.json())
-        .then(data => {
-            availableTiers = data.available_tiers;
-            renderTierSelection();
-        })
-        .catch(error => {
-            console.error('Error loading tiers:', error);
-            // Fallback tier selection
-            renderFallbackTiers();
-        });
-}
-
-function renderTierSelection() {
-    const tierContainer = document.getElementById('tierSelection');
-    if (!tierContainer) return;
-    
-    let html = '';
-    
-    for (const [tierKey, tierData] of Object.entries(availableTiers)) {
-        const isSelected = tierKey === selectedTier;
-        html += `
-            <div class="tier-option mb-2" onclick="selectTier('${tierKey}')" 
-                 style="cursor: pointer; border: 2px solid ${isSelected ? '#198754' : '#dee2e6'}; 
-                        border-radius: 8px; padding: 12px; transition: all 0.3s;">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <strong>${tierData.name}</strong>
-                        <div class="small text-muted">
-                            ${tierData.user_limit === -1 ? 'Unlimited users' : `${tierData.user_limit} user${tierData.user_limit !== 1 ? 's' : ''}`}
-                        </div>
-                    </div>
-                    <div class="text-end">
-                        <div class="h6 mb-0 text-primary">
-                            ${tierData.price_monthly === 0 ? tierData.price_display : `$${Math.round(tierData.price_monthly)}/mo`}
-                        </div>
-                        ${isSelected ? '<i class="fas fa-check-circle text-success"></i>' : ''}
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-    
-    tierContainer.innerHTML = html;
-}
-
-function renderFallbackTiers() {
-    const tierContainer = document.getElementById('tierSelection');
-    if (!tierContainer) return;
-    
-    // Simple fallback if API fails
-    tierContainer.innerHTML = `
-        <div class="tier-option mb-2" onclick="selectTier('team')" 
-             style="cursor: pointer; border: 2px solid #198754; border-radius: 8px; padding: 12px;">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <strong>Team Plan</strong>
-                    <div class="small text-muted">5 users</div>
-                </div>
-                <div class="text-end">
-                    <div class="h6 mb-0 text-primary">$49/mo</div>
-                    <i class="fas fa-check-circle text-success"></i>
-                </div>
-            </div>
-        </div>
-    `;
-}
-
-function selectTier(tierKey) {
-    selectedTier = tierKey;
-    
-    // Update visual selection
-    document.querySelectorAll('.tier-option').forEach(option => {
-        const isSelected = option.getAttribute('onclick').includes(tierKey);
-        option.style.border = isSelected ? '2px solid #198754' : '2px solid #dee2e6';
-        
-        // Update check icon
-        const checkIcon = option.querySelector('.fas.fa-check-circle');
-        if (checkIcon) {
-            checkIcon.style.display = isSelected ? 'inline' : 'none';
-        } else if (isSelected) {
-            // Add check icon if it doesn't exist
-            const priceDiv = option.querySelector('.text-end');
-            priceDiv.innerHTML += '<i class="fas fa-check-circle text-success"></i>';
-        }
-    });
-}
-
-function startSignupWithTier() {
-    if (!selectedTier) {
-        alert('Please select a plan first.');
-        return;
-    }
-    
-    // Redirect to signup page with selected tier
-    window.location.href = `/auth/signup?tier=${selectedTier}&source=login_register`;
-}
-
-// Initialize with login form showing
-showLogin();
-</script>
 {% endblock %}

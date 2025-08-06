@@ -7,11 +7,10 @@ from flask_bcrypt import Bcrypt
 
 db = SQLAlchemy()
 csrf = CSRFProtect()
-# Initialize extensions
+mail = Mail()
 login_manager = LoginManager()
 migrate = Migrate()
 bcrypt = Bcrypt()
-mail = Mail()
 
 # Configure login manager
 login_manager.login_view = 'auth.login'
