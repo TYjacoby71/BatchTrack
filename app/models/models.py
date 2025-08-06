@@ -33,21 +33,30 @@ class Organization(db.Model):
 
     # Subscription tier (relationship to SubscriptionTier) - SINGLE SOURCE OF TRUTH
     subscription_tier_id = db.Column(db.Integer, db.ForeignKey('subscription_tier.id'), nullable=True)
-    
+
     # Whop integration fields (replacing Stripe)
     whop_license_key = db.Column(db.String(128), nullable=True)
     whop_product_tier = db.Column(db.String(32), nullable=True)
     whop_verified = db.Column(db.Boolean, default=False)
-    
+
     # Legacy Stripe fields (keep for migration compatibility)
     stripe_subscription_id = db.Column(db.String(128), nullable=True)  # DEPRECATED
-    stripe_customer_id = db.Column(db.String(128), nullable=True)  # DEPRECATED
+    stripe_customer_id = db.Column(db.String(255), nullable=True)
     billing_info = db.Column(db.Text, nullable=True)  # JSON field for billing details
     next_billing_date = db.Column(db.Date, nullable=True)
     subscription_status = db.Column(db.String(32), default='inactive')  # active, past_due, canceled, etc.
 
     # Keep old string field for migration compatibility only (DO NOT USE)
     subscription_tier = db.Column(db.String(32), default='free')  # DEPRECATED - use tier relationship
+
+    # Billing fields
+    stripe_customer_id = db.Column(db.String(255), nullable=True)
+    whop_license_key = db.Column(db.String(255), nullable=True)
+    billing_status = db.Column(db.String(50), default='active')  # active, suspended, cancelled
+
+    # Offline support
+    last_online_sync = db.Column(db.DateTime, nullable=True)
+    offline_tier_cache = db.Column(db.JSON, nullable=True)  # Cached tier permissions for offline use
 
     # Relationships
     users = db.relationship('User', backref='organization')

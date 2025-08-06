@@ -22,8 +22,12 @@ class SubscriptionTier(db.Model):
     stripe_lookup_key = db.Column(db.String(128), nullable=True)  # Links to Stripe product
     whop_product_key = db.Column(db.String(128), nullable=True)   # Links to Whop product
 
-    # Fallback pricing for display (not billing)
+    # Pricing for display and offline use
     fallback_price = db.Column(db.String(32), default='$0')
+    
+    # Offline support
+    last_billing_sync = db.Column(db.DateTime, nullable=True)  # When billing was last verified
+    grace_period_days = db.Column(db.Integer, default=7)  # Days to allow offline usage
 
     # Metadata
     created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
