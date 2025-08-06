@@ -83,7 +83,9 @@
     "supports_whop": true,
     "whop_only": false,
     "whop_product_key": "",
-    "whop_product_name": ""
+    "whop_product_name": "",
+    "pricing_category": "monthly",
+    "fallback_price": "$0"
   },
   "team": {
     "name": "Team Plan",
