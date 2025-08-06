@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers
 revision = 'add_offline_billing_support'
-down_revision = 'drop_deprecated_billing_columns'
+down_revision = '8b7aa70df87d'
 branch_labels = None
 depends_on = None
 
