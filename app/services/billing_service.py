@@ -1,8 +1,10 @@
-import logging
-from flask import current_app
-from ..models import db, SubscriptionTier, Organization
+
+from datetime import datetime, timedelta
+from ..models.subscription_tier import SubscriptionTier
+from ..models.models import Organization
+from ..extensions import db
 from ..utils.timezone_utils import TimezoneUtils
-from ..blueprints.developer.subscription_tiers import load_tiers_config
+import logging
 
 logger = logging.getLogger(__name__)
 
@@ -75,44 +77,81 @@ class BillingService:
         ).all()
 
     @staticmethod
-    def get_pricing_data_for_signup():
-        """Get pricing data optimized for signup page - live pricing only"""
+    def get_live_pricing_data():
+        """Get live pricing data for signup page - always fetch from Stripe"""
         from .stripe_service import StripeService
         
         pricing_data = {}
         
         for tier_obj in BillingService.get_available_tiers():
-            # Get live pricing from Stripe
-            stripe_price = StripeService.get_price_for_lookup_key(tier_obj.stripe_lookup_key) if tier_obj.stripe_lookup_key else None
+            # Always fetch live pricing from Stripe
+            live_price = None
+            if tier_obj.stripe_lookup_key:
+                try:
+                    live_price = StripeService.get_price_for_lookup_key(tier_obj.stripe_lookup_key)
+                except Exception as e:
+                    logger.warning(f"Failed to fetch Stripe price for {tier_obj.key}: {e}")
             
             pricing_data[tier_obj.key] = {
                 'name': tier_obj.name,
-                'price': stripe_price or tier_obj.fallback_price,  # Fallback only if Stripe fails
+                'price': live_price or 'Contact for pricing',  # Show contact if Stripe fails
                 'features': tier_obj.get_permissions(),
                 'user_limit': tier_obj.user_limit,
                 'stripe_lookup_key': tier_obj.stripe_lookup_key,
                 'whop_product_key': tier_obj.whop_product_key,
-                'description': tier_obj.description
+                'description': tier_obj.description,
+                'billing_cycle': 'month'  # Default billing cycle
             }
 
         return pricing_data
     
     @staticmethod
-    def get_offline_license_data(organization):
-        """Generate offline license data for downloaded app"""
+    def generate_offline_license(organization):
+        """Generate offline license data for downloaded desktop app"""
         if not organization or not organization.subscription_tier_obj:
             return None
             
-        return {
+        # Cache current tier data for offline use
+        license_data = {
             'organization_id': organization.id,
             'organization_name': organization.name,
             'tier_key': organization.subscription_tier_obj.key,
             'tier_name': organization.subscription_tier_obj.name,
             'permissions': organization.subscription_tier_obj.get_permissions(),
             'user_limit': organization.subscription_tier_obj.user_limit,
-            'issued_at': organization.last_online_sync.isoformat() if organization.last_online_sync else None,
-            'expires_at': (organization.last_online_sync + timedelta(days=30)).isoformat() if organization.last_online_sync else None
+            'issued_at': TimezoneUtils.utc_now().isoformat(),
+            'expires_at': (TimezoneUtils.utc_now() + timedelta(days=30)).isoformat(),
+            'billing_status': organization.billing_status if hasattr(organization, 'billing_status') else 'active'
         }
+        
+        # Store in organization for offline access
+        organization.offline_tier_cache = license_data
+        organization.last_online_sync = TimezoneUtils.utc_now()
+        db.session.commit()
+        
+        logger.info(f"Generated offline license for organization {organization.id}")
+        return license_data
+
+    @staticmethod
+    def validate_offline_license(organization):
+        """Validate cached offline license"""
+        if not organization or not organization.offline_tier_cache:
+            return False, "No offline license available"
+        
+        try:
+            expires_at = datetime.fromisoformat(organization.offline_tier_cache['expires_at'])
+            if TimezoneUtils.utc_now() > expires_at:
+                return False, "Offline license expired"
+                
+            billing_status = organization.offline_tier_cache.get('billing_status', 'active')
+            if billing_status != 'active':
+                return False, "Billing status invalid"
+                
+            return True, "Offline license valid"
+            
+        except Exception as e:
+            logger.error(f"Error validating offline license: {e}")
+            return False, "License validation failed"
 
     @staticmethod
     def validate_tier_access(organization):
