@@ -81,4 +81,38 @@
             </div>
         </div>
     </div>
+
+    <!-- OAuth Backup Password Section -->
+    {% if current_user.oauth_provider and not current_user.password_hash %}
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-shield-alt"></i> Account Security</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info mb-3">
+                    <i class="fas fa-info-circle me-2"></i>
+                    You signed in with {{ current_user.oauth_provider.title() }}. Set up a backup password to access your account if {{ current_user.oauth_provider.title() }} is unavailable.
+                </div>
+                <form @submit.prevent="setBackupPassword()" x-show="!backupPasswordSet">
+                    <div class="mb-3">
+                        <label class="form-label">New Password</label>
+                        <input type="password" class="form-control" x-model="backupPassword.new" required minlength="8" placeholder="Minimum 8 characters">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Confirm Password</label>
+                        <input type="password" class="form-control" x-model="backupPassword.confirm" required minlength="8">
+                    </div>
+                    <button type="submit" class="btn btn-success" :disabled="saving">
+                        <i class="fas fa-key"></i> Set Backup Password
+                    </button>
+                </form>
+                <div x-show="backupPasswordSet" class="text-success">
+                    <i class="fas fa-check-circle me-2"></i>
+                    Backup password is set. You can now log in with either {{ current_user.oauth_provider.title() }} or your password.
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 </div>
