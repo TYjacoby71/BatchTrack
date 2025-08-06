@@ -12,7 +12,7 @@ from sqlalchemy import inspect, text
 
 # revision identifiers, used by Alembic.
 revision = '3f7a8b9c2d5e'
-down_revision = 'drop_deprecated_billing_columns'
+down_revision = 'add_offline_billing_support'
 branch_labels = None
 depends_on = None
 
