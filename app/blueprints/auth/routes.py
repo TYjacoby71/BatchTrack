@@ -187,11 +187,11 @@ def signup():
 
         # Check for payment method preference or tier configuration
         tier_data = available_tiers.get(selected_tier, {})
-        
+
         # Check if user wants Whop or if tier is Whop-only
         use_whop = (request.form.get('payment_method') == 'whop' or 
                    tier_data.get('whop_only', False))
-        
+
         if use_whop:
             # Redirect to Whop checkout
             whop_product_id = tier_data.get('whop_product_id')
@@ -200,13 +200,13 @@ def signup():
             else:
                 flash('Whop checkout not available for this plan.', 'warning')
                 # Fall back to Stripe if available
-        
+
         # Use Stripe checkout (default or fallback)
         if tier_data.get('stripe_price_id_monthly'):
             # Store signup data for Stripe processing
             signup_data = {
                 'org_name': org_name,
-                'contact_email': contact_email,
+                'email': email, # Corrected from contact_email to email
                 'username': username,
                 'password': password,
                 'first_name': first_name,
@@ -216,21 +216,21 @@ def signup():
                 'referral_code': referral_code,
                 'promo_code': promo_code
             }
-            
+
             # Create Stripe checkout session
             from ...services.stripe_service import StripeService
             session = StripeService.create_checkout_session_for_signup(
                 signup_data, 
                 f"{selected_tier}_monthly"
             )
-            
+
             if session:
                 return redirect(session.url)
             else:
                 flash('Payment system temporarily unavailable. Please try again later.', 'error')
         else:
             flash('Payment method not configured for this plan. Please contact administrator.', 'error')
-            
+
         return render_template('auth/signup.html', 
                      signup_source=signup_source,
                      referral_code=referral_code,
@@ -250,13 +250,13 @@ def whop_login():
     """Authenticate user with Whop license key"""
     license_key = request.form.get('license_key')
     email = request.form.get('email', '')
-    
+
     if not license_key:
         flash('License key is required.', 'error')
         return redirect(url_for('auth.login'))
 
     from .whop_auth import WhopAuth
-    user = WhopAuth.handle_whop_login(license_key, email)
+    user_data = WhopAuth.handle_whop_login(license_key, email) # Corrected variable name
 
     if user_data:
         # Attempt to find or create user based on Whop data

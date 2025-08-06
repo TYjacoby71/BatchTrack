@@ -61,7 +61,7 @@ def sync_tier_to_database(tier_key, tier_config):
     if stripe_lookup_key is not None:
         tier_record.stripe_lookup_key = stripe_lookup_key
 
-    whop_product_key = tier_config.get('whop_product_key') 
+    whop_product_key = tier_config.get('whop_product_key')
     if whop_product_key is not None:
         tier_record.whop_product_key = whop_product_key
 
@@ -89,7 +89,7 @@ def manage_tiers():
         if not tier_data.get('stripe_price') and not tier_data.get('fallback_price'):
             tier_data['fallback_price'] = '$0'
 
-    return render_template('developer/subscription_tiers.html', 
+    return render_template('developer/subscription_tiers.html',
                          tiers=tiers,
                          all_permissions=all_permissions)
 
@@ -205,7 +205,7 @@ def edit_tier(tier_key):
     tier = tiers[tier_key]
     all_permissions = Permission.query.filter_by(is_active=True).all()
 
-    return render_template('developer/edit_tier.html', 
+    return render_template('developer/edit_tier.html',
                          tier_key=tier_key,
                          tier=tier,
                          permissions=all_permissions)
@@ -284,7 +284,7 @@ def sync_tier(tier_key):
                     tier_config['stripe_price'] = pricing_data.get('price', '')
                     tier_config['stripe_price_id'] = pricing_data.get('price_id', '')
                     tier_config['last_synced'] = pricing_data.get('last_synced')
-                    
+
                     # Update fallback price only if no existing fallback price
                     if not tier_config.get('fallback_price') or tier_config.get('fallback_price') == '$0':
                         tier_config['fallback_price'] = pricing_data.get('price', '$0')
