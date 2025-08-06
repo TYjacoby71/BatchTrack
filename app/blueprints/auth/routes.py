@@ -216,8 +216,6 @@ def signup():
             return redirect(stripe_session.url)
         else:
             flash('Payment system temporarily unavailable. Please try again later.', 'error')
-        else:
-            flash('Payment method not configured for this plan. Please contact administrator.', 'error')
 
         return render_template('auth/signup.html',
                      signup_source=signup_source,
