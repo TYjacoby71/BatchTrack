@@ -1,0 +1,53 @@
+Looking at your current BatchTrack codebase, here's how the Stripe and Whop billing works in the OIDC/OAuth scenario:
+
+Current System vs OIDC Integration
+Current Complex Flow:
+Manual Signup → User fills out forms with personal info
+Stripe/Whop Redirect → Payment processing with metadata stored
+Account Creation → Complete signup after payment success
+Complex Metadata Handling → Store signup data in Stripe customer metadata
+With OIDC Integration:
+OAuth Login → User authenticates with Google/provider (gets email, name automatically)
+Simple Payment → Direct to Stripe/Whop with just the authenticated user data
+Account Linking → Link payment to existing OAuth identity
+Streamlined Flow → No complex metadata juggling
+How Your Current Stripe Integration Would Work with OIDC
+Instead of this complex flow:
+
+# Current: Store all signup data in Stripe metadata
+signup_metadata = {
+    'org_name': org_name,
+    'username': username, 
+    'email': email,
+    'first_name': first_name,
+    'last_name': last_name,
+    'phone': phone or '',
+    'password_hash': generate_password_hash(password)  # Security risk!
+}
+You'd have this simple flow:
+
+# OIDC: User already authenticated, just need payment
+metadata = {
+    'user_id': current_user.id,  # From OAuth
+    'email': current_user.email,  # From OAuth
+    'tier': selected_tier
+}
+Whop Integration with OIDC
+Your current Whop service ([whop_service.py]) would become much simpler:
+
+Current: Whop validates license → creates user account
+With OIDC: User already exists → Whop just validates subscription access
+
+Key Benefits for BatchTrack
+Security: No password storage in Stripe metadata
+Simplicity: stripe_service.py becomes 50% smaller
+User Experience: "Sign in with Google" → Select plan → Pay → Done
+Maintenance: Less complex signup completion logic in billing/routes.py
+The Flow Would Be:
+Google/OAuth Login → User Profile Created → Select Subscription → 
+Stripe/Whop Payment → Subscription Activated → Dashboard Access
+Instead of your current:
+
+Manual Form → Validation → Store in Session → Stripe Payment → 
+Retrieve Session Data → Create User → Create Organization → Assign Role
+Your existing Stripe and Whop services would still work exactly the same - they'd just receive cleaner, simpler data and wouldn't need to handle user account creation since that's handled by the OAuth provider.
