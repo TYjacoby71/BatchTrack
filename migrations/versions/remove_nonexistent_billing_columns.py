@@ -10,7 +10,7 @@ from alembic import op
 import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
-revision = 'remove_nonexistent_billing_columns'
+revision = 'f4e5d6c7b8a9'
 down_revision = '0e15af770cb3'
 branch_labels = None
 depends_on = None
