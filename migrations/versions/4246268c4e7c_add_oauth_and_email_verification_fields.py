@@ -78,14 +78,35 @@ def upgrade():
         # For now, we will only address the explicitly changed ones and keep the rest of the
         # original upgrade logic for other columns unless specified.
 
-        # The following columns were in the original upgrade but not in the explicit changes for upgrade.
-        # Keeping them here for completeness, but they are not being modified with existence checks
-        # as per the explicit change instructions.
-        # batch_op.add_column(sa.Column('email_verification_sent_at', sa.DateTime(), nullable=True))
-        # batch_op.add_column(sa.Column('oauth_provider', sa.String(length=50), nullable=True))
-        # batch_op.add_column(sa.Column('oauth_provider_id', sa.String(length=255), nullable=True))
-        # batch_op.add_column(sa.Column('password_reset_token', sa.String(length=255), nullable=True))
-        # batch_op.add_column(sa.Column('password_reset_sent_at', sa.DateTime(), nullable=True))
+        if not column_exists('user', 'email_verification_sent_at'):
+            print("   Adding email_verification_sent_at column...")
+            batch_op.add_column(sa.Column('email_verification_sent_at', sa.DateTime(), nullable=True))
+        else:
+            print("   ⚠️  email_verification_sent_at column already exists, skipping")
+
+        if not column_exists('user', 'oauth_provider'):
+            print("   Adding oauth_provider column...")
+            batch_op.add_column(sa.Column('oauth_provider', sa.String(length=50), nullable=True))
+        else:
+            print("   ⚠️  oauth_provider column already exists, skipping")
+
+        if not column_exists('user', 'oauth_provider_id'):
+            print("   Adding oauth_provider_id column...")
+            batch_op.add_column(sa.Column('oauth_provider_id', sa.String(length=255), nullable=True))
+        else:
+            print("   ⚠️  oauth_provider_id column already exists, skipping")
+
+        if not column_exists('user', 'password_reset_token'):
+            print("   Adding password_reset_token column...")
+            batch_op.add_column(sa.Column('password_reset_token', sa.String(length=255), nullable=True))
+        else:
+            print("   ⚠️  password_reset_token column already exists, skipping")
+
+        if not column_exists('user', 'password_reset_sent_at'):
+            print("   Adding password_reset_sent_at column...")
+            batch_op.add_column(sa.Column('password_reset_sent_at', sa.DateTime(), nullable=True))
+        else:
+            print("   ⚠️  password_reset_sent_at column already exists, skipping")
 
         # Adding google_id as per the provided changes snippet
         if not column_exists('user', 'google_id'):
