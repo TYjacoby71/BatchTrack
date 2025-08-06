@@ -39,9 +39,7 @@ def create_app():
     # Exempt Stripe webhooks from CSRF protection
     csrf.exempt('billing.stripe_webhook')
 
-    # Configure Flask-Login
-    login_manager = LoginManager()
-    login_manager.init_app(app)
+    # Configure Flask-Login settings
     login_manager.login_view = 'auth.login'
     login_manager.login_message = 'Please log in to access this page.'
     login_manager.session_protection = "strong"
@@ -258,7 +256,7 @@ def create_app():
 
         # Debug all registered endpoints
         all_endpoints = [(rule.rule, rule.endpoint) for rule in app.url_map.iter_rules()]
-        billing_endpoints = [ep for ep in all_endpoints if 'billing' in ep[1]]
+        billing_endpoints = [ep for ep in all_endpoints if ep[1] and 'billing' in ep[1]]
         logger.debug(f"Billing endpoints: {billing_endpoints}")
 
     # Load additional config if provided
@@ -272,6 +270,14 @@ def create_app():
     # Setup logging
     from .utils.unit_utils import setup_logging
     setup_logging(app)
+    
+    # Configure basic logging for production
+    if not app.debug and not logger.handlers:
+        import logging
+        logging.basicConfig(
+            level=logging.INFO,
+            format='%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
+        )
 
     # Enable debug logging in development
     if app.debug:
@@ -290,9 +296,7 @@ def create_app():
     from .filters.product_filters import register_filters
     register_filters(app)
 
-    # Register filters
-    from .filters.product_filters import register_filters
-    register_filters(app)
+    
 
     # Using standard Flask url_for - no custom template registry needed
 
@@ -313,9 +317,24 @@ def create_app():
     # Context processors
     @app.context_processor
     def inject_units():
-        units = Unit.query.order_by(Unit.unit_type, Unit.name).all()
-        categories = IngredientCategory.query.order_by(IngredientCategory.name).all()
-        return dict(units=units, categories=categories)
+        try:
+            # Get all units, filtering by is_active if the column exists
+            units = Unit.query.filter(
+                db.or_(Unit.is_active == True, Unit.is_active.is_(None))
+            ).order_by(Unit.unit_type, Unit.name).all()
+        except:
+            # Fallback to all units if filtering fails
+            try:
+                units = Unit.query.order_by(Unit.unit_type, Unit.name).all()
+            except:
+                units = []
+        
+        try:
+            categories = IngredientCategory.query.order_by(IngredientCategory.name).all()
+        except:
+            categories = []
+            
+        return dict(units=units, categories=categories, global_units=units)
 
     @app.context_processor
     def inject_permissions():
@@ -409,23 +428,7 @@ def create_app():
     app.jinja_env.globals['can_access_route'] = template_can_access_route
     app.jinja_env.globals['get_effective_org_id'] = template_get_org_id
 
-    # Add units to global context for dropdowns
-    @app.context_processor
-    def inject_units():
-        from .models import Unit
-        try:
-            # Get all units, filtering by is_active if the column exists
-            units = Unit.query.filter(
-                db.or_(Unit.is_active == True, Unit.is_active.is_(None))
-            ).order_by(Unit.unit_type, Unit.name).all()
-            return dict(global_units=units)
-        except:
-            # Fallback to all units if filtering fails
-            try:
-                units = Unit.query.order_by(Unit.unit_type, Unit.name).all()
-                return dict(global_units=units)
-            except:
-                return dict(global_units=[])
+    
 
     # Register Jinja2 filters
     from .filters.product_filters import product_variant_name, ingredient_cost_currency, safe_float
@@ -449,7 +452,10 @@ def create_app():
         from .models import Organization
         def get_organization_by_id(org_id):
             if org_id:
-                return Organization.query.get(org_id)
+                try:
+                    return db.session.get(Organization, org_id)
+                except:
+                    return Organization.query.get(org_id)  # Fallback for older SQLAlchemy
             return None
         return dict(get_organization_by_id=get_organization_by_id)
 
