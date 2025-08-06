@@ -67,24 +67,24 @@ def login():
 def oauth_google():
     """Initiate Google OAuth flow"""
     logger.info("OAuth Google route accessed")
-    
+
     # Check configuration with detailed logging
     config_status = OAuthService.get_configuration_status()
     logger.info(f"OAuth configuration status: {config_status}")
-    
+
     if not config_status['is_configured']:
         logger.warning("OAuth not configured - redirecting to login with error")
         flash('OAuth is not configured. Please contact administrator.', 'error')
         return redirect(url_for('auth.login'))
-    
+
     logger.info("Getting OAuth authorization URL")
     authorization_url, state = OAuthService.get_authorization_url()
-    
+
     if not authorization_url:
         logger.error("Failed to get authorization URL")
         flash('Unable to initiate OAuth. Please try again.', 'error')
         return redirect(url_for('auth.login'))
-    
+
     logger.info(f"OAuth authorization URL generated successfully, state: {state[:10]}...")
     session['oauth_state'] = state
     return redirect(authorization_url)
@@ -97,44 +97,44 @@ def oauth_callback():
         state = request.args.get('state')
         code = request.args.get('code')
         error = request.args.get('error')
-        
+
         logger.info(f"OAuth callback received - state: {state[:10] if state else None}, code: {code[:10] if code else None}, error: {error}")
-        
+
         if error:
             logger.error(f"OAuth callback error: {error}")
             flash(f'OAuth authentication failed: {error}', 'error')
             return redirect(url_for('auth.login'))
-        
+
         if not state or not code:
             logger.error("OAuth callback missing required parameters")
             flash('OAuth callback missing required parameters.', 'error')
             return redirect(url_for('auth.login'))
-        
+
         # Exchange code for credentials
         credentials = OAuthService.exchange_code_for_token(code, state)
         if not credentials:
             logger.error("Failed to exchange OAuth code for credentials")
             flash('OAuth authentication failed. Please try again.', 'error')
             return redirect(url_for('auth.login'))
-        
+
         # Get user info from Google
         user_info = OAuthService.get_user_info(credentials)
         if not user_info:
             flash('Unable to retrieve user information. Please try again.', 'error')
             return redirect(url_for('auth.login'))
-        
+
         email = user_info.get('email')
         first_name = user_info.get('given_name', '')
         last_name = user_info.get('family_name', '')
         oauth_id = user_info.get('sub')
-        
+
         if not email:
             flash('Email address is required for account creation.', 'error')
             return redirect(url_for('auth.login'))
-        
+
         # Check if user exists
         user = User.query.filter_by(email=email).first()
-        
+
         if user:
             # Existing user - update OAuth info if needed
             if not user.oauth_provider:
@@ -142,19 +142,19 @@ def oauth_callback():
                 user.oauth_provider_id = oauth_id
                 user.email_verified = True  # OAuth emails are pre-verified
                 db.session.commit()
-            
+
             # Log them in
             login_user(user)
             user.last_login = TimezoneUtils.utc_now()
             db.session.commit()
-            
+
             flash(f'Welcome back, {user.first_name}!', 'success')
-            
+
             if user.user_type == 'developer':
                 return redirect(url_for('developer.dashboard'))
             else:
                 return redirect(url_for('app_routes.dashboard'))
-        
+
         else:
             # New user - store info for signup flow
             session['oauth_user_info'] = {
@@ -165,10 +165,10 @@ def oauth_callback():
                 'oauth_provider_id': oauth_id,
                 'email_verified': True
             }
-            
+
             flash('Please complete your account setup by selecting a subscription plan.', 'info')
             return redirect(url_for('auth.signup'))
-    
+
     except Exception as e:
         logger.error(f"OAuth callback error: {str(e)}")
         flash('OAuth authentication failed. Please try again.', 'error')
@@ -180,27 +180,27 @@ def verify_email(token):
     try:
         # Find user with this verification token
         user = User.query.filter_by(email_verification_token=token).first()
-        
+
         if not user:
             flash('Invalid verification link.', 'error')
             return redirect(url_for('auth.login'))
-        
+
         # Check if token is expired (24 hours)
         if user.email_verification_sent_at:
             expires_at = user.email_verification_sent_at + timedelta(hours=24)
             if TimezoneUtils.utc_now() > expires_at:
                 flash('Verification link has expired. Please request a new one.', 'error')
                 return redirect(url_for('auth.resend_verification'))
-        
+
         # Verify the email
         user.email_verified = True
         user.email_verification_token = None
         user.email_verification_sent_at = None
         db.session.commit()
-        
+
         flash('Email verified successfully! You can now log in.', 'success')
         return redirect(url_for('auth.login'))
-        
+
     except Exception as e:
         logger.error(f"Email verification error: {str(e)}")
         flash('Email verification failed. Please try again.', 'error')
@@ -211,27 +211,27 @@ def resend_verification():
     """Resend email verification"""
     if request.method == 'POST':
         email = request.form.get('email')
-        
+
         user = User.query.filter_by(email=email).first()
         if user and not user.email_verified:
             # Generate new verification token
             user.email_verification_token = EmailService.generate_verification_token(email)
             user.email_verification_sent_at = TimezoneUtils.utc_now()
             db.session.commit()
-            
+
             # Send verification email
             EmailService.send_verification_email(
-                email, 
-                user.email_verification_token, 
+                email,
+                user.email_verification_token,
                 user.first_name
             )
-            
+
             flash('Verification email sent! Please check your inbox.', 'success')
         else:
             flash('If an account with that email exists and is unverified, a verification email has been sent.', 'info')
-        
+
         return redirect(url_for('auth.login'))
-    
+
     return render_template('auth/resend_verification.html')
 
 @auth_bp.route('/logout')
@@ -259,30 +259,47 @@ def dev_login():
 @auth_bp.route('/signup-data')
 def signup_data():
     """API endpoint to get available tiers for signup modal"""
-    from ...services.billing_service import BillingService
-    from ...blueprints.developer.subscription_tiers import load_tiers_config
+    # Get tiers filtered by database columns only - no hardcoded logic
+    from ...models.subscription_tier import SubscriptionTier
 
-    # Get available tiers from billing service
-    available_tiers_db = BillingService.get_available_tiers()
+    available_tiers_db = SubscriptionTier.query.filter_by(
+        is_customer_facing=True,
+        is_available=True
+    ).all()
+
+    # Further filter by subscription_type = 'monthly' (this should be a database column)
+    # For now, show all customer-facing tiers since subscription_type might not be implemented yet
     tiers_config = load_tiers_config()
 
-    # Show all customer-facing tiers
     available_tiers = {}
     for tier_obj in available_tiers_db:
         tier_config = tiers_config.get(tier_obj.key, {})
-        if tier_config and tier_config.get('is_customer_facing', True):
-            # Get features from the correct JSON structure
-            features = tier_config.get('fallback_features', [])
 
-            available_tiers[tier_obj.key] = {
-                'name': tier_obj.name,
-                'price_monthly': 0,  # Will be populated from Stripe/Whop
-                'price_display': tier_obj.fallback_price,
-                'price_yearly': '$0',  # Will be populated from Stripe/Whop
-                'features': features,
-                'user_limit': tier_obj.user_limit,
-                'whop_product_id': tier_config.get('whop_product_id', '')
-            }
+        # Get features from tier config
+        features = tier_config.get('fallback_features', []) if tier_config else []
+
+        # Get live pricing from Stripe if available, otherwise use fallback
+        from ...services.stripe_service import StripeService
+        live_pricing = None
+        if tier_obj.stripe_lookup_key:
+            try:
+                live_pricing = StripeService.get_live_pricing_for_tier(tier_obj)
+            except:
+                live_pricing = None
+
+        # Use live pricing if available, otherwise fallback
+        if live_pricing:
+            price_display = live_pricing['formatted_price']
+        else:
+            price_display = tier_obj.fallback_price
+
+        available_tiers[tier_obj.key] = {
+            'name': tier_obj.name,
+            'price_display': price_display,
+            'features': features,
+            'user_limit': tier_obj.user_limit,
+            'whop_product_id': tier_config.get('whop_product_id', '') if tier_config else ''
+        }
 
     return jsonify({
         'available_tiers': available_tiers,
@@ -294,9 +311,9 @@ def debug_oauth_config():
     """Debug OAuth configuration - only in debug mode"""
     if not current_app.config.get('DEBUG'):
         abort(404)
-        
+
     config_status = OAuthService.get_configuration_status()
-    
+
     return jsonify({
         'oauth_configuration': config_status,
         'environment_vars': {
@@ -312,50 +329,55 @@ def signup():
     if current_user.is_authenticated:
         return redirect(url_for('app_routes.dashboard'))
 
-    # Get pricing data for customer-facing tiers only
-    from ...services.billing_service import BillingService
-    from ...blueprints.developer.subscription_tiers import load_tiers_config
+    # Get tiers filtered by database columns only
+    from ...models.subscription_tier import SubscriptionTier
 
-    # Get available tiers from billing service
-    available_tiers_db = BillingService.get_available_tiers()
+    available_tiers_db = SubscriptionTier.query.filter_by(
+        is_customer_facing=True,
+        is_available=True
+    ).all()
+
     tiers_config = load_tiers_config()
 
-    # Show all customer-facing tiers
     available_tiers = {}
     for tier_obj in available_tiers_db:
         tier_config = tiers_config.get(tier_obj.key, {})
-        if tier_config:
-            # Get features from the correct JSON structure
-            features = tier_config.get('fallback_features', [])
-            
-            # Use synced Stripe pricing if available
-            stripe_price = tier_config.get('stripe_price', tier_obj.fallback_price)
-            if stripe_price and stripe_price != '$0':
-                price_display = stripe_price
-                price_monthly = float(stripe_price.replace('$', '')) if stripe_price.startswith('$') else 0
-            else:
-                price_display = tier_obj.fallback_price
-                price_monthly = 0
 
-            available_tiers[tier_obj.key] = {
-                'name': tier_obj.name,
-                'price_monthly': price_monthly,
-                'price_display': price_display,
-                'price_yearly': '$0',  # Will be populated from Stripe/Whop
-                'features': features,
-                'user_limit': tier_obj.user_limit,
-                'whop_product_id': tier_config.get('whop_product_id', '')
-            }
+        # Get features from tier config
+        features = tier_config.get('fallback_features', []) if tier_config else []
+
+        # Get live pricing from Stripe if available, otherwise use fallback
+        from ...services.stripe_service import StripeService
+        live_pricing = None
+        if tier_obj.stripe_lookup_key:
+            try:
+                live_pricing = StripeService.get_live_pricing_for_tier(tier_obj)
+            except:
+                live_pricing = None
+
+        # Use live pricing if available, otherwise fallback
+        if live_pricing:
+            price_display = live_pricing['formatted_price']
+        else:
+            price_display = tier_obj.fallback_price
+
+        available_tiers[tier_obj.key] = {
+            'name': tier_obj.name,
+            'price_display': price_display,
+            'features': features,
+            'user_limit': tier_obj.user_limit,
+            'whop_product_id': tier_config.get('whop_product_id', '') if tier_config else ''
+        }
 
     # Get signup tracking parameters
     signup_source = request.args.get('source', request.form.get('source', 'direct'))
     referral_code = request.args.get('ref', request.form.get('ref'))
     promo_code = request.args.get('promo', request.form.get('promo'))
     preselected_tier = request.args.get('tier')
-    
+
     # Check for OAuth user info from session
     oauth_user_info = session.get('oauth_user_info')
-    
+
     if request.method == 'POST':
         selected_tier = request.form.get('selected_tier')
         oauth_signup = request.form.get('oauth_signup') == 'true'
@@ -381,7 +403,7 @@ def signup():
         # Create Stripe checkout session
         from ...services.stripe_service import StripeService
         from ...models import SubscriptionTier
-        
+
         tier_obj = SubscriptionTier.query.filter_by(key=selected_tier).first()
         if not tier_obj:
             flash('Invalid subscription plan', 'error')
@@ -398,20 +420,20 @@ def signup():
             'signup_source': signup_source,
             'oauth_signup': str(oauth_signup)
         }
-        
+
         if oauth_user_info:
             metadata['oauth_email'] = oauth_user_info.get('email', '')
             metadata['oauth_provider'] = oauth_user_info.get('oauth_provider', '')
             metadata['oauth_provider_id'] = oauth_user_info.get('oauth_provider_id', '')
-        
+
         if referral_code:
             metadata['referral_code'] = referral_code
         if promo_code:
             metadata['promo_code'] = promo_code
-        
+
         success_url = url_for('billing.complete_signup_from_stripe', _external=True) + '?session_id={CHECKOUT_SESSION_ID}'
         cancel_url = url_for('auth.signup', _external=True)
-        
+
         # Let Stripe collect all user info
         stripe_session = StripeService.create_checkout_session_for_tier(
             tier_obj,
