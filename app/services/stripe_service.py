@@ -384,18 +384,25 @@ class StripeService:
         tiers_config = load_tiers_config()
         tier_data = tiers_config.get(tier, {})
 
-        # Get Stripe price ID
-        if 'yearly' in price_key:
-            price_id = tier_data.get('stripe_price_id_yearly')
-        else:
-            price_id = tier_data.get('stripe_price_id_monthly')
+        # Get Stripe price ID using dynamic secret lookup
+        price_id = None
 
-        # Fallback to config
+        # Determine which secret to look for
+        if 'yearly' in price_key:
+            secret_name = f'STRIPE_{tier.upper()}_YEARLY_PRICE_ID'
+        else:
+            secret_name = f'STRIPE_{tier.upper()}_MONTHLY_PRICE_ID'
+
+        # Get price ID from environment (secrets)
+        import os
+        price_id = os.environ.get(secret_name)
+
+        # Fallback to legacy config approach
         if not price_id:
             price_id = current_app.config.get('STRIPE_PRICE_IDS', {}).get(price_key)
 
         if not price_id:
-            logger.error(f"No Stripe price ID configured for: {price_key}")
+            logger.error(f"No Stripe price ID found for: {price_key} (secret: {secret_name})")
             return None
 
         try:
@@ -405,7 +412,7 @@ class StripeService:
                 name=f"{signup_metadata['first_name']} {signup_metadata['last_name']}",
                 metadata=signup_metadata  # Store all signup data in customer metadata
             )
-            
+
             session = stripe.checkout.Session.create(
                 customer=customer.id,
                 payment_method_types=['card'],

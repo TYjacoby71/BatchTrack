@@ -72,6 +72,7 @@
                 <div class="card">
                     <div class="card-header">
                         <h5 class="mb-0">Product Integration</h5>
+                        <small class="text-muted">System will automatically create secure environment secrets for price IDs</small>
                     </div>
                     <div class="card-body">
                         <div class="mb-3">
@@ -79,6 +80,20 @@
                             <input type="text" class="form-control" id="stripe_lookup_key" name="stripe_lookup_key"
                                    placeholder="solo_plan_monthly">
                             <small class="form-text text-muted">Links to Stripe product for pricing sync</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="stripe_monthly_price_id" class="form-label">Stripe Monthly Price ID</label>
+                            <input type="text" class="form-control" id="stripe_monthly_price_id" name="stripe_monthly_price_id"
+                                   placeholder="price_1234567890...">
+                            <small class="form-text text-muted">Monthly subscription price ID from Stripe</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="stripe_yearly_price_id" class="form-label">Stripe Yearly Price ID</label>
+                            <input type="text" class="form-control" id="stripe_yearly_price_id" name="stripe_yearly_price_id"
+                                   placeholder="price_0987654321...">
+                            <small class="form-text text-muted">Yearly subscription price ID from Stripe</small>
                         </div>
 
                         <div class="mb-3">
