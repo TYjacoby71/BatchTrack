@@ -1,7 +1,7 @@
 
 """Add Whop integration fields to SubscriptionTier
 
-Revision ID: add_whop_tier_fields
+Revision ID: a1b2c3d4e5f6789012345678901234ab
 Revises: whop_integration
 Create Date: 2024-01-15 11:00:00.000000
 

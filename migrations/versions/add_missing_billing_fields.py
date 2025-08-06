@@ -2,7 +2,7 @@
 """Add missing billing fields to organization table
 
 Revision ID: a1b2c3d4e5f6
-Revises: f4e5d6c7b8a9
+Revises: add_offline_billing_support
 Create Date: 2025-08-06 06:40:00.000000
 
 """

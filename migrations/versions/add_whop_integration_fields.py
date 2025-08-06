@@ -2,7 +2,7 @@
 """Add Whop integration fields to Organization
 
 Revision ID: whop_integration
-Revises: 132971c1d456
+Revises: add_billing_columns_org
 Create Date: 2024-01-15 10:00:00.000000
 
 """

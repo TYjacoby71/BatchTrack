@@ -2,7 +2,7 @@
 """drop deprecated billing columns
 
 Revision ID: drop_deprecated_billing_columns  
-Revises: remove_nonexistent_billing_columns
+Revises: f4e5d6c7b8a9
 Create Date: 2025-08-06 05:00:00.000000
 
 """

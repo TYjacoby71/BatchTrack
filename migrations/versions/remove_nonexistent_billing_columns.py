@@ -1,7 +1,7 @@
 
 """remove nonexistent billing columns
 
-Revision ID: remove_nonexistent_billing_columns
+Revision ID: f4e5d6c7b8a9
 Revises: 0e15af770cb3
 Create Date: 2025-08-06 00:35:00.000000
 

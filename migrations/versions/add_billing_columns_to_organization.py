@@ -2,7 +2,7 @@
 """add billing columns to organization
 
 Revision ID: add_billing_columns_org
-Revises: 9d2a5c7f8b1e
+Revises: 1a2b3c4d5e6f
 Create Date: 2025-08-05 00:53:00.000000
 
 """
