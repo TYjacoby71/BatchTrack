@@ -39,11 +39,10 @@ def create_app():
         app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
     # Initialize extensions
+    from .extensions import db, migrate, login_manager, mail
     db.init_app(app)
-    migrate = Migrate(app, db)
-    
-    # Initialize email
-    from .extensions import mail
+    migrate.init_app(app, db)
+    login_manager.init_app(app)
     mail.init_app(app)
 
     # Initialize CSRF protection
