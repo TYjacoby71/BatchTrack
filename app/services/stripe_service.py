@@ -370,8 +370,8 @@ class StripeService:
             return False
 
     @staticmethod
-    def create_checkout_session_for_signup(signup_data, price_key):
-        """Create Stripe checkout session for new customer signup"""
+    def create_checkout_session_for_signup(signup_metadata, price_key):
+        """Create Stripe checkout session for new customer signup - industry standard approach"""
         if not StripeService.initialize_stripe():
             logger.error("Stripe not configured for signup checkout")
             return None
@@ -399,23 +399,31 @@ class StripeService:
             return None
 
         try:
+            # Pre-create customer with signup email (industry standard)
+            customer = stripe.Customer.create(
+                email=signup_metadata['email'],
+                name=f"{signup_metadata['first_name']} {signup_metadata['last_name']}",
+                metadata=signup_metadata  # Store all signup data in customer metadata
+            )
+            
             session = stripe.checkout.Session.create(
+                customer=customer.id,
                 payment_method_types=['card'],
                 line_items=[{
                     'price': price_id,
                     'quantity': 1,
                 }],
                 mode='subscription',
-                success_url=url_for('billing.complete_signup_from_stripe', _external=True),
+                success_url=url_for('billing.complete_signup_from_stripe', _external=True) + '?session_id={CHECKOUT_SESSION_ID}',
                 cancel_url=url_for('auth.signup', _external=True) + '?payment=cancelled',
                 metadata={
-                    'signup_data': str(signup_data),
                     'tier': tier,
-                    'price_key': price_key
+                    'price_key': price_key,
+                    'signup_flow': 'true'
                 }
             )
 
-            logger.info(f"Created signup checkout session {session.id} for tier {tier}")
+            logger.info(f"Created signup checkout session {session.id} for tier {tier} with customer {customer.id}")
             return session
 
         except stripe.error.StripeError as e:
