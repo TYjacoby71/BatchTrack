@@ -101,7 +101,7 @@ def upgrade():
             if column_exists('organization', 'whop_verified'):
                 bind.execute(text("""
                     UPDATE organization 
-                    SET whop_verified = 0 
+                    SET whop_verified = FALSE 
                     WHERE whop_verified IS NULL
                 """))
                 
