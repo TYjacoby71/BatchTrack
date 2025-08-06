@@ -98,29 +98,50 @@ def whop_checkout(product_id):
         return redirect(url_for('billing.upgrade'))
 
 @billing_bp.route('/complete-signup-from-stripe')
-@login_required
 def complete_signup_from_stripe():
-    """Complete signup process after Stripe payment"""
+    """Complete signup process after Stripe payment - industry standard"""
     try:
         session_id = request.args.get('session_id')
         if not session_id:
             flash('Invalid checkout session', 'error')
-            return redirect(url_for('billing.upgrade'))
+            return redirect(url_for('auth.signup'))
 
-        # Complete signup using Stripe session
-        success = SignupService.complete_stripe_signup(current_user.organization, session_id)
+        # Initialize Stripe
+        if not StripeService.initialize_stripe():
+            flash('Payment system error', 'error')
+            return redirect(url_for('auth.signup'))
+            
+        # Retrieve checkout session
+        checkout_session = stripe.checkout.Session.retrieve(session_id)
+        
+        # Get customer with signup metadata
+        customer = stripe.Customer.retrieve(checkout_session.customer)
+        signup_data = customer.metadata
+        
+        if not signup_data.get('org_name'):
+            flash('Signup data not found', 'error')
+            return redirect(url_for('auth.signup'))
+        
+        # Get tier from checkout metadata
+        tier = checkout_session.metadata.get('tier')
+        if not tier:
+            flash('Subscription tier not found', 'error')
+            return redirect(url_for('auth.signup'))
+        
+        # Complete signup using retrieved data
+        success = SignupService.complete_stripe_signup(signup_data, tier, customer.id)
         
         if success:
-            flash('Subscription activated successfully!', 'success')
+            flash('Welcome to BatchTrack! Your account is ready.', 'success')
             return redirect(url_for('app_routes.dashboard'))
         else:
-            flash('Failed to activate subscription', 'error')
-            return redirect(url_for('billing.upgrade'))
+            flash('Failed to complete account setup', 'error')
+            return redirect(url_for('auth.signup'))
             
     except Exception as e:
         logger.error(f"Stripe signup completion error: {e}")
-        flash('Signup completion failed', 'error')
-        return redirect(url_for('billing.upgrade'))
+        flash('Account setup failed. Please contact support.', 'error')
+        return redirect(url_for('auth.signup'))
 
 @billing_bp.route('/complete-signup-from-whop')
 @login_required

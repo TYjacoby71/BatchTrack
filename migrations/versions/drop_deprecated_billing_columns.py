@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = 'drop_deprecated_billing_columns'
-down_revision = 'remove_nonexistent_billing_columns'
+down_revision = 'f4e5d6c7b8a9'
 branch_labels = None
 depends_on = None
 

@@ -24,7 +24,7 @@ class SubscriptionTier(db.Model):
 
     # Pricing for display and offline use
     fallback_price = db.Column(db.String(32), default='$0')
-    
+
     # Offline support
     last_billing_sync = db.Column(db.DateTime, nullable=True)  # When billing was last verified
     grace_period_days = db.Column(db.Integer, default=7)  # Days to allow offline usage
@@ -34,7 +34,7 @@ class SubscriptionTier(db.Model):
     updated_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now, onupdate=TimezoneUtils.utc_now)
 
     # Relationships
-    permissions = db.relationship('Permission', secondary='subscription_tier_permission', 
+    permissions = db.relationship('Permission', secondary='subscription_tier_permission',
                                  backref=db.backref('tiers', lazy='dynamic'))
 
     def get_permissions(self):

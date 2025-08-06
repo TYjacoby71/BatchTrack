@@ -101,12 +101,15 @@ def signup():
     for tier_obj in available_tiers_db:
         tier_config = tiers_config.get(tier_obj.key, {})
         if tier_config:
+            # Get features from the correct JSON structure
+            features = tier_config.get('fallback_features', [])
+
             available_tiers[tier_obj.key] = {
                 'name': tier_obj.name,
                 'price_monthly': 0,  # Will be populated from Stripe/Whop
                 'price_display': tier_obj.fallback_price,
                 'price_yearly': '$0',  # Will be populated from Stripe/Whop
-                'features': tier_config.get('features', []),
+                'features': features,
                 'user_limit': tier_obj.user_limit,
                 'whop_product_id': tier_config.get('whop_product_id', '')
             }
@@ -132,7 +135,7 @@ def signup():
         required_fields = [org_name, username, email, password, confirm_password, selected_tier]
         if not all(required_fields):
             flash('Please fill in all required fields and select a subscription plan', 'error')
-            return render_template('auth/signup.html', 
+            return render_template('auth/signup.html',
                          signup_source=signup_source,
                          referral_code=referral_code,
                          promo_code=promo_code,
@@ -141,7 +144,7 @@ def signup():
 
         if password != confirm_password:
             flash('Passwords do not match', 'error')
-            return render_template('auth/signup.html', 
+            return render_template('auth/signup.html',
                          signup_source=signup_source,
                          referral_code=referral_code,
                          promo_code=promo_code,
@@ -150,7 +153,7 @@ def signup():
 
         if selected_tier not in available_tiers:
             flash('Invalid subscription plan selected', 'error')
-            return render_template('auth/signup.html', 
+            return render_template('auth/signup.html',
                          signup_source=signup_source,
                          referral_code=referral_code,
                          promo_code=promo_code,
@@ -163,82 +166,55 @@ def signup():
         ).first()
         if existing_user:
             flash('Username or email already exists', 'error')
-            return render_template('auth/signup.html', 
+            return render_template('auth/signup.html',
                          signup_source=signup_source,
                          referral_code=referral_code,
                          promo_code=promo_code,
                          available_tiers=available_tiers,
                          form_data=request.form)
 
-        # Store signup data for post-payment completion
-        session['pending_signup'] = {
-            'org_name': org_name,
-            'username': username,
-            'email': email,
-            'first_name': first_name,
-            'last_name': last_name,
-            'password': password,
-            'phone': phone,
-            'selected_tier': selected_tier,
-            'signup_source': signup_source,
-            'promo_code': promo_code,
-            'referral_code': referral_code
-        }
-
-        # Check for payment method preference or tier configuration
+        # Create Stripe checkout with signup data in metadata (industry standard)
         tier_data = available_tiers.get(selected_tier, {})
-
-        # Check if user wants Whop or if tier is Whop-only
-        use_whop = (request.form.get('payment_method') == 'whop' or 
-                   tier_data.get('whop_only', False))
-
-        if use_whop:
-            # Redirect to Whop checkout
-            whop_product_id = tier_data.get('whop_product_id')
-            if whop_product_id:
-                return redirect(url_for('billing.whop_checkout', product_id=whop_product_id))
-            else:
-                flash('Whop checkout not available for this plan.', 'warning')
-                # Fall back to Stripe if available
-
-        # Use Stripe checkout (default or fallback)
+        
         if tier_data.get('stripe_price_id_monthly'):
-            # Store signup data for Stripe processing
-            signup_data = {
+            # Create Stripe checkout session with signup data in metadata
+            from ...services.stripe_service import StripeService
+            
+            signup_metadata = {
                 'org_name': org_name,
-                'email': email, # Corrected from contact_email to email
                 'username': username,
-                'password': password,
+                'email': email,
                 'first_name': first_name,
                 'last_name': last_name,
-                'tier': selected_tier,
+                'phone': phone or '',
+                'selected_tier': selected_tier,
                 'signup_source': signup_source,
-                'referral_code': referral_code,
-                'promo_code': promo_code
+                'promo_code': promo_code or '',
+                'referral_code': referral_code or '',
+                # Hash password for security in metadata
+                'password_hash': generate_password_hash(password)
             }
-
-            # Create Stripe checkout session
-            from ...services.stripe_service import StripeService
-            session = StripeService.create_checkout_session_for_signup(
-                signup_data, 
+            
+            stripe_session = StripeService.create_checkout_session_for_signup(
+                signup_metadata,
                 f"{selected_tier}_monthly"
             )
 
-            if session:
-                return redirect(session.url)
+            if stripe_session:
+                return redirect(stripe_session.url)
             else:
                 flash('Payment system temporarily unavailable. Please try again later.', 'error')
         else:
             flash('Payment method not configured for this plan. Please contact administrator.', 'error')
 
-        return render_template('auth/signup.html', 
+        return render_template('auth/signup.html',
                      signup_source=signup_source,
                      referral_code=referral_code,
                      promo_code=promo_code,
                      available_tiers=available_tiers,
                      form_data=request.form)
 
-    return render_template('auth/signup.html', 
+    return render_template('auth/signup.html',
                          signup_source=signup_source,
                          referral_code=referral_code,
                          promo_code=promo_code,

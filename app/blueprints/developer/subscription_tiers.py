@@ -93,10 +93,29 @@ def manage_tiers():
                          tiers=tiers,
                          all_permissions=all_permissions)
 
+def create_stripe_secrets(tier_key, monthly_price_id, yearly_price_id):
+    """Create environment secrets for Stripe price IDs"""
+    import os
+    
+    # Create secret names following the convention
+    monthly_secret_name = f'STRIPE_{tier_key.upper()}_MONTHLY_PRICE_ID'
+    yearly_secret_name = f'STRIPE_{tier_key.upper()}_YEARLY_PRICE_ID'
+    
+    # In Replit, we can set environment variables dynamically (they become secrets)
+    if monthly_price_id:
+        os.environ[monthly_secret_name] = monthly_price_id
+        logger.info(f"Created secret: {monthly_secret_name}")
+    
+    if yearly_price_id:
+        os.environ[yearly_secret_name] = yearly_price_id
+        logger.info(f"Created secret: {yearly_secret_name}")
+    
+    return monthly_secret_name, yearly_secret_name
+
 @subscription_tiers_bp.route('/create', methods=['GET', 'POST'])
 @login_required
 def create_tier():
-    """Create a new subscription tier"""
+    """Create a new subscription tier with dynamic secret management"""
     if request.method == 'POST':
         tier_key = request.form.get('tier_key')
         tier_name = request.form.get('tier_name')
@@ -110,6 +129,18 @@ def create_tier():
         if tier_key in tiers:
             flash('Tier key already exists', 'error')
             return redirect(url_for('developer.subscription_tiers.manage_tiers'))
+
+        # Get Stripe price IDs and create secrets
+        monthly_price_id = request.form.get('stripe_monthly_price_id', '').strip()
+        yearly_price_id = request.form.get('stripe_yearly_price_id', '').strip()
+        
+        # Create secrets for the price IDs if provided
+        if monthly_price_id or yearly_price_id:
+            try:
+                monthly_secret, yearly_secret = create_stripe_secrets(tier_key, monthly_price_id, yearly_price_id)
+                flash(f'Stripe secrets created: {monthly_secret}, {yearly_secret}', 'info')
+            except Exception as e:
+                flash(f'Warning: Could not create Stripe secrets: {str(e)}', 'warning')
 
         # Get form data
         fallback_features = [f.strip() for f in request.form.get('fallback_features', '').split('\n') if f.strip()]
@@ -129,8 +160,10 @@ def create_tier():
             'fallback_price': request.form.get('fallback_price', '$0'),
             'stripe_features': [],
             'stripe_price': None,
-            'stripe_price_id': None,
-            'last_synced': None
+            'last_synced': None,
+            # Store secret references, not the actual IDs
+            'stripe_monthly_secret': f'STRIPE_{tier_key.upper()}_MONTHLY_PRICE_ID' if monthly_price_id else None,
+            'stripe_yearly_secret': f'STRIPE_{tier_key.upper()}_YEARLY_PRICE_ID' if yearly_price_id else None
         }
 
         tiers[tier_key] = new_tier
@@ -139,7 +172,7 @@ def create_tier():
         # Also create/update database record
         sync_tier_to_database(tier_key, new_tier)
 
-        flash(f'Subscription tier "{tier_name}" created successfully', 'success')
+        flash(f'Subscription tier "{tier_name}" created successfully with Stripe integration', 'success')
         return redirect(url_for('developer.subscription_tiers.manage_tiers'))
 
     return render_template('developer/create_tier.html')

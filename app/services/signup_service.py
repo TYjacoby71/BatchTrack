@@ -133,6 +133,70 @@ class SignupService:
         return True, "Valid signup data"
 
     @staticmethod
+    def complete_stripe_signup(signup_data, tier, stripe_customer_id):
+        """Complete signup after successful Stripe payment"""
+        logger.info(f"=== STRIPE SIGNUP COMPLETION ===")
+        logger.info(f"Processing tier: {tier}")
+        logger.info(f"Customer ID: {stripe_customer_id}")
+        
+        try:
+            # Get the subscription tier
+            subscription_tier = SubscriptionTier.query.filter_by(key=tier).first()
+            if not subscription_tier:
+                raise Exception(f"Subscription tier '{tier}' not found")
+
+            # Create organization
+            org = Organization(
+                name=signup_data['org_name'],
+                contact_email=signup_data['email'],
+                is_active=True,
+                signup_source=signup_data.get('signup_source', 'stripe'),
+                promo_code=signup_data.get('promo_code'),
+                referral_code=signup_data.get('referral_code'),
+                subscription_tier_id=subscription_tier.id
+            )
+            db.session.add(org)
+            db.session.flush()
+            logger.info(f"Created organization: {org.id}")
+
+            # Create user with hashed password from metadata
+            owner_user = User(
+                username=signup_data['username'],
+                email=signup_data['email'],
+                first_name=signup_data['first_name'],
+                last_name=signup_data['last_name'],
+                phone=signup_data.get('phone'),
+                organization_id=org.id,
+                user_type='customer',
+                is_organization_owner=True,
+                is_active=True
+            )
+            # Use the pre-hashed password from metadata
+            owner_user.password_hash = signup_data['password_hash']
+            db.session.add(owner_user)
+            db.session.flush()
+            logger.info(f"Created user: {owner_user.id}")
+
+            # Assign organization owner role
+            org_owner_role = Role.query.filter_by(name='organization_owner', is_system_role=True).first()
+            if org_owner_role:
+                owner_user.assign_role(org_owner_role)
+
+            db.session.commit()
+            
+            # Log in the user
+            from flask_login import login_user
+            login_user(owner_user)
+            
+            logger.info("Stripe signup completed successfully")
+            return True
+
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Stripe signup error: {str(e)}")
+            return False
+
+    @staticmethod
     def clear_pending_signup():
         """Clear pending signup data from session"""
         session.pop('pending_signup', None)
