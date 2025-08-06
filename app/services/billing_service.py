@@ -75,22 +75,44 @@ class BillingService:
         ).all()
 
     @staticmethod
-    def get_simple_pricing_data():
-        """Get basic pricing data for tiers - simple version for signup and offline use"""
+    def get_pricing_data_for_signup():
+        """Get pricing data optimized for signup page - live pricing only"""
+        from .stripe_service import StripeService
+        
         pricing_data = {}
-
+        
         for tier_obj in BillingService.get_available_tiers():
+            # Get live pricing from Stripe
+            stripe_price = StripeService.get_price_for_lookup_key(tier_obj.stripe_lookup_key) if tier_obj.stripe_lookup_key else None
+            
             pricing_data[tier_obj.key] = {
                 'name': tier_obj.name,
-                'price': tier_obj.fallback_price,
+                'price': stripe_price or tier_obj.fallback_price,  # Fallback only if Stripe fails
                 'features': tier_obj.get_permissions(),
                 'user_limit': tier_obj.user_limit,
                 'stripe_lookup_key': tier_obj.stripe_lookup_key,
                 'whop_product_key': tier_obj.whop_product_key,
-                'is_offline_capable': True  # All tiers work offline
+                'description': tier_obj.description
             }
 
         return pricing_data
+    
+    @staticmethod
+    def get_offline_license_data(organization):
+        """Generate offline license data for downloaded app"""
+        if not organization or not organization.subscription_tier_obj:
+            return None
+            
+        return {
+            'organization_id': organization.id,
+            'organization_name': organization.name,
+            'tier_key': organization.subscription_tier_obj.key,
+            'tier_name': organization.subscription_tier_obj.name,
+            'permissions': organization.subscription_tier_obj.get_permissions(),
+            'user_limit': organization.subscription_tier_obj.user_limit,
+            'issued_at': organization.last_online_sync.isoformat() if organization.last_online_sync else None,
+            'expires_at': (organization.last_online_sync + timedelta(days=30)).isoformat() if organization.last_online_sync else None
+        }
 
     @staticmethod
     def validate_tier_access(organization):

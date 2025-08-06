@@ -121,8 +121,8 @@ def upgrade():
         flash('No organization found', 'error')
         return redirect(url_for('app_routes.dashboard'))
 
-    # Get simple pricing data for both online and offline use
-    pricing_data = BillingService.get_simple_pricing_data()
+    # Get live pricing data for signup
+    pricing_data = BillingService.get_pricing_data_for_signup()
 
     logger.info(f"Pricing data retrieved for upgrade page: {len(pricing_data)} tiers")
     
