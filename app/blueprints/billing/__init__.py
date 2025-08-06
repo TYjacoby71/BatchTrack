@@ -1,6 +1,4 @@
 
-from flask import Blueprint
+from .routes import billing_bp
 
-billing_bp = Blueprint('billing', __name__, url_prefix='/billing')
-
-from . import routes
+__all__ = ['billing_bp']

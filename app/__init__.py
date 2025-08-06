@@ -6,14 +6,17 @@ from .models import User
 import os
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 from flask_login import current_user
+import logging # Import logging
 
+# Set up a basic logger
+logger = logging.getLogger(__name__) # Use logger instead of print for debug/error messages
 
 def create_app():
     app = Flask(__name__, static_folder='static', static_url_path='/static')
 
     # Load configuration
     app.config.from_object('app.config.Config')
-    
+
     app.config['UPLOAD_FOLDER'] = 'static/product_images'
     os.makedirs('static/product_images', exist_ok=True)
 
@@ -161,7 +164,7 @@ def create_app():
         from .blueprints.api.container_routes import container_api_bp # Added to register the container_api_bp
 
     except ImportError as e:
-        print(f"Warning: Failed to import some blueprints: {e}")
+        logger.warning(f"Failed to import some blueprints: {e}")
 
     # Register developer blueprint
     from .blueprints.developer.routes import developer_bp
@@ -175,16 +178,16 @@ def create_app():
 
     # Register billing blueprint
     try:
-        from .blueprints.billing import billing_bp
-        print(f"DEBUG: Billing blueprint imported successfully: {billing_bp}")
-        print(f"DEBUG: Billing blueprint name: {billing_bp.name}")
-        print(f"DEBUG: Billing blueprint url_prefix: {billing_bp.url_prefix}")
+        from .blueprints.billing.routes import billing_bp
         app.register_blueprint(billing_bp)
-        print("DEBUG: Billing blueprint registered successfully")
+        logger.debug(f"Billing blueprint registered successfully")
+
+        # Debug billing routes
+        billing_routes = [rule.rule for rule in app.url_map.iter_rules() if rule.endpoint and rule.endpoint.startswith('billing.')]
+        logger.debug(f"Billing routes registered: {billing_routes}")
     except Exception as e:
-        print(f"ERROR: Failed to register billing blueprint: {e}")
-        import traceback
-        traceback.print_exc()
+        logger.error(f"Failed to register billing blueprint: {e}")
+        # Continue without billing blueprint for now
 
     # Register all blueprints
     app.register_blueprint(auth_bp, url_prefix='/auth')
@@ -207,7 +210,7 @@ def create_app():
         app.register_blueprint(product_variants_bp, url_prefix='/products')
         app.register_blueprint(sku_bp, url_prefix='/products')
     except ImportError:
-        print("Could not register any product blueprints")
+        logger.warning("Could not register any product blueprints")
         pass
 
     app.register_blueprint(conversion_bp, url_prefix='/conversion')
@@ -243,20 +246,20 @@ def create_app():
     # Ensure all API routes are loaded
     with app.app_context():
         api_routes = [rule.rule for rule in app.url_map.iter_rules() if rule.rule.startswith('/api/')]
-        print(f"Registered API routes: {api_routes}")
+        logger.debug(f"Registered API routes: {api_routes}")
 
         # Check for specific container route
         container_routes = [rule.rule for rule in app.url_map.iter_rules() if 'container' in rule.rule]
-        print(f"Container routes found: {container_routes}")
+        logger.debug(f"Container routes found: {container_routes}")
 
         # Debug billing routes
         billing_routes = [rule.rule for rule in app.url_map.iter_rules() if 'billing' in rule.rule]
-        print(f"Billing routes found: {billing_routes}")
+        logger.debug(f"Billing routes found: {billing_routes}")
 
         # Debug all registered endpoints
         all_endpoints = [(rule.rule, rule.endpoint) for rule in app.url_map.iter_rules()]
         billing_endpoints = [ep for ep in all_endpoints if 'billing' in ep[1]]
-        print(f"Billing endpoints: {billing_endpoints}")
+        logger.debug(f"Billing endpoints: {billing_endpoints}")
 
     # Load additional config if provided
     #if config_filename:
@@ -361,7 +364,7 @@ def create_app():
             # Always call with just permission name from templates
             return has_permission(permission_name)
         except Exception as e:
-            print(f"Permission check error for {permission_name}: {e}")
+            logger.error(f"Permission check error for {permission_name}: {e}")
             return False
 
     def template_has_role(role_name):
@@ -369,7 +372,7 @@ def create_app():
         try:
             return has_role(role_name)
         except Exception as e:
-            print(f"Role check error for {role_name}: {e}")
+            logger.error(f"Role check error for {role_name}: {e}")
             return False
 
     def template_is_org_owner():
@@ -377,7 +380,7 @@ def create_app():
         try:
             return is_organization_owner()
         except Exception as e:
-            print(f"Org owner check error: {e}")
+            logger.error(f"Org owner check error: {e}")
             return False
 
     def template_can_access_route(route_path):
@@ -387,7 +390,7 @@ def create_app():
             # This helper is deprecated but maintained for backward compatibility
             return True
         except Exception as e:
-            print(f"Route access check error for {route_path}: {e}")
+            logger.error(f"Route access check error for {route_path}: {e}")
             return False
 
     def template_get_org_id():
@@ -395,7 +398,7 @@ def create_app():
         try:
             return get_effective_organization_id()
         except Exception as e:
-            print(f"Organization ID check error: {e}")
+            logger.error(f"Organization ID check error: {e}")
             return None
 
     app.jinja_env.globals['has_permission'] = template_has_permission
