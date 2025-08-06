@@ -54,15 +54,18 @@ def sync_tier_to_database(tier_key, tier_config):
     tier_record.is_customer_facing = tier_config.get('is_customer_facing', True)
     tier_record.is_available = tier_config.get('is_available', True)
     tier_record.requires_stripe_billing = tier_config.get('requires_stripe_billing', True)
+    tier_record.requires_whop_billing = tier_config.get('requires_whop_billing', False)
 
-    # Only update stripe_lookup_key if it's actually provided in config
-    # This preserves manually set lookup keys from being overwritten
-    lookup_key_from_config = tier_config.get('stripe_lookup_key')
-    if lookup_key_from_config is not None:
-        tier_record.stripe_lookup_key = lookup_key_from_config
+    # Integration keys for linking to external products
+    stripe_lookup_key = tier_config.get('stripe_lookup_key')
+    if stripe_lookup_key is not None:
+        tier_record.stripe_lookup_key = stripe_lookup_key
+        
+    whop_product_key = tier_config.get('whop_product_key') 
+    if whop_product_key is not None:
+        tier_record.whop_product_key = whop_product_key
 
-    tier_record.fallback_price_monthly = tier_config.get('fallback_price_monthly', '$0')
-    tier_record.fallback_price_yearly = tier_config.get('fallback_price_yearly', '$0')
+    tier_record.fallback_price = tier_config.get('fallback_price', '$0')
 
     # Handle permissions
     permission_names = tier_config.get('permissions', [])
@@ -250,202 +253,26 @@ def delete_tier(tier_key):
 @subscription_tiers_bp.route('/sync/<tier_key>', methods=['POST'])
 @login_required
 def sync_tier(tier_key):
-    """Sync a tier with Stripe pricing and features - resilient to failures"""
-    import stripe
-    from datetime import datetime
-
+    """Validate tier configuration and sync to database"""
     tiers = load_tiers_config()
 
     if tier_key not in tiers:
         return jsonify({'error': 'Tier not found'}), 404
 
     tier = tiers[tier_key]
-    lookup_key = tier.get('stripe_lookup_key')
-
-    if not lookup_key:
-        return jsonify({'error': 'No Stripe lookup key configured'}), 400
-
+    
     try:
-        # Initialize Stripe
-        stripe_key = os.environ.get('STRIPE_SECRET_KEY')
-        if not stripe_key:
-            return jsonify({'error': 'Stripe secret key not configured in secrets'}), 400
-
-        stripe.api_key = stripe_key
-        logger.info(f"Stripe initialized for sync of tier {tier_key} with lookup key: {lookup_key}")
-
-        # Wrap the entire sync operation in try-catch to ensure failures are contained
-        try:
-            product = None
-
-            # Method 1: Find by lookup key in prices (most reliable)
-            try:
-                prices = stripe.Price.list(lookup_keys=[lookup_key], limit=1, active=True)
-                if prices.data:
-                    price = prices.data[0]
-                    product = stripe.Product.retrieve(price.product)
-                    logger.info(f"Found product via lookup key '{lookup_key}': {product.name} (ID: {product.id})")
-            except stripe.error.StripeError as lookup_error:
-                logger.warning(f"Lookup key search failed for '{lookup_key}': {str(lookup_error)}")
-
-            # Method 2: If lookup key failed, fall back to name matching
-            if not product:
-                logger.info(f"Lookup key '{lookup_key}' not found, falling back to name matching")
-                try:
-                    all_products = stripe.Product.list(limit=100, active=True)
-
-                    # Try to match by product name containing tier key
-                    tier_name_variations = [
-                        f"BatchTrack {tier_key.title()}",  # "BatchTrack Solo"
-                        f"BatchTrack {tier['name']}",      # "BatchTrack Solo Plan"
-                        tier_key.title(),                  # "Solo"
-                        tier['name']                       # "Solo Plan"
-                    ]
-
-                    logger.info(f"Searching for product matching tier '{tier_key}' in {len(all_products.data)} products")
-
-                    for p in all_products.data:
-                        logger.info(f"Checking product: {p.name} (ID: {p.id})")
-                        # Try name matching
-                        for name_variation in tier_name_variations:
-                            if name_variation.lower() in p.name.lower():
-                                product = p
-                                logger.info(f"Found matching product: {p.name} for variation: {name_variation}")
-                                break
-                        if product:
-                            break
-                except stripe.error.StripeError as product_list_error:
-                    logger.error(f"Failed to list products for name matching: {str(product_list_error)}")
-
-            if not product:
-                # Don't fail the entire operation - just return a warning
-                logger.warning(f"No Stripe product found for tier: {tier_key} (lookup key: {lookup_key})")
-                return jsonify({
-                    'success': False,
-                    'error': f'No Stripe product found for tier: {tier_key} (lookup key: {lookup_key}). Check your Stripe dashboard.',
-                    'tier': tier,
-                    'fallback_used': True
-                }), 404
-
-            logger.info(f"Found Stripe product: {product.id} ({product.name})")
-
-        except stripe.error.StripeError as search_error:
-            logger.error(f"Stripe API failed for lookup key {lookup_key}: {str(search_error)}")
-            return jsonify({
-                'success': False,
-                'error': f'Stripe API error: {str(search_error)}',
-                'tier': tier,
-                'fallback_used': True
-            }), 400
-
-        # Get prices for this product
-        try:
-            # First check if product has a default price
-            monthly_price = None
-            yearly_price = None
-            monthly_price_id = None
-            yearly_price_id = None
-
-            if product.default_price:
-                # Expand the default price to get full details
-                default_price = stripe.Price.retrieve(product.default_price)
-                if default_price.recurring:
-                    if default_price.recurring.interval == 'month':
-                        monthly_price = f"${default_price.unit_amount / 100:.0f}"
-                        monthly_price_id = default_price.id
-                    elif default_price.recurring.interval == 'year':
-                        yearly_price = f"${default_price.unit_amount / 100:.0f}"
-                        yearly_price_id = default_price.id
-
-            # Also check for additional prices
-            prices = stripe.Price.list(product=product.id, active=True)
-            for price in prices.data:
-                if price.recurring:
-                    # Monthly price (interval = month, interval_count = 1)
-                    if (price.recurring.interval == 'month' and 
-                        price.recurring.interval_count == 1 and 
-                        not monthly_price_id):
-                        monthly_price = f"${price.unit_amount / 100:.0f}"
-                        monthly_price_id = price.id
-                    # Yearly price (interval = month, interval_count = 12 OR interval = year)
-                    elif ((price.recurring.interval == 'month' and price.recurring.interval_count == 12) or
-                          (price.recurring.interval == 'year')) and not yearly_price_id:
-                        yearly_price = f"${price.unit_amount / 100:.0f}"
-                        yearly_price_id = price.id
-
-            logger.info(f"Found prices - Monthly: {monthly_price} ({monthly_price_id}), Yearly: {yearly_price} ({yearly_price_id})")
-
-        except stripe.error.StripeError as price_error:
-            logger.error(f"Failed to fetch prices for product {product.id}: {str(price_error)}")
-            return jsonify({'error': f'Failed to fetch prices: {str(price_error)}'}), 400
-
-        # Extract features from product metadata or description
-        features = []
-        if product.metadata.get('features'):
-            features = product.metadata['features'].split(',')
-        elif product.description:
-            # Try to extract features from description
-            features = [f.strip() for f in product.description.split(',') if f.strip()]
-
-        # Update tier with Stripe data - NEVER overwrite manually set lookup key
-        tier['stripe_features'] = features
-        tier['stripe_price_monthly'] = monthly_price or tier.get('fallback_price_monthly', '$0')
-        tier['stripe_price_yearly'] = yearly_price or tier.get('fallback_price_yearly', '$0')
-        tier['stripe_price_id_monthly'] = monthly_price_id
-        tier['stripe_price_id_yearly'] = yearly_price_id
-        tier['last_synced'] = datetime.now().isoformat()
-
-        # Preserve existing stripe_lookup_key - this is the user's manual configuration
-        # and should NEVER be overwritten by sync operations
-
-        # Ensure the lookup key is preserved in the tier data
-        if not tier.get('stripe_lookup_key'):
-            logger.warning(f"No stripe_lookup_key found for tier {tier_key} - this should be set manually")
-
-        # Update pricing snapshots for resilience - skip if model doesn't exist
-        try:
-            # Try to import and use pricing snapshots, but don't fail if unavailable
-            try:
-                from app.models.pricing_snapshot import PricingSnapshot
-                
-                # Create/update snapshots for both monthly and yearly prices
-                if monthly_price_id:
-                    monthly_price_data = stripe.Price.retrieve(monthly_price_id)
-                    PricingSnapshot.update_from_stripe_data(monthly_price_data, product)
-                    logger.info(f"Updated pricing snapshot for monthly price: {monthly_price_id}")
-
-                if yearly_price_id:
-                    yearly_price_data = stripe.Price.retrieve(yearly_price_id)
-                    PricingSnapshot.update_from_stripe_data(yearly_price_data, product)
-                    logger.info(f"Updated pricing snapshot for yearly price: {yearly_price_id}")
-
-                db.session.commit()
-                logger.info(f"Pricing snapshots updated for tier {tier_key}")
-            except ImportError:
-                logger.info(f"PricingSnapshot model not available, skipping snapshots for tier {tier_key}")
-            except AttributeError as attr_error:
-                logger.warning(f"PricingSnapshot method not available: {str(attr_error)}")
-
-        except Exception as snapshot_error:
-            logger.warning(f"Failed to update pricing snapshots for tier {tier_key}: {str(snapshot_error)}")
-            # Don't fail the sync if snapshots fail
-
-        save_tiers_config(tiers)
-
-        # Also update database record with the current lookup key
+        # Just sync the tier configuration to database
         sync_tier_to_database(tier_key, tier)
-
-        logger.info(f"Synced tier {tier_key} with Stripe - preserved lookup key: {lookup_key}")
+        
+        logger.info(f"Synced tier {tier_key} configuration to database")
 
         return jsonify({
             'success': True,
             'tier': tier,
-            'message': f'Successfully synced {tier["name"]} with Stripe (lookup key preserved)'
+            'message': f'Successfully synced {tier["name"]} configuration'
         })
 
-    except stripe.error.StripeError as e:
-        logger.error(f"Stripe error during sync of tier {tier_key}: {str(e)}")
-        return jsonify({'success': False, 'error': f'Stripe error: {str(e)}'}), 400
     except Exception as e:
         logger.error(f"Unexpected error during sync of tier {tier_key}: {str(e)}")
         return jsonify({'success': False, 'error': f'Sync failed: {str(e)}'}), 500
@@ -459,9 +286,7 @@ def api_get_tiers():
 @subscription_tiers_bp.route('/sync-whop/<tier_key>', methods=['POST'])
 @login_required
 def sync_whop_tier(tier_key):
-    """Sync a tier with Whop products - validate product exists"""
-    from datetime import datetime
-    
+    """Validate Whop product configuration"""
     tiers = load_tiers_config()
 
     if tier_key not in tiers:
@@ -474,20 +299,7 @@ def sync_whop_tier(tier_key):
         return jsonify({'error': 'No Whop product key configured'}), 400
 
     try:
-        # For now, just validate the configuration exists
-        # In a full implementation, you'd validate against Whop API
-        whop_store_id = current_app.config.get('WHOP_STORE_ID')
-        whop_secret = current_app.config.get('WHOP_SECRET_KEY')
-        
-        if not whop_store_id or not whop_secret:
-            return jsonify({'error': 'Whop integration not configured in secrets'}), 400
-
-        # Update tier with sync timestamp
-        tier['whop_last_synced'] = datetime.now().isoformat()
-        
-        save_tiers_config(tiers)
-
-        # Also update database record
+        # Just validate the configuration and sync to database
         sync_tier_to_database(tier_key, tier)
 
         return jsonify({
@@ -497,7 +309,7 @@ def sync_whop_tier(tier_key):
         })
 
     except Exception as e:
-        return jsonify({'error': f'Whop sync failed: {str(e)}'}), 500
+        return jsonify({'error': f'Whop validation failed: {str(e)}'}), 500
 
 @subscription_tiers_bp.route('/api/customer-tiers')
 def api_get_customer_tiers():
