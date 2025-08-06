@@ -45,11 +45,7 @@
                                 <div class="card-body text-center p-4">
                                     <h3 class="card-title fw-bold">{{ tier_data.name }}</h3>
                                     <div class="h1 text-primary mb-3">
-                                        {% if tier_data.price_monthly == 0 %}
-                                            {{ tier_data.price_display }}
-                                        {% else %}
-                                            ${{ "%.0f"|format(tier_data.price_monthly) }}<small class="text-muted fs-6">/mo</small>
-                                        {% endif %}
+                                        {{ tier_data.price_display }}
                                     </div>
                                     
                                     <div class="text-muted mb-4">
