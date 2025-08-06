@@ -12,7 +12,7 @@ from sqlalchemy import inspect
 
 # revision identifiers, used by Alembic.
 revision = 'add_fallback_price_column'
-down_revision = '4246268c4e7c'
+down_revision = 'fix_missing_email_verification'
 branch_labels = None
 depends_on = None
 
