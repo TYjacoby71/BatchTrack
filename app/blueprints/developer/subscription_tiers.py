@@ -302,7 +302,7 @@ def sync_tier(tier_key):
                 tier_obj = SubscriptionTier(key=tier_key)
                 db.session.add(tier_obj)
 
-            # Update only the fields that exist in the current model
+            # Update only the fields that actually exist in the SubscriptionTier model
             tier_obj.name = tier_config.get('name', tier_key.title())
             tier_obj.description = tier_config.get('description', '')
             tier_obj.user_limit = tier_config.get('user_limit', 1)
@@ -310,9 +310,24 @@ def sync_tier(tier_key):
             tier_obj.is_available = tier_config.get('is_available', True)
             tier_obj.requires_stripe_billing = tier_config.get('requires_stripe_billing', True)
             tier_obj.requires_whop_billing = tier_config.get('requires_whop_billing', False)
-            tier_obj.stripe_lookup_key = tier_config.get('stripe_lookup_key')
-            tier_obj.whop_product_key = tier_config.get('whop_product_key')
+            
+            # Handle nullable fields safely
+            stripe_lookup_key = tier_config.get('stripe_lookup_key')
+            if stripe_lookup_key:
+                tier_obj.stripe_lookup_key = stripe_lookup_key
+                
+            whop_product_key = tier_config.get('whop_product_key')
+            if whop_product_key:
+                tier_obj.whop_product_key = whop_product_key
+                
             tier_obj.fallback_price = tier_config.get('fallback_price', '$0')
+
+            # Handle permissions relationship
+            permission_names = tier_config.get('permissions', [])
+            if permission_names:
+                from app.models import Permission
+                permissions = Permission.query.filter(Permission.name.in_(permission_names)).all()
+                tier_obj.permissions = permissions
 
             db.session.commit()
             logger.info(f"Synced tier to database: {tier_key}")
@@ -393,14 +408,3 @@ def api_get_tiers_by_category(category):
     }
     return jsonify(filtered_tiers)
 
-@subscription_tiers_bp.route('/api/tiers/by-cycle/<cycle>')
-def api_get_tiers_by_cycle(cycle):
-    """API endpoint to get tiers by billing cycle"""
-    all_tiers = load_tiers_config()
-    filtered_tiers = {
-        key: tier for key, tier in all_tiers.items()
-        if (tier.get('billing_cycle', 'monthly') == cycle and
-            tier.get('is_customer_facing', True) and
-            tier.get('is_available', True))
-    }
-    return jsonify(filtered_tiers)
