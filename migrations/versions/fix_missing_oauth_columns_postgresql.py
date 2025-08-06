@@ -1,8 +1,8 @@
 
 """fix missing oauth columns postgresql
 
-Revision ID: fix_missing_oauth_columns_postgresql
-Revises: 4246268c4e7c
+Revision ID: 9a2b8c4d5e6f
+Revises: add_fallback_price_column
 Create Date: 2025-08-06 23:40:00.000000
 
 """
@@ -11,8 +11,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'fix_missing_oauth_columns_postgresql'
-down_revision = '4246268c4e7c'
+revision = '9a2b8c4d5e6f'
+down_revision = 'add_fallback_price_column'
 branch_labels = None
 depends_on = None
 
