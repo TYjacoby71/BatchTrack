@@ -73,9 +73,9 @@ def require_organization_owner(f):
     return decorated_function
 
 def has_permission(permission_name_or_user, permission_name_or_none=None):
-    """Check if user has a specific permission"""
+    """Check if user has a specific permission using proper authorization hierarchy"""
     # Handle both calling patterns:
-    # has_permission('permission.name') - from code
+    # has_permission('permission.name') - from code  
     # has_permission(current_user, 'permission.name') - from templates
 
     if permission_name_or_none is not None:
@@ -90,32 +90,9 @@ def has_permission(permission_name_or_user, permission_name_or_none=None):
     if not hasattr(user, 'is_authenticated') or not user.is_authenticated:
         return False
 
-    # Developers in customer view mode work like organization owners
-    if user.user_type == 'developer':
-        from flask import session
-        selected_org_id = session.get('dev_selected_org_id')
-        if selected_org_id:
-            # Developer in customer view has all organization owner permissions for that tier
-            return _has_tier_permission_for_org(selected_org_id, permission_name)
-        else:
-            # Developer in developer mode - check developer permissions
-            return current_user.has_developer_permission(permission_name)
-
-    # All other users: check org tier allows permission AND user has role with permission
-    if not user.organization:
-        return False
-
-    # 1. First check: Does the organization's subscription tier include this permission?
-    if not _org_tier_includes_permission(user.organization, permission_name):
-        return False
-
-    # 2. Second check: Does any of the user's roles grant this permission?
-    roles = user.get_active_roles()
-    for role in roles:
-        if role.has_permission(permission_name):
-            return True
-
-    return False
+    # Use the proper authorization hierarchy
+    from .authorization import AuthorizationHierarchy
+    return AuthorizationHierarchy.check_user_authorization(user, permission_name)
 
 def _org_tier_includes_permission(organization, permission_name):
     """Check if organization's subscription tier includes this permission"""
@@ -182,40 +159,13 @@ def is_developer():
     return current_user.is_authenticated and current_user.user_type == 'developer'
 
 def get_user_permissions():
-    """Get all permissions for the current user"""
+    """Get all permissions for the current user using authorization hierarchy"""
     if not current_user.is_authenticated:
         return []
 
-    if current_user.user_type == 'developer':
-        from flask import session
-        if session.get('dev_selected_org_id'):
-            # Developer in customer view - return permissions available to selected org's tier
-            from app.models import Organization
-            from app.models.permission import Permission
-            selected_org = Organization.query.get(session.get('dev_selected_org_id'))
-            if selected_org:
-                permissions = set()
-                all_permissions = Permission.query.filter_by(is_active=True).all()
-                for perm in all_permissions:
-                    if perm.is_available_for_tier(selected_org.effective_subscription_tier):
-                        permissions.add(perm.name)
-                return list(permissions)
-            return []
-        else:
-            # Developer not in customer view - return all permissions
-            from app.models.permission import Permission
-            return [perm.name for perm in Permission.query.filter_by(is_active=True).all()]
-
-    # Get permissions from assigned roles (works for all user types)
-    permissions = set()
-    roles = current_user.get_active_roles()
-    for role in roles:
-        for perm in role.get_permissions():
-            # Only add permissions that the organization's tier allows
-            if _org_tier_includes_permission(current_user.organization, perm.name):
-                permissions.add(perm.name)
-
-    return list(permissions)
+    # Use the proper authorization hierarchy
+    from .authorization import AuthorizationHierarchy
+    return AuthorizationHierarchy.get_user_effective_permissions(current_user)
 
 def get_effective_organization_id():
     """Get the effective organization ID for current user (handles developer customer view)"""
@@ -241,6 +191,34 @@ def get_effective_organization():
     if org_id:
         return Organization.query.get(org_id)
     return None
+
+def check_organization_access(organization):
+    """Check if organization has valid access based on subscription and billing status"""
+    if not organization:
+        return False, "No organization found"
+
+    # Exempt organizations always have access
+    if organization.effective_subscription_tier == 'exempt':
+        return True, "Exempt organization"
+
+    # Check subscription tier exists and is valid
+    if not organization.tier:
+        return False, "No valid subscription tier"
+
+    # Check if tier is available and customer-facing
+    if not organization.tier.is_available:
+        return False, "Subscription tier is not available"
+
+    # For billing-required tiers, check billing status
+    if organization.tier.requires_stripe_billing or organization.tier.requires_whop_billing:
+        # Check subscription status
+        if organization.subscription_status not in ['active', 'trialing']:
+            return False, "Subscription not active"
+
+        # Additional billing validations can be added here
+        # e.g., check for past due payments, etc.
+
+    return True, "Active subscription"
 
 def get_available_roles_for_user(user=None):
     """Get roles that can be assigned to a user"""

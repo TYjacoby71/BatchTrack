@@ -79,18 +79,22 @@ class BillingService:
         """Get basic pricing data for tiers - simple version for signup"""
         tiers_config = load_tiers_config()
         pricing_data = {}
-        
+
         for tier_obj in BillingService.get_available_tiers():
             tier_config = tiers_config.get(tier_obj.key, {})
             pricing_data[tier_obj.key] = {
                 'name': tier_obj.name,
                 'price': tier_obj.fallback_price,
+                'price_display': tier_config.get('price_display', tier_obj.fallback_price),
+                'price_monthly': tier_config.get('price_monthly', 0),
                 'features': tier_config.get('features', []),
                 'user_limit': tier_obj.user_limit,
                 'stripe_lookup_key': tier_obj.stripe_lookup_key,
-                'whop_product_key': tier_obj.whop_product_key
+                'whop_product_key': tier_obj.whop_product_key,
+                'whop_product_id': tier_config.get('whop_product_id', ''),
+                'whop_only': tier_config.get('whop_only', False)
             }
-        
+
         return pricing_data
 
     @staticmethod
