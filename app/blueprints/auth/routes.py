@@ -173,37 +173,49 @@ def signup():
                          available_tiers=available_tiers,
                          form_data=request.form)
 
-        # Create Stripe checkout with signup data in metadata (industry standard)
-        tier_data = available_tiers.get(selected_tier, {})
+        # Simplified Stripe checkout
+        from ...services.stripe_service import StripeService
+        from ...models import SubscriptionTier
         
-        if tier_data.get('stripe_price_id_monthly'):
-            # Create Stripe checkout session with signup data in metadata
-            from ...services.stripe_service import StripeService
-            
-            signup_metadata = {
+        tier_obj = SubscriptionTier.query.filter_by(key=selected_tier).first()
+        if not tier_obj:
+            flash('Invalid subscription plan', 'error')
+            return render_template('auth/signup.html', **locals())
+
+        # Simple metadata for Stripe
+        metadata = {
+            'email': email,
+            'tier': selected_tier,
+            'signup_type': 'direct'
+        }
+        
+        success_url = url_for('billing.complete_signup_from_stripe', _external=True) + '?session_id={CHECKOUT_SESSION_ID}'
+        cancel_url = url_for('auth.signup', _external=True)
+        
+        stripe_session = StripeService.create_checkout_session_for_tier(
+            tier_obj,
+            email,
+            f"{first_name} {last_name}",
+            success_url,
+            cancel_url,
+            metadata
+        )
+
+        if stripe_session:
+            # Store signup data in session for completion
+            session['pending_signup'] = {
                 'org_name': org_name,
                 'username': username,
                 'email': email,
                 'first_name': first_name,
                 'last_name': last_name,
-                'phone': phone or '',
-                'selected_tier': selected_tier,
-                'signup_source': signup_source,
-                'promo_code': promo_code or '',
-                'referral_code': referral_code or '',
-                # Hash password for security in metadata
-                'password_hash': generate_password_hash(password)
+                'phone': phone,
+                'password_hash': generate_password_hash(password),
+                'selected_tier': selected_tier
             }
-            
-            stripe_session = StripeService.create_checkout_session_for_signup(
-                signup_metadata,
-                f"{selected_tier}_monthly"
-            )
-
-            if stripe_session:
-                return redirect(stripe_session.url)
-            else:
-                flash('Payment system temporarily unavailable. Please try again later.', 'error')
+            return redirect(stripe_session.url)
+        else:
+            flash('Payment system temporarily unavailable. Please try again later.', 'error')
         else:
             flash('Payment method not configured for this plan. Please contact administrator.', 'error')
 
