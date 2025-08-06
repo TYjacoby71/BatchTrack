@@ -85,10 +85,6 @@ def manage_tiers():
 
     # Ensure each tier has proper pricing display data
     for tier_key, tier_data in tiers.items():
-        # If no stripe_price is set but there's a stripe_lookup_key, show lookup key info
-        if not tier_data.get('stripe_price') and tier_data.get('stripe_lookup_key'):
-            tier_data['stripe_price'] = f"Key: {tier_data['stripe_lookup_key']}"
-        
         # Ensure fallback price is displayed if no Stripe price
         if not tier_data.get('stripe_price') and not tier_data.get('fallback_price'):
             tier_data['fallback_price'] = '$0'
@@ -279,8 +275,8 @@ def sync_tier(tier_key):
         # If tier has Stripe lookup key, fetch pricing from Stripe
         if stripe_lookup_key:
             try:
-                from app.services.stripe_service import get_stripe_pricing_for_lookup_key
-                pricing_data = get_stripe_pricing_for_lookup_key(stripe_lookup_key)
+                from app.services.stripe_service import StripeService
+                pricing_data = StripeService.get_stripe_pricing_for_lookup_key(stripe_lookup_key)
                 
                 if pricing_data:
                     # Update the tier config with fresh pricing data
