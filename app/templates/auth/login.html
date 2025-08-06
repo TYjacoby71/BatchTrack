@@ -99,22 +99,25 @@
 
                     <!-- Register Form -->
                     <div id="registerForm" style="display: none;">
+                        {% if oauth_available %}
                         <div class="text-center mb-4">
-                            <div class="alert alert-success">
-                                <h5 class="mb-2">
-                                    <i class="fas fa-gift me-2"></i>14-Day Free Trial
-                                </h5>
-                                <p class="mb-0">Full access to all features. Payment required but no charges until trial ends.</p>
+                            <a href="{{ url_for('auth.oauth_google') }}" class="btn btn-outline-danger w-100">
+                                <i class="fab fa-google me-2"></i>Sign up with Google
+                            </a>
+                            <div class="divider mt-3">
+                                <span class="divider-text">or</span>
                             </div>
                         </div>
+                        {% endif %}
 
                         <div class="text-center mb-4">
-                            <p class="text-muted">
-                                Get the complete setup with billing information for your free trial:
-                            </p>
-                            <a href="{{ url_for('auth.signup', source='login_register') }}" class="btn btn-success btn-lg w-100">
-                                <i class="fas fa-rocket me-2"></i>Start Free Trial
-                            </a>
+                            <h5 class="mb-3">Choose Your Plan</h5>
+                            <div id="tierSelection" class="mb-3">
+                                <!-- Tier selection will be loaded here -->
+                            </div>
+                            <button type="button" class="btn btn-success btn-lg w-100" onclick="startSignupWithTier()">
+                                <i class="fas fa-rocket me-2"></i>Continue with Selected Plan
+                            </button>
                         </div>
 
                         <div class="text-center mt-3">
@@ -150,6 +153,9 @@
 </div>
 
 <script>
+let selectedTier = 'team'; // Default selection
+let availableTiers = {};
+
 function showLogin() {
     document.getElementById('loginForm').style.display = 'block';
     document.getElementById('registerForm').style.display = 'none';
@@ -166,6 +172,109 @@ function showRegister() {
     document.getElementById('registerTab').classList.remove('btn-outline-primary');
     document.getElementById('loginTab').classList.add('btn-outline-primary');
     document.getElementById('loginTab').classList.remove('btn-primary');
+    
+    // Load tiers when showing register form
+    loadAvailableTiers();
+}
+
+function loadAvailableTiers() {
+    // Get tiers from the signup endpoint
+    fetch('/auth/signup-data')
+        .then(response => response.json())
+        .then(data => {
+            availableTiers = data.available_tiers;
+            renderTierSelection();
+        })
+        .catch(error => {
+            console.error('Error loading tiers:', error);
+            // Fallback tier selection
+            renderFallbackTiers();
+        });
+}
+
+function renderTierSelection() {
+    const tierContainer = document.getElementById('tierSelection');
+    if (!tierContainer) return;
+    
+    let html = '';
+    
+    for (const [tierKey, tierData] of Object.entries(availableTiers)) {
+        const isSelected = tierKey === selectedTier;
+        html += `
+            <div class="tier-option mb-2" onclick="selectTier('${tierKey}')" 
+                 style="cursor: pointer; border: 2px solid ${isSelected ? '#198754' : '#dee2e6'}; 
+                        border-radius: 8px; padding: 12px; transition: all 0.3s;">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>${tierData.name}</strong>
+                        <div class="small text-muted">
+                            ${tierData.user_limit === -1 ? 'Unlimited users' : `${tierData.user_limit} user${tierData.user_limit !== 1 ? 's' : ''}`}
+                        </div>
+                    </div>
+                    <div class="text-end">
+                        <div class="h6 mb-0 text-primary">
+                            ${tierData.price_monthly === 0 ? tierData.price_display : `$${Math.round(tierData.price_monthly)}/mo`}
+                        </div>
+                        ${isSelected ? '<i class="fas fa-check-circle text-success"></i>' : ''}
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    tierContainer.innerHTML = html;
+}
+
+function renderFallbackTiers() {
+    const tierContainer = document.getElementById('tierSelection');
+    if (!tierContainer) return;
+    
+    // Simple fallback if API fails
+    tierContainer.innerHTML = `
+        <div class="tier-option mb-2" onclick="selectTier('team')" 
+             style="cursor: pointer; border: 2px solid #198754; border-radius: 8px; padding: 12px;">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <strong>Team Plan</strong>
+                    <div class="small text-muted">5 users</div>
+                </div>
+                <div class="text-end">
+                    <div class="h6 mb-0 text-primary">$49/mo</div>
+                    <i class="fas fa-check-circle text-success"></i>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function selectTier(tierKey) {
+    selectedTier = tierKey;
+    
+    // Update visual selection
+    document.querySelectorAll('.tier-option').forEach(option => {
+        const isSelected = option.getAttribute('onclick').includes(tierKey);
+        option.style.border = isSelected ? '2px solid #198754' : '2px solid #dee2e6';
+        
+        // Update check icon
+        const checkIcon = option.querySelector('.fas.fa-check-circle');
+        if (checkIcon) {
+            checkIcon.style.display = isSelected ? 'inline' : 'none';
+        } else if (isSelected) {
+            // Add check icon if it doesn't exist
+            const priceDiv = option.querySelector('.text-end');
+            priceDiv.innerHTML += '<i class="fas fa-check-circle text-success"></i>';
+        }
+    });
+}
+
+function startSignupWithTier() {
+    if (!selectedTier) {
+        alert('Please select a plan first.');
+        return;
+    }
+    
+    // Redirect to signup page with selected tier
+    window.location.href = `/auth/signup?tier=${selectedTier}&source=login_register`;
 }
 
 // Initialize with login form showing

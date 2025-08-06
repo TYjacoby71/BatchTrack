@@ -246,6 +246,39 @@ def dev_login():
         flash('Developer account not found. Please contact system administrator.', 'error')
         return redirect(url_for('auth.login'))
 
+@auth_bp.route('/signup-data')
+def signup_data():
+    """API endpoint to get available tiers for signup modal"""
+    from ...services.billing_service import BillingService
+    from ...blueprints.developer.subscription_tiers import load_tiers_config
+
+    # Get available tiers from billing service
+    available_tiers_db = BillingService.get_available_tiers()
+    tiers_config = load_tiers_config()
+
+    # Show all customer-facing tiers
+    available_tiers = {}
+    for tier_obj in available_tiers_db:
+        tier_config = tiers_config.get(tier_obj.key, {})
+        if tier_config and tier_config.get('is_customer_facing', True):
+            # Get features from the correct JSON structure
+            features = tier_config.get('fallback_features', [])
+
+            available_tiers[tier_obj.key] = {
+                'name': tier_obj.name,
+                'price_monthly': 0,  # Will be populated from Stripe/Whop
+                'price_display': tier_obj.fallback_price,
+                'price_yearly': '$0',  # Will be populated from Stripe/Whop
+                'features': features,
+                'user_limit': tier_obj.user_limit,
+                'whop_product_id': tier_config.get('whop_product_id', '')
+            }
+
+    return jsonify({
+        'available_tiers': available_tiers,
+        'oauth_available': OAuthService.is_oauth_configured()
+    })
+
 @auth_bp.route('/debug/oauth-config')
 def debug_oauth_config():
     """Debug OAuth configuration - only in debug mode"""
@@ -299,6 +332,7 @@ def signup():
     signup_source = request.args.get('source', request.form.get('source', 'direct'))
     referral_code = request.args.get('ref', request.form.get('ref'))
     promo_code = request.args.get('promo', request.form.get('promo'))
+    preselected_tier = request.args.get('tier')
     
     # Check for OAuth user info from session
     oauth_user_info = session.get('oauth_user_info')
@@ -438,7 +472,8 @@ def signup():
                          promo_code=promo_code,
                          available_tiers=available_tiers,
                          oauth_user_info=oauth_user_info,
-                         oauth_available=OAuthService.is_oauth_configured())
+                         oauth_available=OAuthService.is_oauth_configured(),
+                         preselected_tier=preselected_tier)
 
 # Whop License Login Route
 @auth_bp.route('/whop-login', methods=['POST'])
