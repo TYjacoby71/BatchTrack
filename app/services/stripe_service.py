@@ -3,6 +3,7 @@ import logging
 from flask import current_app, url_for
 from ..models import db, SubscriptionTier, Organization
 from ..utils.timezone_utils import TimezoneUtils
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -134,7 +135,7 @@ class StripeService:
                 if tier:
                     organization.subscription_tier_id = tier.id
                     logger.info(f"Set organization {organization.id} to tier {tier_key}")
-                    
+
                     # Sync permissions based on new tier
                     from .billing_access_control import BillingAccessControl
                     BillingAccessControl.sync_permissions_from_tier(organization)
@@ -195,7 +196,7 @@ class StripeService:
                 # Reactivate if subscription becomes active again
                 organization.is_active = True
                 logger.info(f"Reactivated org {organization.id} due to active subscription")
-                
+
                 # Sync permissions when reactivated
                 from .billing_access_control import BillingAccessControl
                 BillingAccessControl.sync_permissions_from_tier(organization)
@@ -341,7 +342,6 @@ class StripeService:
             return None
 
 
-
     @staticmethod
     def handle_webhook(event):
         """Centralized webhook event handling"""
@@ -422,4 +422,44 @@ class StripeService:
             logger.error(f"Failed to create signup checkout session: {str(e)}")
             return None
 
-    
+    @staticmethod
+    def get_stripe_pricing_for_lookup_key(lookup_key):
+        """Get pricing information from Stripe for a given lookup key"""
+        if not stripe:
+            return None
+
+        try:
+            # Search for price using lookup key
+            prices = stripe.Price.list(lookup_keys=[lookup_key], limit=1)
+
+            if not prices.data:
+                return None
+
+            price = prices.data[0]
+
+            # Format the price
+            amount = price.unit_amount / 100  # Convert from cents
+            currency = price.currency.upper()
+
+            # Determine billing cycle
+            if price.recurring:
+                interval = price.recurring.interval
+                billing_cycle = 'yearly' if interval == 'year' else 'monthly'
+            else:
+                billing_cycle = 'one-time'
+
+            return {
+                'price_id': price.id,
+                'formatted_price': f'${amount:.0f}',
+                'amount': amount,
+                'currency': currency,
+                'billing_cycle': billing_cycle,
+                'last_synced': datetime.utcnow().isoformat()
+            }
+
+        except stripe.error.StripeError as e:
+            logger.error(f"Stripe error fetching pricing for {lookup_key}: {str(e)}")
+            return None
+        except Exception as e:
+            logger.error(f"Unexpected error fetching pricing for {lookup_key}: {str(e)}")
+            return None

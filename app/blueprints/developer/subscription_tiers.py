@@ -83,6 +83,16 @@ def manage_tiers():
     tiers = load_tiers_config()
     all_permissions = Permission.query.filter_by(is_active=True).all()
 
+    # Ensure each tier has proper pricing display data
+    for tier_key, tier_data in tiers.items():
+        # If no stripe_price is set but there's a stripe_lookup_key, show lookup key info
+        if not tier_data.get('stripe_price') and tier_data.get('stripe_lookup_key'):
+            tier_data['stripe_price'] = f"Key: {tier_data['stripe_lookup_key']}"
+        
+        # Ensure fallback price is displayed if no Stripe price
+        if not tier_data.get('stripe_price') and not tier_data.get('fallback_price'):
+            tier_data['fallback_price'] = '$0'
+
     return render_template('developer/subscription_tiers.html', 
                          tiers=tiers,
                          all_permissions=all_permissions)
@@ -253,24 +263,48 @@ def delete_tier(tier_key):
 @subscription_tiers_bp.route('/sync/<tier_key>', methods=['POST'])
 @login_required
 def sync_tier(tier_key):
-    """Validate tier configuration and sync to database"""
+    """Validate tier configuration and sync to database, fetch pricing from Stripe"""
     tiers = load_tiers_config()
 
     if tier_key not in tiers:
         return jsonify({'error': 'Tier not found'}), 404
 
     tier = tiers[tier_key]
+    stripe_lookup_key = tier.get('stripe_lookup_key')
     
     try:
-        # Just sync the tier configuration to database
+        # Sync the tier configuration to database
         sync_tier_to_database(tier_key, tier)
         
-        logger.info(f"Synced tier {tier_key} configuration to database")
-
+        # If tier has Stripe lookup key, fetch pricing from Stripe
+        if stripe_lookup_key:
+            try:
+                from app.services.stripe_service import get_stripe_pricing_for_lookup_key
+                pricing_data = get_stripe_pricing_for_lookup_key(stripe_lookup_key)
+                
+                if pricing_data:
+                    # Update the tier config with fresh pricing data
+                    tier['stripe_price'] = pricing_data.get('formatted_price', tier.get('fallback_price', '$0'))
+                    tier['stripe_price_id'] = pricing_data.get('price_id')
+                    tier['billing_cycle'] = pricing_data.get('billing_cycle', 'monthly')
+                    tier['last_synced'] = pricing_data.get('last_synced')
+                    
+                    # Save updated pricing back to JSON
+                    save_tiers_config(tiers)
+                    
+                    logger.info(f"Synced tier {tier_key} with Stripe pricing: {tier['stripe_price']}")
+                else:
+                    logger.warning(f"No Stripe pricing found for lookup key: {stripe_lookup_key}")
+                    
+            except Exception as stripe_error:
+                logger.error(f"Failed to fetch Stripe pricing for {tier_key}: {str(stripe_error)}")
+                # Continue without Stripe pricing - fallback to config values
+        
         return jsonify({
             'success': True,
             'tier': tier,
-            'message': f'Successfully synced {tier["name"]} configuration'
+            'message': f'Successfully synced {tier["name"]} configuration' + 
+                      (f' with Stripe pricing' if stripe_lookup_key else '')
         })
 
     except Exception as e:
