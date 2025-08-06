@@ -50,7 +50,14 @@
                                 <span class="divider-text">or create account manually</span>
                             </div>
                         </div>
+                    {% elif not oauth_user_info %}
+                        <!-- OAuth not configured - show debug info in development -->
+                        {% if config.DEBUG %}
+                        <div class="alert alert-info">
+                            <small>OAuth not configured. Add Google OAuth secrets to enable social signup.</small>
+                        </div>
                         {% endif %}
+                    {% endif %}
 
                         {% if oauth_user_info %}
                         <div class="alert alert-success">
