@@ -55,8 +55,10 @@
                         </div>
                         {% elif config.DEBUG %}
                         <div class="text-center mt-3">
-                            <div class="alert alert-info small">
-                                OAuth not configured. Add Google OAuth secrets to enable social login.
+                            <div class="alert alert-warning small">
+                                <strong>OAuth Debug:</strong> Not configured.<br>
+                                <small>Add GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_CLIENT_SECRET to Replit Secrets.</small><br>
+                                <a href="{{ url_for('auth.debug_oauth_config') }}" class="small text-muted">Check OAuth config</a>
                             </div>
                         </div>
                         {% endif %}

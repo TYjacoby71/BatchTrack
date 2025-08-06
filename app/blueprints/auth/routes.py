@@ -66,15 +66,26 @@ def login():
 @auth_bp.route('/oauth/google')
 def oauth_google():
     """Initiate Google OAuth flow"""
-    if not OAuthService.is_oauth_configured():
+    logger.info("OAuth Google route accessed")
+    
+    # Check configuration with detailed logging
+    config_status = OAuthService.get_configuration_status()
+    logger.info(f"OAuth configuration status: {config_status}")
+    
+    if not config_status['is_configured']:
+        logger.warning("OAuth not configured - redirecting to login with error")
         flash('OAuth is not configured. Please contact administrator.', 'error')
         return redirect(url_for('auth.login'))
     
+    logger.info("Getting OAuth authorization URL")
     authorization_url, state = OAuthService.get_authorization_url()
+    
     if not authorization_url:
+        logger.error("Failed to get authorization URL")
         flash('Unable to initiate OAuth. Please try again.', 'error')
         return redirect(url_for('auth.login'))
     
+    logger.info(f"OAuth authorization URL generated successfully, state: {state[:10]}...")
     session['oauth_state'] = state
     return redirect(authorization_url)
 
@@ -234,6 +245,23 @@ def dev_login():
     else:
         flash('Developer account not found. Please contact system administrator.', 'error')
         return redirect(url_for('auth.login'))
+
+@auth_bp.route('/debug/oauth-config')
+def debug_oauth_config():
+    """Debug OAuth configuration - only in debug mode"""
+    if not current_app.config.get('DEBUG'):
+        abort(404)
+        
+    config_status = OAuthService.get_configuration_status()
+    
+    return jsonify({
+        'oauth_configuration': config_status,
+        'environment_vars': {
+            'GOOGLE_OAUTH_CLIENT_ID_present': bool(current_app.config.get('GOOGLE_OAUTH_CLIENT_ID')),
+            'GOOGLE_OAUTH_CLIENT_SECRET_present': bool(current_app.config.get('GOOGLE_OAUTH_CLIENT_SECRET'))
+        },
+        'template_oauth_available': OAuthService.is_oauth_configured()
+    })
 
 @auth_bp.route('/signup', methods=['GET', 'POST'])
 def signup():
