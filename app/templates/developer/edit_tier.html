@@ -82,24 +82,15 @@
                                 </div>
                             </div>
                             <div class="col-md-6">
-                                <div class="mb-3">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="requires_stripe_billing" name="requires_stripe_billing"
-                                               {% if tier.get('requires_stripe_billing', True) %}checked{% endif %}>
-                                        <label class="form-check-label" for="requires_stripe_billing">
-                                            Requires Stripe
-                                        </label>
-                                    </div>
-                                </div>
-
-                                <div class="mb-3">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="supports_whop" name="supports_whop"
-                                               {% if tier.get('supports_whop', False) %}checked{% endif %}>
-                                        <label class="form-check-label" for="supports_whop">
-                                            Requires Whop
-                                        </label>
-                                    </div>
+                                <div class="alert alert-info">
+                                    <h6><i class="fas fa-info-circle"></i> Auto-Detection</h6>
+                                    <small>
+                                        Billing provider is automatically determined by product keys:<br>
+                                        • <strong>Stripe only:</strong> Stripe lookup key provided<br>
+                                        • <strong>Whop only:</strong> Whop product key provided<br>
+                                        • <strong>Both:</strong> Both keys provided<br>
+                                        • <strong>None:</strong> No keys (exempt/free tier)
+                                    </small>
                                 </div>
                             </div>
                         </div>

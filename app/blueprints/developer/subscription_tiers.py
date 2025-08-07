@@ -55,7 +55,11 @@ def sync_tier_to_database(tier_key, tier_config):
     tier_record.is_customer_facing = tier_config.get('is_customer_facing', True)
     tier_record.is_available = tier_config.get('is_available', True)
     tier_record.tier_type = tier_config.get('tier_type', 'paid')
-    tier_record.billing_provider = tier_config.get('billing_provider')
+
+    # Billing provider specifies which system to check for paid tiers
+    billing_provider = tier_config.get('billing_provider')
+    if billing_provider:
+        tier_record.billing_provider = billing_provider
 
     # Integration keys for linking to external products
     stripe_lookup_key = tier_config.get('stripe_lookup_key')
@@ -97,20 +101,20 @@ def manage_tiers():
 def create_stripe_secrets(tier_key, monthly_price_id, yearly_price_id):
     """Create environment secrets for Stripe price IDs"""
     import os
-    
+
     # Create secret names following the convention
     monthly_secret_name = f'STRIPE_{tier_key.upper()}_MONTHLY_PRICE_ID'
     yearly_secret_name = f'STRIPE_{tier_key.upper()}_YEARLY_PRICE_ID'
-    
+
     # In Replit, we can set environment variables dynamically (they become secrets)
     if monthly_price_id:
         os.environ[monthly_secret_name] = monthly_price_id
         logger.info(f"Created secret: {monthly_secret_name}")
-    
+
     if yearly_price_id:
         os.environ[yearly_secret_name] = yearly_price_id
         logger.info(f"Created secret: {yearly_secret_name}")
-    
+
     return monthly_secret_name, yearly_secret_name
 
 @subscription_tiers_bp.route('/create', methods=['GET', 'POST'])
@@ -134,7 +138,7 @@ def create_tier():
         # Get Stripe price IDs and create secrets
         monthly_price_id = request.form.get('stripe_monthly_price_id', '').strip()
         yearly_price_id = request.form.get('stripe_yearly_price_id', '').strip()
-        
+
         # Create secrets for the price IDs if provided
         if monthly_price_id or yearly_price_id:
             try:
@@ -344,16 +348,16 @@ def sync_tier(tier_key):
             tier_obj.is_available = tier_config.get('is_available', True)
             tier_obj.tier_type = tier_config.get('tier_type', 'paid')
             tier_obj.billing_provider = tier_config.get('billing_provider')
-            
+
             # Handle nullable fields safely
             stripe_lookup_key = tier_config.get('stripe_lookup_key')
             if stripe_lookup_key:
                 tier_obj.stripe_lookup_key = stripe_lookup_key
-                
+
             whop_product_key = tier_config.get('whop_product_key')
             if whop_product_key:
                 tier_obj.whop_product_key = whop_product_key
-                
+
             tier_obj.fallback_price = tier_config.get('fallback_price', '$0')
 
             # Handle permissions relationship
@@ -441,4 +445,3 @@ def api_get_tiers_by_category(category):
             tier.get('is_available', True))
     }
     return jsonify(filtered_tiers)
-

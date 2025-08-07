@@ -37,7 +37,7 @@ def upgrade():
     if not column_exists('subscription_tier', 'fallback_price'):
         print("   Adding fallback_price column...")
         with op.batch_alter_table('subscription_tier', schema=None) as batch_op:
-            batch_op.add_column(sa.Column('fallback_price', sa.Numeric(precision=10, scale=2), nullable=True))
+            batch_op.add_column(sa.Column('fallback_price', sa.String(32), nullable=True))
         print("✅ fallback_price column added successfully")
     else:
         print("   ⚠️  fallback_price column already exists, skipping")
