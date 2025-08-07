@@ -195,14 +195,21 @@ def quick_add_ingredient():
         return render_template('components/modals/quick_add_ingredient_modal.html', units=units)
 
     try:
+        # Validate CSRF token
+        try:
+            validate_csrf(request.headers.get('X-CSRFToken'))
+        except Exception as e:
+            logger.error(f"CSRF validation failed: {str(e)}")
+            return jsonify({"error": "CSRF token validation failed"}), 400
+
         # Handle both JSON and form data
         if request.is_json:
             data = request.get_json()
+            name = data.get('name')
+            unit = data.get('unit')
         else:
-            data = request.form.to_dict()
-
-        name = data.get('name', '').strip()
-        unit = data.get('unit', '').strip()
+            name = request.form.get('name')
+            unit = request.form.get('unit')
 
         if not name or not unit:
             return jsonify({"error": "Missing name or unit"}), 400
