@@ -18,6 +18,9 @@ class BillingService:
         """
         Get comprehensive pricing data for display in organization dashboard and settings
         Returns pricing information with fallback for offline mode
+        
+        Note: This handles customer-facing features (AI, integrations, etc.)
+        System permissions are handled separately in subscription tier management
         """
         try:
             # Load tier configuration

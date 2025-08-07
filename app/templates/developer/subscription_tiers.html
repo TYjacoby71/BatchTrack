@@ -91,17 +91,13 @@
                             </span>
                         </div>
 
-                        {% if tier_data.get('feature_groups') %}
+                        {% if tier_data.get('permissions') %}
                         <div class="d-flex align-items-center mb-3">
-                            <i class="fas fa-star me-2 text-warning"></i>
-                            <strong>Features:</strong>
+                            <i class="fas fa-key me-2 text-warning"></i>
+                            <strong>Permissions:</strong>
                             <div class="ms-2">
-                                {% for feature in tier_data.get('feature_groups', [])[:3] %}
-                                    <span class="badge bg-info me-1">{{ feature.replace('_', ' ').title() }}</span>
-                                {% endfor %}
-                                {% if tier_data.get('feature_groups', [])|length > 3 %}
-                                    <span class="badge bg-light text-dark">+{{ tier_data.get('feature_groups', [])|length - 3 }}</span>
-                                {% endif %}
+                                <span class="badge bg-info me-1">{{ tier_data.get('permissions', [])|length }} total</span>
+                                <small class="text-muted">Access control permissions</small>
                             </div>
                         </div>
                         {% endif %}
@@ -225,10 +221,11 @@
                             </ol>
                         </div>
                         <div class="col-md-6">
-                            <h6>Available Permissions:</h6>
+                            <h6>System Permissions:</h6>
                             <div class="small">
-                                Total: {{ all_permissions|length }} permissions available
+                                Total: {{ all_permissions|length }} access control permissions available
                                 <br>Categories: Dashboard, Batches, Inventory, Organization, Reports, API
+                                <br><small class="text-muted">Note: Customer features (AI, integrations) managed separately in billing</small>
                             </div>
                         </div>
                     </div>
