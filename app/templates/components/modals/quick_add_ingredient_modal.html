@@ -131,16 +131,9 @@ function showAlert(type, message) {
     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
   `;
   
-  // Insert at top of main content
-  const mainContent = document.querySelector('main') || document.body;
-  mainContent.insertBefore(alertDiv, mainContent.firstChild);
-  
-  // Auto-hide after 3 seconds
-  setTimeout(() => {
-    if (alertDiv.parentNode) {
-      alertDiv.remove();
-    }
-  }, 3000);ata.id);
+  // Insert at top of maconst option = new Option(`${data.name} (${data.unit})`, data.id);
+        option.dataset.unit = data.unit;
+        option.dataset.type = 'ingredient';
         select.add(option);
       });
 
