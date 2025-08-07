@@ -1,5 +1,4 @@
 
-
 """replace billing provider booleans with enum fields
 
 Revision ID: b5c7d8e9f1a2
@@ -132,29 +131,3 @@ def downgrade():
             batch_op.drop_column('billing_provider')
 
     print("✅ Billing provider downgrade completed")
-
-"""replace billing booleans with enums
-
-Revision ID: replace_billing_booleans_with_enums
-Revises: add_offline_billing_and_missing_fields
-Create Date: 2025-01-01 00:00:00.000000
-
-"""
-from alembic import op
-import sqlalchemy as sa
-
-# revision identifiers, used by Alembic.
-revision = 'replace_billing_booleans_with_enums'
-down_revision = 'add_offline_billing_and_missing_fields'
-branch_labels = None
-depends_on = None
-
-def upgrade():
-    """Replace billing booleans with enums - no-op as this was already handled"""
-    print("=== Replace billing booleans with enums (no-op migration) ===")
-    print("   This migration is a placeholder to fix broken migration chain")
-    print("   Actual enum changes were implemented in other migrations")
-
-def downgrade():
-    """No downgrade needed for this placeholder migration"""
-    print("=== No downgrade needed for placeholder migration ===")
