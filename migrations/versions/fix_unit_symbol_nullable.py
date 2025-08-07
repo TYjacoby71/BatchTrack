@@ -2,7 +2,7 @@
 """make unit symbol nullable for custom units
 
 Revision ID: fix_unit_symbol_nullable
-Revises: replace_billing_booleans_with_enums
+Revises: b5c7d8e9f1a2
 Create Date: 2025-08-07 21:45:00.000000
 
 """
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = 'fix_unit_symbol_nullable'
-down_revision = 'replace_billing_booleans_with_enums'
+down_revision = 'b5c7d8e9f1a2'
 branch_labels = None
 depends_on = None
 
