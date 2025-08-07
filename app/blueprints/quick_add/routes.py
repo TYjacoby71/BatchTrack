@@ -137,32 +137,33 @@ def quick_add_unit():
     try:
         data = request.get_json()
         if not data:
-            return jsonify({'success': False, 'error': 'No data provided'}), 400
+            return jsonify({'error': 'No data provided'}), 400
 
-        name = data.get('name')
+        name = data.get('name', '').strip()
         unit_type = data.get('type', 'weight')
 
         if not name:
-            return jsonify({'success': False, 'error': 'Unit name is required'}), 400
+            return jsonify({'error': 'Unit name is required'}), 400
 
-        # Check if unit already exists
-        existing_unit = Unit.query.filter_by(name=name, organization_id=current_user.organization_id).first()
+        # Check if unit already exists in organization scope
+        existing_unit = Unit.query.filter_by(name=name, organization_id=organization_id).first()
         if existing_unit:
-            return jsonify({'success': False, 'error': f'Unit "{name}" already exists'}), 400
+            return jsonify({'error': f'Unit "{name}" already exists'}), 400
 
         # Create new unit
         new_unit = Unit(
             name=name,
             symbol=name.lower()[:3] if len(name) >= 3 else name.lower(),  # Simple symbol generation
             unit_type=unit_type,
-            organization_id=current_user.organization_id
+            is_custom=True,  # Mark as custom unit
+            organization_id=organization_id,
+            created_by=current_user.id
         )
 
         db.session.add(new_unit)
         db.session.commit()
 
         return jsonify({
-            'success': True,
             'name': new_unit.name,
             'id': new_unit.id,
             'symbol': new_unit.symbol,
@@ -171,7 +172,8 @@ def quick_add_unit():
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'success': False, 'error': str(e)}), 500
+        print(f"Error creating unit: {str(e)}")  # Debug logging
+        return jsonify({'error': str(e)}), 500
 
 @quick_add_bp.route('/ingredient', methods=['GET', 'POST'])
 def quick_add_ingredient():
