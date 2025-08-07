@@ -84,9 +84,13 @@ class BillingService:
         if not tier_obj:
             return False, "no_tier_assigned"
 
-        # Exempt tier always has access
+        # Exempt and internal tiers always have access
         if tier_obj.is_exempt_from_billing:
             return True, "exempt_tier"
+        
+        # Check if billing verification is required
+        if not tier_obj.requires_billing_check:
+            return True, "no_billing_required"
 
         # Check billing status for paid tiers
         if hasattr(organization, 'billing_status'):

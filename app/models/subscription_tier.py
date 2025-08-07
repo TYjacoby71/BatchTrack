@@ -15,8 +15,12 @@ class SubscriptionTier(db.Model):
     user_limit = db.Column(db.Integer, default=1)  # -1 for unlimited
     is_customer_facing = db.Column(db.Boolean, default=True)
     is_available = db.Column(db.Boolean, default=True)
-    requires_stripe_billing = db.Column(db.Boolean, default=True)  # False for exempt, free, or internal tiers
-    requires_whop_billing = db.Column(db.Boolean, default=False)
+    
+    # Tier type determines billing behavior
+    tier_type = db.Column(db.String(32), default='paid')  # 'paid', 'exempt', 'internal', 'trial'
+    
+    # Billing provider specifies which system to check for paid tiers
+    billing_provider = db.Column(db.String(32), nullable=True)  # 'stripe', 'whop', or None
 
     # Integration keys for linking to external products
     stripe_lookup_key = db.Column(db.String(128), nullable=True)  # Links to Stripe product
@@ -48,7 +52,12 @@ class SubscriptionTier(db.Model):
     @property
     def is_exempt_from_billing(self):
         """Check if this tier is exempt from billing"""
-        return not (self.requires_stripe_billing or self.requires_whop_billing)
+        return self.tier_type in ['exempt', 'internal']
+    
+    @property
+    def requires_billing_check(self):
+        """Check if this tier requires billing verification"""
+        return self.tier_type == 'paid' and self.billing_provider is not None
 
     @property
     def can_be_deleted(self):

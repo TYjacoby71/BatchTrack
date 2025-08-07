@@ -54,8 +54,8 @@ def sync_tier_to_database(tier_key, tier_config):
     tier_record.user_limit = tier_config.get('user_limit', 1)
     tier_record.is_customer_facing = tier_config.get('is_customer_facing', True)
     tier_record.is_available = tier_config.get('is_available', True)
-    tier_record.requires_stripe_billing = tier_config.get('requires_stripe_billing', True)
-    tier_record.requires_whop_billing = tier_config.get('requires_whop_billing', False)
+    tier_record.tier_type = tier_config.get('tier_type', 'paid')
+    tier_record.billing_provider = tier_config.get('billing_provider')
 
     # Integration keys for linking to external products
     stripe_lookup_key = tier_config.get('stripe_lookup_key')
@@ -155,8 +155,8 @@ def create_tier():
             'user_limit': user_limit,
             'is_customer_facing': request.form.get('is_customer_facing') == 'on',
             'is_available': request.form.get('is_available') == 'on',
-            'requires_stripe_billing': request.form.get('requires_stripe_billing') == 'on',
-            'requires_whop_billing': request.form.get('supports_whop') == 'on',
+            'tier_type': request.form.get('tier_type', 'paid'),
+            'billing_provider': request.form.get('billing_provider', ''),
             'fallback_features': fallback_features,
             'fallback_price': request.form.get('fallback_price', '$0'),
             'stripe_features': [],
@@ -221,7 +221,8 @@ def edit_tier(tier_key):
         # Update visibility controls
         tier['is_customer_facing'] = request.form.get('is_customer_facing') == 'on'
         tier['is_available'] = request.form.get('is_available') == 'on'
-        tier['requires_stripe_billing'] = request.form.get('requires_stripe_billing') == 'on'
+        tier['tier_type'] = request.form.get('tier_type', 'paid')
+        tier['billing_provider'] = request.form.get('billing_provider', '')
 
         tier['fallback_features'] = [f.strip() for f in request.form.get('fallback_features', '').split('\n') if f.strip()]
         tier['fallback_price'] = request.form.get('fallback_price', '$0')
@@ -341,8 +342,8 @@ def sync_tier(tier_key):
             tier_obj.user_limit = tier_config.get('user_limit', 1)
             tier_obj.is_customer_facing = tier_config.get('is_customer_facing', True)
             tier_obj.is_available = tier_config.get('is_available', True)
-            tier_obj.requires_stripe_billing = tier_config.get('requires_stripe_billing', True)
-            tier_obj.requires_whop_billing = tier_config.get('requires_whop_billing', False)
+            tier_obj.tier_type = tier_config.get('tier_type', 'paid')
+            tier_obj.billing_provider = tier_config.get('billing_provider')
             
             # Handle nullable fields safely
             stripe_lookup_key = tier_config.get('stripe_lookup_key')
