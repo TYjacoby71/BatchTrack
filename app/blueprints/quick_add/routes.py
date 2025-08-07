@@ -135,49 +135,43 @@ def quick_add_unit():
         return jsonify({"error": "No organization context"}), 403
 
     try:
-        # Handle both JSON and form data
-        if request.is_json:
-            data = request.get_json()
-        else:
-            data = request.form.to_dict()
+        data = request.get_json()
+        if not data:
+            return jsonify({'success': False, 'error': 'No data provided'}), 400
 
-        name = data.get('name', '').strip()
-        unit_type = data.get('unit_type', 'count')
+        name = data.get('name')
+        unit_type = data.get('type', 'weight')
 
         if not name:
-            return jsonify({'error': 'Unit name is required'}), 400
+            return jsonify({'success': False, 'error': 'Unit name is required'}), 400
 
-        # Check if unit already exists for this organization
-        from ...models import Unit
-        existing_unit = Unit.query.filter_by(
-            name=name, 
-            organization_id=organization_id,
-            is_active=True
-        ).first()
+        # Check if unit already exists
+        existing_unit = Unit.query.filter_by(name=name, organization_id=current_user.organization_id).first()
         if existing_unit:
-            return jsonify({'error': 'Unit already exists'}), 400
+            return jsonify({'success': False, 'error': f'Unit "{name}" already exists'}), 400
 
-        # Create new custom unit
-        unit = Unit(
+        # Create new unit
+        new_unit = Unit(
             name=name,
+            symbol=name.lower()[:3] if len(name) >= 3 else name.lower(),  # Simple symbol generation
             unit_type=unit_type,
-            symbol=None,  # Custom units don't have symbols initially
-            is_active=True,
-            organization_id=organization_id,
-            is_standard=False
+            organization_id=current_user.organization_id
         )
-        db.session.add(unit)
+
+        db.session.add(new_unit)
         db.session.commit()
 
         return jsonify({
-            'id': unit.id,
-            'name': unit.name,
-            'unit_type': unit.unit_type,
-            'symbol': unit.symbol
+            'success': True,
+            'name': new_unit.name,
+            'id': new_unit.id,
+            'symbol': new_unit.symbol,
+            'type': new_unit.unit_type
         })
+
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @quick_add_bp.route('/ingredient', methods=['GET', 'POST'])
 def quick_add_ingredient():
@@ -226,10 +220,10 @@ def quick_add_ingredient():
         if from_unit and from_unit.unit_type in ['volume']:
             # Set default water density for volume ingredients
             new_item = InventoryItem(
-                name=name, 
+                name=name,
                 type='ingredient',
-                unit=unit, 
-                quantity=0.0, 
+                unit=unit,
+                quantity=0.0,
                 cost_per_unit=0.0,
                 density=1.0,  # Default water density
                 organization_id=organization_id
@@ -238,9 +232,9 @@ def quick_add_ingredient():
         else:
             new_item = InventoryItem(
                 name=name,
-                type='ingredient', 
-                unit=unit, 
-                quantity=0.0, 
+                type='ingredient',
+                unit=unit,
+                quantity=0.0,
                 cost_per_unit=0.0,
                 organization_id=organization_id
             )

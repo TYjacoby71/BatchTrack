@@ -122,71 +122,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  // Quick Add Unit Handler - removed since it's now handled in component
+  // Quick Add Unit Handler - now handled by modal components
   function initQuickAddUnit() {
     // Unit modal is now handled by its own component
-    return;rn;
-    }
-
-    saveButton.addEventListener('click', () => {
-      const name = document.getElementById('unitName').value.trim();
-      const type = document.getElementById('unitType').value;
-
-      if (!name) {
-        alert('Unit name required');
-        return;
-      }
-
-      console.log(`Creating unit: ${name} (${type})`);
-
-      fetch('/quick-add/unit', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'X-CSRFToken': getCSRFToken()
-        },
-        body: JSON.stringify({ name, type })
-      })
-      .then(r => r.json())
-      .then(data => {
-        if (data.error) {
-          alert('Error: ' + data.error);
-          return;
-        }
-
-        // Insert unit into ingredient modal dropdown
-        const unitSelect = document.getElementById('quickIngredientUnit');
-        if (unitSelect) {
-          const newOption = new Option(data.name, data.name, false, true);
-          unitSelect.add(newOption);
-          unitSelect.value = data.name;
-        }
-
-        // Add to quick ingredient unit dropdown
-        const quickUnit = document.getElementById('new-ingredient-unit');
-        if (quickUnit) {
-          quickUnit.add(new Option(data.name, data.name, false, true));
-          quickUnit.value = data.name;
-        }
-
-        // Update all other unit dropdowns
-        document.querySelectorAll("select[name='units[]']").forEach(select => {
-          const option = new Option(data.name, data.name);
-          select.add(option);
-        });
-
-        // Handle modal transitions
-        handleModalTransition('quickAddUnitModal', 'quickAddIngredientModal', 'ingredientName');
-
-        // Reset form
-        document.getElementById('unitName').value = '';
-        document.getElementById('unitType').selectedIndex = 0;
-      })
-      .catch(err => {
-        console.error(err);
-        alert("Failed to add unit");
-      });
-    });
+    return;
   }
 
   initQuickAddUnit();
