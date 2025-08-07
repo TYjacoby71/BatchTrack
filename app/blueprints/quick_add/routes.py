@@ -213,6 +213,7 @@ def quick_add_unit():
 def quick_add_ingredient():
     from flask_login import current_user
     from ...utils.permissions import get_effective_organization_id
+    from ...models import InventoryHistory
     
     # Ensure user is authenticated and get organization context
     if not current_user.is_authenticated:
@@ -229,15 +230,20 @@ def quick_add_ingredient():
         return render_template('quick_add_ingredient_modal.html', units=units)
 
     try:
-        data = request.get_json()
-        name = data.get('name')
-        unit = data.get('unit')
+        # Handle both JSON and form data
+        if request.is_json:
+            data = request.get_json()
+        else:
+            data = request.form.to_dict()
+            
+        name = data.get('name', '').strip()
+        unit = data.get('unit', '').strip()
 
         if not name or not unit:
             return jsonify({"error": "Missing name or unit"}), 400
 
         # Check for existing within organization scope
-        query = InventoryItem.query.filter_by(name=name)
+        query = InventoryItem.query.filter_by(name=name, type='ingredient')
         if organization_id:
             query = query.filter_by(organization_id=organization_id)
         existing = query.first()
@@ -251,6 +257,7 @@ def quick_add_ingredient():
             # Set default water density for volume ingredients
             new_item = InventoryItem(
                 name=name, 
+                type='ingredient',
                 unit=unit, 
                 quantity=0.0, 
                 cost_per_unit=0.0,
@@ -260,7 +267,8 @@ def quick_add_ingredient():
             message = "Added with default water density (1.0 g/mL). Update if needed."
         else:
             new_item = InventoryItem(
-                name=name, 
+                name=name,
+                type='ingredient', 
                 unit=unit, 
                 quantity=0.0, 
                 cost_per_unit=0.0,
@@ -269,12 +277,30 @@ def quick_add_ingredient():
             message = "Added successfully."
 
         db.session.add(new_item)
+        db.session.flush()  # Get the ID without committing
+
+        # Create initial history entry for FIFO tracking (0 quantity to prime the system)
+        history = InventoryHistory(
+            inventory_item_id=new_item.id,
+            change_type='restock',
+            quantity_change=0,
+            remaining_quantity=0,
+            unit=new_item.unit,
+            unit_cost=0,
+            note='Initial ingredient creation via quick add',
+            created_by=current_user.id if current_user else None,
+            quantity_used=0,
+            is_perishable=False,
+            organization_id=organization_id
+        )
+        db.session.add(history)
         db.session.commit()
 
         return jsonify({
             "id": new_item.id,
             "name": new_item.name,
-            "unit": new_item.unit
+            "unit": new_item.unit,
+            "message": message
         }), 200
 
     except Exception as e:

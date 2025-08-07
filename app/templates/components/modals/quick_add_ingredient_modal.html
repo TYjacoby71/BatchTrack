@@ -1,0 +1,94 @@
+
+<div class="modal fade" id="quickAddIngredientModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Quick Add Ingredient</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="quickAddIngredientForm">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="mb-3">
+            <label for="new-ingredient-name" class="form-label">Name</label>
+            <input type="text" class="form-control" id="new-ingredient-name" name="name" required>
+          </div>
+          <div class="mb-3">
+            <label for="new-ingredient-unit" class="form-label">Unit</label>
+            <div class="input-group">
+              <select class="form-control" id="new-ingredient-unit" name="unit" required>
+                {% for unit in get_global_unit_list() %}
+                  <option value="{{ unit.name }}">{{ unit.name }}</option>
+                {% endfor %}
+              </select>
+              <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#quickAddUnitModal">
+                Add Unit
+              </button>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary">Add Ingredient</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const form = document.getElementById('quickAddIngredientForm');
+  if (!form) return;
+
+  form.addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    const formData = new FormData(form);
+    const submitBtn = form.querySelector('button[type="submit"]');
+    
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Adding...';
+
+    fetch('/quick-add/ingredient', {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': formData.get('csrf_token'),
+        'Accept': 'application/json'
+      },
+      body: formData
+    })
+    .then(response => {
+      if (!response.ok) {
+        return response.json().then(err => Promise.reject(err));
+      }
+      return response.json();
+    })
+    .then(data => {
+      // Add to any ingredient dropdowns on the page
+      document.querySelectorAll('select[name="ingredient_ids[]"], select[name*="ingredient"]').forEach(select => {
+        const option = new Option(data.name, data.id);
+        select.add(option);
+      });
+
+      // Close modal and reset form
+      const modal = bootstrap.Modal.getInstance(document.getElementById('quickAddIngredientModal'));
+      modal.hide();
+      form.reset();
+      
+      // Show success message
+      if (typeof showAlert === 'function') {
+        showAlert('Ingredient added successfully!', 'success');
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert(error.error || 'Failed to add ingredient');
+    })
+    .finally(() => {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Add Ingredient';
+    });
+  });
+});
+</script>
