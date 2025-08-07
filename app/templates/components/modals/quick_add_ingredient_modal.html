@@ -43,12 +43,14 @@ function openUnitModalFromIngredient() {
   window.quickAddReturnContext = 'ingredient';
   
   // Hide ingredient modal
-  const ingredientModal = bootstrap.Modal.getInstance(document.getElementById('quickAddIngredientModal'));
+  const ingredientModalElement = document.getElementById('quickAddIngredientModal');
+  const ingredientModal = bootstrap.Modal.getInstance(ingredientModalElement);
   ingredientModal.hide();
   
   // Open unit modal
   setTimeout(() => {
-    const unitModal = new bootstrap.Modal(document.getElementById('quickAddUnitModal'));
+    const unitModalElement = document.getElementById('quickAddUnitModal');
+    const unitModal = new bootstrap.Modal(unitModalElement);
     unitModal.show();
   }, 150);
 }
@@ -91,14 +93,15 @@ document.addEventListener('DOMContentLoaded', function() {
       });
 
       // Show success message
-      showAlert('success', data.message || 'Ingredient added successfully!');
+      showIngredientAlert('success', data.message || 'Ingredient added successfully!');
       
       // Reset form
       form.reset();
       
       // Hide modal
-      const modal = bootstrap.Modal.getInstance(document.getElementById('quickAddIngredientModal'));
-      modal.hide();
+      const modalElement = document.getElementById('quickAddIngredientModal');
+      const modalInstance = bootstrap.Modal.getInstance(modalElement);
+      modalInstance.hide();
       
       // If we're in ingredient context and have a return context, add ingredient line
       if (window.ingredientReturnContext === 'main' && typeof addIngredient === 'function') {
@@ -113,7 +116,7 @@ document.addEventListener('DOMContentLoaded', function() {
     })
     .catch(error => {
       console.log('Error:', error);
-      showAlert('danger', error.error || 'Failed to add ingredient');
+      showIngredientAlert('danger', error.error || 'Failed to add ingredient');
     })
     .finally(() => {
       submitBtn.disabled = false;
@@ -122,7 +125,7 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 });
 
-function showAlert(type, message) {
+function showIngredientAlert(type, message) {
   // Create alert element
   const alertDiv = document.createElement('div');
   alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
