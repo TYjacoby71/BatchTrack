@@ -84,6 +84,62 @@ document.addEventListener('DOMContentLoaded', function() {
       // Add to any ingredient dropdowns on the page
       document.querySelectorAll('select[name="ingredient_ids[]"], select[name*="ingredient"]').forEach(select => {
         const option = new Option(data.name, data.id);
+        option.dataset.unit = data.unit;
+        option.dataset.type = 'ingredient';
+        select.add(option);
+      });
+
+      // Show success message
+      showAlert('success', data.message || 'Ingredient added successfully!');
+      
+      // Reset form
+      form.reset();
+      
+      // Hide modal
+      const modal = bootstrap.Modal.getInstance(document.getElementById('quickAddIngredientModal'));
+      modal.hide();
+      
+      // If we're in ingredient context and have a return context, add ingredient line
+      if (window.ingredientReturnContext === 'main' && typeof addIngredient === 'function') {
+        // Add ingredient line and preselect the new ingredient
+        setTimeout(() => {
+          const newEntry = addIngredient(data.id);
+          if (newEntry) {
+            newEntry.scrollIntoView({ behavior: 'smooth' });
+          }
+        }, 300);
+      }
+    })
+    .catch(error => {
+      console.log('Error:', error);
+      showAlert('danger', error.error || 'Failed to add ingredient');
+    })
+    .finally(() => {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Add Ingredient';
+    });
+  });
+});
+
+function showAlert(type, message) {
+  // Create alert element
+  const alertDiv = document.createElement('div');
+  alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+  alertDiv.innerHTML = `
+    ${message}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  `;
+  
+  // Insert at top of main content
+  const mainContent = document.querySelector('main') || document.body;
+  mainContent.insertBefore(alertDiv, mainContent.firstChild);
+  
+  // Auto-hide after 3 seconds
+  setTimeout(() => {
+    if (alertDiv.parentNode) {
+      alertDiv.remove();
+    }
+  }, 3000);ata.id);
         select.add(option);
       });
 

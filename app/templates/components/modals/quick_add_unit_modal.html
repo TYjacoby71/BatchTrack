@@ -77,35 +77,39 @@ document.addEventListener('DOMContentLoaded', function() {
     .then(data => {
       console.log('Unit created successfully:', data);
 
-      // Add to any unit dropdowns on the page
-      document.querySelectorAll('select[name="unit"], select[name*="unit"]').forEach(select => {
+      // Add to all unit dropdowns on the page
+      document.querySelectorAll('select[name="units[]"], select[name*="unit"], select[name="predicted_yield_unit"]').forEach(select => {
         const option = new Option(data.name, data.name);
+        option.dataset.type = data.type;
+        option.dataset.symbol = data.symbol;
         select.add(option);
       });
 
-      // Close modal and reset form
+      // Clear form and close modal
+      document.getElementById('quickAddUnitForm').reset();
       const modal = bootstrap.Modal.getInstance(document.getElementById('quickAddUnitModal'));
       modal.hide();
-      form.reset();
 
       // Show success message
-      if (typeof showAlert === 'function') {
-        showAlert('Unit added successfully!', 'success');
-      }
+      showAlert('success', `Unit "${data.name}" created successfully!`);
 
-      // If we came from the ingredient modal, go back to it
+      // Handle return context
       if (window.quickAddReturnContext === 'ingredient') {
+        // Reopen ingredient modal after short delay
         setTimeout(() => {
           const ingredientModal = new bootstrap.Modal(document.getElementById('quickAddIngredientModal'));
           ingredientModal.show();
 
-          // Focus back on the ingredient name field
-          setTimeout(() => {
-            const ingredientName = document.getElementById('new-ingredient-name');
-            if (ingredientName) ingredientName.focus();
-          }, 300);
-        }, 150);
+          // Set the new unit as selected in ingredient modal
+          const ingredientUnitSelect = document.querySelector('#quickAddIngredientModal select[name="unit"]');
+          if (ingredientUnitSelect) {
+            ingredientUnitSelect.value = data.name;
+          }
+        }, 300);
       }
+
+      // Reset context
+      window.quickAddReturnContext = null;
     })
     .catch(error => {
       console.error('Error:', error);

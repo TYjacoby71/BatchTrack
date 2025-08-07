@@ -464,6 +464,32 @@ function confirmDelete(recipeId, isVariation, variationCount) {
 function setIngredientReturnContext(context) {
     ingredientReturnContext = context;
 }
+
+function updateConversionWarning(selectElement) {
+    // Get the selected ingredient data
+    const selectedOption = selectElement.selectedOptions[0];
+    if (!selectedOption) return;
+
+    const ingredientType = selectedOption.dataset.type;
+    const ingredientUnit = selectedOption.dataset.unit;
+    
+    // Find the corresponding unit dropdown and warning div
+    const ingredientEntry = selectElement.closest('.ingredient-entry');
+    const unitSelect = ingredientEntry.querySelector('select[name="units[]"]');
+    const warningDiv = ingredientEntry.querySelector('.conversion-warning');
+    
+    if (!unitSelect || !warningDiv) return;
+    
+    const selectedUnit = unitSelect.value;
+    
+    // Clear previous warnings
+    warningDiv.innerHTML = '';
+    
+    // Show conversion warning if units don't match
+    if (ingredientUnit && selectedUnit && ingredientUnit !== selectedUnit) {
+        warningDiv.innerHTML = `<span class="text-warning"><i class="fas fa-exclamation-triangle"></i> Will convert from ${selectedUnit} to ${ingredientUnit}</span>`;
+    }
+}
 </script>
 
 {% endblock %}
