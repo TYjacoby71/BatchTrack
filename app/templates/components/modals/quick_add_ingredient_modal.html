@@ -131,30 +131,14 @@ function showAlert(type, message) {
     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
   `;
   
-  // Insert at top of maconst option = new Option(`${data.name} (${data.unit})`, data.id);
-        option.dataset.unit = data.unit;
-        option.dataset.type = 'ingredient';
-        select.add(option);
-      });
-
-      // Close modal and reset form
-      const modal = bootstrap.Modal.getInstance(document.getElementById('quickAddIngredientModal'));
-      modal.hide();
-      form.reset();
-      
-      // Show success message
-      if (typeof showAlert === 'function') {
-        showAlert('Ingredient added successfully!', 'success');
-      }
-    })
-    .catch(error => {
-      console.error('Error:', error);
-      alert(error.error || 'Failed to add ingredient');
-    })
-    .finally(() => {
-      submitBtn.disabled = false;
-      submitBtn.textContent = 'Add Ingredient';
-    });
-  });
-});
+  // Insert at top of main content area
+  const container = document.querySelector('.container-fluid') || document.body;
+  container.insertBefore(alertDiv, container.firstChild);
+  
+  // Auto dismiss after 5 seconds
+  setTimeout(() => {
+    const alert = bootstrap.Alert.getOrCreateInstance(alertDiv);
+    alert.close();
+  }, 5000);
+}
 </script>
