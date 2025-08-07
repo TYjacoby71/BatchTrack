@@ -436,18 +436,25 @@ def signup():
                          available_tiers=available_tiers,
                          oauth_user_info=oauth_user_info)
 
-        # Metadata for Stripe (minimal for now)
+        # Complete metadata for Stripe checkout - include all signup data
         metadata = {
             'tier': selected_tier,
+            'tier_key': selected_tier,  # Both for compatibility
             'signup_source': signup_source,
             'oauth_signup': str(oauth_signup)
         }
 
+        # Add OAuth information if present
         if oauth_user_info:
             metadata['oauth_email'] = oauth_user_info.get('email', '')
             metadata['oauth_provider'] = oauth_user_info.get('oauth_provider', '')
             metadata['oauth_provider_id'] = oauth_user_info.get('oauth_provider_id', '')
+            metadata['first_name'] = oauth_user_info.get('first_name', '')
+            metadata['last_name'] = oauth_user_info.get('last_name', '')
+            metadata['username'] = oauth_user_info.get('email', '').split('@')[0]
+            metadata['email_verified'] = 'true'  # OAuth emails are pre-verified
 
+        # Add referral/promo codes
         if referral_code:
             metadata['referral_code'] = referral_code
         if promo_code:

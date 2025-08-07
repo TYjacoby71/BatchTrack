@@ -1,4 +1,3 @@
-
 import logging
 import stripe
 import os
@@ -64,10 +63,10 @@ def checkout(tier, billing_cycle='month'):
             )
             if checkout_url:
                 return redirect(checkout_url)
-        
+
         flash('Checkout not available for this tier', 'error')
         return redirect(url_for('billing.upgrade'))
-        
+
     except Exception as e:
         logger.error(f"Checkout error: {e}")
         flash('Checkout failed. Please try again.', 'error')
@@ -90,10 +89,10 @@ def whop_checkout(product_id):
         )
         if checkout_url:
             return redirect(checkout_url)
-            
+
         flash('Whop checkout not available', 'error')
         return redirect(url_for('billing.upgrade'))
-        
+
     except Exception as e:
         logger.error(f"Whop checkout error: {e}")
         flash('Checkout failed. Please try again.', 'error')
@@ -116,15 +115,15 @@ def complete_signup_from_stripe():
             logger.error("Failed to initialize Stripe")
             flash('Payment system error', 'error')
             return redirect(url_for('auth.signup'))
-            
+
         # Retrieve checkout session
         checkout_session = stripe.checkout.Session.retrieve(session_id)
         logger.info(f"Retrieved checkout session: {checkout_session.id}")
-        
+
         # Get customer details
         customer = stripe.Customer.retrieve(checkout_session.customer)
         logger.info(f"Retrieved customer: {customer.id}")
-        
+
         # Extract user info from checkout session
         customer_details = checkout_session.customer_details
         if not customer_details:
@@ -167,7 +166,7 @@ def complete_signup_from_stripe():
         from ...models.models import Organization, User
         from ...models.role import Role
         from flask_login import login_user
-        
+
         # Get the subscription tier
         subscription_tier = SubscriptionTier.query.filter_by(key=tier).first()
         if not subscription_tier:
@@ -210,12 +209,12 @@ def complete_signup_from_stripe():
             import secrets
             temp_password = secrets.token_urlsafe(16)
             owner_user.set_password(temp_password)
-            
+
             # Send password setup email
             from ...services.email_service import EmailService
             owner_user.password_reset_token = EmailService.generate_verification_token(owner_user.email)
             owner_user.password_reset_sent_at = TimezoneUtils.utc_now()
-            
+
         db.session.add(owner_user)
         db.session.flush()
         logger.info(f"Created user with ID: {owner_user.id}")
@@ -239,7 +238,7 @@ def complete_signup_from_stripe():
                 org.name,
                 tier.title()
             )
-            
+
             if not signup_data.get('oauth_provider'):
                 # Send password setup email for non-OAuth users
                 EmailService.send_password_setup_email(
@@ -260,7 +259,7 @@ def complete_signup_from_stripe():
 
         flash(f'Welcome to BatchTrack! Your {tier.title()} account is ready to use.', 'success')
         return redirect(url_for('app_routes.dashboard'))
-        
+
     except Exception as e:
         db.session.rollback()
         logger.error(f"Stripe signup completion error: {str(e)}")
@@ -281,14 +280,14 @@ def complete_signup_from_whop():
 
         # Complete signup using Whop license
         success = SignupService.complete_whop_signup(current_user.organization, license_key)
-        
+
         if success:
             flash('Subscription activated successfully!', 'success')
             return redirect(url_for('app_routes.dashboard'))
         else:
             flash('Failed to activate subscription', 'error')
             return redirect(url_for('billing.upgrade'))
-            
+
     except Exception as e:
         logger.error(f"Whop signup completion error: {e}")
         flash('Signup completion failed', 'error')
@@ -310,7 +309,7 @@ def customer_portal():
         else:
             flash('Unable to access billing portal', 'error')
             return redirect(url_for('app_routes.dashboard'))
-            
+
     except Exception as e:
         logger.error(f"Customer portal error: {e}")
         flash('Billing portal unavailable', 'error')
@@ -338,7 +337,7 @@ def cancel_subscription():
             flash('Subscription cancelled successfully', 'success')
         else:
             flash('Failed to cancel subscription', 'error')
-            
+
     except Exception as e:
         logger.error(f"Subscription cancellation error: {e}")
         flash('Cancellation failed', 'error')
@@ -348,86 +347,223 @@ def cancel_subscription():
 @billing_bp.route('/webhooks/stripe', methods=['POST'])
 def stripe_webhook():
     """Handle Stripe webhooks"""
+    payload = request.data
+    sig_header = request.headers.get('Stripe-Signature')
+
     try:
-        payload = request.get_data(as_text=True)
-        sig_header = request.headers.get('Stripe-Signature')
-        
-        if not sig_header:
-            logger.warning("No Stripe signature header found")
-            return jsonify({'error': 'No signature'}), 400
-        
         # Verify webhook signature
-        try:
-            event = StripeService.verify_webhook_signature(payload, sig_header)
-            if not event:
-                return jsonify({'error': 'Invalid signature'}), 400
-        except Exception as verify_error:
-            logger.error(f"Webhook signature verification failed: {verify_error}")
-            return jsonify({'error': 'Invalid signature'}), 400
-        
-        logger.info(f"Processing webhook event: {event['type']}")
-        
+        endpoint_secret = current_app.config.get('STRIPE_WEBHOOK_SECRET')
+        if not endpoint_secret:
+            logger.error("Stripe webhook secret not configured")
+            return jsonify({'error': 'Webhook secret not configured'}), 400
+
+        event = stripe.Webhook.construct_event(
+            payload, sig_header, endpoint_secret
+        )
+
+        logger.info(f"Received Stripe webhook: {event['type']}")
+
+        # Handle different event types
         if event['type'] == 'checkout.session.completed':
-            # Handle successful checkout - organization should already be created
-            session_obj = event['data']['object']
-            customer_id = session_obj.get('customer')
-            
-            logger.info(f"Checkout completed for customer: {customer_id}")
-            
-            # Find organization by customer ID
-            organization = Organization.query.filter_by(stripe_customer_id=customer_id).first()
-            if organization:
-                # Update subscription status to active
-                organization.subscription_status = 'active'
-                organization.billing_status = 'active'
-                db.session.commit()
-                logger.info(f"Updated organization {organization.id} subscription status to active")
-            else:
-                logger.warning(f"No organization found for Stripe customer {customer_id}")
-                
-        elif event['type'] == 'invoice.payment_succeeded':
-            # Handle successful payment
-            invoice = event['data']['object']
-            customer_id = invoice.get('customer')
-            
-            organization = Organization.query.filter_by(stripe_customer_id=customer_id).first()
-            if organization:
-                organization.billing_status = 'active'
-                organization.subscription_status = 'active'
-                db.session.commit()
-                logger.info(f"Updated organization {organization.id} billing status to active")
-                
-        elif event['type'] == 'invoice.payment_failed':
-            # Handle failed payment
-            invoice = event['data']['object']
-            customer_id = invoice.get('customer')
-            
-            organization = Organization.query.filter_by(stripe_customer_id=customer_id).first()
-            if organization:
-                organization.billing_status = 'past_due'
-                organization.subscription_status = 'past_due'
-                db.session.commit()
-                logger.info(f"Updated organization {organization.id} billing status to past_due")
-                
+            return handle_checkout_completed(event)
+        elif event['type'] == 'customer.created':
+            # Customer created - check if this is from a signup checkout
+            return handle_customer_created(event)
+        elif event['type'] in ['customer.subscription.created', 'customer.subscription.updated']:
+            return handle_subscription_change(event)
         elif event['type'] == 'customer.subscription.deleted':
-            # Handle subscription cancellation
-            subscription = event['data']['object']
-            customer_id = subscription.get('customer')
-            
-            organization = Organization.query.filter_by(stripe_customer_id=customer_id).first()
-            if organization:
-                organization.billing_status = 'cancelled'
-                organization.subscription_status = 'cancelled'
-                db.session.commit()
-                logger.info(f"Updated organization {organization.id} subscription status to cancelled")
+            return handle_subscription_deleted(event)
+        else:
+            logger.info(f"Unhandled webhook event type: {event['type']}")
+            return jsonify({'status': 'unhandled'}), 200
+
+    except ValueError as e:
+        logger.error(f"Invalid payload: {e}")
+        return jsonify({'error': 'Invalid payload'}), 400
+    except stripe.error.SignatureVerificationError as e:
+        logger.error(f"Invalid signature: {e}")
+        return jsonify({'error': 'Invalid signature'}), 400
+    except Exception as e:
+        logger.error(f"Webhook error: {e}")
+        return jsonify({'error': 'Webhook processing failed'}), 500
+
+def handle_checkout_completed(event):
+    """Handle successful checkout completion"""
+    try:
+        checkout_session = event['data']['object']
+        session_id = checkout_session['id']
+
+        logger.info(f"Processing checkout completion for session: {session_id}")
+
+        # Extract metadata from checkout session
+        metadata = checkout_session.get('metadata', {})
+        tier_key = metadata.get('tier_key')
+
+        if not tier_key:
+            logger.error(f"No tier_key in checkout session metadata: {session_id}")
+            return jsonify({'error': 'Missing tier information'}), 400
+
+        # Get customer information
+        customer_id = checkout_session.get('customer')
+        if not customer_id:
+            logger.error(f"No customer ID in checkout session: {session_id}")
+            return jsonify({'error': 'Missing customer information'}), 400
+
+        # Complete signup using the checkout session
+        success = complete_signup_from_checkout_session(checkout_session)
+
+        if success:
+            logger.info(f"Successfully completed signup from checkout session: {session_id}")
+            return jsonify({'status': 'success'}), 200
+        else:
+            logger.error(f"Failed to complete signup from checkout session: {session_id}")
+            return jsonify({'error': 'Signup completion failed'}), 500
+
+    except Exception as e:
+        logger.error(f"Error handling checkout completion: {e}")
+        return jsonify({'error': 'Processing failed'}), 500
+
+def handle_customer_created(event):
+    """Handle customer.created webhook - may be part of signup flow"""
+    try:
+        customer = event['data']['object']
+        customer_id = customer['id']
+
+        logger.info(f"Processing customer.created for: {customer_id}")
+
+        # Check if this customer has signup-related metadata
+        metadata = customer.get('metadata', {})
+
+        if 'tier' in metadata or 'signup_source' in metadata:
+            # This appears to be a signup customer - process the signup
+            tier_key = metadata.get('tier')
+            if not tier_key:
+                logger.warning(f"Customer {customer_id} has signup metadata but no tier")
+                return jsonify({'status': 'no_tier'}), 200
+
+            # Build signup data from customer information and metadata
+            signup_data = {
+                'org_name': customer['name'] or f"{customer['email']} Organization",
+                'email': customer['email'],
+                'first_name': metadata.get('first_name', customer['name'].split(' ')[0] if customer['name'] else ''),
+                'last_name': metadata.get('last_name', ' '.join(customer['name'].split(' ')[1:]) if customer['name'] and ' ' in customer['name'] else ''),
+                'username': metadata.get('username', customer['email'].split('@')[0]),
+                'signup_source': metadata.get('signup_source', 'stripe'),
+                'promo_code': metadata.get('promo_code'),
+                'referral_code': metadata.get('referral_code'),
+                'oauth_provider': metadata.get('oauth_provider'),
+                'oauth_provider_id': metadata.get('oauth_provider_id'),
+                'password_hash': metadata.get('password_hash', 'stripe_signup_pending')
+            }
+
+            # Complete the signup
+            from ...services.signup_service import SignupService
+            success = SignupService.complete_stripe_signup(signup_data, tier_key, customer_id)
+
+            if success:
+                logger.info(f"Successfully completed signup for customer: {customer_id}")
+                return jsonify({'status': 'signup_completed'}), 200
+            else:
+                logger.error(f"Failed to complete signup for customer: {customer_id}")
+                return jsonify({'error': 'Signup completion failed'}), 500
+        else:
+            # Regular customer creation, not a signup
+            logger.info(f"Regular customer creation, not a signup: {customer_id}")
+            return jsonify({'status': 'regular_customer'}), 200
+
+    except Exception as e:
+        logger.error(f"Error handling customer.created: {e}")
+        return jsonify({'error': 'Processing failed'}), 500
+
+def complete_signup_from_checkout_session(checkout_session):
+    """Complete signup using checkout session data"""
+    try:
+        # Extract all necessary information from the checkout session
+        metadata = checkout_session.get('metadata', {})
+        customer_id = checkout_session.get('customer')
+
+        # Get customer details
+        customer = stripe.Customer.retrieve(customer_id)
+
+        # Build comprehensive signup data
+        signup_data = {
+            'org_name': customer.name or f"{customer.email} Organization",
+            'email': customer.email,
+            'first_name': metadata.get('first_name', customer.name.split(' ')[0] if customer.name else ''),
+            'last_name': metadata.get('last_name', ' '.join(customer.name.split(' ')[1:]) if customer.name and ' ' in customer.name else ''),
+            'username': metadata.get('username', customer.email.split('@')[0]),
+            'signup_source': metadata.get('signup_source', 'stripe'),
+            'promo_code': metadata.get('promo_code'),
+            'referral_code': metadata.get('referral_code'),
+            'oauth_provider': metadata.get('oauth_provider'),
+            'oauth_provider_id': metadata.get('oauth_provider_id'),
+            'oauth_email': metadata.get('oauth_email'),
+            'password_hash': metadata.get('password_hash', 'stripe_checkout_signup')
+        }
+
+        tier_key = metadata.get('tier_key') or metadata.get('tier')
+
+        from ...services.signup_service import SignupService
+        return SignupService.complete_stripe_signup(signup_data, tier_key, customer_id)
+
+    except Exception as e:
+        logger.error(f"Error completing signup from checkout session: {e}")
+        return False
+
+
+def handle_subscription_change(event):
+    """Handle subscription creation or update"""
+    try:
+        subscription = event['data']['object']
+        customer_id = subscription.get('customer')
+        status = subscription.get('status')
+
+        organization = Organization.query.filter_by(stripe_customer_id=customer_id).first()
+        if not organization:
+            logger.warning(f"Organization not found for customer ID: {customer_id}")
+            return jsonify({'error': 'Organization not found'}), 404
+
+        # Update subscription status
+        if status in ['active', 'trialing']:
+            organization.subscription_status = status
+            organization.billing_status = 'active'
+        elif status == 'past_due':
+            organization.subscription_status = status
+            organization.billing_status = 'past_due'
+        elif status == 'canceled':
+            organization.subscription_status = status
+            organization.billing_status = 'cancelled'
+        
+        db.session.commit()
+        logger.info(f"Updated organization {organization.id} subscription status to {status}")
 
         return jsonify({'status': 'success'}), 200
-        
+
     except Exception as e:
-        logger.error(f"Webhook processing error: {e}")
-        import traceback
-        logger.error(f"Traceback: {traceback.format_exc()}")
-        return jsonify({'error': 'Webhook processing failed'}), 400
+        logger.error(f"Error handling subscription change: {e}")
+        return jsonify({'error': 'Processing failed'}), 500
+
+def handle_subscription_deleted(event):
+    """Handle subscription deletion"""
+    try:
+        subscription = event['data']['object']
+        customer_id = subscription.get('customer')
+
+        organization = Organization.query.filter_by(stripe_customer_id=customer_id).first()
+        if not organization:
+            logger.warning(f"Organization not found for customer ID: {customer_id}")
+            return jsonify({'error': 'Organization not found'}), 404
+
+        organization.subscription_status = 'cancelled'
+        organization.billing_status = 'cancelled'
+        db.session.commit()
+        logger.info(f"Updated organization {organization.id} subscription status to cancelled")
+
+        return jsonify({'status': 'success'}), 200
+
+    except Exception as e:
+        logger.error(f"Error handling subscription deletion: {e}")
+        return jsonify({'error': 'Processing failed'}), 500
 
 @billing_bp.route('/debug')
 @login_required
