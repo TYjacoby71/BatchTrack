@@ -62,7 +62,7 @@ def list_inventory():
             item.temp_expired_quantity = 0
             item.temp_available_quantity = item.quantity
 
-    return render_template('inventory_list.html', 
+    return render_template('inventory_list.html',
                          inventory_items=inventory_items,
                          items=inventory_items,  # Template expects 'items'
                          categories=categories,
@@ -498,7 +498,7 @@ def edit_inventory(id):
         from datetime import datetime, timedelta
         if shelf_life_days > 0:
             item.expiration_date = datetime.utcnow().date() + timedelta(days=shelf_life_days)
-            
+
             # Update all existing FIFO entries with remaining quantity
             # This handles both new perishable items and shelf life changes
             if not was_perishable or old_shelf_life != shelf_life_days:
@@ -509,7 +509,7 @@ def edit_inventory(id):
         if was_perishable:
             item.shelf_life_days = None
             item.expiration_date = None
-            
+
             # Clear expiration data from all FIFO entries
             fifo_entries = InventoryHistory.query.filter(
                 and_(
@@ -517,7 +517,7 @@ def edit_inventory(id):
                     InventoryHistory.remaining_quantity > 0
                 )
             ).all()
-            
+
             for entry in fifo_entries:
                 entry.is_perishable = False
                 entry.shelf_life_days = None
@@ -585,7 +585,7 @@ def edit_inventory(id):
         import traceback
         traceback.print_exc()
         db.session.rollback()
-        
+
         # Provide user-friendly error messages
         error_msg = str(e)
         if 'invalid input syntax for type integer' in error_msg and 'category_id' in error_msg:
@@ -658,3 +658,71 @@ def debug_inventory(id):
             'error': str(e),
             'traceback': traceback.format_exc()
         }), 500
+
+# Helper function to create inventory items
+def create_inventory_item(data):
+    """
+    Helper function to create inventory items - used by both regular inventory creation
+    and quick add functionality
+    """
+    try:
+        organization_id = get_effective_organization_id()
+        if not organization_id and current_user.user_type != 'developer':
+            return {'success': False, 'error': 'No organization context'}
+
+        # Check for existing item within organization scope
+        query = InventoryItem.query.filter_by(
+            name=data['name'],
+            type=data['type']
+        )
+        if organization_id:
+            query = query.filter_by(organization_id=organization_id)
+
+        existing = query.first()
+        if existing:
+            return {'success': True, 'item': existing, 'existed': True}
+
+        # Create new inventory item
+        new_item = InventoryItem(
+            name=data['name'],
+            type=data['type'],
+            unit=data['unit'],
+            quantity=data.get('quantity', 0.0),
+            cost_per_unit=data.get('cost_per_unit', 0.0),
+            organization_id=organization_id
+        )
+
+        # Add container-specific fields
+        if data['type'] == 'container':
+            new_item.storage_amount = data.get('storage_amount')
+            new_item.storage_unit = data.get('storage_unit')
+
+        # Add density for volume ingredients
+        if data.get('density'):
+            new_item.density = data['density']
+
+        db.session.add(new_item)
+        db.session.flush()
+
+        # Create initial history entry for FIFO tracking
+        history = InventoryHistory(
+            inventory_item_id=new_item.id,
+            change_type='restock',
+            quantity_change=0,
+            remaining_quantity=0,
+            unit=new_item.unit if new_item.unit else 'count',
+            unit_cost=0,
+            note=f'Initial {data["type"]} creation' + (' via quick add' if data.get('quick_add') else ''),
+            created_by=current_user.id if current_user else None,
+            quantity_used=0,
+            is_perishable=False,
+            organization_id=organization_id
+        )
+        db.session.add(history)
+        db.session.commit()
+
+        return {'success': True, 'item': new_item}
+
+    except Exception as e:
+        db.session.rollback()
+        return {'success': False, 'error': str(e)}

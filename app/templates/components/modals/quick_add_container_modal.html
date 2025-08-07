@@ -1,4 +1,3 @@
-
 <div class="modal fade" id="quickAddContainerModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
   <div class="modal-dialog">
     <div class="modal-content">
@@ -10,17 +9,17 @@
         <form id="quickAddContainerForm">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <div class="mb-3">
-            <label for="containerName" class="form-label">Container Name</label>
-            <input type="text" class="form-control" id="containerName" name="name" required>
+            <label for="container-name" class="form-label">Container Name</label>
+            <input type="text" class="form-control" id="container-name" name="name" required>
           </div>
           <div class="mb-3">
-            <label for="storageAmount" class="form-label">Storage Amount</label>
-            <input type="number" class="form-control" id="storageAmount" name="storage_amount" step="0.01" required>
+            <label for="storage-amount" class="form-label">Storage Amount</label>
+            <input type="number" class="form-control" id="storage-amount" name="storage_amount" step="0.01" required>
           </div>
           <div class="mb-3">
-            <label for="storageUnit" class="form-label">Storage Unit</label>
-            <select class="form-select" id="storageUnit" name="storage_unit" required>
-              {% for unit in get_global_unit_list() %}
+            <label for="storage-unit" class="form-label">Storage Unit</label>
+            <select class="form-control" id="storage-unit" name="storage_unit" required>
+              {% for unit in units %}
                 <option value="{{ unit.name }}">{{ unit.name }}</option>
               {% endfor %}
             </select>
@@ -45,7 +44,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const formData = new FormData(form);
     const submitBtn = form.querySelector('button[type="submit"]');
-    
+
     submitBtn.disabled = true;
     submitBtn.textContent = 'Adding...';
 
@@ -53,7 +52,8 @@ document.addEventListener('DOMContentLoaded', function() {
       method: 'POST',
       headers: {
         'X-CSRFToken': formData.get('csrf_token'),
-        'Accept': 'application/json'
+        'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
       },
       body: formData
     })
@@ -64,37 +64,24 @@ document.addEventListener('DOMContentLoaded', function() {
       return response.json();
     })
     .then(data => {
-      // Add to container dropdowns on the page
-      const containerSelect = document.getElementById('allowed_containers');
-      if (containerSelect) {
-        // Get currently selected values
-        const selectedValues = Array.from(containerSelect.selectedOptions).map(opt => opt.value);
+            // Add to container dropdowns on the page
+            document.querySelectorAll('select[name="allowed_containers[]"], .container-select').forEach(select => {
+                const option = new Option(`${data.name} (${data.storage_amount} ${data.storage_unit})`, data.id);
+                option.dataset.storageAmount = data.storage_amount;
+                option.dataset.storageUnit = data.storage_unit;
+                option.dataset.type = 'container';
+                select.add(option);
+            });
 
-        // Add new option
-        const option = new Option(
-          `${data.name} (${data.storage_amount} ${data.storage_unit})`,
-          data.id,
-          false,
-          true  // Select the new option
-        );
-        containerSelect.add(option);
+            // Show success message
+            showAlert('success', 'Container added successfully!');
 
-        // Restore previous selections
-        selectedValues.forEach(value => {
-          const opt = containerSelect.querySelector(`option[value="${value}"]`);
-          if (opt) opt.selected = true;
-        });
-      }
+            // Reset form
+            form.reset();
 
-      // Close modal and reset form
-      const modal = bootstrap.Modal.getInstance(document.getElementById('quickAddContainerModal'));
-      modal.hide();
-      form.reset();
-      
-      // Show success message
-      if (typeof showAlert === 'function') {
-        showAlert('Container added successfully!', 'success');
-      }
+            // Hide modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('quickAddContainerModal'));
+            modal.hide();
     })
     .catch(error => {
       console.error('Error:', error);

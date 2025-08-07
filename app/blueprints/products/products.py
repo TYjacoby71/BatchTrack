@@ -9,6 +9,62 @@ import os
 
 products_bp = Blueprint('products', __name__, url_prefix='/products')
 
+def create_product_from_data(data):
+    """
+    Helper function to create products - used by both regular product creation
+    and quick add functionality
+    """
+    try:
+        from ...models import db, InventoryItem, InventoryHistory
+        from ...utils.permissions import get_effective_organization_id
+
+        organization_id = get_effective_organization_id()
+        if not organization_id and current_user.user_type != 'developer':
+            return {'success': False, 'error': 'No organization context'}
+
+        # Create inventory item for product
+        product = InventoryItem(
+            name=data['name'],
+            type='product',
+            unit=data.get('unit', 'count'),
+            quantity=0,
+            organization_id=organization_id
+        )
+
+        db.session.add(product)
+        db.session.flush()
+
+        # Create initial history entry
+        history = InventoryHistory(
+            inventory_item_id=product.id,
+            change_type='restock',
+            quantity_change=0,
+            remaining_quantity=0,
+            unit=product.unit,
+            unit_cost=0,
+            note='Initial product creation' + (' via quick add' if data.get('quick_add') else ''),
+            created_by=current_user.id if current_user else None,
+            quantity_used=0,
+            is_perishable=False,
+            organization_id=organization_id
+        )
+        db.session.add(history)
+        db.session.commit()
+
+        return {
+            'success': True,
+            'product': {
+                'id': product.id,
+                'name': product.name,
+                'unit': product.unit
+            }
+        }
+
+    except Exception as e:
+        db.session.rollback()
+        return {'success': False, 'error': str(e)}
+
+
 @products_bp.route('/')
 @products_bp.route('/list')
 @login_required
@@ -30,30 +86,30 @@ def product_list():
             self.total_quantity = data.get('total_quantity', 0)
             # Add product ID for URL generation
             self.id = data.get('product_id', None)
-            
+
             # Calculate aggregate inventory values
             self.total_bulk = 0
             self.total_packaged = 0
-            
+
             # Get actual Product and its variants
             if self.id:
                 from ...models.product import ProductSKU, Product, ProductVariant
-                
+
                 # Find the actual Product by name
                 product = Product.query.filter_by(
                     name=self.name,
                     organization_id=current_user.organization_id
                 ).first()
-                
+
                 if product:
                     self.id = product.id  # Use actual product ID
-                    
+
                     # Get actual ProductVariant objects (not size labels)
                     actual_variants = ProductVariant.query.filter_by(
                         product_id=product.id,
                         is_active=True
                     ).all()
-                    
+
                     # Create variation objects for template compatibility
                     self.variations = []
                     for variant in actual_variants:
@@ -64,17 +120,17 @@ def product_list():
                             'sku': None  # Will be set below if there's a primary SKU
                         })()
                         self.variations.append(variant_obj)
-                    
+
                     # Set variant count to actual number of variants
                     self.variant_count = len(actual_variants)
-                    
+
                     # Calculate aggregates from SKUs
                     product_skus = ProductSKU.query.filter_by(
                         product_id=product.id,
                         organization_id=current_user.organization_id,
                         is_active=True
                     ).all()
-                    
+
                     for sku in product_skus:
                         if sku.inventory_item and sku.inventory_item.quantity > 0:
                             size_label = sku.size_label if sku.size_label else 'Bulk'
@@ -236,7 +292,7 @@ def view_product(product_id):
         if not base_sku:
             flash('Product not found', 'error')
             return redirect(url_for('products.product_list'))
-        
+
         product = base_sku.product
 
     # Get all SKUs for this product - with org scoping
@@ -311,7 +367,7 @@ def view_product_by_name(product_name):
 def edit_product(product_id):
     """Edit product details by product ID"""
     from ...models.product import Product
-    
+
     # First try to find the product directly by ID
     product = Product.query.filter_by(
         id=product_id,

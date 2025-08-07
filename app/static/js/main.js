@@ -71,6 +71,34 @@ async function updateClock() {
   }
 }
 
+// Global alert function for showing messages
+function showAlert(type, message) {
+  // Create alert element
+  const alertDiv = document.createElement('div');
+  alertDiv.className = `alert alert-${type} alert-dismissible fade show mt-3`;
+  alertDiv.innerHTML = `
+    ${message}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  `;
+  
+  // Insert at top of main content
+  const mainContent = document.querySelector('main') || document.querySelector('.container').firstChild;
+  if (mainContent) {
+    if (mainContent.parentNode) {
+      mainContent.parentNode.insertBefore(alertDiv, mainContent);
+    }
+  } else {
+    document.body.insertBefore(alertDiv, document.body.firstChild);
+  }
+  
+  // Auto-hide after 5 seconds
+  setTimeout(() => {
+    if (alertDiv.parentNode) {
+      alertDiv.remove();
+    }
+  }, 5000);
+}
+
 document.addEventListener('DOMContentLoaded', function() {
   // Initialize clock
   updateClock();

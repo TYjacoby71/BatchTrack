@@ -17,7 +17,7 @@
             <label for="new-ingredient-unit" class="form-label">Unit</label>
             <div class="input-group">
               <select class="form-control" id="new-ingredient-unit" name="unit" required>
-                {% for unit in get_global_unit_list() %}
+                {% for unit in units %}
                   <option value="{{ unit.name }}">{{ unit.name }}</option>
                 {% endfor %}
               </select>
@@ -43,13 +43,17 @@ function openUnitModalFromIngredient() {
   window.quickAddReturnContext = 'ingredient';
   
   // Hide ingredient modal
-  const ingredientModal = bootstrap.Modal.getInstance(document.getElementById('quickAddIngredientModal'));
-  ingredientModal.hide();
+  const ingredientModalElement = document.getElementById('quickAddIngredientModal');
+  const ingredientModalInstance = bootstrap.Modal.getInstance(ingredientModalElement);
+  if (ingredientModalInstance) {
+    ingredientModalInstance.hide();
+  }
   
   // Open unit modal
   setTimeout(() => {
-    const unitModal = new bootstrap.Modal(document.getElementById('quickAddUnitModal'));
-    unitModal.show();
+    const unitModalElement = document.getElementById('quickAddUnitModal');
+    const unitModalInstance = new bootstrap.Modal(unitModalElement);
+    unitModalInstance.show();
   }, 150);
 }
 
@@ -68,10 +72,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     fetch('/quick-add/ingredient', {
       method: 'POST',
-      headers: {
-        'X-CSRFToken': formData.get('csrf_token'),
-        'Accept': 'application/json'
-      },
       body: formData
     })
     .then(response => {
@@ -84,22 +84,38 @@ document.addEventListener('DOMContentLoaded', function() {
       // Add to any ingredient dropdowns on the page
       document.querySelectorAll('select[name="ingredient_ids[]"], select[name*="ingredient"]').forEach(select => {
         const option = new Option(data.name, data.id);
+        option.dataset.unit = data.unit;
+        option.dataset.type = 'ingredient';
         select.add(option);
       });
 
-      // Close modal and reset form
-      const modal = bootstrap.Modal.getInstance(document.getElementById('quickAddIngredientModal'));
-      modal.hide();
+      // Show success message
+      showIngredientAlert('success', data.message || 'Ingredient added successfully!');
+      
+      // Reset form
       form.reset();
       
-      // Show success message
-      if (typeof showAlert === 'function') {
-        showAlert('Ingredient added successfully!', 'success');
+      // Hide modal
+      const modalElement = document.getElementById('quickAddIngredientModal');
+      const modalInstance = bootstrap.Modal.getInstance(modalElement);
+      if (modalInstance) {
+        modalInstance.hide();
+      }
+      
+      // If we're in ingredient context and have a return context, add ingredient line
+      if (window.ingredientReturnContext === 'main' && typeof addIngredient === 'function') {
+        // Add ingredient line and preselect the new ingredient
+        setTimeout(() => {
+          const newEntry = addIngredient(data.id);
+          if (newEntry) {
+            newEntry.scrollIntoView({ behavior: 'smooth' });
+          }
+        }, 300);
       }
     })
     .catch(error => {
-      console.error('Error:', error);
-      alert(error.error || 'Failed to add ingredient');
+      console.log('Error:', error);
+      showIngredientAlert('danger', error.error || 'Failed to add ingredient');
     })
     .finally(() => {
       submitBtn.disabled = false;
@@ -107,4 +123,24 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
 });
+
+function showIngredientAlert(type, message) {
+  // Create alert element
+  const alertDiv = document.createElement('div');
+  alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+  alertDiv.innerHTML = `
+    ${message}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  `;
+  
+  // Insert at top of main content area
+  const container = document.querySelector('.container-fluid') || document.body;
+  container.insertBefore(alertDiv, container.firstChild);
+  
+  // Auto dismiss after 5 seconds
+  setTimeout(() => {
+    const alert = bootstrap.Alert.getOrCreateInstance(alertDiv);
+    alert.close();
+  }, 5000);
+}
 </script>
