@@ -238,7 +238,7 @@ def create_app():
     app.register_blueprint(ingredient_api_bp)
     app.register_blueprint(dashboard_api_bp)
     app.register_blueprint(unit_api_bp)
-    app.register_blueprint(container_api_bp) # Register container API blueprint
+    app.register_blueprint(container_api_bp)
 
 
     # Ensure all API routes are loaded
