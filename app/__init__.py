@@ -340,6 +340,7 @@ def create_app():
     def inject_permissions():
         from .utils.permissions import has_permission, has_role, is_organization_owner
         from .services.reservation_service import ReservationService
+        from .utils.unit_utils import get_global_unit_list
 
         def get_reservation_summary(inventory_item_id):
             """Get reservation summary for template use"""
@@ -353,7 +354,8 @@ def create_app():
             has_permission=has_permission,
             has_role=has_role,
             is_organization_owner=is_organization_owner,
-            get_reservation_summary=get_reservation_summary
+            get_reservation_summary=get_reservation_summary,
+            get_global_unit_list=get_global_unit_list
         )
 
     # Add main routes
