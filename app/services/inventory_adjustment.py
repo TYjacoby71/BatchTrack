@@ -148,7 +148,7 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
             qty_change = quantity
 
         # Handle expiration using ExpirationService
-        from app.blueprints.expiration.services import ExpirationService
+        from app.services.expiration.services import ExpirationService
 
         expiration_date = None
         shelf_life_to_use = None
@@ -250,21 +250,25 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
                     if custom_expiration_date:
                         expiration_date = custom_expiration_date
                     elif custom_shelf_life_days:
-                        from ..blueprints.expiration.services import ExpirationService
+                        from app.blueprints.expiration.services import ExpirationService
                         expiration_date = ExpirationService.calculate_expiration_date(timestamp, custom_shelf_life_days)
                 elif item.is_perishable and item.shelf_life_days:
                     is_perishable = True
                     # Use ExpirationService to get proper expiration date considering batch hierarchy
-                    from ..blueprints.expiration.services import ExpirationService
+                    from app.blueprints.expiration.services import ExpirationService
                     batch_id = None  # Will be set if this is from a batch operation
                     expiration_date = ExpirationService.get_expiration_date_for_new_entry(item_id, batch_id)
                 else:
                     is_perishable = False
+
+                # Get the correct unit for history entry
+                history_unit = 'count' if getattr(item, 'type', None) == 'container' else item.unit
+
                 FIFOService.add_fifo_entry(
                     inventory_item_id=item_id,
                     quantity=qty_change,
                     change_type=change_type,
-                    unit=item.unit,
+                    unit=history_unit,
                     notes=notes,
                     cost_per_unit=cost_per_unit,
                     expiration_date=expiration_date,
@@ -273,7 +277,9 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
                     created_by=created_by,
                     customer=customer,
                     sale_price=sale_price,
-                    order_id=order_id
+                    order_id=order_id,
+                    custom_expiration_date=custom_expiration_date,
+                    custom_shelf_life_days=custom_shelf_life_days
                 )
 
         # For batch completions, ensure the inventory item inherits perishable settings
