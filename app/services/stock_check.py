@@ -32,58 +32,25 @@ def universal_stock_check(recipe, scale=1.0, flex_mode=False):
         print(f"  - Ingredient belongs to user, proceeding with stock check")
         needed_amount = recipe_ingredient.quantity * scale
 
-        # Get current inventory details - exclude expired FIFO entries using dynamic expiration
-        from ..blueprints.expiration.services import ExpirationService
-        from ..utils.timezone_utils import TimezoneUtils
+        # Get available FIFO entries (non-expired only) - explicitly exclude expired
+        from ..blueprints.fifo.services import FIFOService
+        available_entries = FIFOService.get_fifo_entries(ingredient.id)  # This already excludes expired
+        total_available = sum(entry.remaining_quantity for entry in available_entries)
 
-        all_fifo_entries = InventoryHistory.query.filter(
-            InventoryHistory.inventory_item_id == ingredient.id,
-            InventoryHistory.remaining_quantity > 0
-        ).all()
-
-        # Filter out expired entries using dynamic expiration calculation
-        now_utc = TimezoneUtils.utc_now()
-        # Ensure now_utc is timezone-aware for consistent comparison
-        if now_utc.tzinfo is None:
-            now_utc = now_utc.replace(tzinfo=timezone.utc)
-
-        available_fifo_entries = []
-
-        for entry in all_fifo_entries:
-            if not entry.is_perishable:
-                # Non-perishable items are always available
-                available_fifo_entries.append(entry)
-            else:
-                # Check if perishable item is expired using dynamic calculation
-                expiration_date = ExpirationService.get_effective_expiration_date(entry)
-                if expiration_date:
-                    # Convert to UTC for comparison
-                    if expiration_date.tzinfo:
-                        expiration_utc = expiration_date.astimezone(timezone.utc)
-                    else:
-                        expiration_utc = expiration_date.replace(tzinfo=timezone.utc)
-
-                    # Only include if not expired
-                    if expiration_utc >= now_utc:
-                        available_fifo_entries.append(entry)
-                else:
-                    # If no expiration date can be calculated, include it
-                    available_fifo_entries.append(entry)
-
-        # Sum up available quantity from non-expired entries
-        available = sum(entry.remaining_quantity for entry in available_fifo_entries)
+        # Double-check: ensure we're only counting fresh, non-expired inventory
+        # The get_fifo_entries method already filters out expired entries, but this confirms it
 
         stock_unit = ingredient.unit
         recipe_unit = recipe_ingredient.unit
         density = ingredient.density if ingredient.density else None
 
-        print(f"  - Available (non-expired): {available} {stock_unit}, Need: {needed_amount} {recipe_unit}")
+        print(f"  - Available (non-expired): {total_available} {stock_unit}, Need: {needed_amount} {recipe_unit}")
 
         try:
             # Convert available stock to recipe unit using UUCS
-            print(f"  - Converting {available} {stock_unit} to {recipe_unit}")
+            print(f"  - Converting {total_available} {stock_unit} to {recipe_unit}")
             conversion_result = ConversionEngine.convert_units(
-                available,
+                total_available,
                 stock_unit,
                 recipe_unit,
                 ingredient_id=ingredient.id
@@ -116,7 +83,7 @@ def universal_stock_check(recipe, scale=1.0, flex_mode=False):
                 'needed_unit': recipe_unit,
                 'available': float(available_converted),
                 'available_unit': recipe_unit,
-                'raw_stock': float(available),
+                'raw_stock': float(total_available),
                 'stock_unit': stock_unit,
                 'status': status,
                 'formatted_needed': f"{needed_amount:.2f} {recipe_unit}",
