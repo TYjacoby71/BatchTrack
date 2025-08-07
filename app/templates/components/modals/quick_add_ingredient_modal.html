@@ -70,11 +70,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     fetch('/quick-add/ingredient', {
       method: 'POST',
-      headers: {
-        'X-CSRFToken': formData.get('csrf_token'),
-        'Accept': 'application/json',
-        'X-Requested-With': 'XMLHttpRequest'
-      },
       body: formData
     })
     .then(response => {

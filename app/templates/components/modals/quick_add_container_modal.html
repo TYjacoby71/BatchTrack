@@ -9,17 +9,17 @@
         <form id="quickAddContainerForm">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <div class="mb-3">
-            <label for="containerName" class="form-label">Container Name</label>
-            <input type="text" class="form-control" id="containerName" name="name" required>
+            <label for="container-name" class="form-label">Container Name</label>
+            <input type="text" class="form-control" id="container-name" name="name" required>
           </div>
           <div class="mb-3">
-            <label for="storageAmount" class="form-label">Storage Amount</label>
-            <input type="number" class="form-control" id="storageAmount" name="storage_amount" step="0.01" required>
+            <label for="storage-amount" class="form-label">Storage Amount</label>
+            <input type="number" class="form-control" id="storage-amount" name="storage_amount" step="0.01" required>
           </div>
           <div class="mb-3">
-            <label for="storageUnit" class="form-label">Storage Unit</label>
-            <select class="form-select" id="storageUnit" name="storage_unit" required>
-              {% for unit in get_global_unit_list() %}
+            <label for="storage-unit" class="form-label">Storage Unit</label>
+            <select class="form-control" id="storage-unit" name="storage_unit" required>
+              {% for unit in units %}
                 <option value="{{ unit.name }}">{{ unit.name }}</option>
               {% endfor %}
             </select>
@@ -81,10 +81,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Hide modal
             const modal = bootstrap.Modal.getInstance(document.getElementById('quickAddContainerModal'));
-            modal.hide();al
-            const modal = bootstrap.Modal.getInstance(document.getElementById('quickAddContainerModal'));
             modal.hide();
-        })
+    })
     .catch(error => {
       console.error('Error:', error);
       alert(error.error || 'Failed to add container');

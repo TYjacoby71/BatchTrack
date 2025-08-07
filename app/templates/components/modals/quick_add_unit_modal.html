@@ -46,28 +46,20 @@ document.addEventListener('DOMContentLoaded', function() {
     e.preventDefault();
 
     const formData = new FormData(form);
-    const submitBtn = form.querySelector('button[type="submit"]') || document.querySelector('button[form="quickAddUnitForm"]');
+    const submitBtn = form.querySelector('button[type="submit"]');
 
     submitBtn.disabled = true;
     submitBtn.textContent = 'Adding...';
-
-    // Convert FormData to regular object for JSON
-    const data = {
-      name: formData.get('name'),
-      type: formData.get('type')
-    };
-
-    console.log('Creating unit:', data.name + ' (' + data.type + ')');
 
     fetch('/quick-add/unit', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-CSRFToken': formData.get('csrf_token'),
-        'Accept': 'application/json',
-        'X-Requested-With': 'XMLHttpRequest'
       },
-      body: JSON.stringify(data)
+      body: JSON.stringify({
+        name: formData.get('name'),
+        type: formData.get('type')
+      })
     })
     .then(response => {
       if (!response.ok) {
@@ -76,46 +68,34 @@ document.addEventListener('DOMContentLoaded', function() {
       return response.json();
     })
     .then(data => {
-      console.log('Unit created successfully:', data);
-
-      // Add to all unit dropdowns on the page
-      document.querySelectorAll('select[name="units[]"], select[name*="unit"], select[name="predicted_yield_unit"]').forEach(select => {
+      // Add to all unit dropdowns
+      document.querySelectorAll('select[name*="unit"], select[id*="unit"]').forEach(select => {
         const option = new Option(data.name, data.name);
-        option.dataset.type = data.type;
-        option.dataset.symbol = data.symbol;
-        select.add(option);ymbol;
         select.add(option);
       });
 
-      // Clear form and close modal
-      document.getElementById('quickAddUnitForm').reset();
-      const modal = bootstrap.Modal.getInstance(document.getElementById('quickAddUnitModal'));
-      modal.hide();
-
       // Show success message
-      showAlert('success', `Unit "${data.name}" created successfully!`);
+      showUnitAlert('success', 'Unit added successfully!');
 
-      // Handle return context
+      // Reset form
+      form.reset();
+
+      // Hide modal
+      const modalElement = document.getElementById('quickAddUnitModal');
+      const modalInstance = bootstrap.Modal.getInstance(modalElement);
+      modalInstance.hide();
+
+      // Return to ingredient modal if that's the context
       if (window.quickAddReturnContext === 'ingredient') {
-        // Reopen ingredient modal after short delay
         setTimeout(() => {
           const ingredientModal = new bootstrap.Modal(document.getElementById('quickAddIngredientModal'));
           ingredientModal.show();
-
-          // Set the new unit as selected in ingredient modal
-          const ingredientUnitSelect = document.querySelector('#quickAddIngredientModal select[name="unit"]');
-          if (ingredientUnitSelect) {
-            ingredientUnitSelect.value = data.name;
-          }
-        }, 300);
+        }, 150);
       }
-
-      // Reset context
-      window.quickAddReturnContext = null;
     })
     .catch(error => {
-      console.error('Error:', error);
-      alert(error.error || 'Failed to add unit');
+      console.log('Error:', error);
+      showUnitAlert('danger', error.error || 'Failed to add unit');
     })
     .finally(() => {
       submitBtn.disabled = false;
@@ -123,10 +103,11 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
 
-  // Handle cancel button - return to ingredient modal if that's where we came from
-  document.getElementById('cancelQuickUnit').addEventListener('click', function() {
-    const modal = bootstrap.Modal.getInstance(document.getElementById('quickAddUnitModal'));
-    modal.hide();
+  // Handle cancel button
+  document.getElementById('cancelQuickUnit')?.addEventListener('click', function() {
+    const modalElement = document.getElementById('quickAddUnitModal');
+    const modalInstance = bootstrap.Modal.getInstance(modalElement);
+    modalInstance.hide();
 
     if (window.quickAddReturnContext === 'ingredient') {
       setTimeout(() => {
