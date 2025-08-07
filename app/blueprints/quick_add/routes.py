@@ -1,7 +1,7 @@
 from flask import request, jsonify, render_template, redirect, url_for
 from flask_login import current_user
 from ...models import db, Unit, InventoryItem, InventoryHistory
-from ...utils.permissions import get_effective_organization_id
+# Removed unused import - using current_user.organization_id directly
 from . import quick_add_bp
 
 # Placeholder for CSRF validation and logger if they were used in the original quick_add_ingredient

@@ -58,14 +58,14 @@ function openUnitModalFromIngredient() {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-  const form = document.getElementById('quickAddIngredientForm');
-  if (!form) return;
+  const ingredientForm = document.getElementById('quickAddIngredientForm');
+  if (!ingredientForm) return;
 
-  form.addEventListener('submit', function(e) {
+  ingredientForm.addEventListener('submit', function(e) {
     e.preventDefault();
 
-    const formData = new FormData(form);
-    const submitBtn = form.querySelector('button[type="submit"]');
+    const formData = new FormData(ingredientForm);
+    const submitBtn = ingredientForm.querySelector('button[type="submit"]');
     
     submitBtn.disabled = true;
     submitBtn.textContent = 'Adding...';
@@ -93,7 +93,7 @@ document.addEventListener('DOMContentLoaded', function() {
       showIngredientAlert('success', data.message || 'Ingredient added successfully!');
       
       // Reset form
-      form.reset();
+      ingredientForm.reset();
       
       // Hide modal
       const modalElement = document.getElementById('quickAddIngredientModal');
