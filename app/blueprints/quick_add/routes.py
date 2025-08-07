@@ -189,9 +189,8 @@ def quick_add_ingredient():
     if not organization_id and current_user.user_type != 'developer':
         return jsonify({"error": "No organization context"}), 403
 
-    # If GET request, return the modal with units
+    # If GET request, return the modal with units  
     if request.method == 'GET':
-        from ...models import Unit
         units = Unit.query.filter_by(is_active=True).order_by(Unit.unit_type, Unit.name).all()
         return render_template('components/modals/quick_add_ingredient_modal.html', units=units)
 
