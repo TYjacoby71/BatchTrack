@@ -2,7 +2,7 @@
 """fix fallback_price column type from Numeric to String
 
 Revision ID: fix_fallback_price_type
-Revises: 9a2b8c4d5e6f
+Revises: 'fix_unit_symbol_nullable'
 Create Date: 2025-08-07 00:40:00.000000
 
 """
@@ -12,7 +12,7 @@ from sqlalchemy import inspect
 
 # revision identifiers, used by Alembic.
 revision = 'c8f2e5a9b1d4'
-down_revision = 'b5c7d8e9f1a2'
+down_revision = 'fix_unit_symbol_nullable'
 branch_labels = None
 depends_on = None
 
