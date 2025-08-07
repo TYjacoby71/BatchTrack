@@ -11,8 +11,8 @@ import sqlalchemy as sa
 from sqlalchemy import inspect
 
 # revision identifiers, used by Alembic.
-revision = 'fix_fallback_price_type'
-down_revision = '9a2b8c4d5e6f'
+revision = 'c8f2e5a9b1d4'
+down_revision = 'b5c7d8e9f1a2'
 branch_labels = None
 depends_on = None
 
