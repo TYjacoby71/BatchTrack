@@ -1,4 +1,3 @@
-
 import logging
 from flask import current_app, render_template, url_for
 from flask_mail import Message
@@ -13,15 +12,15 @@ class EmailService:
     """Service for sending emails"""
 
     @staticmethod
-    def send_verification_email(user_email, verification_token, user_name=None):
+    def send_verification_email(email, verification_token, user_name=None):
         """Send email verification link"""
         try:
             verification_url = url_for('auth.verify_email', 
                                      token=verification_token, 
                                      _external=True)
-            
+
             subject = "Verify your BatchTrack account"
-            
+
             html_body = f"""
             <h2>Welcome to BatchTrack!</h2>
             <p>Hi {user_name or 'there'},</p>
@@ -34,30 +33,30 @@ class EmailService:
             <br>
             <p>Best regards,<br>The BatchTrack Team</p>
             """
-            
+
             text_body = f"""
             Welcome to BatchTrack!
-            
+
             Hi {user_name or 'there'},
-            
+
             Thank you for signing up for BatchTrack. Please verify your email address by visiting:
             {verification_url}
-            
+
             This link will expire in 24 hours.
-            
+
             If you didn't create an account with BatchTrack, please ignore this email.
-            
+
             Best regards,
             The BatchTrack Team
             """
 
             return EmailService._send_email(
-                recipient=user_email,
+                recipient=email,
                 subject=subject,
                 html_body=html_body,
                 text_body=text_body
             )
-            
+
         except Exception as e:
             logger.error(f"Error sending verification email: {str(e)}")
             return False
@@ -67,13 +66,13 @@ class EmailService:
         """Send welcome email after successful signup"""
         try:
             subject = f"Welcome to BatchTrack - Your {tier_name} account is ready!"
-            
+
             dashboard_url = url_for('app_routes.dashboard', _external=True)
-            
+
             html_body = f"""
             <h2>Welcome to BatchTrack, {user_name}!</h2>
             <p>Your {tier_name} account for <strong>{organization_name}</strong> has been successfully created and is ready to use.</p>
-            
+
             <h3>Getting Started:</h3>
             <ul>
                 <li><a href="{dashboard_url}">Access your dashboard</a></li>
@@ -81,21 +80,21 @@ class EmailService:
                 <li>Start tracking your production batches</li>
                 <li>Manage your inventory with FIFO tracking</li>
             </ul>
-            
+
             <p>Need help? Check out our documentation or contact support.</p>
-            
+
             <p><a href="{dashboard_url}" style="background-color: #28a745; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px;">Go to Dashboard</a></p>
-            
+
             <br>
             <p>Happy making!<br>The BatchTrack Team</p>
             """
-            
+
             return EmailService._send_email(
                 recipient=user_email,
                 subject=subject,
                 html_body=html_body
             )
-            
+
         except Exception as e:
             logger.error(f"Error sending welcome email: {str(e)}")
             return False
@@ -107,9 +106,9 @@ class EmailService:
             reset_url = url_for('auth.reset_password', 
                               token=reset_token, 
                               _external=True)
-            
+
             subject = "Reset your BatchTrack password"
-            
+
             html_body = f"""
             <h2>Password Reset Request</h2>
             <p>Hi {user_name or 'there'},</p>
@@ -128,7 +127,7 @@ class EmailService:
                 subject=subject,
                 html_body=html_body
             )
-            
+
         except Exception as e:
             logger.error(f"Error sending password reset email: {str(e)}")
             return False
@@ -143,11 +142,11 @@ class EmailService:
                 html=html_body,
                 body=text_body
             )
-            
+
             mail.send(msg)
             logger.info(f"Email sent successfully to {recipient}")
             return True
-            
+
         except Exception as e:
             logger.error(f"Failed to send email to {recipient}: {str(e)}")
             return False
@@ -165,3 +164,29 @@ class EmailService:
         timestamp = str(TimezoneUtils.utc_now().timestamp())
         data = f"{user_id}:{timestamp}:{secrets.token_hex(16)}"
         return hashlib.sha256(data.encode()).hexdigest()
+
+    @staticmethod
+    def send_password_setup_email(email, token, first_name):
+        """Send password setup email for new accounts"""
+        if not EmailService.is_configured():
+            print(f"Email not configured - would send password setup to {email}")
+            return False
+
+        subject = "Set up your BatchTrack password"
+        reset_url = url_for('auth.reset_password', token=token, _external=True)
+
+        body = f"""
+        Hi {first_name},
+
+        Welcome to BatchTrack! Your account has been created successfully.
+
+        To complete your setup, please create a password by clicking the link below:
+        {reset_url}
+
+        This link will expire in 24 hours.
+
+        Best regards,
+        The BatchTrack Team
+        """
+
+        return EmailService._send_email(email, subject, body)
