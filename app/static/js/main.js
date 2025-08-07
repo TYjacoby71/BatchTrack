@@ -122,12 +122,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  // Quick Add Unit Handler
+  // Quick Add Unit Handler - removed since it's now handled in component
   function initQuickAddUnit() {
-    const saveButton = document.getElementById('saveQuickUnit');
-    if (!saveButton) {
-      // Element doesn't exist on this page, skip initialization
-      return;
+    // Unit modal is now handled by its own component
+    return;rn;
     }
 
     saveButton.addEventListener('click', () => {
