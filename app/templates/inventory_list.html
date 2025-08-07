@@ -759,9 +759,28 @@ function initTablePagination(tableType) {
     updateTable();
   });
 
-  // Column visibility toggle
+  // Column visibility toggle with localStorage
   const columnCheckboxes = document.querySelectorAll(`[data-column]`);
+  
+  // Load saved column preferences
+  const savedColumns = JSON.parse(localStorage.getItem(`${tableType}_columns`) || '{}');
+  
   columnCheckboxes.forEach(checkbox => {
+    const column = checkbox.dataset.column;
+    
+    // Apply saved preference if it exists
+    if (savedColumns.hasOwnProperty(column)) {
+      checkbox.checked = savedColumns[column];
+    }
+    
+    // Apply initial visibility
+    const isVisible = checkbox.checked;
+    const columnElements = document.querySelectorAll(`#${tableId} .col-${column}`);
+    columnElements.forEach(el => {
+      el.style.display = isVisible ? '' : 'none';
+    });
+    
+    // Save preference on change
     checkbox.addEventListener('change', function() {
       const column = this.dataset.column;
       const isVisible = this.checked;
@@ -769,6 +788,11 @@ function initTablePagination(tableType) {
       columnElements.forEach(el => {
         el.style.display = isVisible ? '' : 'none';
       });
+      
+      // Save to localStorage
+      const currentColumns = JSON.parse(localStorage.getItem(`${tableType}_columns`) || '{}');
+      currentColumns[column] = isVisible;
+      localStorage.setItem(`${tableType}_columns`, JSON.stringify(currentColumns));
     });
   });
 
