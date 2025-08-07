@@ -54,12 +54,11 @@
                             <small class="form-text text-muted">Unchecked tiers won't be shown anywhere</small>
                         </div>
 
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="requires_stripe_billing" name="requires_stripe_billing" checked>
-                            <label class="form-check-label" for="requires_stripe_billing">
-                                Requires Stripe billing
-                            </label>
-                            <small class="form-text text-muted">Uncheck for exempt, free, or internal tiers that don't need payment</small>
+                        <div class="alert alert-info">
+                            <h6><i class="fas fa-info-circle"></i> Auto-Detection</h6>
+                            <small>
+                                Billing provider is automatically determined by product keys you enter below.
+                            </small>
                         </div>
 
 
@@ -103,13 +102,7 @@
                             <small class="form-text text-muted">Links to Whop product (if using Whop billing)</small>
                         </div>
 
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="supports_whop" name="supports_whop">
-                            <label class="form-check-label" for="supports_whop">
-                                Enable Whop integration
-                            </label>
-                            <small class="form-text text-muted">Check if this tier supports Whop billing</small>
-                        </div>
+                        
                     </div>
                 </div>
             </div>
