@@ -193,7 +193,7 @@ def quick_add_ingredient():
     if request.method == 'GET':
         from ...models import Unit
         units = Unit.query.filter_by(is_active=True).order_by(Unit.unit_type, Unit.name).all()
-        return render_template('quick_add_ingredient_modal.html', units=units)
+        return render_template('components/modals/quick_add_ingredient_modal.html', units=units)
 
     try:
         # Handle both JSON and form data
