@@ -270,7 +270,7 @@ def create_app():
     # Setup logging
     from .utils.unit_utils import setup_logging
     setup_logging(app)
-    
+
     # Configure basic logging for production
     if not app.debug and not logger.handlers:
         import logging
@@ -296,7 +296,7 @@ def create_app():
     from .filters.product_filters import register_filters
     register_filters(app)
 
-    
+
 
     # Using standard Flask url_for - no custom template registry needed
 
@@ -328,12 +328,12 @@ def create_app():
                 units = Unit.query.order_by(Unit.unit_type, Unit.name).all()
             except:
                 units = []
-        
+
         try:
             categories = IngredientCategory.query.order_by(IngredientCategory.name).all()
         except:
             categories = []
-            
+
         return dict(units=units, categories=categories, global_units=units)
 
     @app.context_processor
@@ -428,7 +428,7 @@ def create_app():
     app.jinja_env.globals['can_access_route'] = template_can_access_route
     app.jinja_env.globals['get_effective_org_id'] = template_get_org_id
 
-    
+
 
     # Register Jinja2 filters
     from .filters.product_filters import product_variant_name, ingredient_cost_currency, safe_float
