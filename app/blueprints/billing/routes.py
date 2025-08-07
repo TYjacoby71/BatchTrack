@@ -30,16 +30,40 @@ def upgrade():
 
     # Get live pricing data
     try:
-        pricing_data = BillingService.get_live_pricing_data()
-        logger.info(f"Live pricing data retrieved for upgrade page: {len(pricing_data)} tiers")
+        pricing_data = BillingService.get_comprehensive_pricing_data()
+        logger.info(f"Live pricing data retrieved for upgrade page: {len(pricing_data.get('tiers', {}))} tiers")
     except Exception as e:
         logger.error(f"Error fetching live pricing: {e}")
         flash('Pricing information temporarily unavailable. Please try again later.', 'warning')
-        pricing_data = {}
+        pricing_data = {'tiers': {}, 'available': False}
+
+    # Get current tier information
+    current_tier = BillingService.get_tier_for_organization(organization)
+    
+    # Get subscription details (mock for now since we don't have Stripe integration active)
+    subscription_details = {
+        'status': 'active' if current_tier != 'exempt' else 'inactive',
+        'next_billing_date': None,
+        'amount': None,
+        'interval': None,
+        'trial_end': None,
+        'cancel_at_period_end': False
+    }
+
+    # Load tier configuration for display
+    try:
+        from ..developer.subscription_tiers import load_tiers_config
+        tiers_config = load_tiers_config()
+    except Exception as e:
+        logger.error(f"Error loading tiers config: {e}")
+        tiers_config = {}
 
     return render_template('billing/upgrade.html',
                          organization=organization,
-                         pricing_data=pricing_data)
+                         pricing_data=pricing_data.get('tiers', {}),
+                         tiers=tiers_config,
+                         current_tier=current_tier,
+                         subscription_details=subscription_details)
 
 @billing_bp.route('/checkout/<tier>')
 @billing_bp.route('/checkout/<tier>/<billing_cycle>')
