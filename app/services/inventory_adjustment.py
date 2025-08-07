@@ -148,7 +148,7 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
             qty_change = quantity
 
         # Handle expiration using ExpirationService
-        from app.services.expiration.services import ExpirationService
+        from app.blueprints.expiration.services import ExpirationService
 
         expiration_date = None
         shelf_life_to_use = None
