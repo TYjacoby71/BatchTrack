@@ -105,8 +105,12 @@ def quick_add_unit():
         if not current_user.is_authenticated:
             return jsonify({"error": "Authentication required"}), 401
 
-        organization_id = get_effective_organization_id()
-        if not organization_id and current_user.user_type != 'developer':
+        # Get organization context
+        if hasattr(current_user, 'organization_id') and current_user.organization_id:
+            organization_id = current_user.organization_id
+        elif current_user.user_type == 'developer':
+            organization_id = None  # Developer users can create global units
+        else:
             return jsonify({"error": "No organization context"}), 403
 
         data = request.get_json()

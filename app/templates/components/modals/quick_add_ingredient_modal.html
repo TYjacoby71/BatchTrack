@@ -44,14 +44,16 @@ function openUnitModalFromIngredient() {
   
   // Hide ingredient modal
   const ingredientModalElement = document.getElementById('quickAddIngredientModal');
-  const ingredientModal = bootstrap.Modal.getInstance(ingredientModalElement);
-  ingredientModal.hide();
+  const ingredientModalInstance = bootstrap.Modal.getInstance(ingredientModalElement);
+  if (ingredientModalInstance) {
+    ingredientModalInstance.hide();
+  }
   
   // Open unit modal
   setTimeout(() => {
     const unitModalElement = document.getElementById('quickAddUnitModal');
-    const unitModal = new bootstrap.Modal(unitModalElement);
-    unitModal.show();
+    const unitModalInstance = new bootstrap.Modal(unitModalElement);
+    unitModalInstance.show();
   }, 150);
 }
 
@@ -96,7 +98,9 @@ document.addEventListener('DOMContentLoaded', function() {
       // Hide modal
       const modalElement = document.getElementById('quickAddIngredientModal');
       const modalInstance = bootstrap.Modal.getInstance(modalElement);
-      modalInstance.hide();
+      if (modalInstance) {
+        modalInstance.hide();
+      }
       
       // If we're in ingredient context and have a return context, add ingredient line
       if (window.ingredientReturnContext === 'main' && typeof addIngredient === 'function') {
