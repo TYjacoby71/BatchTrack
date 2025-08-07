@@ -122,25 +122,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  // Quick Add Unit Handler - now handled by modal components
-  function initQuickAddUnit() {
-    // Unit modal is now handled by its own component
-    return;
-  }
-
-  initQuickAddUnit();
-
-  // Quick Add Container form handler
-  const quickAddContainerForm = document.getElementById('quickAddContainerForm');
-  if (quickAddContainerForm) {
-    quickAddContainerForm.addEventListener('submit', function(e) {
-      e.preventDefault();
-      // Your existing form submission logic here
-    });
-  }
+  // Note: Quick add components (unit, container, ingredient) now have their own 
+  // embedded scripts and don't need initialization here
 });
-
-// Remove duplicate DOMContentLoaded - already handled above
 
 // Unit filtering function (kept separate as it's called from HTML)
 window.filterUnits = function(filterValue) {
