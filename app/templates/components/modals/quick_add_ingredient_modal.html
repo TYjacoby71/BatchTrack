@@ -21,7 +21,7 @@
                   <option value="{{ unit.name }}">{{ unit.name }}</option>
                 {% endfor %}
               </select>
-              <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#quickAddUnitModal">
+              <button type="button" class="btn btn-outline-secondary" onclick="openUnitModalFromIngredient()">
                 Add Unit
               </button>
             </div>
@@ -37,6 +37,22 @@
 </div>
 
 <script>
+// Function to open unit modal from ingredient modal
+function openUnitModalFromIngredient() {
+  // Set context so unit modal knows to return here
+  window.quickAddReturnContext = 'ingredient';
+  
+  // Hide ingredient modal
+  const ingredientModal = bootstrap.Modal.getInstance(document.getElementById('quickAddIngredientModal'));
+  ingredientModal.hide();
+  
+  // Open unit modal
+  setTimeout(() => {
+    const unitModal = new bootstrap.Modal(document.getElementById('quickAddUnitModal'));
+    unitModal.show();
+  }, 150);
+}
+
 document.addEventListener('DOMContentLoaded', function() {
   const form = document.getElementById('quickAddIngredientForm');
   if (!form) return;

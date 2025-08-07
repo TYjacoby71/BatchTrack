@@ -284,24 +284,9 @@
 </form>
 
 {% include 'components/modals/quick_add_ingredient_modal.html' %}
-
-<!-- Quick Add Container Modal -->
-<div class="modal fade" id="quickAddContainerModal" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Quick Add Container</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <form id="quickAddContainerForm">
-          <div class="mb-3">
-            <label for="containerName" class="form-label">Container Name</label>
-            <input type="text" class="form-control" id="containerName" required>
-          </div>
-          <div class="mb-3">
-            <label for="storageAmount" class="form-label">Storage Amount</label>
-            <input type="number" class="form-control" id="storageAmount" step="0.01" required>
+{% include 'components/modals/quick_add_unit_modal.html' %}
+{% include 'components/modals/quick_add_container_modal.html' %}
+      
           </div>
           <div class="mb-3">
             <label for="storageUnit" class="form-label">Storage Unit</label>
@@ -375,61 +360,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
 
-    const quickAddContainerForm = document.getElementById('quickAddContainerForm');
-    if (quickAddContainerForm) {
-        quickAddContainerForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            const name = document.getElementById('containerName').value;
-            const amount = document.getElementById('storageAmount').value;
-            const unit = document.getElementById('storageUnit').value;
-
-            fetch('/quick-add/container', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
-                },
-                body: JSON.stringify({ name, storage_amount: amount, storage_unit: unit })
-            })
-            .then(r => {
-                if (!r.ok) {
-                    throw new Error(`HTTP ${r.status}: ${r.statusText}`);
-                }
-                return r.json();
-            })
-            .then(data => {
-                if (data.error) throw new Error(data.error);
-
-                const containerSelect = document.getElementById('allowed_containers');
-                if (containerSelect) {
-                    // Get currently selected values
-                    const selectedValues = Array.from(containerSelect.selectedOptions).map(opt => opt.value);
-
-                    // Add new option
-                    const option = new Option(
-                        `${data.name} (${data.storage_amount} ${data.storage_unit})`,
-                        data.id,
-                        false,
-                        true  // Select the new option
-                    );
-                    containerSelect.add(option);
-
-                    // Restore previous selections
-                    selectedValues.forEach(value => {
-                        const opt = containerSelect.querySelector(`option[value="${value}"]`);
-                        if (opt) opt.selected = true;
-                    });
-                }
-
-                const modal = bootstrap.Modal.getInstance(document.getElementById('quickAddContainerModal'));
-                if (modal) modal.hide();
-
-                // Reset form
-                quickAddContainerForm.reset();
-            })
-            .catch(err => alert('Failed to add container: ' + err.message));
-        });
-    }
+    
+                    
 
     {% if edit_mode and existing_batches and existing_batches > 0 %}
     // Show warning when yield unit is changed

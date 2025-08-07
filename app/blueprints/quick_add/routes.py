@@ -1,7 +1,6 @@
-from flask import Blueprint, request, jsonify, render_template
+from flask import request, jsonify, render_template
 from ...models import db, InventoryItem, Unit
-
-quick_add_bp = Blueprint("quick_add", __name__, url_prefix='/quick-add', template_folder='templates')
+from . import quick_add_bp
 
 @quick_add_bp.route('/product', methods=['POST'])
 def quick_add_product():
@@ -13,7 +12,7 @@ def quick_add_product():
         # Ensure user is authenticated and get organization context
         if not current_user.is_authenticated:
             return jsonify({'error': 'Authentication required'}), 401
-        
+
         organization_id = get_effective_organization_id()
         if not organization_id and current_user.user_type != 'developer':
             return jsonify({'error': 'No organization context'}), 403
@@ -73,7 +72,7 @@ def quick_add_container():
         # Ensure user is authenticated and get organization context
         if not current_user.is_authenticated:
             return jsonify({'error': 'Authentication required'}), 401
-        
+
         organization_id = get_effective_organization_id()
         if not organization_id and current_user.user_type != 'developer':
             return jsonify({'error': 'No organization context'}), 403
@@ -124,101 +123,68 @@ def quick_add_container():
 
 @quick_add_bp.route('/unit', methods=['POST'])
 def quick_add_unit():
-    try:
-        from flask_login import current_user
-        from ...utils.permissions import get_effective_organization_id
-        
-        # Ensure user is authenticated and get organization context
-        if not current_user.is_authenticated:
-            return jsonify({'error': 'Authentication required'}), 401
-        
-        organization_id = get_effective_organization_id()
-        if not organization_id and current_user.user_type != 'developer':
-            return jsonify({'error': 'No organization context'}), 403
+    from flask_login import current_user
+    from ...utils.permissions import get_effective_organization_id
 
+    # Ensure user is authenticated and get organization context
+    if not current_user.is_authenticated:
+        return jsonify({"error": "Authentication required"}), 401
+
+    organization_id = get_effective_organization_id()
+    if not organization_id and current_user.user_type != 'developer':
+        return jsonify({"error": "No organization context"}), 403
+
+    try:
         data = request.get_json()
         if not data:
             return jsonify({'error': 'No data provided'}), 400
-            
+
         name = data.get('name', '').strip()
-        type_ = data.get('type', 'count').strip()
+        unit_type = data.get('type', 'weight')
 
         if not name:
-            return jsonify({'error': 'Name is required'}), 400
+            return jsonify({'error': 'Unit name is required'}), 400
 
-        # Check for existing within organization scope (custom units only)
-        existing = Unit.query.filter_by(name=name, is_custom=True, organization_id=organization_id).first()
-        if existing:
-            return jsonify({'error': 'Unit already exists in your organization'}), 409
-        
-        # Check for existing standard unit
-        existing_standard = Unit.query.filter_by(name=name, is_custom=False).first()
-        if existing_standard:
-            return jsonify({'error': 'A standard unit with this name already exists'}), 409
+        # Check if unit already exists in organization scope
+        existing_unit = Unit.query.filter_by(name=name, organization_id=organization_id).first()
+        if existing_unit:
+            return jsonify({'error': f'Unit "{name}" already exists'}), 400
 
-        # Validate unit type
-        valid_types = ['count', 'weight', 'volume', 'length', 'area']
-        if type_ not in valid_types:
-            return jsonify({'error': f'Invalid unit type. Must be one of: {", ".join(valid_types)}'}), 400
-
-        # Set proper base unit and multiplier based on type
-        if type_ == 'count':
-            base_unit = 'count'
-            multiplier = 1.0
-        elif type_ == 'weight':
-            base_unit = 'gram'
-            multiplier = 1.0
-        elif type_ == 'volume':
-            base_unit = 'ml'
-            multiplier = 1.0
-        elif type_ == 'length':
-            base_unit = 'cm'
-            multiplier = 1.0
-        elif type_ == 'area':
-            base_unit = 'sqcm'
-            multiplier = 1.0
-        else:
-            base_unit = name.lower()
-            multiplier = 1.0
-
-        # Generate a symbol - for custom units, use the name as symbol to avoid conflicts
-        symbol = name[:8]  # Truncate to 8 chars max for symbol
-
+        # Create new unit
         new_unit = Unit(
             name=name,
-            symbol=symbol,
-            unit_type=type_,
-            base_unit=base_unit,
-            conversion_factor=multiplier,
-            is_custom=True,
-            is_mapped=False,  # Custom units start unmapped
+            symbol=name.lower()[:3] if len(name) >= 3 else name.lower(),  # Simple symbol generation
+            unit_type=unit_type,
+            is_custom=True,  # Mark as custom unit
             organization_id=organization_id,
-            created_by=current_user.id if current_user else None
+            created_by=current_user.id
         )
+
         db.session.add(new_unit)
         db.session.commit()
 
         return jsonify({
-            'success': True,
             'name': new_unit.name,
+            'id': new_unit.id,
             'symbol': new_unit.symbol,
             'type': new_unit.unit_type
-        }), 201
+        })
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'success': False, 'error': str(e)}), 500
+        print(f"Error creating unit: {str(e)}")  # Debug logging
+        return jsonify({'error': str(e)}), 500
 
 @quick_add_bp.route('/ingredient', methods=['GET', 'POST'])
 def quick_add_ingredient():
     from flask_login import current_user
     from ...utils.permissions import get_effective_organization_id
     from ...models import InventoryHistory
-    
+
     # Ensure user is authenticated and get organization context
     if not current_user.is_authenticated:
         return jsonify({"error": "Authentication required"}), 401
-    
+
     organization_id = get_effective_organization_id()
     if not organization_id and current_user.user_type != 'developer':
         return jsonify({"error": "No organization context"}), 403
@@ -235,7 +201,7 @@ def quick_add_ingredient():
             data = request.get_json()
         else:
             data = request.form.to_dict()
-            
+
         name = data.get('name', '').strip()
         unit = data.get('unit', '').strip()
 
@@ -247,7 +213,7 @@ def quick_add_ingredient():
         if organization_id:
             query = query.filter_by(organization_id=organization_id)
         existing = query.first()
-        
+
         if existing:
             return jsonify({"id": existing.id, "name": existing.name, "unit": existing.unit}), 200
 
@@ -256,10 +222,10 @@ def quick_add_ingredient():
         if from_unit and from_unit.unit_type in ['volume']:
             # Set default water density for volume ingredients
             new_item = InventoryItem(
-                name=name, 
+                name=name,
                 type='ingredient',
-                unit=unit, 
-                quantity=0.0, 
+                unit=unit,
+                quantity=0.0,
                 cost_per_unit=0.0,
                 density=1.0,  # Default water density
                 organization_id=organization_id
@@ -268,9 +234,9 @@ def quick_add_ingredient():
         else:
             new_item = InventoryItem(
                 name=name,
-                type='ingredient', 
-                unit=unit, 
-                quantity=0.0, 
+                type='ingredient',
+                unit=unit,
+                quantity=0.0,
                 cost_per_unit=0.0,
                 organization_id=organization_id
             )

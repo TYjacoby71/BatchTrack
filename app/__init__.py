@@ -144,7 +144,7 @@ def create_app():
         from .blueprints.expiration import expiration_bp
         from .blueprints.settings import settings_bp
         from .blueprints.timers import timers_bp
-        from .blueprints.quick_add import quick_add_bp
+        from .blueprints.quick_add.routes import quick_add_bp
         from .routes.app_routes import app_routes_bp
         from .blueprints.fifo import fifo_bp
         from .blueprints.batches.add_extra import add_extra_bp
