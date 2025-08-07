@@ -8,7 +8,7 @@ from ..utils.timezone_utils import TimezoneUtils
 class Unit(TimestampMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), nullable=False)
-    symbol = db.Column(db.String(16), nullable=False)
+    symbol = db.Column(db.String(16), nullable=True)  # Nullable for custom units to avoid conflicts
     unit_type = db.Column(db.String(32), nullable=False)  # weight, volume, count, etc.
     base_unit = db.Column(db.String(64), nullable=True)  # For conversions
     conversion_factor = db.Column(db.Float, nullable=True)  # To base unit
@@ -20,10 +20,8 @@ class Unit(TimestampMixin, db.Model):
 
     # Add unique constraints
     __table_args__ = (
-        # Standard units (is_custom=False) must have unique names globally
-        db.Index('ix_unit_standard_unique', 'name', unique=True),
         # Custom units must have unique names within organization  
-        db.UniqueConstraint('name', 'name', 'organization_id', name='_unit_name_org_uc'),
+        db.UniqueConstraint('name', 'organization_id', name='_unit_name_org_uc'),
     )
 
     @classmethod

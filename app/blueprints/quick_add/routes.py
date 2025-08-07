@@ -125,16 +125,41 @@ def quick_add_container():
 @quick_add_bp.route('/unit', methods=['POST'])
 def quick_add_unit():
     try:
+        from flask_login import current_user
+        from ...utils.permissions import get_effective_organization_id
+        
+        # Ensure user is authenticated and get organization context
+        if not current_user.is_authenticated:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        organization_id = get_effective_organization_id()
+        if not organization_id and current_user.user_type != 'developer':
+            return jsonify({'error': 'No organization context'}), 403
+
         data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+            
         name = data.get('name', '').strip()
-        type_ = data.get('type', 'volume').strip()
+        type_ = data.get('type', 'count').strip()
 
         if not name:
             return jsonify({'error': 'Name is required'}), 400
 
-        existing = Unit.query.filter_by(name=name).first()
+        # Check for existing within organization scope (custom units only)
+        existing = Unit.query.filter_by(name=name, is_custom=True, organization_id=organization_id).first()
         if existing:
-            return jsonify({'error': 'Unit already exists'}), 409
+            return jsonify({'error': 'Unit already exists in your organization'}), 409
+        
+        # Check for existing standard unit
+        existing_standard = Unit.query.filter_by(name=name, is_custom=False).first()
+        if existing_standard:
+            return jsonify({'error': 'A standard unit with this name already exists'}), 409
+
+        # Validate unit type
+        valid_types = ['count', 'weight', 'volume', 'length', 'area']
+        if type_ not in valid_types:
+            return jsonify({'error': f'Invalid unit type. Must be one of: {", ".join(valid_types)}'}), 400
 
         # Set proper base unit and multiplier based on type
         if type_ == 'count':
@@ -142,37 +167,47 @@ def quick_add_unit():
             multiplier = 1.0
         elif type_ == 'weight':
             base_unit = 'gram'
-            multiplier = 1.0  # Default to 1 gram
+            multiplier = 1.0
         elif type_ == 'volume':
             base_unit = 'ml'
-            multiplier = 1.0  # Default to 1 milliliter
+            multiplier = 1.0
         elif type_ == 'length':
             base_unit = 'cm'
-            multiplier = 1.0  # Default to 1 centimeter
+            multiplier = 1.0
         elif type_ == 'area':
             base_unit = 'sqcm'
-            multiplier = 1.0  # Default to 1 square centimeter
+            multiplier = 1.0
         else:
-            return jsonify({'error': 'Invalid unit type'}), 400
+            base_unit = name.lower()
+            multiplier = 1.0
+
+        # Generate a symbol - for custom units, use the name as symbol to avoid conflicts
+        symbol = name[:8]  # Truncate to 8 chars max for symbol
 
         new_unit = Unit(
             name=name,
+            symbol=symbol,
             unit_type=type_,
             base_unit=base_unit,
             conversion_factor=multiplier,
-            is_custom=True
+            is_custom=True,
+            is_mapped=False,  # Custom units start unmapped
+            organization_id=organization_id,
+            created_by=current_user.id if current_user else None
         )
         db.session.add(new_unit)
         db.session.commit()
 
         return jsonify({
+            'success': True,
             'name': new_unit.name,
+            'symbol': new_unit.symbol,
             'type': new_unit.unit_type
         }), 201
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @quick_add_bp.route('/ingredient', methods=['GET', 'POST'])
 def quick_add_ingredient():

@@ -153,7 +153,7 @@ def create_tier():
 
         new_tier = {
             'name': tier_name,
-            'permissions': [],  # Will be configured on edit page
+            'permissions': [],  # Will be configured on edit page - system access control
             'stripe_lookup_key': request.form.get('stripe_lookup_key', ''),
             'whop_product_key': request.form.get('whop_product_key', ''),
             'user_limit': user_limit,
@@ -161,9 +161,9 @@ def create_tier():
             'is_available': request.form.get('is_available') == 'on',
             'tier_type': request.form.get('tier_type', 'paid'),
             'billing_provider': request.form.get('billing_provider', ''),
-            'fallback_features': fallback_features,
+            'fallback_features': fallback_features,  # Customer-facing features for display
             'fallback_price': request.form.get('fallback_price', '$0'),
-            'stripe_features': [],
+            'stripe_features': [],  # Features from Stripe product data
             'stripe_price': None,
             'last_synced': None,
             # Store secret references, not the actual IDs
@@ -209,7 +209,6 @@ def edit_tier(tier_key):
         tier['supports_whop'] = 'supports_whop' in request.form
 
         tier['permissions'] = request.form.getlist('permissions')
-        tier['feature_groups'] = request.form.getlist('feature_groups')
         tier['stripe_lookup_key'] = request.form.get('stripe_lookup_key', '')
         tier['whop_product_key'] = request.form.get('whop_product_key', '')
         tier['whop_product_name'] = request.form.get('whop_product_name', '')
