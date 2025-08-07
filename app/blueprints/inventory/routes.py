@@ -489,6 +489,7 @@ def edit_inventory(id):
     # Handle expiration date if item is perishable
     is_perishable = request.form.get('is_perishable') == 'on'
     was_perishable = item.is_perishable
+    old_shelf_life = item.shelf_life_days
     item.is_perishable = is_perishable
 
     if is_perishable:
@@ -497,10 +498,30 @@ def edit_inventory(id):
         from datetime import datetime, timedelta
         if shelf_life_days > 0:
             item.expiration_date = datetime.utcnow().date() + timedelta(days=shelf_life_days)
-            # If item wasn't perishable before, update existing FIFO entries
-            if not was_perishable:
-                from app.blueprints.fifo.services import update_fifo_perishable_status
-                update_fifo_perishable_status(item.id, shelf_life_days)
+            
+            # Update all existing FIFO entries with remaining quantity
+            # This handles both new perishable items and shelf life changes
+            if not was_perishable or old_shelf_life != shelf_life_days:
+                from app.blueprints.expiration.services import ExpirationService
+                ExpirationService.update_fifo_expiration_data(item.id, shelf_life_days)
+    else:
+        # If changing from perishable to non-perishable, clear expiration data
+        if was_perishable:
+            item.shelf_life_days = None
+            item.expiration_date = None
+            
+            # Clear expiration data from all FIFO entries
+            fifo_entries = InventoryHistory.query.filter(
+                and_(
+                    InventoryHistory.inventory_item_id == item.id,
+                    InventoryHistory.remaining_quantity > 0
+                )
+            ).all()
+            
+            for entry in fifo_entries:
+                entry.is_perishable = False
+                entry.shelf_life_days = None
+                entry.expiration_date = None
 
     # Handle recount if quantity changed
     if new_quantity != item.quantity:
