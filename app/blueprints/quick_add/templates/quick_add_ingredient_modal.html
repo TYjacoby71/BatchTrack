@@ -16,7 +16,7 @@
             <label for="new-ingredient-unit" class="form-label">Unit</label>
             <div class="input-group">
               <select class="form-control" id="new-ingredient-unit" required>
-                {% for unit in global_units %}
+                {% for unit in units %}
                   <option value="{{ unit.name }}">{{ unit.name }}</option>
                 {% endfor %}
               </select>
@@ -108,30 +108,52 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (!name) return alert('Unit name required.');
 
-    fetch('/recipes/units/quick-add', {
+    console.log('Creating unit:', name, '(' + type + ')');
+
+    fetch('/quick-add/unit', {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',
-        'X-CSRFToken': '{{ csrf_token() }}'
+        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
       },
       body: JSON.stringify({ name, type })
     })
-    .then(r => r.json())
+    .then(r => {
+      if (!r.ok) throw new Error(`HTTP ${r.status}: ${r.statusText}`);
+      return r.json();
+    })
     .then(data => {
-      if (data.error) return alert('Error: ' + data.error);
+      console.log('Unit creation response:', data);
+      if (data.error) {
+        alert('Error: ' + data.error);
+        return;
+      }
+
+      if (!data.success) {
+        alert('Failed to create unit');
+        return;
+      }
 
       // Add to ingredient unit dropdown
       const quickUnit = document.getElementById('new-ingredient-unit');
-      quickUnit.add(new Option(data.name, data.name, false, true));
-      quickUnit.value = data.name;
+      if (quickUnit) {
+        quickUnit.add(new Option(data.name, data.name, false, true));
+        quickUnit.value = data.name;
+      }
 
       // Close unit modal
       const unitModal = bootstrap.Modal.getInstance(document.getElementById('quickAddUnitModal'));
-      unitModal.hide();
+      if (unitModal) unitModal.hide();
 
       // Reset form
-      document.getElementById('unitName').value = '';
-      document.getElementById('unitType').selectedIndex = 0;
+      const nameField = document.getElementById('unitName');
+      const typeField = document.getElementById('unitType');
+      if (nameField) nameField.value = '';
+      if (typeField) typeField.selectedIndex = 0;
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('Failed to create unit: ' + error.message);
     });
   });
 });
