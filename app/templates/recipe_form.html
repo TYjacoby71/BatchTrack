@@ -286,23 +286,6 @@
 {% include 'components/modals/quick_add_unit_modal.html' %}
 {% include 'components/modals/quick_add_container_modal.html' %}
 
-          </div>
-          <div class="mb-3">
-            <label for="storageUnit" class="form-label">Storage Unit</label>
-            <select class="form-select" id="storageUnit" required>
-              <option value="">Select Unit</option>
-              {% for unit in inventory_units %}
-              <option value="{{ unit.name }}">{{ unit.name }}</option>
-              {% endfor %}
-            </select>
-          </div>
-          <button type="submit" class="btn btn-primary">Add Container</button>
-        </form>
-      </div>
-    </div>
-  </div>
-</div>
-
 <script>
 let PRESELECT_INGREDIENT_ID = {{ preselect_ingredient_id or 'null' }};
 let SHOULD_ADD_LINE = {{ 'true' if add_ingredient_line else 'false' }};
@@ -356,11 +339,6 @@ document.addEventListener('DOMContentLoaded', function() {
     if (SHOULD_ADD_LINE && PRESELECT_INGREDIENT_ID) {
         addIngredient(PRESELECT_INGREDIENT_ID);
     }
-
-
-
-
-
 
     {% if edit_mode and existing_batches and existing_batches > 0 %}
     // Show warning when yield unit is changed
