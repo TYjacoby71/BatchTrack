@@ -1,6 +1,7 @@
 from typing import Dict, List, Optional
 from datetime import datetime, timedelta
 from flask_login import current_user
+from flask import session # Added import for session
 from ..models import db, InventoryItem, Batch, ProductSKU, UserPreferences
 from ..services.combined_inventory_alerts import CombinedInventoryAlertService
 from ..blueprints.expiration.services import ExpirationService

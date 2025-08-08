@@ -128,7 +128,7 @@ def create_app():
     # Register blueprints with URL prefixes
     try:
         from .blueprints.auth.routes import auth_bp
-        from .blueprints.inventory.routes import inventory_bp
+        from .blueprints.inventory.routes import inventory_bp  
         from .blueprints.recipes.routes import recipes_bp
         from .blueprints.batches.routes import batches_bp
         from .blueprints.batches.finish_batch import finish_batch_bp
@@ -159,7 +159,8 @@ def create_app():
         from .blueprints.api.container_routes import container_api_bp
 
     except ImportError as e:
-        logger.warning(f"Failed to import some blueprints: {e}")
+        logger.error(f"Critical blueprint import failure: {e}")
+        # Continue without failing completely, but log the error
 
     # Register reservation blueprints (now under products)
     try:
@@ -371,7 +372,7 @@ def create_app():
     # No automatic seeding on startup to improve performance
 
     # Register template globals for permissions
-    from .utils.permissions import has_permission, has_role, has_subscription_feature, is_organization_owner, is_developer, get_effective_organization_id
+    from .utils.permissions import has_permission, has_role, has_subscription_feature, is_organization_owner, is_developer
 
     def template_has_permission(permission_name):
         """Template helper for permission checking"""
@@ -426,7 +427,7 @@ def create_app():
     app.jinja_env.globals['is_organization_owner'] = template_is_org_owner
     app.jinja_env.globals['is_developer'] = is_developer
     app.jinja_env.globals['can_access_route'] = template_can_access_route
-    app.jinja_env.globals['get_effective_org_id'] = template_get_org_id
+    app.jinja_env.globals['get_organization_id'] = template_get_org_id
 
 
 
