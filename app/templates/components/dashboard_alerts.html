@@ -1,3 +1,4 @@
+
 <!-- Unified Alert System -->
 {% if alert_data.alerts %}
 <div class="alert-container mb-4" id="alertContainer">
@@ -24,7 +25,7 @@
 
         {% if alert.dismissible %}
         <button type="button" class="btn-close" aria-label="Close"
-                                onclick="dismissAlert('{{ alert.type }}', this.closest('.alert'))"></button>
+                onclick="dismissAlert('{{ alert.type }}', this.closest('.alert'))"></button>
         {% endif %}
       </div>
     </div>
@@ -41,44 +42,37 @@
   </div>
   {% endif %}
 </div>
-{% endif %}
 
 <script>
-// Alert management functions
-async function dismissAlert(alertType) {
-    try {
-        const response = await fetch('/api/dismiss-alert', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': document.querySelector('meta[name=csrf-token]')?.getAttribute('content')
-            },
-            body: JSON.stringify({ alert_type: alertType })
-        });
+let dismissedAlertsForSession = [];
 
-        if (response.ok) {
-            // Remove the alert from the DOM with fade effect
-            const alertElement = document.getElementById(`alert-${alertType}`);
-            if (alertElement) {
-                alertElement.style.transition = 'opacity 0.3s ease';
-                alertElement.style.opacity = '0';
-                setTimeout(() => {
-                    alertElement.remove();
-                    // Check if there are any alerts left, and if not, hide the container
-                    const container = document.getElementById('alertContainer');
-                    if (container && container.children.length === 0) {
-                        container.style.display = 'none';
-                    }
-                    // Refresh to show any new alerts that were hidden
-                    refreshDashboardAlerts();
-                }, 300);
-            }
-        } else {
-            console.error('Failed to dismiss alert - response not ok');
-        }
-    } catch (error) {
-        console.error('Error dismissing alert:', error);
+function dismissAlert(alertType, alertElement) {
+    if (!alertType || !alertElement) return;
+    
+    // Add to session dismissed list
+    if (!dismissedAlertsForSession.includes(alertType)) {
+        dismissedAlertsForSession.push(alertType);
     }
+    
+    // Hide the alert with animation
+    alertElement.classList.remove('show');
+    setTimeout(() => {
+        if (alertElement.parentNode) {
+            alertElement.remove();
+        }
+    }, 150);
+    
+    // Send dismiss request to server
+    fetch('/api/dismiss-alert', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('meta[name=csrf-token]')?.getAttribute('content') || ''
+        },
+        body: JSON.stringify({ alert_type: alertType })
+    }).catch(error => {
+        console.error('Failed to dismiss alert:', error);
+    });
 }
 
 async function refreshDashboardAlerts() {
@@ -87,7 +81,7 @@ async function refreshDashboardAlerts() {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': document.querySelector('meta[name=csrf-token]')?.getAttribute('content')
+                'X-CSRFToken': document.querySelector('meta[name=csrf-token]')?.getAttribute('content') || ''
             }
         });
         if (response.ok) {
@@ -124,40 +118,29 @@ function updateAlertContainer(alertData) {
 function addAlertToContainer(alert, container) {
     const priorityClass = alert.priority === 'CRITICAL' ? 'danger' : 
                          alert.priority === 'HIGH' ? 'warning' : 'info';
-    const emoji = alert.priority === 'CRITICAL' ? '🚨' : 
-                  alert.priority === 'HIGH' ? '⚠️' : 'ℹ️';
-
-    const alertHTML = `
+    
+    const alertHtml = `
         <div class="alert alert-${priorityClass} alert-dismissible fade show" 
-             data-alert-type="${alert.type}" id="alert-${alert.type}">
+             data-alert-type="${alert.type}"
+             id="alert-${alert.type}">
             <div class="d-flex justify-content-between align-items-start">
                 <div class="flex-grow-1">
                     <h6 class="alert-heading mb-1">
-                        ${emoji} ${alert.title}
+                        ${alert.priority === 'CRITICAL' ? '🚨' : alert.priority === 'HIGH' ? '⚠️' : 'ℹ️'}
+                        ${alert.title}
                     </h6>
                     <p class="mb-2">${alert.message}</p>
-                    ${alert.action_url ? `
-                    <a href="${alert.action_url}" class="btn btn-sm btn-outline-${priorityClass}">
-                        ${alert.action_text}
-                    </a>
-                    ` : ''}
+                    ${alert.action_url ? `<a href="${alert.action_url}" class="btn btn-sm btn-outline-${priorityClass}">${alert.action_text}</a>` : ''}
                 </div>
-                ${alert.dismissible ? `
-                <button type="button" class="btn-close" aria-label="Close"
-                                onclick="dismissAlert('${alert.type}')" aria-label="Close"></button>
-                ` : ''}
+                ${alert.dismissible ? `<button type="button" class="btn-close" aria-label="Close" onclick="dismissAlert('${alert.type}', this.closest('.alert'))"></button>` : ''}
             </div>
         </div>
     `;
-
-    container.insertAdjacentHTML('beforeend', alertHTML);
+    
+    container.insertAdjacentHTML('beforeend', alertHtml);
 }
 
-// Auto-refresh alerts every 30 seconds (only if alerts still exist)
-setInterval(() => {
-    const alertContainer = document.getElementById('alertContainer');
-    if (alertContainer && alertContainer.children.length > 0) {
-        refreshDashboardAlerts();
-    }
-}, 30000);
+// Auto-refresh alerts every 5 minutes
+setInterval(refreshDashboardAlerts, 300000);
 </script>
+{% endif %}
