@@ -180,6 +180,10 @@ def create_app():
     app.register_blueprint(start_batch_bp, url_prefix='/start-batch')
     app.register_blueprint(developer_bp)
     
+    # Register waitlist blueprint
+    from .routes.waitlist_routes import waitlist_bp
+    app.register_blueprint(waitlist_bp)
+    
     # Register billing blueprint
     try:
         app.register_blueprint(billing_bp)
