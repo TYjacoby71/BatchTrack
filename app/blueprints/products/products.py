@@ -240,12 +240,17 @@ def new_product():
             # Step 4: Create the base SKU with "Bulk" size label
             from ...services.product_service import ProductService
             sku_code = ProductService.generate_sku_code(name, 'Base', 'Bulk')
+            
+            # Generate SKU name - never leave it empty
+            sku_name = f"{name} - Base - Bulk"
+            
             sku = ProductSKU(
                 # New foreign key relationships
                 product_id=product.id,
                 variant_id=variant.id,
                 size_label='Bulk',
                 sku_code=sku_code,
+                sku_name=sku_name,  # Always set the sku_name
                 unit=unit,
                 low_stock_threshold=float(low_stock_threshold) if low_stock_threshold else 0,
                 organization_id=current_user.organization_id,

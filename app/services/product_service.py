@@ -72,12 +72,16 @@ class ProductService:
             # Generate SKU code
             sku_code = ProductService.generate_sku_code(product.name, variant.name, size_label)
 
+            # Generate SKU name - never leave it empty
+            sku_name = f"{product.name} - {variant.name} - {size_label}"
+            
             # Create the ProductSKU entry
             product_sku = ProductSKU(
                 product_id=product.id,
                 variant_id=variant.id,
                 size_label=size_label,
                 sku_code=sku_code,
+                sku_name=sku_name,  # Always set the sku_name
                 inventory_item_id=inventory_item.id,
                 unit=unit,
                 organization_id=current_user.organization_id,
