@@ -9,7 +9,7 @@ class OrganizationScopedMixin:
     def scoped(cls, organization_id=None):
         """Return query scoped to organization"""
         if organization_id is None:
-            # Get effective organization ID (handles developer customer view)
+            # Simple organization scoping
             if current_user.is_authenticated:
                 if current_user.user_type == 'developer':
                     organization_id = session.get('dev_selected_org_id')
@@ -96,23 +96,38 @@ class ScopedModelMixin:
 
     @classmethod
     def for_current_user(cls):
-        """Get records scoped to current user's effective organization (handles developer customer view)"""
-        from app.utils.permissions import get_effective_organization_id
-        org_id = get_effective_organization_id()
+        """Get records scoped to current user's organization"""
+        from flask_login import current_user
+        from flask import session
+        
+        if not current_user.is_authenticated:
+            return cls.query.filter(False)
+            
+        # For developers in customer view mode
+        if current_user.user_type == 'developer':
+            org_id = session.get('dev_selected_org_id')
+        else:
+            org_id = current_user.organization_id
+            
         if org_id:
             return cls.query.filter_by(organization_id=org_id)
-        return cls.query.filter(cls.organization_id.is_(None))  # Return empty results if no org
+        return cls.query.filter(False)  # Return empty results if no org
 
     @classmethod
     def scoped(cls):
-        """Return query filtered by current user's effective organization"""
-        from app.utils.permissions import get_effective_organization_id
+        """Return query filtered by current user's organization"""
+        from flask_login import current_user
+        from flask import session
         
         if not current_user.is_authenticated:
             return cls.query.filter(False)  # Return empty query if no user
 
-        # Get effective organization ID (handles both regular users and developers in customer view)
-        org_id = get_effective_organization_id()
+        # Simple organization scoping without complex effective logic
+        if current_user.user_type == 'developer':
+            org_id = session.get('dev_selected_org_id')
+        else:
+            org_id = current_user.organization_id
+            
         if org_id:
             return cls.query.filter_by(organization_id=org_id)
         else:

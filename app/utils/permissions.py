@@ -167,7 +167,7 @@ def get_user_permissions():
     return AuthorizationHierarchy.get_user_effective_permissions(current_user)
 
 def get_effective_organization_id():
-    """Get the effective organization ID for the current user"""
+    """Get the effective organization ID for the current user (DEVELOPER-ONLY FUNCTION)"""
     if not current_user.is_authenticated:
         return None
 
@@ -179,16 +179,22 @@ def get_effective_organization_id():
     if current_user.user_type == 'developer':
         return session.get('dev_selected_org_id')
 
+    # Regular users should use current_user.organization_id directly
     return current_user.organization_id
 
 def get_effective_organization():
-    """Get the effective organization for the current user (handles developer customer view)"""
+    """Get the effective organization for the current user"""
     from app.models import Organization
 
     if not current_user.is_authenticated:
         return None
 
-    org_id = get_effective_organization_id()
+    # Simple organization lookup without complex effective logic
+    if current_user.user_type == 'developer':
+        org_id = session.get('dev_selected_org_id')
+    else:
+        org_id = current_user.organization_id
+        
     if org_id:
         return Organization.query.get(org_id)
     return None

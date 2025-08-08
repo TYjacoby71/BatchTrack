@@ -65,7 +65,7 @@ def create_app():
         """Universal permission and organization scoping enforcement"""
         from flask import request, abort, jsonify, session, redirect, url_for, g, flash
         from flask_login import current_user
-        from app.utils.permissions import has_permission, get_effective_organization_id
+        from app.utils.permissions import has_permission
         from app.models import Organization
 
         # Skip for static files, auth routes, and webhooks
@@ -409,9 +409,13 @@ def create_app():
             return False
 
     def template_get_org_id():
-        """Template helper to get effective organization ID"""
+        """Template helper to get organization ID for current user"""
         try:
-            return get_effective_organization_id()
+            if current_user.is_authenticated:
+                if current_user.user_type == 'developer':
+                    return session.get('dev_selected_org_id')
+                return current_user.organization_id
+            return None
         except Exception as e:
             logger.error(f"Organization ID check error: {e}")
             return None
@@ -446,7 +450,6 @@ def create_app():
     @app.context_processor
     def inject_organization_helpers():
         from .models import Organization
-        from .utils.permissions import get_effective_organization_id
         
         def get_organization_by_id(org_id):
             if org_id:
@@ -457,9 +460,14 @@ def create_app():
             return None
             
         def get_current_organization():
-            """Get the current organization context (works with developer masquerade)"""
-            org_id = get_effective_organization_id()
-            return get_organization_by_id(org_id) if org_id else None
+            """Get the current organization context"""
+            if current_user.is_authenticated:
+                if current_user.user_type == 'developer':
+                    org_id = session.get('dev_selected_org_id')
+                else:
+                    org_id = current_user.organization_id
+                return get_organization_by_id(org_id) if org_id else None
+            return None
             
         return dict(
             get_organization_by_id=get_organization_by_id,

@@ -1,10 +1,10 @@
+
 from typing import Dict, List, Optional
 from datetime import datetime, timedelta
 from flask_login import current_user
 from ..models import db, InventoryItem, Batch, ProductSKU, UserPreferences
 from ..services.combined_inventory_alerts import CombinedInventoryAlertService
 from ..blueprints.expiration.services import ExpirationService
-from ..utils.permissions import get_effective_organization_id
 import json
 import os
 
@@ -152,15 +152,11 @@ class DashboardAlertService:
 
         # MEDIUM: Active batches needing attention - only if enabled
         if user_prefs and user_prefs.show_batch_alerts:
-            if current_user and current_user.is_authenticated:
-                if current_user.organization_id:
-                    active_batches = Batch.query.filter_by(
-                        status='in_progress',
-                        organization_id=current_user.organization_id
-                    ).count()
-                else:
-                    # Developer users see all batches
-                    active_batches = Batch.query.filter_by(status='in_progress').count()
+            if current_user and current_user.is_authenticated and current_user.organization_id:
+                active_batches = Batch.query.filter_by(
+                    status='in_progress',
+                    organization_id=current_user.organization_id
+                ).count()
             else:
                 active_batches = 0
 
@@ -238,7 +234,7 @@ class DashboardAlertService:
             Batch.started_at < cutoff_time
         )
 
-        # Apply organization scoping if user is authenticated
+        # Simple organization scoping - no complex developer logic here
         if current_user and current_user.is_authenticated and current_user.organization_id:
             query = query.filter(Batch.organization_id == current_user.organization_id)
 
@@ -280,10 +276,9 @@ class DashboardAlertService:
             from ..models import BatchTimer
             from ..utils.timezone_utils import TimezoneUtils
             
-            # Get active timers with organization scoping
+            # Get active timers with simple organization scoping
             query = BatchTimer.query.filter_by(status='active')
             
-            # Apply organization scoping if user is authenticated
             if current_user and current_user.is_authenticated and current_user.organization_id:
                 query = query.filter(BatchTimer.organization_id == current_user.organization_id)
             
@@ -314,10 +309,9 @@ class DashboardAlertService:
         try:
             from ..models.product import ProductSKU
             
-            # SKUs with zero or negative inventory - with organization scoping
+            # SKUs with zero or negative inventory - simple organization scoping
             query = ProductSKU.query.filter(ProductSKU.current_quantity <= 0)
             
-            # Apply organization scoping if user is authenticated
             if current_user and current_user.is_authenticated and current_user.organization_id:
                 query = query.filter(ProductSKU.organization_id == current_user.organization_id)
             
@@ -325,8 +319,6 @@ class DashboardAlertService:
             return issues
         except:
             return 0
-
-
 
     @staticmethod
     def _get_incomplete_batches() -> int:
@@ -338,7 +330,7 @@ class DashboardAlertService:
                 Batch.final_yield.is_(None)
             )
 
-            # Apply organization scoping if user is authenticated
+            # Simple organization scoping
             if current_user and current_user.is_authenticated and current_user.organization_id:
                 query = query.filter(Batch.organization_id == current_user.organization_id)
 
