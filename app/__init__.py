@@ -63,9 +63,10 @@ def create_app():
     @app.before_request
     def enforce_permissions_and_scoping():
         """Universal permission and organization scoping enforcement"""
-        from flask import request, abort, jsonify
+        from flask import request, abort, jsonify, session, redirect, url_for, g, flash
         from flask_login import current_user
         from app.utils.permissions import has_permission, get_effective_organization_id
+        from app.models import Organization
 
         # Skip for static files and auth routes
         if (request.path.startswith('/static/') or
@@ -101,7 +102,6 @@ def create_app():
 
             # CRITICAL: Temporarily inject organization context for developers
             # This makes them work exactly like organization owners for the selected org
-            from app.models import Organization
             selected_org = Organization.query.get(selected_org_id)
             if not selected_org:
                 session.pop('dev_selected_org_id', None)
@@ -109,7 +109,6 @@ def create_app():
                 return redirect(url_for('developer.organizations'))
 
             # Store effective organization context in Flask g for developer masquerade
-            from flask import g
             g.effective_org_id = selected_org_id
             g.effective_org = selected_org
             g.is_developer_masquerade = True
@@ -125,19 +124,22 @@ def create_app():
         # This middleware only handles organization scoping
         return None
 
-    # Register blueprints with error handling
+    # Register blueprints with URL prefixes
     try:
-        from .blueprints.auth import auth_bp
-        from .blueprints.recipes import recipes_bp
-        from .blueprints.inventory import inventory_bp
-        from .blueprints.batches import batches_bp
-        from .blueprints.batches.finish_batch import finish_batch_bp
-        from .blueprints.batches.cancel_batch import cancel_batch_bp
-        from .blueprints.batches.start_batch import start_batch_bp
-        from .blueprints.conversion import conversion_bp
-        from .blueprints.expiration import expiration_bp
-        from .blueprints.settings import settings_bp
-        from .blueprints.timers import timers_bp
+        from .blueprints.auth.routes import auth_bp
+        from .blueprints.inventory.routes import inventory_bp
+        from .blueprints.recipes.routes import recipes_bp
+        from .blueprints.batches.routes import batches_bp
+        from .blueprints.api.routes import api_bp
+        from .blueprints.settings.routes import settings_bp
+        from .blueprints.products.routes import products_bp
+        from .blueprints.products.api import products_api_bp
+        from .blueprints.expiration.routes import expiration_bp
+        from .blueprints.conversion.routes import conversion_bp
+        from .blueprints.organization.routes import organization_bp
+        from .blueprints.billing.routes import billing_bp
+        from .blueprints.developer.routes import developer_bp
+        from .blueprints.timers.routes import timers_bp
         from .blueprints.quick_add.routes import quick_add_bp
         from .routes.app_routes import app_routes_bp
         from .blueprints.fifo import fifo_bp
@@ -465,6 +467,7 @@ def create_app():
     # Force HTTPS redirect in production
     @app.before_request
     def force_https():
+        from flask import request, redirect
         if os.environ.get('REPLIT_DEPLOYMENT') == 'true':
             # Check if the request is not secure and not already HTTPS
             if not request.is_secure and request.headers.get('X-Forwarded-Proto') != 'https':

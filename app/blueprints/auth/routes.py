@@ -22,9 +22,9 @@ def load_tiers_config():
     """Load subscription tiers from JSON file - this is the single source of truth"""
     import json
     import os
-    
+
     TIERS_CONFIG_FILE = 'subscription_tiers.json'
-    
+
     if os.path.exists(TIERS_CONFIG_FILE):
         with open(TIERS_CONFIG_FILE, 'r') as f:
             loaded_tiers = json.load(f)

@@ -825,36 +825,7 @@ def soft_delete_user():
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)})
 
-@developer_bp.route('/login-as/<int:user_id>')
-@login_required
-def login_as_user(user_id):
-    """Login as another user for customer support"""
-    try:
-        target_user = User.query.get_or_404(user_id)
 
-        # Don't allow logging in as other developers
-        if target_user.user_type == 'developer':
-            flash('Cannot login as another developer user', 'error')
-            return redirect(url_for('developer.users'))
-
-        # Log this action for security audit
-        import logging
-        logging.warning(f"DEVELOPER LOGIN AS USER: Developer {current_user.username} logged in as user {target_user.username} (ID: {target_user.id})")
-
-        # Store the original developer user in session before switching
-        session['original_developer_id'] = current_user.id
-        session['is_developer_impersonation'] = True
-
-        # Login as the target user
-        from flask_login import login_user
-        login_user(target_user)
-
-        flash(f'Logged in as {target_user.username} (Developer Impersonation Mode)', 'info')
-        return redirect(url_for('app_routes.dashboard'))
-
-    except Exception as e:
-        flash(f'Error logging in as user: {str(e)}', 'error')
-        return redirect(url_for('developer.users'))
 
 @developer_bp.route('/api/user/<int:user_id>')
 @login_required
