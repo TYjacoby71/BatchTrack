@@ -1,4 +1,4 @@
-from flask import Flask, redirect, url_for, render_template
+from flask import Flask, redirect, url_for, render_template, g, session
 from flask_login import LoginManager
 from flask_migrate import Migrate
 from .extensions import db
@@ -308,23 +308,23 @@ def create_app():
             val2 = 0
         return float(val1) * float(val2)
 
-    # Context processors
-    @app.context_processor
+    # Context processors with caching
+    @app.context_processor  
     def inject_units():
+        # Use cached global unit list instead of direct DB queries
+        from .utils.unit_utils import get_global_unit_list
+        
         try:
-            # Get all units, filtering by is_active if the column exists
-            units = Unit.query.filter(
-                db.or_(Unit.is_active == True, Unit.is_active.is_(None))
-            ).order_by(Unit.unit_type, Unit.name).all()
+            # Get cached units - this is much faster than DB query every request
+            units = get_global_unit_list()
         except:
-            # Fallback to all units if filtering fails
-            try:
-                units = Unit.query.order_by(Unit.unit_type, Unit.name).all()
-            except:
-                units = []
+            units = []
 
         try:
-            categories = IngredientCategory.query.order_by(IngredientCategory.name).all()
+            # Only load categories if we don't have them cached
+            if not hasattr(g, 'cached_categories'):
+                g.cached_categories = IngredientCategory.query.order_by(IngredientCategory.name).all()
+            categories = g.cached_categories
         except:
             categories = []
 
@@ -337,12 +337,25 @@ def create_app():
         from .utils.unit_utils import get_global_unit_list
 
         def get_reservation_summary(inventory_item_id):
-            """Get reservation summary for template use"""
+            """Get reservation summary for template use - with caching"""
+            if not inventory_item_id:
+                return {'available': 0.0, 'reserved': 0.0, 'total': 0.0, 'reservations': []}
+                
+            # Check if we already computed this in this request
+            cache_key = f'reservation_summary_{inventory_item_id}'
+            if hasattr(g, cache_key):
+                return getattr(g, cache_key)
+                
             from .models import ProductSKU
             sku = ProductSKU.query.filter_by(inventory_item_id=inventory_item_id).first()
             if sku:
-                return ReservationService.get_reservation_summary_for_sku(sku)
-            return {'available': 0.0, 'reserved': 0.0, 'total': 0.0, 'reservations': []}
+                result = ReservationService.get_reservation_summary_for_sku(sku)
+            else:
+                result = {'available': 0.0, 'reserved': 0.0, 'total': 0.0, 'reservations': []}
+            
+            # Cache for this request
+            setattr(g, cache_key, result)
+            return result
 
         return dict(
             has_permission=has_permission,
@@ -413,6 +426,7 @@ def create_app():
         try:
             if current_user.is_authenticated:
                 if current_user.user_type == 'developer':
+                    from flask import session
                     return session.get('dev_selected_org_id')
                 return current_user.organization_id
             return None
