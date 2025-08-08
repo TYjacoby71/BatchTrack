@@ -72,12 +72,13 @@ class ExpirationService:
             if now_utc.tzinfo is None:
                 now_utc = now_utc.replace(tzinfo=timezone.utc)
 
-            # Calculate days since creation
-            days_since_creation = (now_utc - entry_date).days
-
-            # Calculate remaining life percentage
-            remaining_days = shelf_life_days - days_since_creation
-            life_remaining_percent = (remaining_days / shelf_life_days) * 100
+            # Calculate precise time elapsed in seconds for accurate freshness
+            time_elapsed_seconds = (now_utc - entry_date).total_seconds()
+            total_shelf_life_seconds = shelf_life_days * 24 * 60 * 60  # Convert days to seconds
+            
+            # Calculate remaining life percentage based on precise time
+            remaining_seconds = total_shelf_life_seconds - time_elapsed_seconds
+            life_remaining_percent = (remaining_seconds / total_shelf_life_seconds) * 100
 
             # Clamp between 0 and 100
             return max(0.0, min(100.0, life_remaining_percent))
