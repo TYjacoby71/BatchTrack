@@ -384,7 +384,7 @@ def create_app():
     # No automatic seeding on startup to improve performance
 
     # Register template globals for permissions
-    from .utils.permissions import has_permission, has_role, has_subscription_feature, is_organization_owner, is_developer, get_effective_organization_id
+    from .utils.permissions import has_permission, has_role, has_subscription_feature, is_organization_owner, is_developer
 
     def template_has_permission(permission_name):
         """Template helper for permission checking"""

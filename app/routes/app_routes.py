@@ -45,7 +45,7 @@ def dashboard():
     # Get unified dashboard alerts with dismissed alerts from session
     dismissed_alerts = session.get('dismissed_alerts', [])
     alert_data = DashboardAlertService.get_dashboard_alerts(
-        max_alerts=3, 
+        max_alerts=3,
         dismissed_alerts=dismissed_alerts
     )
 
@@ -73,7 +73,7 @@ def dashboard():
         except ValueError as e:
             flash("Invalid scale value")
 
-    return render_template("dashboard.html", 
+    return render_template("dashboard.html",
                          recipes=recipes,
                          stock_check=stock_check,
                          selected_recipe=selected_recipe,
@@ -177,7 +177,7 @@ def api_dashboard_alerts():
     try:
         dismissed_alerts = session.get('dismissed_alerts', [])
         alert_data = DashboardAlertService.get_dashboard_alerts(
-            max_alerts=3, 
+            max_alerts=3,
             dismissed_alerts=dismissed_alerts
         )
         return jsonify(alert_data)
