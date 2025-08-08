@@ -1,4 +1,3 @@
-
 from flask_login import current_user
 from functools import wraps
 from flask import abort, g, session
@@ -15,16 +14,17 @@ def require_permission(permission_name, require_org_scoping=True):
                 abort(401)
 
             # Check permission
-            if not has_permission(permission_name):
+            if not has_permission(current_user, permission_name):
                 abort(403)
 
             # Enforce organization scoping for non-developer users
             if require_org_scoping and current_user.user_type != 'developer':
-                if not current_user.organization_id:
+                effective_org_id = get_effective_organization_id()
+                if not effective_org_id:
                     abort(403, description="No organization context")
 
                 # Add organization context to kwargs for easy access
-                kwargs['organization_id'] = current_user.organization_id
+                kwargs['organization_id'] = effective_org_id
 
             return f(*args, **kwargs)
         return decorated_function
@@ -37,11 +37,12 @@ def require_organization_scoping(f):
         if not current_user.is_authenticated:
             abort(401)
 
-        if not current_user.organization_id and current_user.user_type != 'developer':
+        effective_org_id = get_effective_organization_id()
+        if not effective_org_id and current_user.user_type != 'developer':
             abort(403, description="No organization context")
 
         # Add organization context to kwargs
-        kwargs['organization_id'] = current_user.organization_id
+        kwargs['organization_id'] = effective_org_id
         return f(*args, **kwargs)
     return decorated_function
 
@@ -71,14 +72,45 @@ def require_organization_owner(f):
         return f(*args, **kwargs)
     return decorated_function
 
-def has_permission(permission_name):
-    """Check if current user has a specific permission using proper authorization hierarchy"""
-    if not current_user.is_authenticated:
+def has_permission(permission_name_or_user, permission_name_or_none=None):
+    """Check if user has a specific permission using proper authorization hierarchy"""
+    # Handle both calling patterns:
+    # has_permission('permission.name') - from code
+    # has_permission(current_user, 'permission.name') - from templates
+
+    if permission_name_or_none is not None:
+        # Template style: has_permission(user, permission_name)
+        user = permission_name_or_user
+        permission_name = permission_name_or_none
+    else:
+        # Code style: has_permission(permission_name, user=None)
+        permission_name = permission_name_or_user
+        user = current_user
+
+    if not hasattr(user, 'is_authenticated') or not user.is_authenticated:
         return False
 
     # Use the proper authorization hierarchy
     from .authorization import AuthorizationHierarchy
-    return AuthorizationHierarchy.check_user_authorization(current_user, permission_name)
+    return AuthorizationHierarchy.check_user_authorization(user, permission_name)
+
+def _org_tier_includes_permission(organization, permission_name):
+    """Check if organization's subscription tier includes this permission"""
+    if not organization:
+        return False
+
+    # Get organization's effective subscription tier
+    current_tier = organization.effective_subscription_tier
+
+    # Import here to avoid circular import
+    from app.blueprints.developer.subscription_tiers import load_tiers_config
+
+    # Get tier permissions from subscription tiers config
+    tiers_config = load_tiers_config()
+    tier_data = tiers_config.get(current_tier, {})
+    tier_permissions = tier_data.get('permissions', [])
+
+    return permission_name in tier_permissions
 
 def has_role(role_name):
     """Check if current user has specific role"""
@@ -102,9 +134,6 @@ def has_subscription_feature(feature):
     # Developers can access everything
     if current_user.user_type == 'developer':
         return True
-
-    if not current_user.organization:
-        return False
 
     org_features = current_user.organization.get_subscription_features()
     return feature in org_features or 'all_features' in org_features

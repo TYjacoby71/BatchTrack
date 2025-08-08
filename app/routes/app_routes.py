@@ -1,16 +1,11 @@
 from flask import Blueprint, render_template, request, redirect, url_for, session, jsonify, flash
-from ..models import Recipe, InventoryItem, Batch, Organization # Added Organization import
+from ..models import Recipe, InventoryItem, Batch
 from ..services.stock_check import universal_stock_check
 from flask_login import login_required, current_user
-from ..utils.permissions import require_permission, get_effective_organization_id # Keep for potential other uses, but not used in the updated endpoint
+from ..utils.permissions import require_permission, get_effective_organization_id
 from ..services.combined_inventory_alerts import CombinedInventoryAlertService
 from ..blueprints.expiration.services import ExpirationService
 from ..services.dashboard_alerts import DashboardAlertService
-from datetime import datetime # Added datetime import
-import pytz # Added pytz import
-import logging # Added logging import
-
-logger = logging.getLogger(__name__) # Added logger
 
 app_routes_bp = Blueprint('app_routes', __name__)
 
@@ -231,35 +226,33 @@ def view_fault_log():
         return render_template('fault_log.html', faults=[])
 
 @app_routes_bp.route('/api/server-time')
-@login_required
-def server_time():
-    """API endpoint to get server time in user's timezone"""
+def get_server_time():
+    """Get current server time in UTC and user's timezone, also auto-complete expired timers"""
+    from flask_login import current_user
+    from ..utils.timezone_utils import TimezoneUtils
+    from ..services.timer_service import TimerService
+
+    # Auto-complete expired timers on each server time request
+    # This provides a lightweight way to keep timers updated
     try:
-        # Get user's organization timezone
-        org = None
-        if current_user.user_type == 'developer':
-            org_id = session.get('dev_selected_org_id')
-            if org_id:
-                org = Organization.query.get(org_id)
-        else:
-            org = current_user.organization
-
-        # Get current UTC time
-        now_utc = datetime.utcnow()
-
-        # Convert to user's timezone if organization has timezone setting
-        if org and org.timezone:
-            user_tz = pytz.timezone(org.timezone)
-            user_time = pytz.utc.localize(now_utc).astimezone(user_tz)
-        else:
-            # Default to UTC if no timezone set
-            user_time = now_utc
-
-        return jsonify({
-            'server_utc': now_utc.isoformat(),
-            'user_time': user_time.isoformat(),
-            'timezone': org.timezone if org and org.timezone else 'UTC'
-        })
+        TimerService.complete_expired_timers()
     except Exception as e:
-        logger.error(f"Error getting server time: {e}")
-        return jsonify({'error': str(e)}), 500
+        # Don't let timer errors break the time endpoint
+        print(f"Timer auto-completion error: {e}")
+
+    server_utc = TimezoneUtils.utc_now()
+
+    # If user is logged in, also provide their local time
+    user_time = None
+    if current_user and current_user.is_authenticated:
+        user_timezone = getattr(current_user, 'timezone', 'UTC')
+        try:
+            user_time = TimezoneUtils.convert_to_timezone(server_utc, user_timezone)
+        except:
+            user_time = server_utc  # Fallback to UTC if conversion fails
+
+    return jsonify({
+        'server_utc': server_utc.isoformat(),
+        'user_time': user_time.isoformat() if user_time else server_utc.isoformat(),
+        'timestamp': server_utc.timestamp()
+    })

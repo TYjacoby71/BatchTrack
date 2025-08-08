@@ -80,7 +80,7 @@ function showAlert(type, message) {
     ${message}
     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
   `;
-
+  
   // Insert at top of main content
   const mainContent = document.querySelector('main') || document.querySelector('.container').firstChild;
   if (mainContent) {
@@ -90,7 +90,7 @@ function showAlert(type, message) {
   } else {
     document.body.insertBefore(alertDiv, document.body.firstChild);
   }
-
+  
   // Auto-hide after 5 seconds
   setTimeout(() => {
     if (alertDiv.parentNode) {
@@ -150,26 +150,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  // Dashboard alerts functionality
-    if (window.location.pathname === '/user_dashboard') {
-        fetchDashboardAlerts();
-
-        // Auto-refresh alerts every 5 minutes
-        setInterval(fetchDashboardAlerts, 300000);
-    }
-
-    // Initialize modals (only if bootstrap is available)
-    if (typeof bootstrap !== 'undefined') {
-        const modals = document.querySelectorAll('.modal');
-        modals.forEach(modalElement => {
-            if (!modalElement.hasAttribute('data-bs-modal-initialized')) {
-                new bootstrap.Modal(modalElement);
-                modalElement.setAttribute('data-bs-modal-initialized', 'true');
-            }
-        });
-    }
-
-  // Note: Quick add components (unit, container, ingredient) now have their own
+  // Note: Quick add components (unit, container, ingredient) now have their own 
   // embedded scripts and don't need initialization here
 });
 
