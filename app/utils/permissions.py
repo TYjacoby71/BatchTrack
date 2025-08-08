@@ -168,17 +168,21 @@ def get_user_permissions():
     return AuthorizationHierarchy.get_user_effective_permissions(current_user)
 
 def get_effective_organization_id():
-    """Get the effective organization ID for current user (handles developer customer view)"""
+    """Get the effective organization ID for the current user"""
     if not current_user.is_authenticated:
         return None
 
+    # Check for developer masquerade context in g first
+    from flask import g
+    if hasattr(g, 'effective_org_id'):
+        return g.effective_org_id
+
+    # For developers in customer view mode
     if current_user.user_type == 'developer':
-        # Developers can view customer data by selecting an organization
         from flask import session
         return session.get('dev_selected_org_id')
-    else:
-        # Regular users use their organization
-        return current_user.organization_id
+
+    return current_user.organization_id
 
 def get_effective_organization():
     """Get the effective organization for the current user (handles developer customer view)"""
