@@ -183,7 +183,15 @@ class FIFOService:
         from datetime import datetime
         today = datetime.now().date()
         for entry in fifo_entries:
-            if hasattr(entry, 'expiration_date') and entry.expiration_date and entry.expiration_date < today:
+            # Normalize expiration_date to date for comparison
+            entry_exp_date = None
+            if hasattr(entry, 'expiration_date') and entry.expiration_date:
+                if isinstance(entry.expiration_date, datetime):
+                    entry_exp_date = entry.expiration_date.date()
+                else:
+                    entry_exp_date = entry.expiration_date
+
+            if entry_exp_date and entry_exp_date < today:
                 raise ValueError(f"SAFETY ERROR: Expired entry {entry.id} found in fresh FIFO entries for {change_type}")
 
         if available_quantity < quantity:
