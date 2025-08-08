@@ -68,11 +68,12 @@ def create_app():
         from app.utils.permissions import has_permission, get_effective_organization_id
         from app.models import Organization
 
-        # Skip for static files and auth routes
+        # Skip for static files, auth routes, and webhooks
         if (request.path.startswith('/static/') or
             request.path.startswith('/auth/login') or
             request.path.startswith('/auth/logout') or
             request.path.startswith('/auth/signup') or
+            request.path.startswith('/billing/webhooks/') or
             request.path == '/' or
             request.path == '/homepage'):
             return None
@@ -169,6 +170,20 @@ def create_app():
     except ImportError:
         logger.warning("Could not register reservation blueprints")
 
+    # Register all blueprints
+    app.register_blueprint(auth_bp, url_prefix='/auth')
+    app.register_blueprint(recipes_bp, url_prefix='/recipes')
+    app.register_blueprint(inventory_bp, url_prefix='/inventory')
+    app.register_blueprint(batches_bp, url_prefix='/batches')
+    app.register_blueprint(finish_batch_bp, url_prefix='/batches')
+    app.register_blueprint(cancel_batch_bp, url_prefix='/batches')
+    app.register_blueprint(start_batch_bp, url_prefix='/start-batch')
+    app.register_blueprint(developer_bp)
+    
+    # Register waitlist blueprint
+    from .routes.waitlist_routes import waitlist_bp
+    app.register_blueprint(waitlist_bp)
+    
     # Register billing blueprint
     try:
         app.register_blueprint(billing_bp)
@@ -180,16 +195,6 @@ def create_app():
     except Exception as e:
         logger.error(f"Failed to register billing blueprint: {e}")
         # Continue without billing blueprint for now
-
-    # Register all blueprints
-    app.register_blueprint(auth_bp, url_prefix='/auth')
-    app.register_blueprint(recipes_bp, url_prefix='/recipes')
-    app.register_blueprint(inventory_bp, url_prefix='/inventory')
-    app.register_blueprint(batches_bp, url_prefix='/batches')
-    app.register_blueprint(finish_batch_bp, url_prefix='/batches')
-    app.register_blueprint(cancel_batch_bp, url_prefix='/batches')
-    app.register_blueprint(start_batch_bp, url_prefix='/start-batch')
-    app.register_blueprint(developer_bp)
     # Import and register blueprints
     try:
         from .blueprints.products.products import products_bp
@@ -216,13 +221,7 @@ def create_app():
     app.register_blueprint(bulk_stock_routes.bulk_stock_bp, url_prefix='/bulk_stock')
     app.register_blueprint(fault_log_routes.fault_log_bp, url_prefix='/fault_log')
     app.register_blueprint(tag_manager_routes.tag_manager_bp, url_prefix='/tag_manager')
-
-    # Register organization blueprint
-    from .blueprints.organization.routes import organization_bp
     app.register_blueprint(organization_bp, url_prefix='/organization')
-
-    # Register API blueprint
-    from .blueprints.api import api_bp
     app.register_blueprint(api_bp)
 
     # Register dashboard and unit API blueprints
@@ -237,21 +236,22 @@ def create_app():
 
     # Ensure all API routes are loaded
     with app.app_context():
-        api_routes = [rule.rule for rule in app.url_map.iter_rules() if rule.rule.startswith('/api/')]
-        logger.debug(f"Registered API routes: {api_routes}")
+        if app.debug:
+            api_routes = [rule.rule for rule in app.url_map.iter_rules() if rule.rule.startswith('/api/')]
+            logger.debug(f"Registered API routes: {api_routes}")
 
-        # Check for specific container route
-        container_routes = [rule.rule for rule in app.url_map.iter_rules() if 'container' in rule.rule]
-        logger.debug(f"Container routes found: {container_routes}")
+            # Check for specific container route
+            container_routes = [rule.rule for rule in app.url_map.iter_rules() if 'container' in rule.rule]
+            logger.debug(f"Container routes found: {container_routes}")
 
-        # Debug billing routes
-        billing_routes = [rule.rule for rule in app.url_map.iter_rules() if 'billing' in rule.rule]
-        logger.debug(f"Billing routes found: {billing_routes}")
+            # Debug billing routes
+            billing_routes = [rule.rule for rule in app.url_map.iter_rules() if 'billing' in rule.rule]
+            logger.debug(f"Billing routes found: {billing_routes}")
 
-        # Debug all registered endpoints
-        all_endpoints = [(rule.rule, rule.endpoint) for rule in app.url_map.iter_rules()]
-        billing_endpoints = [ep for ep in all_endpoints if ep[1] and 'billing' in ep[1]]
-        logger.debug(f"Billing endpoints: {billing_endpoints}")
+            # Debug all registered endpoints
+            all_endpoints = [(rule.rule, rule.endpoint) for rule in app.url_map.iter_rules()]
+            billing_endpoints = [ep for ep in all_endpoints if ep[1] and 'billing' in ep[1]]
+            logger.debug(f"Billing endpoints: {billing_endpoints}")
 
     # Load additional config if provided
     #if config_filename:
@@ -446,6 +446,8 @@ def create_app():
     @app.context_processor
     def inject_organization_helpers():
         from .models import Organization
+        from .utils.permissions import get_effective_organization_id
+        
         def get_organization_by_id(org_id):
             if org_id:
                 try:
@@ -453,7 +455,16 @@ def create_app():
                 except:
                     return Organization.query.get(org_id)  # Fallback for older SQLAlchemy
             return None
-        return dict(get_organization_by_id=get_organization_by_id)
+            
+        def get_current_organization():
+            """Get the current organization context (works with developer masquerade)"""
+            org_id = get_effective_organization_id()
+            return get_organization_by_id(org_id) if org_id else None
+            
+        return dict(
+            get_organization_by_id=get_organization_by_id,
+            get_current_organization=get_current_organization
+        )
 
     from .management import register_commands
     register_commands(app)

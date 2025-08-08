@@ -4,6 +4,7 @@ from flask_login import current_user
 from ..models import db, InventoryItem, Batch, ProductSKU, UserPreferences
 from ..services.combined_inventory_alerts import CombinedInventoryAlertService
 from ..blueprints.expiration.services import ExpirationService
+from ..utils.permissions import get_effective_organization_id
 import json
 import os
 

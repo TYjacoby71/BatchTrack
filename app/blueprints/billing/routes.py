@@ -80,8 +80,8 @@ def checkout(tier, billing_cycle='month'):
         # For Stripe checkout
         if billing_cycle in ['month', 'year']:
             checkout_url = StripeService.create_checkout_session(
-                organization, 
-                tier, 
+                organization,
+                tier,
                 billing_cycle,
                 success_url=url_for('billing.complete_signup_from_stripe', _external=True),
                 cancel_url=url_for('billing.upgrade', _external=True)
@@ -98,7 +98,7 @@ def checkout(tier, billing_cycle='month'):
         return redirect(url_for('billing.upgrade'))
 
 @billing_bp.route('/whop-checkout/<product_id>')
-@login_required 
+@login_required
 def whop_checkout(product_id):
     """Redirect to Whop checkout"""
     organization = current_user.organization

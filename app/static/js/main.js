@@ -56,7 +56,7 @@ async function updateClock() {
       const response = await fetch('/api/server-time');
       if (response.ok) {
         const data = await response.json();
-        const serverTime = new Date(data.current_time);
+        const serverTime = new Date(data.user_time || data.server_utc);
         clock.textContent = '🕐 ' + serverTime.toLocaleTimeString();
       } else {
         // Fallback to local time if server endpoint unavailable

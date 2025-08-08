@@ -41,6 +41,16 @@ def dismiss_alert():
     return jsonify({'success': True})
 
 @api_bp.route('/dashboard-alerts')
+@login_required
+def get_dashboard_alerts():
+    """Get dashboard alerts for the current user"""
+    from ...services.dashboard_alerts import DashboardAlertService
+    from flask import session
+    
+    dismissed_alerts = session.get('dismissed_alerts', [])
+    alert_data = DashboardAlertService.get_dashboard_alerts(dismissed_alerts=dismissed_alerts)
+    
+    return jsonify(alert_data)
 def dashboard_alerts():
     """Get dashboard alerts with session-based dismissals"""
     from ...services.dashboard_alerts import DashboardAlertService
