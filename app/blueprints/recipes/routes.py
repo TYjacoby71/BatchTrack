@@ -88,8 +88,11 @@ def new_recipe():
     ingredients_query = InventoryItem.query.filter(
         ~InventoryItem.type.in_(['product', 'product-reserved'])
     ).order_by(InventoryItem.name)
+
+    # Simple organization scoping - regular users only see their org's data
     if current_user.organization_id:
         ingredients_query = ingredients_query.filter_by(organization_id=current_user.organization_id)
+
     all_ingredients = ingredients_query.all()
 
     # Get all units for dropdowns

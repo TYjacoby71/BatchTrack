@@ -16,7 +16,7 @@ def list_inventory():
     show_archived = request.args.get('show_archived') == 'true'
     query = InventoryItem.query
 
-    # Add organization scoping
+    # Add organization scoping - regular users only see their org's inventory
     if current_user.organization_id:
         query = query.filter_by(organization_id=current_user.organization_id)
 
@@ -84,7 +84,7 @@ def view_inventory(id):
     per_page = 5
     fifo_filter = request.args.get('fifo') == 'true'
 
-    # Get scoped inventory item
+    # Get scoped inventory item - regular users only see their org's inventory
     query = InventoryItem.query
     if current_user.organization_id:
         query = query.filter_by(organization_id=current_user.organization_id)
