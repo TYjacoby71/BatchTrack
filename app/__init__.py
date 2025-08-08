@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, redirect, url_for, render_template
 from flask_login import LoginManager
 from flask_migrate import Migrate
 from .extensions import db
@@ -63,9 +63,10 @@ def create_app():
     @app.before_request
     def enforce_permissions_and_scoping():
         """Universal permission and organization scoping enforcement"""
-        from flask import request, abort, jsonify
+        from flask import request, abort, jsonify, session, redirect, url_for, g, flash
         from flask_login import current_user
         from app.utils.permissions import has_permission, get_effective_organization_id
+        from app.models import Organization
 
         # Skip for static files and auth routes
         if (request.path.startswith('/static/') or
@@ -101,7 +102,6 @@ def create_app():
 
             # CRITICAL: Temporarily inject organization context for developers
             # This makes them work exactly like organization owners for the selected org
-            from app.models import Organization
             selected_org = Organization.query.get(selected_org_id)
             if not selected_org:
                 session.pop('dev_selected_org_id', None)
@@ -109,7 +109,6 @@ def create_app():
                 return redirect(url_for('developer.organizations'))
 
             # Store effective organization context in Flask g for developer masquerade
-            from flask import g
             g.effective_org_id = selected_org_id
             g.effective_org = selected_org
             g.is_developer_masquerade = True
@@ -125,20 +124,23 @@ def create_app():
         # This middleware only handles organization scoping
         return None
 
-    # Register blueprints with error handling
+    # Register blueprints with URL prefixes
     try:
-        from .blueprints.auth import auth_bp
-        from .blueprints.recipes import recipes_bp
-        from .blueprints.inventory import inventory_bp
-        from .blueprints.batches import batches_bp
+        from .blueprints.auth.routes import auth_bp
+        from .blueprints.inventory.routes import inventory_bp
+        from .blueprints.recipes.routes import recipes_bp
+        from .blueprints.batches.routes import batches_bp
         from .blueprints.batches.finish_batch import finish_batch_bp
-        from .blueprints.batches.cancel_batch import cancel_batch_bp
         from .blueprints.batches.start_batch import start_batch_bp
-        from .blueprints.conversion import conversion_bp
-        from .blueprints.expiration import expiration_bp
-        from .blueprints.settings import settings_bp
-        from .blueprints.timers import timers_bp
-        from .blueprints.quick_add.routes import quick_add_bp
+        from .blueprints.batches.cancel_batch import cancel_batch_bp
+        from .blueprints.api.routes import api_bp
+        from .blueprints.settings.routes import settings_bp
+        from .blueprints.expiration.routes import expiration_bp
+        from .blueprints.conversion.routes import conversion_bp
+        from .blueprints.organization.routes import organization_bp
+        from .blueprints.billing.routes import billing_bp
+        from .blueprints.developer.routes import developer_bp
+        from .blueprints.timers.routes import timers_bp
         from .routes.app_routes import app_routes_bp
         from .blueprints.fifo import fifo_bp
         from .blueprints.batches.add_extra import add_extra_bp
@@ -153,24 +155,22 @@ def create_app():
         # Register API blueprints
         from .blueprints.api.stock_routes import stock_api_bp
         from .blueprints.api.ingredient_routes import ingredient_api_bp
-        from .blueprints.api.container_routes import container_api_bp # Added to register the container_api_bp
+        from .blueprints.api.container_routes import container_api_bp
 
     except ImportError as e:
         logger.warning(f"Failed to import some blueprints: {e}")
 
-    # Register developer blueprint
-    from .blueprints.developer.routes import developer_bp
-    app.register_blueprint(developer_bp)
-
     # Register reservation blueprints (now under products)
-    from .blueprints.products.reservation_routes import reservation_bp
-    from .blueprints.api.reservation_routes import reservation_api_bp
-    app.register_blueprint(reservation_bp, url_prefix='/reservations')
-    app.register_blueprint(reservation_api_bp)
+    try:
+        from .blueprints.products.reservation_routes import reservation_bp
+        from .blueprints.api.reservation_routes import reservation_api_bp
+        app.register_blueprint(reservation_bp, url_prefix='/reservations')
+        app.register_blueprint(reservation_api_bp)
+    except ImportError:
+        logger.warning("Could not register reservation blueprints")
 
     # Register billing blueprint
     try:
-        from .blueprints.billing.routes import billing_bp
         app.register_blueprint(billing_bp)
         logger.debug(f"Billing blueprint registered successfully")
 
@@ -189,6 +189,7 @@ def create_app():
     app.register_blueprint(finish_batch_bp, url_prefix='/batches')
     app.register_blueprint(cancel_batch_bp, url_prefix='/batches')
     app.register_blueprint(start_batch_bp, url_prefix='/start-batch')
+    app.register_blueprint(developer_bp)
     # Import and register blueprints
     try:
         from .blueprints.products.products import products_bp
@@ -209,12 +210,7 @@ def create_app():
     app.register_blueprint(expiration_bp, url_prefix='/expiration')
     app.register_blueprint(settings_bp, url_prefix='/settings')
     app.register_blueprint(timers_bp, url_prefix='/timers')
-    app.register_blueprint(quick_add_bp, url_prefix='/quick-add')
     app.register_blueprint(app_routes_bp)
-
-    # Debug: Log quick add routes
-    quick_add_routes = [rule.rule for rule in app.url_map.iter_rules() if rule.endpoint and rule.endpoint.startswith('quick_add.')]
-    logger.debug(f"Quick Add routes registered: {quick_add_routes}")
     app.register_blueprint(fifo_bp)
     app.register_blueprint(add_extra_bp, url_prefix='/add-extra')
     app.register_blueprint(bulk_stock_routes.bulk_stock_bp, url_prefix='/bulk_stock')
@@ -465,6 +461,7 @@ def create_app():
     # Force HTTPS redirect in production
     @app.before_request
     def force_https():
+        from flask import request, redirect
         if os.environ.get('REPLIT_DEPLOYMENT') == 'true':
             # Check if the request is not secure and not already HTTPS
             if not request.is_secure and request.headers.get('X-Forwarded-Proto') != 'https':

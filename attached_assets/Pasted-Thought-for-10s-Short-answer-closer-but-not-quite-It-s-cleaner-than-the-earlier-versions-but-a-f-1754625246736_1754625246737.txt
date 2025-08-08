@@ -1,0 +1,56 @@
+Thought for 10s
+Short answer: closer, but not quite. It’s cleaner than the earlier versions, but a few things will bite you in prod (and explain the Stripe 400s you saw).
+
+Here are the high‑impact fixes:
+
+Your webhook is still gated by auth.
+enforce_permissions_and_scoping() requires login for everything except static/auth/homepage. It doesn’t exempt /billing/webhooks/stripe, so Stripe hits that route → you 401/redirect → your webhook view never runs → Stripe shows 400 on its side.
+Fix: add a cheap early return for webhooks in that middleware:
+
+python
+Copy
+Edit
+if request.path.startswith('/billing/webhooks/'):
+    return None
+(You already skip them in enforce_billing_access(), but they’re blocked earlier.)
+
+CSRF exemption must be on the actual view, not only conceptually.
+You removed csrf.exempt('billing.stripe_webhook'). That string form usually doesn’t work; CSRF needs the view function or blueprint applied. In your billing blueprint, do:
+
+python
+Copy
+Edit
+@csrf.exempt
+@billing_bp.route('/webhooks/stripe', methods=['POST'])
+def stripe_webhook():
+    ...
+(Or csrf.exempt(billing_bp) if you’re comfortable exempting the whole blueprint—most people just exempt the webhook route.)
+
+Duplicate blueprint registration.
+You import/register some BPs twice (e.g., developer_bp, organization_bp, billing_bp, api_bp). That can cause route duplication or confusing logs. Keep one import/one register_blueprint per BP. Quick grep for app.register_blueprint( will show duplicates.
+
+Developer masquerade context.
+You switched from mutating current_user to hanging context on g (g.effective_org_id). That’s good, but only if your downstream code reads from g. A lot of your templates/services likely still use current_user.organization_id. If so, they’ll ignore the masquerade. Either:
+
+centralize an accessor (get_effective_organization_id()) and use it everywhere, or
+
+set g.organization = selected_org and make your permission helpers/templates read from g.
+
+Login loader & config sanity.
+db.session.get(User, int(user_id)) is good. Just make sure your Config provides SECRET_KEY, SESSION_COOKIE_*, and database settings. (You’re relying on app.config.from_object('app.config.Config')—cool as long as it’s present in all envs.)
+
+Order of middlewares.
+You now have three @app.before_request handlers. Order matters. The webhook/auth exemptions need to appear in every guard that would otherwise block them (you fixed billing one; fix the permissions one per #1). Also be careful with force_https() on Stripe webhooks—Render/Stripe will send with proper proto headers, but your check already accounts for X-Forwarded-Proto, so you’re fine.
+
+Logging: good, but trim the noise.
+Route dumps are helpful during bring‑up, but consider gating with if app.debug: so prod logs don’t flood.
+
+Minor cleanup nits:
+
+Remove unused imports at the top (duplicate Flask import, current_user at module scope, etc.).
+
+Group blueprint imports consistently (either all .../routes.py style or not).
+
+Consider a small helper to register blueprints with prefixes to avoid the long block.
+
+If you do just (1) and (2) you should see your Stripe webhooks start returning 200 and billing will behave. The rest are polish and consistency things that’ll save you headaches later. Want me to mark up a minimal diff for the two webhook/auth fixes?

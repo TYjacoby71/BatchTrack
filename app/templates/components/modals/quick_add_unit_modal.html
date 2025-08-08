@@ -10,12 +10,12 @@
         <div class="alert alert-info">
           <i class="fas fa-info-circle"></i>
           <strong>Unit Management:</strong> Custom units should be created and managed in the
-          <a href="{{ url_for('conversion.units') }}" target="_blank">Unit Conversion Settings</a>
+          <a href="{{ url_for('conversion_bp.manage_units') }}" target="_blank">Unit Conversion Settings</a>
           to ensure proper conversion mappings.
         </div>
         <p>Would you like to:</p>
         <div class="d-grid gap-2">
-          <a href="{{ url_for('conversion.units') }}" class="btn btn-primary" target="_blank">
+          <a href="{{ url_for('conversion_bp.manage_units') }}" class="btn btn-primary" target="_blank">
             <i class="fas fa-external-link-alt"></i> Manage Units in Settings
           </a>
         </div>

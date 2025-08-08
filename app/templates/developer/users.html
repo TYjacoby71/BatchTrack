@@ -145,9 +145,6 @@
                                                             <button class="btn btn-outline-primary" onclick="editCustomerUser({{ user.id }})">
                                                                 <i class="fas fa-edit"></i> Edit
                                                             </button>
-                                                            <button class="btn btn-outline-info" onclick="loginAsUser({{ user.id }})">
-                                                                <i class="fas fa-sign-in-alt"></i> Login As
-                                                            </button>
                                                             <button class="btn btn-outline-{{ 'warning' if user.is_active else 'success' }}" onclick="toggleUserStatus({{ user.id }}, {{ 'true' if user.is_active else 'false' }})">
                                                                 <i class="fas fa-{{ 'pause' if user.is_active else 'play' }}"></i> {{ 'Deactivate' if user.is_active else 'Activate' }}
                                                             </button>
@@ -415,12 +412,13 @@ async function toggleUserStatus(userId, isActive) {
     }
 }
 
-function loginAsUser(userId = null) {
-    if (userId) {
-        if (confirm('Login as this user? This will open a new tab with their session.')) {
-            window.open(`/developer/login-as/${userId}`, '_blank');
-        }
-    }
-}
+// The loginAsUser function is removed as requested.
+// function loginAsUser(userId = null) {
+//     if (userId) {
+//         if (confirm('Login as this user? This will open a new tab with their session.')) {
+//             window.open(`/developer/login-as/${userId}`, '_blank');
+//         }
+//     }
+// }
 </script>
 {% endblock %}
