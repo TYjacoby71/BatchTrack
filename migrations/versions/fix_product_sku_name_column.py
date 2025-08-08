@@ -2,7 +2,7 @@
 """fix product_sku name column mismatch
 
 Revision ID: fix_product_sku_name_column
-Revises: add_unit_timestamps
+Revises: c8f2e5a9b1d4
 Create Date: 2025-08-08 04:25:00.000000
 
 """
@@ -13,7 +13,7 @@ from sqlalchemy import inspect, text
 
 # revision identifiers, used by Alembic.
 revision = 'fix_product_sku_name_column'
-down_revision = 'add_unit_timestamps'
+down_revision = 'c8f2e5a9b1d4'
 branch_labels = None
 depends_on = None
 
