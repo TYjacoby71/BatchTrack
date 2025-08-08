@@ -2,7 +2,7 @@
 """fix product_sku name column
 
 Revision ID: fix_product_sku_name_column
-Revises: 
+Revises: c8f2e5a9b1d4
 Create Date: 2025-08-08 04:30:00.000000
 
 """
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers
 revision = 'fix_product_sku_name_column'
-down_revision = None
+down_revision = 'c8f2e5a9b1d4'
 branch_labels = None
 depends_on = None
 
