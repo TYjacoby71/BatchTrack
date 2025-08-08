@@ -1,6 +1,6 @@
 from flask_login import current_user
 from functools import wraps
-from flask import abort
+from flask import abort, g, session
 
 def require_permission(permission_name, require_org_scoping=True):
     """
@@ -75,7 +75,7 @@ def require_organization_owner(f):
 def has_permission(permission_name_or_user, permission_name_or_none=None):
     """Check if user has a specific permission using proper authorization hierarchy"""
     # Handle both calling patterns:
-    # has_permission('permission.name') - from code  
+    # has_permission('permission.name') - from code
     # has_permission(current_user, 'permission.name') - from templates
 
     if permission_name_or_none is not None:
@@ -145,7 +145,6 @@ def is_organization_owner():
 
     # Developers in customer view mode act as organization owners
     if current_user.user_type == 'developer':
-        from flask import session
         return session.get('dev_selected_org_id') is not None
 
     # Organization owners are customers with the organization_owner role
@@ -173,13 +172,11 @@ def get_effective_organization_id():
         return None
 
     # Check for developer masquerade context in g first
-    from flask import g
     if hasattr(g, 'effective_org_id'):
         return g.effective_org_id
 
     # For developers in customer view mode
     if current_user.user_type == 'developer':
-        from flask import session
         return session.get('dev_selected_org_id')
 
     return current_user.organization_id
