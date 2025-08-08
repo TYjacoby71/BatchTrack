@@ -14,6 +14,7 @@ from ...models.subscription_tier import SubscriptionTier
 from ...models.role import Role
 from ...extensions import db
 from ...utils.timezone_utils import TimezoneUtils
+from ...extensions import csrf
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +40,7 @@ def upgrade():
 
     # Get current tier information
     current_tier = BillingService.get_tier_for_organization(organization)
-    
+
     # Get subscription details (mock for now since we don't have Stripe integration active)
     subscription_details = {
         'status': 'active' if current_tier != 'exempt' else 'inactive',
@@ -369,6 +370,7 @@ def cancel_subscription():
     return redirect(url_for('app_routes.dashboard'))
 
 @billing_bp.route('/webhooks/stripe', methods=['POST'])
+@csrf.exempt
 def stripe_webhook():
     """Handle Stripe webhooks"""
     payload = request.data
@@ -557,7 +559,7 @@ def handle_subscription_change(event):
         elif status == 'canceled':
             organization.subscription_status = status
             organization.billing_status = 'cancelled'
-        
+
         db.session.commit()
         logger.info(f"Updated organization {organization.id} subscription status to {status}")
 

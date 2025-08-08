@@ -4,7 +4,6 @@
     from .extensions import db
     from .models import User
     import os
-    from flask import Flask, render_template, request, redirect, url_for, flash, session
     from flask_login import current_user
     import logging # Import logging
 
@@ -36,8 +35,7 @@
         mail.init_app(app)
         csrf.init_app(app)
 
-        # Exempt Stripe webhooks from CSRF protection
-        csrf.exempt('billing.stripe_webhook')
+        # CSRF exempt will be applied directly to webhook routes in billing blueprint
 
         # Configure Flask-Login settings
         login_manager.login_view = 'auth.login'
@@ -48,7 +46,7 @@
         def load_user(user_id):
             """Load user by ID for Flask-Login"""
             try:
-                user = User.query.get(int(user_id))
+                user = db.session.get(User, int(user_id))
                 # Ensure user is active
                 if user and user.is_active:
                     # For developers, organization is not required
@@ -110,15 +108,11 @@
                     flash('Selected organization no longer exists', 'error')
                     return redirect(url_for('developer.organizations'))
 
-                # Store original user attributes and temporarily override them
-                if not hasattr(current_user, '_original_org_id'):
-                    current_user._original_org_id = current_user.organization_id
-                    current_user._original_is_org_owner = getattr(current_user, 'is_organization_owner', False)
-
-                # Make developer appear as organization owner of selected org
-                current_user.organization_id = selected_org_id
-                current_user.organization = selected_org
-                current_user._is_organization_owner = True
+                # Store effective organization context in Flask g for developer masquerade
+                from flask import g
+                g.effective_org_id = selected_org_id
+                g.effective_org = selected_org
+                g.is_developer_masquerade = True
 
             # Organization scoping enforcement for regular users
             elif not current_user.organization_id:
@@ -502,8 +496,7 @@
             if (request.endpoint and (
                 request.endpoint.startswith('static') or
                 request.endpoint.startswith('auth.') or
-                request.endpoint.startswith('billing.') or
-                request.endpoint == 'billing.stripe_webhook'
+                request.endpoint.startswith('billing.')
             )):
                 return
 
