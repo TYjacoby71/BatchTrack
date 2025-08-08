@@ -8,14 +8,14 @@ def get_user_organization_id():
     """Helper function to get organization context with debugging"""
     try:
         current_app.logger.info(f"Quick Add: Getting organization context for user {current_user.id if current_user.is_authenticated else 'anonymous'}")
-        
+
         if not current_user.is_authenticated:
             current_app.logger.warning("Quick Add: User not authenticated")
             return None, "Authentication required"
-        
+
         current_app.logger.info(f"Quick Add: User type: {current_user.user_type}")
         current_app.logger.info(f"Quick Add: User organization_id: {getattr(current_user, 'organization_id', 'NOT_SET')}")
-        
+
         if hasattr(current_user, 'organization_id') and current_user.organization_id:
             organization_id = current_user.organization_id
             current_app.logger.info(f"Quick Add: Using organization_id: {organization_id}")
@@ -74,7 +74,7 @@ def quick_add_container():
     """Quick add container - delegates to existing inventory creation"""
     try:
         current_app.logger.info("Quick Add Container: POST request started")
-        
+
         organization_id, error = get_user_organization_id()
         if error:
             current_app.logger.error(f"Quick Add Container: {error}")
@@ -139,7 +139,7 @@ def quick_add_unit():
     """Quick add unit - simplified unit creation"""
     try:
         current_app.logger.info("Quick Add Unit: POST request started")
-        
+
         organization_id, error = get_user_organization_id()
         if error:
             current_app.logger.error(f"Quick Add Unit: {error}")
@@ -213,7 +213,7 @@ def quick_add_ingredient():
 
     try:
         current_app.logger.info("Quick Add Ingredient: POST request started")
-        
+
         organization_id, error = get_user_organization_id()
         if error:
             current_app.logger.error(f"Quick Add Ingredient: {error}")
