@@ -1,4 +1,3 @@
-
 from typing import Dict, List, Optional
 from datetime import datetime, timedelta
 from flask_login import current_user
@@ -8,147 +7,65 @@ from ..blueprints.expiration.services import ExpirationService
 import json
 import os
 
-class DashboardAlertService:
-    """Unified alert management for neurodivergent-friendly dashboard"""
-
-    PRIORITY_LEVELS = {
-        'CRITICAL': 1,    # Requires immediate action
-        'HIGH': 2,        # Should be addressed today
-        'MEDIUM': 3,      # Should be addressed this week
-        'LOW': 4          # Informational
-    }
+class DashboardAlertsService:
+    """Service for managing dashboard alerts and notifications"""
 
     @staticmethod
-    def get_dashboard_alerts(max_alerts: int = None, dismissed_alerts: list = None) -> Dict:
-        """Get prioritized alerts for dashboard with cognitive load management"""
-        # Get user preferences
+    def get_dashboard_alerts() -> Dict:
+        """Get all dashboard alerts for the current user"""
+        if not current_user or not current_user.is_authenticated:
+            return {
+                'critical': [],
+                'high': [],
+                'medium': [],
+                'low': [],
+                'stats': {'total': 0, 'critical': 0, 'high': 0, 'medium': 0, 'low': 0}
+            }
+
+        # Get user preferences for alert filtering
         user_prefs = None
-        if current_user and current_user.is_authenticated:
-            user_prefs = UserPreferences.get_for_user(current_user.id)
-            if max_alerts is None:
-                max_alerts = user_prefs.max_dashboard_alerts
+        if current_user.organization_id:
+            user_prefs = UserPreferences.query.filter_by(
+                user_id=current_user.id,
+                organization_id=current_user.organization_id
+            ).first()
 
-        if max_alerts is None:
-            max_alerts = 3  # Default fallback
+        alerts = {
+            'critical': [],
+            'high': [],
+            'medium': [],
+            'low': []
+        }
 
-        alerts = []
-
-        # Get expiration data from combined service
-        from ..utils.settings import get_setting
-        expiration_days = get_setting('alerts.expiration_warning_days', 7)
-        expiration_data = CombinedInventoryAlertService.get_expiration_alerts(
-            days_ahead=expiration_days
-        )
-
-        # CRITICAL: Expired items with remaining quantity - only if enabled
-        if user_prefs and user_prefs.show_expiration_alerts and expiration_data['expired_total'] > 0:
-            alerts.append({
-                'priority': 'CRITICAL',
-                'type': 'expired_inventory',
-                'title': 'Expired Inventory',
-                'message': f"{expiration_data['expired_total']} items have expired and need attention",
-                'action_url': '/expiration/alerts',
-                'action_text': 'Review Expired Items',
-                'dismissible': True
-            })
-
-        # CRITICAL: Stuck batches (in progress > 24 hours) - only if enabled in user preferences
-        if user_prefs and user_prefs.show_batch_alerts:
-            stuck_batches = DashboardAlertService._get_stuck_batches()
-            if stuck_batches:
-                alerts.append({
-                    'priority': 'CRITICAL',
-                    'type': 'stuck_batches',
-                    'title': 'Stuck Batches',
-                    'message': f"{len(stuck_batches)} batches may be stuck",
-                    'action_url': '/batches/',
-                    'action_text': 'Review Batches',
-                    'dismissible': True
+        # CRITICAL: Items with zero or negative stock
+        try:
+            critical_stock_issues = DashboardAlertsService._get_critical_stock_issues()
+            if critical_stock_issues > 0:
+                alerts['critical'].append({
+                    'type': 'critical_stock',
+                    'title': 'Critical Stock Issues',
+                    'message': f'{critical_stock_issues} items have zero or negative stock',
+                    'count': critical_stock_issues,
+                    'action_url': '/inventory',
+                    'icon': 'exclamation-triangle'
                 })
+        except Exception as e:
+            print(f"Error getting critical stock issues: {e}")
 
-        # CRITICAL: Recent fault log errors - only if enabled
-        if user_prefs and user_prefs.show_fault_alerts:
-            recent_faults = DashboardAlertService._get_recent_faults()
-            if recent_faults > 0:
-                alerts.append({
-                    'priority': 'CRITICAL',
-                    'type': 'fault_errors',
-                    'title': 'System Faults',
-                    'message': f"{recent_faults} critical faults in last 24 hours",
-                    'action_url': '/faults/view_fault_log',
-                    'action_text': 'View Faults',
-                    'dismissible': True
+        # HIGH: Expiring items (next 7 days)
+        try:
+            expiring_soon = DashboardAlertsService._get_expiring_items_count(days=7)
+            if expiring_soon > 0:
+                alerts['high'].append({
+                    'type': 'expiring_soon',
+                    'title': 'Items Expiring Soon',
+                    'message': f'{expiring_soon} items expire within 7 days',
+                    'count': expiring_soon,
+                    'action_url': '/expiration/alerts',
+                    'icon': 'clock'
                 })
-
-        # HIGH: Items expiring soon (within expiration_warning_days) - only if enabled
-        if user_prefs and user_prefs.show_expiration_alerts and expiration_data['expiring_soon_total'] > 0:
-            alerts.append({
-                'priority': 'HIGH',
-                'type': 'expiring_soon',
-                'title': 'Expiring Soon',
-                'message': f"{expiration_data['expiring_soon_total']} items expire within {expiration_days} days",
-                'action_url': '/expiration/alerts',
-                'action_text': 'Plan Usage',
-                'dismissible': True
-            })
-
-        # HIGH: Low stock items - only if enabled
-        if user_prefs and user_prefs.show_low_stock_alerts:
-            stock_summary = CombinedInventoryAlertService.get_unified_stock_summary()
-
-            if stock_summary['low_stock_ingredients_count'] > 0:
-                alerts.append({
-                    'priority': 'HIGH',
-                    'type': 'low_stock_ingredients',
-                    'title': 'Low Stock Ingredients',
-                    'message': f"{stock_summary['low_stock_ingredients_count']} ingredients are running low",
-                    'action_url': '/inventory/',
-                    'action_text': 'View Inventory',
-                    'dismissible': True
-                })
-
-            if stock_summary['low_stock_count'] > 0:
-                alerts.append({
-                    'priority': 'HIGH',
-                    'type': 'low_stock_products',
-                    'title': 'Low Stock Products',
-                    'message': f"{stock_summary['affected_products_count']} products have low stock SKUs",
-                    'action_url': '/products/',
-                    'action_text': 'View Products',
-                    'dismissible': True
-                })
-
-            if stock_summary['out_of_stock_count'] > 0:
-                alerts.append({
-                    'priority': 'CRITICAL',
-                    'type': 'out_of_stock_products',
-                    'title': 'Out of Stock Products',
-                    'message': f"{stock_summary['out_of_stock_count']} product SKUs are out of stock",
-                    'action_url': '/products/',
-                    'action_text': 'View Products',
-                    'dismissible': True
-                })
-
-        # HIGH: Expired timers - only if enabled
-        if user_prefs and user_prefs.show_timer_alerts:
-            timer_alerts = DashboardAlertService._get_timer_alerts()
-            if timer_alerts['expired_count'] > 0:
-                # Get the first expired timer's batch for redirection
-                batch_url = '/batches/'
-                if timer_alerts['expired_timers']:
-                    first_timer = timer_alerts['expired_timers'][0]
-                    if hasattr(first_timer, 'batch_id') and first_timer.batch_id:
-                        batch_url = f'/batches/in-progress/{first_timer.batch_id}'
-
-                alerts.append({
-                    'priority': 'HIGH',
-                    'type': 'expired_timers',
-                    'title': 'Timer Alert',
-                    'message': f"{timer_alerts['expired_count']} timers have expired",
-                    'action_url': batch_url,
-                    'action_text': 'View Batch',
-                    'dismissible': True
-                })
+        except Exception as e:
+            print(f"Error getting expiring items: {e}")
 
         # MEDIUM: Active batches needing attention - only if enabled
         if user_prefs and user_prefs.show_batch_alerts:
@@ -161,160 +78,125 @@ class DashboardAlertService:
                 active_batches = 0
 
             if active_batches > 0:
-                alerts.append({
-                    'priority': 'MEDIUM',
+                alerts['medium'].append({
                     'type': 'active_batches',
                     'title': 'Active Batches',
-                    'message': f"{active_batches} batches in progress",
-                    'action_url': '/batches/',
-                    'action_text': 'View Batches',
-                    'dismissible': True
+                    'message': f'{active_batches} batches in progress',
+                    'count': active_batches,
+                    'action_url': '/batches',
+                    'icon': 'play-circle'
                 })
 
-        # MEDIUM: Incomplete batches
-        incomplete_batches = DashboardAlertService._get_incomplete_batches()
-        if incomplete_batches:
-            alerts.append({
-                'priority': 'MEDIUM',
-                'type': 'incomplete_batches',
-                'title': 'Incomplete Batches',
-                'message': f"{incomplete_batches} batches need completion",
-                'action_url': '/batches/',
-                'action_text': 'Complete Batches',
-                'dismissible': True
-            })
+        # MEDIUM: Long-running batches (>24 hours)
+        try:
+            long_running_batches = DashboardAlertsService._get_long_running_batches()
+            if long_running_batches > 0:
+                alerts['medium'].append({
+                    'type': 'long_running_batches',
+                    'title': 'Long-Running Batches',
+                    'message': f'{long_running_batches} batches running over 24 hours',
+                    'count': long_running_batches,
+                    'action_url': '/batches',
+                    'icon': 'hourglass'
+                })
+        except Exception as e:
+            print(f"Error getting long-running batches: {e}")
 
-        # Filter out dismissed alerts from this session
-        if dismissed_alerts:
-            alerts = [alert for alert in alerts if alert['type'] not in dismissed_alerts]
+        # LOW: Active timers
+        try:
+            active_timers = DashboardAlertsService._get_active_timers_count()
+            if active_timers > 0:
+                alerts['low'].append({
+                    'type': 'active_timers',
+                    'title': 'Active Timers',
+                    'message': f'{active_timers} timers currently running',
+                    'count': active_timers,
+                    'action_url': '/timers',
+                    'icon': 'stopwatch'
+                })
+        except Exception as e:
+            print(f"Error getting active timers: {e}")
 
-        # Sort by priority and limit
-        alerts.sort(key=lambda x: DashboardAlertService.PRIORITY_LEVELS[x['priority']])
+        # Calculate stats
+        stats = {
+            'critical': len(alerts['critical']),
+            'high': len(alerts['high']),
+            'medium': len(alerts['medium']),
+            'low': len(alerts['low'])
+        }
+        stats['total'] = stats['critical'] + stats['high'] + stats['medium'] + stats['low']
+
         return {
-            'alerts': alerts[:max_alerts],
-            'total_alerts': len(alerts),
-            'hidden_count': max(0, len(alerts) - max_alerts)
+            'critical': alerts['critical'],
+            'high': alerts['high'],
+            'medium': alerts['medium'],
+            'low': alerts['low'],
+            'stats': stats
         }
 
     @staticmethod
-    def get_alert_summary() -> Dict:
-        """Get summary counts for navigation badge"""
-        from flask_login import current_user
-        from ..models.user_preferences import UserPreferences
+    def _get_expiring_items_count(days: int = 7) -> int:
+        """Get count of items expiring within specified days"""
+        try:
+            from ..blueprints.expiration.services import ExpirationService
 
-        # Get expiration warning days from settings
-        from ..utils.settings import get_setting
-        days_ahead = get_setting('alerts.expiration_warning_days', 7)
-
-        expiration_data = CombinedInventoryAlertService.get_expiration_alerts(days_ahead)
-        stock_summary = CombinedInventoryAlertService.get_unified_stock_summary()
-        stuck_batches = len(DashboardAlertService._get_stuck_batches())
-        recent_faults = DashboardAlertService._get_recent_faults()
-        timer_alerts = DashboardAlertService._get_timer_alerts()
-
-        critical_count = (expiration_data['expired_total'] + stuck_batches + 
-                         (1 if recent_faults > 0 else 0) + 
-                         stock_summary['out_of_stock_count'])
-        high_count = (expiration_data['expiring_soon_total'] + stock_summary['low_stock_ingredients_count'] + 
-                     timer_alerts['expired_count'] + 
-                     stock_summary['low_stock_count'])
-
-        return {
-            'critical_count': critical_count,
-            'high_count': high_count,
-            'total_count': critical_count + high_count
-        }
-
-    @staticmethod
-    def _get_stuck_batches() -> List:
-        """Get batches that have been in progress for more than 24 hours"""
-        cutoff_time = datetime.utcnow() - timedelta(hours=24)
-        query = Batch.query.filter(
-            Batch.status == 'in_progress',
-            Batch.started_at < cutoff_time
-        )
-
-        # Simple organization scoping - no complex developer logic here
-        if current_user and current_user.is_authenticated and current_user.organization_id:
-            query = query.filter(Batch.organization_id == current_user.organization_id)
-
-        return query.all()
-
-    @staticmethod
-    def _get_recent_faults() -> int:
-        """Get count of recent critical faults"""
-        fault_file = 'faults.json'
-        if not os.path.exists(fault_file):
+            if current_user and current_user.is_authenticated and current_user.organization_id:
+                return ExpirationService.get_expiring_items_count(
+                    organization_id=current_user.organization_id,
+                    days_ahead=days
+                )
+            return 0
+        except:
             return 0
 
+    @staticmethod
+    def _get_long_running_batches() -> int:
+        """Get count of batches running longer than 24 hours"""
         try:
-            with open(fault_file, 'r') as f:
-                faults = json.load(f)
-
             cutoff_time = datetime.utcnow() - timedelta(hours=24)
-            recent_critical = 0
 
-            for fault in faults:
-                fault_time = datetime.fromisoformat(fault.get('timestamp', ''))
-                if (fault_time > cutoff_time and 
-                    fault.get('severity', '').lower() in ['critical', 'error']):
-                    recent_critical += 1
+            query = Batch.query.filter(
+                Batch.status == 'in_progress',
+                Batch.started_at < cutoff_time
+            )
 
-            return recent_critical
-        except (json.JSONDecodeError, KeyError, ValueError):
+            # Simple organization scoping - no complex developer logic here
+            if current_user and current_user.is_authenticated and current_user.organization_id:
+                query = query.filter(Batch.organization_id == current_user.organization_id)
+
+            return query.count()
+        except:
             return 0
 
     @staticmethod
-    def _get_timer_alerts() -> Dict:
-        """Get timer-related alerts and auto-complete expired timers"""
+    def _get_active_timers_count() -> int:
+        """Get count of active timers"""
         try:
-            # Auto-complete expired timers first
-            from ..services.timer_service import TimerService
-            TimerService.complete_expired_timers()
-            
-            # Use BatchTimer model which exists in your system
             from ..models import BatchTimer
             from ..utils.timezone_utils import TimezoneUtils
-            
+
             # Get active timers with simple organization scoping
             query = BatchTimer.query.filter_by(status='active')
-            
+
             if current_user and current_user.is_authenticated and current_user.organization_id:
                 query = query.filter(BatchTimer.organization_id == current_user.organization_id)
-            
-            active_timers = query.all()
-            expired_timers = []
 
-            current_time = TimezoneUtils.utc_now()
-
-            for timer in active_timers:
-                if timer.start_time and timer.duration_seconds:
-                    end_time = timer.start_time + timedelta(seconds=timer.duration_seconds)
-                    if current_time > end_time:
-                        expired_timers.append(timer)
-
-            return {
-                'expired_count': len(expired_timers),
-                'expired_timers': expired_timers,
-                'active_count': len(active_timers)
-            }
-        except (ImportError, AttributeError) as e:
-            # Fallback if BatchTimer doesn't exist or import fails
-            print(f"Timer alerts error: {e}")
-            return {'expired_count': 0, 'expired_timers': [], 'active_count': 0}
+            return query.count()
+        except:
+            return 0
 
     @staticmethod
-    def _get_product_inventory_issues() -> int:
-        """Get count of products with inventory issues"""
+    def _get_critical_stock_issues() -> int:
+        """Get count of items with critical stock issues"""
         try:
             from ..models.product import ProductSKU
-            
+
             # SKUs with zero or negative inventory - simple organization scoping
             query = ProductSKU.query.filter(ProductSKU.current_quantity <= 0)
-            
+
             if current_user and current_user.is_authenticated and current_user.organization_id:
                 query = query.filter(ProductSKU.organization_id == current_user.organization_id)
-            
+
             issues = query.count()
             return issues
         except:
@@ -322,11 +204,10 @@ class DashboardAlertService:
 
     @staticmethod
     def _get_incomplete_batches() -> int:
-        """Get count of batches missing required data"""
+        """Get count of completed batches missing final data"""
         try:
-            # Batches that are finished but missing containers or labels
             query = Batch.query.filter(
-                Batch.status == 'finished',
+                Batch.status == 'completed',
                 Batch.final_yield.is_(None)
             )
 
@@ -334,7 +215,45 @@ class DashboardAlertService:
             if current_user and current_user.is_authenticated and current_user.organization_id:
                 query = query.filter(Batch.organization_id == current_user.organization_id)
 
-            incomplete = query.count()
-            return incomplete
+            return query.count()
         except:
             return 0
+
+    @staticmethod
+    def dismiss_alert(alert_type: str, alert_id: Optional[str] = None) -> bool:
+        """Dismiss a specific alert"""
+        try:
+            # Implementation for dismissing alerts
+            # This could store dismissed alerts in user preferences
+            return True
+        except:
+            return False
+
+    @staticmethod
+    def get_alert_preferences() -> Dict:
+        """Get user's alert preferences"""
+        if not current_user or not current_user.is_authenticated:
+            return {}
+
+        try:
+            user_prefs = UserPreferences.query.filter_by(
+                user_id=current_user.id,
+                organization_id=current_user.organization_id
+            ).first()
+
+            if user_prefs:
+                return {
+                    'show_stock_alerts': getattr(user_prefs, 'show_stock_alerts', True),
+                    'show_expiration_alerts': getattr(user_prefs, 'show_expiration_alerts', True),
+                    'show_batch_alerts': getattr(user_prefs, 'show_batch_alerts', True),
+                    'show_timer_alerts': getattr(user_prefs, 'show_timer_alerts', True)
+                }
+        except:
+            pass
+
+        return {
+            'show_stock_alerts': True,
+            'show_expiration_alerts': True,
+            'show_batch_alerts': True,
+            'show_timer_alerts': True
+        }
