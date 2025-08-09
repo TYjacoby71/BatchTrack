@@ -6,17 +6,11 @@ from ..services.email_service import EmailService
 
 waitlist_bp = Blueprint('waitlist', __name__)
 
-# Disable CSRF for this API endpoint
-@waitlist_bp.before_request
-def disable_csrf():
-    from flask import current_app
-    if hasattr(current_app, 'extensions') and 'csrf' in current_app.extensions:
-        current_app.extensions['csrf']._exempt_views.add('waitlist.join_waitlist')
-
 @waitlist_bp.route('/api/waitlist', methods=['POST'])
 def join_waitlist():
     """Handle waitlist form submissions"""
     try:
+        # Get JSON data from request
         data = request.get_json()
 
         if not data or not data.get('email'):
@@ -54,13 +48,18 @@ def join_waitlist():
         with open(waitlist_file, 'w') as f:
             json.dump(waitlist, f, indent=2)
 
-        # Send confirmation email
-        EmailService.send_waitlist_confirmation(
-            email=waitlist_entry['email'],
-            name=waitlist_entry['name']
-        )
+        # Try to send confirmation email (but don't fail if it doesn't work)
+        try:
+            EmailService.send_waitlist_confirmation(
+                email=waitlist_entry['email'],
+                name=waitlist_entry['name']
+            )
+        except Exception as email_error:
+            # Log email error but don't fail the request
+            print(f"Email service error: {email_error}")
 
         return jsonify({'message': 'Successfully joined waitlist'}), 200
 
     except Exception as e:
+        print(f"Waitlist error: {e}")
         return jsonify({'error': 'Internal server error'}), 500
