@@ -35,6 +35,23 @@ function handleModalTransition(fromModalId, toModalId, focusElementId) {
   }
 }
 
+// Add alert dismissal functionality
+        document.querySelectorAll('.alert .btn-close').forEach(button => {
+            button.addEventListener('click', function() {
+                const alertType = this.closest('.alert').dataset.alertType;
+                if (alertType) {
+                    fetch('/api/dismiss-alert', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCSRFToken()
+                        },
+                        body: JSON.stringify({ alert_type: alertType })
+                    }).catch(console.error);
+                }
+            });
+        });
+
 // Make functions globally available
 window.getCSRFToken = getCSRFToken;
 window.handleModalTransition = handleModalTransition;

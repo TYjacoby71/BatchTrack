@@ -200,7 +200,10 @@ def _register_blueprints(app):
     try:
         from .routes.waitlist_routes import waitlist_bp
         app.register_blueprint(waitlist_bp)
-        csrf.exempt(app.view_functions.get('waitlist.join_waitlist'))
+        # Only exempt if the view function exists
+        waitlist_view = app.view_functions.get('waitlist.api_join_waitlist')
+        if waitlist_view:
+            csrf.exempt(waitlist_view)
     except (ImportError, KeyError):
         pass
 

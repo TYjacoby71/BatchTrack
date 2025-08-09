@@ -152,6 +152,71 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Note: Quick add components (unit, container, ingredient) now have their own 
   // embedded scripts and don't need initialization here
+
+  // Handle waitlist form
+        const waitlistForm = document.querySelector('#waitlistForm');
+        if (waitlistForm) {
+            waitlistForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+
+                const emailField = document.querySelector('#waitlistEmail');
+                const businessField = document.querySelector('#businessType');
+                const submitBtn = document.querySelector('#waitlistSubmitBtn');
+
+                if (!emailField || !emailField.value) {
+                    alert('Please enter your email address');
+                    return;
+                }
+
+                const email = emailField.value;
+                const businessType = businessField ? businessField.value : '';
+
+                // Disable submit button
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Joining...';
+                }
+
+                try {
+                    const response = await fetch('/api/waitlist/join', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            email: email,
+                            maker_type: businessType
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        // Show success message
+                        waitlistForm.innerHTML = `
+                            <div class="text-center">
+                                <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                                <h4>You're on the list!</h4>
+                                <p class="text-muted">We'll notify you when BatchTrack is ready for early access.</p>
+                            </div>
+                        `;
+                    } else {
+                        alert(data.error || 'Failed to join waitlist. Please try again.');
+                        if (submitBtn) {
+                            submitBtn.disabled = false;
+                            submitBtn.innerHTML = '<i class="fas fa-paper-plane me-2"></i>Join Waitlist';
+                        }
+                    }
+                } catch (error) {
+                    console.error('Waitlist error:', error);
+                    alert('Failed to join waitlist. Please try again.');
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = '<i class="fas fa-paper-plane me-2"></i>Join Waitlist';
+                    }
+                }
+            });
+        }
 });
 
 // Unit filtering function (kept separate as it's called from HTML)
