@@ -1,14 +1,14 @@
+
 from flask import Blueprint, request, jsonify
 import json
 import os
 from datetime import datetime
-from ..services.email_service import EmailService
 
 waitlist_bp = Blueprint('waitlist', __name__)
 
 @waitlist_bp.route('/api/waitlist', methods=['POST'])
 def join_waitlist():
-    """Handle waitlist form submissions"""
+    """Handle waitlist form submissions - save to JSON only"""
     try:
         # Get JSON data from request
         data = request.get_json()
@@ -25,8 +25,12 @@ def join_waitlist():
             'source': 'homepage'
         }
 
-        # Save to JSON file (you can later migrate this to database)
-        waitlist_file = 'waitlist.json'
+        # Save to JSON file (persistent storage)
+        waitlist_file = 'data/waitlist.json'
+        
+        # Create data directory if it doesn't exist
+        os.makedirs('data', exist_ok=True)
+        
         waitlist = []
 
         # Load existing waitlist
@@ -47,16 +51,6 @@ def join_waitlist():
         # Save updated waitlist
         with open(waitlist_file, 'w') as f:
             json.dump(waitlist, f, indent=2)
-
-        # Try to send confirmation email (but don't fail if it doesn't work)
-        try:
-            EmailService.send_waitlist_confirmation(
-                email=waitlist_entry['email'],
-                name=waitlist_entry['name']
-            )
-        except Exception as email_error:
-            # Log email error but don't fail the request
-            print(f"Email service error: {email_error}")
 
         return jsonify({'message': 'Successfully joined waitlist'}), 200
 
