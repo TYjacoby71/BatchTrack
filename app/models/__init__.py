@@ -46,3 +46,6 @@ __all__ = [
     'OrganizationStats', 'SubscriptionTier', 'DeveloperPermission', 'DeveloperRole',
     'BillingSnapshot', 'PricingSnapshot'
 ]
+
+# Create alias for backward compatibility
+Inventory = InventoryItem

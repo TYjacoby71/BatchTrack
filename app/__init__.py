@@ -212,9 +212,8 @@ def _register_template_context(app):
     from .utils.unit_utils import get_global_unit_list
     from .utils.timezone_utils import TimezoneUtils
     
-    # Cache static data at startup
-    @app.before_first_request
-    def cache_static_data():
+    # Cache static data at startup - moved to app context for Flask 2.2+ compatibility
+    with app.app_context():
         try:
             from .models import IngredientCategory
             app._cached_units = get_global_unit_list()
