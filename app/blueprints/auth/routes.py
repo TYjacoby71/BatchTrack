@@ -1,4 +1,4 @@
-from flask import render_template, request, redirect, url_for, flash, session, current_app, jsonify, abort
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, current_app, jsonify, abort
 from flask_login import login_user, logout_user, current_user
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField
@@ -11,10 +11,11 @@ from ...utils.timezone_utils import TimezoneUtils
 from ...utils.permissions import require_permission
 from flask_login import login_required
 import logging
-from .whop_auth import WhopAuth # Import WhopAuth
+from .whop_auth import WhopAuth
 from ...services.oauth_service import OAuthService
 from ...services.email_service import EmailService
 from datetime import datetime, timedelta
+from app.utils.security import rate_limit
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +47,7 @@ class LoginForm(FlaskForm):
     submit = SubmitField('Login')
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
+@rate_limit(limit=10, per=60) # 10 requests per minute
 def login():
     if current_user.is_authenticated:
         return redirect(url_for('app_routes.dashboard'))
@@ -86,6 +88,7 @@ def login():
     return render_template('auth/login.html', form=form, oauth_available=OAuthService.is_oauth_configured())
 
 @auth_bp.route('/oauth/google')
+@rate_limit(limit=5, per=60) # 5 requests per minute for initiating OAuth
 def oauth_google():
     """Initiate Google OAuth flow"""
     logger.info("OAuth Google route accessed")
@@ -112,6 +115,7 @@ def oauth_google():
     return redirect(authorization_url)
 
 @auth_bp.route('/oauth/callback')
+@rate_limit(limit=5, per=60) # 5 requests per minute for OAuth callback
 def oauth_callback():
     """Handle OAuth callback"""
     try:
@@ -197,6 +201,7 @@ def oauth_callback():
         return redirect(url_for('auth.login'))
 
 @auth_bp.route('/verify-email/<token>')
+@rate_limit(limit=5, per=300) # 5 requests per 5 minutes for email verification
 def verify_email(token):
     """Verify email address"""
     try:
@@ -229,6 +234,7 @@ def verify_email(token):
         return redirect(url_for('auth.login'))
 
 @auth_bp.route('/resend-verification', methods=['GET', 'POST'])
+@rate_limit(limit=2, per=300) # 2 requests per 5 minutes for resending verification
 def resend_verification():
     """Resend email verification"""
     if request.method == 'POST':
@@ -267,6 +273,7 @@ def logout():
     return redirect(url_for('homepage'))
 
 @auth_bp.route('/dev-login')
+@rate_limit(limit=5, per=60) # 5 requests per minute for dev login
 def dev_login():
     """Quick developer login for system access"""
     dev_user = User.query.filter_by(username='dev').first()
@@ -346,6 +353,7 @@ def debug_oauth_config():
     })
 
 @auth_bp.route('/signup', methods=['GET', 'POST'])
+@rate_limit(limit=5, per=60) # 5 requests per minute for signup
 def signup():
     """Simplified signup flow - tier selection only, then redirect to payment"""
     if current_user.is_authenticated:
@@ -497,6 +505,7 @@ def signup():
 
 # Whop License Login Route
 @auth_bp.route('/whop-login', methods=['POST'])
+@rate_limit(limit=5, per=60) # 5 requests per minute for Whop login
 def whop_login():
     """Authenticate user with Whop license key"""
     license_key = request.form.get('license_key')
