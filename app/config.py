@@ -1,4 +1,3 @@
-
 import os
 from datetime import timedelta
 
@@ -9,14 +8,14 @@ class Config:
     # Core
     SECRET_KEY = os.environ.get('FLASK_SECRET_KEY', 'devkey-please-change-in-production')
     DEBUG = _env_bool('FLASK_DEBUG')
-    
+
     # Database - clean logic
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or _get_sqlite_path()
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = {
         'pool_size': 10, 'max_overflow': 20, 'pool_recycle': 3600, 'pool_pre_ping': True
     }
-    
+
     # Session
     PERMANENT_SESSION_LIFETIME = timedelta(minutes=30)
     is_production = _env_bool('REPLIT_DEPLOYMENT')
@@ -24,7 +23,7 @@ class Config:
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
     PREFERRED_URL_SCHEME = 'https' if is_production else 'http'
-    
+
     # External Services
     MAIL_SERVER = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
     MAIL_PORT = int(os.environ.get('MAIL_PORT', '587'))
@@ -33,7 +32,7 @@ class Config:
     MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')  
     MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER', 'noreply@batchtrack.app')
-    
+
     # API Keys
     STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY')
     STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY')
