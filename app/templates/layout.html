@@ -248,7 +248,7 @@
                     </li>
                     <li><hr class="dropdown-divider"></li>
 
-                    {% if has_role('developer') or has_role('organization_owner') or has_role('manager') %}
+                    {% if has_role('developer') or has_role('organization_owner') or has_manager('manager') %}
                     <li><h6 class="dropdown-header">Admin Tools</h6></li>
                     <li><a class="dropdown-item" href="{{ url_for('reservations.list_reservations') }}"><i class="fas fa-clock"></i> Reservations</a></li>
                     {% endif %}
@@ -303,6 +303,21 @@
 
     {% include 'components/modals/unit_converter_modal.html' %}
     </div>
+
+    <footer class="bg-light text-center text-muted py-3 mt-5">
+            <div class="container">
+                <div class="row">
+                    <div class="col-12">
+                        <small>
+                            &copy; {{ "now"|strftime("%Y") }} BatchTrack. All rights reserved. |
+                            <a href="{{ url_for('legal.privacy_policy') }}" class="text-muted">Privacy Policy</a> |
+                            <a href="{{ url_for('legal.terms_of_service') }}" class="text-muted">Terms of Service</a> |
+                            <a href="{{ url_for('legal.cookie_policy') }}" class="text-muted">Cookie Policy</a>
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </footer>
 
     <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
