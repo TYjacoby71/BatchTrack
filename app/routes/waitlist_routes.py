@@ -42,43 +42,45 @@ def save_waitlist(data):
     except IOError as e:
         logger.error(f"Error saving waitlist file {waitlist_file}: {e}")
 
-@waitlist_bp.route('/join', methods=['POST'])
-def join_waitlist():
+# Placeholder for is_valid_email function if it were defined elsewhere
+def is_valid_email(email):
+    # Basic email validation (can be expanded)
+    return '@' in email and '.' in email
+
+# Placeholder for add_to_waitlist function if it were defined elsewhere
+def add_to_waitlist(email, maker_type):
+    waitlist_data = load_waitlist()
+    if email in waitlist_data['emails']:
+        return False, "Email already on waitlist."
+    waitlist_data['emails'].append(email)
+    waitlist_data['count'] = len(waitlist_data['emails'])
+    save_waitlist(waitlist_data)
+    return True, "Successfully added to waitlist."
+
+@waitlist_bp.route('/api/waitlist/join', methods=['POST'])
+def api_join_waitlist():
+    """API endpoint for joining waitlist"""
     try:
-        # Handle both JSON and form data
-        if request.is_json:
-            data = request.get_json()
+        data = request.get_json()
+        if not data:
+            return jsonify({'success': False, 'error': 'No data provided'}), 400
+
+        email = data.get('email', '').strip().lower()
+        maker_type = data.get('maker_type', '').strip()
+
+        if not email or not maker_type:
+            return jsonify({'success': False, 'error': 'Email and maker type required'}), 400
+
+        if not is_valid_email(email):
+            return jsonify({'success': False, 'error': 'Invalid email format'}), 400
+
+        success, message = add_to_waitlist(email, maker_type)
+
+        if success:
+            return jsonify({'success': True, 'message': message})
         else:
-            data = request.form.to_dict()
-
-        if not data or 'email' not in data:
-            return jsonify({'success': False, 'error': 'Email is required'}), 400
-
-        email = data['email'].strip().lower()
-
-        # Basic email validation
-        if not email or '@' not in email:
-            return jsonify({'success': False, 'error': 'Valid email is required'}), 400
-
-        # Load existing waitlist
-        waitlist_data = load_waitlist()
-
-        # Check if already exists
-        if email in waitlist_data['emails']:
-            return jsonify({'success': True, 'message': 'Already on waitlist'}), 200
-
-        # Add to waitlist
-        waitlist_data['emails'].append(email)
-        waitlist_data['count'] = len(waitlist_data['emails'])
-
-        # Save updated waitlist
-        save_waitlist(waitlist_data)
-
-        return jsonify({
-            'success': True,
-            'message': 'Successfully added to waitlist',
-            'position': len(waitlist_data['emails'])
-        })
+            return jsonify({'success': False, 'error': message}), 400
 
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logger.error(f"Error in api_join_waitlist: {e}") # Added logging for unexpected errors
+        return jsonify({'success': False, 'error': 'Failed to join waitlist'}), 500
