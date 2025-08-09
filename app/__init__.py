@@ -574,7 +574,7 @@ def _setup_logging(app):
 def register_error_handlers(app):
     """Register application error handlers"""
     from flask import render_template, jsonify, request, redirect, url_for, flash
-    from .utils.api_response import APIResponse
+    from .utils.api_responses import APIResponse
 
     @app.errorhandler(404)
     def page_not_found(error):

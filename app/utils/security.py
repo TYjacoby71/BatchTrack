@@ -1,8 +1,11 @@
-
 import secrets
 import hashlib
-from flask import request, abort
+import re
+from datetime import datetime, timedelta
 from functools import wraps
+from flask import request, abort
+from .permissions import has_permission
+from flask_login import current_user
 
 class SecurityUtils:
     @staticmethod
@@ -10,31 +13,31 @@ class SecurityUtils:
         """Simple in-memory rate limiting"""
         # In production, use Redis
         import time
-        
+
         if not hasattr(SecurityUtils, '_rate_limits'):
             SecurityUtils._rate_limits = {}
-        
+
         now = time.time()
         window_start = now - window
-        
+
         # Clean old entries
         SecurityUtils._rate_limits = {
             k: v for k, v in SecurityUtils._rate_limits.items() 
             if v['last_request'] > window_start
         }
-        
+
         if key not in SecurityUtils._rate_limits:
             SecurityUtils._rate_limits[key] = {'count': 1, 'last_request': now}
             return True
-        
+
         entry = SecurityUtils._rate_limits[key]
         if entry['count'] >= limit:
             return False
-        
+
         entry['count'] += 1
         entry['last_request'] = now
         return True
-    
+
     @staticmethod
     def validate_csrf_token(token: str) -> bool:
         """Enhanced CSRF validation"""
@@ -44,8 +47,6 @@ class SecurityUtils:
             return True
         except:
             return False
-
-from functools import wraps
 
 def rate_limit(limit: int = 100, per: int = 3600):
     """Rate limiting decorator"""
