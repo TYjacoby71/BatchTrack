@@ -4,6 +4,13 @@ from datetime import timedelta
 def _env_bool(key, default=False):
     return os.environ.get(key, str(default)).lower() == 'true'
 
+def _get_sqlite_path():
+    """Get SQLite path for local development"""
+    instance_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', 'instance')
+    os.makedirs(instance_path, exist_ok=True)
+    os.chmod(instance_path, 0o777)
+    return f'sqlite:///{os.path.join(instance_path, "batchtrack.db")}'
+
 class Config:
     # Core
     SECRET_KEY = os.environ.get('FLASK_SECRET_KEY', 'devkey-please-change-in-production')
@@ -41,10 +48,3 @@ class Config:
     WHOP_APP_ID = os.environ.get('WHOP_APP_ID')
     GOOGLE_OAUTH_CLIENT_ID = os.environ.get('GOOGLE_OAUTH_CLIENT_ID')
     GOOGLE_OAUTH_CLIENT_SECRET = os.environ.get('GOOGLE_OAUTH_CLIENT_SECRET')
-
-def _get_sqlite_path():
-    """Get SQLite path for local development"""
-    instance_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', 'instance')
-    os.makedirs(instance_path, exist_ok=True)
-    os.chmod(instance_path, 0o777)
-    return f'sqlite:///{os.path.join(instance_path, "batchtrack.db")}'
