@@ -190,3 +190,69 @@ class EmailService:
         """
 
         return EmailService._send_email(email, subject, body)
+
+    @staticmethod
+    def is_configured():
+        """Check if email is properly configured"""
+        try:
+            return (current_app.config.get('MAIL_SERVER') and 
+                   current_app.config.get('MAIL_USERNAME'))
+        except:
+            return False
+
+    @staticmethod
+    def send_waitlist_confirmation(email, name=None):
+        """Send waitlist confirmation email"""
+        if not EmailService.is_configured():
+            logger.info(f"Email not configured - would send waitlist confirmation to {email}")
+            return False
+
+        try:
+            subject = "Welcome to the BatchTrack Waitlist!"
+            
+            html_body = f"""
+            <h2>Thanks for joining our waitlist!</h2>
+            <p>Hi {name or 'there'},</p>
+            <p>Thank you for your interest in BatchTrack! You're now on our exclusive waitlist.</p>
+            
+            <h3>What's Next?</h3>
+            <ul>
+                <li>We'll notify you as soon as BatchTrack is ready for beta testing</li>
+                <li>You'll get early access to special pricing and lifetime deals</li>
+                <li>We'll keep you updated on our development progress</li>
+            </ul>
+            
+            <p>In the meantime, feel free to reach out if you have any questions about BatchTrack.</p>
+            
+            <br>
+            <p>Thanks again for your interest!<br>The BatchTrack Team</p>
+            """
+
+            text_body = f"""
+            Thanks for joining our waitlist!
+
+            Hi {name or 'there'},
+
+            Thank you for your interest in BatchTrack! You're now on our exclusive waitlist.
+
+            What's Next?
+            - We'll notify you as soon as BatchTrack is ready for beta testing
+            - You'll get early access to special pricing and lifetime deals  
+            - We'll keep you updated on our development progress
+
+            In the meantime, feel free to reach out if you have any questions about BatchTrack.
+
+            Thanks again for your interest!
+            The BatchTrack Team
+            """
+
+            return EmailService._send_email(
+                recipient=email,
+                subject=subject,
+                html_body=html_body,
+                text_body=text_body
+            )
+
+        except Exception as e:
+            logger.error(f"Error sending waitlist confirmation email: {str(e)}")
+            return False

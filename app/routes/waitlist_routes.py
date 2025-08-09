@@ -8,13 +8,14 @@ waitlist_bp = Blueprint('waitlist', __name__)
 
 @waitlist_bp.route('/api/waitlist', methods=['POST'])
 def join_waitlist():
-    """Handle waitlist form submissions"""
+    """Handle waitlist form submissions - save to JSON only"""
     try:
+        # Get JSON data from request
         data = request.get_json()
-        
+
         if not data or not data.get('email'):
             return jsonify({'error': 'Email is required'}), 400
-        
+
         # Create waitlist entry
         waitlist_entry = {
             'email': data.get('email'),
@@ -23,11 +24,15 @@ def join_waitlist():
             'timestamp': datetime.utcnow().isoformat(),
             'source': 'homepage'
         }
+
+        # Save to JSON file (persistent storage)
+        waitlist_file = 'data/waitlist.json'
         
-        # Save to JSON file (you can later migrate this to database)
-        waitlist_file = 'waitlist.json'
+        # Create data directory if it doesn't exist
+        os.makedirs('data', exist_ok=True)
+        
         waitlist = []
-        
+
         # Load existing waitlist
         if os.path.exists(waitlist_file):
             try:
@@ -35,19 +40,20 @@ def join_waitlist():
                     waitlist = json.load(f)
             except (json.JSONDecodeError, IOError):
                 waitlist = []
-        
+
         # Check if email already exists
         if any(entry.get('email') == waitlist_entry['email'] for entry in waitlist):
             return jsonify({'message': 'Email already on waitlist'}), 200
-        
+
         # Add new entry
         waitlist.append(waitlist_entry)
-        
+
         # Save updated waitlist
         with open(waitlist_file, 'w') as f:
             json.dump(waitlist, f, indent=2)
-        
+
         return jsonify({'message': 'Successfully joined waitlist'}), 200
-        
+
     except Exception as e:
+        print(f"Waitlist error: {e}")
         return jsonify({'error': 'Internal server error'}), 500
