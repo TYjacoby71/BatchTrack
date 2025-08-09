@@ -1,4 +1,3 @@
-
 """Models package - imports all models for the application"""
 from ..extensions import db
 from .mixins import ScopedModelMixin
@@ -41,8 +40,8 @@ __all__ = [
     'Batch', 'BatchIngredient', 'BatchContainer', 'ExtraBatchContainer', 'BatchTimer', 'ExtraBatchIngredient',
     'Unit', 'CustomUnitMapping', 'ConversionLog',
     'IngredientCategory', 'Tag',
-    'Product', 'ProductVariant', 'ProductSKU', 'ProductSKUHistory', 'Reservation', 
-    'Role', 'Permission', 'role_permission', 'UserRoleAssignment', 'UserPreferences', 'UserStats', 
+    'Product', 'ProductVariant', 'ProductSKU', 'ProductSKUHistory', 'Reservation',
+    'Role', 'Permission', 'role_permission', 'UserRoleAssignment', 'UserPreferences', 'UserStats',
     'OrganizationStats', 'SubscriptionTier', 'DeveloperPermission', 'DeveloperRole',
     'BillingSnapshot', 'PricingSnapshot'
 ]

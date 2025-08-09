@@ -6,6 +6,12 @@ import logging
 
 class PerformanceMonitor:
     @staticmethod
+    def init_app(app):
+        """Initialize performance monitoring for the app"""
+        # Simple placeholder - can be expanded later
+        app.logger.debug("Performance monitoring initialized")
+    
+    @staticmethod
     def monitor_db_queries():
         """Track database query performance"""
         if not hasattr(g, 'query_count'):
