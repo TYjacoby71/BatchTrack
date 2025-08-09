@@ -5,28 +5,7 @@ from datetime import datetime, timedelta
 from app.services.conversion_wrapper import safe_convert
 from app.services.unit_conversion import ConversionEngine
 from app.blueprints.fifo.services import FIFOService
-
-# Assuming BaseService is defined in app.services.base_service
-# If not, this import needs to be adjusted or BaseService needs to be created.
-# For the purpose of this example, we'll assume it exists and is importable.
-# from .base_service import BaseService # This line should be uncommented if BaseService is available
-
-# Mock BaseService for demonstration if it's not provided
-class BaseService:
-    def __init__(self):
-        pass
-
-    def log_info(self, message):
-        current_app.logger.info(message)
-
-    def log_warning(self, message):
-        current_app.logger.warning(message)
-
-    def log_error(self, message):
-        current_app.logger.error(message)
-
-    def raise_validation_error(self, message):
-        raise ValueError(message)
+from .base_service import BaseService
 
 
 def validate_inventory_fifo_sync(item_id, item_type=None):
@@ -115,6 +94,7 @@ def validate_inventory_fifo_sync(item_id, item_type=None):
         return False, error_msg, current_qty, fifo_total
 
     return True, "", current_qty, fifo_total
+
 
 def process_inventory_adjustment(item_id, quantity, change_type, unit=None, notes=None,
                                  created_by=None, batch_id=None, cost_override=None,
@@ -348,6 +328,7 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
             print(f"WARNING: Failed to rollback transaction: {rollback_error}")
         raise e
 
+
 def handle_recount_adjustment(item_id, target_quantity, notes=None, created_by=None, item_type='ingredient'):
     """
     Comprehensive recount handler that implements all recount business rules:
@@ -489,14 +470,6 @@ def handle_recount_adjustment(item_id, target_quantity, notes=None, created_by=N
         # Update inventory quantity to match target
         item.quantity = target_quantity
 
-        # Don't create any summary entries - all recount events are handled by:
-        # 1. FIFOService.create_deduction_history() for deductions (already creates proper FIFO entries)
-        # 2. FIFOService.add_fifo_entry() for new lots (already creates proper FIFO entries)
-        # 3. Direct FIFO entry updates for filling existing lots
-        #
-        # No additional summary entries are needed as all actions are properly logged
-        # in their respective FIFO history tables with appropriate FIFO codes
-
         db.session.commit()
 
         # Validate final state
@@ -516,56 +489,6 @@ def handle_recount_adjustment(item_id, target_quantity, notes=None, created_by=N
         raise e
 
 
-# This class definition should be placed after the function definitions if it's meant to contain them
-# or imported from another file. Based on the changes snippet, it seems like an update to an existing class.
-# If this class was not present in the original code and is meant to be added, it would need a proper place.
-# Assuming it's an existing class that needs modification:
-
-# Update to use BaseService
-# This part is a direct replacement as per the changes provided.
-# The original code did not contain the class definition for InventoryAdjustmentService,
-# but the changes snippet implies it exists and needs modification.
-# For clarity and to match the requested output format, we'll define it here as modified.
-
-# Since the original code does not contain the class definition, we'll create it as per the change instruction.
-# It's unclear if the functions above are methods of this class or standalone.
-# Given the structure, they appear to be standalone functions.
-# If InventoryAdjustmentService is meant to be a class that *uses* these functions,
-# the structure would be different.
-# Assuming the change instruction is about making the service *itself* inherit from BaseService,
-# and the functions above are standalone or belong to another component.
-
-# If InventoryAdjustmentService is meant to be a class that *contains* these functions as methods:
-# The original code would have had a class definition. Since it doesn't, we'll create it
-# with the modification. However, the functions above are not part of any class in the original snippet.
-# This suggests that the change might be for a different part of the codebase not provided,
-# or the intention is to create a new service class.
-
-# Let's assume the intention is to create a new service class inheriting from BaseService
-# and the functions above remain as utility functions or are called by this new service.
-# The most direct interpretation of the change is to simply add the inheritance.
-
-# If the functions *should* be methods of InventoryAdjustmentService, the original code structure
-# is incomplete for this interpretation.
-
-# For now, we will just provide the modified class definition as requested by the snippet.
-# The actual functionality of the functions remains outside this class structure based on the original code.
-
-# The original code snippet does not contain a class definition for `InventoryAdjustmentService`.
-# The `<changes>` indicate a modification to an existing class.
-# Assuming the class should be created or was intended to be there:
-
-# Adding the modified class structure as per the instruction.
-# If the functions above were meant to be methods, they would need to be indented under this class.
-
 class InventoryAdjustmentService(BaseService):
     def __init__(self):
         super().__init__()
-        # Initialize any specific attributes for InventoryAdjustmentService here if needed
-
-    # If the functions above were intended to be methods of this class,
-    # they would be defined here with `self` as the first parameter.
-    # e.g., def process_inventory_adjustment(self, ...):
-
-    # For now, we'll assume the functions remain standalone or are called externally.
-    pass

@@ -1,7 +1,7 @@
 
 from .base_service import CacheableService
 from typing import List, Dict, Any
-from app.models import Batch, Inventory, Product
+from app.models import Batch, InventoryItem, Product
 from flask_login import current_user
 from datetime import datetime, timedelta
 
@@ -23,17 +23,17 @@ class AlertService(CacheableService):
         """Get expiration alerts"""
         thirty_days = datetime.utcnow() + timedelta(days=30)
         
-        expiring_inventory = Inventory.query.filter(
-            Inventory.organization_id == organization_id,
-            Inventory.expiration_date <= thirty_days,
-            Inventory.quantity > 0
+        expiring_inventory = InventoryItem.query.filter(
+            InventoryItem.organization_id == organization_id,
+            InventoryItem.expiration_date <= thirty_days,
+            InventoryItem.quantity > 0
         ).all()
         
         return [
             {
                 'type': 'expiration',
                 'severity': 'warning' if item.expiration_date > datetime.utcnow() + timedelta(days=7) else 'danger',
-                'message': f"{item.ingredient.name} expires on {item.expiration_date.strftime('%Y-%m-%d')}",
+                'message': f"{item.name} expires on {item.expiration_date.strftime('%Y-%m-%d')}",
                 'item_id': item.id,
                 'days_until': (item.expiration_date - datetime.utcnow()).days
             }
@@ -42,20 +42,20 @@ class AlertService(CacheableService):
     
     def _get_inventory_alerts(self, organization_id: int) -> List[Dict]:
         """Get low inventory alerts"""
-        low_stock = Inventory.query.filter(
-            Inventory.organization_id == organization_id,
-            Inventory.quantity <= Inventory.minimum_stock_level,
-            Inventory.quantity > 0
+        low_stock = InventoryItem.query.filter(
+            InventoryItem.organization_id == organization_id,
+            InventoryItem.quantity <= InventoryItem.low_stock_threshold,
+            InventoryItem.quantity > 0
         ).all()
         
         return [
             {
                 'type': 'low_stock',
                 'severity': 'warning',
-                'message': f"Low stock: {item.ingredient.name} ({item.quantity} {item.unit.symbol} remaining)",
+                'message': f"Low stock: {item.name} ({item.quantity} {item.unit} remaining)",
                 'item_id': item.id,
                 'current_quantity': item.quantity,
-                'minimum_level': item.minimum_stock_level
+                'minimum_level': item.low_stock_threshold
             }
             for item in low_stock
         ]

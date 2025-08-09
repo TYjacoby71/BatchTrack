@@ -1,4 +1,3 @@
-
 from flask import Blueprint, request, jsonify
 import json
 import os
@@ -28,10 +27,10 @@ def join_waitlist():
 
         # Save to JSON file (persistent storage)
         waitlist_file = 'data/waitlist.json'
-        
+
         # Create data directory if it doesn't exist
         os.makedirs('data', exist_ok=True)
-        
+
         waitlist = []
 
         # Load existing waitlist

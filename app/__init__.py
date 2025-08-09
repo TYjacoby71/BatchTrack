@@ -202,50 +202,18 @@ def _register_middleware(app):
 def _register_blueprints(app):
     """Register all application blueprints"""
     from .extensions import csrf
+    from flask import current_app # Import current_app here
 
-    # Import blueprints
+    # Import and register blueprints
     blueprints = _import_blueprints()
 
-    # Register core blueprints
-    core_registrations = [
-        (blueprints['auth_bp'], '/auth'),
-        (blueprints['recipes_bp'], '/recipes'),
-        (blueprints['inventory_bp'], '/inventory'),
-        (blueprints['batches_bp'], '/batches'),
-        (blueprints['finish_batch_bp'], '/batches'),
-        (blueprints['cancel_batch_bp'], '/batches'),
-        (blueprints['start_batch_bp'], '/start-batch'),
-        (blueprints['conversion_bp'], '/conversion'),
-        (blueprints['expiration_bp'], '/expiration'),
-        (blueprints['settings_bp'], '/settings'),
-        (blueprints['timers_bp'], '/timers'),
-        (blueprints['organization_bp'], '/organization'),
-    ]
-
-    for blueprint, prefix in core_registrations:
-        if blueprint:
-            app.register_blueprint(blueprint, url_prefix=prefix)
-
-    # Register standalone blueprints
-    standalone_blueprints = [
-        'developer_bp', 'app_routes_bp', 'fifo_bp', 'api_bp', 'admin_bp'
-    ]
-
-    for bp_name in standalone_blueprints:
-        if blueprints.get(bp_name):
-            app.register_blueprint(blueprints[bp_name])
-
-    # Register prefixed blueprints
-    prefixed_blueprints = [
-        ('add_extra_bp', '/add-extra'),
-        ('bulk_stock_bp', '/bulk_stock'),
-        ('fault_log_bp', '/fault_log'),
-        ('tag_manager_bp', '/tag_manager'),
-    ]
-
-    for bp_name, prefix in prefixed_blueprints:
-        if blueprints.get(bp_name):
-            app.register_blueprint(blueprints[bp_name], url_prefix=prefix)
+    for blueprint_name, blueprint in blueprints.items():
+        try:
+            app.register_blueprint(blueprint)
+            current_app.logger.debug(f"Blueprint '{blueprint_name}' registered successfully")
+        except Exception as e:
+            current_app.logger.error(f"Failed to register blueprint '{blueprint_name}': {str(e)}")
+            raise
 
     # Register waitlist with CSRF exemption
     if blueprints.get('waitlist_bp'):
@@ -320,6 +288,14 @@ def _import_blueprints():
         })
     except ImportError as e:
         logger.warning(f"Failed to import core blueprints: {e}")
+
+    # Dashboard blueprint import
+    try:
+        from .blueprints.dashboard.routes import dashboard_bp
+        blueprints['dashboard'] = dashboard_bp
+    except ImportError:
+        logger.warning("Could not import dashboard blueprint")
+
 
     return blueprints
 
@@ -598,7 +574,7 @@ def _setup_logging(app):
 def register_error_handlers(app):
     """Register application error handlers"""
     from flask import render_template, jsonify, request, redirect, url_for, flash
-    from .utils.api_response import APIResponse
+    from .utils.api_responses import APIResponse
 
     @app.errorhandler(404)
     def page_not_found(error):
