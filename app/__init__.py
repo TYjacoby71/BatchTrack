@@ -184,6 +184,9 @@ def create_app():
     from .routes.waitlist_routes import waitlist_bp
     app.register_blueprint(waitlist_bp)
     
+    # Exempt waitlist API from CSRF protection
+    csrf.exempt(waitlist_bp.join_waitlist)
+    
     # Register billing blueprint
     try:
         app.register_blueprint(billing_bp)
