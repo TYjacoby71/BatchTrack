@@ -155,3 +155,14 @@ def register_filters(app):
         tiers_config = load_tiers_config()
         tier_data = tiers_config.get(tier_key, {})
         return tier_data.get('features', [])
+
+    @app.template_filter('strftime')
+    def strftime_filter(datetime_obj, format_string='%Y-%m-%d %H:%M:%S'):
+        """Format datetime object using strftime"""
+        if isinstance(datetime_obj, str) and datetime_obj == 'now':
+            from datetime import datetime
+            datetime_obj = datetime.now()
+        
+        if hasattr(datetime_obj, 'strftime'):
+            return datetime_obj.strftime(format_string)
+        return str(datetime_obj)
