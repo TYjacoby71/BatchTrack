@@ -96,11 +96,20 @@ def _register_middleware(app):
         from flask_login import current_user
         from app.models import Organization
 
-        # Skip middleware for static files, auth routes, and webhooks
-        skip_paths = ['/static/', '/auth/login', '/auth/logout', '/auth/signup', 
-                     '/billing/webhooks/', '/', '/homepage', '/api/waitlist']
-
-        if any(request.path.startswith(path) for path in skip_paths):
+        # Optimized path checking with early returns
+        path = request.path
+        
+        # Fast static file check
+        if path.startswith('/static/'):
+            return None
+            
+        # Auth routes (most common)
+        if path.startswith('/auth/'):
+            if path in ['/auth/login', '/auth/logout', '/auth/signup']:
+                return None
+                
+        # Other skip paths
+        if path in ['/', '/homepage'] or path.startswith('/billing/webhooks/') or path.startswith('/api/waitlist'):
             return None
 
         # Require authentication
@@ -373,15 +382,22 @@ def _register_template_context(app):
     @app.context_processor  
     def inject_units():
         from .utils.unit_utils import get_global_unit_list
-        try:
-            units = get_global_unit_list()
-            if not hasattr(g, 'cached_categories'):
-                g.cached_categories = IngredientCategory.query.order_by(IngredientCategory.name).all()
-            categories = g.cached_categories
-        except:
-            units = []
-            categories = []
-        return dict(units=units, categories=categories, global_units=units)
+        from flask import current_app
+        
+        # Cache at app level, not request level
+        if not hasattr(current_app, '_cached_units'):
+            try:
+                current_app._cached_units = get_global_unit_list()
+                current_app._cached_categories = IngredientCategory.query.order_by(IngredientCategory.name).all()
+            except:
+                current_app._cached_units = []
+                current_app._cached_categories = []
+        
+        return dict(
+            units=current_app._cached_units, 
+            categories=current_app._cached_categories, 
+            global_units=current_app._cached_units
+        )
 
     @app.context_processor
     def inject_permissions():

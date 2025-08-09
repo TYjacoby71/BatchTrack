@@ -20,6 +20,13 @@ class Config:
         SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(instance_path, 'batchtrack.db')
     
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        'pool_size': 10,
+        'max_overflow': 20,
+        'pool_recycle': 3600,
+        'pool_pre_ping': True,
+        'echo': False  # Set to True only for debugging
+    }
     
     # Session Configuration
     PERMANENT_SESSION_LIFETIME = timedelta(minutes=30)
