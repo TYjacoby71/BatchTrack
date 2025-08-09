@@ -45,13 +45,13 @@ class SecurityUtils:
         except:
             return False
 
-def rate_limit(limit: int = 100, per: int = 3600):
+def rate_limit(limit: int = 100):
     """Rate limiting decorator"""
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
             client_ip = request.remote_addr
-            if not SecurityUtils.rate_limit_check(f"route_{func.__name__}_{client_ip}", limit, per):
+            if not SecurityUtils.rate_limit_check(f"route_{func.__name__}_{client_ip}", limit):
                 abort(429)  # Too Many Requests
             return func(*args, **kwargs)
         return wrapper

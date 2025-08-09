@@ -208,18 +208,18 @@ def _register_blueprints(app):
 
     # Register core blueprints
     core_registrations = [
-        (blueprints.get('auth_bp'), '/auth'),
-        (blueprints.get('recipes_bp'), '/recipes'),
-        (blueprints.get('inventory_bp'), '/inventory'),
-        (blueprints.get('batches_bp'), '/batches'),
-        (blueprints.get('finish_batch_bp'), '/batches'),
-        (blueprints.get('cancel_batch_bp'), '/batches'),
-        (blueprints.get('start_batch_bp'), '/start-batch'),
-        (blueprints.get('conversion_bp'), '/conversion'),
-        (blueprints.get('expiration_bp'), '/expiration'),
-        (blueprints.get('settings_bp'), '/settings'),
-        (blueprints.get('timers_bp'), '/timers'),
-        (blueprints.get('organization_bp'), '/organization'),
+        (blueprints['auth_bp'], '/auth'),
+        (blueprints['recipes_bp'], '/recipes'),
+        (blueprints['inventory_bp'], '/inventory'),
+        (blueprints['batches_bp'], '/batches'),
+        (blueprints['finish_batch_bp'], '/batches'),
+        (blueprints['cancel_batch_bp'], '/batches'),
+        (blueprints['start_batch_bp'], '/start-batch'),
+        (blueprints['conversion_bp'], '/conversion'),
+        (blueprints['expiration_bp'], '/expiration'),
+        (blueprints['settings_bp'], '/settings'),
+        (blueprints['timers_bp'], '/timers'),
+        (blueprints['organization_bp'], '/organization'),
     ]
 
     for blueprint, prefix in core_registrations:
@@ -228,7 +228,7 @@ def _register_blueprints(app):
 
     # Register standalone blueprints
     standalone_blueprints = [
-        'developer_bp', 'main_bp', 'fifo_bp', 'api_bp', 'admin_bp'
+        'developer_bp', 'app_routes_bp', 'fifo_bp', 'api_bp', 'admin_bp'
     ]
 
     for bp_name in standalone_blueprints:
@@ -250,12 +250,7 @@ def _register_blueprints(app):
     # Register waitlist with CSRF exemption
     if blueprints.get('waitlist_bp'):
         app.register_blueprint(blueprints['waitlist_bp'])
-        # Exempt both waitlist endpoints from CSRF
-        try:
-            csrf.exempt(app.view_functions.get('waitlist.join_waitlist'))
-            csrf.exempt(app.view_functions.get('waitlist.api_join_waitlist'))
-        except (KeyError, TypeError):
-            pass  # Endpoints may not exist yet
+        csrf.exempt(app.view_functions['waitlist.join_waitlist'])
 
     # Register product blueprints
     _register_product_blueprints(app, blueprints)
@@ -271,44 +266,60 @@ def _register_blueprints(app):
         app.register_blueprint(blueprints['legal_bp'])
 
 def _import_blueprints():
-    """Import all blueprints with proper error handling"""
+    """Import all blueprints with error handling"""
     blueprints = {}
 
-    # Import blueprints individually with error handling
-    blueprint_imports = [
-        ('app.blueprints.auth', 'auth_bp'),
-        ('app.blueprints.recipes', 'recipes_bp'), 
-        ('app.blueprints.inventory', 'inventory_bp'),
-        ('app.blueprints.batches', 'batches_bp'),
-        ('app.blueprints.batches.finish_batch', 'finish_batch_bp'),
-        ('app.blueprints.batches.cancel_batch', 'cancel_batch_bp'),
-        ('app.blueprints.batches.start_batch', 'start_batch_bp'),
-        ('app.blueprints.conversion', 'conversion_bp'),
-        ('app.blueprints.expiration', 'expiration_bp'),
-        ('app.blueprints.settings', 'settings_bp'),
-        ('app.blueprints.timers', 'timers_bp'),
-        ('app.blueprints.organization', 'organization_bp'),
-        ('app.blueprints.api', 'api_bp'),
-        ('app.blueprints.api.dashboard_routes', 'dashboard_api_bp'),
-        ('app.blueprints.admin', 'admin_bp'),
-        ('app.blueprints.developer', 'developer_bp'),
-        ('app.blueprints.billing', 'billing_bp'),
-        ('app.blueprints.products', 'products_bp'),
-        ('app.routes.app_routes', 'main_bp'),
-        ('app.routes.waitlist_routes', 'waitlist_bp'),
-        ('app.routes.legal_routes', 'legal_bp'),
-    ]
+    # Core blueprints
+    try:
+        from .blueprints.auth.routes import auth_bp
+        from .blueprints.inventory.routes import inventory_bp
+        from .blueprints.recipes.routes import recipes_bp
+        from .blueprints.batches.routes import batches_bp
+        from .blueprints.batches.finish_batch import finish_batch_bp
+        from .blueprints.batches.start_batch import start_batch_bp
+        from .blueprints.batches.cancel_batch import cancel_batch_bp
+        from .blueprints.api.routes import api_bp
+        from .blueprints.settings.routes import settings_bp
+        from .blueprints.expiration.routes import expiration_bp
+        from .blueprints.conversion.routes import conversion_bp
+        from .blueprints.organization.routes import organization_bp
+        from .blueprints.developer.routes import developer_bp
+        from .blueprints.timers.routes import timers_bp
+        from .routes.app_routes import app_routes_bp
+        from .blueprints.fifo import fifo_bp
+        from .blueprints.batches.add_extra import add_extra_bp
+        from .routes import bulk_stock_routes, fault_log_routes, tag_manager_routes
+        from .routes.waitlist_routes import waitlist_bp
+        from .blueprints.admin.admin_routes import admin_bp
+        from .routes.legal_routes import legal_bp
 
-    for module_path, blueprint_name in blueprint_imports:
-        try:
-            module = __import__(module_path, fromlist=[blueprint_name])
-            blueprint = getattr(module, blueprint_name)
-            blueprints[blueprint_name] = blueprint
-            logger.debug(f"Successfully imported {blueprint_name}")
-        except ImportError as e:
-            logger.warning(f"Failed to import {blueprint_name} from {module_path}: {e}")
-        except AttributeError as e:
-            logger.warning(f"Blueprint {blueprint_name} not found in {module_path}: {e}")
+        blueprints.update({
+            'auth_bp': auth_bp,
+            'inventory_bp': inventory_bp,
+            'recipes_bp': recipes_bp,
+            'batches_bp': batches_bp,
+            'finish_batch_bp': finish_batch_bp,
+            'start_batch_bp': start_batch_bp,
+            'cancel_batch_bp': cancel_batch_bp,
+            'api_bp': api_bp,
+            'settings_bp': settings_bp,
+            'expiration_bp': expiration_bp,
+            'conversion_bp': conversion_bp,
+            'organization_bp': organization_bp,
+            'developer_bp': developer_bp,
+            'timers_bp': timers_bp,
+            'app_routes_bp': app_routes_bp,
+            'fifo_bp': fifo_bp,
+            'add_extra_bp': add_extra_bp,
+            'bulk_stock_bp': bulk_stock_routes.bulk_stock_bp,
+            'fault_log_bp': fault_log_routes.fault_log_bp,
+            'tag_manager_bp': tag_manager_routes.tag_manager_bp,
+            'waitlist_bp': waitlist_bp,
+            'admin_bp': admin_bp,
+            'legal_bp': legal_bp,
+        })
+    except ImportError as e:
+        logger.warning(f"Failed to import core blueprints: {e}")
 
     return blueprints
 
