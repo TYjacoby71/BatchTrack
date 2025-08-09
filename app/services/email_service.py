@@ -201,7 +201,7 @@ class EmailService:
             return False
 
     @staticmethod
-    def send_waitlist_confirmation(email, name=None):
+    def send_waitlist_confirmation(email, first_name=None, last_name=None, name=None):
         """Send waitlist confirmation email"""
         if not EmailService.is_configured():
             logger.info(f"Email not configured - would send waitlist confirmation to {email}")
@@ -209,21 +209,29 @@ class EmailService:
 
         try:
             subject = "Welcome to the BatchTrack Waitlist!"
-            
+
+            # Build personalized greeting - prefer first_name over legacy name field
+            if first_name:
+                greeting = f"Hi {first_name},"
+            elif name:
+                greeting = f"Hi {name},"
+            else:
+                greeting = "Hi there,"
+
             html_body = f"""
             <h2>Thanks for joining our waitlist!</h2>
-            <p>Hi {name or 'there'},</p>
+            <p>{greeting}</p>
             <p>Thank you for your interest in BatchTrack! You're now on our exclusive waitlist.</p>
-            
+
             <h3>What's Next?</h3>
             <ul>
                 <li>We'll notify you as soon as BatchTrack is ready for beta testing</li>
                 <li>You'll get early access to special pricing and lifetime deals</li>
                 <li>We'll keep you updated on our development progress</li>
             </ul>
-            
+
             <p>In the meantime, feel free to reach out if you have any questions about BatchTrack.</p>
-            
+
             <br>
             <p>Thanks again for your interest!<br>The BatchTrack Team</p>
             """
@@ -231,7 +239,7 @@ class EmailService:
             text_body = f"""
             Thanks for joining our waitlist!
 
-            Hi {name or 'there'},
+            {greeting}
 
             Thank you for your interest in BatchTrack! You're now on our exclusive waitlist.
 

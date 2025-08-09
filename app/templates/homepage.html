@@ -584,9 +584,15 @@
                             <label for="waitlistEmail" class="form-label">Email Address</label>
                             <input type="email" class="form-control" id="waitlistEmail" name="email" required placeholder="your@email.com">
                         </div>
-                        <div class="mb-3">
-                            <label for="waitlistName" class="form-label">Name (Optional)</label>
-                            <input type="text" class="form-control" id="waitlistName" name="name" placeholder="Your name">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="waitlistFirstName" class="form-label">First Name (Optional)</label>
+                                <input type="text" class="form-control" id="waitlistFirstName" name="first_name" placeholder="First name">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="waitlistLastName" class="form-label">Last Name (Optional)</label>
+                                <input type="text" class="form-control" id="waitlistLastName" name="last_name" placeholder="Last name">
+                            </div>
                         </div>
                         <div class="mb-3">
                             <label for="businessType" class="form-label">Business Type (Optional)</label>
@@ -664,7 +670,8 @@
                     },
                     body: JSON.stringify({
                         email: formData.get('email'),
-                        name: formData.get('name'),
+                        first_name: formData.get('first_name'),
+                        last_name: formData.get('last_name'),
                         business_type: formData.get('business_type')
                     })
                 });
