@@ -1,4 +1,3 @@
-
 // Utility functions for BatchTrack
 
 // Safe querySelector that prevents empty selector errors

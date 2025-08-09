@@ -1,4 +1,3 @@
-
 <!-- Unified Alert System -->
 {% if alert_data.alerts %}
 <div class="alert-container mb-4" id="alertContainer">
@@ -48,12 +47,12 @@ let dismissedAlertsForSession = [];
 
 function dismissAlert(alertType, alertElement) {
     if (!alertType || !alertElement) return;
-    
+
     // Add to session dismissed list
     if (!dismissedAlertsForSession.includes(alertType)) {
         dismissedAlertsForSession.push(alertType);
     }
-    
+
     // Hide the alert with animation
     alertElement.classList.remove('show');
     setTimeout(() => {
@@ -61,13 +60,13 @@ function dismissAlert(alertType, alertElement) {
             alertElement.remove();
         }
     }, 150);
-    
+
     // Send dismiss request to server
     fetch('/api/dismiss-alert', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRFToken': document.querySelector('meta[name=csrf-token]')?.getAttribute('content') || ''
+            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
         },
         body: JSON.stringify({ alert_type: alertType })
     }).catch(error => {
@@ -81,7 +80,7 @@ async function refreshDashboardAlerts() {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': document.querySelector('meta[name=csrf-token]')?.getAttribute('content') || ''
+                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
             }
         });
         if (response.ok) {
@@ -118,7 +117,7 @@ function updateAlertContainer(alertData) {
 function addAlertToContainer(alert, container) {
     const priorityClass = alert.priority === 'CRITICAL' ? 'danger' : 
                          alert.priority === 'HIGH' ? 'warning' : 'info';
-    
+
     const alertHtml = `
         <div class="alert alert-${priorityClass} alert-dismissible fade show" 
              data-alert-type="${alert.type}"
@@ -136,7 +135,7 @@ function addAlertToContainer(alert, container) {
             </div>
         </div>
     `;
-    
+
     container.insertAdjacentHTML('beforeend', alertHtml);
 }
 

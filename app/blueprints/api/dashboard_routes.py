@@ -1,7 +1,7 @@
 
 from flask import Blueprint, jsonify
 from flask_login import login_required, current_user
-from app.services.dashboard_alerts import DashboardAlertService
+from app.services.alert_service import AlertService
 from app.utils.permissions import require_permission
 
 dashboard_api_bp = Blueprint('dashboard_api', __name__, url_prefix='/api')
@@ -17,7 +17,8 @@ def get_dashboard_alerts():
         dismissed_alerts = session.get('dismissed_alerts', [])
         
         # Get alerts from service
-        alert_data = DashboardAlertService.get_dashboard_alerts(dismissed_alerts=dismissed_alerts)
+        alert_service = AlertService()
+        alert_data = alert_service.get_dashboard_alerts(current_user.organization_id)
         
         return jsonify({
             'success': True,

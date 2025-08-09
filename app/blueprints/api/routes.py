@@ -44,6 +44,23 @@ def dismiss_alert():
 @api_bp.route('/dashboard-alerts')
 @login_required
 def get_dashboard_alerts():
+    """Get dashboard alerts for current user's organization"""
+    try:
+        alert_service = AlertService()
+        alert_data = alert_service.get_dashboard_alerts(current_user.organization_id)
+        
+        return jsonify({
+            'success': True,
+            'alerts': alert_data,
+            'total_alerts': len(alert_data.get('expiration', [])) + len(alert_data.get('inventory', [])) + len(alert_data.get('batch', [])) + len(alert_data.get('product', []))
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@api_bp.route('/dashboard-alerts-old')
+@login_required
+def get_dashboard_alerts():
     """Get dashboard alerts for the current user"""
     from ...services.dashboard_alerts import DashboardAlertService
     from flask import session

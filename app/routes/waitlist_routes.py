@@ -10,67 +10,75 @@ logger = logging.getLogger(__name__)
 
 waitlist_bp = Blueprint('waitlist', __name__)
 
-@waitlist_bp.route('/api/waitlist', methods=['POST'])
-def join_waitlist():
-    """Handle waitlist form submissions - save to JSON only"""
+# Helper function to load waitlist data
+def load_waitlist():
+    waitlist_file = 'data/waitlist.json'
+    os.makedirs('data', exist_ok=True)
+    if not os.path.exists(waitlist_file):
+        return {'emails': [], 'count': 0}
     try:
-        # Get JSON data from request
-        data = request.get_json()
+        with open(waitlist_file, 'r') as f:
+            content = f.read()
+            if not content:
+                return {'emails': [], 'count': 0}
+            data = json.loads(content)
+            # Ensure expected keys exist
+            if 'emails' not in data:
+                data['emails'] = []
+            if 'count' not in data:
+                data['count'] = len(data['emails'])
+            return data
+    except (json.JSONDecodeError, IOError) as e:
+        logger.error(f"Error loading waitlist file {waitlist_file}: {e}")
+        return {'emails': [], 'count': 0}
 
-        if not data or not data.get('email'):
-            logger.warning("Waitlist join attempt with missing email.")
-            return jsonify({'error': 'Email is required'}), 400
+# Helper function to save waitlist data
+def save_waitlist(data):
+    waitlist_file = 'data/waitlist.json'
+    try:
+        with open(waitlist_file, 'w') as f:
+            json.dump(data, f, indent=2)
+        logger.info(f"Waitlist data saved. Current count: {data.get('count', 0)}")
+    except IOError as e:
+        logger.error(f"Error saving waitlist file {waitlist_file}: {e}")
 
-        # Create waitlist entry
-        waitlist_entry = {
-            'email': data.get('email'),
-            'first_name': data.get('first_name', ''),
-            'last_name': data.get('last_name', ''),
-            'business_type': data.get('business_type', ''),
-            'timestamp': datetime.utcnow().isoformat(),
-            'source': 'homepage'
-        }
+@waitlist_bp.route('/join', methods=['POST'])
+def join_waitlist():
+    try:
+        # Handle both JSON and form data
+        if request.is_json:
+            data = request.get_json()
+        else:
+            data = request.form.to_dict()
 
-        # Save to JSON file (persistent storage)
-        waitlist_file = 'data/waitlist.json'
+        if not data or 'email' not in data:
+            return jsonify({'success': False, 'error': 'Email is required'}), 400
 
-        # Create data directory if it doesn't exist
-        os.makedirs('data', exist_ok=True)
+        email = data['email'].strip().lower()
 
-        waitlist = []
+        # Basic email validation
+        if not email or '@' not in email:
+            return jsonify({'success': False, 'error': 'Valid email is required'}), 400
 
         # Load existing waitlist
-        if os.path.exists(waitlist_file):
-            try:
-                with open(waitlist_file, 'r') as f:
-                    # Handle empty file case
-                    content = f.read()
-                    if not content:
-                        waitlist = []
-                    else:
-                        waitlist = json.loads(content)
-            except (json.JSONDecodeError, IOError) as e:
-                logger.error(f"Error reading waitlist file {waitlist_file}: {e}")
-                waitlist = []
+        waitlist_data = load_waitlist()
 
-        # Check if email already exists
-        if any(entry.get('email') == waitlist_entry['email'] for entry in waitlist):
-            logger.info(f"Email {waitlist_entry['email']} already on waitlist.")
-            return jsonify({'message': 'Email already on waitlist'}), 200
+        # Check if already exists
+        if email in waitlist_data['emails']:
+            return jsonify({'success': True, 'message': 'Already on waitlist'}), 200
 
-        # Add new entry
-        waitlist.append(waitlist_entry)
+        # Add to waitlist
+        waitlist_data['emails'].append(email)
+        waitlist_data['count'] = len(waitlist_data['emails'])
 
         # Save updated waitlist
-        try:
-            with open(waitlist_file, 'w') as f:
-                json.dump(waitlist, f, indent=2)
-            logger.info(f"Successfully added {waitlist_entry['email']} to waitlist.")
-            return jsonify({'message': 'Successfully joined waitlist'}), 200
-        except IOError as e:
-            logger.error(f"Error writing to waitlist file {waitlist_file}: {e}")
-            return jsonify({'error': 'Internal server error: could not save to waitlist'}), 500
+        save_waitlist(waitlist_data)
+
+        return jsonify({
+            'success': True,
+            'message': 'Successfully added to waitlist',
+            'position': len(waitlist_data['emails'])
+        })
 
     except Exception as e:
-        logger.error(f"Waitlist join error: {e}")
-        return jsonify({'error': 'Error joining waitlist'}), 500
+        return jsonify({'success': False, 'error': str(e)}), 500
