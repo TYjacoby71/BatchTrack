@@ -1,18 +1,5 @@
-// Utility functions for BatchTrack
 
-// Safe querySelector that prevents empty selector errors
-function safeQuerySelector(selector) {
-    if (!selector || selector === '#' || selector === '.') {
-        console.warn('Invalid selector:', selector);
-        return null;
-    }
-    try {
-        return document.querySelector(selector);
-    } catch (e) {
-        console.warn('Invalid selector:', selector, e);
-        return null;
-    }
-}
+// Utility functions for BatchTrack
 
 function getCSRFToken() {
   return document.querySelector('meta[name="csrf-token"]')?.content;

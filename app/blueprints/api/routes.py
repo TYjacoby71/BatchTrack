@@ -41,7 +41,30 @@ def dismiss_alert():
 
     return jsonify({'success': True})
 
+@api_bp.route('/dashboard-alerts')
+@login_required
+def get_dashboard_alerts():
+    """Get dashboard alerts for the current user"""
+    from ...services.dashboard_alerts import DashboardAlertService
+    from flask import session
 
+    dismissed_alerts = session.get('dismissed_alerts', [])
+    alert_data = DashboardAlertService.get_dashboard_alerts(dismissed_alerts=dismissed_alerts)
+
+    return jsonify(alert_data)
+def dashboard_alerts():
+    """Get dashboard alerts with session-based dismissals"""
+    from ...services.dashboard_alerts import DashboardAlertService
+
+    # Get dismissed alerts from session
+    dismissed_alerts = session.get('dismissed_alerts', [])
+
+    # Get alerts with dismissed ones filtered out
+    alert_data = DashboardAlertService.get_dashboard_alerts(
+        dismissed_alerts=dismissed_alerts
+    )
+
+    return jsonify(alert_data)
 
 # Import sub-blueprints to register their routes
 from .stock_routes import stock_api_bp
@@ -49,7 +72,6 @@ from .ingredient_routes import ingredient_api_bp
 from .container_routes import container_api_bp
 from .fifo_routes import fifo_api_bp
 from .reservation_routes import reservation_api_bp
-from .dashboard_routes import dashboard_api_bp
 
 # Register sub-blueprints
 api_bp.register_blueprint(stock_api_bp)
@@ -57,4 +79,3 @@ api_bp.register_blueprint(ingredient_api_bp)
 api_bp.register_blueprint(container_api_bp)
 api_bp.register_blueprint(fifo_api_bp)
 api_bp.register_blueprint(reservation_api_bp)
-api_bp.register_blueprint(dashboard_api_bp)
