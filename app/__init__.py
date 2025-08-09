@@ -185,7 +185,7 @@ def create_app():
     app.register_blueprint(waitlist_bp)
     
     # Exempt waitlist API from CSRF protection
-    csrf.exempt(waitlist_bp.join_waitlist)
+    csrf.exempt(app.view_functions['waitlist.join_waitlist'])
     
     # Register billing blueprint
     try:
