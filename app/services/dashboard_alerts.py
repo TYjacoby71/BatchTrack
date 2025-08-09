@@ -78,7 +78,7 @@ class DashboardAlertService(CacheableService):
                 'type': 'expiration',
                 'priority': severity,
                 'title': f'Ingredient Expiring Soon',
-                'message': f"{item.ingredient.name} expires in {days_until} days",
+                'message': f"{item.name} expires in {days_until} days",
                 'action_url': f'/inventory/view/{item.id}',
                 'action_text': 'View Details',
                 'dismissible': True,
@@ -93,27 +93,27 @@ class DashboardAlertService(CacheableService):
         """Get low inventory alerts"""
         low_stock = InventoryItem.query.filter(
             InventoryItem.organization_id == organization_id,
-            InventoryItem.quantity <= InventoryItem.minimum_stock_level,
+            InventoryItem.quantity <= InventoryItem.low_stock_threshold,
             InventoryItem.quantity > 0
         ).all()
 
         alerts = []
         for item in low_stock:
-            shortage_pct = (item.quantity / item.minimum_stock_level) * 100
+            shortage_pct = (item.quantity / item.low_stock_threshold) * 100
             severity = 'HIGH' if shortage_pct <= 25 else 'MEDIUM'
 
             alerts.append({
                 'type': 'low_stock',
                 'priority': severity,
                 'title': 'Low Stock Alert',
-                'message': f"{item.ingredient.name} is running low ({item.quantity} {item.unit.symbol} remaining)",
+                'message': f"{item.name} is running low ({item.quantity} {item.unit} remaining)",
                 'action_url': f'/inventory/view/{item.id}',
                 'action_text': 'Restock',
                 'dismissible': True,
                 'timestamp': datetime.utcnow(),
                 'item_id': item.id,
                 'current_quantity': item.quantity,
-                'minimum_level': item.minimum_stock_level
+                'minimum_level': item.low_stock_threshold
             })
 
         return alerts
