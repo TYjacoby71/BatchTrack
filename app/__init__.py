@@ -1,4 +1,3 @@
-
 from flask import Flask, redirect, url_for, render_template, g, session
 from flask_login import current_user
 import os
@@ -9,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 def create_app():
     app = Flask(__name__, static_folder='static', static_url_path='/static')
-    
+
     # Load configuration
     app.config.from_object('app.config.Config')
     app.config['UPLOAD_FOLDER'] = 'static/product_images'
@@ -21,26 +20,26 @@ def create_app():
 
     # Initialize extensions
     _init_extensions(app)
-    
+
     # Configure Flask-Login
     _configure_login_manager(app)
-    
+
     # Register middleware
     _register_middleware(app)
-    
+
     # Register blueprints
     _register_blueprints(app)
-    
+
     # Register template context and filters
     _register_template_context(app)
-    
+
     # Register CLI commands
     from .management import register_commands
     register_commands(app)
-    
+
     # Add routes
     _add_core_routes(app)
-    
+
     # Setup logging
     _setup_logging(app)
 
@@ -59,7 +58,7 @@ def _configure_production_security(app):
 def _init_extensions(app):
     """Initialize Flask extensions"""
     from .extensions import db, migrate, login_manager, mail, csrf
-    
+
     db.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
@@ -70,7 +69,7 @@ def _configure_login_manager(app):
     """Configure Flask-Login settings"""
     from .extensions import login_manager
     from .models import User
-    
+
     login_manager.login_view = 'auth.login'
     login_manager.login_message = 'Please log in to access this page.'
     login_manager.session_protection = "strong"
@@ -90,18 +89,27 @@ def _configure_login_manager(app):
 
 def _register_middleware(app):
     """Register application middleware"""
-    
+
     @app.before_request
     def enforce_permissions_and_scoping():
         from flask import request, abort, jsonify, session, redirect, url_for, g, flash
         from flask_login import current_user
         from app.models import Organization
 
-        # Skip middleware for static files, auth routes, and webhooks
-        skip_paths = ['/static/', '/auth/login', '/auth/logout', '/auth/signup', 
-                     '/billing/webhooks/', '/', '/homepage', '/api/waitlist']
+        # Optimized path checking with early returns
+        path = request.path
         
-        if any(request.path.startswith(path) for path in skip_paths):
+        # Fast static file check
+        if path.startswith('/static/'):
+            return None
+            
+        # Auth routes (most common)
+        if path.startswith('/auth/'):
+            if path in ['/auth/login', '/auth/logout', '/auth/signup']:
+                return None
+                
+        # Other skip paths
+        if path in ['/', '/homepage'] or path.startswith('/billing/webhooks/') or path.startswith('/api/waitlist'):
             return None
 
         # Require authentication
@@ -114,7 +122,7 @@ def _register_middleware(app):
         if current_user.user_type == 'developer':
             if request.path.startswith('/developer/') or request.path.startswith('/auth/'):
                 return None
-                
+
             selected_org_id = session.get('dev_selected_org_id')
             if not selected_org_id:
                 if request.is_json:
@@ -132,7 +140,7 @@ def _register_middleware(app):
             g.effective_org_id = selected_org_id
             g.effective_org = selected_org
             g.is_developer_masquerade = True
-            
+
         elif not current_user.organization_id:
             if request.is_json:
                 return jsonify({'error': 'No organization context'}), 403
@@ -187,10 +195,10 @@ def _register_middleware(app):
 def _register_blueprints(app):
     """Register all application blueprints"""
     from .extensions import csrf
-    
+
     # Import blueprints
     blueprints = _import_blueprints()
-    
+
     # Register core blueprints
     core_registrations = [
         (blueprints['auth_bp'], '/auth'),
@@ -206,7 +214,7 @@ def _register_blueprints(app):
         (blueprints['timers_bp'], '/timers'),
         (blueprints['organization_bp'], '/organization'),
     ]
-    
+
     for blueprint, prefix in core_registrations:
         if blueprint:
             app.register_blueprint(blueprint, url_prefix=prefix)
@@ -215,7 +223,7 @@ def _register_blueprints(app):
     standalone_blueprints = [
         'developer_bp', 'app_routes_bp', 'fifo_bp', 'api_bp', 'admin_bp'
     ]
-    
+
     for bp_name in standalone_blueprints:
         if blueprints.get(bp_name):
             app.register_blueprint(blueprints[bp_name])
@@ -227,7 +235,7 @@ def _register_blueprints(app):
         ('fault_log_bp', '/fault_log'),
         ('tag_manager_bp', '/tag_manager'),
     ]
-    
+
     for bp_name, prefix in prefixed_blueprints:
         if blueprints.get(bp_name):
             app.register_blueprint(blueprints[bp_name], url_prefix=prefix)
@@ -239,17 +247,21 @@ def _register_blueprints(app):
 
     # Register product blueprints
     _register_product_blueprints(app, blueprints)
-    
+
     # Register API blueprints
     _register_api_blueprints(app, blueprints)
-    
+
     # Register billing blueprint
     _register_billing_blueprint(app, blueprints)
+
+    # Register legal blueprint
+    if blueprints.get('legal_bp'):
+        app.register_blueprint(blueprints['legal_bp'])
 
 def _import_blueprints():
     """Import all blueprints with error handling"""
     blueprints = {}
-    
+
     # Core blueprints
     try:
         from .blueprints.auth.routes import auth_bp
@@ -272,7 +284,8 @@ def _import_blueprints():
         from .routes import bulk_stock_routes, fault_log_routes, tag_manager_routes
         from .routes.waitlist_routes import waitlist_bp
         from .blueprints.admin.admin_routes import admin_bp
-        
+        from .routes.legal_routes import legal_bp
+
         blueprints.update({
             'auth_bp': auth_bp,
             'inventory_bp': inventory_bp,
@@ -296,10 +309,11 @@ def _import_blueprints():
             'tag_manager_bp': tag_manager_routes.tag_manager_bp,
             'waitlist_bp': waitlist_bp,
             'admin_bp': admin_bp,
+            'legal_bp': legal_bp,
         })
     except ImportError as e:
         logger.warning(f"Failed to import core blueprints: {e}")
-    
+
     return blueprints
 
 def _register_product_blueprints(app, blueprints):
@@ -312,7 +326,7 @@ def _register_product_blueprints(app, blueprints):
         from .blueprints.products.sku import sku_bp
         from .blueprints.products.reservation_routes import reservation_bp
         from .blueprints.api.reservation_routes import reservation_api_bp
-        
+
         app.register_blueprint(products_bp, url_prefix='/products')
         app.register_blueprint(products_api_bp)
         app.register_blueprint(product_inventory_bp, url_prefix='/products')
@@ -331,22 +345,22 @@ def _register_api_blueprints(app, blueprints):
         from .blueprints.api.container_routes import container_api_bp
         from .blueprints.api.dashboard_routes import dashboard_api_bp
         from .blueprints.api.unit_routes import unit_api_bp
-        
+
         api_blueprints = [
             stock_api_bp, ingredient_api_bp, container_api_bp, 
             dashboard_api_bp, unit_api_bp
         ]
-        
+
         for bp in api_blueprints:
             app.register_blueprint(bp)
-            
+
         # Initialize API routes
         try:
             from .blueprints.api import init_api
             init_api(app)
         except ImportError:
             pass
-            
+
     except ImportError:
         logger.warning("Could not register API blueprints")
 
@@ -361,22 +375,29 @@ def _register_billing_blueprint(app, blueprints):
 
 def _register_template_context(app):
     """Register template context processors and filters"""
-    
+
     # Import models once
     from .models import Unit, IngredientCategory
-    
+
     @app.context_processor  
     def inject_units():
         from .utils.unit_utils import get_global_unit_list
-        try:
-            units = get_global_unit_list()
-            if not hasattr(g, 'cached_categories'):
-                g.cached_categories = IngredientCategory.query.order_by(IngredientCategory.name).all()
-            categories = g.cached_categories
-        except:
-            units = []
-            categories = []
-        return dict(units=units, categories=categories, global_units=units)
+        from flask import current_app
+        
+        # Cache at app level, not request level
+        if not hasattr(current_app, '_cached_units'):
+            try:
+                current_app._cached_units = get_global_unit_list()
+                current_app._cached_categories = IngredientCategory.query.order_by(IngredientCategory.name).all()
+            except:
+                current_app._cached_units = []
+                current_app._cached_categories = []
+        
+        return dict(
+            units=current_app._cached_units, 
+            categories=current_app._cached_categories, 
+            global_units=current_app._cached_units
+        )
 
     @app.context_processor
     def inject_permissions():
@@ -388,16 +409,16 @@ def _register_template_context(app):
         def get_reservation_summary(inventory_item_id):
             if not inventory_item_id:
                 return {'available': 0.0, 'reserved': 0.0, 'total': 0.0, 'reservations': []}
-                
+
             cache_key = f'reservation_summary_{inventory_item_id}'
             if hasattr(g, cache_key):
                 return getattr(g, cache_key)
-                
+
             sku = ProductSKU.query.filter_by(inventory_item_id=inventory_item_id).first()
             result = ReservationService.get_reservation_summary_for_sku(sku) if sku else {
                 'available': 0.0, 'reserved': 0.0, 'total': 0.0, 'reservations': []
             }
-            
+
             setattr(g, cache_key, result)
             return result
 
@@ -412,7 +433,7 @@ def _register_template_context(app):
     @app.context_processor
     def inject_organization_helpers():
         from .models import Organization
-        
+
         def get_organization_by_id(org_id):
             if org_id:
                 try:
@@ -420,7 +441,7 @@ def _register_template_context(app):
                 except:
                     return Organization.query.get(org_id)
             return None
-            
+
         def get_current_organization():
             if current_user.is_authenticated:
                 if current_user.user_type == 'developer':
@@ -429,7 +450,7 @@ def _register_template_context(app):
                     org_id = current_user.organization_id
                 return get_organization_by_id(org_id) if org_id else None
             return None
-            
+
         return dict(
             get_organization_by_id=get_organization_by_id,
             get_current_organization=get_current_organization
@@ -446,7 +467,7 @@ def _register_template_context(app):
 
     # Register template globals
     _register_template_globals(app)
-    
+
     # Register filters
     _register_template_filters(app)
 
@@ -506,10 +527,10 @@ def _register_template_filters(app):
         product_variant_name, ingredient_cost_currency, safe_float,
         register_filters
     )
-    
+
     # Register product filters
     register_filters(app)
-    
+
     # Register custom filters
     app.jinja_env.filters.update({
         'product_variant_name': product_variant_name,

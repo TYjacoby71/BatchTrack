@@ -155,3 +155,13 @@ def register_filters(app):
         tiers_config = load_tiers_config()
         tier_data = tiers_config.get(tier_key, {})
         return tier_data.get('features', [])
+
+    @app.template_filter('user_timezone')
+    def user_timezone_filter(datetime_obj, format_string='%Y-%m-%d %H:%M:%S'):
+        """Convert UTC datetime to user's timezone for display"""
+        if datetime_obj is None:
+            return ''
+
+        # Convert UTC to user's timezone
+        user_time = TimezoneUtils.to_user_timezone(datetime_obj)
+        return user_time.strftime(format_string)
