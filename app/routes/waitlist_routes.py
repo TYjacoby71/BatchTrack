@@ -1,5 +1,6 @@
 
 from flask import Blueprint, request, jsonify
+from flask_wtf.csrf import exempt
 import json
 import os
 from datetime import datetime
@@ -8,6 +9,7 @@ from ..services.email_service import EmailService
 waitlist_bp = Blueprint('waitlist', __name__)
 
 @waitlist_bp.route('/api/waitlist', methods=['POST'])
+@exempt
 def join_waitlist():
     """Handle waitlist form submissions"""
     try:
