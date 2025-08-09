@@ -5,8 +5,6 @@ from datetime import datetime, timedelta
 from app.services.conversion_wrapper import safe_convert
 from app.services.unit_conversion import ConversionEngine
 from app.blueprints.fifo.services import FIFOService
-from .base_service import BaseService
-
 
 def validate_inventory_fifo_sync(item_id, item_type=None):
     """
@@ -52,7 +50,7 @@ def validate_inventory_fifo_sync(item_id, item_type=None):
         current_qty = item.quantity
         item_name = item.name
 
-        # If there are no FIFO entries but there is inventory, allow it for now
+        # If there are no FIFO entries but there is inventory, allow it for now 
         # This handles cases where ProductSKUs exist but haven't had FIFO entries created yet
         if fifo_total == 0 and current_qty > 0:
             print(f"WARNING: Product SKU {item_name} has inventory ({current_qty}) but no FIFO entries - allowing operation to proceed")
@@ -95,8 +93,7 @@ def validate_inventory_fifo_sync(item_id, item_type=None):
 
     return True, "", current_qty, fifo_total
 
-
-def process_inventory_adjustment(item_id, quantity, change_type, unit=None, notes=None,
+def process_inventory_adjustment(item_id, quantity, change_type, unit=None, notes=None, 
                                  created_by=None, batch_id=None, cost_override=None,
                                  custom_expiration_date=None, custom_shelf_life_days=None,
                                  item_type='ingredient', customer=None, sale_price=None, order_id=None):
@@ -228,8 +225,8 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
 
             # Use FIFO service for all deductions - it routes to the correct history table
             FIFOService.create_deduction_history(
-                item_id, deduction_plan, change_type, notes,
-                batch_id=batch_id, created_by=created_by,
+                item_id, deduction_plan, change_type, notes, 
+                batch_id=batch_id, created_by=created_by, 
                 customer=customer, sale_price=sale_price, order_id=order_id
             )
         elif qty_change > 0:
@@ -327,7 +324,6 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
             # Log rollback error but don't mask original error
             print(f"WARNING: Failed to rollback transaction: {rollback_error}")
         raise e
-
 
 def handle_recount_adjustment(item_id, target_quantity, notes=None, created_by=None, item_type='ingredient'):
     """
@@ -470,6 +466,14 @@ def handle_recount_adjustment(item_id, target_quantity, notes=None, created_by=N
         # Update inventory quantity to match target
         item.quantity = target_quantity
 
+        # Don't create any summary entries - all recount events are handled by:
+        # 1. FIFOService.create_deduction_history() for deductions (already creates proper FIFO entries)
+        # 2. FIFOService.add_fifo_entry() for new lots (already creates proper FIFO entries)
+        # 3. Direct FIFO entry updates for filling existing lots
+        #
+        # No additional summary entries are needed as all actions are properly logged
+        # in their respective FIFO history tables with appropriate FIFO codes
+
         db.session.commit()
 
         # Validate final state
@@ -487,8 +491,3 @@ def handle_recount_adjustment(item_id, target_quantity, notes=None, created_by=N
         db.session.rollback()
         print(f"RECOUNT ERROR: {str(e)}")
         raise e
-
-
-class InventoryAdjustmentService(BaseService):
-    def __init__(self):
-        super().__init__()

@@ -43,13 +43,6 @@ def create_app():
     # Setup logging
     _setup_logging(app)
 
-    # Register error handlers
-    register_error_handlers(app)
-
-    # Initialize performance monitoring
-    from app.utils.performance_monitor import PerformanceMonitor
-    PerformanceMonitor.init_app(app)
-
     return app
 
 def _configure_production_security(app):
@@ -105,16 +98,16 @@ def _register_middleware(app):
 
         # Optimized path checking with early returns
         path = request.path
-
+        
         # Fast static file check
         if path.startswith('/static/'):
             return None
-
+            
         # Auth routes (most common)
         if path.startswith('/auth/'):
             if path in ['/auth/login', '/auth/logout', '/auth/signup']:
                 return None
-
+                
         # Other skip paths
         if path in ['/', '/homepage'] or path.startswith('/billing/webhooks/') or path.startswith('/api/waitlist'):
             return None
@@ -202,18 +195,50 @@ def _register_middleware(app):
 def _register_blueprints(app):
     """Register all application blueprints"""
     from .extensions import csrf
-    from flask import current_app # Import current_app here
 
-    # Import and register blueprints
+    # Import blueprints
     blueprints = _import_blueprints()
 
-    for blueprint_name, blueprint in blueprints.items():
-        try:
-            app.register_blueprint(blueprint)
-            current_app.logger.debug(f"Blueprint '{blueprint_name}' registered successfully")
-        except Exception as e:
-            current_app.logger.error(f"Failed to register blueprint '{blueprint_name}': {str(e)}")
-            raise
+    # Register core blueprints
+    core_registrations = [
+        (blueprints['auth_bp'], '/auth'),
+        (blueprints['recipes_bp'], '/recipes'),
+        (blueprints['inventory_bp'], '/inventory'),
+        (blueprints['batches_bp'], '/batches'),
+        (blueprints['finish_batch_bp'], '/batches'),
+        (blueprints['cancel_batch_bp'], '/batches'),
+        (blueprints['start_batch_bp'], '/start-batch'),
+        (blueprints['conversion_bp'], '/conversion'),
+        (blueprints['expiration_bp'], '/expiration'),
+        (blueprints['settings_bp'], '/settings'),
+        (blueprints['timers_bp'], '/timers'),
+        (blueprints['organization_bp'], '/organization'),
+    ]
+
+    for blueprint, prefix in core_registrations:
+        if blueprint:
+            app.register_blueprint(blueprint, url_prefix=prefix)
+
+    # Register standalone blueprints
+    standalone_blueprints = [
+        'developer_bp', 'app_routes_bp', 'fifo_bp', 'api_bp', 'admin_bp'
+    ]
+
+    for bp_name in standalone_blueprints:
+        if blueprints.get(bp_name):
+            app.register_blueprint(blueprints[bp_name])
+
+    # Register prefixed blueprints
+    prefixed_blueprints = [
+        ('add_extra_bp', '/add-extra'),
+        ('bulk_stock_bp', '/bulk_stock'),
+        ('fault_log_bp', '/fault_log'),
+        ('tag_manager_bp', '/tag_manager'),
+    ]
+
+    for bp_name, prefix in prefixed_blueprints:
+        if blueprints.get(bp_name):
+            app.register_blueprint(blueprints[bp_name], url_prefix=prefix)
 
     # Register waitlist with CSRF exemption
     if blueprints.get('waitlist_bp'):
@@ -289,14 +314,6 @@ def _import_blueprints():
     except ImportError as e:
         logger.warning(f"Failed to import core blueprints: {e}")
 
-    # Dashboard blueprint import
-    try:
-        from .blueprints.dashboard.routes import dashboard_bp
-        blueprints['dashboard'] = dashboard_bp
-    except ImportError:
-        logger.warning("Could not import dashboard blueprint")
-
-
     return blueprints
 
 def _register_product_blueprints(app, blueprints):
@@ -366,7 +383,7 @@ def _register_template_context(app):
     def inject_units():
         from .utils.unit_utils import get_global_unit_list
         from flask import current_app
-
+        
         # Cache at app level, not request level
         if not hasattr(current_app, '_cached_units'):
             try:
@@ -375,7 +392,7 @@ def _register_template_context(app):
             except:
                 current_app._cached_units = []
                 current_app._cached_categories = []
-
+        
         return dict(
             units=current_app._cached_units, 
             categories=current_app._cached_categories, 
@@ -388,7 +405,6 @@ def _register_template_context(app):
         from .services.reservation_service import ReservationService
         from .utils.unit_utils import get_global_unit_list
         from .models import ProductSKU
-        from app.services.alert_service import AlertService
 
         def get_reservation_summary(inventory_item_id):
             if not inventory_item_id:
@@ -406,20 +422,12 @@ def _register_template_context(app):
             setattr(g, cache_key, result)
             return result
 
-        def get_dashboard_alerts_context():
-            if current_user.is_authenticated and current_user.organization_id:
-                alert_service = AlertService()
-                alerts = alert_service.get_dashboard_alerts(current_user.organization_id)
-                return alerts
-            return []
-
         return dict(
             has_permission=has_permission,
             has_role=has_role,
             is_organization_owner=is_organization_owner,
             get_reservation_summary=get_reservation_summary,
-            get_global_unit_list=get_global_unit_list,
-            get_dashboard_alerts=get_dashboard_alerts_context
+            get_global_unit_list=get_global_unit_list
         )
 
     @app.context_processor
@@ -570,49 +578,3 @@ def _setup_logging(app):
 
     # Import models to ensure they're registered
     from . import models
-
-def register_error_handlers(app):
-    """Register application error handlers"""
-    from flask import render_template, jsonify, request, redirect, url_for, flash
-    from .utils.api_responses import APIResponse
-
-    @app.errorhandler(404)
-    def page_not_found(error):
-        if request.is_json:
-            return APIResponse.error("Resource not found.", status_code=404)
-        return render_template('errors/404.html'), 404
-
-    @app.errorhandler(403)
-    def forbidden(error):
-        if request.is_json:
-            return APIResponse.error("Access denied.", status_code=403)
-        return render_template('errors/403.html'), 403
-
-    @app.errorhandler(500)
-    def internal_server_error(error):
-        logger.exception("An internal server error occurred.")
-        if request.is_json:
-            return APIResponse.error("An unexpected error occurred.", status_code=500)
-        return render_template('errors/500.html'), 500
-
-    @app.errorhandler(401)
-    def unauthorized(error):
-        if request.is_json:
-            return APIResponse.error("Authentication required.", status_code=401)
-        flash('Please log in to access this page.', 'warning')
-        return redirect(url_for('auth.login'))
-
-    @app.errorhandler(418) # I'm a teapot
-    def im_a_teapot(error):
-        if request.is_json:
-            return APIResponse.error("I'm a teapot.", status_code=418)
-        return render_template('errors/418.html'), 418
-
-    # Catch specific exceptions from extensions if needed
-    # Example: from sqlalchemy.exc import SQLAlchemyError
-    # @app.errorhandler(SQLAlchemyError)
-    # def handle_sqlalchemy_error(error):
-    #     logger.exception("Database error occurred.")
-    #     if request.is_json:
-    #         return APIResponse.error("Database error.", status_code=503)
-    #     return render_template('errors/500.html', error_message="Database operation failed."), 503
