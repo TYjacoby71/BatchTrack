@@ -1,4 +1,3 @@
-
 from flask import Blueprint, jsonify, session
 from flask_login import login_required, current_user
 from app.services.dashboard_alerts import dashboard_alert_service
@@ -12,20 +11,20 @@ def get_dashboard_alerts():
     try:
         # Get dismissed alerts from session
         dismissed_alerts = session.get('dismissed_alerts', [])
-        
+
         # Get alerts from service
         alert_data = dashboard_alert_service.get_dashboard_alerts(
             organization_id=current_user.organization_id,
             dismissed_alerts=dismissed_alerts
         )
-        
+
         return jsonify({
             'success': True,
             'alerts': alert_data['alerts'],
             'total_alerts': alert_data['total_alerts'],
             'hidden_count': alert_data['hidden_count']
         })
-        
+
     except Exception as e:
         dashboard_alert_service.handle_service_error(e, "get_dashboard_alerts")
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -38,45 +37,46 @@ def dismiss_alert():
         from flask import request
         data = request.get_json()
         alert_type = data.get('alert_type')
-        
+
         if not alert_type:
             return jsonify({'success': False, 'error': 'Alert type required'}), 400
-            
+
         # Session-based dismissal
         if 'dismissed_alerts' not in session:
             session['dismissed_alerts'] = []
-        
+
         if alert_type not in session['dismissed_alerts']:
             session['dismissed_alerts'].append(alert_type)
             session.permanent = True
-        
+
         # Clear cache to refresh alerts
         dashboard_alert_service.clear_organization_cache(current_user.organization_id)
-        
+
         return jsonify({'success': True, 'message': 'Alert dismissed successfully'})
-            
+
     except Exception as e:
         dashboard_alert_service.handle_service_error(e, "dismiss_alert")
-        return jsonify({'success': False, 'error': str(e)}), 500 
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 def dismiss_alert():
     """Dismiss an alert"""
     try:
         from flask import request, session
         data = request.get_json()
         alert_type = data.get('alert_type')
-        
+
         if not alert_type:
             return jsonify({'success': False, 'error': 'Alert type required'}), 400
-            
+
         # Session-based dismissal (alerts are dismissed in session)
         if 'dismissed_alerts' not in session:
             session['dismissed_alerts'] = []
-        
+
         if alert_type not in session['dismissed_alerts']:
             session['dismissed_alerts'].append(alert_type)
             session.permanent = True
-        
+
         return jsonify({'success': True, 'message': 'Alert dismissed successfully'})
-            
+
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
