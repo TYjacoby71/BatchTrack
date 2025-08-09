@@ -158,11 +158,25 @@ def register_filters(app):
 
     @app.template_filter('strftime')
     def strftime_filter(datetime_obj, format_string='%Y-%m-%d %H:%M:%S'):
-        """Format datetime object using strftime"""
+        """Format datetime object using strftime following timezone system rules"""
+        from ..utils.timezone_utils import TimezoneUtils
+        
         if isinstance(datetime_obj, str) and datetime_obj == 'now':
-            from datetime import datetime
-            datetime_obj = datetime.now()
+            # Follow timezone rules: get current time in user's timezone
+            datetime_obj = TimezoneUtils.now()
         
         if hasattr(datetime_obj, 'strftime'):
             return datetime_obj.strftime(format_string)
         return str(datetime_obj)
+    
+    @app.template_filter('user_timezone')
+    def user_timezone_filter(datetime_obj, format_string='%Y-%m-%d %H:%M:%S'):
+        """Convert UTC datetime to user's timezone for display"""
+        from ..utils.timezone_utils import TimezoneUtils
+        
+        if datetime_obj is None:
+            return ''
+        
+        # Convert UTC to user's timezone
+        user_time = TimezoneUtils.to_user_timezone(datetime_obj)
+        return user_time.strftime(format_string)
