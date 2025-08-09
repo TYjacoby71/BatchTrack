@@ -250,7 +250,12 @@ def _register_blueprints(app):
     # Register waitlist with CSRF exemption
     if blueprints.get('waitlist_bp'):
         app.register_blueprint(blueprints['waitlist_bp'])
-        csrf.exempt(app.view_functions['waitlist.join_waitlist'])
+        # Exempt both waitlist endpoints from CSRF
+        try:
+            csrf.exempt(app.view_functions.get('waitlist.join_waitlist'))
+            csrf.exempt(app.view_functions.get('waitlist.api_join_waitlist'))
+        except (KeyError, TypeError):
+            pass  # Endpoints may not exist yet
 
     # Register product blueprints
     _register_product_blueprints(app, blueprints)
