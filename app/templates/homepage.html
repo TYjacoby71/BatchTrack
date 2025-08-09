@@ -513,9 +513,9 @@
                 <div class="col-lg-2 col-md-6 mb-4">
                     <h6 class="fw-bold">Legal</h6>
                     <ul class="list-unstyled">
-                        <li><a href="#privacy" class="text-light text-decoration-none">Privacy</a></li>
-                        <li><a href="#terms" class="text-light text-decoration-none">Terms</a></li>
-                        <li><a href="#security" class="text-light text-decoration-none">Security</a></li>
+                        <li><a href="{{ url_for('legal.privacy_policy') }}" class="text-light text-decoration-none">Privacy</a></li>
+                        <li><a href="{{ url_for('legal.terms_of_service') }}" class="text-light text-decoration-none">Terms</a></li>
+                        <li><a href="{{ url_for('legal.cookie_policy') }}" class="text-light text-decoration-none">Security</a></li>
                     </ul>
                 </div>
             </div>

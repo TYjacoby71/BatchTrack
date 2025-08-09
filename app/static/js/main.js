@@ -80,7 +80,7 @@ function showAlert(type, message) {
     ${message}
     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
   `;
-  
+
   // Insert at top of main content
   const mainContent = document.querySelector('main') || document.querySelector('.container').firstChild;
   if (mainContent) {
@@ -90,7 +90,7 @@ function showAlert(type, message) {
   } else {
     document.body.insertBefore(alertDiv, document.body.firstChild);
   }
-  
+
   // Auto-hide after 5 seconds
   setTimeout(() => {
     if (alertDiv.parentNode) {
