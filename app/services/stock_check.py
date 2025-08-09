@@ -3,6 +3,7 @@ from sqlalchemy import or_
 from app.services.unit_conversion import ConversionEngine
 from flask_login import current_user
 from datetime import datetime, timezone
+from .base_service import BaseService
 
 def universal_stock_check(recipe, scale=1.0, flex_mode=False):
     """Universal Stock Check Service (USCS) - Ingredients Only"""
@@ -117,7 +118,6 @@ def universal_stock_check(recipe, scale=1.0, flex_mode=False):
     }
 
 from app.models import InventoryItem, Recipe, RecipeIngredient
-from flask_login import current_user
 
 
 def check_ingredient_availability(ingredient_id, required_amount, unit_id):

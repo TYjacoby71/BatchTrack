@@ -43,6 +43,13 @@ def create_app():
     # Setup logging
     _setup_logging(app)
 
+    # Register error handlers
+    register_error_handlers(app)
+
+    # Initialize performance monitoring
+    from app.utils.performance_monitor import PerformanceMonitor
+    PerformanceMonitor.init_app(app)
+
     return app
 
 def _configure_production_security(app):
@@ -98,16 +105,16 @@ def _register_middleware(app):
 
         # Optimized path checking with early returns
         path = request.path
-        
+
         # Fast static file check
         if path.startswith('/static/'):
             return None
-            
+
         # Auth routes (most common)
         if path.startswith('/auth/'):
             if path in ['/auth/login', '/auth/logout', '/auth/signup']:
                 return None
-                
+
         # Other skip paths
         if path in ['/', '/homepage'] or path.startswith('/billing/webhooks/') or path.startswith('/api/waitlist'):
             return None
@@ -383,7 +390,7 @@ def _register_template_context(app):
     def inject_units():
         from .utils.unit_utils import get_global_unit_list
         from flask import current_app
-        
+
         # Cache at app level, not request level
         if not hasattr(current_app, '_cached_units'):
             try:
@@ -392,7 +399,7 @@ def _register_template_context(app):
             except:
                 current_app._cached_units = []
                 current_app._cached_categories = []
-        
+
         return dict(
             units=current_app._cached_units, 
             categories=current_app._cached_categories, 
@@ -405,6 +412,7 @@ def _register_template_context(app):
         from .services.reservation_service import ReservationService
         from .utils.unit_utils import get_global_unit_list
         from .models import ProductSKU
+        from app.services.alert_service import AlertService
 
         def get_reservation_summary(inventory_item_id):
             if not inventory_item_id:
@@ -422,12 +430,20 @@ def _register_template_context(app):
             setattr(g, cache_key, result)
             return result
 
+        def get_dashboard_alerts_context():
+            if current_user.is_authenticated and current_user.organization_id:
+                alert_service = AlertService()
+                alerts = alert_service.get_dashboard_alerts(current_user.organization_id)
+                return alerts
+            return []
+
         return dict(
             has_permission=has_permission,
             has_role=has_role,
             is_organization_owner=is_organization_owner,
             get_reservation_summary=get_reservation_summary,
-            get_global_unit_list=get_global_unit_list
+            get_global_unit_list=get_global_unit_list,
+            get_dashboard_alerts=get_dashboard_alerts_context
         )
 
     @app.context_processor
@@ -578,3 +594,49 @@ def _setup_logging(app):
 
     # Import models to ensure they're registered
     from . import models
+
+def register_error_handlers(app):
+    """Register application error handlers"""
+    from flask import render_template, jsonify, request, redirect, url_for, flash
+    from .utils.api_response import APIResponse
+
+    @app.errorhandler(404)
+    def page_not_found(error):
+        if request.is_json:
+            return APIResponse.error("Resource not found.", status_code=404)
+        return render_template('errors/404.html'), 404
+
+    @app.errorhandler(403)
+    def forbidden(error):
+        if request.is_json:
+            return APIResponse.error("Access denied.", status_code=403)
+        return render_template('errors/403.html'), 403
+
+    @app.errorhandler(500)
+    def internal_server_error(error):
+        logger.exception("An internal server error occurred.")
+        if request.is_json:
+            return APIResponse.error("An unexpected error occurred.", status_code=500)
+        return render_template('errors/500.html'), 500
+
+    @app.errorhandler(401)
+    def unauthorized(error):
+        if request.is_json:
+            return APIResponse.error("Authentication required.", status_code=401)
+        flash('Please log in to access this page.', 'warning')
+        return redirect(url_for('auth.login'))
+
+    @app.errorhandler(418) # I'm a teapot
+    def im_a_teapot(error):
+        if request.is_json:
+            return APIResponse.error("I'm a teapot.", status_code=418)
+        return render_template('errors/418.html'), 418
+
+    # Catch specific exceptions from extensions if needed
+    # Example: from sqlalchemy.exc import SQLAlchemyError
+    # @app.errorhandler(SQLAlchemyError)
+    # def handle_sqlalchemy_error(error):
+    #     logger.exception("Database error occurred.")
+    #     if request.is_json:
+    #         return APIResponse.error("Database error.", status_code=503)
+    #     return render_template('errors/500.html', error_message="Database operation failed."), 503

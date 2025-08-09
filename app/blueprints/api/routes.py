@@ -2,6 +2,7 @@ from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
 from datetime import datetime
 from flask import session
+from app.utils.api_responses import APIResponse, api_route
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
@@ -46,10 +47,10 @@ def get_dashboard_alerts():
     """Get dashboard alerts for the current user"""
     from ...services.dashboard_alerts import DashboardAlertService
     from flask import session
-    
+
     dismissed_alerts = session.get('dismissed_alerts', [])
     alert_data = DashboardAlertService.get_dashboard_alerts(dismissed_alerts=dismissed_alerts)
-    
+
     return jsonify(alert_data)
 def dashboard_alerts():
     """Get dashboard alerts with session-based dismissals"""
