@@ -3,6 +3,7 @@ from flask import Blueprint, request, jsonify
 import json
 import os
 from datetime import datetime
+from ..services.email_service import EmailService
 
 waitlist_bp = Blueprint('waitlist', __name__)
 
@@ -46,6 +47,12 @@ def join_waitlist():
         # Save updated waitlist
         with open(waitlist_file, 'w') as f:
             json.dump(waitlist, f, indent=2)
+        
+        # Send confirmation email
+        EmailService.send_waitlist_confirmation(
+            email=waitlist_entry['email'],
+            name=waitlist_entry['name']
+        )
         
         return jsonify({'message': 'Successfully joined waitlist'}), 200
         
