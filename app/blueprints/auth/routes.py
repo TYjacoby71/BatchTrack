@@ -47,7 +47,7 @@ class LoginForm(FlaskForm):
     submit = SubmitField('Login')
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
-@rate_limit("10 per minute")
+@rate_limit(10)
 def login():
     if current_user.is_authenticated:
         return redirect(url_for('app_routes.dashboard'))
@@ -88,7 +88,7 @@ def login():
     return render_template('auth/login.html', form=form, oauth_available=OAuthService.is_oauth_configured())
 
 @auth_bp.route('/oauth/google')
-@rate_limit(limit=5, per=60) # 5 requests per minute for initiating OAuth
+@rate_limit(5)
 def oauth_google():
     """Initiate Google OAuth flow"""
     logger.info("OAuth Google route accessed")
@@ -115,7 +115,7 @@ def oauth_google():
     return redirect(authorization_url)
 
 @auth_bp.route('/oauth/callback')
-@rate_limit(limit=5, per=60) # 5 requests per minute for OAuth callback
+@rate_limit(5)
 def oauth_callback():
     """Handle OAuth callback"""
     try:
@@ -201,7 +201,7 @@ def oauth_callback():
         return redirect(url_for('auth.login'))
 
 @auth_bp.route('/verify-email/<token>')
-@rate_limit(limit=5, per=300) # 5 requests per 5 minutes for email verification
+@rate_limit(5)
 def verify_email(token):
     """Verify email address"""
     try:
@@ -234,7 +234,7 @@ def verify_email(token):
         return redirect(url_for('auth.login'))
 
 @auth_bp.route('/resend-verification', methods=['GET', 'POST'])
-@rate_limit(limit=2, per=300) # 2 requests per 5 minutes for resending verification
+@rate_limit(2)
 def resend_verification():
     """Resend email verification"""
     if request.method == 'POST':
@@ -273,7 +273,7 @@ def logout():
     return redirect(url_for('homepage'))
 
 @auth_bp.route('/dev-login')
-@rate_limit(limit=5, per=60) # 5 requests per minute for dev login
+@rate_limit(5)
 def dev_login():
     """Quick developer login for system access"""
     dev_user = User.query.filter_by(username='dev').first()
@@ -353,7 +353,7 @@ def debug_oauth_config():
     })
 
 @auth_bp.route('/signup', methods=['GET', 'POST'])
-@rate_limit(limit=5, per=60) # 5 requests per minute for signup
+@rate_limit(5)
 def signup():
     """Simplified signup flow - tier selection only, then redirect to payment"""
     if current_user.is_authenticated:
@@ -505,7 +505,7 @@ def signup():
 
 # Whop License Login Route
 @auth_bp.route('/whop-login', methods=['POST'])
-@rate_limit(limit=5, per=60) # 5 requests per minute for Whop login
+@rate_limit(5)
 def whop_login():
     """Authenticate user with Whop license key"""
     license_key = request.form.get('license_key')
