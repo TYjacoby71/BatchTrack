@@ -309,7 +309,7 @@
                 <div class="row">
                     <div class="col-12">
                         <small>
-                            &copy; {{ "now"|strftime("%Y") }} BatchTrack. All rights reserved. |
+                            &copy; {{ TimezoneUtils.utc_now().year }} BatchTrack. All rights reserved. |
                             <a href="{{ url_for('legal.privacy_policy') }}" class="text-muted">Privacy Policy</a> |
                             <a href="{{ url_for('legal.terms_of_service') }}" class="text-muted">Terms of Service</a> |
                             <a href="{{ url_for('legal.cookie_policy') }}" class="text-muted">Cookie Policy</a>
