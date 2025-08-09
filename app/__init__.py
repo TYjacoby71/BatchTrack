@@ -35,9 +35,6 @@ def create_app():
     mail.init_app(app)
     csrf.init_app(app)
 
-    # Exempt API routes from CSRF protection
-    csrf.exempt('waitlist.join_waitlist')
-    
     # CSRF exempt will be applied directly to webhook routes in billing blueprint
 
     # Configure Flask-Login settings
@@ -186,6 +183,9 @@ def create_app():
     # Register waitlist blueprint
     from .routes.waitlist_routes import waitlist_bp
     app.register_blueprint(waitlist_bp)
+    
+    # Exempt waitlist API from CSRF protection
+    csrf.exempt(waitlist_bp)
     
     # Register billing blueprint
     try:
