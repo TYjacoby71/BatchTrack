@@ -3,10 +3,12 @@ from flask import Blueprint, request, jsonify
 import json
 import os
 from datetime import datetime
+from flask_wtf.csrf import exempt
 
 waitlist_bp = Blueprint('waitlist', __name__)
 
 @waitlist_bp.route('/api/waitlist', methods=['POST'])
+@exempt
 def join_waitlist():
     """Handle waitlist form submissions - save to JSON only"""
     try:

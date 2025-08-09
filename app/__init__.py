@@ -34,9 +34,6 @@ def create_app():
     login_manager.init_app(app)
     mail.init_app(app)
     csrf.init_app(app)
-    
-    # Exempt specific views from CSRF protection
-    csrf.exempt('waitlist.join_waitlist')
 
     # CSRF exempt will be applied directly to webhook routes in billing blueprint
 
