@@ -481,41 +481,41 @@
                     </h5>
                     <p>The complete solution for production and inventory management.</p>
                     <div class="d-flex gap-3">
-                        <a href="#" class="text-light"><i class="fab fa-twitter"></i></a>
-                        <a href="#" class="text-light"><i class="fab fa-facebook"></i></a>
-                        <a href="#" class="text-light"><i class="fab fa-linkedin"></i></a>
+                        <a href="javascript:void(0)" class="text-light"><i class="fab fa-twitter"></i></a>
+                        <a href="javascript:void(0)" class="text-light"><i class="fab fa-facebook"></i></a>
+                        <a href="javascript:void(0)" class="text-light"><i class="fab fa-linkedin"></i></a>
                     </div>
                 </div>
                 <div class="col-lg-2 col-md-6 mb-4">
                     <h6 class="fw-bold">Product</h6>
                     <ul class="list-unstyled">
-                        <li><a href="#" class="text-light text-decoration-none">Features</a></li>
-                        <li><a href="#" class="text-light text-decoration-none">Pricing</a></li>
-                        <li><a href="#" class="text-light text-decoration-none">Demo</a></li>
+                        <li><a href="#features" class="text-light text-decoration-none">Features</a></li>
+                        <li><a href="#pricing" class="text-light text-decoration-none">Pricing</a></li>
+                        <li><a href="#demo" class="text-light text-decoration-none">Demo</a></li>
                     </ul>
                 </div>
                 <div class="col-lg-2 col-md-6 mb-4">
                     <h6 class="fw-bold">Company</h6>
                     <ul class="list-unstyled">
-                        <li><a href="#" class="text-light text-decoration-none">About</a></li>
-                        <li><a href="#" class="text-light text-decoration-none">Blog</a></li>
-                        <li><a href="#" class="text-light text-decoration-none">Careers</a></li>
+                        <li><a href="#about" class="text-light text-decoration-none">About</a></li>
+                        <li><a href="#blog" class="text-light text-decoration-none">Blog</a></li>
+                        <li><a href="#careers" class="text-light text-decoration-none">Careers</a></li>
                     </ul>
                 </div>
                 <div class="col-lg-2 col-md-6 mb-4">
                     <h6 class="fw-bold">Support</h6>
                     <ul class="list-unstyled">
-                        <li><a href="#" class="text-light text-decoration-none">Help Center</a></li>
-                        <li><a href="#" class="text-light text-decoration-none">Contact</a></li>
+                        <li><a href="#help" class="text-light text-decoration-none">Help Center</a></li>
+                        <li><a href="#contact" class="text-light text-decoration-none">Contact</a></li>
                         <li><a href="{{ url_for('auth.login') }}" class="text-light text-decoration-none">Login</a></li>
                     </ul>
                 </div>
                 <div class="col-lg-2 col-md-6 mb-4">
                     <h6 class="fw-bold">Legal</h6>
                     <ul class="list-unstyled">
-                        <li><a href="#" class="text-light text-decoration-none">Privacy</a></li>
-                        <li><a href="#" class="text-light text-decoration-none">Terms</a></li>
-                        <li><a href="#" class="text-light text-decoration-none">Security</a></li>
+                        <li><a href="#privacy" class="text-light text-decoration-none">Privacy</a></li>
+                        <li><a href="#terms" class="text-light text-decoration-none">Terms</a></li>
+                        <li><a href="#security" class="text-light text-decoration-none">Security</a></li>
                     </ul>
                 </div>
             </div>
@@ -584,9 +584,15 @@
                             <label for="waitlistEmail" class="form-label">Email Address</label>
                             <input type="email" class="form-control" id="waitlistEmail" name="email" required placeholder="your@email.com">
                         </div>
-                        <div class="mb-3">
-                            <label for="waitlistName" class="form-label">Name (Optional)</label>
-                            <input type="text" class="form-control" id="waitlistName" name="name" placeholder="Your name">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="waitlistFirstName" class="form-label">First Name (Optional)</label>
+                                <input type="text" class="form-control" id="waitlistFirstName" name="first_name" placeholder="First name">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="waitlistLastName" class="form-label">Last Name (Optional)</label>
+                                <input type="text" class="form-control" id="waitlistLastName" name="last_name" placeholder="Last name">
+                            </div>
                         </div>
                         <div class="mb-3">
                             <label for="businessType" class="form-label">Business Type (Optional)</label>
@@ -664,7 +670,8 @@
                     },
                     body: JSON.stringify({
                         email: formData.get('email'),
-                        name: formData.get('name'),
+                        first_name: formData.get('first_name'),
+                        last_name: formData.get('last_name'),
                         business_type: formData.get('business_type')
                     })
                 });

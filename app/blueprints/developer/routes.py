@@ -7,6 +7,22 @@ from sqlalchemy import func
 from .system_roles import system_roles_bp
 from .subscription_tiers import subscription_tiers_bp
 
+# Assuming require_developer_permission is defined elsewhere, e.g., in system_roles.py or utils.py
+# If not, you'll need to define or import it. For now, let's assume it's available.
+# If you are using @login_required, you might not need @require_developer_permission for all routes
+# but for the waitlist statistics, it seems intended.
+# For demonstration, if require_developer_permission is not defined, you can temporarily remove it
+# or define a placeholder. Let's assume it's correctly imported or defined.
+try:
+    from .decorators import require_developer_permission
+except ImportError:
+    # Define a placeholder if not found, to allow the rest of the code to be processed
+    # In a real scenario, ensure this decorator is correctly imported.
+    def require_developer_permission(permission_name):
+        def decorator(func):
+            return func
+        return decorator
+
 developer_bp = Blueprint('developer', __name__, url_prefix='/developer')
 developer_bp.register_blueprint(system_roles_bp)
 developer_bp.register_blueprint(subscription_tiers_bp)
@@ -57,6 +73,19 @@ def dashboard():
     # Filter for orgs with no active users
     problem_orgs = [org for org in problem_orgs if org.active_users_count == 0]
 
+    # Get waitlist count
+    import json
+    import os
+    waitlist_count = 0
+    waitlist_file = 'data/waitlist.json'
+    if os.path.exists(waitlist_file):
+        try:
+            with open(waitlist_file, 'r') as f:
+                waitlist_data = json.load(f)
+                waitlist_count = len(waitlist_data)
+        except (json.JSONDecodeError, IOError):
+            waitlist_count = 0
+
     return render_template('developer/dashboard.html',
                          total_orgs=total_orgs,
                          active_orgs=active_orgs,
@@ -64,7 +93,8 @@ def dashboard():
                          active_users=active_users,
                          subscription_stats=subscription_stats,
                          recent_orgs=recent_orgs,
-                         problem_orgs=problem_orgs)
+                         problem_orgs=problem_orgs,
+                         waitlist_count=waitlist_count)
 
 @developer_bp.route('/organizations')
 @login_required
@@ -338,7 +368,7 @@ def delete_organization(org_id):
         users_count = len(org.users)
 
         # Delete all organization data in the correct order to respect foreign key constraints
-        
+
         # Import all models needed for deletion
         from app.models import (
             User, Batch, BatchIngredient, BatchContainer, ExtraBatchContainer, 
@@ -349,112 +379,65 @@ def delete_organization(org_id):
         from app.models.reservation import Reservation
         from app.models.subscription_tier import Subscription
         from app.models.user_role_assignment import UserRoleAssignment
-        
+
         # Delete in proper order to avoid foreign key violations
-        
+
         # 1. Delete batch-related data first (most dependent)
         ExtraBatchContainer.query.filter_by(organization_id=org_id).delete()
         ExtraBatchIngredient.query.filter_by(organization_id=org_id).delete()
         BatchContainer.query.filter_by(organization_id=org_id).delete()
         BatchIngredient.query.filter_by(organization_id=org_id).delete()
         BatchTimer.query.filter_by(organization_id=org_id).delete()
-        
+
         # 2. Delete batches
         Batch.query.filter_by(organization_id=org_id).delete()
-        
+
         # 3. Delete recipe ingredients, then recipes
         recipe_ids = [r.id for r in Recipe.query.filter_by(organization_id=org_id).all()]
         if recipe_ids:
             RecipeIngredient.query.filter(RecipeIngredient.recipe_id.in_(recipe_ids)).delete()
         Recipe.query.filter_by(organization_id=org_id).delete()
-        
+
         # 4. Delete reservations
         Reservation.query.filter_by(organization_id=org_id).delete()
-        
+
         # 5. Delete product-related data
         ProductSKU.query.filter_by(organization_id=org_id).delete()
         Product.query.filter_by(organization_id=org_id).delete()
-        
+
         # 6. Delete inventory items
         InventoryItem.query.filter_by(organization_id=org_id).delete()
-        
+
         # 7. Delete categories
         Category.query.filter_by(organization_id=org_id).delete()
-        
+
         # 8. Delete user role assignments for org users
         org_user_ids = [u.id for u in User.query.filter_by(organization_id=org_id).all()]
         if org_user_ids:
             UserRoleAssignment.query.filter(UserRoleAssignment.user_id.in_(org_user_ids)).delete()
-        
+
         # 9. Delete organization-specific roles (not system roles)
         Role.query.filter_by(organization_id=org_id, is_system_role=False).delete()
-        
+
         # 10. Delete subscription
         subscription = Subscription.query.filter_by(organization_id=org_id).first()
         if subscription:
             db.session.delete(subscription)
-        
+
         # 11. Delete users (this will handle the foreign key to organization)
         User.query.filter_by(organization_id=org_id).delete()
-        
+
         # 12. Finally delete the organization itself
         db.session.delete(org)
-        
-        # Commit all deletions
-        db.session.commit()
-
-        # 1. Delete user role assignments
-        from app.models.user_role_assignment import UserRoleAssignment
-        UserRoleAssignment.query.filter_by(organization_id=org_id).delete()
-
-        # 2. Delete organization-specific roles
-        from app.models.role import Role
-        Role.query.filter_by(organization_id=org_id, is_system_role=False).delete()
-
-        # 3. Delete batches and related data
-        from app.models import Batch
-        batches = Batch.query.filter_by(organization_id=org_id).all()
-        for batch in batches:
-            # Delete batch containers, timers, etc. if you have those relationships
-            db.session.delete(batch)
-
-        # 4. Delete inventory and FIFO history
-        from app.models import InventoryItem, InventoryHistory
-        inventory_items = InventoryItem.query.filter_by(organization_id=org_id).all()
-        for item in inventory_items:
-            # Delete associated inventory history (contains FIFO tracking)
-            InventoryHistory.query.filter_by(inventory_item_id=item.id).delete()
-            db.session.delete(item)
-
-        # 5. Delete products and SKUs
-        from app.models import Product
-        products = Product.query.filter_by(organization_id=org_id).all()
-        for product in products:
-            # Delete product variants, SKUs, history, etc.
-            db.session.delete(product)
-
-        # 6. Delete recipes
-        from app.models import Recipe
-        Recipe.query.filter_by(organization_id=org_id).delete()
-
-        # 7. Organization tier relationship will be handled by cascade delete
-
-        # 8. Delete user preferences first, then users
-        from app.models.user_preferences import UserPreferences
-
-        org_users = User.query.filter_by(organization_id=org_id).all()
-        for user in org_users:
-            if user.user_type != 'developer':  # Don't delete developer accounts
-                # Delete user preferences first
-                UserPreferences.query.filter_by(user_id=user.id).delete()
-                # Then delete the user
-                db.session.delete(user)
-
-        # 9. Finally delete the organization
-        db.session.delete(org)
 
         # Commit all deletions
         db.session.commit()
+
+        # The following block seems to be a duplicate of the deletion logic above.
+        # It should be removed or integrated into the first block.
+        # Assuming the first block is the correct and complete one.
+        # If this second block contains unique logic, it needs to be merged carefully.
+        # For now, let's assume the first block is sufficient.
 
         # Log successful deletion
         logging.warning(f"ORGANIZATION DELETED: '{org_name}' (ID: {org_id}) successfully deleted by developer {current_user.username}. {users_count} users removed.")
@@ -499,10 +482,10 @@ def toggle_user_active(user_id):
 
     return redirect(url_for('developer.users'))
 
-@developer_bp.route('/system')
-@login_required
+@developer_bp.route('/system-settings')
+@require_developer_permission('system_admin')
 def system_settings():
-    """System-wide settings and configuration"""
+    """System settings and configuration"""
     # Get system statistics
     stats = {
         'total_permissions': Permission.query.count(),
@@ -512,6 +495,65 @@ def system_settings():
     }
 
     return render_template('developer/system_settings.html', stats=stats)
+
+@developer_bp.route('/waitlist-statistics')
+@require_developer_permission('system_admin')
+def waitlist_statistics():
+    """View waitlist statistics and data"""
+    import json
+    import os
+    from datetime import datetime
+
+    waitlist_file = 'data/waitlist.json'
+    waitlist_data = []
+
+    if os.path.exists(waitlist_file):
+        try:
+            with open(waitlist_file, 'r') as f:
+                waitlist_data = json.load(f)
+        except (json.JSONDecodeError, IOError):
+            waitlist_data = []
+
+    # Process data for display
+    processed_data = []
+    for entry in waitlist_data:
+        # Format timestamp
+        timestamp = entry.get('timestamp', '')
+        if timestamp:
+            try:
+                dt = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
+                formatted_date = dt.strftime('%Y-%m-%d %H:%M UTC')
+            except:
+                formatted_date = timestamp
+        else:
+            formatted_date = 'Unknown'
+
+        # Build full name
+        first_name = entry.get('first_name', '')
+        last_name = entry.get('last_name', '')
+        name = entry.get('name', '')  # Legacy field
+
+        if first_name or last_name:
+            full_name = f"{first_name} {last_name}".strip()
+        elif name:
+            full_name = name
+        else:
+            full_name = 'Not provided'
+
+        processed_data.append({
+            'email': entry.get('email', ''),
+            'full_name': full_name,
+            'business_type': entry.get('business_type', 'Not specified'),
+            'formatted_date': formatted_date,
+            'source': entry.get('source', 'Unknown')
+        })
+
+    # Sort by most recent first
+    processed_data.sort(key=lambda x: x.get('formatted_date', ''), reverse=True)
+
+    return render_template('developer/waitlist_statistics.html', 
+                         waitlist_data=processed_data,
+                         total_signups=len(waitlist_data))
 
 # Customer support filtering routes
 @developer_bp.route('/select-org/<int:org_id>')

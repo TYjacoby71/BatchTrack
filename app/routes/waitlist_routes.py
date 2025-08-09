@@ -19,7 +19,8 @@ def join_waitlist():
         # Create waitlist entry
         waitlist_entry = {
             'email': data.get('email'),
-            'name': data.get('name', ''),
+            'first_name': data.get('first_name', ''),
+            'last_name': data.get('last_name', ''),
             'business_type': data.get('business_type', ''),
             'timestamp': datetime.utcnow().isoformat(),
             'source': 'homepage'
