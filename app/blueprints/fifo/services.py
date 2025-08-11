@@ -10,7 +10,7 @@ from sqlalchemy import func, text
 from app.extensions import db
 from app.models.inventory import InventoryItem, InventoryHistory
 from app.models.models import User
-from app.utils.fifo_generator import FifoInventoryGenerator
+# FifoInventoryGenerator removed - using generate_fifo_code directly
 from app.utils.timezone_utils import TimezoneUtils
 
 # No public API - all methods are private

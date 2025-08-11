@@ -120,6 +120,31 @@ from app.models import InventoryItem, Recipe, RecipeIngredient
 from flask_login import current_user
 
 
+class StockCheckService:
+    """Backwards-compatibility wrapper for existing stock check functions"""
+    
+    @staticmethod
+    def check_availability(*args, **kwargs):
+        """Check if ingredients are available for production"""
+        return check_recipe_availability(*args, **kwargs)
+    
+    @staticmethod
+    def check_recipe_availability(*args, **kwargs):
+        return check_recipe_availability(*args, **kwargs)
+    
+    @staticmethod
+    def check_ingredient_availability(*args, **kwargs):
+        return check_ingredient_availability(*args, **kwargs)
+    
+    @staticmethod
+    def get_available_inventory_summary(*args, **kwargs):
+        return get_available_inventory_summary(*args, **kwargs)
+    
+    @staticmethod
+    def universal_stock_check(*args, **kwargs):
+        return universal_stock_check(*args, **kwargs)
+
+
 def check_ingredient_availability(ingredient_id, required_amount, unit_id):
     """
     Check if sufficient inventory exists for an ingredient
