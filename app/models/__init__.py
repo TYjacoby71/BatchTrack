@@ -1,4 +1,3 @@
-
 """Models package - imports all models for the application"""
 from ..extensions import db
 from .mixins import ScopedModelMixin
@@ -32,6 +31,7 @@ from .reservation import Reservation
 from .unit import CustomUnitMapping, ConversionLog
 from .billing_snapshot import BillingSnapshot
 from .pricing_snapshot import PricingSnapshot
+from .stripe_event import StripeEvent
 
 # Re-export everything for convenience
 __all__ = [
@@ -41,8 +41,8 @@ __all__ = [
     'Batch', 'BatchIngredient', 'BatchContainer', 'ExtraBatchContainer', 'BatchTimer', 'ExtraBatchIngredient',
     'Unit', 'CustomUnitMapping', 'ConversionLog',
     'IngredientCategory', 'Tag',
-    'Product', 'ProductVariant', 'ProductSKU', 'ProductSKUHistory', 'Reservation', 
-    'Role', 'Permission', 'role_permission', 'UserRoleAssignment', 'UserPreferences', 'UserStats', 
+    'Product', 'ProductVariant', 'ProductSKU', 'ProductSKUHistory', 'Reservation',
+    'Role', 'Permission', 'role_permission', 'UserRoleAssignment', 'UserPreferences', 'UserStats',
     'OrganizationStats', 'SubscriptionTier', 'DeveloperPermission', 'DeveloperRole',
-    'BillingSnapshot', 'PricingSnapshot'
+    'BillingSnapshot', 'PricingSnapshot', 'StripeEvent'
 ]

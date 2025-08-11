@@ -57,13 +57,14 @@ def _configure_production_security(app):
 
 def _init_extensions(app):
     """Initialize Flask extensions"""
-    from .extensions import db, migrate, login_manager, mail, csrf
+    from .extensions import db, migrate, login_manager, csrf, mail, limiter
 
     db.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
     mail.init_app(app)
     csrf.init_app(app)
+    limiter.init_app(app)
 
 def _configure_login_manager(app):
     """Configure Flask-Login settings"""
@@ -98,16 +99,16 @@ def _register_middleware(app):
 
         # Optimized path checking with early returns
         path = request.path
-        
+
         # Fast static file check
         if path.startswith('/static/'):
             return None
-            
+
         # Auth routes (most common)
         if path.startswith('/auth/'):
             if path in ['/auth/login', '/auth/logout', '/auth/signup']:
                 return None
-                
+
         # Other skip paths
         if path in ['/', '/homepage'] or path.startswith('/billing/webhooks/') or path.startswith('/api/waitlist'):
             return None
@@ -383,7 +384,7 @@ def _register_template_context(app):
     def inject_units():
         from .utils.unit_utils import get_global_unit_list
         from flask import current_app
-        
+
         # Cache at app level, not request level
         if not hasattr(current_app, '_cached_units'):
             try:
@@ -392,7 +393,7 @@ def _register_template_context(app):
             except:
                 current_app._cached_units = []
                 current_app._cached_categories = []
-        
+
         return dict(
             units=current_app._cached_units, 
             categories=current_app._cached_categories, 
