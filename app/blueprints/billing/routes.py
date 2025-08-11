@@ -79,15 +79,19 @@ def checkout(tier, billing_cycle='month'):
     try:
         # For Stripe checkout
         if billing_cycle in ['month', 'year']:
-            checkout_url = StripeService.create_checkout_session(
-                organization,
-                tier,
-                billing_cycle,
-                success_url=url_for('billing.complete_signup_from_stripe', _external=True),
-                cancel_url=url_for('billing.upgrade', _external=True)
-            )
-            if checkout_url:
-                return redirect(checkout_url)
+            from ...models.subscription_tier import SubscriptionTier
+            tier_obj = SubscriptionTier.query.filter_by(key=tier).first()
+            if tier_obj:
+                checkout_session = StripeService.create_checkout_session_for_tier(
+                    tier_obj,
+                    current_user.email,
+                    f"{current_user.first_name} {current_user.last_name}",
+                    url_for('billing.complete_signup_from_stripe', _external=True),
+                    url_for('billing.upgrade', _external=True),
+                    metadata={'tier': tier, 'billing_cycle': billing_cycle}
+                )
+                if checkout_session:
+                    return redirect(checkout_session.url)
 
         flash('Checkout not available for this tier', 'error')
         return redirect(url_for('billing.upgrade'))
@@ -136,7 +140,7 @@ def complete_signup_from_stripe():
         logger.info(f"Processing Stripe signup completion for session: {session_id}")
 
         # Initialize Stripe
-        if not StripeService.initialize_stripe():
+        if not StripeService.initialize():
             logger.error("Failed to initialize Stripe")
             flash('Payment system error', 'error')
             return redirect(url_for('auth.signup'))
@@ -338,9 +342,12 @@ def customer_portal():
         return redirect(url_for('app_routes.dashboard'))
 
     try:
-        portal_url = StripeService.create_customer_portal_session(organization.stripe_customer_id)
-        if portal_url:
-            return redirect(portal_url)
+        portal_session = StripeService.create_customer_portal_session(
+            organization, 
+            url_for('app_routes.dashboard', _external=True)
+        )
+        if portal_session:
+            return redirect(portal_session.url)
         else:
             flash('Unable to access billing portal', 'error')
             return redirect(url_for('app_routes.dashboard'))

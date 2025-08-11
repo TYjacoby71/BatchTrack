@@ -6,7 +6,8 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 from app.extensions import db
 from app.models.stripe_event import StripeEvent
-from ..models import db, SubscriptionTier, Organization
+from app.models.subscription_tier import SubscriptionTier
+from app.models.models import Organization
 from ..utils.timezone_utils import TimezoneUtils
 
 
