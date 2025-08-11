@@ -33,3 +33,5 @@ google-auth
 google-auth-oauthlib
 Flask-Mail
 flask-mail
+Flask-Limiter
+Flask-Migrate
