@@ -1,0 +1,61 @@
+Thought for 9s
+No — fix your app factory so tests can pass a config dict.
+
+Right now create_app() takes no args, but the tests call create_app({...}). Patch it like this (minimal, safe):
+
+python
+Copy
+Edit
+# app/__init__.py
+from flask import Flask
+import os
+
+def create_app(config: dict | None = None):
+    app = Flask(__name__)
+
+    # ---- Defaults (12-factor-ish) ----
+    app.config.update(
+        SECRET_KEY=os.getenv("SECRET_KEY", "dev-not-secret"),
+        SQLALCHEMY_DATABASE_URI=os.getenv("DATABASE_URL") or os.getenv("SQLALCHEMY_DATABASE_URI", "sqlite:///instance/app.db"),
+        SQLALCHEMY_TRACK_MODIFICATIONS=False,
+        WTF_CSRF_ENABLED=True,
+        TESTING=False,
+    )
+
+    # ---- Allow tests to override ----
+    if config:
+        app.config.update(config)
+        # tests pass DATABASE_URL; SQLAlchemy wants SQLALCHEMY_DATABASE_URI
+        if "DATABASE_URL" in config:
+            app.config["SQLALCHEMY_DATABASE_URI"] = config["DATABASE_URL"]
+
+    # ---- Extensions ----
+    from .extensions import db, migrate, login_manager, csrf, mail, limiter
+    db.init_app(app)
+    migrate.init_app(app, db)
+    csrf.init_app(app)                 # respects WTF_CSRF_ENABLED=False in tests
+    login_manager.init_app(app)
+    mail.init_app(app)
+    limiter.init_app(app)              # init BEFORE blueprint registration
+
+    # ---- Blueprints ----
+    from .blueprints.auth import auth_bp
+    from .blueprints.billing import billing_bp
+    # (import and register the rest as you already do)
+    app.register_blueprint(auth_bp)
+    app.register_blueprint(billing_bp)
+    # ... others ...
+
+    # any other app-level setup you already had (error handlers, logging, etc.)
+
+    return app
+Sanity checks before re-running tests:
+
+bash
+Copy
+Edit
+rg -n "def create_app" app/__init__.py
+pytest -q
+Why this matters: elite-level repos make the app factory configurable so tests can inject an in-memory/temporary DB and disable CSRF. This keeps behavior the same in prod while letting your new characterization tests spin up a clean app instance.
+
+Once that’s in, re-run pytest. If anything else pops, paste the next failure and we’ll keep tightening.
