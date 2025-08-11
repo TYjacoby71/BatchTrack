@@ -15,6 +15,7 @@ from ...models.role import Role
 from ...extensions import db
 from ...utils.timezone_utils import TimezoneUtils
 from ...extensions import csrf
+from ...extensions import limiter
 
 logger = logging.getLogger(__name__)
 
@@ -175,7 +176,7 @@ def complete_signup_from_stripe():
             'first_name': customer_details.name.split(' ')[0] if customer_details.name else oauth_user_info.get('first_name', ''),
             'last_name': ' '.join(customer_details.name.split(' ')[1:]) if customer_details.name and len(customer_details.name.split(' ')) > 1 else oauth_user_info.get('last_name', ''),
             'org_name': customer.metadata.get('org_name') or f"{customer_details.name}'s Company" if customer_details.name else "My Company",
-            'username': customer.metadata.get('username') or customer_details.email.split('@')[0] if customer_details.email else oauth_user_info.get('email', '').split('@')[0],
+            'username': customer.metadata.get('username') or customer_details.email.split('@')[0] if customer.email else oauth_user_info.get('email', '').split('@')[0],
             'signup_source': checkout_session.metadata.get('signup_source', 'stripe'),
             'promo_code': checkout_session.metadata.get('promo_code'),
             'referral_code': checkout_session.metadata.get('referral_code'),
@@ -371,47 +372,30 @@ def cancel_subscription():
 
 @billing_bp.route('/webhooks/stripe', methods=['POST'])
 @csrf.exempt
+@limiter.limit("60/minute")
 def stripe_webhook():
     """Handle Stripe webhooks"""
-    payload = request.data
-    sig_header = request.headers.get('Stripe-Signature')
+    payload = request.get_data()
+    sig_header = request.headers.get('Stripe-Signature', '')
+    webhook_secret = current_app.config.get('STRIPE_WEBHOOK_SECRET')
+
+    if not webhook_secret:
+        logger.error("Stripe webhook secret not configured")
+        return '', 500
 
     try:
-        # Verify webhook signature
-        endpoint_secret = current_app.config.get('STRIPE_WEBHOOK_SECRET')
-        if not endpoint_secret:
-            logger.error("Stripe webhook secret not configured")
-            return jsonify({'error': 'Webhook secret not configured'}), 400
-
-        event = stripe.Webhook.construct_event(
-            payload, sig_header, endpoint_secret
-        )
-
+        event = StripeService.construct_event(payload, sig_header, webhook_secret)
         logger.info(f"Received Stripe webhook: {event['type']}")
 
-        # Handle different event types
-        if event['type'] == 'checkout.session.completed':
-            return handle_checkout_completed(event)
-        elif event['type'] == 'customer.created':
-            # Customer created - check if this is from a signup checkout
-            return handle_customer_created(event)
-        elif event['type'] in ['customer.subscription.created', 'customer.subscription.updated']:
-            return handle_subscription_change(event)
-        elif event['type'] == 'customer.subscription.deleted':
-            return handle_subscription_deleted(event)
-        else:
-            logger.info(f"Unhandled webhook event type: {event['type']}")
-            return jsonify({'status': 'unhandled'}), 200
+        status = StripeService.handle_webhook_event(event)
+        return '', status
 
     except ValueError as e:
-        logger.error(f"Invalid payload: {e}")
-        return jsonify({'error': 'Invalid payload'}), 400
-    except stripe.error.SignatureVerificationError as e:
-        logger.error(f"Invalid signature: {e}")
-        return jsonify({'error': 'Invalid signature'}), 400
+        logger.error(f"Invalid payload: {str(e)}")
+        return '', 400
     except Exception as e:
-        logger.error(f"Webhook error: {e}")
-        return jsonify({'error': 'Webhook processing failed'}), 500
+        logger.error(f"Webhook signature verification failed: {str(e)}")
+        return '', 400
 
 def handle_checkout_completed(event):
     """Handle successful checkout completion"""

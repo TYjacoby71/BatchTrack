@@ -1,5 +1,6 @@
 
 import logging
+import secrets
 from flask import current_app, session, url_for, request
 import google_auth_oauthlib.flow
 import google.auth.transport.requests
@@ -63,8 +64,46 @@ class OAuthService:
             return None
 
     @staticmethod
+    def generate_state():
+        """Generate secure state token"""
+        return secrets.token_urlsafe(32)
+    
+    @staticmethod
+    def generate_nonce():
+        """Generate secure nonce"""
+        return secrets.token_urlsafe(32)
+    
+    @staticmethod
+    def start_google_flow(session_obj):
+        """Start Google OAuth flow with state/nonce generation"""
+        try:
+            flow = OAuthService.create_google_oauth_flow()
+            if not flow:
+                return None, None, None
+            
+            state = OAuthService.generate_state()
+            nonce = OAuthService.generate_nonce()
+            
+            # Store in session
+            session_obj['oauth_state'] = state
+            session_obj['oauth_nonce'] = nonce
+            
+            authorization_url, _ = flow.authorization_url(
+                access_type='offline',
+                include_granted_scopes='true',
+                state=state
+            )
+            
+            logger.info(f"OAuth flow started with state: {state[:10]}...")
+            return authorization_url, state, nonce
+            
+        except Exception as e:
+            logger.error(f"Error starting OAuth flow: {str(e)}")
+            return None, None, None
+    
+    @staticmethod
     def get_authorization_url():
-        """Get Google authorization URL"""
+        """Get Google authorization URL (legacy method)"""
         try:
             flow = OAuthService.create_google_oauth_flow()
             if not flow:
@@ -82,8 +121,45 @@ class OAuthService:
             return None, None
 
     @staticmethod
+    def complete_google_flow(session_obj, code, state):
+        """Complete Google OAuth flow with state verification"""
+        try:
+            # Verify state
+            stored_state = session_obj.get('oauth_state')
+            if not stored_state or stored_state != state:
+                logger.error(f"OAuth state mismatch: stored={stored_state}, received={state}")
+                raise ValueError("state_mismatch")
+            
+            flow = OAuthService.create_google_oauth_flow()
+            if not flow:
+                raise ValueError("failed_to_create_flow")
+            
+            # Fix URL protocol for Replit (convert http to https)
+            authorization_response = request.url.replace('http://', 'https://')
+            logger.info(f"OAuth callback URL: {authorization_response}")
+            
+            # Exchange code for token
+            flow.fetch_token(authorization_response=authorization_response)
+            
+            # Get user info
+            user_info = OAuthService.get_user_info(flow.credentials)
+            if not user_info:
+                raise ValueError("failed_to_get_user_info")
+            
+            # Clean up session
+            session_obj.pop('oauth_state', None)
+            session_obj.pop('oauth_nonce', None)
+            
+            logger.info(f"OAuth flow completed for user: {user_info.get('email')}")
+            return user_info
+            
+        except Exception as e:
+            logger.error(f"Error completing OAuth flow: {str(e)}")
+            return None
+    
+    @staticmethod
     def exchange_code_for_token(authorization_code, state):
-        """Exchange authorization code for access token"""
+        """Exchange authorization code for access token (legacy method)"""
         try:
             flow = OAuthService.create_google_oauth_flow()
             if not flow:

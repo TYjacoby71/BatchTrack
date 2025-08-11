@@ -14,6 +14,7 @@ import logging
 from .whop_auth import WhopAuth # Import WhopAuth
 from ...services.oauth_service import OAuthService
 from ...services.email_service import EmailService
+from ...extensions import limiter
 from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
@@ -46,6 +47,7 @@ class LoginForm(FlaskForm):
     submit = SubmitField('Login')
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
+@limiter.limit("60/minute")
 def login():
     if current_user.is_authenticated:
         return redirect(url_for('app_routes.dashboard'))
@@ -86,6 +88,7 @@ def login():
     return render_template('auth/login.html', form=form, oauth_available=OAuthService.is_oauth_configured())
 
 @auth_bp.route('/oauth/google')
+@limiter.limit("30/minute")
 def oauth_google():
     """Initiate Google OAuth flow"""
     logger.info("OAuth Google route accessed")
@@ -112,6 +115,7 @@ def oauth_google():
     return redirect(authorization_url)
 
 @auth_bp.route('/oauth/callback')
+@limiter.limit("30/minute")
 def oauth_callback():
     """Handle OAuth callback"""
     try:
@@ -346,6 +350,7 @@ def debug_oauth_config():
     })
 
 @auth_bp.route('/signup', methods=['GET', 'POST'])
+@limiter.limit("30/minute")
 def signup():
     """Simplified signup flow - tier selection only, then redirect to payment"""
     if current_user.is_authenticated:
