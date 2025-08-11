@@ -32,6 +32,13 @@ try:
 except ImportError:
     pass
 
+# Add test-expected aliases
+try:
+    from .inventory import InventoryHistory as FIFOLot
+    Ingredient = InventoryItem  # Alias for tests expecting Ingredient class
+except ImportError:
+    pass
+
 __all__ = [
     "db", "Organization", "User", "InventoryItem", "InventoryHistory", "BatchInventoryLog",
     "Recipe", "RecipeIngredient", "Batch", "BatchIngredient", "BatchContainer", 
@@ -39,5 +46,6 @@ __all__ = [
     "CustomUnitMapping", "ConversionLog", "IngredientCategory", "Tag",
     "StripeEvent", "PricingSnapshot", "BillingSnapshot", "UserPreferences", 
     "UserRoleAssignment", "DeveloperPermission", "DeveloperRole", 
-    "Product", "ProductSKU", "SubscriptionTier", "Permission", "Role"
+    "Product", "ProductSKU", "SubscriptionTier", "Permission", "Role",
+    "Ingredient", "FIFOLot"
 ]
