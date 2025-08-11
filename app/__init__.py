@@ -21,6 +21,10 @@ def create_app():
     # Initialize extensions
     _init_extensions(app)
 
+    # Initialize limiter with app
+    from .extensions import limiter
+    limiter.init_app(app)
+
     # Configure Flask-Login
     _configure_login_manager(app)
 
@@ -64,7 +68,8 @@ def _init_extensions(app):
     login_manager.init_app(app)
     mail.init_app(app)
     csrf.init_app(app)
-    limiter.init_app(app)
+    # Limiter is now initialized separately after this function
+    # limiter.init_app(app) 
 
 def _configure_login_manager(app):
     """Configure Flask-Login settings"""

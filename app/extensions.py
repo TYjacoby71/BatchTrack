@@ -13,7 +13,7 @@ mail = Mail()
 login_manager = LoginManager()
 migrate = Migrate()
 bcrypt = Bcrypt()
-limiter = Limiter(key_func=get_remote_address, default_limits=["200 per minute"])
+limiter = Limiter(key_func=get_remote_address)
 
 # Configure login manager
 login_manager.login_view = 'auth.login'

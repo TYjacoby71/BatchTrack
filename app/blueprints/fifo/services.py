@@ -1,10 +1,32 @@
-from ...models import InventoryHistory, db, InventoryItem, Batch
-from sqlalchemy import and_, desc, or_
-from datetime import datetime
-from flask_login import current_user
-from app.utils.fifo_generator import generate_fifo_code, generate_batch_fifo_code
+from ...extensions import db
+from ...models import InventoryItem, InventoryHistory, Organization, User
+from ...utils.timezone_utils import TimezoneUtils
+from ...models.batch import Batch
+from flask import current_app
+import logging
+
+logger = logging.getLogger(__name__)
+
+# DEPRECATED: Stop importing FIFOService from blueprints
+__all__ = []
 
 class FIFOService:
+    """DEPRECATED: Use app.services.inventory_adjustment.process_inventory_adjustment instead"""
+
+    @staticmethod
+    def deduct_fifo(inventory_item_id, quantity, change_type=None, notes=None, batch_id=None, created_by=None):
+        """DEPRECATED: Use process_inventory_adjustment instead"""
+        from app.services.inventory_adjustment import process_inventory_adjustment
+        logger.warning("FIFOService.deduct_fifo is deprecated. Use process_inventory_adjustment instead.")
+        return process_inventory_adjustment(
+            item_id=inventory_item_id,
+            quantity=-abs(quantity),  # Ensure negative for deduction
+            change_type=change_type or 'batch_production',
+            notes=notes,
+            batch_id=batch_id,
+            created_by=created_by
+        )
+
     @staticmethod
     def get_fifo_entries(inventory_item_id):
         """Get all FIFO entries for an item with remaining quantity, excluding expired ones"""
