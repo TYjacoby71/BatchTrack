@@ -9,10 +9,16 @@ class SubscriptionTier(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), nullable=False)  # "Solo Plan", "Team Plan", etc.
     key = db.Column(db.String(32), nullable=False, unique=True)  # "solo", "team", etc.
+    
+    # NEW: stable programmatic key the app/tests expect
+    tier_key = db.Column(db.String(64), unique=True, nullable=False, index=True)
+    
     description = db.Column(db.Text, nullable=True)
 
     # Tier configuration
     user_limit = db.Column(db.Integer, default=1)  # -1 for unlimited
+    max_users = db.Column(db.Integer, default=1, nullable=False)  # For test compatibility
+    max_monthly_batches = db.Column(db.Integer, default=0, nullable=False)  # For test compatibility
     is_customer_facing = db.Column(db.Boolean, default=True)
     is_available = db.Column(db.Boolean, default=True)
     
@@ -66,6 +72,10 @@ class SubscriptionTier(db.Model):
         if self.key == 'exempt':
             return False
         return True
+
+    @classmethod
+    def get_by_key(cls, key: str):
+        return cls.query.filter_by(tier_key=key).first()
 
     def __repr__(self):
         return f'<SubscriptionTier {self.key}: {self.name}>'
