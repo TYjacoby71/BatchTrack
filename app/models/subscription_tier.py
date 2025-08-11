@@ -11,9 +11,17 @@ class SubscriptionTier(db.Model):
     key = db.Column(db.String(32), nullable=False, unique=True)  # "solo", "team", etc.
     
     # NEW: stable programmatic key the app/tests expect
-    tier_key = db.Column(db.String(64), unique=True, nullable=False, index=True)
+    tier_key = db.Column(db.String(64), unique=True, nullable=True, index=True)
     
     description = db.Column(db.Text, nullable=True)
+
+    # Core, flexible fields (modern approach)
+    stripe_product_id = db.Column(db.String(128), nullable=True)
+    stripe_price_id = db.Column(db.String(128), nullable=True)
+    
+    # Legacy/test compatibility fields (nullable; for backwards compatibility)
+    stripe_price_id_monthly = db.Column(db.String(128), nullable=True)
+    stripe_price_id_yearly = db.Column(db.String(128), nullable=True)
 
     # Tier configuration
     user_limit = db.Column(db.Integer, default=1)  # -1 for unlimited
@@ -72,6 +80,11 @@ class SubscriptionTier(db.Model):
         if self.key == 'exempt':
             return False
         return True
+
+    @property
+    def effective_price_id(self):
+        """Get the effective price ID, preferring modern single price over legacy monthly"""
+        return self.stripe_price_id or self.stripe_price_id_monthly
 
     @classmethod
     def get_by_key(cls, key: str):
