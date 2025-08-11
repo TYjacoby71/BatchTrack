@@ -1,4 +1,3 @@
-
 """Models package - imports all models for the application"""
 from ..extensions import db
 from .mixins import ScopedModelMixin
@@ -39,13 +38,14 @@ try:
 except ImportError:
     pass
 
-__all__ = [
-    "db", "Organization", "User", "InventoryItem", "InventoryHistory", "BatchInventoryLog",
-    "Recipe", "RecipeIngredient", "Batch", "BatchIngredient", "BatchContainer", 
-    "ExtraBatchContainer", "BatchTimer", "ExtraBatchIngredient", "Unit", 
-    "CustomUnitMapping", "ConversionLog", "IngredientCategory", "Tag",
-    "StripeEvent", "PricingSnapshot", "BillingSnapshot", "UserPreferences", 
-    "UserRoleAssignment", "DeveloperPermission", "DeveloperRole", 
-    "Product", "ProductSKU", "SubscriptionTier", "Permission", "Role",
-    "Ingredient", "FIFOLot"
-]
+# Safe re-export layer - defer to models.py
+from .models import *
+
+# Also ensure direct access to key models for backward compatibility
+try:
+    from .mixins import ScopedModelMixin
+except ImportError:
+    pass
+
+# Make sure all exported symbols are available
+__all__ = list([k for k in globals().keys() if not k.startswith('_')])
