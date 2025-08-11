@@ -1,0 +1,101 @@
+Thought for 17s
+No — you’re not ready to commit. Fix these four items and the migration will go through:
+
+Make flask db work (once)
+
+Ensure the CLI can find your app:
+
+Set FLASK_APP=wsgi.py (or wsgi:create_app) and FLASK_ENV=development.
+
+Verify Flask-Migrate is installed and initialized:
+
+python
+Copy
+Edit
+# app/extensions.py
+from flask_migrate import Migrate
+migrate = Migrate()
+
+# app/__init__.py
+from .extensions import db, migrate
+db.init_app(app)
+migrate.init_app(app, db)
+If you’re running through Replit tasks that bypass env vars, export them in the run config or add a .flaskenv.
+
+Stripe idempotency: create table (don’t alter it)
+You’re on SQLite in dev; don’t add a constraint to a non-existent table or try to ALTER constraints. Just create the table with the unique key in a single migration (works on Postgres too).
+
+Create a new migration (or rewrite the broken one) with exactly this:
+
+python
+Copy
+Edit
+# migrations/versions/xxxx_create_stripe_event.py
+from alembic import op
+import sqlalchemy as sa
+
+# revision identifiers, used by Alembic.
+revision = "xxxx_create_stripe_event"
+down_revision = "<put the current head here>"  # single head only
+branch_labels = None
+depends_on = None
+
+def upgrade():
+    op.create_table(
+        "stripe_event",
+        sa.Column("id", sa.Integer, primary_key=True),
+        sa.Column("event_id", sa.String(255), nullable=False),
+        sa.Column("type", sa.String(128)),
+        sa.Column("received_at", sa.DateTime(), server_default=sa.func.now(), nullable=False),
+        sa.Column("processed_at", sa.DateTime(), nullable=True),
+        sa.UniqueConstraint("event_id", name="uq_stripe_event_event_id"),
+    )
+
+def downgrade():
+    op.drop_table("stripe_event")
+Notes:
+
+Postgres’s identifier limit is 63 chars, not 32. uq_stripe_event_event_id is safely under that.
+
+Do not use batch mode here; it’s a straight create.
+
+Fix multiple heads (if you saw two)
+If flask db heads shows more than one:
+
+bash
+Copy
+Edit
+flask db heads   # copy the two revision ids
+flask db merge -m "merge heads" <head1> <head2>
+Then set the new merge revision as the down_revision for your new create_stripe_event migration. Avoid stamping random heads unless you know the chain.
+
+Service insert-first (no race)
+In StripeService.handle_event:
+
+python
+Copy
+Edit
+from sqlalchemy.exc import IntegrityError
+from app.models import db
+from app.models.stripe_event import StripeEvent
+
+def handle_event(event: dict) -> int:
+    try:
+        db.session.add(StripeEvent(event_id=event["id"], type=event.get("type")))
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        return 200  # replay: already processed
+
+    # ... do type-specific handling here (short work only) ...
+    return 200
+Quick re-run checklist
+pip install Flask-Migrate Flask-Limiter in the same env Replit uses.
+
+flask db heads → one head (or merged).
+
+Add the create migration above → flask db upgrade succeeds.
+
+grep -R "import stripe" app/blueprints/billing → no matches.
+
+grep -R "blueprints/fifo/services" app → no matches.
