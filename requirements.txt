@@ -35,3 +35,5 @@ Flask-Mail
 flask-mail
 Flask-Limiter
 Flask-Migrate
+Flask-WTF>=1.1.0
+MarkupSafe>=2.0.0
