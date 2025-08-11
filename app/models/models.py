@@ -10,16 +10,12 @@ from .recipe import Recipe, RecipeIngredient
 from .batch import Batch, BatchIngredient, BatchContainer, ExtraBatchContainer, BatchTimer, ExtraBatchIngredient
 from .unit import Unit, CustomUnitMapping, ConversionLog
 from .category import IngredientCategory, Tag
-from .subscription_tier import SubscriptionTier
-from .permission import Permission
-from .role import Role
 
 # Make sure Organization and User are available for import
 __all__ = ['Organization', 'User', 'InventoryItem', 'InventoryHistory', 'BatchInventoryLog', 
            'Recipe', 'RecipeIngredient', 'Batch', 'BatchIngredient', 'BatchContainer', 
            'ExtraBatchContainer', 'BatchTimer', 'ExtraBatchIngredient', 'Unit', 
-           'CustomUnitMapping', 'ConversionLog', 'IngredientCategory', 'Tag', 
-           'SubscriptionTier', 'Permission', 'Role']
+           'CustomUnitMapping', 'ConversionLog', 'IngredientCategory', 'Tag']
 
 class Organization(db.Model):
     id = db.Column(db.Integer, primary_key=True)
