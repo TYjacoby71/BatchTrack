@@ -4,7 +4,7 @@ from flask_login import login_required, current_user
 from ...models import db, ProductSKU, Reservation
 from ...services.inventory_adjustment import process_inventory_adjustment
 from ...services.reservation_service import ReservationService
-from app.blueprints.fifo.services import FIFOService
+from app.services.inventory_adjustment import process_inventory_adjustment
 import logging
 from ...utils.permissions import has_permission
 

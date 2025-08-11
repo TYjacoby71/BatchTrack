@@ -4,7 +4,7 @@ from app.models import db, InventoryItem, InventoryHistory
 from datetime import datetime, timedelta
 from app.services.conversion_wrapper import safe_convert
 from app.services.unit_conversion import ConversionEngine
-from app.blueprints.fifo.services import FIFOService
+# FIFO logic moved inline to avoid blueprint imports
 
 def validate_inventory_fifo_sync(item_id, item_type=None):
     """
