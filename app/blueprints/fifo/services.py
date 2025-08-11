@@ -13,8 +13,24 @@ from app.models.models import User
 # FifoInventoryGenerator removed - using generate_fifo_code directly
 from app.utils.timezone_utils import TimezoneUtils
 
-# No public API - all methods are private
-__all__ = []
+# Temporary compatibility shim for imports
+__all__ = ['FIFOService']
+
+class FIFOService:
+    """TEMP compatibility shim - use process_inventory_adjustment instead"""
+    
+    @staticmethod
+    def deduct_fifo(*args, **kwargs):
+        from app.services.inventory_adjustment import process_inventory_adjustment
+        return process_inventory_adjustment(*args, **kwargs)
+    
+    @staticmethod
+    def get_fifo_entries(inventory_item_id):
+        return _FIFOService.get_fifo_entries(inventory_item_id)
+    
+    @staticmethod
+    def calculate_deduction_plan(inventory_item_id, quantity, change_type):
+        return _FIFOService.calculate_deduction_plan(inventory_item_id, quantity, change_type)
 
 logger = logging.getLogger(__name__)
 
@@ -494,12 +510,7 @@ def get_fifo_entries(inventory_item_id):
 def get_expired_fifo_entries(inventory_item_id):
     return _FIFOService.get_expired_fifo_entries(inventory_item_id)
 
-def _deduct_fifo(inventory_item_id, quantity, change_type=None, notes=None, batch_id=None, created_by=None):
-    """
-    Private standalone function - DEPRECATED
-    Use process_inventory_adjustment instead
-    """
-    return _FIFOService._deduct_fifo(inventory_item_id, quantity, change_type, notes, batch_id, created_by)
+
 
 def recount_fifo(inventory_item_id, new_quantity, note, user_id):
     return _FIFOService.recount_fifo(inventory_item_id, new_quantity, note, user_id)

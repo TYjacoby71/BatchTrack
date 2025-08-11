@@ -46,6 +46,17 @@ except ImportError:
 # Safe re-export layer - defer to models.py
 from .models import *
 
+# Add missing exports for tests
+try:
+    from .reservation import Reservation
+except ImportError:
+    pass
+
+try:
+    from .product import ProductSKUHistory
+except ImportError:
+    pass
+
 # Also ensure direct access to key models for backward compatibility
 try:
     from .mixins import ScopedModelMixin
