@@ -46,8 +46,16 @@ def upgrade():
     if not column_exists('subscription_tier', 'max_users'):
         print("   Adding max_users column...")
         with op.batch_alter_table('subscription_tier', schema=None) as batch_op:
-            batch_op.add_column(sa.Column('max_users', sa.Integer, nullable=False, default=1))
+            batch_op.add_column(sa.Column('max_users', sa.Integer, nullable=True))
         print("✅ max_users column added successfully")
+        
+        # Update existing records with default value
+        print("   Setting default values for max_users...")
+        connection.execute(sa.text("UPDATE subscription_tier SET max_users = 1 WHERE max_users IS NULL"))
+        
+        # Make column NOT NULL after setting values
+        with op.batch_alter_table('subscription_tier', schema=None) as batch_op:
+            batch_op.alter_column('max_users', nullable=False)
     else:
         print("   ⚠️  max_users column already exists, skipping")
     
@@ -55,8 +63,16 @@ def upgrade():
     if not column_exists('subscription_tier', 'max_monthly_batches'):
         print("   Adding max_monthly_batches column...")
         with op.batch_alter_table('subscription_tier', schema=None) as batch_op:
-            batch_op.add_column(sa.Column('max_monthly_batches', sa.Integer, nullable=False, default=0))
+            batch_op.add_column(sa.Column('max_monthly_batches', sa.Integer, nullable=True))
         print("✅ max_monthly_batches column added successfully")
+        
+        # Update existing records with default value
+        print("   Setting default values for max_monthly_batches...")
+        connection.execute(sa.text("UPDATE subscription_tier SET max_monthly_batches = 0 WHERE max_monthly_batches IS NULL"))
+        
+        # Make column NOT NULL after setting values
+        with op.batch_alter_table('subscription_tier', schema=None) as batch_op:
+            batch_op.alter_column('max_monthly_batches', nullable=False)
     else:
         print("   ⚠️  max_monthly_batches column already exists, skipping")
     
