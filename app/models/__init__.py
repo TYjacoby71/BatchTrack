@@ -21,6 +21,11 @@ from .developer_role import DeveloperRole
 
 # Core models (that definitely exist)
 from .product import Product, ProductSKU
+try:
+    from .product import ProductVariant
+except ImportError:
+    # ProductVariant might not exist in all versions
+    pass
 from .subscription_tier import SubscriptionTier
 from .permission import Permission
 from .role import Role

@@ -6,11 +6,18 @@ import logging
 # Set up logger once
 logger = logging.getLogger(__name__)
 
-def create_app():
+def create_app(config=None):
     app = Flask(__name__, static_folder='static', static_url_path='/static')
 
-    # Load configuration
+    # Load default configuration
     app.config.from_object('app.config.Config')
+    
+    # Allow tests to override configuration
+    if config:
+        app.config.update(config)
+        # Tests pass DATABASE_URL; SQLAlchemy wants SQLALCHEMY_DATABASE_URI
+        if "DATABASE_URL" in config:
+            app.config["SQLALCHEMY_DATABASE_URI"] = config["DATABASE_URL"]
     app.config['UPLOAD_FOLDER'] = 'static/product_images'
     os.makedirs('static/product_images', exist_ok=True)
 
@@ -268,57 +275,47 @@ def _import_blueprints():
     """Import all blueprints with error handling"""
     blueprints = {}
 
-    # Core blueprints
-    try:
-        from .blueprints.auth.routes import auth_bp
-        from .blueprints.inventory.routes import inventory_bp
-        from .blueprints.recipes.routes import recipes_bp
-        from .blueprints.batches.routes import batches_bp
-        from .blueprints.batches.finish_batch import finish_batch_bp
-        from .blueprints.batches.start_batch import start_batch_bp
-        from .blueprints.batches.cancel_batch import cancel_batch_bp
-        from .blueprints.api.routes import api_bp
-        from .blueprints.settings.routes import settings_bp
-        from .blueprints.expiration.routes import expiration_bp
-        from .blueprints.conversion.routes import conversion_bp
-        from .blueprints.organization.routes import organization_bp
-        from .blueprints.developer.routes import developer_bp
-        from .blueprints.timers.routes import timers_bp
-        from .routes.app_routes import app_routes_bp
-        from .blueprints.fifo import fifo_bp
-        from .blueprints.batches.add_extra import add_extra_bp
-        from .routes import bulk_stock_routes, fault_log_routes, tag_manager_routes
-        from .routes.waitlist_routes import waitlist_bp
-        from .blueprints.admin.admin_routes import admin_bp
-        from .routes.legal_routes import legal_bp
+    # Core blueprints - import individually with error handling
+    blueprint_imports = [
+        ('auth_bp', 'blueprints.auth.routes', 'auth_bp'),
+        ('inventory_bp', 'blueprints.inventory.routes', 'inventory_bp'),
+        ('recipes_bp', 'blueprints.recipes.routes', 'recipes_bp'),
+        ('batches_bp', 'blueprints.batches.routes', 'batches_bp'),
+        ('finish_batch_bp', 'blueprints.batches.finish_batch', 'finish_batch_bp'),
+        ('start_batch_bp', 'blueprints.batches.start_batch', 'start_batch_bp'),
+        ('cancel_batch_bp', 'blueprints.batches.cancel_batch', 'cancel_batch_bp'),
+        ('api_bp', 'blueprints.api.routes', 'api_bp'),
+        ('settings_bp', 'blueprints.settings.routes', 'settings_bp'),
+        ('expiration_bp', 'blueprints.expiration.routes', 'expiration_bp'),
+        ('conversion_bp', 'blueprints.conversion.routes', 'conversion_bp'),
+        ('organization_bp', 'blueprints.organization.routes', 'organization_bp'),
+        ('developer_bp', 'blueprints.developer.routes', 'developer_bp'),
+        ('timers_bp', 'blueprints.timers.routes', 'timers_bp'),
+        ('app_routes_bp', 'routes.app_routes', 'app_routes_bp'),
+        ('fifo_bp', 'blueprints.fifo', 'fifo_bp'),
+        ('add_extra_bp', 'blueprints.batches.add_extra', 'add_extra_bp'),
+        ('waitlist_bp', 'routes.waitlist_routes', 'waitlist_bp'),
+        ('admin_bp', 'blueprints.admin.admin_routes', 'admin_bp'),
+        ('legal_bp', 'routes.legal_routes', 'legal_bp'),
+    ]
 
+    for bp_key, module_path, bp_name in blueprint_imports:
+        try:
+            module = __import__(f'app.{module_path}', fromlist=[bp_name])
+            blueprints[bp_key] = getattr(module, bp_name)
+        except (ImportError, AttributeError) as e:
+            logger.warning(f"Failed to import {bp_key} from {module_path}: {e}")
+
+    # Import route modules with error handling
+    try:
+        from .routes import bulk_stock_routes, fault_log_routes, tag_manager_routes
         blueprints.update({
-            'auth_bp': auth_bp,
-            'inventory_bp': inventory_bp,
-            'recipes_bp': recipes_bp,
-            'batches_bp': batches_bp,
-            'finish_batch_bp': finish_batch_bp,
-            'start_batch_bp': start_batch_bp,
-            'cancel_batch_bp': cancel_batch_bp,
-            'api_bp': api_bp,
-            'settings_bp': settings_bp,
-            'expiration_bp': expiration_bp,
-            'conversion_bp': conversion_bp,
-            'organization_bp': organization_bp,
-            'developer_bp': developer_bp,
-            'timers_bp': timers_bp,
-            'app_routes_bp': app_routes_bp,
-            'fifo_bp': fifo_bp,
-            'add_extra_bp': add_extra_bp,
             'bulk_stock_bp': bulk_stock_routes.bulk_stock_bp,
             'fault_log_bp': fault_log_routes.fault_log_bp,
             'tag_manager_bp': tag_manager_routes.tag_manager_bp,
-            'waitlist_bp': waitlist_bp,
-            'admin_bp': admin_bp,
-            'legal_bp': legal_bp,
         })
     except ImportError as e:
-        logger.warning(f"Failed to import core blueprints: {e}")
+        logger.warning(f"Failed to import route modules: {e}")
 
     return blueprints
 
