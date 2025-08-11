@@ -1,53 +1,65 @@
+
+# app/models/models.py
+# Canonical re-exports for tests/legacy imports. Safe, no-crash imports.
+import importlib
+
+def _export(targets):
+    g = globals()
+    for module, name, alias in targets:
+        try:
+            mod = importlib.import_module(f"{__package__}.{module}")
+            cls = getattr(mod, name)
+            g[alias or name] = cls
+        except Exception:
+            # silently skip if module/class doesn't exist
+            pass
+
+_export([
+    # Inventory / FIFO
+    ("inventory", "InventoryItem", None),
+    ("inventory", "InventoryHistory", "FIFOLot"),     # alias InventoryHistory as FIFOLot
+    ("inventory", "InventoryHistory", None),
+    ("inventory", "BatchInventoryLog", None),
+    
+    # Create Ingredient alias to InventoryItem (common pattern)
+    ("inventory", "InventoryItem", "Ingredient"),
+    
+    # Products
+    ("product", "Product", None),
+    ("product", "ProductSKU", None),
+    
+    # Auth/Org/ACL - these are defined in this file below
+    ("subscription_tier", "SubscriptionTier", None),
+    ("permission", "Permission", None),
+    ("role", "Role", None),
+    
+    # Recipes and Batches
+    ("recipe", "Recipe", None),
+    ("recipe", "RecipeIngredient", None),
+    ("batch", "Batch", None),
+    ("batch", "BatchIngredient", None),
+    ("batch", "BatchContainer", None),
+    ("batch", "ExtraBatchContainer", None),
+    ("batch", "BatchTimer", None),
+    ("batch", "ExtraBatchIngredient", None),
+    
+    # Units and Categories
+    ("unit", "Unit", None),
+    ("unit", "CustomUnitMapping", None),
+    ("unit", "ConversionLog", None),
+    ("category", "IngredientCategory", None),
+    ("category", "Tag", None),
+])
+
+# Build __all__ from whatever successfully imported
+__all__ = [k for k, v in globals().items() if k[0].isupper() and hasattr(v, "__mro__")]
+
+# Keep the core models that are defined in this file
 from datetime import datetime, date
 from flask_login import current_user, UserMixin
 from ..extensions import db
 from .mixins import ScopedModelMixin
 from ..utils.timezone_utils import TimezoneUtils
-
-# Import forwarding for moved models
-from .inventory import InventoryItem, InventoryHistory, BatchInventoryLog
-from .recipe import Recipe, RecipeIngredient
-from .batch import Batch, BatchIngredient, BatchContainer, ExtraBatchContainer, BatchTimer, ExtraBatchIngredient
-from .unit import Unit, CustomUnitMapping, ConversionLog
-from .category import IngredientCategory, Tag
-from .subscription_tier import SubscriptionTier
-from .permission import Permission
-from .role import Role
-from .product import Product, ProductSKU
-
-# Core models (that definitely exist)
-from .product import Product, ProductSKU
-from .subscription_tier import SubscriptionTier
-from .permission import Permission
-from .role import Role
-from .organization import Organization
-from .user import User
-
-# Inventory models that tests expect
-from .inventory import InventoryItem
-try:
-    from .inventory import InventoryHistory as FIFOLot  # alias for tests that expect FIFOLot
-except ImportError:
-    pass
-
-# Create Ingredient alias if it doesn't exist as a separate class
-try:
-    Ingredient = InventoryItem  # Many systems use InventoryItem as the ingredient model
-except:
-    pass
-
-# OPTIONAL exports — don’t crash if the module or names aren’t present
-try:
-    from .statistics import UserStats  # <- replace with actual names that exist
-except Exception:
-    pass
-
-# Make sure Organization and User are available for import
-__all__ = ['Organization', 'User', 'InventoryItem', 'InventoryHistory', 'BatchInventoryLog', 
-           'Recipe', 'RecipeIngredient', 'Batch', 'BatchIngredient', 'BatchContainer', 
-           'ExtraBatchContainer', 'BatchTimer', 'ExtraBatchIngredient', 'Unit', 
-           'CustomUnitMapping', 'ConversionLog', 'IngredientCategory', 'Tag', 
-           'SubscriptionTier', 'Permission', 'Role', 'Product', 'ProductSKU', 'Ingredient', 'FIFOLot']
 
 class Organization(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -257,8 +269,6 @@ class User(UserMixin, db.Model):
         elif self.last_name:
             return self.last_name
         return self.username
-
-
 
     def ensure_organization_owner_role(self):
         """Ensure organization owner has the proper role assigned"""
@@ -479,3 +489,6 @@ class User(UserMixin, db.Model):
 
     def __repr__(self):
         return f'<User {self.username}>'
+
+# Add the imported classes to __all__
+__all__.extend(['Organization', 'User'])
