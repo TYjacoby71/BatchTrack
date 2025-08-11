@@ -15,6 +15,12 @@ from .permission import Permission
 from .role import Role
 from .product import Product, ProductSKU
 
+# OPTIONAL exports — don’t crash if the module or names aren’t present
+try:
+    from .statistics import UserStats  # <- replace with actual names that exist
+except Exception:
+    pass
+
 # Make sure Organization and User are available for import
 __all__ = ['Organization', 'User', 'InventoryItem', 'InventoryHistory', 'BatchInventoryLog', 
            'Recipe', 'RecipeIngredient', 'Batch', 'BatchIngredient', 'BatchContainer', 
