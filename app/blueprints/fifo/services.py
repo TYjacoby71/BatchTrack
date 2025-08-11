@@ -1,23 +1,31 @@
-from ...extensions import db
-from ...models import InventoryItem, InventoryHistory, Organization, User
-from ...utils.timezone_utils import TimezoneUtils
-from ...models.batch import Batch
-from flask import current_app
+"""
+FIFO Service - First In, First Out inventory management
+DEPRECATED: Use app.services.inventory_adjustment instead
+"""
+
 import logging
+from datetime import datetime
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy import func, text
+from app.extensions import db
+from app.models.inventory import InventoryItem, InventoryHistory
+from app.models.models import User
+from app.utils.fifo_generator import FifoInventoryGenerator
+from app.utils.timezone_utils import TimezoneUtils
+
+# No public API - all methods are private
+__all__ = []
 
 logger = logging.getLogger(__name__)
 
-# DEPRECATED: Stop importing FIFOService from blueprints
-__all__ = []
-
-class FIFOService:
+class _FIFOService:
     """DEPRECATED: Use app.services.inventory_adjustment.process_inventory_adjustment instead"""
 
     @staticmethod
-    def deduct_fifo(inventory_item_id, quantity, change_type=None, notes=None, batch_id=None, created_by=None):
+    def _deduct_fifo(inventory_item_id, quantity, change_type=None, notes=None, batch_id=None, created_by=None):
         """DEPRECATED: Use process_inventory_adjustment instead"""
+        logger.warning("_FIFOService._deduct_fifo is deprecated. Use process_inventory_adjustment instead.")
         from app.services.inventory_adjustment import process_inventory_adjustment
-        logger.warning("FIFOService.deduct_fifo is deprecated. Use process_inventory_adjustment instead.")
         return process_inventory_adjustment(
             item_id=inventory_item_id,
             quantity=-abs(quantity),  # Ensure negative for deduction
@@ -179,7 +187,7 @@ class FIFOService:
 
         # For expired disposal, only look at expired lots
         if change_type in disposal_operations:
-            expired_entries = FIFOService.get_expired_fifo_entries(inventory_item_id)
+            expired_entries = _FIFOService.get_expired_fifo_entries(inventory_item_id)
             expired_total = sum(entry.remaining_quantity for entry in expired_entries)
 
             # If we have enough expired stock, use it
@@ -198,7 +206,7 @@ class FIFOService:
 
         # PRODUCTION SAFETY: For ALL non-disposal operations, ONLY use fresh (non-expired) entries
         # This ensures production batches, sales, reservations, etc. never use expired inventory
-        fifo_entries = FIFOService.get_fifo_entries(inventory_item_id)  # Already excludes expired
+        fifo_entries = _FIFOService.get_fifo_entries(inventory_item_id)  # Already excludes expired
         available_quantity = sum(entry.remaining_quantity for entry in fifo_entries)
 
         # Validate no expired entries leaked through
@@ -261,8 +269,8 @@ class FIFOService:
         db.session.commit()
 
     @staticmethod
-    def add_fifo_entry(inventory_item_id, quantity, change_type, unit, notes=None, 
-                      cost_per_unit=None, created_by=None, batch_id=None, 
+    def add_fifo_entry(inventory_item_id, quantity, change_type, unit, notes=None,
+                      cost_per_unit=None, created_by=None, batch_id=None,
                       expiration_date=None, shelf_life_days=None, order_id=None,
                       source=None, fifo_reference_id=None, **kwargs):
         """
@@ -338,7 +346,7 @@ class FIFOService:
 
 
     @staticmethod
-    def create_deduction_history(inventory_item_id, deduction_plan, change_type, notes, 
+    def create_deduction_history(inventory_item_id, deduction_plan, change_type, notes,
                                 batch_id=None, created_by=None, customer=None, sale_price=None, order_id=None):
         """
         Create history entries for deductions using FIFO order
@@ -454,7 +462,7 @@ class FIFOService:
 
         # If there's still quantity to credit (shouldn't happen in normal cases)
         if remaining_to_credit > 0:
-            excess_history = FIFOService.add_fifo_entry(
+            excess_history = _FIFOService.add_fifo_entry(
                 inventory_item_id=inventory_item_id,
                 quantity=remaining_to_credit,
                 change_type='restock',
@@ -481,20 +489,20 @@ class FIFOService:
 # Removed deprecated process_adjustment_via_fifo - use inventory_adjustment service
 # Legacy function aliases for backward compatibility
 def get_fifo_entries(inventory_item_id):
-    return FIFOService.get_fifo_entries(inventory_item_id)
+    return _FIFOService.get_fifo_entries(inventory_item_id)
 
 def get_expired_fifo_entries(inventory_item_id):
-    return FIFOService.get_expired_fifo_entries(inventory_item_id)
+    return _FIFOService.get_expired_fifo_entries(inventory_item_id)
 
-def deduct_fifo(inventory_item_id, quantity, change_type=None, notes=None, batch_id=None, created_by=None):
-    """Legacy function - use FIFOService.calculate_deduction_plan and execute_deduction_plan instead"""
-    success, deduction_plan, _ = FIFOService.calculate_deduction_plan(inventory_item_id, quantity, change_type)
-    if success:
-        FIFOService.execute_deduction_plan(deduction_plan)
-    return success, deduction_plan
+def _deduct_fifo(inventory_item_id, quantity, change_type=None, notes=None, batch_id=None, created_by=None):
+    """
+    Private standalone function - DEPRECATED
+    Use process_inventory_adjustment instead
+    """
+    return _FIFOService._deduct_fifo(inventory_item_id, quantity, change_type, notes, batch_id, created_by)
 
 def recount_fifo(inventory_item_id, new_quantity, note, user_id):
-    return FIFOService.recount_fifo(inventory_item_id, new_quantity, note, user_id)
+    return _FIFOService.recount_fifo(inventory_item_id, new_quantity, note, user_id)
 
 def update_fifo_perishable_status(inventory_item_id, shelf_life_days):
     """Updates perishable status for all FIFO entries with remaining quantity"""

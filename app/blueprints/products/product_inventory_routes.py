@@ -4,7 +4,7 @@ from ...models import db, ProductSKU, Batch
 from ...models.product import ProductSKUHistory
 from ...services.product_service import ProductService
 from ...services.inventory_adjustment import process_inventory_adjustment
-from app.blueprints.fifo.services import FIFOService
+from app.services.inventory_adjustment import process_inventory_adjustment
 import logging
 
 # Set up logger for product inventory operations
