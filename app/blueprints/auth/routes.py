@@ -136,6 +136,13 @@ def oauth_callback():
             flash('OAuth callback missing required parameters.', 'error')
             return redirect(url_for('auth.login'))
 
+        # Validate state parameter against session
+        session_state = session.pop('oauth_state', None)
+        if not session_state or session_state != state:
+            logger.error(f"OAuth state mismatch: session={session_state[:10] if session_state else None}, callback={state[:10]}")
+            flash('OAuth state validation failed. Please try again.', 'error')
+            return redirect(url_for('auth.login'))
+
         # Exchange code for credentials
         credentials = OAuthService.exchange_code_for_token(code, state)
         if not credentials:

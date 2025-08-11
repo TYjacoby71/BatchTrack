@@ -30,21 +30,7 @@ class StripeService:
         """Construct Stripe event from webhook payload"""
         return stripe.Webhook.construct_event(payload, sig_header, webhook_secret)
 
-    @staticmethod
-    def is_replay(event_id: str) -> bool:
-        """Check if we've already processed this event"""
-        return db.session.query(StripeEvent.id).filter_by(event_id=event_id).first() is not None
-
-    @staticmethod
-    def record_event(event: dict) -> StripeEvent:
-        """Record Stripe event for idempotency"""
-        stripe_event = StripeEvent(
-            event_id=event["id"],
-            event_type=event["type"]
-        )
-        db.session.add(stripe_event)
-        db.session.commit()
-        return stripe_event
+    
 
     @staticmethod
     def get_customer(customer_id: str):
@@ -67,13 +53,23 @@ class StripeService:
     @staticmethod
     def handle_webhook_event(event: dict) -> int:
         """Handle Stripe webhook event with idempotency"""
-        # Check for replay
-        if StripeService.is_replay(event["id"]):
+        from sqlalchemy.exc import IntegrityError
+        
+        # Insert-first pattern to handle concurrent replays
+        stripe_event = StripeEvent(
+            event_id=event["id"],
+            event_type=event["type"],
+            status='received'
+        )
+        
+        try:
+            db.session.add(stripe_event)
+            db.session.commit()
+        except IntegrityError:
+            # Event already exists (concurrent replay)
+            db.session.rollback()
             logger.info(f"Replay detected for event {event['id']}, skipping")
             return 200
-
-        # Record event
-        stripe_event = StripeService.record_event(event)
 
         try:
             # Route by event type

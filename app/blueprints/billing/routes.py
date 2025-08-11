@@ -1,5 +1,4 @@
 import logging
-import stripe
 import os
 import json
 from datetime import datetime, timedelta
@@ -143,11 +142,21 @@ def complete_signup_from_stripe():
             return redirect(url_for('auth.signup'))
 
         # Retrieve checkout session
-        checkout_session = stripe.checkout.Session.retrieve(session_id)
+        checkout_session = StripeService.get_checkout_session(session_id)
+        if not checkout_session:
+            logger.error("Failed to retrieve checkout session")
+            flash('Checkout session not found', 'error')
+            return redirect(url_for('auth.signup'))
+        
         logger.info(f"Retrieved checkout session: {checkout_session.id}")
 
         # Get customer details
-        customer = stripe.Customer.retrieve(checkout_session.customer)
+        customer = StripeService.get_customer(checkout_session.customer)
+        if not customer:
+            logger.error("Failed to retrieve customer")
+            flash('Customer information not found', 'error')
+            return redirect(url_for('auth.signup'))
+        
         logger.info(f"Retrieved customer: {customer.id}")
 
         # Extract user info from checkout session
@@ -397,128 +406,7 @@ def stripe_webhook():
         logger.error(f"Webhook signature verification failed: {str(e)}")
         return '', 400
 
-def handle_checkout_completed(event):
-    """Handle successful checkout completion"""
-    try:
-        checkout_session = event['data']['object']
-        session_id = checkout_session['id']
 
-        logger.info(f"Processing checkout completion for session: {session_id}")
-
-        # Extract metadata from checkout session
-        metadata = checkout_session.get('metadata', {})
-        tier_key = metadata.get('tier_key')
-
-        if not tier_key:
-            logger.error(f"No tier_key in checkout session metadata: {session_id}")
-            return jsonify({'error': 'Missing tier information'}), 400
-
-        # Get customer information
-        customer_id = checkout_session.get('customer')
-        if not customer_id:
-            logger.error(f"No customer ID in checkout session: {session_id}")
-            return jsonify({'error': 'Missing customer information'}), 400
-
-        # Complete signup using the checkout session
-        success = complete_signup_from_checkout_session(checkout_session)
-
-        if success:
-            logger.info(f"Successfully completed signup from checkout session: {session_id}")
-            return jsonify({'status': 'success'}), 200
-        else:
-            logger.error(f"Failed to complete signup from checkout session: {session_id}")
-            return jsonify({'error': 'Signup completion failed'}), 500
-
-    except Exception as e:
-        logger.error(f"Error handling checkout completion: {e}")
-        return jsonify({'error': 'Processing failed'}), 500
-
-def handle_customer_created(event):
-    """Handle customer.created webhook - may be part of signup flow"""
-    try:
-        customer = event['data']['object']
-        customer_id = customer['id']
-
-        logger.info(f"Processing customer.created for: {customer_id}")
-
-        # Check if this customer has signup-related metadata
-        metadata = customer.get('metadata', {})
-
-        if 'tier' in metadata or 'signup_source' in metadata:
-            # This appears to be a signup customer - process the signup
-            tier_key = metadata.get('tier')
-            if not tier_key:
-                logger.warning(f"Customer {customer_id} has signup metadata but no tier")
-                return jsonify({'status': 'no_tier'}), 200
-
-            # Build signup data from customer information and metadata
-            signup_data = {
-                'org_name': customer['name'] or f"{customer['email']} Organization",
-                'email': customer['email'],
-                'first_name': metadata.get('first_name', customer['name'].split(' ')[0] if customer['name'] else ''),
-                'last_name': metadata.get('last_name', ' '.join(customer['name'].split(' ')[1:]) if customer['name'] and ' ' in customer['name'] else ''),
-                'username': metadata.get('username', customer['email'].split('@')[0]),
-                'signup_source': metadata.get('signup_source', 'stripe'),
-                'promo_code': metadata.get('promo_code'),
-                'referral_code': metadata.get('referral_code'),
-                'oauth_provider': metadata.get('oauth_provider'),
-                'oauth_provider_id': metadata.get('oauth_provider_id'),
-                'password_hash': metadata.get('password_hash', 'stripe_signup_pending')
-            }
-
-            # Complete the signup
-            from ...services.signup_service import SignupService
-            success = SignupService.complete_stripe_signup(signup_data, tier_key, customer_id)
-
-            if success:
-                logger.info(f"Successfully completed signup for customer: {customer_id}")
-                return jsonify({'status': 'signup_completed'}), 200
-            else:
-                logger.error(f"Failed to complete signup for customer: {customer_id}")
-                return jsonify({'error': 'Signup completion failed'}), 500
-        else:
-            # Regular customer creation, not a signup
-            logger.info(f"Regular customer creation, not a signup: {customer_id}")
-            return jsonify({'status': 'regular_customer'}), 200
-
-    except Exception as e:
-        logger.error(f"Error handling customer.created: {e}")
-        return jsonify({'error': 'Processing failed'}), 500
-
-def complete_signup_from_checkout_session(checkout_session):
-    """Complete signup using checkout session data"""
-    try:
-        # Extract all necessary information from the checkout session
-        metadata = checkout_session.get('metadata', {})
-        customer_id = checkout_session.get('customer')
-
-        # Get customer details
-        customer = stripe.Customer.retrieve(customer_id)
-
-        # Build comprehensive signup data
-        signup_data = {
-            'org_name': customer.name or f"{customer.email} Organization",
-            'email': customer.email,
-            'first_name': metadata.get('first_name', customer.name.split(' ')[0] if customer.name else ''),
-            'last_name': metadata.get('last_name', ' '.join(customer.name.split(' ')[1:]) if customer.name and ' ' in customer.name else ''),
-            'username': metadata.get('username', customer.email.split('@')[0]),
-            'signup_source': metadata.get('signup_source', 'stripe'),
-            'promo_code': metadata.get('promo_code'),
-            'referral_code': metadata.get('referral_code'),
-            'oauth_provider': metadata.get('oauth_provider'),
-            'oauth_provider_id': metadata.get('oauth_provider_id'),
-            'oauth_email': metadata.get('oauth_email'),
-            'password_hash': metadata.get('password_hash', 'stripe_checkout_signup')
-        }
-
-        tier_key = metadata.get('tier_key') or metadata.get('tier')
-
-        from ...services.signup_service import SignupService
-        return SignupService.complete_stripe_signup(signup_data, tier_key, customer_id)
-
-    except Exception as e:
-        logger.error(f"Error completing signup from checkout session: {e}")
-        return False
 
 
 def handle_subscription_change(event):
