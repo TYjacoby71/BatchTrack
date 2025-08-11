@@ -2,7 +2,7 @@
 """add tier_key column to subscription_tier
 
 Revision ID: add_tier_key_column
-Revises: add_fallback_price_column
+Revises: add_unique_constraint_stripe
 Create Date: 2025-01-20 10:00:00.000000
 
 """
@@ -12,7 +12,7 @@ from sqlalchemy import inspect
 
 # revision identifiers, used by Alembic.
 revision = 'add_tier_key_column'
-down_revision = 'add_fallback_price_column'
+down_revision = 'add_unique_constraint_stripe'
 branch_labels = None
 depends_on = None
 
