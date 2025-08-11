@@ -4,7 +4,46 @@ from app.models import db, InventoryItem, InventoryHistory
 from datetime import datetime, timedelta
 from app.services.conversion_wrapper import safe_convert
 from app.services.unit_conversion import ConversionEngine
+from sqlalchemy import func, and_
+import logging
+
+# Initialize logger
+logger = logging.getLogger(__name__)
+
 # FIFO logic moved inline to avoid blueprint imports
+
+def validate_inventory_fifo_sync(inventory_item_id, expected_total=None):
+    """
+    Validate that FIFO entries sum to inventory total
+    Returns (is_valid, details)
+    """
+    try:
+        item = InventoryItem.query.get(inventory_item_id)
+        if not item:
+            return False, "Inventory item not found"
+
+        # Get current FIFO total
+        fifo_total = db.session.query(func.sum(InventoryHistory.remaining_quantity)).filter(
+            InventoryHistory.inventory_item_id == inventory_item_id,
+            InventoryHistory.remaining_quantity > 0
+        ).scalar() or 0
+
+        # Compare with expected or actual inventory quantity
+        target_quantity = expected_total if expected_total is not None else item.quantity
+
+        is_valid = abs(float(fifo_total) - float(target_quantity)) < 0.001
+
+        return is_valid, {
+            'fifo_total': float(fifo_total),
+            'inventory_quantity': float(target_quantity),
+            'difference': float(fifo_total) - float(target_quantity),
+            'is_valid': is_valid
+        }
+
+    except Exception as e:
+        logger.error(f"Error validating FIFO sync for item {inventory_item_id}: {e}")
+        return False, f"Validation error: {str(e)}"
+
 
 def validate_inventory_fifo_sync(item_id, item_type=None):
     """
@@ -491,3 +530,20 @@ def handle_recount_adjustment(item_id, target_quantity, notes=None, created_by=N
         db.session.rollback()
         print(f"RECOUNT ERROR: {str(e)}")
         raise e
+
+
+class InventoryAdjustmentService:
+    """Backwards compatibility shim for tests and legacy code"""
+
+    @staticmethod
+    def adjust_inventory(*args, **kwargs):
+        """Legacy method - use process_inventory_adjustment instead"""
+        return process_inventory_adjustment(*args, **kwargs)
+
+    @staticmethod
+    def process_inventory_adjustment(*args, **kwargs):
+        return process_inventory_adjustment(*args, **kwargs)
+
+    @staticmethod
+    def validate_inventory_fifo_sync(*args, **kwargs):
+        return validate_inventory_fifo_sync(*args, **kwargs)
