@@ -1,4 +1,3 @@
-
 """
 Pytest configuration and shared fixtures for BatchTrack tests.
 """
@@ -15,7 +14,7 @@ def app():
     """Create and configure a new app instance for each test."""
     # Create a temporary file to use as the database
     db_fd, db_path = tempfile.mkstemp()
-    
+
     app = create_app({
         'TESTING': True,
         'DATABASE_URL': f'sqlite:///{db_path}',
@@ -27,12 +26,12 @@ def app():
 
     with app.app_context():
         db.create_all()
-        
+
         # Create basic test data
         _create_test_data()
-        
+
         yield app
-        
+
     os.close(db_fd)
     os.unlink(db_path)
 
@@ -56,37 +55,37 @@ def auth_headers():
 
 
 def _create_test_data():
-    """Create minimal test data for all tests."""
+    """Create basic test data"""
+    from app.models.subscription_tier import SubscriptionTier
+    from app.models.models import Organization, User
+    from app.extensions import db
+
     # Create a test subscription tier
     tier = SubscriptionTier(
-        tier_key='test_tier',
-        name='Test Tier', 
-        stripe_price_id_monthly='price_test_monthly',
-        stripe_price_id_yearly='price_test_yearly',
+        name='Test Tier',
+        key='test',
+        tier_key='test',
         max_users=5,
         max_monthly_batches=100,
         is_customer_facing=True
     )
     db.session.add(tier)
-    
+    db.session.commit()
+
     # Create a test organization
     org = Organization(
         name='Test Organization',
-        subscription_tier_id='test_tier',
-        stripe_customer_id='cus_test_customer'
+        subscription_tier=tier.id
     )
     db.session.add(org)
-    
+    db.session.commit()
+
     # Create a test user
     user = User(
         email='test@example.com',
-        password_hash='hashed_password',
-        first_name='Test',
-        last_name='User',
-        organization_id=org.id,
-        email_verified=True,
-        is_active=True
+        password_hash='test_hash',
+        is_verified=True,
+        organization_id=org.id
     )
     db.session.add(user)
-    
     db.session.commit()
