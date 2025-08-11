@@ -1,7 +1,6 @@
 from datetime import datetime
 from flask_login import current_user
 from ..models import db, Unit, CustomUnitMapping, InventoryItem as Ingredient, ConversionLog
-from .base_service import CacheableService
 
 class ConversionEngine:
             @staticmethod
@@ -178,6 +177,3 @@ class ConversionEngine:
                     'to': to_unit,
                     'requires_attention': conversion_type in ['custom', 'density']
                 }
-
-class UnitConversionService(CacheableService):
-    pass

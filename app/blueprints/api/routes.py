@@ -2,7 +2,6 @@ from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
 from datetime import datetime
 from flask import session
-from app.utils.api_responses import APIResponse, api_route
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
@@ -44,36 +43,13 @@ def dismiss_alert():
 @api_bp.route('/dashboard-alerts')
 @login_required
 def get_dashboard_alerts():
-    """Get dashboard alerts for current user's organization"""
-    try:
-        from app.services.dashboard_alerts import dashboard_alert_service
-        
-        # Get dismissed alerts from session
-        dismissed_alerts = session.get('dismissed_alerts', [])
-        
-        # Get alerts from service
-        alert_data = dashboard_alert_service.get_dashboard_alerts(
-            organization_id=current_user.organization_id,
-            dismissed_alerts=dismissed_alerts
-        )
-        
-        return jsonify({
-            'success': True,
-            'alerts': alert_data['alerts'],
-            'total_alerts': alert_data['total_alerts'],
-            'hidden_count': alert_data['hidden_count']
-        })
-        
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
-def get_dashboard_alerts():
     """Get dashboard alerts for the current user"""
     from ...services.dashboard_alerts import DashboardAlertService
     from flask import session
-
+    
     dismissed_alerts = session.get('dismissed_alerts', [])
     alert_data = DashboardAlertService.get_dashboard_alerts(dismissed_alerts=dismissed_alerts)
-
+    
     return jsonify(alert_data)
 def dashboard_alerts():
     """Get dashboard alerts with session-based dismissals"""
