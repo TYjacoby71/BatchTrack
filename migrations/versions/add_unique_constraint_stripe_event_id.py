@@ -1,8 +1,8 @@
 
 """add unique constraint on stripe event id
 
-Revision ID: add_unique_constraint_stripe_event_id
-Revises: 
+Revision ID: add_unique_constraint_stripe
+Revises: 'fix_product_sku_name_column'
 Create Date: 2025-08-11 20:06:30.000000
 
 """
@@ -11,8 +11,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'add_unique_constraint_stripe_event_id'
-down_revision = '132971c1d456'
+revision = 'add_unique_constraint_stripe'
+down_revision = 'fix_product_sku_name_column'
 branch_labels = None
 depends_on = None
 
