@@ -75,7 +75,7 @@ class ExpirationService:
             # Calculate precise time elapsed in seconds for accurate freshness
             time_elapsed_seconds = (now_utc - entry_date).total_seconds()
             total_shelf_life_seconds = shelf_life_days * 24 * 60 * 60  # Convert days to seconds
-            
+
             # Calculate remaining life percentage based on precise time
             remaining_seconds = total_shelf_life_seconds - time_elapsed_seconds
             life_remaining_percent = (remaining_seconds / total_shelf_life_seconds) * 100
@@ -535,7 +535,7 @@ class ExpirationService:
         }
 
     @staticmethod
-    def mark_as_expired(item_type, item_id, quantity=None):
+    def mark_as_expired(item_type, item_id, quantity=None, notes=""):
         """Mark items as expired - handles sync errors by directly adjusting FIFO entries"""
         try:
             if item_type == 'fifo':
@@ -544,39 +544,42 @@ class ExpirationService:
                 if not fifo_entry:
                     return False, "FIFO entry not found"
 
-                quantity_to_expire = quantity or fifo_entry.remaining_quantity
+                # Use provided quantity or the full remaining quantity if not specified
+                quantity_to_expire = quantity if quantity is not None else fifo_entry.remaining_quantity
+                if quantity_to_expire <= 0:
+                    return False, "Quantity to expire must be positive"
 
-                # For expired items, directly zero out the FIFO entry and update inventory
+                # Get the inventory item to update its overall quantity
                 item = InventoryItem.query.get(fifo_entry.inventory_item_id)
                 if not item:
                     return False, "Inventory item not found"
 
-                # Create history record for the expiration
-                history = InventoryHistory(
-                    inventory_item_id=fifo_entry.inventory_item_id,
-                    change_type='expired',
-                    quantity_change=-quantity_to_expire,
-                    remaining_quantity=0.0,
+                # Use canonical inventory adjustment service
+                from app.services.inventory_adjustment import process_inventory_adjustment
+
+                success = process_inventory_adjustment(
+                    item_id=fifo_entry.inventory_item_id,
+                    quantity=-abs(quantity_to_expire),
+                    change_type="spoil",
                     unit=fifo_entry.unit,
-                    unit_cost=fifo_entry.unit_cost,
-                    note=f'Expired removal from FIFO entry #{item_id}',
-                    created_by=current_user.id,
-                    quantity_used=quantity_to_expire,
-                    is_perishable=fifo_entry.is_perishable,
-                    shelf_life_days=fifo_entry.shelf_life_days,
-                    organization_id=current_user.organization_id
+                    notes=f"Expired lot {fifo_entry.id} disposal: {notes or ''}".strip(),
+                    created_by=current_user.id
                 )
-                db.session.add(history)
 
-                # Zero out the expired FIFO entry
+                if not success:
+                    logger.error(f"Failed to process expiration adjustment for item {fifo_entry.inventory_item_id}")
+                    return False, "Failed to update inventory through canonical service"
+
+                # Mark the specific FIFO entry as fully used (remaining_quantity = 0)
+                # This is important to prevent it from being picked up again.
                 old_remaining = fifo_entry.remaining_quantity
-                fifo_entry.remaining_quantity = 0.0
-
-                # Reduce inventory quantity
-                item.quantity = max(0, item.quantity - quantity_to_expire)
+                fifo_entry.remaining_quantity = max(0.0, old_remaining - quantity_to_expire)
+                if fifo_entry.remaining_quantity == 0:
+                    # If the entire FIFO entry is used, ensure it's marked as such
+                    pass # The process_inventory_adjustment should handle the overall inventory update
 
                 db.session.commit()
-                return True, f"Successfully marked FIFO entry #{item_id} as expired (removed {old_remaining})"
+                return True, f"Successfully marked FIFO entry #{item_id} as expired (removed {quantity_to_expire} of {old_remaining})"
 
             elif item_type == 'product':
                 # Get product history entry
@@ -585,7 +588,9 @@ class ExpirationService:
                 if not history_entry:
                     return False, "Product history entry not found"
 
-                quantity_to_expire = quantity or history_entry.remaining_quantity
+                quantity_to_expire = quantity if quantity is not None else history_entry.remaining_quantity
+                if quantity_to_expire <= 0:
+                    return False, "Quantity to expire must be positive"
 
                 # For expired products, directly zero out the FIFO entry and update inventory
                 item = InventoryItem.query.get(history_entry.inventory_item_id)

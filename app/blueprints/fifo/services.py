@@ -23,7 +23,7 @@ from app.models.models import User
 from app.utils.timezone_utils import TimezoneUtils
 
 # INTERNAL USE ONLY - do not import externally
-__all__ = []  # No public exports - use inventory_adjustment service
+__all__ = ['get_fifo_entries', 'get_expired_fifo_entries']  # Only read-only exports allowed
 
 class FIFOService:
     """TEMP compatibility shim - use process_inventory_adjustment instead"""
@@ -265,7 +265,7 @@ class _FIFOService:
         return True, deduction_plan, available_quantity
 
     @staticmethod
-    def execute_deduction_plan(deduction_plan, inventory_item_id=None):
+    def _internal_execute_deduction_plan(deduction_plan, inventory_item_id=None):
         """Execute a deduction plan by updating remaining quantities"""
         from app.models.product import ProductSKUHistory
 
@@ -294,7 +294,7 @@ class _FIFOService:
         db.session.commit()
 
     @staticmethod
-    def add_fifo_entry(inventory_item_id, quantity, change_type, unit, notes=None,
+    def _internal_add_fifo_entry(inventory_item_id, quantity, change_type, unit, notes=None,
                       cost_per_unit=None, created_by=None, batch_id=None,
                       expiration_date=None, shelf_life_days=None, order_id=None,
                       source=None, fifo_reference_id=None, **kwargs):
@@ -371,7 +371,7 @@ class _FIFOService:
 
 
     @staticmethod
-    def create_deduction_history(inventory_item_id, deduction_plan, change_type, notes,
+    def _internal_create_deduction_history(inventory_item_id, deduction_plan, change_type, notes,
                                 batch_id=None, created_by=None, customer=None, sale_price=None, order_id=None):
         """
         Create history entries for deductions using FIFO order
