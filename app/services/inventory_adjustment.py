@@ -215,6 +215,12 @@ def process_inventory_adjustment(
         custom_shelf_life_days = kwargs.get("custom_shelf_life_days")
     import inspect
 
+    # Extract optional metadata used downstream
+    batch_id = kwargs.get("batch_id")
+    order_id = kwargs.get("order_id")
+    customer = kwargs.get("customer")
+    sale_price = kwargs.get("sale_price")
+
     # Log canonical entry point usage for audit
     caller_frame = inspect.currentframe().f_back
     caller_file = caller_frame.f_code.co_filename
@@ -323,6 +329,9 @@ def process_inventory_adjustment(
         else:
             cost_per_unit = item.cost_per_unit
 
+        # Track whether we already applied the quantity mutation inside FIFO helpers
+        qty_applied_in_fifo = False
+
         # Handle inventory changes using FIFO service
         if qty_change < 0:
             # Deductions - use FIFO service
@@ -341,6 +350,7 @@ def process_inventory_adjustment(
 
                 # Create reservation tracking with FIFO lot details BEFORE executing deductions
                 from app.services.reservation_service import ReservationService
+
                 reservations_created = []
                 try:
                     for fifo_entry_id, qty_deducted, cost_per_unit in deduction_plan:
@@ -377,7 +387,6 @@ def process_inventory_adjustment(
                 FIFOService.handle_refund_credits(
                     item_id, qty_change, batch_id, notes, created_by, cost_per_unit
                 )
-
             else:
                 # Use FIFO service for all additions - it routes to the correct history table
                 # Handle expiration data
@@ -403,6 +412,7 @@ def process_inventory_adjustment(
                     custom_expiration_date=expiration_date, # Using the determined expiration_date here
                     custom_shelf_life_days=shelf_life_to_use # Using the determined shelf_life_to_use here
                 )
+                qty_applied_in_fifo = True
 
         # For batch completions, ensure the inventory item inherits perishable settings
         if change_type == 'finished_batch' and batch_id:
@@ -414,9 +424,10 @@ def process_inventory_adjustment(
                 item.shelf_life_days = batch.shelf_life_days
                 current_app.logger.info(f"Set inventory item {item.name} as perishable with {batch.shelf_life_days} day shelf life from batch {batch_id}")
 
-        # Update inventory quantity with rounding
-        rounded_qty_change = ConversionEngine.round_value(qty_change, 3)
-        item.quantity = ConversionEngine.round_value(item.quantity + rounded_qty_change, 3)
+        # Update inventory quantity with rounding only if not applied inside FIFO helper
+        if not qty_applied_in_fifo:
+            rounded_qty_change = ConversionEngine.round_value(qty_change, 3)
+            item.quantity = ConversionEngine.round_value(item.quantity + rounded_qty_change, 3)
 
         db.session.commit()
 

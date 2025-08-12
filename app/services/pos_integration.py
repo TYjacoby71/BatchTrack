@@ -366,6 +366,21 @@ class POSIntegrationService:
         ).scalar()
         return result or 0.0
 
+    @staticmethod
+    def process_sale(item_id: int, quantity: float, notes: str | None = None):
+        """
+        Minimal sale processor for tests: delegates to canonical service.
+        Deducts inventory by the sold quantity (negative change), marks change_type 'sale',
+        and prefixes notes with 'POS Sale'.
+        """
+        success = process_inventory_adjustment(
+            item_id=item_id,
+            quantity=-abs(quantity),
+            change_type='sale',
+            notes=f"POS Sale: {notes or ''}".strip(),
+        )
+        return success, ("Sale processed" if success else "Sale failed")
+
 # Placeholder for FIFOService and Reservation.mark_returned(), Reservation.mark_converted_to_sale()
 # These would be defined in other modules.
 class FIFOService:

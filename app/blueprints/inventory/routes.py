@@ -289,6 +289,21 @@ def adjust_inventory(id):
         # Get the item first
         item = InventoryItem.query.get_or_404(id)
 
+        # Recount branch using canonical service when explicitly requested by form
+        adjustment_type = request.form.get('adjustment_type')
+        if adjustment_type == 'recount':
+            success = process_inventory_adjustment(
+                item_id=item.id,
+                quantity=float(request.form.get('quantity', 0) or 0),
+                change_type='recount',
+                unit=item.unit,
+                notes=request.form.get('notes'),
+                created_by=getattr(current_user, 'id', None),
+            )
+            if not success:
+                flash('Error performing recount', 'error')
+            return redirect(url_for('inventory.view_inventory', id=id))
+
         # Check if this item has no history - this indicates it needs FIFO initialization
         history_count = InventoryHistory.query.filter_by(inventory_item_id=id).count()
 
@@ -364,7 +379,6 @@ def adjust_inventory(id):
                 return redirect(url_for('inventory.view_inventory', id=id))
 
             # Use centralized adjustment service for regular adjustments
-            from app.services.inventory_adjustment import process_inventory_adjustment
             # Get custom shelf life for tracking
             quantity = input_quantity
             unit = input_unit

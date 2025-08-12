@@ -88,7 +88,7 @@ class TimestampMixin:
 
 
 class ScopedModelMixin:
-    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=False)
+    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)
 
     @classmethod
     def for_organization(cls, org_id):
