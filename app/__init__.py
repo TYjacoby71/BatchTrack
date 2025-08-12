@@ -20,9 +20,10 @@ def create_app(config=None):
     if app.config.get("TESTING"):
         app.config["LOGIN_DISABLED"] = True
         app.config.setdefault("WTF_CSRF_ENABLED", False)
-        # Tests pass DATABASE_URL; SQLAlchemy wants SQLALCHEMY_DATABASE_URI
-        if "DATABASE_URL" in config:
-            app.config["SQLALCHEMY_DATABASE_URI"] = config["DATABASE_URL"]
+    
+    # Tests pass DATABASE_URL; SQLAlchemy wants SQLALCHEMY_DATABASE_URI
+    if config and "DATABASE_URL" in config:
+        app.config["SQLALCHEMY_DATABASE_URI"] = config["DATABASE_URL"]
     app.config['UPLOAD_FOLDER'] = 'static/product_images'
     os.makedirs('static/product_images', exist_ok=True)
 

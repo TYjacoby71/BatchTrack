@@ -36,12 +36,18 @@ class FIFOService:
         return process_inventory_adjustment(*args, **kwargs)
 
     @staticmethod
-    def get_fifo_entries(inventory_item_id):
-        return _FIFOService.get_fifo_entries(inventory_item_id)
-
-    @staticmethod
     def calculate_deduction_plan(inventory_item_id, quantity, change_type):
         return _FIFOService.calculate_deduction_plan(inventory_item_id, quantity, change_type)
+
+    @staticmethod
+    def execute_deduction_plan(deduction_plan, inventory_item_id):
+        return _FIFOService.execute_deduction_plan(deduction_plan, inventory_item_id)
+
+    @staticmethod
+    def create_deduction_history(inventory_item_id, fifo_entry_id, quantity, change_type, notes=None, unit_cost=None):
+        return _FIFOService.create_deduction_history(
+            inventory_item_id, fifo_entry_id, quantity, change_type, notes=notes, unit_cost=unit_cost
+        )
 
     @staticmethod
     def _internal_add_fifo_entry(
@@ -322,7 +328,7 @@ class _FIFOService:
         return True, deduction_plan, available_quantity
 
     @staticmethod
-    def _internal_execute_deduction_plan(deduction_plan, inventory_item_id=None):
+    def execute_deduction_plan(deduction_plan, inventory_item_id=None):
         """Execute a deduction plan by updating remaining quantities"""
         from app.models.product import ProductSKUHistory
 
@@ -349,6 +355,63 @@ class _FIFOService:
 
         # Commit the changes immediately to ensure they persist
         db.session.commit()
+
+    @staticmethod
+    def create_deduction_history(inventory_item_id, fifo_entry_id, quantity, change_type, notes=None, unit_cost=None):
+        """
+        Create a single deduction history entry based on a FIFO entry.
+        This is a simplified helper for specific use cases.
+        """
+        item = InventoryItem.query.get(inventory_item_id)
+        if not item:
+            raise ValueError(f"Inventory item with ID {inventory_item_id} not found.")
+
+        history_unit = item.unit if item.unit else 'count'
+
+        # Generate FIFO code for deduction
+        # Note: The generate_fifo_code function might need adjustment if it expects more context here.
+        # Assuming a simple generation based on change_type and a placeholder for batch_id.
+        fifo_code = generate_fifo_code(change_type, 0, None) # Placeholder for batch_id
+
+        # Determine the correct history table
+        if item.type == 'product':
+            from app.models.product import ProductSKUHistory
+            history = ProductSKUHistory(
+                inventory_item_id=inventory_item_id,
+                change_type=change_type,
+                quantity_change=-quantity, # Deduction is negative
+                unit=history_unit,
+                remaining_quantity=0.0, # Deductions from FIFO always result in 0 remaining for that entry
+                fifo_reference_id=fifo_entry_id,
+                unit_cost=unit_cost,
+                notes=f"{notes or ''} (Deducted from FIFO #{fifo_entry_id})",
+                created_by=current_user.id if current_user and current_user.is_authenticated else None,
+                quantity_used=quantity,
+                batch_id=None, # This should be passed if available
+                fifo_code=fifo_code,
+                organization_id=current_user.organization_id if current_user and current_user.is_authenticated else item.organization_id
+            )
+        else:
+            history = InventoryHistory(
+                inventory_item_id=inventory_item_id,
+                change_type=change_type,
+                quantity_change=-quantity, # Deduction is negative
+                unit=history_unit,
+                remaining_quantity=0.0, # Deductions from FIFO always result in 0 remaining for that entry
+                fifo_reference_id=fifo_entry_id,
+                unit_cost=unit_cost,
+                note=f"{notes or ''} (Deducted from FIFO #{fifo_entry_id})",
+                created_by=current_user.id if current_user and current_user.is_authenticated else None,
+                quantity_used=quantity,
+                used_for_batch_id=None, # This should be passed if available
+                fifo_code=fifo_code,
+                organization_id=current_user.organization_id if current_user and current_user.is_authenticated else item.organization_id
+            )
+
+        db.session.add(history)
+        db.session.flush() # Flush to get the history entry ID if needed immediately
+        return history
+
 
     @staticmethod
     def _internal_create_deduction_history(inventory_item_id, deduction_plan, change_type, notes,

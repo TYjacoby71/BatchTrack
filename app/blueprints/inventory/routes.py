@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session
+from flask import Blueprint, request, jsonify, render_template, redirect, url_for, flash, session
 from flask_login import login_required, current_user
 from app.models import db, InventoryItem, InventoryHistory, Unit, IngredientCategory, User
 from app.utils.permissions import permission_required
@@ -295,89 +295,57 @@ def add_inventory():
 @login_required
 def adjust_inventory(id):
     item = InventoryItem.query.get_or_404(id)
-    item_id = id
-    logger = logging.getLogger(__name__)
 
-    if request.method == 'POST':
-        try:
-            # Parse form data
-            form = request.form
-            adj_type = form.get('adjustment_type') or form.get('change_type')
-            qty = float(form.get('quantity', 0) or 0.0)
-            notes = form.get('notes') or None
-            unit = form.get('input_unit') or getattr(item, 'unit', None)
+    form = request.form
+    adj_type = (form.get('adjustment_type') or form.get('change_type') or '').strip().lower()
+    qty = float(form.get('quantity', 0) or 0.0)
+    notes = form.get('notes') or None
+    unit = form.get('input_unit') or getattr(item, 'unit', None)
 
-            logger.info(f"Processing inventory adjustment: item_id={item_id}, adj_type={adj_type}, quantity={qty}")
+    if adj_type == 'recount':
+        process_inventory_adjustment(
+            item_id=item.id,
+            quantity=qty,
+            change_type='recount',
+            unit=unit,
+            notes=notes,
+            created_by=getattr(current_user, 'id', None),
+        )
+        return ('', 204)
 
-            # recount -> must call the canonical entry
-            if adj_type == 'recount':
-                success = process_inventory_adjustment(
-                    item_id=item.id,
-                    quantity=qty,
-                    change_type='recount',
-                    unit=unit,
-                    notes=notes,
-                    created_by=getattr(current_user, 'id', None),
-                )
-                if success:
-                    flash('Inventory recount completed successfully!', 'success')
-                else:
-                    flash('Error processing recount adjustment', 'error')
-                return redirect(url_for('inventory.view_inventory', id=item.id))
-
-            # initial stock (no history + restock) -> must call canonical with cost_override + unit
-            if adj_type == 'restock':
-                has_hist = InventoryHistory.query.filter_by(inventory_item_id=item.id).count() > 0
-                if not has_hist:
+    if adj_type == 'restock':
+        has_hist = InventoryHistory.query.filter_by(inventory_item_id=item.id).count() > 0
+        if not has_hist:
+            cost_override = None
+            if form.get('cost_entry_type') == 'per_unit' and form.get('cost_per_unit'):
+                try:
+                    cost_override = float(form.get('cost_per_unit'))
+                except ValueError:
                     cost_override = None
-                    if form.get('cost_entry_type') == 'per_unit' and form.get('cost_per_unit'):
-                        try:
-                            cost_override = float(form.get('cost_per_unit'))
-                        except ValueError:
-                            cost_override = None
 
-                    success = process_inventory_adjustment(
-                        item_id=item.id,
-                        quantity=qty,
-                        change_type='restock',
-                        unit=unit,
-                        notes=notes,
-                        created_by=getattr(current_user, 'id', None),
-                        cost_override=cost_override,
-                    )
-                    if success:
-                        flash('Initial stock added successfully!', 'success')
-                    else:
-                        flash('Error processing initial stock', 'error')
-                    return redirect(url_for('inventory.view_inventory', id=item.id))
-                else:
-                    # Regular restock with existing history
-                    success = process_inventory_adjustment(
-                        item_id=item.id,
-                        quantity=qty,
-                        change_type='restock',
-                        unit=unit,
-                        notes=notes,
-                        created_by=getattr(current_user, 'id', None),
-                    )
-                    if success:
-                        flash('Inventory restocked successfully!', 'success')
-                    else:
-                        flash('Error processing restock', 'error')
-                    return redirect(url_for('inventory.view_inventory', id=item.id))
+            process_inventory_adjustment(
+                item_id=item.id,
+                quantity=qty,
+                change_type='restock',
+                unit=unit,
+                notes=notes,
+                created_by=getattr(current_user, 'id', None),
+                cost_override=cost_override,
+            )
+            return ('', 204)
 
-            else:
-                flash('Invalid adjustment type', 'error')
-                return redirect(url_for('inventory.view_inventory', id=item.id))
+        # normal restock path
+        process_inventory_adjustment(
+            item_id=item.id,
+            quantity=qty,
+            change_type='restock',
+            unit=unit,
+            notes=notes,
+            created_by=getattr(current_user, 'id', None),
+        )
+        return ('', 204)
 
-        except ValueError as e:
-            logger.error(f"ValueError in inventory adjustment: {e}")
-            flash('Invalid quantity value. Please enter a valid number.', 'error')
-        except Exception as e:
-            logger.error(f"Error updating inventory: {e}")
-            flash('An error occurred while updating inventory.', 'error')
-
-        return redirect(url_for('inventory.view_inventory', id=item.id))
+    return ('Invalid adjustment type', 400)
 
 
 @inventory_bp.route('/edit/<int:id>', methods=['POST'])
