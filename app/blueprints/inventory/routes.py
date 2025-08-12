@@ -289,110 +289,111 @@ def adjust_inventory(id):
         # Get the item first
         item = InventoryItem.query.get_or_404(id)
 
-        # Check if this item has no history - this indicates it needs FIFO initialization
-        history_count = InventoryHistory.query.filter_by(inventory_item_id=id).count()
+        adjustment_type = request.form.get('change_type')
 
-        change_type = request.form.get('change_type')
-        input_quantity = float(request.form.get('quantity', 0))
-        input_unit = request.form.get('input_unit')
+        # Check if this is the first stock entry (no history)
+        history_count = InventoryHistory.query.filter_by(inventory_item_id=item.id).count()
+        if history_count == 0:
+            # This is initial stock - use canonical service
+            qty = float(request.form.get('quantity', 0) or 0)
+            input_unit = request.form.get('input_unit') or item.unit
+            notes = request.form.get('notes')
+            cost_entry_type = request.form.get('cost_entry_type')
+            cost_per_unit = request.form.get('cost_per_unit')
+            cost_override = float(cost_per_unit) if cost_entry_type == 'per_unit' and cost_per_unit else None
 
-        # For containers, always use 'count' as the unit
-        if item.type == 'container':
-            input_unit = 'count'
+            process_inventory_adjustment(
+                item_id=item.id,
+                quantity=qty,
+                change_type='restock',
+                unit=input_unit,
+                notes=notes,
+                created_by=getattr(current_user, 'id', None),
+                cost_override=cost_override,
+            )
+        else:
+            if adjustment_type == 'recount':
+                # Handle recount separately - use canonical service
+                process_inventory_adjustment(
+                    item_id=item.id,
+                    quantity=float(request.form.get('quantity', 0) or 0),
+                    change_type='recount',
+                    unit=item.unit,  # safe default
+                    notes=request.form.get('notes'),
+                    created_by=getattr(current_user, 'id', None),
+                )
+            else:
+                input_quantity = float(request.form.get('quantity', 0))
+                input_unit = request.form.get('input_unit')
 
-        input_unit = request.form.get('input_unit', item.unit)
-        notes = request.form.get('notes', '')
-        cost_entry_type = request.form.get('cost_entry_type', 'no_change')
-        cost_per_unit_input = request.form.get('cost_per_unit')
+                # For containers, always use 'count' as the unit
+                if item.type == 'container':
+                    input_unit = 'count'
 
-        # Handle custom shelf life override
-        override_expiration = request.form.get('override_expiration') == 'on'
-        custom_expiration_date = None
-        if override_expiration and change_type == 'restock':
-            custom_shelf_life_str = request.form.get('custom_shelf_life_days')
-            if custom_shelf_life_str:
-                try:
-                    custom_shelf_life = int(custom_shelf_life_str)
-                    if custom_shelf_life > 0:
-                        from app.blueprints.expiration.services import ExpirationService
-                        custom_expiration_date = ExpirationService.calculate_expiration_date(
-                            datetime.utcnow(), custom_shelf_life
-                        )
-                except (ValueError, TypeError):
-                    flash('Invalid shelf life value', 'error')
+                input_unit = request.form.get('input_unit', item.unit)
+                notes = request.form.get('notes', '')
+                cost_entry_type = request.form.get('cost_entry_type', 'no_change')
+                cost_per_unit_input = request.form.get('cost_per_unit')
+
+                # Handle custom shelf life override
+                override_expiration = request.form.get('override_expiration') == 'on'
+                custom_expiration_date = None
+                if override_expiration and adjustment_type == 'restock':
+                    custom_shelf_life_str = request.form.get('custom_shelf_life_days')
+                    if custom_shelf_life_str:
+                        try:
+                            custom_shelf_life = int(custom_shelf_life_str)
+                            if custom_shelf_life > 0:
+                                from app.blueprints.expiration.services import ExpirationService
+                                custom_expiration_date = ExpirationService.calculate_expiration_date(
+                                    datetime.utcnow(), custom_shelf_life
+                                )
+                        except (ValueError, TypeError):
+                            flash('Invalid shelf life value', 'error')
+                            return redirect(url_for('inventory.view_inventory', id=id))
+
+                # Calculate restock cost based on entry type
+                restock_cost = None
+                if cost_entry_type == 'per_unit' and cost_per_unit_input:
+                    restock_cost = float(cost_per_unit_input)
+                elif cost_entry_type == 'total' and cost_per_unit_input:
+                    total_cost = float(cost_per_unit_input)
+                    restock_cost = total_cost / input_quantity
+
+                # Pre-validation check for existing items
+                from app.services.inventory_adjustment import validate_inventory_fifo_sync
+                is_valid, error_msg, inv_qty, fifo_total = validate_inventory_fifo_sync(id)
+                if not is_valid:
+                    flash(f'Pre-adjustment validation failed: {error_msg}', 'error')
                     return redirect(url_for('inventory.view_inventory', id=id))
 
-        # Calculate restock cost based on entry type
-        restock_cost = None
-        if cost_entry_type == 'per_unit' and cost_per_unit_input:
-            restock_cost = float(cost_per_unit_input)
-        elif cost_entry_type == 'total' and cost_per_unit_input:
-            total_cost = float(cost_per_unit_input)
-            restock_cost = total_cost / input_quantity
+                # Use centralized adjustment service for regular adjustments
+                from app.services.inventory_adjustment import process_inventory_adjustment
+                # Get custom shelf life for tracking
+                quantity = input_quantity
+                unit = input_unit
+                cost_override = restock_cost
 
-        # Special case: FIFO initialization for items with no history
-        if history_count == 0 and change_type == 'restock' and input_quantity > 0:
-            # This is essentially the same as initial stock creation
-            # Set the proper unit for history based on item type
-            if item.type == 'container':
-                history_unit = 'count'
-            else:
-                history_unit = item.unit or input_unit
+                custom_shelf_life = None
+                if override_expiration:
+                    custom_shelf_life_str = request.form.get('custom_shelf_life_days')
+                    if custom_shelf_life_str:
+                        try:
+                            custom_shelf_life = int(custom_shelf_life_str)
+                        except (ValueError, TypeError):
+                            pass
 
-            # Use canonical inventory adjustment service for initial stock creation
-            success = process_inventory_adjustment(
-                item_id=item.id,
-                quantity=abs(input_quantity),
-                change_type="restock",
-                unit=history_unit,
-                notes=notes or 'Initial stock creation via adjustment modal',
-                created_by=current_user.id,
-                cost_override=restock_cost
-            )
-
-            if success:
-                flash('Initial inventory created successfully')
-            else:
-                flash('Error creating initial inventory', 'error')
-
-        else:
-            # Pre-validation check for existing items
-            from app.services.inventory_adjustment import validate_inventory_fifo_sync
-            is_valid, error_msg, inv_qty, fifo_total = validate_inventory_fifo_sync(id)
-            if not is_valid:
-                flash(f'Pre-adjustment validation failed: {error_msg}', 'error')
-                return redirect(url_for('inventory.view_inventory', id=id))
-
-            # Use centralized adjustment service for regular adjustments
-            from app.services.inventory_adjustment import process_inventory_adjustment
-            # Get custom shelf life for tracking
-            quantity = input_quantity
-            unit = input_unit
-            cost_override = restock_cost
-
-            custom_shelf_life = None
-            if override_expiration:
-                custom_shelf_life_str = request.form.get('custom_shelf_life_days')
-                if custom_shelf_life_str:
-                    try:
-                        custom_shelf_life = int(custom_shelf_life_str)
-                    except (ValueError, TypeError):
-                        pass
-
-            success = process_inventory_adjustment(
-                item_id=id,
-                quantity=quantity,
-                change_type=change_type,
-                unit=unit,
-                notes=notes,
-                created_by=current_user.id,
-                cost_override=cost_override,
-                custom_expiration_date=custom_expiration_date,
-                custom_shelf_life_days=custom_shelf_life
-            )
-
-            if not success:
-                flash('Error adjusting inventory', 'error')
+                process_inventory_adjustment(
+                    item_id=id,
+                    quantity=quantity,
+                    change_type=adjustment_type,
+                    unit=unit,
+                    notes=notes,
+                    created_by=current_user.id,
+                    cost_override=cost_override,
+                    custom_expiration_date=custom_expiration_date,
+                    custom_shelf_life_days=custom_shelf_life
+                )
 
     except ValueError as e:
         print(f"DEBUG: ValueError in adjust_inventory: {str(e)}")

@@ -342,7 +342,20 @@ class ProductSKU(db.Model, ScopedModelMixin):
         self.quantity_override = value
 
     def __repr__(self):
-        return f'<ProductSKU {self.display_name}>'
+        return f'<ProductSKU {self.name}>'
+
+
+# Auto-fill organization_id from the linked inventory item if missing
+@event.listens_for(ProductSKU, "before_insert")
+def _sku_fill_org_id(mapper, connection, target):
+    if not getattr(target, "organization_id", None) and getattr(target, "inventory_item_id", None):
+        sess = object_session(target)
+        if sess is not None:
+            from app.models.inventory import InventoryItem
+            inv = sess.get(InventoryItem, target.inventory_item_id)
+            if inv and inv.organization_id:
+                target.organization_id = inv.organization_id
+
 
 class ProductSKUHistory(ScopedModelMixin, db.Model):
     """FIFO-enabled history table for SKU changes"""
