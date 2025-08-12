@@ -83,12 +83,12 @@ class ReservationService:
                 continue
 
             # Credit back using canonical service
-            from app.services.inventory_adjustment import process_inventory_adjustment
             process_inventory_adjustment(
                 item_id=reservation.inventory_item_id,
                 quantity=reservation.quantity,  # credit back
                 change_type="unreserved",
                 notes=f"Released reservation {reservation.id} (ref lot #{reservation.source_fifo_id})",
+                created_by=current_user.id if current_user.is_authenticated else None,
                 item_type="product"
             )
             print(f"Credited {reservation.quantity} back to lot {reservation.source_fifo_id}")
