@@ -5,6 +5,7 @@ from ...utils.unit_utils import get_global_unit_list
 from ...utils.fifo_generator import get_change_type_prefix, int_to_base36
 from sqlalchemy import and_, or_, func
 from sqlalchemy.orm import joinedload
+from app.services.inventory_adjustment import InventoryAdjustmentService, process_inventory_adjustment
 
 # Import the blueprint from __init__.py instead of creating a new one
 from . import inventory_bp
