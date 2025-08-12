@@ -1,3 +1,4 @@
+2025-08-12 17:12:30,505 ERROR: Error getting global unit list: cannot access local variable 'FallbackUnit' where it is not associated with a value [in /home/runner/workspace/app/utils/unit_utils.py:77]
 2025-08-12 17:12:30,657 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:20]
 2025-08-12 17:12:31,411 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:20]
 2025-08-12 17:12:32,144 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:20]

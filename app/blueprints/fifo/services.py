@@ -15,31 +15,28 @@ This service is kept for backward compatibility and internal FIFO logic only.
 import logging
 from datetime import datetime
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy import func, text, and_
+from sqlalchemy import func, text
 from app.extensions import db
 from app.models.inventory import InventoryItem, InventoryHistory
 from app.models.models import User
-from app.models.product import ProductSKUHistory
+# FifoInventoryGenerator removed - using generate_fifo_code directly
 from app.utils.timezone_utils import TimezoneUtils
-from app.utils.fifo_utils import generate_fifo_code
-from flask_login import current_user
-from app.models.batch import Batch
 
 # INTERNAL USE ONLY - do not import externally
 __all__ = ['get_fifo_entries', 'get_expired_fifo_entries']  # Only read-only exports allowed
 
 class FIFOService:
     """TEMP compatibility shim - use process_inventory_adjustment instead"""
-
+    
     @staticmethod
     def deduct_fifo(*args, **kwargs):
         from app.services.inventory_adjustment import process_inventory_adjustment
         return process_inventory_adjustment(*args, **kwargs)
-
+    
     @staticmethod
     def get_fifo_entries(inventory_item_id):
         return _FIFOService.get_fifo_entries(inventory_item_id)
-
+    
     @staticmethod
     def calculate_deduction_plan(inventory_item_id, quantity, change_type):
         return _FIFOService.calculate_deduction_plan(inventory_item_id, quantity, change_type)
@@ -64,57 +61,10 @@ class _FIFOService:
         )
 
     @staticmethod
-    def _internal_add_fifo_entry(
-        inventory_item_id: int,
-        quantity: float,
-        change_type: str,
-        unit: str,
-        notes: str = None,
-        cost_per_unit: float = None,
-        expiration_date=None,
-        shelf_life_days=None,
-        batch_id=None,
-        created_by=None,
-        customer=None,
-        sale_price=None,
-        order_id=None,
-        custom_expiration_date=None,
-        custom_shelf_life_days=None,
-    ):
-        """
-        Minimal addition path used by the canonical inventory adjustment service.
-        Creates a FIFO history entry with remaining_quantity initialized to the added quantity,
-        and bumps the InventoryItem.quantity.
-        """
-        # 1) history row
-        entry = InventoryHistory(
-            inventory_item_id=inventory_item_id,
-            timestamp=TimezoneUtils.utc_now(),
-            change_type=change_type,
-            quantity_change=quantity,
-            unit=unit,
-            remaining_quantity=quantity,
-            unit_cost=cost_per_unit,
-            batch_id=batch_id,
-            note=notes,
-            created_by=created_by,
-            is_perishable=1 if (custom_expiration_date or expiration_date or custom_shelf_life_days or shelf_life_days) else 0,
-            shelf_life_days=custom_shelf_life_days or shelf_life_days,
-            expiration_date=custom_expiration_date or expiration_date,
-        )
-        db.session.add(entry)
-        db.session.flush()
-
-        # 2) update item stock
-        item = InventoryItem.query.get(inventory_item_id)
-        item.quantity = (item.quantity or 0.0) + float(quantity)
-
-        db.session.commit()
-        return entry
-
-    @staticmethod
     def get_fifo_entries(inventory_item_id):
         """Get all FIFO entries for an item with remaining quantity, excluding expired ones"""
+        from app.models.product import ProductSKUHistory
+
         today = datetime.now().date()
 
         # Check what type of item this is
@@ -166,6 +116,8 @@ class _FIFOService:
     @staticmethod
     def get_expired_fifo_entries(inventory_item_id):
         """Get expired FIFO entries with remaining quantity (for disposal only)"""
+        from app.models.product import ProductSKUHistory
+
         today = datetime.now().date()
 
         # Check what type of item this is
@@ -211,6 +163,8 @@ class _FIFOService:
     @staticmethod
     def get_all_fifo_entries(inventory_item_id):
         """Get ALL FIFO entries with remaining quantity (including expired) for validation"""
+        from app.models.product import ProductSKUHistory
+
         # Check what type of item this is
         item = InventoryItem.query.get(inventory_item_id)
         if not item:
@@ -281,6 +235,7 @@ class _FIFOService:
         available_quantity = sum(entry.remaining_quantity for entry in fifo_entries)
 
         # Validate no expired entries leaked through
+        from datetime import datetime
         today = datetime.now().date()
         for entry in fifo_entries:
             # Normalize expiration_date to date for comparison
@@ -312,6 +267,8 @@ class _FIFOService:
     @staticmethod
     def _internal_execute_deduction_plan(deduction_plan, inventory_item_id=None):
         """Execute a deduction plan by updating remaining quantities"""
+        from app.models.product import ProductSKUHistory
+
         # Check what type of item this is
         item = InventoryItem.query.get(inventory_item_id) if inventory_item_id else None
 
@@ -543,6 +500,7 @@ class _FIFOService:
             credit_histories.append(excess_history)
 
         return credit_histories
+
 
 
     @staticmethod
