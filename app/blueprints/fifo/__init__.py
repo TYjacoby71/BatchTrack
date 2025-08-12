@@ -30,14 +30,16 @@ def _warn_direct_import():
 import sys
 from types import ModuleType
 
+# Store reference to original module before override
+_original_module = sys.modules[__name__]
+
 class DeprecatedFIFOModule(ModuleType):
     def __getattr__(self, name):
         if name == 'services':
             _warn_direct_import()
-        # Use getattr instead of super().__getattr__ to avoid AttributeError
-        original_module = sys.modules.get(__name__)
-        if hasattr(original_module, name):
-            return getattr(original_module, name)
+        # Check original module attributes without recursion
+        if hasattr(_original_module, name):
+            return getattr(_original_module, name)
         raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
 
 # Only apply the override if not already applied
