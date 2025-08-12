@@ -1,0 +1,134 @@
+heck yes—24/24 green ✅ means we can kick off PR2.
+
+Since we don’t want a “big bang” refactor, PR2 should be one tight slice. The highest ROI (and safest) next step is to canonicalize inventory adjustments so there’s exactly one public path for deductions/returns. Below is a paste-ready prompt you can give Replit/Grox to do PR2 end-to-end without changing behavior.
+
+PR2 Master Prompt — Canonical Inventory Adjustment (paste into Replit)
+You are the lead engineer. Create PR2 to canonicalize inventory adjustments while preserving all current behavior and passing all tests.
+
+Non-negotiables
+No behavior changes. Existing routes, JSON, templates, webhooks, DB semantics stay the same.
+
+All tests must stay green (we already have green pytest).
+
+No schema changes in this PR.
+
+Small, reviewable commits; each one must be CI-green.
+
+Goal of PR2
+Ensure every inventory deduction/adjustment (batch start/finish, spoilage, manual adjust, product flows) goes through a single entry point: app/services/inventory_adjustment.py (or whichever file currently acts as the canonical service). Remove/forbid direct calls to any FIFO helpers from routes or other services.
+
+What to do (step by step)
+1) Map current call sites (read-only)
+List every place inventory is adjusted or FIFO math is called.
+
+Produce docs/refactor/pr2_inventory_call_sites.md with:
+
+File + function names
+
+How they currently call into inventory/FIFO
+
+Which ones bypass the canonical service
+
+Use greps (or equivalent) and include the raw outputs at the bottom of the doc:
+
+rg -n "adjust|inventory_adjust|fifo|deduct|consume" app | sort
+
+rg -n "from .*fifo" app | sort
+
+rg -n "inventory_adjustment" app | sort
+
+Stop and show me this doc before changing code.
+
+2) Thin the routes (mechanical moves only)
+For each blueprint that mutates inventory (batches, inventory, products, recipes, etc.):
+
+Route handlers must: validate input → call the single service → return response.
+
+Move/inline nothing else; no business logic left in routes.
+
+Implementation notes:
+
+Replace any direct imports of FIFO helpers (e.g., app/blueprints/fifo/services.py) in routes with calls to the canonical service.
+
+If a helper is used only by the canonical service, make it private (prefix underscore) or move it under the service module as an internal function.
+
+3) Seal the public surface
+Inside app/services/inventory_adjustment.py:
+
+Add a module docstring: "SINGLE ENTRY POINT for all inventory changes. All callers must use this."
+
+Expose one public function for adjustments (e.g., adjust_inventory(...)) and keep helpers private.
+
+If multiple service functions exist, keep them but make them delegate to one internal core to guarantee identical math.
+
+4) Replace all external calls
+Update every call site found in Step 1 to use the canonical service.
+
+Remove unused imports and dead code created by the move.
+
+5) Guardrails within this PR (no behavior change)
+Add a unit test that asserts route → service wiring for at least one path per blueprint (simple spy/monkeypatch to ensure the service is called once).
+
+Add a characterization test (if not present) that uses the public entrypoint to validate the current FIFO layer consumption order. This must match our existing behavior (do not “fix math” here).
+
+6) Prove the consolidation (evidence)
+Update docs/refactor/pr2_inventory_call_sites.md with before/after greps showing:
+
+No direct imports of FIFO helpers in routes/services outside the canonical service.
+
+Only one public adjustment path left.
+
+Re-run:
+
+rg -n "from .*fifo" app | sort → should be empty or only inside the canonical service
+
+rg -n "adjust|inventory_adjust|fifo|deduct|consume" app | sort → all call-sites hit the canonical service
+
+pytest -q → still green
+
+7) PR details
+Open a PR named:
+PR2: Canonicalize inventory adjustments (single entry point; no behavior change)
+
+Checklist in the PR body (must all be checked):
+
+ All inventory mutations call app/services/inventory_adjustment.py
+
+ No direct FIFO calls from routes or other services
+
+ Routes are thin; business logic lives in services
+
+ Tests still green; added wiring test(s) if needed
+
+ No schema changes
+
+ Docs updated with before/after greps
+
+Conventional commits recommended:
+
+refactor(inventory): route delegates to inventory_adjustment service
+
+refactor(inventory): move fifo helper under service as private
+
+test(inventory): add wiring test for route -> service
+
+docs(refactor): add pr2 inventory call sites before/after
+
+Acceptance criteria (what “done” means)
+pytest is green end-to-end.
+
+Running the greps shows no non-service FIFO calls.
+
+Manual smoke: create a batch and finish it → inventory updates via the service; behavior exactly as before.
+
+Rollback plan
+If any regression is detected, revert to the commit before “Replace all external calls” and re-apply changes by blueprint in smaller steps.
+
+After PR2
+Once PR2 is merged, we can do PR3/PR4 as separate, small wins:
+
+PR3 (Stripe boundary + idempotency checks only): routes delegate to stripe_service; verify signature & idempotency; add rate-limit to webhook.
+
+PR4 (OAuth seam + rate limits): routes delegate to oauth_service; verify state/nonce; rate limit /auth/*.
+
+PR5 (structured logging + error handlers): request_id/org_id/user_id in l

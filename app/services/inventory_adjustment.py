@@ -133,13 +133,46 @@ def validate_inventory_fifo_sync(item_id, item_type=None):
     return True, "", current_qty, fifo_total
 
 def process_inventory_adjustment(item_id, quantity, change_type, unit=None, notes=None, 
-                                 created_by=None, batch_id=None, cost_override=None,
-                                 custom_expiration_date=None, custom_shelf_life_days=None,
-                                 item_type='ingredient', customer=None, sale_price=None, order_id=None):
+                               created_by=None, batch_id=None, custom_expiration_date=None, 
+                               item_type=None, **kwargs):
     """
-    Centralized inventory adjustment service that handles both ingredients and products
-    with proper FIFO tracking and expiration management
+    CANONICAL ENTRY POINT for all inventory adjustments.
+
+    This function ensures consistent processing of all inventory changes
+    including FIFO ordering, organization scoping, and audit trails.
+
+    Args:
+        item_id: InventoryItem.id to adjust
+        quantity: Amount to adjust (positive=add, negative=deduct)
+        change_type: Type of change ('batch_production', 'restock', etc.)
+        unit: Unit of measurement (optional, uses item default)
+        notes: Description of the change
+        created_by: User.id making the change
+        batch_id: Associated Batch.id if applicable
+        custom_expiration_date: Override expiration date
+        item_type: Force item type routing ('ingredient', 'product', 'container')
+
+    Returns:
+        bool: True if adjustment succeeded, False otherwise
     """
+    import inspect
+
+    # Log canonical entry point usage for audit
+    caller_frame = inspect.currentframe().f_back
+    caller_file = caller_frame.f_code.co_filename
+    caller_function = caller_frame.f_code.co_name
+
+    logger.info(f"CANONICAL INVENTORY ADJUSTMENT: item_id={item_id}, quantity={quantity}, "
+               f"change_type={change_type}, caller={caller_file}:{caller_function}")
+
+    # Validate required parameters
+    if not item_id:
+        logger.error("CANONICAL ENTRY: item_id is required")
+        return False
+
+    if quantity == 0:
+        logger.warning("CANONICAL ENTRY: zero quantity adjustment requested")
+        return True  # No-op but not an error
     # Start a transaction with explicit rollback protection
     try:
         # Pre-validate FIFO sync BEFORE starting any inventory changes (skip for recount)

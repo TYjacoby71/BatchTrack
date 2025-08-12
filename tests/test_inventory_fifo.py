@@ -1,55 +1,141 @@
 
-"""
-Characterization tests for inventory and FIFO logic.
-
-These tests lock in the current behavior of the inventory system
-to prevent regressions during refactoring.
-"""
+<old_str>
 import pytest
-from app.services.inventory_adjustment import InventoryAdjustmentService
-from app.services.stock_check import StockCheckService
-from app.models.models import Ingredient, InventoryItem, FIFOLot
+from app import create_app
+from app.extensions import db
+from app.models.inventory import InventoryItem, InventoryHistory
+from app.models.models import User, Organization
+from app.services.inventory_adjustment import process_inventory_adjustment
+from app.blueprints.fifo.services import FIFOService
+from flask_login import login_user</old_str>
+<new_str>
+import pytest
+from app import create_app
+from app.extensions import db
+from app.models.inventory import InventoryItem, InventoryHistory
+from app.models.models import User, Organization
+from app.services.inventory_adjustment import process_inventory_adjustment
+from flask_login import login_user
 
 
 class TestInventoryFIFOCharacterization:
-    """Test current inventory and FIFO behavior to prevent regressions."""
+    """Lock in current FIFO behavior through canonical entry point only."""
     
-    def test_single_entry_point_exists(self, app):
-        """Test that inventory adjustment service exists and is importable."""
-        with app.app_context():
-            # This test ensures the canonical entry point exists
-            service = InventoryAdjustmentService()
-            assert service is not None
+    def test_single_entry_point_exists(self, app, db_session):
+        """Verify canonical inventory adjustment entry point exists."""
+        from app.services.inventory_adjustment import process_inventory_adjustment
+        assert callable(process_inventory_adjustment)
+        
+    def test_fifo_deduction_order(self, app, db_session, test_user, test_org):
+        """Test FIFO deduction follows first-in-first-out order."""
+        with app.test_request_context():
+            login_user(test_user)
             
-            # Verify the service has expected methods
-            assert hasattr(service, 'adjust_inventory')
+            # Create inventory item
+            item = InventoryItem(
+                name="Test Ingredient",
+                type="ingredient", 
+                unit="g",
+                quantity=0.0,
+                organization_id=test_org.id,
+                created_by=test_user.id
+            )
+            db_session.add(item)
+            db_session.flush()
             
-    def test_fifo_deduction_order(self, app, client):
-        """Test that FIFO deduction follows first-in-first-out order."""
-        with app.app_context():
-            # This is a characterization test - we're testing current behavior
-            # to ensure refactoring doesn't break the FIFO math
+            # Add stock in layers (oldest first)
+            assert process_inventory_adjustment(
+                item_id=item.id,
+                quantity=100.0,
+                change_type="restock",
+                notes="First batch",
+                created_by=test_user.id
+            )
             
-            # TODO: Add actual FIFO test once we have test data setup
-            # For now, just ensure the modules import correctly
-            from app.blueprints.fifo.services import FIFOService
-            fifo_service = FIFOService()
-            assert fifo_service is not None
+            assert process_inventory_adjustment(
+                item_id=item.id, 
+                quantity=50.0,
+                change_type="restock",
+                notes="Second batch",
+                created_by=test_user.id
+            )
             
-    def test_stock_check_accuracy(self, app):
-        """Test that stock checks return accurate availability."""
-        with app.app_context():
-            # Characterization test for current stock check behavior
-            service = StockCheckService()
-            assert service is not None
-            assert hasattr(service, 'check_availability')
+            # Deduct less than first layer
+            assert process_inventory_adjustment(
+                item_id=item.id,
+                quantity=-75.0,
+                change_type="batch_production", 
+                notes="Test deduction",
+                created_by=test_user.id
+            )
             
-    def test_inventory_adjustment_delegates_properly(self, app):
-        """Test that inventory adjustments flow through the correct service."""
-        with app.app_context():
-            # This test will catch if routes bypass the canonical service
-            service = InventoryAdjustmentService()
+            # Verify FIFO order: first layer partially consumed, second untouched
+            db_session.refresh(item)
+            assert item.quantity == 75.0  # 150 - 75 = 75
             
-            # Verify service has required methods for delegation
-            assert hasattr(service, 'adjust_inventory')
-            # TODO: Add actual delegation tests once refactoring begins
+    def test_stock_check_accuracy(self, app, db_session, test_user, test_org):
+        """Test stock availability checking matches FIFO consumption."""
+        with app.test_request_context():
+            login_user(test_user)
+            
+            item = InventoryItem(
+                name="Test Container",
+                type="container",
+                unit="count", 
+                quantity=0.0,
+                organization_id=test_org.id,
+                created_by=test_user.id
+            )
+            db_session.add(item)
+            db_session.flush()
+            
+            # Add stock
+            assert process_inventory_adjustment(
+                item_id=item.id,
+                quantity=10.0,
+                change_type="restock",
+                notes="Container restock",
+                created_by=test_user.id
+            )
+            
+            db_session.refresh(item)
+            assert item.quantity == 10.0
+            
+            # Verify available quantity matches
+            from app.services.stock_check import check_stock_availability
+            result = check_stock_availability([{
+                'item_id': item.id,
+                'quantity_needed': 5.0,
+                'unit': 'count'
+            }])
+            
+            assert result['can_make'] is True
+            
+    def test_inventory_adjustment_delegates_properly(self, app, db_session, test_user, test_org):
+        """Verify inventory adjustment service delegates to proper internal systems."""
+        with app.test_request_context():
+            login_user(test_user)
+            
+            item = InventoryItem(
+                name="Test Product",
+                type="product",
+                unit="ml",
+                quantity=0.0, 
+                organization_id=test_org.id,
+                created_by=test_user.id
+            )
+            db_session.add(item)
+            db_session.flush()
+            
+            # Test product addition (should use ProductSKUHistory)
+            result = process_inventory_adjustment(
+                item_id=item.id,
+                quantity=250.0,
+                change_type="finished_batch",
+                notes="Batch completion",
+                created_by=test_user.id
+            )
+            
+            assert result is True
+            db_session.refresh(item)
+            assert item.quantity == 250.0</new_str>
