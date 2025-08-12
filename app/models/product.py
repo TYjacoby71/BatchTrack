@@ -6,6 +6,7 @@ from ..utils.timezone_utils import TimezoneUtils
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy import func, event
 from sqlalchemy.orm import synonym
+from sqlalchemy.orm import object_session
 
 class Product(ScopedModelMixin, db.Model):
     """Main Product model - represents the parent product"""
@@ -426,3 +427,14 @@ class ProductSKUHistory(ScopedModelMixin, db.Model):
 
     def __repr__(self):
         return f'<ProductSKUHistory {self.change_type}: {self.quantity_change}>'
+
+# Auto-fill organization_id from the linked inventory item if missing
+@event.listens_for(ProductSKU, "before_insert")
+def _sku_fill_org_id(mapper, connection, target):
+    if not getattr(target, "organization_id", None) and getattr(target, "inventory_item_id", None):
+        sess = object_session(target)
+        if sess is not None:
+            from app.models.inventory import InventoryItem
+            inv = sess.get(InventoryItem, target.inventory_item_id)
+            if inv and getattr(inv, 'organization_id', None):
+                target.organization_id = inv.organization_id
