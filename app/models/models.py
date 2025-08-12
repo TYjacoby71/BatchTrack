@@ -1,6 +1,7 @@
 # app/models/models.py
 # Canonical re-exports for tests/legacy imports. Safe, no-crash imports.
 import importlib
+from sqlalchemy.ext.hybrid import hybrid_property
 
 def _export(targets):
     g = globals()
@@ -251,8 +252,16 @@ class User(UserMixin, db.Model):
     deleted_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     is_deleted = db.Column(db.Boolean, default=False)
 
-    # Legacy compatibility field for tests
-    is_verified = db.Column(db.Boolean, nullable=False, default=False)
+    # Legacy compatibility: is_verified hybrid property
+    @hybrid_property
+    def is_verified(self):
+        """Legacy compatibility: maps to email_verified boolean"""
+        return self.email_verified
+
+    @is_verified.setter
+    def is_verified(self, value: bool):
+        """Legacy compatibility: sets email_verified boolean"""
+        self.email_verified = value
 
     def set_password(self, password):
         from werkzeug.security import generate_password_hash
@@ -275,7 +284,7 @@ class User(UserMixin, db.Model):
     def ensure_organization_owner_role(self):
         """Ensure organization owner has the proper role assigned"""
         # Only apply to customer users with the flag set
-        if (self.user_type == 'customer' and 
+        if (self.user_type == 'customer' and
             self.is_organization_owner is True):
             from .role import Role
             org_owner_role = Role.query.filter_by(name='organization_owner', is_system_role=True).first()
