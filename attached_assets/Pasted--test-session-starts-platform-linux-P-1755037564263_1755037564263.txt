@@ -1,0 +1,75 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.13, pytest-8.3.5, pluggy-1.5.0 -- /home/runner/workspace/.pythonlibs/bin/python
+cachedir: .pytest_cache
+rootdir: /home/runner/workspace
+collected 1 item                                                               
+
+tests/test_inventory_routes_canonicalization.py::test_recount_adjustment_uses_canonical_service ERROR [100%]
+
+==================================== ERRORS ====================================
+_______ ERROR at setup of test_recount_adjustment_uses_canonical_service _______
+
+    @pytest.fixture
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+>       app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+        })
+
+tests/conftest.py:18: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+app/__init__.py:42: in create_app
+    _register_blueprints(app)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+app = <Flask 'app'>
+
+    def _register_blueprints(app):
+        """Register all application blueprints"""
+        from .extensions import csrf
+    
+        # Import blueprints
+        blueprints = _import_blueprints()
+    
+        # Register core blueprints
+        core_registrations = [
+            (blueprints['auth_bp'], '/auth'),
+            (blueprints['recipes_bp'], '/recipes'),
+>           (blueprints['inventory_bp'], '/inventory'),
+            (blueprints['batches_bp'], '/batches'),
+            (blueprints['finish_batch_bp'], '/batches'),
+            (blueprints['cancel_batch_bp'], '/batches'),
+            (blueprints['start_batch_bp'], '/start-batch'),
+            (blueprints['conversion_bp'], '/conversion'),
+            (blueprints['expiration_bp'], '/expiration'),
+            (blueprints['settings_bp'], '/settings'),
+            (blueprints['timers_bp'], '/timers'),
+            (blueprints['organization_bp'], '/organization'),
+        ]
+E       KeyError: 'inventory_bp'
+
+app/__init__.py:241: KeyError
+------------------------------ Captured log setup ------------------------------
+WARNING  app:__init__.py:335 Failed to import inventory_bp from blueprints.inventory.routes: cannot import name 'InventoryAlertService' from 'app.services.inventory_alerts' (/home/runner/workspace/app/services/inventory_alerts.py)
+WARNING  app:__init__.py:335 Failed to import batches_bp from blueprints.batches.routes: cannot import name 'InventoryAlertService' from 'app.services.inventory_alerts' (/home/runner/workspace/app/services/inventory_alerts.py)
+WARNING  app:__init__.py:335 Failed to import finish_batch_bp from blueprints.batches.finish_batch: cannot import name 'InventoryAlertService' from 'app.services.inventory_alerts' (/home/runner/workspace/app/services/inventory_alerts.py)
+WARNING  app:__init__.py:335 Failed to import start_batch_bp from blueprints.batches.start_batch: cannot import name 'InventoryAlertService' from 'app.services.inventory_alerts' (/home/runner/workspace/app/services/inventory_alerts.py)
+WARNING  app:__init__.py:335 Failed to import cancel_batch_bp from blueprints.batches.cancel_batch: cannot import name 'InventoryAlertService' from 'app.services.inventory_alerts' (/home/runner/workspace/app/services/inventory_alerts.py)
+WARNING  app:__init__.py:335 Failed to import add_extra_bp from blueprints.batches.add_extra: cannot import name 'InventoryAlertService' from 'app.services.inventory_alerts' (/home/runner/workspace/app/services/inventory_alerts.py)
+=============================== warnings summary ===============================
+tests/test_inventory_routes_canonicalization.py::test_recount_adjustment_uses_canonical_service
+  /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_limiter/extension.py:333: UserWarning: Using the in-memory storage for tracking rate limits as no storage was explicitly specified. This is not recommended for production use. See: https://flask-limiter.readthedocs.io#configuring-a-storage-backend for documentation about configuring the storage backend.
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+ERROR tests/test_inventory_routes_canonicalization.py::test_recount_adjustment_uses_canonical_service - KeyError: 'inventory_bp'
+========================= 1 warning, 1 error in 1.15s ==========================
