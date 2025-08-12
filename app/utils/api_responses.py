@@ -1,11 +1,10 @@
-
 from flask import jsonify, request, Response
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Optional, Union, List
 import json
 
 class APIResponse:
     """Standardized API response handler"""
-    
+
     @staticmethod
     def success(data: Any = None, message: str = "Success", status_code: int = 200) -> Response:
         """Standard success response"""
@@ -15,7 +14,7 @@ class APIResponse:
             'data': data
         }
         return jsonify(response_data), status_code
-    
+
     @staticmethod
     def error(message: str, errors: Optional[Dict] = None, status_code: int = 400) -> Response:
         """Standard error response"""
@@ -25,7 +24,7 @@ class APIResponse:
             'errors': errors or {}
         }
         return jsonify(response_data), status_code
-    
+
     @staticmethod
     def validation_error(errors: Dict[str, List[str]]) -> Response:
         """Validation error response"""
@@ -34,7 +33,7 @@ class APIResponse:
             errors=errors,
             status_code=422
         )
-    
+
     @staticmethod
     def not_found(resource: str = "Resource") -> Response:
         """404 error response"""
@@ -42,7 +41,7 @@ class APIResponse:
             message=f"{resource} not found",
             status_code=404
         )
-    
+
     @staticmethod
     def forbidden(message: str = "Access denied") -> Response:
         """403 error response"""
@@ -50,7 +49,7 @@ class APIResponse:
             message=message,
             status_code=403
         )
-    
+
     @staticmethod
     def handle_request_content():
         """Smart request content handling"""
@@ -72,9 +71,22 @@ def api_route(methods=['GET']):
             except PermissionError as e:
                 return APIResponse.forbidden(str(e))
             except Exception as e:
+                from flask import current_app
                 current_app.logger.error(f"API error in {func.__name__}: {str(e)}")
                 return APIResponse.error("Internal server error", status_code=500)
-        
+
         wrapper.__name__ = func.__name__
         return wrapper
     return decorator
+
+# Backwards compatibility functions
+def api_error(message: str, status_code: int = 400, **kwargs) -> Response:
+    """Legacy function - use APIResponse.error() instead"""
+    return APIResponse.error(message, status_code=status_code, **kwargs)
+
+def api_success(data: Any = None, message: str = "Success", **kwargs) -> Response:
+    """Legacy function - use APIResponse.success() instead"""
+    return APIResponse.success(data, message=message, **kwargs)
+
+# Export APIResponse class for backwards compatibility
+__all__ = ['APIResponse', 'api_response', 'api_error', 'api_success']

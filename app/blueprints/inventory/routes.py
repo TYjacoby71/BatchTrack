@@ -4,6 +4,7 @@ from app.models import db, InventoryItem, InventoryHistory, Unit
 from app.utils.permissions import permission_required
 from app.utils.authorization import role_required
 from app.utils.api_responses import api_error, api_success
+from app.services.inventory_adjustment import process_inventory_adjustment
 from app.services.inventory_alerts import InventoryAlertService
 from app.services.reservation_service import ReservationService
 from app.services.inventory_adjustment import process_inventory_adjustment
