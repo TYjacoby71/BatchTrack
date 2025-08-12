@@ -116,7 +116,7 @@ class ProductSKU(db.Model, ScopedModelMixin):
     _quantity = db.Column('quantity_override', db.Float, default=0.0, nullable=True)
 
     # LEGACY FIELDS FOR COMPATIBILITY (will be calculated from inventory_item)
-    unit = db.Column(db.String(32), nullable=False)
+    unit = db.Column(db.String(32), nullable=True)
     low_stock_threshold = db.Column(db.Float, default=10.0)
 
     # FIFO REFERENCE
