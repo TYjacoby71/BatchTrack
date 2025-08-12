@@ -108,7 +108,7 @@ class ProductSKU(db.Model, ScopedModelMixin):
 
     # CORE PRODUCT IDENTIFICATION
     product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=True)
-    variant_id = db.Column(db.Integer, db.ForeignKey('product_variant.id'), nullable=False)
+    variant_id = db.Column(db.Integer, db.ForeignKey('product_variant.id'), nullable=True)
     size_label = db.Column(db.String(64), nullable=False, default='Bulk')
     sku_code = db.Column(db.String(64), nullable=True)
     sku = db.Column(db.String(64), unique=True, nullable=False) # Renamed from sku_code to sku
