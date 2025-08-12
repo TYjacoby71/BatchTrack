@@ -557,6 +557,53 @@ def handle_recount_adjustment(item_id, target_quantity, notes=None, created_by=N
         raise e
 
 
+def record_audit_entry(item_id, quantity, change_type, unit=None, notes=None, created_by=None, **kwargs):
+    """
+    Public helper for audit-only records (remaining_quantity=0, no inventory change)
+    Used for tracking reservations, conversions, etc. without affecting FIFO
+    """
+    try:
+        item = InventoryItem.query.get(item_id)
+        if not item:
+            return False
+
+        # Route to correct history table based on item type
+        if item.type == 'product':
+            from app.models.product import ProductSKUHistory
+            history = ProductSKUHistory(
+                inventory_item_id=item_id,
+                change_type=change_type,
+                quantity_change=0.0,  # Audit entries don't change quantity
+                remaining_quantity=0.0,  # Audit entries have no FIFO impact
+                unit=unit or item.unit,
+                notes=notes,
+                created_by=created_by,
+                organization_id=current_user.organization_id if current_user.is_authenticated else item.organization_id,
+                **kwargs
+            )
+        else:
+            history = InventoryHistory(
+                inventory_item_id=item_id,
+                change_type=change_type,
+                quantity_change=0.0,  # Audit entries don't change quantity
+                remaining_quantity=0.0,  # Audit entries have no FIFO impact
+                unit=unit or item.unit,
+                note=notes,
+                created_by=created_by,
+                quantity_used=0.0,
+                organization_id=current_user.organization_id if current_user.is_authenticated else item.organization_id,
+                **kwargs
+            )
+        
+        db.session.add(history)
+        db.session.commit()
+        return True
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error creating audit entry: {str(e)}")
+        return False
+
+
 class InventoryAdjustmentService:
     """Backwards compatibility shim for tests and legacy code"""
 
@@ -572,3 +619,7 @@ class InventoryAdjustmentService:
     @staticmethod
     def validate_inventory_fifo_sync(*args, **kwargs):
         return validate_inventory_fifo_sync(*args, **kwargs)
+    
+    @staticmethod
+    def record_audit_entry(*args, **kwargs):
+        return record_audit_entry(*args, **kwargs)

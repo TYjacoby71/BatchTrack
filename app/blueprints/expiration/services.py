@@ -570,16 +570,23 @@ class ExpirationService:
                     logger.error(f"Failed to process expiration adjustment for item {fifo_entry.inventory_item_id}")
                     return False, "Failed to update inventory through canonical service"
 
-                # Mark the specific FIFO entry as fully used (remaining_quantity = 0)
-                # This is important to prevent it from being picked up again.
-                old_remaining = fifo_entry.remaining_quantity
-                fifo_entry.remaining_quantity = max(0.0, old_remaining - quantity_to_expire)
-                if fifo_entry.remaining_quantity == 0:
-                    # If the entire FIFO entry is used, ensure it's marked as such
-                    pass # The process_inventory_adjustment should handle the overall inventory update
+                # Use canonical inventory adjustment service for expired disposal
+                from app.services.inventory_adjustment import process_inventory_adjustment
+                
+                success = process_inventory_adjustment(
+                    item_id=fifo_entry.inventory_item_id,
+                    quantity=-abs(quantity_to_expire),
+                    change_type="spoil",
+                    unit=fifo_entry.unit,
+                    notes=f"Expired lot disposal #{item_id}: {notes or ''}".strip(),
+                    created_by=current_user.id if current_user.is_authenticated else None
+                )
 
-                db.session.commit()
-                return True, f"Successfully marked FIFO entry #{item_id} as expired (removed {quantity_to_expire} of {old_remaining})"
+                if not success:
+                    logger.error(f"Failed to process expiration adjustment for item {fifo_entry.inventory_item_id}")
+                    return False, "Failed to update inventory through canonical service"
+
+                return True, f"Successfully marked FIFO entry #{item_id} as expired (removed {quantity_to_expire})"
 
             elif item_type == 'product':
                 # Get product history entry
@@ -592,38 +599,24 @@ class ExpirationService:
                 if quantity_to_expire <= 0:
                     return False, "Quantity to expire must be positive"
 
-                # For expired products, directly zero out the FIFO entry and update inventory
-                item = InventoryItem.query.get(history_entry.inventory_item_id)
-                if not item:
-                    return False, "Inventory item not found"
-
-                # Create history record for the expiration
-                new_history = ProductSKUHistory(
-                    inventory_item_id=history_entry.inventory_item_id,
-                    change_type='expired',
-                    quantity_change=-quantity_to_expire,
-                    remaining_quantity=0.0,
+                # Use canonical inventory adjustment service for product expiration
+                from app.services.inventory_adjustment import process_inventory_adjustment
+                
+                success = process_inventory_adjustment(
+                    item_id=history_entry.inventory_item_id,
+                    quantity=-abs(quantity_to_expire),
+                    change_type="spoil",
                     unit=history_entry.unit,
-                    unit_cost=history_entry.unit_cost,
-                    note=f'Expired removal from product FIFO entry #{item_id}',
-                    created_by=current_user.id,
-                    quantity_used=quantity_to_expire,
-                    is_perishable=history_entry.is_perishable,
-                    shelf_life_days=history_entry.shelf_life_days,
-                    batch_id=history_entry.batch_id,
-                    organization_id=current_user.organization_id
+                    notes=f"Expired product lot disposal #{item_id}: {notes or ''}".strip(),
+                    created_by=current_user.id if current_user.is_authenticated else None,
+                    item_type='product'
                 )
-                db.session.add(new_history)
 
-                # Zero out the expired FIFO entry
-                old_remaining = history_entry.remaining_quantity
-                history_entry.remaining_quantity = 0.0
+                if not success:
+                    logger.error(f"Failed to process product expiration adjustment for item {history_entry.inventory_item_id}")
+                    return False, "Failed to update inventory through canonical service"
 
-                # Reduce inventory quantity
-                item.quantity = max(0, item.quantity - quantity_to_expire)
-
-                db.session.commit()
-                return True, f"Successfully marked product FIFO entry #{item_id} as expired (removed {old_remaining})"
+                return True, f"Successfully marked product FIFO entry #{item_id} as expired (removed {quantity_to_expire})"
 
             else:
                 return False, "Invalid item type"
