@@ -1,6 +1,7 @@
 from datetime import datetime
 from ..extensions import db
 from ..utils.timezone_utils import TimezoneUtils
+from sqlalchemy.ext.hybrid import hybrid_property
 
 class SubscriptionTier(db.Model):
     """Database model for subscription tiers - authorization and tier definition only"""
@@ -9,16 +10,16 @@ class SubscriptionTier(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), nullable=False)  # "Solo Plan", "Team Plan", etc.
     key = db.Column(db.String(32), nullable=False, unique=True)  # "solo", "team", etc.
-    
+
     # NEW: stable programmatic key the app/tests expect
     tier_key = db.Column(db.String(64), unique=True, nullable=True, index=True)
-    
+
     description = db.Column(db.Text, nullable=True)
 
     # Core, flexible fields (modern approach)
     stripe_product_id = db.Column(db.String(128), nullable=True)
     stripe_price_id = db.Column(db.String(128), nullable=True)
-    
+
     # Legacy/test compatibility fields (nullable; for backwards compatibility)
     stripe_price_id_monthly = db.Column(db.String(128), nullable=True)
     stripe_price_id_yearly = db.Column(db.String(128), nullable=True)
@@ -29,10 +30,10 @@ class SubscriptionTier(db.Model):
     max_monthly_batches = db.Column(db.Integer, default=0, nullable=False)  # For test compatibility
     is_customer_facing = db.Column(db.Boolean, default=True)
     is_available = db.Column(db.Boolean, default=True)
-    
+
     # Tier type determines billing behavior
     tier_type = db.Column(db.String(32), default='paid')  # 'paid', 'exempt', 'internal', 'trial'
-    
+
     # Billing provider specifies which system to check for paid tiers
     billing_provider = db.Column(db.String(32), nullable=True)  # 'stripe', 'whop', or None
 
@@ -67,7 +68,7 @@ class SubscriptionTier(db.Model):
     def is_exempt_from_billing(self):
         """Check if this tier is exempt from billing"""
         return self.tier_type in ['exempt', 'internal']
-    
+
     @property
     def requires_billing_check(self):
         """Check if this tier requires billing verification"""
@@ -89,6 +90,27 @@ class SubscriptionTier(db.Model):
     @classmethod
     def get_by_key(cls, key: str):
         return cls.query.filter_by(tier_key=key).first()
+
+    # Legacy compatibility: maps to Stripe lookup keys
+    @hybrid_property
+    def stripe_price_id_monthly(self):
+        """Legacy compatibility: maps to stripe_lookup_key_monthly"""
+        return self.stripe_lookup_key_monthly
+
+    @stripe_price_id_monthly.setter
+    def stripe_price_id_monthly(self, value):
+        """Legacy compatibility: stores value in stripe_lookup_key_monthly"""
+        self.stripe_lookup_key_monthly = value
+
+    @hybrid_property
+    def stripe_price_id_yearly(self):
+        """Legacy compatibility: maps to stripe_lookup_key_yearly"""
+        return self.stripe_lookup_key_yearly
+
+    @stripe_price_id_yearly.setter
+    def stripe_price_id_yearly(self, value):
+        """Legacy compatibility: stores value in stripe_lookup_key_yearly"""
+        self.stripe_lookup_key_yearly = value
 
     def __repr__(self):
         return f'<SubscriptionTier {self.key}: {self.name}>'

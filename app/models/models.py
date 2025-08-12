@@ -59,6 +59,10 @@ from flask_login import current_user, UserMixin
 from ..extensions import db
 from .mixins import ScopedModelMixin
 from ..utils.timezone_utils import TimezoneUtils
+from sqlalchemy.ext.hybrid import hybrid_property
+from sqlalchemy import func
+from datetime import datetime, timedelta
+import bcrypt
 
 class Organization(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -237,10 +241,23 @@ class User(UserMixin, db.Model):
     email_verified = db.Column(db.Boolean, default=False)
     email_verification_token = db.Column(db.String(255), nullable=True)
     email_verification_sent_at = db.Column(db.DateTime, nullable=True)
+    email_verified_at = db.Column(db.DateTime, nullable=True) # Added for hybrid property
 
     # OAuth fields
-    oauth_provider = db.Column(db.String(50), nullable=True)  # 'google', etc.
+    oauth_provider = db.Column(db.String(50), nullable=True)
     oauth_provider_id = db.Column(db.String(255), nullable=True)
+    google_id = db.Column(db.String(255), nullable=True)
+
+    # Legacy compatibility: is_verified hybrid property
+    @hybrid_property
+    def is_verified(self):
+        """Legacy compatibility: maps to email_verified_at timestamp"""
+        return self.email_verified_at is not None
+
+    @is_verified.setter
+    def is_verified(self, value: bool):
+        """Legacy compatibility: sets email_verified_at based on boolean"""
+        self.email_verified_at = datetime.utcnow() if value else None
 
     # Password reset fields
     password_reset_token = db.Column(db.String(255), nullable=True)
@@ -275,7 +292,7 @@ class User(UserMixin, db.Model):
     def ensure_organization_owner_role(self):
         """Ensure organization owner has the proper role assigned"""
         # Only apply to customer users with the flag set
-        if (self.user_type == 'customer' and 
+        if (self.user_type == 'customer' and
             self.is_organization_owner is True):
             from .role import Role
             org_owner_role = Role.query.filter_by(name='organization_owner', is_system_role=True).first()
