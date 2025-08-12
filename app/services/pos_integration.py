@@ -116,19 +116,19 @@ class POSIntegrationService:
             # 3. UPDATE reserved item quantity (for display purposes)
             reserved_item.quantity += quantity
 
-            # 4. LOG the reservation in FIFO for audit (no remaining_quantity)
-            FIFOService.add_fifo_entry(
-                inventory_item_id=reserved_item.id,
+            # 4. LOG the reservation using canonical inventory adjustment
+            allocation_success = process_inventory_adjustment(
+                item_id=reserved_item.id,
                 quantity=quantity,
                 change_type='reserved_allocation',
                 unit=original_item.unit,
-                notes=f"Reserved for order {order_id} from batch. {notes or ''}",
-                cost_per_unit=original_item.cost_per_unit,
+                notes=f"Reserved for order {order_id}. {notes or ''}",
                 created_by=current_user.id if current_user.is_authenticated else None,
-                order_id=order_id,
-                source=source,
-                fifo_reference_id=source_fifo_id
+                cost_override=original_item.cost_per_unit
             )
+            
+            if not allocation_success:
+                return False, "Failed to log reservation allocation"
 
             db.session.commit()
             return True, f"Reserved {quantity} units for order {order_id}"
@@ -354,10 +354,6 @@ class FIFOService:
     @staticmethod
     def get_fifo_entries(item_id):
         return [] # Dummy implementation
-
-    @staticmethod
-    def add_fifo_entry(*args, **kwargs):
-        pass # Dummy implementation
 
 class Reservation:
     def __init__(self, **kwargs):

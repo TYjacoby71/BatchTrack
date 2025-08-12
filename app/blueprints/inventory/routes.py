@@ -338,33 +338,21 @@ def adjust_inventory(id):
             else:
                 history_unit = item.unit or input_unit
 
-            # Create initial FIFO entry directly (mimics add_inventory route)
-            history = InventoryHistory(
-                inventory_item_id=item.id,
-                change_type='restock',
-                quantity_change=input_quantity,
-                remaining_quantity=input_quantity,  # For FIFO tracking
+            # Use canonical inventory adjustment service for initial stock creation
+            success = process_inventory_adjustment(
+                item_id=item.id,
+                quantity=abs(input_quantity),
+                change_type="restock",
                 unit=history_unit,
-                unit_cost=restock_cost or item.cost_per_unit,
-                note=notes or 'Initial stock creation via adjustment modal',
+                notes=notes or 'Initial stock creation via adjustment modal',
                 created_by=current_user.id,
-                quantity_used=0.0,  # Restocks don't consume inventory - always 0
-                is_perishable=item.is_perishable,
-                shelf_life_days=item.shelf_life_days,
-                expiration_date=item.expiration_date,
-                organization_id=current_user.organization_id
+                cost_override=restock_cost
             )
-            db.session.add(history)
-
-            # Update inventory quantity
-            item.quantity = input_quantity
-
-            # Update cost if provided
-            if restock_cost:
-                item.cost_per_unit = restock_cost
-
-            db.session.commit()
-            flash('Initial inventory created successfully')
+            
+            if success:
+                flash('Initial inventory created successfully')
+            else:
+                flash('Error creating initial inventory', 'error')
 
         else:
             # Pre-validation check for existing items
