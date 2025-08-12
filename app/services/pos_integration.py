@@ -1,13 +1,19 @@
+import logging
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Tuple
+from flask import current_app
 from flask_login import current_user
-from sqlalchemy import func, and_
+from ..models import db, InventoryItem, Reservation
+from sqlalchemy import and_, func
+from ..utils import generate_fifo_code
 
-from ..models import db, InventoryItem, InventoryHistory, Reservation
-from .inventory_adjustment import process_inventory_adjustment
-from app.services.inventory_adjustment import process_inventory_adjustment
-from app.services.reservation_service import ReservationService
-import logging
+# Import necessary canonical functions
+from app.blueprints.fifo.services import FIFOService
+from app.services.inventory_adjustment import record_audit_entry, process_inventory_adjustment
+
+def _db():
+    """Get database session - works with real SQLAlchemy and test mocks"""
+    return getattr(db, "session", db)
 
 logger = logging.getLogger(__name__)
 
@@ -126,7 +132,7 @@ class POSIntegrationService:
                 created_by=current_user.id if current_user.is_authenticated else None,
                 cost_override=original_item.cost_per_unit
             )
-            
+
             if not allocation_success:
                 return False, "Failed to log reservation allocation"
 

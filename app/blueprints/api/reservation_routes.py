@@ -1,11 +1,21 @@
 from flask import Blueprint, request, jsonify, flash, redirect, url_for
-from flask_login import login_required, current_user
-from ...models import db, ProductSKU, Reservation
-from ...services.inventory_adjustment import process_inventory_adjustment
-from ...services.reservation_service import ReservationService
-from app.services.inventory_adjustment import process_inventory_adjustment
+from flask_login import current_user, login_required
+from ...models import db, InventoryItem
+from ...models.product import ProductSKU
+from ...models.reservation import Reservation
+from ...services.pos_integration import POSIntegrationService
+from app.services.inventory_adjustment import record_audit_entry as _record_audit_entry
 import logging
-from ...utils.permissions import has_permission
+
+def _write_unreserved_audit(reservation):
+    """Wrapper for audit entry - used by tests"""
+    return _record_audit_entry(
+        item_id=reservation.inventory_item_id,
+        change_type="unreserved",
+        note=f"Reservation {reservation.id} released",
+        item_type="product",
+        fifo_reference_id=reservation.source_fifo_id,
+    )
 
 logger = logging.getLogger(__name__)
 
@@ -76,6 +86,11 @@ def release_reservation(reservation_id):
 
         if success:
             db.session.commit()
+            # Use the helper function to write the audit entry
+            reservation = Reservation.query.get(reservation_id)
+            if reservation:
+                _write_unreserved_audit(reservation)
+                db.session.commit()
             return jsonify({
                 'success': True,
                 'message': 'Reservation released successfully'

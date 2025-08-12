@@ -11,7 +11,7 @@ def create_app(config=None):
 
     # Load default configuration
     app.config.from_object('app.config.Config')
-    
+
     # Allow tests to override configuration
     if config:
         app.config.update(config)
