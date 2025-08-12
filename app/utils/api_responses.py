@@ -1,6 +1,6 @@
 
 from flask import jsonify, request, Response
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Optional, Union, List
 import json
 
 class APIResponse:
@@ -72,6 +72,7 @@ def api_route(methods=['GET']):
             except PermissionError as e:
                 return APIResponse.forbidden(str(e))
             except Exception as e:
+                from flask import current_app
                 current_app.logger.error(f"API error in {func.__name__}: {str(e)}")
                 return APIResponse.error("Internal server error", status_code=500)
         
