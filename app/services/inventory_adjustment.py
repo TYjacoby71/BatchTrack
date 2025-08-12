@@ -200,9 +200,16 @@ def process_inventory_adjustment(
     created_by: int | None = None,
     cost_override: float | None = None,
     item_type: str | None = None,
-    **_
+    custom_shelf_life_days: int | None = None,
+    **kwargs,
 ) -> bool:
-    """Process inventory adjustment using canonical service"""
+    """
+    Process inventory adjustments through a centralized, canonical service.
+    """
+    from app.models.inventory import InventoryItem
+
+    if custom_shelf_life_days is None:
+        custom_shelf_life_days = kwargs.get("custom_shelf_life_days")
     import inspect
 
     # Log canonical entry point usage for audit
@@ -245,6 +252,7 @@ def process_inventory_adjustment(
             unit = getattr(item, "unit", None)
 
         # Convert units if needed
+        # only attempt conversion when there's something to convert
         if item_type != "product" and getattr(item, "type", None) != "container" and unit and unit != item.unit:
             conversion = safe_convert(quantity, unit, item.unit, ingredient_id=item.id)
             if not conversion["ok"]:

@@ -391,9 +391,7 @@ def adjust_inventory(id):
                 custom_shelf_life_days=custom_shelf_life
             )
 
-            if success:
-                flash('Inventory adjusted successfully')
-            else:
+            if not success:
                 flash('Error adjusting inventory', 'error')
 
     except ValueError as e:
