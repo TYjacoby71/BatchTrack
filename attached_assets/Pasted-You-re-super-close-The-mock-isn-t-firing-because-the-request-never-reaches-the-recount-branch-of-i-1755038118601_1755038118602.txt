@@ -1,0 +1,88 @@
+You’re super close. The mock isn’t firing because the request never reaches the recount branch of /inventory/adjust/<id>. Two common blockers:
+
+@login_required still active in tests (Flask-Login redirects before your handler runs).
+
+adj_type isn’t normalized so your branch isn’t hit (or the handler returns early).
+
+Do these 3 tiny edits:
+
+1) Make @login_required a no-op in tests
+python
+Copy
+Edit
+# app/__init__.py
+def create_app(config=None):
+    app = Flask(__name__)
+    # ... existing config loading ...
+    if config:
+        app.config.update(config)
+
+    if app.config.get("TESTING"):
+        app.config["LOGIN_DISABLED"] = True   # <-- add this
+        app.config.setdefault("WTF_CSRF_ENABLED", False)
+2) Normalize the form field and call the canonical service
+Make sure the import is at module scope:
+
+python
+Copy
+Edit
+# app/blueprints/inventory/routes.py
+from app.services.inventory_adjustment import process_inventory_adjustment
+Then in the POST handler:
+
+python
+Copy
+Edit
+# inside adjust_inventory(id)
+form = request.form
+adj_type = (form.get('adjustment_type') or form.get('change_type') or '').strip().lower()
+qty = float(form.get('quantity', 0) or 0.0)
+notes = form.get('notes') or None
+unit = form.get('input_unit') or getattr(item, 'unit', None)
+
+if adj_type == 'recount':
+    process_inventory_adjustment(
+        item_id=item.id,
+        quantity=qty,
+        change_type='recount',
+        unit=unit,
+        notes=notes,
+        created_by=getattr(current_user, 'id', None),
+    )
+    # keep it simple to avoid URL param name mismatches during tests
+    return ('', 204)
+(If you prefer a redirect, be sure to use url_for('inventory.view_inventory', id=item.id) — the param name is id, not item_id.)
+
+3) Keep the target exactly as the test patches
+They patch app.blueprints.inventory.routes.process_inventory_adjustment, so don’t re-import the function inside adjust_inventory. Keep the module-level import only.
+
+Now re-run just the failing test:
+
+bash
+Copy
+Edit
+pytest -q tests/test_inventory_routes_canonicalization.py::test_recount_adjustment_uses_canonical_service
+If it still fails, print/inspect response.status_code (likely 302) — that means some other middleware is still redirecting. In that case, temporarily bypass it in tests with:
+
+python
+Copy
+Edit
+# app/__init__.py, inside a before_request only when TESTING:
+if app.config.get("TESTING"):
+    @app.before_request
+    def _bypass_for_tests():
+        if request.path.startswith("/inventory/adjust"):
+            return None
+But in most setups, adding LOGIN_DISABLED=True and normalizing adj_type makes this test go green.
+
+
+
+
+
+
+
+
+
+Sources
+
+Ask ChatGPT
