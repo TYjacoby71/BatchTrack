@@ -17,6 +17,16 @@ def _write_unreserved_audit(reservation):
         fifo_reference_id=reservation.source_fifo_id,
     )
 
+def _write_unreserved_audit(item_id, unit=None, notes=""):
+    """Helper for API audit entries"""
+    from ...services.inventory_adjustment import record_audit_entry
+    return record_audit_entry(
+        item_id=item_id,
+        quantity=0,
+        change_type="unreserved_audit",
+        notes=f"Unreserved via API: {notes}"
+    )
+
 logger = logging.getLogger(__name__)
 
 reservation_api_bp = Blueprint('reservation_api', __name__, url_prefix='/api/reservations')

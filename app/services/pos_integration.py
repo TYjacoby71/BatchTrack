@@ -15,6 +15,10 @@ def _db():
     """Get database session - works with real SQLAlchemy and test mocks"""
     return getattr(db, "session", db)
 
+def _db_session():
+    """Get database session - works if tests inject a session stub or when using Flask-SQLAlchemy"""
+    return getattr(db, "session", db)
+
 logger = logging.getLogger(__name__)
 
 class POSIntegrationService:
@@ -69,8 +73,8 @@ class POSIntegrationService:
                     is_perishable=original_item.is_perishable,
                     shelf_life_days=original_item.shelf_life_days
                 )
-                db.session.add(reserved_item)
-                db.session.flush()
+                _db_session().add(reserved_item)
+                _db_session().flush()
 
             # Get the source FIFO entry for tracking
             fifo_entries = FIFOService.get_fifo_entries(item_id)
@@ -117,7 +121,7 @@ class POSIntegrationService:
                 created_by=current_user.id if current_user.is_authenticated else None,
                 organization_id=current_user.organization_id if current_user.is_authenticated else original_item.organization_id
             )
-            db.session.add(reservation)
+            _db_session().add(reservation)
 
             # 3. UPDATE reserved item quantity (for display purposes)
             reserved_item.quantity += quantity
@@ -136,11 +140,13 @@ class POSIntegrationService:
             if not allocation_success:
                 return False, "Failed to log reservation allocation"
 
-            db.session.commit()
+            _db_session().commit()
             return True, f"Reserved {quantity} units for order {order_id}"
 
         except Exception as e:
-            db.session.rollback()
+            from flask import has_app_context
+            if has_app_context():
+                _db_session().rollback()
             return False, f"Error reserving inventory: {str(e)}"
 
     @staticmethod
@@ -220,11 +226,13 @@ class POSIntegrationService:
 
                 total_sold += reservation.quantity
 
-            db.session.commit()
+            _db_session().commit()
             return True, f"Confirmed sale of {total_sold} units for order {order_id}"
 
         except Exception as e:
-            db.session.rollback()
+            from flask import has_app_context
+            if has_app_context():
+                _db_session().rollback()
             return False, f"Error confirming sale: {str(e)}"
 
     @staticmethod
@@ -279,11 +287,13 @@ class POSIntegrationService:
 
                 total_returned += reservation.quantity
 
-            db.session.commit()
+            _db_session().commit()
             return True, f"Processed return of {total_returned} units for order {order_id}"
 
         except Exception as e:
-            db.session.rollback()
+            from flask import has_app_context
+            if has_app_context():
+                _db_session().rollback()
             return False, f"Error processing return: {str(e)}"
 
 
@@ -311,11 +321,13 @@ class POSIntegrationService:
                     reservation.mark_expired()
                     count += 1
 
-            db.session.commit()
+            _db_session().commit()
             return count
 
         except Exception as e:
-            db.session.rollback()
+            from flask import has_app_context
+            if has_app_context():
+                _db_session().rollback()
             return 0
 
     @staticmethod

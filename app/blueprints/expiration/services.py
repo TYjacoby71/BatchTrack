@@ -623,9 +623,11 @@ class ExpirationService:
                 return False, "Invalid item type"
 
         except Exception as e:
-            db.session.rollback()
-            logger.error(f"Error marking item as expired: {str(e)}")
-            return False, str(e)
+            from flask import has_app_context
+            if has_app_context():
+                db.session.rollback()
+            logger.error(f"Expiration mark failed: {e}")
+            return False, f"Error marking as expired: {str(e)}"
 
     @staticmethod
     def get_expiring_within_days(days_ahead: int = 7) -> List[Dict]:

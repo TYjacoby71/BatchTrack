@@ -49,6 +49,13 @@ def runner(app):
 
 
 @pytest.fixture
+def db_session(app):
+    with app.app_context():
+        yield db.session
+        db.session.rollback()
+
+
+@pytest.fixture
 def auth_headers():
     """Headers for authenticated requests."""
     return {'Content-Type': 'application/json'}
