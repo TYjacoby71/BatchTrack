@@ -1,11 +1,18 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
-from ...models import db, InventoryItem, Unit, IngredientCategory, InventoryHistory, User
+from app.models import db, InventoryItem, InventoryHistory, Unit
+from app.utils.permissions import permission_required
+from app.utils.authorization import role_required
+from app.utils.api_responses import api_error, api_success
+from app.services.inventory_alerts import InventoryAlertService
+from app.services.reservation_service import ReservationService
+from app.services.inventory_adjustment import process_inventory_adjustment
+from app.utils.timezone_utils import TimezoneUtils
+import logging
 from ...utils.unit_utils import get_global_unit_list
 from ...utils.fifo_generator import get_change_type_prefix, int_to_base36
 from sqlalchemy import and_, or_, func
 from sqlalchemy.orm import joinedload
-from app.services.inventory_adjustment import InventoryAdjustmentService, process_inventory_adjustment
 
 # Import the blueprint from __init__.py instead of creating a new one
 from . import inventory_bp
@@ -285,147 +292,90 @@ def add_inventory():
 @inventory_bp.route('/adjust/<int:id>', methods=['POST'])
 @login_required
 def adjust_inventory(id):
-    try:
-        # Get the item first
-        item = InventoryItem.query.get_or_404(id)
+    item = InventoryItem.query.get_or_404(id)
+    item_id = id
+    logger = logging.getLogger(__name__)
 
-        # Recount branch using canonical service when explicitly requested by form
-        adjustment_type = request.form.get('adjustment_type')
-        if adjustment_type == 'recount':
-            success = process_inventory_adjustment(
-                item_id=item.id,
-                quantity=float(request.form.get('quantity', 0) or 0),
-                change_type='recount',
-                unit=item.unit,
-                notes=request.form.get('notes'),
-                created_by=getattr(current_user, 'id', None),
-            )
-            if not success:
-                flash('Error performing recount', 'error')
-            return redirect(url_for('inventory.view_inventory', id=id))
+    if request.method == 'POST':
+        try:
+            # Parse form data
+            form = request.form
+            adj_type = form.get('adjustment_type') or form.get('change_type')
+            qty = float(form.get('quantity', 0) or 0.0)
+            notes = form.get('notes') or None
+            unit = form.get('input_unit') or getattr(item, 'unit', None)
 
-        # Check if this item has no history - this indicates it needs FIFO initialization
-        history_count = InventoryHistory.query.filter_by(inventory_item_id=id).count()
+            logger.info(f"Processing inventory adjustment: item_id={item_id}, adj_type={adj_type}, quantity={qty}")
 
-        change_type = request.form.get('change_type')
-        input_quantity = float(request.form.get('quantity', 0))
-        input_unit = request.form.get('input_unit')
+            # recount -> must call the canonical entry
+            if adj_type == 'recount':
+                success = process_inventory_adjustment(
+                    item_id=item.id,
+                    quantity=qty,
+                    change_type='recount',
+                    unit=unit,
+                    notes=notes,
+                    created_by=getattr(current_user, 'id', None),
+                )
+                if success:
+                    flash('Inventory recount completed successfully!', 'success')
+                else:
+                    flash('Error processing recount adjustment', 'error')
+                return redirect(url_for('inventory.view_inventory', item_id=item.id))
 
-        # For containers, always use 'count' as the unit
-        if item.type == 'container':
-            input_unit = 'count'
+            # initial stock (no history + restock) -> must call canonical with cost_override + unit
+            if adj_type == 'restock':
+                has_hist = InventoryHistory.query.filter_by(inventory_item_id=item.id).count() > 0
+                if not has_hist:
+                    cost_override = None
+                    if form.get('cost_entry_type') == 'per_unit' and form.get('cost_per_unit'):
+                        try:
+                            cost_override = float(form.get('cost_per_unit'))
+                        except ValueError:
+                            cost_override = None
 
-        input_unit = request.form.get('input_unit', item.unit)
-        notes = request.form.get('notes', '')
-        cost_entry_type = request.form.get('cost_entry_type', 'no_change')
-        cost_per_unit_input = request.form.get('cost_per_unit')
+                    success = process_inventory_adjustment(
+                        item_id=item.id,
+                        quantity=qty,
+                        change_type='restock',
+                        unit=unit,
+                        notes=notes,
+                        created_by=getattr(current_user, 'id', None),
+                        cost_override=cost_override,
+                    )
+                    if success:
+                        flash('Initial stock added successfully!', 'success')
+                    else:
+                        flash('Error processing initial stock', 'error')
+                    return redirect(url_for('inventory.view_inventory', item_id=item.id))
+                else:
+                    # Regular restock with existing history
+                    success = process_inventory_adjustment(
+                        item_id=item.id,
+                        quantity=qty,
+                        change_type='restock',
+                        unit=unit,
+                        notes=notes,
+                        created_by=getattr(current_user, 'id', None),
+                    )
+                    if success:
+                        flash('Inventory restocked successfully!', 'success')
+                    else:
+                        flash('Error processing restock', 'error')
+                    return redirect(url_for('inventory.view_inventory', item_id=item.id))
 
-        # Handle custom shelf life override
-        override_expiration = request.form.get('override_expiration') == 'on'
-        custom_expiration_date = None
-        if override_expiration and change_type == 'restock':
-            custom_shelf_life_str = request.form.get('custom_shelf_life_days')
-            if custom_shelf_life_str:
-                try:
-                    custom_shelf_life = int(custom_shelf_life_str)
-                    if custom_shelf_life > 0:
-                        from app.blueprints.expiration.services import ExpirationService
-                        custom_expiration_date = ExpirationService.calculate_expiration_date(
-                            datetime.utcnow(), custom_shelf_life
-                        )
-                except (ValueError, TypeError):
-                    flash('Invalid shelf life value', 'error')
-                    return redirect(url_for('inventory.view_inventory', id=id))
-
-        # Calculate restock cost based on entry type
-        restock_cost = None
-        if cost_entry_type == 'per_unit' and cost_per_unit_input:
-            restock_cost = float(cost_per_unit_input)
-        elif cost_entry_type == 'total' and cost_per_unit_input:
-            total_cost = float(cost_per_unit_input)
-            restock_cost = total_cost / input_quantity
-
-        # Special case: FIFO initialization for items with no history
-        if history_count == 0 and change_type == 'restock' and input_quantity > 0:
-            # This is essentially the same as initial stock creation
-            # Set the proper unit for history based on item type
-            if item.type == 'container':
-                history_unit = 'count'
             else:
-                history_unit = item.unit or input_unit
+                flash('Invalid adjustment type', 'error')
+                return redirect(url_for('inventory.view_inventory', item_id=item.id))
 
-            # Use canonical inventory adjustment service for initial stock creation
-            success = process_inventory_adjustment(
-                item_id=item.id,
-                quantity=abs(input_quantity),
-                change_type="restock",
-                unit=history_unit,
-                notes=notes or 'Initial stock creation via adjustment modal',
-                created_by=current_user.id,
-                cost_override=restock_cost
-            )
+        except ValueError as e:
+            logger.error(f"ValueError in inventory adjustment: {e}")
+            flash('Invalid quantity value. Please enter a valid number.', 'error')
+        except Exception as e:
+            logger.error(f"Error updating inventory: {e}")
+            flash('An error occurred while updating inventory.', 'error')
 
-            if success:
-                flash('Initial inventory created successfully')
-            else:
-                flash('Error creating initial inventory', 'error')
-
-        else:
-            # Pre-validation check for existing items
-            from app.services.inventory_adjustment import validate_inventory_fifo_sync
-            is_valid, error_msg, inv_qty, fifo_total = validate_inventory_fifo_sync(id)
-            if not is_valid:
-                flash(f'Pre-adjustment validation failed: {error_msg}', 'error')
-                return redirect(url_for('inventory.view_inventory', id=id))
-
-            # Use centralized adjustment service for regular adjustments
-            # Get custom shelf life for tracking
-            quantity = input_quantity
-            unit = input_unit
-            cost_override = restock_cost
-
-            custom_shelf_life = None
-            if override_expiration:
-                custom_shelf_life_str = request.form.get('custom_shelf_life_days')
-                if custom_shelf_life_str:
-                    try:
-                        custom_shelf_life = int(custom_shelf_life_str)
-                    except (ValueError, TypeError):
-                        pass
-
-            success = process_inventory_adjustment(
-                item_id=id,
-                quantity=quantity,
-                change_type=change_type,
-                unit=unit,
-                notes=notes,
-                created_by=current_user.id,
-                cost_override=cost_override,
-                custom_expiration_date=custom_expiration_date,
-                custom_shelf_life_days=custom_shelf_life
-            )
-
-            if not success:
-                flash('Error adjusting inventory', 'error')
-
-    except ValueError as e:
-        print(f"DEBUG: ValueError in adjust_inventory: {str(e)}")
-        db.session.rollback()
-        flash(f'Error: {str(e)}', 'error')
-    except ImportError as e:
-        print(f"DEBUG: ImportError in adjust_inventory: {str(e)}")
-        db.session.rollback()
-        flash(f'Import error: {str(e)}', 'error')
-    except Exception as e:
-        print(f"DEBUG: Unexpected error in adjust_inventory: {str(e)}")
-        print(f"DEBUG: Exception type: {type(e)}")
-        import traceback
-        traceback.print_exc()
-        db.session.rollback()
-        flash(f'Unexpected error: {str(e)}', 'error')
-
-    return redirect(url_for('inventory.view_inventory', id=id))
-
+        return redirect(url_for('inventory.view_inventory', item_id=item.id))
 
 
 @inventory_bp.route('/edit/<int:id>', methods=['POST'])

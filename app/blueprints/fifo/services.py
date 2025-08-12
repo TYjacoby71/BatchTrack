@@ -15,28 +15,30 @@ This service is kept for backward compatibility and internal FIFO logic only.
 import logging
 from datetime import datetime
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy import func, text
+from sqlalchemy import func, text, and_, or_
 from app.extensions import db
 from app.models.inventory import InventoryItem, InventoryHistory
 from app.models.models import User
 # FifoInventoryGenerator removed - using generate_fifo_code directly
 from app.utils.timezone_utils import TimezoneUtils
+from app.utils.fifo_generator import generate_fifo_code
+from flask_login import current_user
 
 # INTERNAL USE ONLY - do not import externally
 __all__ = ['get_fifo_entries', 'get_expired_fifo_entries']  # Only read-only exports allowed
 
 class FIFOService:
     """TEMP compatibility shim - use process_inventory_adjustment instead"""
-    
+
     @staticmethod
     def deduct_fifo(*args, **kwargs):
         from app.services.inventory_adjustment import process_inventory_adjustment
         return process_inventory_adjustment(*args, **kwargs)
-    
+
     @staticmethod
     def get_fifo_entries(inventory_item_id):
         return _FIFOService.get_fifo_entries(inventory_item_id)
-    
+
     @staticmethod
     def calculate_deduction_plan(inventory_item_id, quantity, change_type):
         return _FIFOService.calculate_deduction_plan(inventory_item_id, quantity, change_type)
@@ -134,7 +136,7 @@ class _FIFOService:
                     ProductSKUHistory.inventory_item_id == inventory_item_id,
                     ProductSKUHistory.remaining_quantity > 0,
                     # Skip expired entries - they can only be spoiled/trashed
-                    db.or_(
+                    or_(
                         ProductSKUHistory.expiration_date.is_(None),  # Non-perishable
                         ProductSKUHistory.expiration_date >= today    # Not expired yet
                     )
@@ -154,7 +156,7 @@ class _FIFOService:
                     InventoryHistory.inventory_item_id == inventory_item_id,
                     InventoryHistory.remaining_quantity > 0,
                     # Skip expired entries - they can only be spoiled/trashed
-                    db.or_(
+                    or_(
                         InventoryHistory.expiration_date.is_(None),  # Non-perishable
                         InventoryHistory.expiration_date >= today    # Not expired yet
                     )
