@@ -20,11 +20,11 @@ class ReservationService:
         Delegate to the canonical credit_specific_lot helper instead of writing remaining_quantity directly.
         """
         return credit_specific_lot(
-            inventory_item_id=reservation.inventory_item_id,
+            item_id=reservation.inventory_item_id,
             fifo_entry_id=reservation.source_fifo_id,
-            quantity=reservation.quantity,
+            qty=reservation.quantity,
             unit=getattr(source_entry, "unit", None),
-            notes=f"Released reservation #{getattr(reservation, 'id', '')}",
+            notes=f"Released reservation → credit back lot #{reservation.source_fifo_id}",
         )
 
     @staticmethod
@@ -33,12 +33,12 @@ class ReservationService:
         Delegate to the canonical audit helper to keep all audit writes centralized.
         """
         return record_audit_entry(
-            inventory_item_id=reservation.inventory_item_id,
-            action="unreserved",
-            details={
-                "reservation_id": getattr(reservation, "id", None),
-                "source_fifo_id": getattr(reservation, "source_fifo_id", None),
-            },
+            item_id=reservation.inventory_item_id,
+            quantity=0,
+            change_type="unreserved_audit",
+            notes=f"Released reservation (ref lot #{reservation.source_fifo_id})",
+            fifo_reference_id=reservation.source_fifo_id,
+            source=f"reservation_{reservation.id}"
         )
 
     @staticmethod

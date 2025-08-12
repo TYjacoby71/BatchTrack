@@ -68,9 +68,31 @@ def _configure_production_security(app):
 
 def _init_extensions(app):
     """Initialize Flask extensions"""
-    from .extensions import db, migrate, login_manager, csrf, mail, limiter
+    from flask_migrate import Migrate
+    from flask_login import LoginManager
+    from flask_limiter import Limiter
+    from flask_limiter.util import get_remote_address
+    from sqlalchemy.pool import StaticPool
+    from .models import db, User
 
+    # Fix SQLite engine options for testing
+    uri = app.config.get("SQLALCHEMY_DATABASE_URI", "")
+    if app.config.get("TESTING") or uri.startswith("sqlite"):
+        opts = dict(app.config.get("SQLALCHEMY_ENGINE_OPTIONS", {}))
+        # remove pool args that SQLite memory + StaticPool don't accept
+        opts.pop("pool_size", None)
+        opts.pop("max_overflow", None)
+        if uri == "sqlite:///:memory:":
+            opts["poolclass"] = StaticPool
+            opts["connect_args"] = {"check_same_thread": False}
+        app.config["SQLALCHEMY_ENGINE_OPTIONS"] = opts
+
+    # Initialize database
     db.init_app(app)
+
+    # Initialize extensions
+    from .extensions import migrate, login_manager, mail, csrf # limiter is initialized separately
+
     migrate.init_app(app, db)
     login_manager.init_app(app)
     mail.init_app(app)

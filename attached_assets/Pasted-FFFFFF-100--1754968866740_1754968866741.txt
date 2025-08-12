@@ -1,0 +1,355 @@
+FFFFFF.                                                                  [100%]
+=================================== FAILURES ===================================
+____________ test_credit_specific_lot_called_on_reservation_release ____________
+
+app = <Flask 'app'>
+
+    def test_credit_specific_lot_called_on_reservation_release(app):
+        """Test that releasing a reservation calls the canonical credit_specific_lot helper"""
+        with app.app_context():
+            with patch('app.services.inventory_adjustment.credit_specific_lot') as mock_credit:
+                mock_credit.return_value = True
+    
+                # Mock reservation object
+                mock_reservation = MagicMock()
+                mock_reservation.inventory_item_id = 123
+                mock_reservation.source_fifo_id = 456
+                mock_reservation.quantity = 5.0
+    
+                # Mock source entry
+                mock_source_entry = MagicMock()
+                mock_source_entry.unit = "kg"
+    
+                with patch('app.models.inventory.InventoryHistory.query') as mock_query:
+                    mock_query.get.return_value = mock_source_entry
+    
+                    # This should trigger the credit_specific_lot call
+                    ReservationService._release_reservation_inventory(mock_reservation, mock_source_entry)
+    
+                    # Assert it was called with correct parameters
+>                   mock_credit.assert_called_once_with(
+                        item_id=123,
+                        fifo_entry_id=456,
+                        qty=5.0,
+                        unit="kg",
+                        notes="Released reservation → credit back lot #456"
+                    )
+
+tests/test_reservation_canonicalization.py:30: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <MagicMock name='credit_specific_lot' id='139665704669392'>, args = ()
+kwargs = {'fifo_entry_id': 456, 'item_id': 123, 'notes': 'Released reservation → credit back lot #456', 'qty': 5.0, ...}
+msg = "Expected 'credit_specific_lot' to be called once. Called 0 times."
+
+    def assert_called_once_with(self, /, *args, **kwargs):
+        """assert that the mock was called exactly once and that that call was
+        with the specified arguments."""
+        if not self.call_count == 1:
+            msg = ("Expected '%s' to be called once. Called %s times.%s"
+                   % (self._mock_name or 'mock',
+                      self.call_count,
+                      self._calls_repr()))
+>           raise AssertionError(msg)
+E           AssertionError: Expected 'credit_specific_lot' to be called once. Called 0 times.
+
+/nix/store/7d088dip86hlzri9sk0h78b63yfmx0a0-python3-3.11.13/lib/python3.11/unittest/mock.py:950: AssertionError
+------------------------------ Captured log setup ------------------------------
+INFO     app:unit_utils.py:20 BatchTrack startup
+_____________ test_record_audit_entry_called_for_unreserved_audit ______________
+
+app = <Flask 'app'>
+
+    def test_record_audit_entry_called_for_unreserved_audit(app):
+        """Test that audit entries use the canonical record_audit_entry helper"""
+        with app.app_context():
+            with patch('app.services.inventory_adjustment.record_audit_entry') as mock_audit:
+    
+                # Mock reservation object
+                mock_reservation = MagicMock()
+                mock_reservation.inventory_item_id = 123
+                mock_reservation.source_fifo_id = 456
+                mock_reservation.id = 789
+    
+                # This should trigger the record_audit_entry call
+                ReservationService._write_unreserved_audit_entry(mock_reservation)
+    
+                # Assert it was called with correct parameters
+>               mock_audit.assert_called_once_with(
+                    item_id=123,
+                    change_type="unreserved_audit",
+                    notes="Released reservation (ref lot #456)",
+                    fifo_reference_id=456,
+                    source="reservation_789"
+                )
+
+tests/test_reservation_canonicalization.py:54: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <MagicMock name='record_audit_entry' id='139665703077904'>, args = ()
+kwargs = {'change_type': 'unreserved_audit', 'fifo_reference_id': 456, 'item_id': 123, 'notes': 'Released reservation (ref lot #456)', ...}
+msg = "Expected 'record_audit_entry' to be called once. Called 0 times."
+
+    def assert_called_once_with(self, /, *args, **kwargs):
+        """assert that the mock was called exactly once and that that call was
+        with the specified arguments."""
+        if not self.call_count == 1:
+            msg = ("Expected '%s' to be called once. Called %s times.%s"
+                   % (self._mock_name or 'mock',
+                      self.call_count,
+                      self._calls_repr()))
+>           raise AssertionError(msg)
+E           AssertionError: Expected 'record_audit_entry' to be called once. Called 0 times.
+
+/nix/store/7d088dip86hlzri9sk0h78b63yfmx0a0-python3-3.11.13/lib/python3.11/unittest/mock.py:950: AssertionError
+------------------------------ Captured log setup ------------------------------
+INFO     app:unit_utils.py:20 BatchTrack startup
+_______________ test_api_reservation_routes_uses_canonical_audit _______________
+
+app = <Flask 'app'>
+
+    def test_api_reservation_routes_uses_canonical_audit(app):
+        """Test that API reservation routes use canonical audit helper"""
+        with app.app_context():
+            with patch('app.services.inventory_adjustment.record_audit_entry') as mock_audit:
+    
+                # Mock the route function that writes audit entries
+                from app.blueprints.api.reservation_routes import _write_unreserved_audit
+    
+                _write_unreserved_audit(
+                    item_id=123,
+                    unit="kg",
+                    notes="Test unreserve"
+                )
+    
+                # Assert canonical helper was called
+>               mock_audit.assert_called_once_with(
+                    item_id=123,
+                    change_type="unreserved_audit",
+                    notes="Unreserved via API: Test unreserve"
+                )
+
+tests/test_audit_canonicalization.py:21: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/nix/store/7d088dip86hlzri9sk0h78b63yfmx0a0-python3-3.11.13/lib/python3.11/unittest/mock.py:951: in assert_called_once_with
+    return self.assert_called_with(*args, **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <MagicMock name='record_audit_entry' id='139665701138064'>, args = ()
+kwargs = {'change_type': 'unreserved_audit', 'item_id': 123, 'notes': 'Unreserved via API: Test unreserve'}
+expected = call(item_id=123, change_type='unreserved_audit', notes='Unreserved via API: Test unreserve')
+actual = call(item_id=123, quantity=0, change_type='unreserved_audit', notes='Unreserved via API: Test unreserve')
+_error_message = <function NonCallableMock.assert_called_with.<locals>._error_message at 0x7f06746bade0>
+cause = None
+
+    def assert_called_with(self, /, *args, **kwargs):
+        """assert that the last call was made with the specified arguments.
+    
+        Raises an AssertionError if the args and keyword args passed in are
+        different to the last call to the mock."""
+        if self.call_args is None:
+            expected = self._format_mock_call_signature(args, kwargs)
+            actual = 'not called.'
+            error_message = ('expected call not found.\nExpected: %s\n  Actual: %s'
+                    % (expected, actual))
+            raise AssertionError(error_message)
+    
+        def _error_message():
+            msg = self._format_mock_failure_message(args, kwargs)
+            return msg
+        expected = self._call_matcher(_Call((args, kwargs), two=True))
+        actual = self._call_matcher(self.call_args)
+        if actual != expected:
+            cause = expected if isinstance(expected, Exception) else None
+>           raise AssertionError(_error_message()) from cause
+E           AssertionError: expected call not found.
+E           Expected: record_audit_entry(item_id=123, change_type='unreserved_audit', notes='Unreserved via API: Test unreserve')
+E             Actual: record_audit_entry(item_id=123, quantity=0, change_type='unreserved_audit', notes='Unreserved via API: Test unreserve')
+
+/nix/store/7d088dip86hlzri9sk0h78b63yfmx0a0-python3-3.11.13/lib/python3.11/unittest/mock.py:939: AssertionError
+------------------------------ Captured log setup ------------------------------
+INFO     app:unit_utils.py:20 BatchTrack startup
+__________________ test_products_routes_uses_canonical_audit ___________________
+
+app = <Flask 'app'>
+
+    def test_products_routes_uses_canonical_audit(app):
+        """Test that product creation uses canonical audit helper"""
+        with app.app_context():
+            with patch('app.services.inventory_adjustment.record_audit_entry') as mock_audit:
+    
+                # Mock the route function that writes audit entries
+                from app.blueprints.products.products import _write_product_created_audit
+    
+                mock_variant = MagicMock()
+                mock_variant.id = 456
+                mock_variant.name = "Test Product"
+    
+>               _write_product_created_audit(mock_variant)
+
+tests/test_audit_canonicalization.py:40: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+sku = <MagicMock id='139665698327376'>
+
+    def _write_product_created_audit(sku):
+        """Wrapper for audit entry - used by tests"""
+>       return _record_audit_entry(
+            item_id=sku.inventory_item_id,
+            change_type="product_created",
+            note=f"SKU {getattr(sku,'id',None)} created",
+            item_type="product",
+        )
+E       TypeError: record_audit_entry() missing 1 required positional argument: 'quantity'
+
+app/blueprints/products/products.py:31: TypeError
+------------------------------ Captured log setup ------------------------------
+INFO     app:unit_utils.py:20 BatchTrack startup
+_ TestExpirationCanonicalService.test_mark_fifo_expired_calls_canonical_service _
+
+self = <tests.test_expiration_canonicalization.TestExpirationCanonicalService object at 0x7f0677a87590>
+mock_user = <AsyncMock name='current_user' id='139665703083536'>
+mock_history = <MagicMock name='InventoryHistory' id='139665701141456'>
+mock_process = <MagicMock name='process_inventory_adjustment' id='139665695912592'>
+
+    @patch('app.blueprints.expiration.services.process_inventory_adjustment')
+    @patch('app.blueprints.expiration.services.InventoryHistory')
+    @patch('app.blueprints.expiration.services.current_user')
+    def test_mark_fifo_expired_calls_canonical_service(self, mock_user, mock_history, mock_process):
+        """Test that marking FIFO entry as expired calls process_inventory_adjustment"""
+        # Mock the FIFO entry
+        mock_fifo_entry = MagicMock()
+        mock_fifo_entry.id = 123
+        mock_fifo_entry.inventory_item_id = 456
+        mock_fifo_entry.remaining_quantity = 10.0
+        mock_fifo_entry.unit = 'g'
+    
+        mock_history.query.get.return_value = mock_fifo_entry
+        mock_user.id = 1
+        mock_user.is_authenticated = True
+        mock_process.return_value = True
+    
+        # Call the service
+        success, message = ExpirationService.mark_as_expired('fifo', 123, quantity=5.0, notes="Test expiration")
+    
+        # Verify canonical service was called
+>       mock_process.assert_called_once_with(
+            item_id=456,
+            quantity=-5.0,
+            change_type="spoil",
+            unit='g',
+            notes="Expired lot disposal #123: Test expiration",
+            created_by=1
+        )
+
+tests/test_expiration_canonicalization.py:67: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <MagicMock name='process_inventory_adjustment' id='139665695912592'>
+args = ()
+kwargs = {'change_type': 'spoil', 'created_by': 1, 'item_id': 456, 'notes': 'Expired lot disposal #123: Test expiration', ...}
+msg = "Expected 'process_inventory_adjustment' to be called once. Called 0 times."
+
+    def assert_called_once_with(self, /, *args, **kwargs):
+        """assert that the mock was called exactly once and that that call was
+        with the specified arguments."""
+        if not self.call_count == 1:
+            msg = ("Expected '%s' to be called once. Called %s times.%s"
+                   % (self._mock_name or 'mock',
+                      self.call_count,
+                      self._calls_repr()))
+>           raise AssertionError(msg)
+E           AssertionError: Expected 'process_inventory_adjustment' to be called once. Called 0 times.
+
+/nix/store/7d088dip86hlzri9sk0h78b63yfmx0a0-python3-3.11.13/lib/python3.11/unittest/mock.py:950: AssertionError
+------------------------------ Captured log call -------------------------------
+ERROR    app.blueprints.expiration.services:services.py:629 Expiration mark failed: Working outside of application context.
+
+This typically means that you attempted to use functionality that needed
+the current application. To solve this, set up an application context
+with app.app_context(). See the documentation for more information.
+_ TestExpirationCanonicalService.test_mark_product_expired_calls_canonical_service _
+
+self = <tests.test_expiration_canonicalization.TestExpirationCanonicalService object at 0x7f0677a87ad0>
+mock_user = <AsyncMock name='current_user' id='139665698038032'>
+mock_sku_history = <MagicMock name='ProductSKUHistory' id='139665700402704'>
+mock_process = <MagicMock name='process_inventory_adjustment' id='139665700008208'>
+
+    @patch('app.blueprints.expiration.services.process_inventory_adjustment')
+    @patch('app.blueprints.expiration.services.ProductSKUHistory')
+    @patch('app.blueprints.expiration.services.current_user')
+    def test_mark_product_expired_calls_canonical_service(self, mock_user, mock_sku_history, mock_process):
+        """Test that marking product SKU as expired calls process_inventory_adjustment"""
+        # Mock the product SKU history entry
+        mock_sku_entry = MagicMock()
+        mock_sku_entry.id = 789
+        mock_sku_entry.inventory_item_id = 101
+        mock_sku_entry.remaining_quantity = 20.0
+        mock_sku_entry.unit = 'ml'
+    
+        mock_sku_history.query.get.return_value = mock_sku_entry
+        mock_user.id = 2
+        mock_user.is_authenticated = True
+        mock_process.return_value = True
+    
+        # Call the service
+        success, message = ExpirationService.mark_as_expired('product', 789, quantity=15.0, notes="Product expired")
+    
+        # Verify canonical service was called with product type
+>       mock_process.assert_called_once_with(
+            item_id=101,
+            quantity=-15.0,
+            change_type="spoil",
+            unit='ml',
+            notes="Expired product lot disposal #789: Product expired",
+            created_by=2,
+            item_type='product'
+        )
+
+tests/test_expiration_canonicalization.py:100: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <MagicMock name='process_inventory_adjustment' id='139665700008208'>
+args = ()
+kwargs = {'change_type': 'spoil', 'created_by': 2, 'item_id': 101, 'item_type': 'product', ...}
+msg = "Expected 'process_inventory_adjustment' to be called once. Called 0 times."
+
+    def assert_called_once_with(self, /, *args, **kwargs):
+        """assert that the mock was called exactly once and that that call was
+        with the specified arguments."""
+        if not self.call_count == 1:
+            msg = ("Expected '%s' to be called once. Called %s times.%s"
+                   % (self._mock_name or 'mock',
+                      self.call_count,
+                      self._calls_repr()))
+>           raise AssertionError(msg)
+E           AssertionError: Expected 'process_inventory_adjustment' to be called once. Called 0 times.
+
+/nix/store/7d088dip86hlzri9sk0h78b63yfmx0a0-python3-3.11.13/lib/python3.11/unittest/mock.py:950: AssertionError
+------------------------------ Captured log call -------------------------------
+ERROR    app.blueprints.expiration.services:services.py:629 Expiration mark failed: Working outside of application context.
+
+This typically means that you attempted to use functionality that needed
+the current application. To solve this, set up an application context
+with app.app_context(). See the documentation for more information.
+=============================== warnings summary ===============================
+tests/test_reservation_canonicalization.py::test_credit_specific_lot_called_on_reservation_release
+tests/test_reservation_canonicalization.py::test_record_audit_entry_called_for_unreserved_audit
+tests/test_audit_canonicalization.py::test_api_reservation_routes_uses_canonical_audit
+tests/test_audit_canonicalization.py::test_products_routes_uses_canonical_audit
+  /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_limiter/extension.py:333: UserWarning: Using the in-memory storage for tracking rate limits as no storage was explicitly specified. This is not recommended for production use. See: https://flask-limiter.readthedocs.io#configuring-a-storage-backend for documentation about configuring the storage backend.
+    warnings.warn(
+
+tests/test_reservation_canonicalization.py::test_record_audit_entry_called_for_unreserved_audit
+  /home/runner/workspace/app/services/inventory_adjustment.py:702: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    item = InventoryItem.query.get(item_id)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/test_reservation_canonicalization.py::test_credit_specific_lot_called_on_reservation_release - AssertionError: Expected 'credit_specific_lot' to be called once. Called 0 ...
+FAILED tests/test_reservation_canonicalization.py::test_record_audit_entry_called_for_unreserved_audit - AssertionError: Expected 'record_audit_entry' to be called once. Called 0 t...
+FAILED tests/test_audit_canonicalization.py::test_api_reservation_routes_uses_canonical_audit - AssertionError: expected call not found.
+FAILED tests/test_audit_canonicalization.py::test_products_routes_uses_canonical_audit - TypeError: record_audit_entry() missing 1 required positional argument: 'qu...
+FAILED tests/test_expiration_canonicalization.py::TestExpirationCanonicalService::test_mark_fifo_expired_calls_canonical_service - AssertionError: Expected 'process_inventory_adjustment' to be called once. ...
+FAILED tests/test_expiration_canonicalization.py::TestExpirationCanonicalService::test_mark_product_expired_calls_canonical_service - AssertionError: Expected 'process_inventory_adjustment' to be called once. ...
+6 failed, 1 passed, 5 warnings in 7.41s
