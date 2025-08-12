@@ -118,28 +118,142 @@ def universal_stock_check(recipe, scale=1.0, flex_mode=False):
 
 from app.models import InventoryItem, Recipe, RecipeIngredient
 from flask_login import current_user
+from datetime import date
+from sqlalchemy import and_, or_
+from app.models.product import ProductSKU, ProductSKUHistory
+import logging
+
+logger = logging.getLogger(__name__)
+
+def _fresh_filter(model):
+    """Return SQLAlchemy filter for 'not expired'."""
+    today = date.today()
+    return or_(getattr(model, "expiration_date").is_(None),
+               getattr(model, "expiration_date") >= today)
+
+def _scoped(query, model):
+    """Apply org scoping when a user is authenticated."""
+    if current_user and getattr(current_user, "is_authenticated", False):
+        return query.filter(getattr(model, "organization_id") == current_user.organization_id)
+    return query
+
+def _entries_for_item(inventory_item_id: int, include_expired: bool):
+    item = InventoryItem.query.get(inventory_item_id)
+    if not item:
+        return [], None
+
+    if item.type == "product" and ProductSKUHistory is not None:
+        q = ProductSKUHistory.query.filter(
+            and_(ProductSKUHistory.inventory_item_id == inventory_item_id,
+                 ProductSKUHistory.remaining_quantity > 0)
+        )
+        if not include_expired:
+            q = q.filter(_fresh_filter(ProductSKUHistory))
+        q = _scoped(q, ProductSKUHistory)
+        return q.all(), item
+
+    # ingredients/containers
+    q = InventoryHistory.query.filter(
+        and_(InventoryHistory.inventory_item_id == inventory_item_id,
+             InventoryHistory.remaining_quantity > 0)
+    )
+    if not include_expired:
+        q = q.filter(_fresh_filter(InventoryHistory))
+    q = _scoped(q, InventoryHistory)
+    return q.all(), item
+
+def check_stock_availability(inventory_item_id: int,
+                             requested_qty: float | None = None,
+                             include_expired: bool = False):
+    """
+    Compatibility helper used by tests.
+    Returns (is_available: bool, available_quantity: float).
+
+    - Counts only *fresh* lots by default (exclude expired).
+    - Respects organization scoping when a user is authenticated.
+    - Works for both raw inventory (InventoryHistory) and products (ProductSKUHistory).
+    """
+    entries, _ = _entries_for_item(inventory_item_id, include_expired)
+    available = float(sum(float(getattr(e, "remaining_quantity", 0.0)) for e in entries))
+    if requested_qty is None:
+        return (available > 0.0, available)
+    return (available >= float(requested_qty), available)
+
+def get_available_quantity(inventory_item_id: int, include_expired: bool = False) -> float:
+    """Optional convenience alias for getting available quantity."""
+    _, qty = check_stock_availability(inventory_item_id, None, include_expired=include_expired)
+    return qty
+
+def get_stock_summary_for_dashboard():
+    """
+    Get a summary of inventory status for the dashboard
+    """
+    try:
+        # Get current user's organization ID
+        if not current_user.is_authenticated:
+            return {
+                'low_stock_items': 0,
+                'out_of_stock_items': 0,
+                'items_approaching_expiration': 0,
+                'expired_items': 0
+            }
+
+        org_id = current_user.organization_id
+
+        # Count items by status
+        low_stock = InventoryItem.query.filter(
+            InventoryItem.organization_id == org_id,
+            InventoryItem.quantity < InventoryItem.reorder_level,
+            InventoryItem.quantity > 0
+        ).count()
+
+        out_of_stock = InventoryItem.query.filter(
+            InventoryItem.organization_id == org_id,
+            InventoryItem.quantity <= 0
+        ).count()
+
+        # For expiration tracking, we'd need to check FIFO entries
+        # This is a simplified version - full implementation would check InventoryHistory
+        items_approaching = 0
+        expired_items = 0
+
+        return {
+            'low_stock_items': low_stock,
+            'out_of_stock_items': out_of_stock,
+            'items_approaching_expiration': items_approaching,
+            'expired_items': expired_items
+        }
+
+    except Exception as e:
+        logger.error(f"Error getting stock summary: {e}")
+        return {
+            'low_stock_items': 0,
+            'out_of_stock_items': 0,
+            'items_approaching_expiration': 0,
+            'expired_items': 0
+        }
 
 
 class StockCheckService:
     """Backwards-compatibility wrapper for existing stock check functions"""
-    
+
     @staticmethod
     def check_availability(*args, **kwargs):
         """Check if ingredients are available for production"""
         return check_recipe_availability(*args, **kwargs)
-    
+
     @staticmethod
     def check_recipe_availability(*args, **kwargs):
         return check_recipe_availability(*args, **kwargs)
-    
+
     @staticmethod
     def check_ingredient_availability(*args, **kwargs):
         return check_ingredient_availability(*args, **kwargs)
-    
+
     @staticmethod
     def get_available_inventory_summary(*args, **kwargs):
         return get_available_inventory_summary(*args, **kwargs)
-    
+
     @staticmethod
     def universal_stock_check(*args, **kwargs):
         return universal_stock_check(*args, **kwargs)
