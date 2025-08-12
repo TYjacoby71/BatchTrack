@@ -82,18 +82,16 @@ class ReservationService:
                 print(f"Warning: Source FIFO entry {reservation.source_fifo_id} not found for reservation")
                 continue
 
-            # Credit back to the original lot's remaining_quantity
-            source_entry.remaining_quantity += reservation.quantity
-            print(f"Credited {reservation.quantity} back to lot {reservation.source_fifo_id}")
-
-            # Create ProductSKUHistory entry showing the credit back using canonical helper
-            record_audit_entry(
+            # Credit back using canonical service
+            from app.services.inventory_adjustment import process_inventory_adjustment
+            process_inventory_adjustment(
                 item_id=reservation.inventory_item_id,
-                change_type="unreserved_audit",
-                notes=f"Released reservation (ref lot #{reservation.source_fifo_id})",
-                fifo_reference_id=reservation.source_fifo_id,
-                source=f"reservation_{reservation.id}",
+                quantity=reservation.quantity,  # credit back
+                change_type="unreserved",
+                notes=f"Released reservation {reservation.id} (ref lot #{reservation.source_fifo_id})",
+                item_type="product"
             )
+            print(f"Credited {reservation.quantity} back to lot {reservation.source_fifo_id}")
 
             # Update inventory item quantity
             reservation.product_item.quantity += reservation.quantity

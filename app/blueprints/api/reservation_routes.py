@@ -100,24 +100,13 @@ def convert_reservation_to_sale(reservation_id):
         # Mark reservation as converted
         reservation.mark_converted_to_sale()
 
-        # Create sale history entry (reservation already deducted inventory)
-        from app.models.product import ProductSKUHistory
-
-        sale_entry = ProductSKUHistory(
-            inventory_item_id=reservation.product_item_id,
-            quantity_used=reservation.quantity,
-            remaining_quantity=0,  # Already deducted
-            change_type='sale',
-            unit=reservation.unit,
-            unit_cost=reservation.unit_cost,
+        # Create sale audit entry using canonical service (reservation already deducted inventory)
+        record_audit_entry(
+            item_id=reservation.product_item_id,
+            change_type='sale_from_reservation',
             notes=f"Sale from reservation {reservation.order_id}",
-            customer=reservation.customer if hasattr(reservation, 'customer') else None,
-            sale_price=reservation.sale_price,
-            order_id=reservation.order_id,
-            created_by=current_user.id,
-            organization_id=current_user.organization_id
+            unit=reservation.unit
         )
-        db.session.add(sale_entry)
 
         db.session.commit()
         return jsonify({
