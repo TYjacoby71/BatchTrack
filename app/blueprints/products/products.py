@@ -6,6 +6,7 @@ from ...utils.unit_utils import get_global_unit_list
 from datetime import datetime
 from werkzeug.utils import secure_filename
 import os
+from app.services.inventory_adjustment import record_audit_entry
 
 products_bp = Blueprint('products', __name__, url_prefix='/products')
 
@@ -240,10 +241,10 @@ def new_product():
             # Step 4: Create the base SKU with "Bulk" size label
             from ...services.product_service import ProductService
             sku_code = ProductService.generate_sku_code(name, 'Base', 'Bulk')
-            
+
             # Generate SKU name - never leave it empty
             sku_name = f"{name} - Base - Bulk"
-            
+
             sku = ProductSKU(
                 # New foreign key relationships
                 product_id=product.id,
