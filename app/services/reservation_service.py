@@ -7,8 +7,7 @@ import logging
 
 # Import necessary canonical functions
 from app.blueprints.fifo.services import FIFOService
-from app.services.inventory_adjustment import InventoryAdjustmentService, credit_specific_lot, record_audit_entry
-from .inventory_adjustment import credit_specific_lot, record_audit_entry, process_inventory_adjustment
+import app.services.inventory_adjustment as inv_adj
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +18,7 @@ class ReservationService:
     def _release_reservation_inventory(reservation, source_entry):
         """Release inventory from reservation back to stock"""
         try:
-            return credit_specific_lot(
+            return inv_adj.credit_specific_lot(
                 item_id=reservation.inventory_item_id,
                 fifo_entry_id=reservation.source_fifo_id,
                 qty=reservation.quantity,
@@ -34,7 +33,7 @@ class ReservationService:
     def _write_unreserved_audit_entry(reservation):
         """Write audit entry for unreserved inventory"""
         try:
-            return record_audit_entry(
+            return inv_adj.record_audit_entry(
                 item_id=reservation.inventory_item_id,
                 change_type="unreserved_audit",
                 notes=f"Released reservation (ref lot #{reservation.source_fifo_id})",
@@ -117,7 +116,7 @@ class ReservationService:
                 continue
 
             # Credit back using canonical service
-            process_inventory_adjustment(
+            inv_adj.process_inventory_adjustment(
                 item_id=reservation.inventory_item_id,
                 quantity=reservation.quantity,  # credit back
                 change_type="unreserved",
@@ -169,7 +168,7 @@ class ReservationService:
         reservation.status = 'cancelled'
 
         # Record the transaction in inventory history using canonical helper
-        record_audit_entry(
+        inv_adj.record_audit_entry(
             item_id=product_item.id,
             change_type='reservation_cancellation_audit',
             notes=f"Cancelled reservation {reservation_id} for order {reservation.order_id}",
@@ -205,7 +204,7 @@ class ReservationService:
         reservation.status = 'fulfilled'
 
         # Record the transaction in inventory history using canonical helper
-        record_audit_entry(
+        inv_adj.record_audit_entry(
             item_id=reserved_item.id,
             change_type='reservation_fulfillment_audit',
             notes=f"Fulfilled reservation {reservation_id} for order {reservation.order_id}",
