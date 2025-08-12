@@ -98,13 +98,13 @@ class ProductSKU(db.Model, ScopedModelMixin):
     """Product SKU model - represents sellable units of inventory"""
     __tablename__ = 'product_sku'
 
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
 
     # Add name synonym for test compatibility
     name = synonym("sku")
 
     # INVENTORY ITEM REFERENCE - unified inventory control (PRIMARY KEY)
-    inventory_item_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'), primary_key=True)
+    inventory_item_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'), nullable=True, index=True)
 
     # CORE PRODUCT IDENTIFICATION
     product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=False)
