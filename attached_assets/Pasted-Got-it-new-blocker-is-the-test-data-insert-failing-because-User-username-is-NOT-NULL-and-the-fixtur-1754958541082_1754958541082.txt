@@ -1,0 +1,106 @@
+Got it—new blocker is the test data insert failing because User.username is NOT NULL, and the fixture creates a user without a username. We won’t touch the tests. Let’s make the model tolerant.
+
+Fix: auto-generate a username when missing
+Add a tiny shim so if a User is created without username, we derive one from the email (or fall back to a random handle). No schema change, no test edits.
+
+python
+Copy
+Edit
+# app/models/models.py (where User is defined)
+import re, secrets
+from sqlalchemy import event
+
+# ... your User model ...
+
+@event.listens_for(User, "before_insert")
+def _default_username_before_insert(mapper, connection, target):
+    if not getattr(target, "username", None):
+        base = None
+        if getattr(target, "email", None):
+            local = target.email.split("@", 1)[0]
+            base = re.sub(r"[^a-zA-Z0-9_.-]", "", local) or None
+        target.username = base or f"user_{secrets.token_hex(4)}"
+This keeps username non-null, satisfies the NOT NULL constraint, and stays invisible to the rest of your app.
+
+Recap of other shims we added/need
+User.is_verified → hybrid prop or column (already discussed).
+
+SubscriptionTier.stripe_price_id_monthly/yearly → hybrid props that map to your lookup-key fields (keeps your “no hard-coded tiers” stance intact).
+
+Ensure app/models/__init__.py re-exports the models the tests import.
+
+After adding the username default, re-run pytest -q. We’ll tackle the next failure in the chain (likely OAuth routes or inventory service wiring) once this setup passes.
+
+
+
+
+
+
+
+
+ChatGPT said:
+
+Thought for 4 seconds
+You’re hitting this because the fixture creates a User without a username, but your user.username column is NOT NULL. SQLite throws the integrity error during the insert, so all tests die in setup.
+
+You said not to change the tests, so the cleanest fix is to make the model auto‑supply a username when one isn’t provided.
+
+Drop‑in fix (no schema change, no test change)
+Add a before_insert listener on User to derive a username from the email (or generate one):
+
+python
+Copy
+Edit
+# app/models/models.py (or wherever User is defined)
+import re
+import secrets
+from sqlalchemy import event
+
+# ... your existing User model ...
+
+@event.listens_for(User, "before_insert")
+def _default_username_before_insert(mapper, connection, target):
+    if not getattr(target, "username", None):
+        base = None
+        if getattr(target, "email", None):
+            local = target.email.split("@", 1)[0]
+            # keep it simple/safe for usernames
+            base = re.sub(r"[^a-zA-Z0-9_.-]", "", local) or None
+        # add a short random tail to avoid collisions if username is UNIQUE
+        target.username = (base or "user") + "_" + secrets.token_hex(3)
+That keeps your NOT NULL constraint intact, preserves existing tests, and avoids touching fixtures.
+
+If you want it even simpler and you don’t enforce uniqueness on username, you can drop the random suffix—though I recommend keeping it.
+
+Once that’s in, re-run pytest. We’ll tackle the next failure that surfaces after setup succeeds.
+
+
+2/2
+
+
+
+
+
+
+
+
+You said:
+this seems like a lot of debugging the test
+
+
+ChatGPT said:
+Yeah — that’s exactly what it is.
+
+Right now, we’re not finding actual production bugs; we’re chasing failures that only exist because the characterization tests are written against assumptions from before your refactor.
+
+That means:
+
+The code is fine in many of these cases.
+
+The test suite was built to validate the old layout/fields, so we’re adding shims and default behaviors just to let it run.
+
+We’re not improving production stability yet — we’re just making the test harness compatible so we can collect results and move forward.
+
+If your goal is to stick to the roadmap, this is the “compatibility glue” step before PR-2 inventory consolidation, not real bug fixing. Once the tests stop breaking from model/import mismatches, we’ll be back to working on actual system behavior instead of spending time in test-driven detours.
+
+If you want, I can lock in the minimum shims only so we’re not over-engineering for old test expectations. That way we get test collection done quickly and then drop the scaffolding when we don’t need it.
