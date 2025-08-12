@@ -89,7 +89,7 @@ class InventoryHistory(ScopedModelMixin, db.Model):
     inventory_item_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'), nullable=False)
     timestamp = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
     change_type = db.Column(db.String(50), nullable=True)  # manual_addition, batch_usage, spoil, trash, tester, damaged, recount
-    quantity_change = db.Column(db.Float, nullable=False)
+    quantity_change = db.Column(db.Float, nullable=True)
     unit = db.Column(db.String(32), nullable=False)
     remaining_quantity = db.Column(db.Float, nullable=True)  # For FIFO tracking
     unit_cost = db.Column(db.Float, nullable=True)

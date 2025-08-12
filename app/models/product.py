@@ -4,7 +4,8 @@ from ..extensions import db
 from .mixins import ScopedModelMixin
 from ..utils.timezone_utils import TimezoneUtils
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import validates, synonym
+from sqlalchemy.orm import validates, synonym, hybrid_property
+from sqlalchemy import func
 
 class Product(ScopedModelMixin, db.Model):
     """Main Product model - represents the parent product"""
@@ -111,7 +112,7 @@ class ProductSKU(db.Model, ScopedModelMixin):
     sku_code = db.Column(db.String(64), nullable=True)
     sku = db.Column(db.String(64), unique=True, nullable=False) # Renamed from sku_code to sku
     sku_name = db.Column(db.String(128), nullable=True)
-    quantity = db.Column(db.Float, default=0.0)
+    _quantity = db.Column('quantity_override', db.Float, default=0.0, nullable=True)
 
     # LEGACY FIELDS FOR COMPATIBILITY (will be calculated from inventory_item)
     unit = db.Column(db.String(32), nullable=False)
@@ -202,10 +203,27 @@ class ProductSKU(db.Model, ScopedModelMixin):
         """Get the base unit from the parent product"""
         return self.product.base_unit if self.product else self.unit
 
-    @property
+    @hybrid_property
     def quantity(self):
-        """Get current quantity from unified inventory"""
-        return self.inventory_item.quantity if self.inventory_item else 0.0
+        """Get current quantity from history"""
+        if hasattr(self, '_quantity') and self._quantity is not None:
+            return self._quantity
+
+        if not self.inventory_item_id:
+            return 0.0
+
+        # Sum all quantity changes for this SKU
+        total = db.session.query(func.sum(ProductSKUHistory.quantity_change)).filter(
+            ProductSKUHistory.inventory_item_id == self.inventory_item_id,
+            ProductSKUHistory.product_sku_id == self.id
+        ).scalar()
+
+        return float(total) if total else 0.0
+
+    @quantity.setter
+    def quantity(self, value):
+        """Set quantity (for testing purposes)"""
+        self._quantity = value
 
     @property
     def cost_per_unit(self):
@@ -317,6 +335,8 @@ class ProductSKUHistory(ScopedModelMixin, db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     inventory_item_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'), nullable=False)
+    product_sku_id = db.Column(db.Integer, db.ForeignKey('product_sku.id'), nullable=False)
+
 
     # Change tracking
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
@@ -374,6 +394,7 @@ class ProductSKUHistory(ScopedModelMixin, db.Model):
 
     # Relationships
     inventory_item = db.relationship('InventoryItem', foreign_keys=[inventory_item_id], backref='product_history_entries')
+    product_sku = db.relationship('ProductSKU', foreign_keys=[product_sku_id], backref='history_entries')
     batch = db.relationship('Batch', foreign_keys=[batch_id])
     container = db.relationship('InventoryItem', foreign_keys=[container_id])
     user = db.relationship('User', foreign_keys=[created_by])

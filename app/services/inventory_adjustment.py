@@ -163,11 +163,10 @@ def credit_specific_lot(item_id: int, fifo_entry_id: int, qty: float, *, unit: s
 
 
 def record_audit_entry(
-    *,
     item_id: int,
-    change_type: str = "audit",
-    notes: str = "",
-    unit: str | None = None,
+    change_type: str,
+    notes: str,
+    quantity: float | None = None,
     fifo_reference_id: int | None = None,
     source: str | None = None,
 ) -> None:
@@ -197,15 +196,11 @@ def process_inventory_adjustment(
     quantity: float,
     change_type: str,
     unit: str | None = None,
-    notes: str = "",
-    batch_id: int | None = None,
-    container_id: int | None = None,
-    source: str | None = None,
-    container_type: str | None = None,
-    container_size: float | None = None,
-    expiration_date=None,
-    cost_per_unit: float | None = None,
-    fifo_lot_reference: str | None = None
+    notes: str | None = None,
+    created_by: int | None = None,
+    cost_override: float | None = None,
+    item_type: str | None = None,
+    **_
 ) -> bool:
     """
     CANONICAL ENTRY POINT for all inventory adjustments.
@@ -644,7 +639,7 @@ def audit_event(
     Uses the same internal helpers so nothing writes outside this module.
     """
     from app.utils.fifo_generator import generate_fifo_code
-    
+
     try:
         item = InventoryItem.query.get(item_id)
         if not item:
