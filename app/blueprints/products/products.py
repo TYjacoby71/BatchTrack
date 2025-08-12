@@ -19,7 +19,7 @@ def _write_product_created_audit(variant):
     inv_adj.record_audit_entry(
         item_id=variant.id,
         change_type="product_created",
-        notes=f"Product variant created: {getattr(variant, 'name', '')}"
+        notes=f"Product variant created: {variant.name}"
     )
 
 from ...services.product_service import ProductService

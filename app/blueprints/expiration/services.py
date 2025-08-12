@@ -5,6 +5,8 @@ from typing import List, Dict, Optional, Tuple
 from flask_login import current_user
 import logging
 from app.services.inventory_adjustment import process_inventory_adjustment
+from app.models.inventory import InventoryHistory, InventoryItem
+from app.models.product import ProductSKU, ProductSKUHistory
 
 # Set logger to INFO level to reduce debug noise
 logger = logging.getLogger(__name__)
@@ -536,82 +538,44 @@ class ExpirationService:
         }
 
     @staticmethod
-    def mark_as_expired(entry_type, entry_id, quantity=None, notes=None):
-        """
-        Mark inventory as expired and adjust quantities
-
-        Args:
-            entry_type: 'fifo' or 'product'
-            entry_id: ID of the FIFO entry or product SKU history entry
-            quantity: Amount to mark as expired (if None, uses remaining_quantity)
-            notes: Optional notes about the expiration
-        """
-        from flask import has_app_context
-
+    def mark_as_expired(kind, entry_id, quantity, notes=""):
+        """Mark inventory as expired and remove from stock"""
         try:
-            if not has_app_context():
-                logger.error("mark_as_expired called outside app context")
-                return False, "App context required"
-
-            from app.services.inventory_adjustment import process_inventory_adjustment
-            from app.models import db
-
-            if not getattr(current_user, "is_authenticated", False):
-                logger.error("mark_as_expired called without authenticated user")
-                return False, "Authentication required"
-
-            # Get user for audit trail
-            user_id = getattr(current_user, "id", None) if getattr(current_user, "is_authenticated", False) else None
-
-            if entry_type == 'fifo':
-                from app.models.inventory import InventoryHistory
-                fifo_entry = InventoryHistory.query.get(entry_id)
-                if not fifo_entry:
+            if kind == "fifo":
+                entry = InventoryHistory.query.get(entry_id)
+                if not entry:
                     return False, "FIFO entry not found"
 
-                # Call canonical inventory adjustment service
-                success = process_inventory_adjustment(
-                    item_id=fifo_entry.inventory_item_id,
-                    quantity=-(quantity or fifo_entry.remaining_quantity),
+                result = process_inventory_adjustment(
+                    item_id=entry.inventory_item_id,
+                    quantity=-quantity,
                     change_type="spoil",
-                    unit=fifo_entry.unit,
-                    notes=f"Expired lot disposal #{entry_id}: {notes or ''}".strip(),
-                    created_by=user_id
+                    unit=entry.unit,
+                    notes=f"Expired lot disposal #{entry_id}: {notes}",
+                    created_by=current_user.id if getattr(current_user, "is_authenticated", False) else None,
                 )
-                message = f"Marked FIFO entry #{entry_id} as expired" if success else "Failed to mark FIFO entry as expired"
+                return result, "ok"
 
-            elif entry_type == 'product':
-                from app.models.product import ProductSKUHistory
-                sku_entry = ProductSKUHistory.query.get(entry_id)
-                if not sku_entry:
-                    return False, "Product entry not found"
+            elif kind == "product":
+                entry = ProductSKUHistory.query.get(entry_id)
+                if not entry:
+                    return False, "Product SKU entry not found"
 
-                # Call canonical inventory adjustment service
-                success = process_inventory_adjustment(
-                    item_id=sku_entry.inventory_item_id,
-                    quantity=-(quantity or sku_entry.remaining_quantity),
+                result = process_inventory_adjustment(
+                    item_id=entry.inventory_item_id,
+                    quantity=-quantity,
                     change_type="spoil",
-                    unit=sku_entry.unit,
-                    notes=f"Expired product lot disposal #{entry_id}: {notes or ''}".strip(),
-                    created_by=user_id,
-                    item_type="product"
+                    unit=entry.unit,
+                    notes=f"Expired product lot disposal #{entry_id}: {notes}",
+                    created_by=current_user.id if getattr(current_user, "is_authenticated", False) else None,
+                    item_type="product",
                 )
-                message = f"Marked product SKU #{entry_id} as expired" if success else "Failed to mark product SKU as expired"
-            else:
-                return False, "Invalid entry type"
+                return result, "ok"
 
-            if success:
-                logger.info(f"Marked {quantity or 'all remaining'} units as expired for {entry_type} entry {entry_id}")
-                return True, message
-            else:
-                return False, message
+            return False, "Invalid expiration type"
 
         except Exception as e:
-            if has_app_context():
-                from app.models import db
-                db.session.rollback()
-            logger.error(f"Expiration mark failed for entry {entry_id} of type {entry_type}: {e}")
-            return False, "Error marking as expired"
+            return False, f"Error marking as expired: {str(e)}"
 
     @staticmethod
     def get_expiring_within_days(days_ahead: int = 7) -> List[Dict]:
