@@ -34,6 +34,12 @@ class DeprecatedFIFOModule(ModuleType):
     def __getattr__(self, name):
         if name == 'services':
             _warn_direct_import()
-        return super().__getattr__(name)
+        # Use getattr instead of super().__getattr__ to avoid AttributeError
+        original_module = sys.modules.get(__name__)
+        if hasattr(original_module, name):
+            return getattr(original_module, name)
+        raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
 
-sys.modules[__name__] = DeprecatedFIFOModule(__name__)
+# Only apply the override if not already applied
+if not isinstance(sys.modules.get(__name__), DeprecatedFIFOModule):
+    sys.modules[__name__] = DeprecatedFIFOModule(__name__)

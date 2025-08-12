@@ -5,7 +5,7 @@ from sqlalchemy import and_, func
 from ..utils import generate_fifo_code
 
 # Import necessary canonical functions
-from app.services.fifoservice import FIFOService
+from app.blueprints.fifo.services import FIFOService
 from app.services.inventory_adjustment import record_audit_entry, process_inventory_adjustment
 
 class ReservationService:
