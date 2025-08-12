@@ -536,98 +536,84 @@ class ExpirationService:
         }
 
     @staticmethod
-    def mark_as_expired(item_type, item_id, quantity=None, notes=""):
-        """Mark items as expired - handles sync errors by directly adjusting FIFO entries"""
+    def mark_as_expired(entry_type, entry_id, quantity=None, notes=None):
+        """
+        Mark inventory as expired and adjust quantities
+
+        Args:
+            entry_type: 'fifo' or 'product'
+            entry_id: ID of the FIFO entry or product SKU history entry
+            quantity: Amount to mark as expired (if None, uses remaining_quantity)
+            notes: Optional notes about the expiration
+        """
+        from flask import has_app_context
+
         try:
-            if item_type == 'fifo':
-                # Get FIFO entry to determine quantity and inventory item
-                fifo_entry = InventoryHistory.query.get(item_id)
-                if not fifo_entry:
+            if not has_app_context():
+                logger.error("mark_as_expired called outside app context")
+                return False, "App context required"
+
+            from flask_login import current_user
+            from app.services.inventory_adjustment import process_inventory_adjustment
+            from app.models import db
+
+            if not current_user.is_authenticated:
+                logger.error("mark_as_expired called without authenticated user")
+                return False, "Authentication required"
+
+            if entry_type == 'fifo':
+                from app.models.inventory import InventoryHistory
+                entry = InventoryHistory.query.get(entry_id)
+                if not entry:
                     return False, "FIFO entry not found"
 
-                # Use provided quantity or the full remaining quantity if not specified
-                quantity_to_expire = quantity if quantity is not None else fifo_entry.remaining_quantity
-                if quantity_to_expire <= 0:
-                    return False, "Quantity to expire must be positive"
-
-                # Get the inventory item to update its overall quantity
-                item = InventoryItem.query.get(fifo_entry.inventory_item_id)
-                if not item:
-                    return False, "Inventory item not found"
+                expire_qty = quantity if quantity is not None else entry.remaining_quantity
+                notes_text = f"Expired lot disposal #{entry_id}: {notes or 'Marked as expired'}"
 
                 # Use canonical inventory adjustment service
-                from app.services.inventory_adjustment import process_inventory_adjustment
-
                 success = process_inventory_adjustment(
-                    item_id=fifo_entry.inventory_item_id,
-                    quantity=-abs(quantity_to_expire),
+                    item_id=entry.inventory_item_id,
+                    quantity=-expire_qty,  # Negative for disposal
                     change_type="spoil",
-                    unit=fifo_entry.unit,
-                    notes=f"Expired lot {fifo_entry.id} disposal: {notes or ''}".strip(),
+                    unit=entry.unit,
+                    notes=notes_text,
                     created_by=current_user.id
                 )
 
-                if not success:
-                    logger.error(f"Failed to process expiration adjustment for item {fifo_entry.inventory_item_id}")
-                    return False, "Failed to update inventory through canonical service"
+            elif entry_type == 'product':
+                from app.models.product import ProductSKUHistory
+                entry = ProductSKUHistory.query.get(entry_id)
+                if not entry:
+                    return False, "Product entry not found"
 
-                # Use canonical inventory adjustment service for expired disposal
-                from app.services.inventory_adjustment import process_inventory_adjustment
+                expire_qty = quantity if quantity is not None else entry.remaining_quantity
+                notes_text = f"Expired product lot disposal #{entry_id}: {notes or 'Product marked as expired'}"
 
+                # Use canonical inventory adjustment service
                 success = process_inventory_adjustment(
-                    item_id=fifo_entry.inventory_item_id,
-                    quantity=-abs(quantity_to_expire),
+                    item_id=entry.inventory_item_id,
+                    quantity=-expire_qty,  # Negative for disposal
                     change_type="spoil",
-                    unit=fifo_entry.unit,
-                    notes=f"Expired lot disposal #{item_id}: {notes or ''}".strip(),
-                    created_by=current_user.id if current_user.is_authenticated else None
-                )
-
-                if not success:
-                    logger.error(f"Failed to process expiration adjustment for item {fifo_entry.inventory_item_id}")
-                    return False, "Failed to update inventory through canonical service"
-
-                return True, f"Successfully marked FIFO entry #{item_id} as expired (removed {quantity_to_expire})"
-
-            elif item_type == 'product':
-                # Get product history entry
-                from ...models.product import ProductSKUHistory
-                history_entry = ProductSKUHistory.query.get(item_id)
-                if not history_entry:
-                    return False, "Product history entry not found"
-
-                quantity_to_expire = quantity if quantity is not None else history_entry.remaining_quantity
-                if quantity_to_expire <= 0:
-                    return False, "Quantity to expire must be positive"
-
-                # Use canonical inventory adjustment service for product expiration
-                from app.services.inventory_adjustment import process_inventory_adjustment
-
-                success = process_inventory_adjustment(
-                    item_id=history_entry.inventory_item_id,
-                    quantity=-abs(quantity_to_expire),
-                    change_type="spoil",
-                    unit=history_entry.unit,
-                    notes=f"Expired product lot disposal #{item_id}: {notes or ''}".strip(),
-                    created_by=current_user.id if current_user.is_authenticated else None,
+                    unit=entry.unit,
+                    notes=notes_text,
+                    created_by=current_user.id,
                     item_type='product'
                 )
-
-                if not success:
-                    logger.error(f"Failed to process product expiration adjustment for item {history_entry.inventory_item_id}")
-                    return False, "Failed to update inventory through canonical service"
-
-                return True, f"Successfully marked product FIFO entry #{item_id} as expired (removed {quantity_to_expire})"
-
             else:
-                return False, "Invalid item type"
+                return False, "Invalid entry type"
+
+            if success:
+                logger.info(f"Marked {expire_qty} units as expired for {entry_type} entry {entry_id}")
+                return True, f"Successfully marked {expire_qty} units as expired"
+            else:
+                return False, "Failed to process expiration adjustment"
 
         except Exception as e:
-            from flask import has_app_context
             if has_app_context():
+                from app.models import db
                 db.session.rollback()
             logger.error(f"Expiration mark failed: {e}")
-            return False, f"Error marking as expired: {str(e)}"
+            return False, "Error marking as expired"
 
     @staticmethod
     def get_expiring_within_days(days_ahead: int = 7) -> List[Dict]:

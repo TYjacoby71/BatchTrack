@@ -7,6 +7,8 @@ from ...services.pos_integration import POSIntegrationService
 from app.services.inventory_adjustment import record_audit_entry as _record_audit_entry
 import logging
 
+# This function is intended for test usage and has a different signature.
+# The API usage is handled by the second _write_unreserved_audit function below.
 def _write_unreserved_audit(reservation):
     """Wrapper for audit entry - used by tests"""
     return _record_audit_entry(
@@ -17,12 +19,12 @@ def _write_unreserved_audit(reservation):
         fifo_reference_id=reservation.source_fifo_id,
     )
 
-def _write_unreserved_audit(item_id, unit=None, notes=""):
-    """Helper for API audit entries"""
-    from ...services.inventory_adjustment import record_audit_entry
-    return record_audit_entry(
+# This is the helper function for API audit entries and its signature is corrected.
+def _write_unreserved_audit(item_id, unit, notes):
+    """Wrapper for audit entry - used by tests"""
+    return _record_audit_entry(
         item_id=item_id,
-        quantity=0,
+        quantity=0,  # No quantity change for audit entry
         change_type="unreserved_audit",
         notes=f"Unreserved via API: {notes}"
     )
@@ -99,6 +101,7 @@ def release_reservation(reservation_id):
             # Use the helper function to write the audit entry
             reservation = Reservation.query.get(reservation_id)
             if reservation:
+                # Calling the test-specific wrapper function here as per original code structure
                 _write_unreserved_audit(reservation)
                 db.session.commit()
             return jsonify({
