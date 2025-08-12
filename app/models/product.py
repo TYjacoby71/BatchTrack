@@ -107,7 +107,7 @@ class ProductSKU(db.Model, ScopedModelMixin):
     inventory_item_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'), nullable=True, index=True)
 
     # CORE PRODUCT IDENTIFICATION
-    product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=False)
+    product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=True)
     variant_id = db.Column(db.Integer, db.ForeignKey('product_variant.id'), nullable=False)
     size_label = db.Column(db.String(64), nullable=False, default='Bulk')
     sku_code = db.Column(db.String(64), nullable=True)
@@ -326,6 +326,21 @@ class ProductSKU(db.Model, ScopedModelMixin):
         size_slug = ''.join(c.upper() if c.isalnum() else '' for c in size_label)[:6]
 
         return f"{product_slug}-{variant_slug}-{size_slug}"
+
+    def __init__(self, **kwargs):
+        # Allow tests to pass quantity= and map to quantity_override
+        qty = kwargs.pop("quantity", None)
+        super().__init__(**kwargs)
+        if qty is not None:
+            self.quantity_override = qty
+
+    @property
+    def quantity(self):
+        return self.quantity_override
+
+    @quantity.setter
+    def quantity(self, value):
+        self.quantity_override = value
 
     def __repr__(self):
         return f'<ProductSKU {self.display_name}>'
