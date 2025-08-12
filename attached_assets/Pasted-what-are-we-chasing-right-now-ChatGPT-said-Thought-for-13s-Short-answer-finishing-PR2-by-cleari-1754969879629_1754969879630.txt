@@ -1,0 +1,1888 @@
+what are we chasing right now
+
+
+ChatGPT said:
+
+Thought for 13s
+Short answer: finishing PR2 by clearing the last wiring gaps the tests are flagging.
+
+Here’s what we’re chasing right now (from the latest pytest run):
+
+Audit wiring
+
+_write_unreserved_audit (reservation_routes) and _write_product_created_audit (products) must call inventory_adjustment.record_audit_entry(...) with the exact args tests expect.
+
+Export a no-op require_permission so products.py imports cleanly.
+
+Expiration service
+
+In expiration/services.py, always call process_inventory_adjustment(...) for spoilage and guard current_user: user_id = current_user.id if getattr(current_user, "is_authenticated", False) else None.
+
+Inventory routes patchability
+
+Tests patch app.blueprints.inventory.routes.process_inventory_adjustment. Import it at module scope and use that name so the patch lands.
+
+Reservation service helpers
+
+_release_reservation_inventory → call credit_specific_lot(item_id=..., fifo_entry_id=..., qty=..., unit=..., notes=...).
+
+_write_unreserved_audit_entry → call record_audit_entry(item_id=..., change_type="unreserved_audit", notes=..., fifo_reference_id=..., source=...).
+
+Model/fixture compatibility
+
+ProductSKU needs to accept name= (add name = synonym("sku") or equivalent).
+
+InventoryItem.organization_id mustn’t block tests (make nullable or set org in fixtures).
+
+Add test_user / test_org fixtures used by FIFO and routes tests.
+
+After these edits: run pytest -q, then the guardrail greps.
+
+
+
+
+
+
+
+
+You said:
+EEEFFEEEEEEEEEEEEE.EEEEEEEEEEEEEEE                                       [100%]
+==================================== ERRORS ====================================
+______ ERROR at setup of test_api_reservation_routes_uses_canonical_audit ______
+
+    @pytest.fixture
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+>       app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+        })
+
+tests/conftest.py:18: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+app/__init__.py:42: in create_app
+    _register_blueprints(app)
+app/__init__.py:284: in _register_blueprints
+    _register_product_blueprints(app, blueprints)
+app/__init__.py:347: in _register_product_blueprints
+    from .blueprints.products.products import products_bp
+app/blueprints/products/__init__.py:5: in <module>
+    from . import products, product_variants, sku, api, product_inventory_routes, reservation_routes
+app/blueprints/products/products.py:8: in <module>
+    from ...utils.authorization import require_permission
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    """
+    Authorization system following industry standard practices:
+    
+    1. User logs in (authentication)
+    2. System checks subscription tier status (authorization)
+    3. Subscription tier dictates available permissions/features
+    4. Organization owner gets all tier-allowed permissions
+    5. Other users get permissions based on their assigned roles
+    """
+    
+    from flask_login import current_user
+    from flask import session, current_app, g, request, jsonify
+    
+    def require_permission(*_args, **_kwargs):
+        def _decorator(f):
+            return f
+        return _decorator
+    
+>   logger = logging.getLogger(__name__)
+E   NameError: name 'logging' is not defined
+
+app/utils/authorization.py:19: NameError
+_________ ERROR at setup of test_products_routes_uses_canonical_audit __________
+
+    @pytest.fixture
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+>       app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+        })
+
+tests/conftest.py:18: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+app/__init__.py:42: in create_app
+    _register_blueprints(app)
+app/__init__.py:284: in _register_blueprints
+    _register_product_blueprints(app, blueprints)
+app/__init__.py:347: in _register_product_blueprints
+    from .blueprints.products.products import products_bp
+app/blueprints/products/__init__.py:5: in <module>
+    from . import products, product_variants, sku, api, product_inventory_routes, reservation_routes
+app/blueprints/products/products.py:8: in <module>
+    from ...utils.authorization import require_permission
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    """
+    Authorization system following industry standard practices:
+    
+    1. User logs in (authentication)
+    2. System checks subscription tier status (authorization)
+    3. Subscription tier dictates available permissions/features
+    4. Organization owner gets all tier-allowed permissions
+    5. Other users get permissions based on their assigned roles
+    """
+    
+    from flask_login import current_user
+    from flask import session, current_app, g, request, jsonify
+    
+    def require_permission(*_args, **_kwargs):
+        def _decorator(f):
+            return f
+        return _decorator
+    
+>   logger = logging.getLogger(__name__)
+E   NameError: name 'logging' is not defined
+
+app/utils/authorization.py:19: NameError
+____________________________________ ERROR at setup of test_expiration_service_uses_canonical_adjustment ____________________________________
+
+    @pytest.fixture
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+>       app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+        })
+
+tests/conftest.py:18: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+app/__init__.py:42: in create_app
+    _register_blueprints(app)
+app/__init__.py:284: in _register_blueprints
+    _register_product_blueprints(app, blueprints)
+app/__init__.py:347: in _register_product_blueprints
+    from .blueprints.products.products import products_bp
+app/blueprints/products/__init__.py:5: in <module>
+    from . import products, product_variants, sku, api, product_inventory_routes, reservation_routes
+app/blueprints/products/products.py:8: in <module>
+    from ...utils.authorization import require_permission
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    """
+    Authorization system following industry standard practices:
+    
+    1. User logs in (authentication)
+    2. System checks subscription tier status (authorization)
+    3. Subscription tier dictates available permissions/features
+    4. Organization owner gets all tier-allowed permissions
+    5. Other users get permissions based on their assigned roles
+    """
+    
+    from flask_login import current_user
+    from flask import session, current_app, g, request, jsonify
+    
+    def require_permission(*_args, **_kwargs):
+        def _decorator(f):
+            return f
+        return _decorator
+    
+>   logger = logging.getLogger(__name__)
+E   NameError: name 'logging' is not defined
+
+app/utils/authorization.py:19: NameError
+________________________________ ERROR at setup of TestGoogleOAuthCharacterization.test_oauth_service_exists ________________________________
+
+    @pytest.fixture
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+>       app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+        })
+
+tests/conftest.py:18: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+app/__init__.py:42: in create_app
+    _register_blueprints(app)
+app/__init__.py:284: in _register_blueprints
+    _register_product_blueprints(app, blueprints)
+app/__init__.py:347: in _register_product_blueprints
+    from .blueprints.products.products import products_bp
+app/blueprints/products/__init__.py:5: in <module>
+    from . import products, product_variants, sku, api, product_inventory_routes, reservation_routes
+app/blueprints/products/products.py:8: in <module>
+    from ...utils.authorization import require_permission
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    """
+    Authorization system following industry standard practices:
+    
+    1. User logs in (authentication)
+    2. System checks subscription tier status (authorization)
+    3. Subscription tier dictates available permissions/features
+    4. Organization owner gets all tier-allowed permissions
+    5. Other users get permissions based on their assigned roles
+    """
+    
+    from flask_login import current_user
+    from flask import session, current_app, g, request, jsonify
+    
+    def require_permission(*_args, **_kwargs):
+        def _decorator(f):
+            return f
+        return _decorator
+    
+>   logger = logging.getLogger(__name__)
+E   NameError: name 'logging' is not defined
+
+app/utils/authorization.py:19: NameError
+_____________________________ ERROR at setup of TestGoogleOAuthCharacterization.test_auth_login_endpoint_exists _____________________________
+
+    @pytest.fixture
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+>       app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+        })
+
+tests/conftest.py:18: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+app/__init__.py:42: in create_app
+    _register_blueprints(app)
+app/__init__.py:284: in _register_blueprints
+    _register_product_blueprints(app, blueprints)
+app/__init__.py:347: in _register_product_blueprints
+    from .blueprints.products.products import products_bp
+app/blueprints/products/__init__.py:5: in <module>
+    from . import products, product_variants, sku, api, product_inventory_routes, reservation_routes
+app/blueprints/products/products.py:8: in <module>
+    from ...utils.authorization import require_permission
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    """
+    Authorization system following industry standard practices:
+    
+    1. User logs in (authentication)
+    2. System checks subscription tier status (authorization)
+    3. Subscription tier dictates available permissions/features
+    4. Organization owner gets all tier-allowed permissions
+    5. Other users get permissions based on their assigned roles
+    """
+    
+    from flask_login import current_user
+    from flask import session, current_app, g, request, jsonify
+    
+    def require_permission(*_args, **_kwargs):
+        def _decorator(f):
+            return f
+        return _decorator
+    
+>   logger = logging.getLogger(__name__)
+E   NameError: name 'logging' is not defined
+
+app/utils/authorization.py:19: NameError
+___________________________ ERROR at setup of TestGoogleOAuthCharacterization.test_auth_callback_endpoint_exists ____________________________
+
+    @pytest.fixture
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+>       app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+        })
+
+tests/conftest.py:18: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+app/__init__.py:42: in create_app
+    _register_blueprints(app)
+app/__init__.py:284: in _register_blueprints
+    _register_product_blueprints(app, blueprints)
+app/__init__.py:347: in _register_product_blueprints
+    from .blueprints.products.products import products_bp
+app/blueprints/products/__init__.py:5: in <module>
+    from . import products, product_variants, sku, api, product_inventory_routes, reservation_routes
+app/blueprints/products/products.py:8: in <module>
+    from ...utils.authorization import require_permission
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    """
+    Authorization system following industry standard practices:
+    
+    1. User logs in (authentication)
+    2. System checks subscription tier status (authorization)
+    3. Subscription tier dictates available permissions/features
+    4. Organization owner gets all tier-allowed permissions
+    5. Other users get permissions based on their assigned roles
+    """
+    
+    from flask_login import current_user
+    from flask import session, current_app, g, request, jsonify
+    
+    def require_permission(*_args, **_kwargs):
+        def _decorator(f):
+            return f
+        return _decorator
+    
+>   logger = logging.getLogger(__name__)
+E   NameError: name 'logging' is not defined
+
+app/utils/authorization.py:19: NameError
+____________________________ ERROR at setup of TestGoogleOAuthCharacterization.test_oauth_state_validation_path _____________________________
+
+    @pytest.fixture
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+>       app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+        })
+
+tests/conftest.py:18: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+app/__init__.py:42: in create_app
+    _register_blueprints(app)
+app/__init__.py:284: in _register_blueprints
+    _register_product_blueprints(app, blueprints)
+app/__init__.py:347: in _register_product_blueprints
+    from .blueprints.products.products import products_bp
+app/blueprints/products/__init__.py:5: in <module>
+    from . import products, product_variants, sku, api, product_inventory_routes, reservation_routes
+app/blueprints/products/products.py:8: in <module>
+    from ...utils.authorization import require_permission
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    """
+    Authorization system following industry standard practices:
+    
+    1. User logs in (authentication)
+    2. System checks subscription tier status (authorization)
+    3. Subscription tier dictates available permissions/features
+    4. Organization owner gets all tier-allowed permissions
+    5. Other users get permissions based on their assigned roles
+    """
+    
+    from flask_login import current_user
+    from flask import session, current_app, g, request, jsonify
+    
+    def require_permission(*_args, **_kwargs):
+        def _decorator(f):
+            return f
+        return _decorator
+    
+>   logger = logging.getLogger(__name__)
+E   NameError: name 'logging' is not defined
+
+app/utils/authorization.py:19: NameError
+____________________________ ERROR at setup of TestGoogleOAuthCharacterization.test_oauth_service_methods_exist _____________________________
+
+    @pytest.fixture
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+>       app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+        })
+
+tests/conftest.py:18: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+app/__init__.py:42: in create_app
+    _register_blueprints(app)
+app/__init__.py:284: in _register_blueprints
+    _register_product_blueprints(app, blueprints)
+app/__init__.py:347: in _register_product_blueprints
+    from .blueprints.products.products import products_bp
+app/blueprints/products/__init__.py:5: in <module>
+    from . import products, product_variants, sku, api, product_inventory_routes, reservation_routes
+app/blueprints/products/products.py:8: in <module>
+    from ...utils.authorization import require_permission
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    """
+    Authorization system following industry standard practices:
+    
+    1. User logs in (authentication)
+    2. System checks subscription tier status (authorization)
+    3. Subscription tier dictates available permissions/features
+    4. Organization owner gets all tier-allowed permissions
+    5. Other users get permissions based on their assigned roles
+    """
+    
+    from flask_login import current_user
+    from flask import session, current_app, g, request, jsonify
+    
+    def require_permission(*_args, **_kwargs):
+        def _decorator(f):
+            return f
+        return _decorator
+    
+>   logger = logging.getLogger(__name__)
+E   NameError: name 'logging' is not defined
+
+app/utils/authorization.py:19: NameError
+_____________________________ ERROR at setup of TestGoogleOAuthCharacterization.test_oauth_configuration_status _____________________________
+
+    @pytest.fixture
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+>       app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+        })
+
+tests/conftest.py:18: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+app/__init__.py:42: in create_app
+    _register_blueprints(app)
+app/__init__.py:284: in _register_blueprints
+    _register_product_blueprints(app, blueprints)
+app/__init__.py:347: in _register_product_blueprints
+    from .blueprints.products.products import products_bp
+app/blueprints/products/__init__.py:5: in <module>
+    from . import products, product_variants, sku, api, product_inventory_routes, reservation_routes
+app/blueprints/products/products.py:8: in <module>
+    from ...utils.authorization import require_permission
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    """
+    Authorization system following industry standard practices:
+    
+    1. User logs in (authentication)
+    2. System checks subscription tier status (authorization)
+    3. Subscription tier dictates available permissions/features
+    4. Organization owner gets all tier-allowed permissions
+    5. Other users get permissions based on their assigned roles
+    """
+    
+    from flask_login import current_user
+    from flask import session, current_app, g, request, jsonify
+    
+    def require_permission(*_args, **_kwargs):
+        def _decorator(f):
+            return f
+        return _decorator
+    
+>   logger = logging.getLogger(__name__)
+E   NameError: name 'logging' is not defined
+
+app/utils/authorization.py:19: NameError
+____________________________ ERROR at setup of TestGoogleOAuthCharacterization.test_oauth_callback_invalid_state ____________________________
+
+    @pytest.fixture
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+>       app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+        })
+
+tests/conftest.py:18: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+app/__init__.py:42: in create_app
+    _register_blueprints(app)
+app/__init__.py:284: in _register_blueprints
+    _register_product_blueprints(app, blueprints)
+app/__init__.py:347: in _register_product_blueprints
+    from .blueprints.products.products import products_bp
+app/blueprints/products/__init__.py:5: in <module>
+    from . import products, product_variants, sku, api, product_inventory_routes, reservation_routes
+app/blueprints/products/products.py:8: in <module>
+    from ...utils.authorization import require_permission
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    """
+    Authorization system following industry standard practices:
+    
+    1. User logs in (authentication)
+    2. System checks subscription tier status (authorization)
+    3. Subscription tier dictates available permissions/features
+    4. Organization owner gets all tier-allowed permissions
+    5. Other users get permissions based on their assigned roles
+    """
+    
+    from flask_login import current_user
+    from flask import session, current_app, g, request, jsonify
+    
+    def require_permission(*_args, **_kwargs):
+        def _decorator(f):
+            return f
+        return _decorator
+    
+>   logger = logging.getLogger(__name__)
+E   NameError: name 'logging' is not defined
+
+app/utils/authorization.py:19: NameError
+____________________________ ERROR at setup of TestInventoryFIFOCharacterization.test_single_entry_point_exists _____________________________
+
+    @pytest.fixture
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+>       app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+        })
+
+tests/conftest.py:18: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+app/__init__.py:42: in create_app
+    _register_blueprints(app)
+app/__init__.py:284: in _register_blueprints
+    _register_product_blueprints(app, blueprints)
+app/__init__.py:347: in _register_product_blueprints
+    from .blueprints.products.products import products_bp
+app/blueprints/products/__init__.py:5: in <module>
+    from . import products, product_variants, sku, api, product_inventory_routes, reservation_routes
+app/blueprints/products/products.py:8: in <module>
+    from ...utils.authorization import require_permission
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    """
+    Authorization system following industry standard practices:
+    
+    1. User logs in (authentication)
+    2. System checks subscription tier status (authorization)
+    3. Subscription tier dictates available permissions/features
+    4. Organization owner gets all tier-allowed permissions
+    5. Other users get permissions based on their assigned roles
+    """
+    
+    from flask_login import current_user
+    from flask import session, current_app, g, request, jsonify
+    
+    def require_permission(*_args, **_kwargs):
+        def _decorator(f):
+            return f
+        return _decorator
+    
+>   logger = logging.getLogger(__name__)
+E   NameError: name 'logging' is not defined
+
+app/utils/authorization.py:19: NameError
+_______________________________ ERROR at setup of TestInventoryFIFOCharacterization.test_fifo_deduction_order _______________________________
+
+    @pytest.fixture
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+>       app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+        })
+
+tests/conftest.py:18: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+app/__init__.py:42: in create_app
+    _register_blueprints(app)
+app/__init__.py:284: in _register_blueprints
+    _register_product_blueprints(app, blueprints)
+app/__init__.py:347: in _register_product_blueprints
+    from .blueprints.products.products import products_bp
+app/blueprints/products/__init__.py:5: in <module>
+    from . import products, product_variants, sku, api, product_inventory_routes, reservation_routes
+app/blueprints/products/products.py:8: in <module>
+    from ...utils.authorization import require_permission
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    """
+    Authorization system following industry standard practices:
+    
+    1. User logs in (authentication)
+    2. System checks subscription tier status (authorization)
+    3. Subscription tier dictates available permissions/features
+    4. Organization owner gets all tier-allowed permissions
+    5. Other users get permissions based on their assigned roles
+    """
+    
+    from flask_login import current_user
+    from flask import session, current_app, g, request, jsonify
+    
+    def require_permission(*_args, **_kwargs):
+        def _decorator(f):
+            return f
+        return _decorator
+    
+>   logger = logging.getLogger(__name__)
+E   NameError: name 'logging' is not defined
+
+app/utils/authorization.py:19: NameError
+_____________________ ERROR at setup of TestInventoryFIFOCharacterization.test_inventory_adjustment_delegates_properly ______________________
+
+    @pytest.fixture
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+>       app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+        })
+
+tests/conftest.py:18: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+app/__init__.py:42: in create_app
+    _register_blueprints(app)
+app/__init__.py:284: in _register_blueprints
+    _register_product_blueprints(app, blueprints)
+app/__init__.py:347: in _register_product_blueprints
+    from .blueprints.products.products import products_bp
+app/blueprints/products/__init__.py:5: in <module>
+    from . import products, product_variants, sku, api, product_inventory_routes, reservation_routes
+app/blueprints/products/products.py:8: in <module>
+    from ...utils.authorization import require_permission
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    """
+    Authorization system following industry standard practices:
+    
+    1. User logs in (authentication)
+    2. System checks subscription tier status (authorization)
+    3. Subscription tier dictates available permissions/features
+    4. Organization owner gets all tier-allowed permissions
+    5. Other users get permissions based on their assigned roles
+    """
+    
+    from flask_login import current_user
+    from flask import session, current_app, g, request, jsonify
+    
+    def require_permission(*_args, **_kwargs):
+        def _decorator(f):
+            return f
+        return _decorator
+    
+>   logger = logging.getLogger(__name__)
+E   NameError: name 'logging' is not defined
+
+app/utils/authorization.py:19: NameError
+_____________________________________ ERROR at setup of test_recount_adjustment_uses_canonical_service ______________________________________
+
+    @pytest.fixture
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+>       app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+        })
+
+tests/conftest.py:18: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+app/__init__.py:42: in create_app
+    _register_blueprints(app)
+app/__init__.py:284: in _register_blueprints
+    _register_product_blueprints(app, blueprints)
+app/__init__.py:347: in _register_product_blueprints
+    from .blueprints.products.products import products_bp
+app/blueprints/products/__init__.py:5: in <module>
+    from . import products, product_variants, sku, api, product_inventory_routes, reservation_routes
+app/blueprints/products/products.py:8: in <module>
+    from ...utils.authorization import require_permission
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    """
+    Authorization system following industry standard practices:
+    
+    1. User logs in (authentication)
+    2. System checks subscription tier status (authorization)
+    3. Subscription tier dictates available permissions/features
+    4. Organization owner gets all tier-allowed permissions
+    5. Other users get permissions based on their assigned roles
+    """
+    
+    from flask_login import current_user
+    from flask import session, current_app, g, request, jsonify
+    
+    def require_permission(*_args, **_kwargs):
+        def _decorator(f):
+            return f
+        return _decorator
+    
+>   logger = logging.getLogger(__name__)
+E   NameError: name 'logging' is not defined
+
+app/utils/authorization.py:19: NameError
+_____________ ERROR at setup of TestInventoryRoutesCanonicalService.test_adjust_inventory_initial_stock_calls_canonical_service _____________
+
+self = <tests.test_inventory_routes_canonicalization.TestInventoryRoutesCanonicalService object at 0x7fa021a5e790>
+
+    @pytest.fixture
+    def app(self):
+>       app = create_app({'TESTING': True, 'SQLALCHEMY_DATABASE_URI': 'sqlite:///:memory:'})
+
+tests/test_inventory_routes_canonicalization.py:51: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+app/__init__.py:42: in create_app
+    _register_blueprints(app)
+app/__init__.py:284: in _register_blueprints
+    _register_product_blueprints(app, blueprints)
+app/__init__.py:347: in _register_product_blueprints
+    from .blueprints.products.products import products_bp
+app/blueprints/products/__init__.py:5: in <module>
+    from . import products, product_variants, sku, api, product_inventory_routes, reservation_routes
+app/blueprints/products/products.py:8: in <module>
+    from ...utils.authorization import require_permission
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    """
+    Authorization system following industry standard practices:
+    
+    1. User logs in (authentication)
+    2. System checks subscription tier status (authorization)
+    3. Subscription tier dictates available permissions/features
+    4. Organization owner gets all tier-allowed permissions
+    5. Other users get permissions based on their assigned roles
+    """
+    
+    from flask_login import current_user
+    from flask import session, current_app, g, request, jsonify
+    
+    def require_permission(*_args, **_kwargs):
+        def _decorator(f):
+            return f
+        return _decorator
+    
+>   logger = logging.getLogger(__name__)
+E   NameError: name 'logging' is not defined
+
+app/utils/authorization.py:19: NameError
+__________________________________________ ERROR at setup of test_pos_sale_uses_canonical_service ___________________________________________
+
+    @pytest.fixture
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+>       app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+        })
+
+tests/conftest.py:18: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+app/__init__.py:42: in create_app
+    _register_blueprints(app)
+app/__init__.py:284: in _register_blueprints
+    _register_product_blueprints(app, blueprints)
+app/__init__.py:347: in _register_product_blueprints
+    from .blueprints.products.products import products_bp
+app/blueprints/products/__init__.py:5: in <module>
+    from . import products, product_variants, sku, api, product_inventory_routes, reservation_routes
+app/blueprints/products/products.py:8: in <module>
+    from ...utils.authorization import require_permission
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    """
+    Authorization system following industry standard practices:
+    
+    1. User logs in (authentication)
+    2. System checks subscription tier status (authorization)
+    3. Subscription tier dictates available permissions/features
+    4. Organization owner gets all tier-allowed permissions
+    5. Other users get permissions based on their assigned roles
+    """
+    
+    from flask_login import current_user
+    from flask import session, current_app, g, request, jsonify
+    
+    def require_permission(*_args, **_kwargs):
+        def _decorator(f):
+            return f
+        return _decorator
+    
+>   logger = logging.getLogger(__name__)
+E   NameError: name 'logging' is not defined
+
+app/utils/authorization.py:19: NameError
+________________________________ ERROR at setup of TestProductSKUCharacterization.test_product_creation_flow ________________________________
+
+    @pytest.fixture
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+>       app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+        })
+
+tests/conftest.py:18: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+app/__init__.py:42: in create_app
+    _register_blueprints(app)
+app/__init__.py:284: in _register_blueprints
+    _register_product_blueprints(app, blueprints)
+app/__init__.py:347: in _register_product_blueprints
+    from .blueprints.products.products import products_bp
+app/blueprints/products/__init__.py:5: in <module>
+    from . import products, product_variants, sku, api, product_inventory_routes, reservation_routes
+app/blueprints/products/products.py:8: in <module>
+    from ...utils.authorization import require_permission
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    """
+    Authorization system following industry standard practices:
+    
+    1. User logs in (authentication)
+    2. System checks subscription tier status (authorization)
+    3. Subscription tier dictates available permissions/features
+    4. Organization owner gets all tier-allowed permissions
+    5. Other users get permissions based on their assigned roles
+    """
+    
+    from flask_login import current_user
+    from flask import session, current_app, g, request, jsonify
+    
+    def require_permission(*_args, **_kwargs):
+        def _decorator(f):
+            return f
+        return _decorator
+    
+>   logger = logging.getLogger(__name__)
+E   NameError: name 'logging' is not defined
+
+app/utils/authorization.py:19: NameError
+_____________________________ ERROR at setup of TestProductSKUCharacterization.test_sku_generation_constraints ______________________________
+
+    @pytest.fixture
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+>       app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+        })
+
+tests/conftest.py:18: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+app/__init__.py:42: in create_app
+    _register_blueprints(app)
+app/__init__.py:284: in _register_blueprints
+    _register_product_blueprints(app, blueprints)
+app/__init__.py:347: in _register_product_blueprints
+    from .blueprints.products.products import products_bp
+app/blueprints/products/__init__.py:5: in <module>
+    from . import products, product_variants, sku, api, product_inventory_routes, reservation_routes
+app/blueprints/products/products.py:8: in <module>
+    from ...utils.authorization import require_permission
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    """
+    Authorization system following industry standard practices:
+    
+    1. User logs in (authentication)
+    2. System checks subscription tier status (authorization)
+    3. Subscription tier dictates available permissions/features
+    4. Organization owner gets all tier-allowed permissions
+    5. Other users get permissions based on their assigned roles
+    """
+    
+    from flask_login import current_user
+    from flask import session, current_app, g, request, jsonify
+    
+    def require_permission(*_args, **_kwargs):
+        def _decorator(f):
+            return f
+        return _decorator
+    
+>   logger = logging.getLogger(__name__)
+E   NameError: name 'logging' is not defined
+
+app/utils/authorization.py:19: NameError
+_______________________________ ERROR at setup of TestProductSKUCharacterization.test_product_service_exists ________________________________
+
+    @pytest.fixture
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+>       app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+        })
+
+tests/conftest.py:18: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+app/__init__.py:42: in create_app
+    _register_blueprints(app)
+app/__init__.py:284: in _register_blueprints
+    _register_product_blueprints(app, blueprints)
+app/__init__.py:347: in _register_product_blueprints
+    from .blueprints.products.products import products_bp
+app/blueprints/products/__init__.py:5: in <module>
+    from . import products, product_variants, sku, api, product_inventory_routes, reservation_routes
+app/blueprints/products/products.py:8: in <module>
+    from ...utils.authorization import require_permission
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    """
+    Authorization system following industry standard practices:
+    
+    1. User logs in (authentication)
+    2. System checks subscription tier status (authorization)
+    3. Subscription tier dictates available permissions/features
+    4. Organization owner gets all tier-allowed permissions
+    5. Other users get permissions based on their assigned roles
+    """
+    
+    from flask_login import current_user
+    from flask import session, current_app, g, request, jsonify
+    
+    def require_permission(*_args, **_kwargs):
+        def _decorator(f):
+            return f
+        return _decorator
+    
+>   logger = logging.getLogger(__name__)
+E   NameError: name 'logging' is not defined
+
+app/utils/authorization.py:19: NameError
+_______________________________ ERROR at setup of TestProductSKUCharacterization.test_sku_creation_validation _______________________________
+
+    @pytest.fixture
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+>       app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+        })
+
+tests/conftest.py:18: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+app/__init__.py:42: in create_app
+    _register_blueprints(app)
+app/__init__.py:284: in _register_blueprints
+    _register_product_blueprints(app, blueprints)
+app/__init__.py:347: in _register_product_blueprints
+    from .blueprints.products.products import products_bp
+app/blueprints/products/__init__.py:5: in <module>
+    from . import products, product_variants, sku, api, product_inventory_routes, reservation_routes
+app/blueprints/products/products.py:8: in <module>
+    from ...utils.authorization import require_permission
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    """
+    Authorization system following industry standard practices:
+    
+    1. User logs in (authentication)
+    2. System checks subscription tier status (authorization)
+    3. Subscription tier dictates available permissions/features
+    4. Organization owner gets all tier-allowed permissions
+    5. Other users get permissions based on their assigned roles
+    """
+    
+    from flask_login import current_user
+    from flask import session, current_app, g, request, jsonify
+    
+    def require_permission(*_args, **_kwargs):
+        def _decorator(f):
+            return f
+        return _decorator
+    
+>   logger = logging.getLogger(__name__)
+E   NameError: name 'logging' is not defined
+
+app/utils/authorization.py:19: NameError
+_________________________________ ERROR at setup of test_credit_specific_lot_called_on_reservation_release __________________________________
+
+    @pytest.fixture
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+>       app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+        })
+
+tests/conftest.py:18: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+app/__init__.py:42: in create_app
+    _register_blueprints(app)
+app/__init__.py:284: in _register_blueprints
+    _register_product_blueprints(app, blueprints)
+app/__init__.py:347: in _register_product_blueprints
+    from .blueprints.products.products import products_bp
+app/blueprints/products/__init__.py:5: in <module>
+    from . import products, product_variants, sku, api, product_inventory_routes, reservation_routes
+app/blueprints/products/products.py:8: in <module>
+    from ...utils.authorization import require_permission
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    """
+    Authorization system following industry standard practices:
+    
+    1. User logs in (authentication)
+    2. System checks subscription tier status (authorization)
+    3. Subscription tier dictates available permissions/features
+    4. Organization owner gets all tier-allowed permissions
+    5. Other users get permissions based on their assigned roles
+    """
+    
+    from flask_login import current_user
+    from flask import session, current_app, g, request, jsonify
+    
+    def require_permission(*_args, **_kwargs):
+        def _decorator(f):
+            return f
+        return _decorator
+    
+>   logger = logging.getLogger(__name__)
+E   NameError: name 'logging' is not defined
+
+app/utils/authorization.py:19: NameError
+___________________________________ ERROR at setup of test_record_audit_entry_called_for_unreserved_audit ___________________________________
+
+    @pytest.fixture
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+>       app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+        })
+
+tests/conftest.py:18: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+app/__init__.py:42: in create_app
+    _register_blueprints(app)
+app/__init__.py:284: in _register_blueprints
+    _register_product_blueprints(app, blueprints)
+app/__init__.py:347: in _register_product_blueprints
+    from .blueprints.products.products import products_bp
+app/blueprints/products/__init__.py:5: in <module>
+    from . import products, product_variants, sku, api, product_inventory_routes, reservation_routes
+app/blueprints/products/products.py:8: in <module>
+    from ...utils.authorization import require_permission
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    """
+    Authorization system following industry standard practices:
+    
+    1. User logs in (authentication)
+    2. System checks subscription tier status (authorization)
+    3. Subscription tier dictates available permissions/features
+    4. Organization owner gets all tier-allowed permissions
+    5. Other users get permissions based on their assigned roles
+    """
+    
+    from flask_login import current_user
+    from flask import session, current_app, g, request, jsonify
+    
+    def require_permission(*_args, **_kwargs):
+        def _decorator(f):
+            return f
+        return _decorator
+    
+>   logger = logging.getLogger(__name__)
+E   NameError: name 'logging' is not defined
+
+app/utils/authorization.py:19: NameError
+_______________________________ ERROR at setup of TestSignupTierCharacterization.test_signup_endpoint_exists ________________________________
+
+    @pytest.fixture
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+>       app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+        })
+
+tests/conftest.py:18: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+app/__init__.py:42: in create_app
+    _register_blueprints(app)
+app/__init__.py:284: in _register_blueprints
+    _register_product_blueprints(app, blueprints)
+app/__init__.py:347: in _register_product_blueprints
+    from .blueprints.products.products import products_bp
+app/blueprints/products/__init__.py:5: in <module>
+    from . import products, product_variants, sku, api, product_inventory_routes, reservation_routes
+app/blueprints/products/products.py:8: in <module>
+    from ...utils.authorization import require_permission
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    """
+    Authorization system following industry standard practices:
+    
+    1. User logs in (authentication)
+    2. System checks subscription tier status (authorization)
+    3. Subscription tier dictates available permissions/features
+    4. Organization owner gets all tier-allowed permissions
+    5. Other users get permissions based on their assigned roles
+    """
+    
+    from flask_login import current_user
+    from flask import session, current_app, g, request, jsonify
+    
+    def require_permission(*_args, **_kwargs):
+        def _decorator(f):
+            return f
+        return _decorator
+    
+>   logger = logging.getLogger(__name__)
+E   NameError: name 'logging' is not defined
+
+app/utils/authorization.py:19: NameError
+________________________________ ERROR at setup of TestSignupTierCharacterization.test_tier_bypass_behavior _________________________________
+
+    @pytest.fixture
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+>       app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+        })
+
+tests/conftest.py:18: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+app/__init__.py:42: in create_app
+    _register_blueprints(app)
+app/__init__.py:284: in _register_blueprints
+    _register_product_blueprints(app, blueprints)
+app/__init__.py:347: in _register_product_blueprints
+    from .blueprints.products.products import products_bp
+app/blueprints/products/__init__.py:5: in <module>
+    from . import products, product_variants, sku, api, product_inventory_routes, reservation_routes
+app/blueprints/products/products.py:8: in <module>
+    from ...utils.authorization import require_permission
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    """
+    Authorization system following industry standard practices:
+    
+    1. User logs in (authentication)
+    2. System checks subscription tier status (authorization)
+    3. Subscription tier dictates available permissions/features
+    4. Organization owner gets all tier-allowed permissions
+    5. Other users get permissions based on their assigned roles
+    """
+    
+    from flask_login import current_user
+    from flask import session, current_app, g, request, jsonify
+    
+    def require_permission(*_args, **_kwargs):
+        def _decorator(f):
+            return f
+        return _decorator
+    
+>   logger = logging.getLogger(__name__)
+E   NameError: name 'logging' is not defined
+
+app/utils/authorization.py:19: NameError
+____________________________ ERROR at setup of TestSignupTierCharacterization.test_organization_tier_assignment _____________________________
+
+    @pytest.fixture
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+>       app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+        })
+
+tests/conftest.py:18: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+app/__init__.py:42: in create_app
+    _register_blueprints(app)
+app/__init__.py:284: in _register_blueprints
+    _register_product_blueprints(app, blueprints)
+app/__init__.py:347: in _register_product_blueprints
+    from .blueprints.products.products import products_bp
+app/blueprints/products/__init__.py:5: in <module>
+    from . import products, product_variants, sku, api, product_inventory_routes, reservation_routes
+app/blueprints/products/products.py:8: in <module>
+    from ...utils.authorization import require_permission
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    """
+    Authorization system following industry standard practices:
+    
+    1. User logs in (authentication)
+    2. System checks subscription tier status (authorization)
+    3. Subscription tier dictates available permissions/features
+    4. Organization owner gets all tier-allowed permissions
+    5. Other users get permissions based on their assigned roles
+    """
+    
+    from flask_login import current_user
+    from flask import session, current_app, g, request, jsonify
+    
+    def require_permission(*_args, **_kwargs):
+        def _decorator(f):
+            return f
+        return _decorator
+    
+>   logger = logging.getLogger(__name__)
+E   NameError: name 'logging' is not defined
+
+app/utils/authorization.py:19: NameError
+______________________________ ERROR at setup of TestSignupTierCharacterization.test_permission_gating_exists _______________________________
+
+    @pytest.fixture
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+>       app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+        })
+
+tests/conftest.py:18: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+app/__init__.py:42: in create_app
+    _register_blueprints(app)
+app/__init__.py:284: in _register_blueprints
+    _register_product_blueprints(app, blueprints)
+app/__init__.py:347: in _register_product_blueprints
+    from .blueprints.products.products import products_bp
+app/blueprints/products/__init__.py:5: in <module>
+    from . import products, product_variants, sku, api, product_inventory_routes, reservation_routes
+app/blueprints/products/products.py:8: in <module>
+    from ...utils.authorization import require_permission
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    """
+    Authorization system following industry standard practices:
+    
+    1. User logs in (authentication)
+    2. System checks subscription tier status (authorization)
+    3. Subscription tier dictates available permissions/features
+    4. Organization owner gets all tier-allowed permissions
+    5. Other users get permissions based on their assigned roles
+    """
+    
+    from flask_login import current_user
+    from flask import session, current_app, g, request, jsonify
+    
+    def require_permission(*_args, **_kwargs):
+        def _decorator(f):
+            return f
+        return _decorator
+    
+>   logger = logging.getLogger(__name__)
+E   NameError: name 'logging' is not defined
+
+app/utils/authorization.py:19: NameError
+______________________________ ERROR at setup of TestSignupTierCharacterization.test_signup_service_delegation ______________________________
+
+    @pytest.fixture
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+>       app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+        })
+
+tests/conftest.py:18: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+app/__init__.py:42: in create_app
+    _register_blueprints(app)
+app/__init__.py:284: in _register_blueprints
+    _register_product_blueprints(app, blueprints)
+app/__init__.py:347: in _register_product_blueprints
+    from .blueprints.products.products import products_bp
+app/blueprints/products/__init__.py:5: in <module>
+    from . import products, product_variants, sku, api, product_inventory_routes, reservation_routes
+app/blueprints/products/products.py:8: in <module>
+    from ...utils.authorization import require_permission
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    """
+    Authorization system following industry standard practices:
+    
+    1. User logs in (authentication)
+    2. System checks subscription tier status (authorization)
+    3. Subscription tier dictates available permissions/features
+    4. Organization owner gets all tier-allowed permissions
+    5. Other users get permissions based on their assigned roles
+    """
+    
+    from flask_login import current_user
+    from flask import session, current_app, g, request, jsonify
+    
+    def require_permission(*_args, **_kwargs):
+        def _decorator(f):
+            return f
+        return _decorator
+    
+>   logger = logging.getLogger(__name__)
+E   NameError: name 'logging' is not defined
+
+app/utils/authorization.py:19: NameError
+______________________________ ERROR at setup of TestStripeWebhookCharacterization.test_stripe_service_exists _______________________________
+
+    @pytest.fixture
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+>       app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+        })
+
+tests/conftest.py:18: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+app/__init__.py:42: in create_app
+    _register_blueprints(app)
+app/__init__.py:284: in _register_blueprints
+    _register_product_blueprints(app, blueprints)
+app/__init__.py:347: in _register_product_blueprints
+    from .blueprints.products.products import products_bp
+app/blueprints/products/__init__.py:5: in <module>
+    from . import products, product_variants, sku, api, product_inventory_routes, reservation_routes
+app/blueprints/products/products.py:8: in <module>
+    from ...utils.authorization import require_permission
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    """
+    Authorization system following industry standard practices:
+    
+    1. User logs in (authentication)
+    2. System checks subscription tier status (authorization)
+    3. Subscription tier dictates available permissions/features
+    4. Organization owner gets all tier-allowed permissions
+    5. Other users get permissions based on their assigned roles
+    """
+    
+    from flask_login import current_user
+    from flask import session, current_app, g, request, jsonify
+    
+    def require_permission(*_args, **_kwargs):
+        def _decorator(f):
+            return f
+        return _decorator
+    
+>   logger = logging.getLogger(__name__)
+E   NameError: name 'logging' is not defined
+
+app/utils/authorization.py:19: NameError
+____________________ ERROR at setup of TestStripeWebhookCharacterization.test_webhook_signature_verification_path_exists ____________________
+
+    @pytest.fixture
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+>       app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+        })
+
+tests/conftest.py:18: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+app/__init__.py:42: in create_app
+    _register_blueprints(app)
+app/__init__.py:284: in _register_blueprints
+    _register_product_blueprints(app, blueprints)
+app/__init__.py:347: in _register_product_blueprints
+    from .blueprints.products.products import products_bp
+app/blueprints/products/__init__.py:5: in <module>
+    from . import products, product_variants, sku, api, product_inventory_routes, reservation_routes
+app/blueprints/products/products.py:8: in <module>
+    from ...utils.authorization import require_permission
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    """
+    Authorization system following industry standard practices:
+    
+    1. User logs in (authentication)
+    2. System checks subscription tier status (authorization)
+    3. Subscription tier dictates available permissions/features
+    4. Organization owner gets all tier-allowed permissions
+    5. Other users get permissions based on their assigned roles
+    """
+    
+    from flask_login import current_user
+    from flask import session, current_app, g, request, jsonify
+    
+    def require_permission(*_args, **_kwargs):
+        def _decorator(f):
+            return f
+        return _decorator
+    
+>   logger = logging.getLogger(__name__)
+E   NameError: name 'logging' is not defined
+
+app/utils/authorization.py:19: NameError
+___________________________ ERROR at setup of TestStripeWebhookCharacterization.test_webhook_idempotency_behavior ___________________________
+
+    @pytest.fixture
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+>       app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+        })
+
+tests/conftest.py:18: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+app/__init__.py:42: in create_app
+    _register_blueprints(app)
+app/__init__.py:284: in _register_blueprints
+    _register_product_blueprints(app, blueprints)
+app/__init__.py:347: in _register_product_blueprints
+    from .blueprints.products.products import products_bp
+app/blueprints/products/__init__.py:5: in <module>
+    from . import products, product_variants, sku, api, product_inventory_routes, reservation_routes
+app/blueprints/products/products.py:8: in <module>
+    from ...utils.authorization import require_permission
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    """
+    Authorization system following industry standard practices:
+    
+    1. User logs in (authentication)
+    2. System checks subscription tier status (authorization)
+    3. Subscription tier dictates available permissions/features
+    4. Organization owner gets all tier-allowed permissions
+    5. Other users get permissions based on their assigned roles
+    """
+    
+    from flask_login import current_user
+    from flask import session, current_app, g, request, jsonify
+    
+    def require_permission(*_args, **_kwargs):
+        def _decorator(f):
+            return f
+        return _decorator
+    
+>   logger = logging.getLogger(__name__)
+E   NameError: name 'logging' is not defined
+
+app/utils/authorization.py:19: NameError
+___________________________ ERROR at setup of TestStripeWebhookCharacterization.test_stripe_service_methods_exist ___________________________
+
+    @pytest.fixture
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+>       app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+        })
+
+tests/conftest.py:18: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+app/__init__.py:42: in create_app
+    _register_blueprints(app)
+app/__init__.py:284: in _register_blueprints
+    _register_product_blueprints(app, blueprints)
+app/__init__.py:347: in _register_product_blueprints
+    from .blueprints.products.products import products_bp
+app/blueprints/products/__init__.py:5: in <module>
+    from . import products, product_variants, sku, api, product_inventory_routes, reservation_routes
+app/blueprints/products/products.py:8: in <module>
+    from ...utils.authorization import require_permission
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    """
+    Authorization system following industry standard practices:
+    
+    1. User logs in (authentication)
+    2. System checks subscription tier status (authorization)
+    3. Subscription tier dictates available permissions/features
+    4. Organization owner gets all tier-allowed permissions
+    5. Other users get permissions based on their assigned roles
+    """
+    
+    from flask_login import current_user
+    from flask import session, current_app, g, request, jsonify
+    
+    def require_permission(*_args, **_kwargs):
+        def _decorator(f):
+            return f
+        return _decorator
+    
+>   logger = logging.getLogger(__name__)
+E   NameError: name 'logging' is not defined
+
+app/utils/authorization.py:19: NameError
+================================================================= FAILURES ==================================================================
+_______________________________ TestExpirationCanonicalService.test_mark_fifo_expired_calls_canonical_service _______________________________
+
+self = <tests.test_expiration_canonicalization.TestExpirationCanonicalService object at 0x7fa022176710>
+mock_user = <AsyncMock name='current_user' id='140325692166736'>, mock_history = <MagicMock name='InventoryHistory' id='140325692174032'>
+mock_process = <MagicMock name='process_inventory_adjustment' id='140325692162960'>
+
+    @patch('app.blueprints.expiration.services.process_inventory_adjustment')
+    @patch('app.blueprints.expiration.services.InventoryHistory')
+    @patch('app.blueprints.expiration.services.current_user')
+    def test_mark_fifo_expired_calls_canonical_service(self, mock_user, mock_history, mock_process):
+        """Test that marking FIFO entry as expired calls process_inventory_adjustment"""
+        from app import create_app
+    
+>       app = create_app({'TESTING': True})
+
+tests/test_expiration_canonicalization.py:49: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+app/__init__.py:42: in create_app
+    _register_blueprints(app)
+app/__init__.py:284: in _register_blueprints
+    _register_product_blueprints(app, blueprints)
+app/__init__.py:347: in _register_product_blueprints
+    from .blueprints.products.products import products_bp
+app/blueprints/products/__init__.py:5: in <module>
+    from . import products, product_variants, sku, api, product_inventory_routes, reservation_routes
+app/blueprints/products/products.py:8: in <module>
+    from ...utils.authorization import require_permission
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    """
+    Authorization system following industry standard practices:
+    
+    1. User logs in (authentication)
+    2. System checks subscription tier status (authorization)
+    3. Subscription tier dictates available permissions/features
+    4. Organization owner gets all tier-allowed permissions
+    5. Other users get permissions based on their assigned roles
+    """
+    
+    from flask_login import current_user
+    from flask import session, current_app, g, request, jsonify
+    
+    def require_permission(*_args, **_kwargs):
+        def _decorator(f):
+            return f
+        return _decorator
+    
+>   logger = logging.getLogger(__name__)
+E   NameError: name 'logging' is not defined
+
+app/utils/authorization.py:19: NameError
+_____________________________ TestExpirationCanonicalService.test_mark_product_expired_calls_canonical_service ______________________________
+
+self = <tests.test_expiration_canonicalization.TestExpirationCanonicalService object at 0x7fa02203f950>
+mock_user = <AsyncMock name='current_user' id='140325694986896'>
+mock_sku_history = <MagicMock name='ProductSKUHistory' id='140325694989584'>
+mock_process = <MagicMock name='process_inventory_adjustment' id='140325694984528'>
+
+    @patch('app.blueprints.expiration.services.process_inventory_adjustment')
+    @patch('app.blueprints.expiration.services.ProductSKUHistory')
+    @patch('app.blueprints.expiration.services.current_user')
+    def test_mark_product_expired_calls_canonical_service(self, mock_user, mock_sku_history, mock_process):
+        """Test that marking product SKU as expired calls process_inventory_adjustment"""
+        from app import create_app
+    
+>       app = create_app({'TESTING': True})
+
+tests/test_expiration_canonicalization.py:86: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+app/__init__.py:42: in create_app
+    _register_blueprints(app)
+app/__init__.py:284: in _register_blueprints
+    _register_product_blueprints(app, blueprints)
+app/__init__.py:347: in _register_product_blueprints
+    from .blueprints.products.products import products_bp
+app/blueprints/products/__init__.py:5: in <module>
+    from . import products, product_variants, sku, api, product_inventory_routes, reservation_routes
+app/blueprints/products/products.py:8: in <module>
+    from ...utils.authorization import require_permission
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    """
+    Authorization system following industry standard practices:
+    
+    1. User logs in (authentication)
+    2. System checks subscription tier status (authorization)
+    3. Subscription tier dictates available permissions/features
+    4. Organization owner gets all tier-allowed permissions
+    5. Other users get permissions based on their assigned roles
+    """
+    
+    from flask_login import current_user
+    from flask import session, current_app, g, request, jsonify
+    
+    def require_permission(*_args, **_kwargs):
+        def _decorator(f):
+            return f
+        return _decorator
+    
+>   logger = logging.getLogger(__name__)
+E   NameError: name 'logging' is not defined
+
+app/utils/authorization.py:19: NameError
+============================================================= warnings summary ==============================================================
+tests/test_audit_canonicalization.py: 2 warnings
+tests/test_expiration_canonicalization.py: 3 warnings
+tests/test_google_oauth.py: 7 warnings
+tests/test_inventory_fifo.py: 3 warnings
+tests/test_inventory_routes_canonicalization.py: 2 warnings
+tests/test_pos_integration_canonicalization.py: 1 warning
+tests/test_product_sku.py: 4 warnings
+tests/test_reservation_canonicalization.py: 2 warnings
+tests/test_signup_tiers.py: 5 warnings
+tests/test_stripe_webhooks.py: 4 warnings
+  /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_limiter/extension.py:333: UserWarning: Using the in-memory storage for tracking rate limits as no storage was explicitly specified. This is not recommended for production use. See: https://flask-limiter.readthedocs.io#configuring-a-storage-backend for documentation about configuring the storage backend.
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+========================================================== short test summary info ==========================================================
+FAILED tests/test_expiration_canonicalization.py::TestExpirationCanonicalService::test_mark_fifo_expired_calls_canonical_service - NameError: name 'logging' is not defined
+FAILED tests/test_expiration_canonicalization.py::TestExpirationCanonicalService::test_mark_product_expired_calls_canonical_service - NameError: name 'logging' is not defined
+ERROR tests/test_audit_canonicalization.py::test_api_reservation_routes_uses_canonical_audit - NameError: name 'logging' is not defined
+ERROR tests/test_audit_canonicalization.py::test_products_routes_uses_canonical_audit - NameError: name 'logging' is not defined
+ERROR tests/test_expiration_canonicalization.py::test_expiration_service_uses_canonical_adjustment - NameError: name 'logging' is not defined
+ERROR tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_oauth_service_exists - NameError: name 'logging' is not defined
+ERROR tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_auth_login_endpoint_exists - NameError: name 'logging' is not defined
+ERROR tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_auth_callback_endpoint_exists - NameError: name 'logging' is not defined
+ERROR tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_oauth_state_validation_path - NameError: name 'logging' is not defined
+ERROR tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_oauth_service_methods_exist - NameError: name 'logging' is not defined
+ERROR tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_oauth_configuration_status - NameError: name 'logging' is not defined
+ERROR tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_oauth_callback_invalid_state - NameError: name 'logging' is not defined
+ERROR tests/test_inventory_fifo.py::TestInventoryFIFOCharacterization::test_single_entry_point_exists - NameError: name 'logging' is not defined
+ERROR tests/test_inventory_fifo.py::TestInventoryFIFOCharacterization::test_fifo_deduction_order - NameError: name 'logging' is not defined
+ERROR tests/test_inventory_fifo.py::TestInventoryFIFOCharacterization::test_inventory_adjustment_delegates_properly - NameError: name 'logging' is not defined
+ERROR tests/test_inventory_routes_canonicalization.py::test_recount_adjustment_uses_canonical_service - NameError: name 'logging' is not defined
+ERROR tests/test_inventory_routes_canonicalization.py::TestInventoryRoutesCanonicalService::test_adjust_inventory_initial_stock_calls_canonical_service - NameError: name 'logging' is not defined
+ERROR tests/test_pos_integration_canonicalization.py::test_pos_sale_uses_canonical_service - NameError: name 'logging' is not defined
+ERROR tests/test_product_sku.py::TestProductSKUCharacterization::test_product_creation_flow - NameError: name 'logging' is not defined
+ERROR tests/test_product_sku.py::TestProductSKUCharacterization::test_sku_generation_constraints - NameError: name 'logging' is not defined
+ERROR tests/test_product_sku.py::TestProductSKUCharacterization::test_product_service_exists - NameError: name 'logging' is not defined
+ERROR tests/test_product_sku.py::TestProductSKUCharacterization::test_sku_creation_validation - NameError: name 'logging' is not defined
+ERROR tests/test_reservation_canonicalization.py::test_credit_specific_lot_called_on_reservation_release - NameError: name 'logging' is not defined
+ERROR tests/test_reservation_canonicalization.py::test_record_audit_entry_called_for_unreserved_audit - NameError: name 'logging' is not defined
+ERROR tests/test_signup_tiers.py::TestSignupTierCharacterization::test_signup_endpoint_exists - NameError: name 'logging' is not defined
+ERROR tests/test_signup_tiers.py::TestSignupTierCharacterization::test_tier_bypass_behavior - NameError: name 'logging' is not defined
+ERROR tests/test_signup_tiers.py::TestSignupTierCharacterization::test_organization_tier_assignment - NameError: name 'logging' is not defined
+ERROR tests/test_signup_tiers.py::TestSignupTierCharacterization::test_permission_gating_exists - NameError: name 'logging' is not defined
+ERROR tests/test_signup_tiers.py::TestSignupTierCharacterization::test_signup_service_delegation - NameError: name 'logging' is not defined
+ERROR tests/test_stripe_webhooks.py::TestStripeWebhookCharacterization::test_stripe_service_exists - NameError: name 'logging' is not defined
+ERROR tests/test_stripe_webhooks.py::TestStripeWebhookCharacterization::test_webhook_signature_verification_path_exists - NameError: name 'logging' is not defined
+ERROR tests/test_stripe_webhooks.py::TestStripeWebhookCharacterization::test_webhook_idempotency_behavior - NameError: name 'logging' is not defined
+ERROR tests/test_stripe_webhooks.py::TestStripeWebhookCharacterization::test_stripe_service_methods_exist - NameError: name 'logging' is not defined
+2 failed, 1 passed, 33 warnings, 31 errors in 10.83s
+
+
+ChatGPT said:
+
+Thought for 22s
+Right now the blocker is super simple: app/utils/authorization.py forgot import logging. That’s causing basically the whole app to fail to import, which cascades into 31 test errors.
+
+Do this first (top of app/utils/authorization.py):
+
+python
+Copy
+Edit
+import logging
+
+def require_permission(*_args, **_kwargs):
+    def _decorator(f):
+        return f
+    return _decorator
+
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
+Then re-run pytest.
+
+Once imports work, we’ll likely be back to the smaller set we were chasing earlier:
+
+wire _write_unreserved_audit and _write_product_created_audit to call record_audit_entry(...) with the exact args the tests expect,
+
+guard current_user in expiration service and ensure it calls process_inventory_adjustment(...),
+
+expose process_inventory_adjustment at module scope in app.blueprints.inventory.routes so tests can patch it,
+
+make ProductSKU accept name= (synonym to sku),
+
+ensure InventoryItem.organization_id doesn’t block tests (nullable or default in tests).
+
+But first: add that import logging + logger setup and re-run.
+
+
+
+
+
+
+
+
+
+
+
+
+
+ChatGPT can make mistakes. Check important info.
