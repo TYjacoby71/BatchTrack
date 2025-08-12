@@ -1,0 +1,115 @@
+Nice! You’re down to just a few stragglers + a busted test file. Here’s the quickest path to finish PR-2.
+
+1) Kill the last write-bypasses
+A) app/services/reservation_service.py
+Find the direct mutation:
+
+python
+Copy
+Edit
+source_entry.remaining_quantity += reservation.quantity
+Replace with the canonical call (credit back to the original lot):
+
+python
+Copy
+Edit
+from app.services.inventory_adjustment import process_inventory_adjustment
+
+process_inventory_adjustment(
+    item_id=reservation.inventory_item_id,
+    quantity=reservation.quantity,        # credit
+    change_type="unreserved",             # keep your existing enum if different
+    notes=f"Released reservation {reservation.id}",
+    created_by=user_id,
+    item_type="product",                  # or "ingredient" if appropriate
+    fifo_reference_id=reservation.source_fifo_id,
+    unit_cost=getattr(source_entry, "unit_cost", None),
+)
+If this module also creates “audit only” history rows (with remaining_quantity=0), stop doing that here—use the audit helper below.
+
+B) app/blueprints/products/products.py:43
+You’re creating a history row with remaining_quantity=0. Route this through a sanctioned helper:
+
+python
+Copy
+Edit
+from app.services.inventory_adjustment import audit_event  # add this helper if you don't have it
+
+audit_event(
+    item_id=sku.inventory_item_id,
+    change_type="merge",
+    note="Merged SKUs",
+    created_by=current_user.id,
+    item_type="product",
+)
+C) app/blueprints/api/reservation_routes.py:109
+Same pattern as above—replace the manual history add (remaining_quantity=0) with:
+
+python
+Copy
+Edit
+from app.services.inventory_adjustment import audit_event
+
+audit_event(
+    item_id=inventory_item_id,
+    change_type="reserved",
+    note=f"Reservation {reservation.id} created (no quantity change)",
+    created_by=current_user.id,
+    item_type="product",
+)
+D) (If missing) add the helper in app/services/inventory_adjustment.py
+Put this near the other public functions. It writes a zero-quantity history entry via the same codepath that picks the right table (ingredient vs product).
+
+python
+Copy
+Edit
+def audit_event(
+    item_id: int,
+    change_type: str,
+    note: str = "",
+    created_by: int | None = None,
+    item_type: str = "ingredient",
+    fifo_reference_id: int | None = None,
+    unit: str | None = None,
+    unit_cost: float | None = None,
+) -> bool:
+    """
+    Sanctioned audit-only history entry (no inventory change).
+    Uses the same internal helpers so nothing writes outside this module.
+    """
+    fifo_code = generate_fifo_code(change_type, 0)
+    # choose correct history model and create a 0-quantity change entry…
+    # (use your existing internal write helpers here)
+    ...
+    return True
+2) Fix the test SyntaxError
+Your tests/test_inventory_fifo.py has a stray placeholder (<old_str> at line 2). Open the file and remove any <old_str>, <new_str>, or merge-conflict markers. If you need a safe baseline, restore the last green version from git.
+
+3) Re-run the guardrails
+Run these until clean:
+
+bash
+Copy
+Edit
+# Forbidden writes (should print nothing)
+rg -n "execute_deduction_plan|create_deduction_history|add_fifo_entry|remaining_quantity\s*[-+]?=" app \
+| rg -v "services/inventory_adjustment\.py|blueprints/fifo/services\.py"
+
+# Allowed read-only calls are fine
+rg -n "FIFOService\.(get_fifo_entries|get_all_fifo_entries|get_expired_fifo_entries)\(" app | sort
+
+# Everyone calls the canonical entry
+rg -n "process_inventory_adjustment\(" app/blueprints app/services | sort
+4) Run tests + lint/type
+bash
+Copy
+Edit
+pytest -q
+ruff app tests
+mypy app
+PR-2 acceptance checklist
+First grep returns no lines.
+
+All inventory mutations flow through process_inventory_adjustment (or audit_event).
+
+pytest green.
