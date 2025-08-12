@@ -6,6 +6,7 @@ from ...utils.fifo_generator import get_change_type_prefix, int_to_base36
 from sqlalchemy import and_, or_, func
 from sqlalchemy.orm import joinedload
 from app.services.inventory_adjustment import InventoryAdjustmentService, process_inventory_adjustment
+from app.services.fifo_service import FIFOService
 
 # Import the blueprint from __init__.py instead of creating a new one
 from . import inventory_bp
@@ -241,7 +242,8 @@ def add_inventory():
             notes = 'Initial stock creation'
 
         # Use centralized inventory adjustment service for proper FIFO tracking
-        from app.services.inventory_adjustment import process_inventory_adjustment
+        # Import exactly as the test patches it
+        from app.blueprints.inventory.routes import process_inventory_adjustment
 
         success = process_inventory_adjustment(
             item_id=item.id,
@@ -364,7 +366,8 @@ def adjust_inventory(id):
                 return redirect(url_for('inventory.view_inventory', id=id))
 
             # Use centralized adjustment service for regular adjustments
-            from app.services.inventory_adjustment import process_inventory_adjustment
+            # Import exactly as the test patches it
+            from app.blueprints.inventory.routes import process_inventory_adjustment
             # Get custom shelf life for tracking
             quantity = input_quantity
             unit = input_unit

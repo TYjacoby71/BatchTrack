@@ -1,12 +1,11 @@
-from datetime import datetime
-from flask_login import current_user
+from datetime import datetime, date
+from flask_login import current_user, UserMixin
 from ..extensions import db
 from .mixins import ScopedModelMixin
 from ..utils.timezone_utils import TimezoneUtils
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import validates, synonym
 from sqlalchemy.ext.hybrid import hybrid_property
-from sqlalchemy import func
+from sqlalchemy import func, event
+from sqlalchemy.orm import synonym
 
 class Product(ScopedModelMixin, db.Model):
     """Main Product model - represents the parent product"""
