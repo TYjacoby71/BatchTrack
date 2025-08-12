@@ -24,11 +24,6 @@ class SubscriptionTier(db.Model):
     stripe_price_id_monthly = db.Column(db.String(128), nullable=True)
     stripe_price_id_yearly = db.Column(db.String(128), nullable=True)
 
-    # NEW: Add stripe lookup keys for compatibility with older tests/systems
-    stripe_lookup_key_monthly = db.Column(db.String(128), nullable=True)
-    stripe_lookup_key_yearly = db.Column(db.String(128), nullable=True)
-
-
     # Tier configuration
     user_limit = db.Column(db.Integer, default=1)  # -1 for unlimited
     max_users = db.Column(db.Integer, default=1, nullable=False)  # For test compatibility
@@ -96,26 +91,7 @@ class SubscriptionTier(db.Model):
     def get_by_key(cls, key: str):
         return cls.query.filter_by(tier_key=key).first()
 
-    # Legacy compatibility: map stripe_price_id_* to lookup keys for tests
-    @hybrid_property
-    def stripe_price_id_monthly(self):
-        """Legacy compatibility: maps to stripe_lookup_key_monthly"""
-        return self.stripe_lookup_key_monthly
-
-    @stripe_price_id_monthly.setter
-    def stripe_price_id_monthly(self, value):
-        """Legacy compatibility: sets stripe_lookup_key_monthly"""
-        self.stripe_lookup_key_monthly = value
-
-    @hybrid_property
-    def stripe_price_id_yearly(self):
-        """Legacy compatibility: maps to stripe_lookup_key_yearly"""
-        return self.stripe_lookup_key_yearly
-
-    @stripe_price_id_yearly.setter
-    def stripe_price_id_yearly(self, value):
-        """Legacy compatibility: sets stripe_lookup_key_yearly"""
-        self.stripe_lookup_key_yearly = value
+    
 
 
     def __repr__(self):
