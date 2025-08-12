@@ -1,0 +1,123 @@
+Nice progress—lots flipped to green. We’ve got a handful of focused fixes left. Here’s what to change, then re-run the same targeted tests.
+
+1) inventory_history.organization_id is NULL (expiration test)
+Problem: The test creates an InventoryHistory(...) directly (not via the service). Your model requires organization_id but doesn’t auto-fill it.
+
+Fix: Add a before_insert hook to copy the org from the parent InventoryItem.
+
+python
+Copy
+Edit
+# app/models/inventory.py (or wherever InventoryHistory is defined)
+from sqlalchemy import event
+from app import db
+from app.models.inventory import InventoryHistory, InventoryItem
+
+@event.listens_for(InventoryHistory, "before_insert")
+def _set_org_on_history(mapper, connection, target):
+    if getattr(target, "organization_id", None) is None and target.inventory_item_id:
+        inv_tbl = InventoryItem.__table__
+        row = connection.execute(
+            inv_tbl.select()
+                   .with_only_columns(inv_tbl.c.organization_id)
+                   .where(inv_tbl.c.id == target.inventory_item_id)
+        ).first()
+        if row:
+            target.organization_id = row[0]
+Then:
+
+bash
+Copy
+Edit
+pytest tests/test_expiration_canonicalization.py::test_expiration_service_uses_canonical_adjustment -q
+2) NameError: custom_shelf_life_days (FIFO tests)
+Problem: You reference custom_shelf_life_days but never define it when not passed.
+
+Fix: Give it a parameter/default (or pull it from **kwargs) and default the unit.
+
+python
+Copy
+Edit
+def process_inventory_adjustment(
+    item_id: int,
+    quantity: float,
+    change_type: str,
+    unit: str | None = None,
+    notes: str | None = None,
+    created_by: int | None = None,
+    cost_override: float | None = None,
+    item_type: str | None = None,
+    custom_shelf_life_days: int | None = None,   # <-- add
+    **kwargs,
+) -> bool:
+    # ...
+    if custom_shelf_life_days is None:
+        custom_shelf_life_days = kwargs.get("custom_shelf_life_days")
+
+    item = InventoryItem.query.get(item_id)
+    # ...
+    if unit is None:
+        unit = item.unit  # avoid “Invalid from_unit: None”
+    if item_type != 'product' and getattr(item, 'type', None) != 'container' and unit != item.unit:
+        conversion = safe_convert(quantity, unit, item.unit, ingredient_id=item.id)
+        if not conversion['ok']:
+            raise ValueError(conversion['error'])
+        quantity = conversion['value']
+        unit = item.unit
+Then:
+
+bash
+Copy
+Edit
+pytest tests/test_inventory_fifo.py -q
+3) Inventory routes aren’t calling the canonical service (2 route fails)
+Problem: /inventory/adjust/<id> POST path still mutates DB directly for recount/initial stock.
+
+Fix: In app/blueprints/inventory/routes.py, always delegate to process_inventory_adjustment.
+
+python
+Copy
+Edit
+# inside the POST handler after parsing form:
+payload = dict(
+    item_id=item.id,
+    quantity=float(request.form['quantity']),
+    change_type=request.form.get('change_type') or request.form.get('adjustment_type'),
+    unit=request.form.get('input_unit') or item.unit,
+    notes=request.form.get('notes'),
+    created_by=getattr(current_user, "id", None),
+)
+if request.form.get('cost_entry_type') == 'per_unit' and request.form.get('cost_per_unit'):
+    payload['cost_override'] = float(request.form['cost_per_unit'])
+
+ok = process_inventory_adjustment(**payload)
+# handle ok/false and flash/redirect as you already do
+Then:
+
+bash
+Copy
+Edit
+pytest tests/test_inventory_routes_canonicalization.py -q
+4) ProductSKU INSERT needs autoincrement PK (POS test)
+Problem: product_sku.id is part of a composite PK or not autoincrementing, causing NULL PK insert.
+
+Fix: Make id the sole primary key with autoincrement; do not include inventory_item_id in the PK.
+
+python
+Copy
+Edit
+# app/models/product.py (ProductSKU)
+class ProductSKU(db.Model):
+    __tablename__ = "product_sku"
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)  # <-- ensure this
+    inventory_item_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'), nullable=True)  # <-- not PK
+    # ... rest of fields
+(If you previously had a composite PK, drop that and run the tests; the suite’s SKU tests already passed, so this should align with expectations.)
+
+Then:
+
+bash
+Copy
+Edit
+pytest tests/test_pos_integration_canonicalization.py::test_pos_sale_uses_canonical_service -q
