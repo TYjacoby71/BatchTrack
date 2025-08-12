@@ -375,10 +375,16 @@ def process_inventory_adjustment(
             FIFOService.execute_deduction_plan(deduction_plan, item_id)
 
             # Use FIFO service for all deductions - it routes to the correct history table
-            FIFOService.create_deduction_history(
-                item_id, deduction_plan, change_type, notes,
-                batch_id=batch_id, created_by=created_by,
-                customer=customer, sale_price=sale_price, order_id=order_id
+            FIFOService.record_deduction_plan(
+                item_id,
+                deduction_plan,
+                change_type,
+                notes,
+                batch_id=batch_id,
+                created_by=created_by,
+                customer=customer,
+                sale_price=sale_price,
+                order_id=order_id,
             )
         elif qty_change > 0:
             # Additions - use FIFO service
