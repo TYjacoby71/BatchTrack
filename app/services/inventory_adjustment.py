@@ -7,6 +7,9 @@ from app.services.unit_conversion import ConversionEngine
 from sqlalchemy import func, and_
 import logging
 
+# Import FIFOService to handle inventory operations
+from app.blueprints.fifo.services import FIFOService
+
 # Initialize logger
 logger = logging.getLogger(__name__)
 
