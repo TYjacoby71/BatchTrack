@@ -348,7 +348,7 @@ def adjust_inventory(id):
                 created_by=current_user.id,
                 cost_override=restock_cost
             )
-            
+
             if success:
                 flash('Initial inventory created successfully')
             else:

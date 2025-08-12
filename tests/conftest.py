@@ -96,3 +96,17 @@ def _create_test_data():
     )
     db.session.add(user)
     db.session.commit()
+
+@pytest.fixture
+def test_org(db_session):
+    org = Organization(name="Test Org")
+    db_session.add(org)
+    db_session.commit()
+    return org
+
+@pytest.fixture
+def test_user(db_session, test_org):
+    user = User(email="test@example.com", is_active=True, organization_id=test_org.id)
+    db_session.add(user)
+    db_session.commit()
+    return user

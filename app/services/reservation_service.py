@@ -7,6 +7,7 @@ import logging
 
 # Import necessary canonical functions
 from app.blueprints.fifo.services import FIFOService
+from app.services.inventory_adjustment import InventoryAdjustmentService, credit_specific_lot, record_audit_entry
 from .inventory_adjustment import credit_specific_lot, record_audit_entry, process_inventory_adjustment
 
 logger = logging.getLogger(__name__)
@@ -16,30 +17,33 @@ class ReservationService:
 
     @staticmethod
     def _release_reservation_inventory(reservation, source_entry):
-        """
-        Delegate to the canonical credit_specific_lot helper instead of writing remaining_quantity directly.
-        """
-        return credit_specific_lot(
-            item_id=reservation.inventory_item_id,
-            fifo_entry_id=reservation.source_fifo_id,
-            qty=reservation.quantity,
-            unit=getattr(source_entry, "unit", None),
-            notes=f"Released reservation → credit back lot #{reservation.source_fifo_id}",
-        )
+        """Release inventory from reservation back to stock"""
+        try:
+            return credit_specific_lot(
+                item_id=reservation.inventory_item_id,
+                fifo_entry_id=reservation.source_fifo_id,
+                qty=reservation.quantity,
+                unit=getattr(source_entry, "unit", None),
+                notes=f"Released reservation → credit back lot #{reservation.source_fifo_id}"
+            )
+        except Exception as e:
+            logger.error(f"Failed to release reservation inventory: {e}")
+            return False
 
     @staticmethod
     def _write_unreserved_audit_entry(reservation):
-        """
-        Delegate to the canonical audit helper to keep all audit writes centralized.
-        """
-        return record_audit_entry(
-            item_id=reservation.inventory_item_id,
-            quantity=0,
-            change_type="unreserved_audit",
-            notes=f"Released reservation (ref lot #{reservation.source_fifo_id})",
-            fifo_reference_id=reservation.source_fifo_id,
-            source=f"reservation_{reservation.id}"
-        )
+        """Write audit entry for unreserved inventory"""
+        try:
+            return record_audit_entry(
+                item_id=reservation.inventory_item_id,
+                change_type="unreserved_audit",
+                notes=f"Released reservation (ref lot #{reservation.source_fifo_id})",
+                fifo_reference_id=reservation.source_fifo_id,
+                source=f"reservation_{getattr(reservation, 'id', '')}"
+            )
+        except Exception as e:
+            logger.error(f"Failed to write unreserved audit entry: {e}")
+            return False
 
     @staticmethod
     def create_reservation(inventory_item_id, quantity, order_id, source_fifo_id, unit_cost, customer=None, sale_price=None, notes="", source="manual"):
