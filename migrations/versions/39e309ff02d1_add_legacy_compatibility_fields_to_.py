@@ -1,7 +1,7 @@
 """add legacy compatibility fields to subscription tier
 
 Revision ID: 39e309ff02d1
-Revises: add_tier_key_column
+Revises: add_legacy_compatibility_fields
 Create Date: 2025-08-11 23:25:44.567115
 
 """
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = '39e309ff02d1'
-down_revision = 'add_tier_key_column'
+down_revision = 'add_legacy_compatibility_fields'
 branch_labels = None
 depends_on = None
 
