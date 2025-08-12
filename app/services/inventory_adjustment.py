@@ -89,7 +89,7 @@ def validate_inventory_fifo_sync(item_id, item_type=None):
         current_qty = item.quantity
         item_name = item.name
 
-        # If there are no FIFO entries but there is inventory, allow it for now 
+        # If there are no FIFO entries but there is inventory, allow it for now
         # This handles cases where ProductSKUs exist but haven't had FIFO entries created yet
         if fifo_total == 0 and current_qty > 0:
             print(f"WARNING: Product SKU {item_name} has inventory ({current_qty}) but no FIFO entries - allowing operation to proceed")
@@ -132,9 +132,81 @@ def validate_inventory_fifo_sync(item_id, item_type=None):
 
     return True, "", current_qty, fifo_total
 
-def process_inventory_adjustment(item_id, quantity, change_type, unit=None, notes=None, 
-                               created_by=None, batch_id=None, custom_expiration_date=None, 
-                               item_type=None, cost_override=None, order_id=None, customer=None, sale_price=None, custom_shelf_life_days=None):
+def credit_specific_lot(item_id: int, fifo_entry_id: int, qty: float, *, unit: str | None = None, notes: str = "") -> bool:
+    """
+    Public seam: credit quantity back to a specific FIFO lot.
+    Keeps all mutations inside the canonical service.
+    """
+    from app.models.inventory import InventoryHistory
+    from app.utils.fifo_generator import generate_fifo_code
+
+    fifo_entry = InventoryHistory.query.get(fifo_entry_id)
+    if not fifo_entry or fifo_entry.inventory_item_id != item_id:
+        return False
+
+    # mutate the lot here (allowed—inside canonical service)
+    fifo_entry.remaining_quantity = float(fifo_entry.remaining_quantity or 0) + float(abs(qty))
+
+    # write a linked history entry (reference the lot we credited)
+    FIFOService.add_fifo_entry(
+        inventory_item_id=item_id,
+        quantity=abs(qty),                 # addition
+        change_type="unreserved",          # or "credit"
+        unit=unit or fifo_entry.unit,
+        notes=notes or f"Credited back to lot #{fifo_entry_id}",
+        fifo_reference_id=fifo_entry_id,
+        fifo_code=generate_fifo_code("unreserved"),
+        quantity_used=0.0,                 # credits don't consume inventory
+    )
+    db.session.commit()
+    return True
+
+
+def record_audit_entry(
+    *,
+    item_id: int,
+    change_type: str = "audit",
+    notes: str = "",
+    unit: str | None = None,
+    fifo_reference_id: int | None = None,
+    source: str | None = None,
+) -> None:
+    """
+    Public seam: write an audit-only history entry (no FIFO delta).
+    Keeps routes/services from crafting raw history rows.
+    """
+    from app.utils.fifo_generator import generate_fifo_code
+
+    FIFOService.add_fifo_entry(
+        inventory_item_id=item_id,
+        quantity=0.0,                      # no effect on available FIFO
+        change_type=change_type,
+        unit=unit,
+        notes=notes,
+        fifo_reference_id=fifo_reference_id,
+        source=source,
+        remaining_quantity=0.0,            # explicit for clarity
+        quantity_used=0.0,
+        fifo_code=generate_fifo_code(change_type),
+    )
+    db.session.commit()
+
+
+def process_inventory_adjustment(
+    item_id: int,
+    quantity: float,
+    change_type: str,
+    unit: str | None = None,
+    notes: str = "",
+    batch_id: int | None = None,
+    container_id: int | None = None,
+    source: str | None = None,
+    container_type: str | None = None,
+    container_size: float | None = None,
+    expiration_date=None,
+    cost_per_unit: float | None = None,
+    fifo_lot_reference: str | None = None
+) -> bool:
     """
     CANONICAL ENTRY POINT for all inventory adjustments.
 
@@ -230,11 +302,11 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
         expiration_date = None
         shelf_life_to_use = None
 
-        is_perishable_override = custom_expiration_date is not None or custom_shelf_life_days is not None
+        is_perishable_override = expiration_date is not None or custom_shelf_life_days is not None
 
         if is_perishable_override:
-            if custom_expiration_date:
-                expiration_date = custom_expiration_date
+            if expiration_date:
+                expiration_date = expiration_date
             elif custom_shelf_life_days:
                 expiration_date = ExpirationService.calculate_expiration_date(datetime.utcnow(), custom_shelf_life_days)
             shelf_life_to_use = custom_shelf_life_days
@@ -308,8 +380,8 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
 
             # Use FIFO service for all deductions - it routes to the correct history table
             FIFOService.create_deduction_history(
-                item_id, deduction_plan, change_type, notes, 
-                batch_id=batch_id, created_by=created_by, 
+                item_id, deduction_plan, change_type, notes,
+                batch_id=batch_id, created_by=created_by,
                 customer=customer, sale_price=sale_price, order_id=order_id
             )
         elif qty_change > 0:
@@ -324,7 +396,7 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
                 # Use FIFO service for all additions - it routes to the correct history table
                 # Handle expiration data
                 timestamp = datetime.utcnow()
-                
+
                 # Determine the correct unit for the history entry
                 history_unit = 'count' if getattr(item, 'type', None) == 'container' else item.unit
 
@@ -342,8 +414,8 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
                     customer=customer,
                     sale_price=sale_price,
                     order_id=order_id,
-                    custom_expiration_date=custom_expiration_date,
-                    custom_shelf_life_days=custom_shelf_life_days
+                    custom_expiration_date=expiration_date, # Using the determined expiration_date here
+                    custom_shelf_life_days=shelf_life_to_use # Using the determined shelf_life_to_use here
                 )
 
         # For batch completions, ensure the inventory item inherits perishable settings
@@ -594,7 +666,7 @@ def record_audit_entry(item_id, quantity, change_type, unit=None, notes=None, cr
                 organization_id=current_user.organization_id if current_user.is_authenticated else item.organization_id,
                 **kwargs
             )
-        
+
         db.session.add(history)
         db.session.commit()
         return True
@@ -619,7 +691,7 @@ class InventoryAdjustmentService:
     @staticmethod
     def validate_inventory_fifo_sync(*args, **kwargs):
         return validate_inventory_fifo_sync(*args, **kwargs)
-    
+
     @staticmethod
     def record_audit_entry(*args, **kwargs):
         return record_audit_entry(*args, **kwargs)

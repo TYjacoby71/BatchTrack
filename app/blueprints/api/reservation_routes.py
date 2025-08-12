@@ -1,4 +1,3 @@
-
 from flask import Blueprint, request, jsonify, flash, redirect, url_for
 from flask_login import login_required, current_user
 from ...models import db, ProductSKU, Reservation
@@ -72,7 +71,8 @@ def create_reservation():
 def release_reservation(reservation_id):
     """Release a reservation - credits back to original FIFO lots"""
     try:
-        success = FIFOService.release_reservation(reservation_id)
+        # Use ReservationService to release the reservation
+        success = ReservationService.release_reservation(reservation_id)
 
         if success:
             db.session.commit()
@@ -135,6 +135,7 @@ def convert_reservation_to_sale(reservation_id):
 def expire_old_reservations():
     """Expire reservations that have passed their expiration date"""
     from datetime import datetime
+    from app.services.inventory_adjustment import record_audit_entry # Import for audit logging
 
     try:
         # Find expired reservations
@@ -147,11 +148,15 @@ def expire_old_reservations():
 
         count = 0
         for reservation in expired_reservations:
-            # Release the reservation (credits back to FIFO)
-            success = FIFOService.release_reservation(reservation.id)
+            # Use ReservationService to release the reservation
+            success = ReservationService.release_reservation(reservation.id)
             if success:
                 reservation.mark_expired()
                 count += 1
+            else:
+                # Log failure to release reservation, but continue expiring others
+                logger.warning(f"Failed to release reservation {reservation.id} during expiration process.")
+
 
         db.session.commit()
         return jsonify({

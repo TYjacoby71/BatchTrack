@@ -4,6 +4,10 @@ from ..models import db, InventoryItem, Reservation
 from sqlalchemy import and_, func
 from ..utils import generate_fifo_code
 
+# Import necessary canonical functions
+from app.services.fifoservice import FIFOService
+from app.services.inventory_adjustment import record_audit_entry, process_inventory_adjustment
+
 class ReservationService:
     """Service for managing product reservations - ONLY handles products, never raw inventory"""
 
@@ -82,22 +86,14 @@ class ReservationService:
             source_entry.remaining_quantity += reservation.quantity
             print(f"Credited {reservation.quantity} back to lot {reservation.source_fifo_id}")
 
-            # Create ProductSKUHistory entry showing the credit back
-            credit_entry = ProductSKUHistory(
-                inventory_item_id=reservation.product_item_id,
-                quantity_change=reservation.quantity,  # POSITIVE - adding back
-                remaining_quantity=0,  # This is an audit entry, not a FIFO lot
-                change_type='unreserved',
-                unit=reservation.unit,
-                unit_cost=reservation.unit_cost,
-                notes=f"Released reservation - credited back to lot {reservation.source_fifo_id}",
-                created_by=current_user.id if current_user.is_authenticated else None,
-                order_id=order_id,
+            # Create ProductSKUHistory entry showing the credit back using canonical helper
+            record_audit_entry(
+                item_id=reservation.inventory_item_id,
+                change_type="unreserved_audit",
+                notes=f"Released reservation (ref lot #{reservation.source_fifo_id})",
                 fifo_reference_id=reservation.source_fifo_id,
-                fifo_code=generate_fifo_code('unreserved'),
-                organization_id=current_user.organization_id if current_user.is_authenticated else None
+                source=f"reservation_{reservation.id}",
             )
-            db.session.add(credit_entry)
 
             # Update inventory item quantity
             reservation.product_item.quantity += reservation.quantity
@@ -140,17 +136,14 @@ class ReservationService:
         # Update the reservation status
         reservation.status = 'cancelled'
 
-        # Record the transaction in inventory history
-        history_entry = InventoryHistory(
-            inventory_item_id=product_item.id,
-            change_type='reservation_cancellation',
-            quantity_change=reservation.quantity,
-            remaining_quantity=product_item.quantity,
-            unit=product_item.unit,
-            note=f"Cancelled reservation {reservation_id} for order {reservation.order_id}",
-            created_by=current_user.id if current_user.is_authenticated else None
+        # Record the transaction in inventory history using canonical helper
+        record_audit_entry(
+            item_id=product_item.id,
+            change_type='reservation_cancellation_audit',
+            notes=f"Cancelled reservation {reservation_id} for order {reservation.order_id}",
+            fifo_reference_id=reservation.source_fifo_id, # Assuming source_fifo_id is relevant here
+            source=f"reservation_{reservation.id}",
         )
-        db.session.add(history_entry)
 
         try:
             db.session.commit()
@@ -179,17 +172,14 @@ class ReservationService:
         # Update reservation status
         reservation.status = 'fulfilled'
 
-        # Record the transaction in inventory history
-        history_entry = InventoryHistory(
-            inventory_item_id=reserved_item.id,
-            change_type='reservation_fulfillment',
-            quantity_change=-reservation.quantity,
-            remaining_quantity=reserved_item.quantity,
-            unit=reserved_item.unit,
-            note=f"Fulfilled reservation {reservation_id} for order {reservation.order_id}",
-            created_by=current_user.id if current_user.is_authenticated else None
+        # Record the transaction in inventory history using canonical helper
+        record_audit_entry(
+            item_id=reserved_item.id,
+            change_type='reservation_fulfillment_audit',
+            notes=f"Fulfilled reservation {reservation_id} for order {reservation.order_id}",
+            fifo_reference_id=reservation.source_fifo_id, # Assuming source_fifo_id is relevant here
+            source=f"reservation_{reservation.id}",
         )
-        db.session.add(history_entry)
 
         try:
             db.session.commit()
