@@ -2,6 +2,10 @@
 # Canonical re-exports for tests/legacy imports. Safe, no-crash imports.
 import importlib
 from sqlalchemy.ext.hybrid import hybrid_property
+from sqlalchemy import event
+from datetime import datetime
+import re
+import secrets
 
 def _export(targets):
     g = globals()
@@ -499,7 +503,17 @@ class User(UserMixin, db.Model):
             return 'Team Member (No Roles)'
 
     def __repr__(self):
-        return f'<User {self.username}>'
+        return f'<User {self.email}>'
+
+@event.listens_for(User, "before_insert")
+def _default_username_before_insert(mapper, connection, target):
+    """Auto-generate username if not provided (for test compatibility)"""
+    if not getattr(target, "username", None):
+        base = None
+        if getattr(target, "email", None):
+            local = target.email.split("@", 1)[0]
+            base = re.sub(r"[^a-zA-Z0-9_.-]", "", local) or None
+        target.username = (base or "user") + "_" + secrets.token_hex(3)
 
 # Add the imported classes to __all__
 __all__.extend(['Organization', 'User'])
