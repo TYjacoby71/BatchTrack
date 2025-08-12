@@ -1,6 +1,6 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session
 from flask_login import login_required, current_user
-from app.models import db, InventoryItem, InventoryHistory, Unit
+from app.models import db, InventoryItem, InventoryHistory, Unit, IngredientCategory, User
 from app.utils.permissions import permission_required
 from app.utils.authorization import role_required
 from app.utils.api_responses import api_error, api_success
@@ -281,6 +281,7 @@ def add_inventory():
         print(f"DEBUG: ImportError in add_inventory: {str(e)}")
         db.session.rollback()
         flash(f'Import error: {str(e)}', 'error')
+        return redirect(url_for('inventory.list_inventory'))
     except Exception as e:
         print(f"DEBUG: Unexpected error in add_inventory: {str(e)}")
         print(f"DEBUG: Exception type: {type(e)}")
@@ -322,7 +323,7 @@ def adjust_inventory(id):
                     flash('Inventory recount completed successfully!', 'success')
                 else:
                     flash('Error processing recount adjustment', 'error')
-                return redirect(url_for('inventory.view_inventory', item_id=item.id))
+                return redirect(url_for('inventory.view_inventory', id=item.id))
 
             # initial stock (no history + restock) -> must call canonical with cost_override + unit
             if adj_type == 'restock':
@@ -348,7 +349,7 @@ def adjust_inventory(id):
                         flash('Initial stock added successfully!', 'success')
                     else:
                         flash('Error processing initial stock', 'error')
-                    return redirect(url_for('inventory.view_inventory', item_id=item.id))
+                    return redirect(url_for('inventory.view_inventory', id=item.id))
                 else:
                     # Regular restock with existing history
                     success = process_inventory_adjustment(
@@ -363,11 +364,11 @@ def adjust_inventory(id):
                         flash('Inventory restocked successfully!', 'success')
                     else:
                         flash('Error processing restock', 'error')
-                    return redirect(url_for('inventory.view_inventory', item_id=item.id))
+                    return redirect(url_for('inventory.view_inventory', id=item.id))
 
             else:
                 flash('Invalid adjustment type', 'error')
-                return redirect(url_for('inventory.view_inventory', item_id=item.id))
+                return redirect(url_for('inventory.view_inventory', id=item.id))
 
         except ValueError as e:
             logger.error(f"ValueError in inventory adjustment: {e}")
@@ -376,7 +377,7 @@ def adjust_inventory(id):
             logger.error(f"Error updating inventory: {e}")
             flash('An error occurred while updating inventory.', 'error')
 
-        return redirect(url_for('inventory.view_inventory', item_id=item.id))
+        return redirect(url_for('inventory.view_inventory', id=item.id))
 
 
 @inventory_bp.route('/edit/<int:id>', methods=['POST'])
