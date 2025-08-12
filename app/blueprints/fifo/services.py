@@ -41,6 +41,61 @@ class FIFOService:
     def calculate_deduction_plan(inventory_item_id, quantity, change_type):
         return _FIFOService.calculate_deduction_plan(inventory_item_id, quantity, change_type)
 
+    @staticmethod
+    def _internal_add_fifo_entry(
+        inventory_item_id: int,
+        quantity: float,
+        change_type: str,
+        unit: str,
+        notes: str | None = None,
+        cost_per_unit: float | None = None,
+        expiration_date=None,
+        shelf_life_days=None,
+        batch_id=None,
+        created_by=None,
+        customer=None,
+        sale_price=None,
+        order_id=None,
+        custom_expiration_date=None,
+        custom_shelf_life_days=None,
+        fifo_reference_id=None,
+        fifo_code=None,
+        quantity_used: float | None = None,
+    ):
+        """
+        Minimal addition path used by the canonical inventory adjustment service.
+        Creates a FIFO history entry with remaining_quantity initialized to the added quantity,
+        and bumps the InventoryItem.quantity.
+        """
+        # 1) history row
+        entry = InventoryHistory(
+            inventory_item_id=inventory_item_id,
+            timestamp=datetime.utcnow(),
+            change_type=change_type,
+            quantity_change=quantity,
+            unit=unit,
+            remaining_quantity=quantity,
+            unit_cost=cost_per_unit,
+            batch_id=batch_id,
+            note=notes,
+            created_by=created_by,
+            is_perishable=1 if (custom_expiration_date or expiration_date or custom_shelf_life_days or shelf_life_days) else 0,
+            shelf_life_days=custom_shelf_life_days or shelf_life_days,
+            expiration_date=custom_expiration_date or expiration_date,
+            fifo_reference_id=fifo_reference_id,
+            fifo_code=fifo_code,
+            quantity_used=quantity_used or 0.0,
+        )
+        db.session.add(entry)
+        db.session.flush()
+
+        # 2) update item stock
+        item = InventoryItem.query.get(inventory_item_id)
+        item.quantity = (item.quantity or 0.0) + float(quantity)
+
+        db.session.commit()
+        return entry
+
 logger = logging.getLogger(__name__)
 
 class _FIFOService:
@@ -292,83 +347,6 @@ class _FIFOService:
 
         # Commit the changes immediately to ensure they persist
         db.session.commit()
-
-    @staticmethod
-    def _internal_add_fifo_entry(inventory_item_id, quantity, change_type, unit, notes=None,
-                      cost_per_unit=None, created_by=None, batch_id=None,
-                      expiration_date=None, shelf_life_days=None, order_id=None,
-                      source=None, fifo_reference_id=None, **kwargs):
-        """
-        Add a new FIFO entry for positive inventory changes
-        Routes to appropriate history table based on item type
-        """
-        item = InventoryItem.query.get(inventory_item_id)
-        if not item:
-            raise ValueError("Inventory item not found")
-
-        # Use item unit if none provided, default to 'count' for containers
-        if not unit:
-            unit = item.unit if item.unit else 'count'
-
-        # Generate FIFO code - for finished_batch, use batch label if available
-        if change_type == 'finished_batch' and batch_id:
-            batch = db.session.get(Batch, batch_id)
-            if batch and batch.label_code:
-                fifo_code = f"BCH-{batch.label_code}"
-            else:
-                fifo_code = generate_fifo_code(change_type, quantity, batch_id)
-        else:
-            fifo_code = generate_fifo_code(change_type, quantity, batch_id)
-
-        # Check if this is a product item
-        if item.type == 'product':
-            # Use ProductSKUHistory for products
-            from app.models.product import ProductSKUHistory
-
-            history = ProductSKUHistory(
-                inventory_item_id=inventory_item_id,
-                change_type=change_type,
-                quantity_change=quantity,
-                unit=unit,
-                remaining_quantity=quantity,
-                unit_cost=cost_per_unit,
-                notes=notes,
-                created_by=created_by,
-                expiration_date=expiration_date,
-                shelf_life_days=shelf_life_days,
-                is_perishable=expiration_date is not None,
-                batch_id=batch_id if change_type == 'finished_batch' else None,
-                fifo_code=fifo_code,
-                customer=kwargs.get('customer'),
-                sale_price=kwargs.get('sale_price'),
-                order_id=order_id,
-                organization_id=current_user.organization_id if current_user and current_user.is_authenticated else item.organization_id
-            )
-        else:
-            # Use InventoryHistory for raw ingredients/containers
-            history = InventoryHistory(
-                inventory_item_id=inventory_item_id,
-                change_type=change_type,
-                quantity_change=quantity,
-                unit=unit,
-                remaining_quantity=quantity,
-                unit_cost=cost_per_unit,
-                note=notes,
-                quantity_used=0.0,  # Additions don't consume inventory
-                created_by=created_by,
-                expiration_date=expiration_date,
-                shelf_life_days=shelf_life_days,
-                is_perishable=expiration_date is not None,
-                batch_id=batch_id if change_type == 'finished_batch' else None,
-                used_for_batch_id=batch_id if change_type not in ['restock'] else None,
-                fifo_code=fifo_code,
-                organization_id=current_user.organization_id if current_user and current_user.is_authenticated else item.organization_id
-            )
-
-        db.session.add(history)
-        return history
-
-
 
     @staticmethod
     def _internal_create_deduction_history(inventory_item_id, deduction_plan, change_type, notes,
