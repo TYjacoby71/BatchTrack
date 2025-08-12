@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = 'add_email_verified_at_column'
-down_revision = 'add_is_verified_to_user'
+down_revision = 'b5c7d8e9f1a2'
 branch_labels = None
 depends_on = None
 
