@@ -242,8 +242,7 @@ def add_inventory():
             notes = 'Initial stock creation'
 
         # Use centralized inventory adjustment service for proper FIFO tracking
-        # Import exactly as the test patches it
-        from app.blueprints.inventory.routes import process_inventory_adjustment
+        from app.services.inventory_adjustment import process_inventory_adjustment
 
         success = process_inventory_adjustment(
             item_id=item.id,
@@ -366,8 +365,7 @@ def adjust_inventory(id):
                 return redirect(url_for('inventory.view_inventory', id=id))
 
             # Use centralized adjustment service for regular adjustments
-            # Import exactly as the test patches it
-            from app.blueprints.inventory.routes import process_inventory_adjustment
+            from app.services.inventory_adjustment import process_inventory_adjustment
             # Get custom shelf life for tracking
             quantity = input_quantity
             unit = input_unit
