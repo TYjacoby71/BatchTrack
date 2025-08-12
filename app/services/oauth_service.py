@@ -226,10 +226,18 @@ class OAuthService:
         client_id = current_app.config.get('GOOGLE_OAUTH_CLIENT_ID')
         client_secret = current_app.config.get('GOOGLE_OAUTH_CLIENT_SECRET')
         
+        # Check which keys are missing
+        missing_keys = []
+        if not client_id:
+            missing_keys.append('GOOGLE_OAUTH_CLIENT_ID')
+        if not client_secret:
+            missing_keys.append('GOOGLE_OAUTH_CLIENT_SECRET')
+        
         return {
             'is_configured': bool(client_id and client_secret),
             'has_client_id': bool(client_id),
             'has_client_secret': bool(client_secret),
             'client_id_length': len(client_id) if client_id else 0,
-            'client_secret_length': len(client_secret) if client_secret else 0
+            'client_secret_length': len(client_secret) if client_secret else 0,
+            'missing_keys': missing_keys
         }

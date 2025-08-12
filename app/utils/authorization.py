@@ -14,6 +14,16 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+def has_permission(user, permission: str) -> bool:
+    """Check if user has the given permission"""
+    if not user:
+        return False
+
+    # Use the existing permission checking logic
+    from app.utils.permissions import get_user_permissions
+    user_permissions = get_user_permissions(user)
+    return permission in user_permissions
+
 class AuthorizationHierarchy:
     """Handles the authorization hierarchy for the application"""
 
