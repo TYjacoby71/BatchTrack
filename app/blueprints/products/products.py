@@ -30,8 +30,9 @@ def _write_product_created_audit(sku):
     """Wrapper for audit entry - used by tests"""
     return _record_audit_entry(
         item_id=sku.inventory_item_id,
+        quantity=0,  # No quantity change for audit entry
         change_type="product_created",
-        note=f"SKU {getattr(sku,'id',None)} created",
+        notes=f"Product variant created: {sku.name}",
         item_type="product",
     )
 
