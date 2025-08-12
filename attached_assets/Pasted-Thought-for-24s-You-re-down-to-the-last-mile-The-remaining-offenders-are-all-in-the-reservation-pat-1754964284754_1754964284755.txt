@@ -1,0 +1,155 @@
+Thought for 24s
+You’re down to the last mile. The remaining offenders are all in the reservation paths and a couple of “audit-style” history writes. Here’s exactly what to change to finish the consolidation.
+
+1) Add two sanctioned helpers (inside app/services/inventory_adjustment.py)
+These give other modules legal ways to do lot-targeted credits and audit-only history writes without touching FIFO internals.
+
+python
+Copy
+Edit
+# app/services/inventory_adjustment.py
+
+def credit_specific_lot(item_id: int, fifo_entry_id: int, qty: float, *, unit: str | None = None, notes: str = "") -> bool:
+    """
+    Public seam: credit quantity back to a specific FIFO lot.
+    Keeps all mutations inside the canonical service.
+    """
+    from app.models.inventory import InventoryHistory
+    fifo_entry = InventoryHistory.query.get(fifo_entry_id)
+    if not fifo_entry or fifo_entry.inventory_item_id != item_id:
+        return False
+
+    # mutate the lot here (allowed—inside canonical service)
+    fifo_entry.remaining_quantity = float(fifo_entry.remaining_quantity or 0) + float(abs(qty))
+
+    # write a linked history entry (reference the lot we credited)
+    FIFOService.add_fifo_entry(
+        inventory_item_id=item_id,
+        quantity=abs(qty),                 # addition
+        change_type="unreserved",          # or "credit"
+        unit=unit or fifo_entry.unit,
+        notes=notes or f"Credited back to lot #{fifo_entry_id}",
+        fifo_reference_id=fifo_entry_id,
+        fifo_code=generate_fifo_code("unreserved"),
+        quantity_used=0.0,                 # credits don’t consume inventory
+    )
+    db.session.commit()
+    return True
+
+
+def record_audit_entry(
+    *,
+    item_id: int,
+    change_type: str = "audit",
+    notes: str = "",
+    unit: str | None = None,
+    fifo_reference_id: int | None = None,
+    source: str | None = None,
+) -> None:
+    """
+    Public seam: write an audit-only history entry (no FIFO delta).
+    Keeps routes/services from crafting raw history rows.
+    """
+    FIFOService.add_fifo_entry(
+        inventory_item_id=item_id,
+        quantity=0.0,                      # no effect on available FIFO
+        change_type=change_type,
+        unit=unit,
+        notes=notes,
+        fifo_reference_id=fifo_reference_id,
+        source=source,
+        remaining_quantity=0.0,            # explicit for clarity
+        quantity_used=0.0,
+        fifo_code=generate_fifo_code(change_type),
+    )
+    db.session.commit()
+(Those use existing internal FIFO helpers but keep the write surface inside this module.)
+
+2) Replace remaining direct writes
+A) app/services/reservation_service.py
+Line ~82: source_entry.remaining_quantity += reservation.quantity
+→ Replace with:
+
+python
+Copy
+Edit
+credit_specific_lot(
+    item_id=reservation.inventory_item_id,
+    fifo_entry_id=reservation.source_fifo_id,
+    qty=reservation.quantity,
+    unit=getattr(source_entry, "unit", None),
+    notes=f"Released reservation → credit back lot #{reservation.source_fifo_id}",
+)
+Line ~89 (manual audit row with remaining_quantity=0)
+→ Replace with:
+
+python
+Copy
+Edit
+record_audit_entry(
+    item_id=reservation.inventory_item_id,
+    change_type="unreserved_audit",
+    notes=f"Released reservation (ref lot #{reservation.source_fifo_id})",
+    fifo_reference_id=reservation.source_fifo_id,
+)
+Lines ~148 & ~187 (writing history with remaining_quantity=...)
+If these were trying to reflect “reserved snapshot” quantities, switch to the canonical path instead of crafting rows:
+
+python
+Copy
+Edit
+process_inventory_adjustment(
+    item_id=product_item.id,            # or reserved_item.inventory_item_id
+    quantity=-abs(reserved_qty),        # reservations act like a deduction of available
+    change_type="reserve",
+    unit=product_item.unit,
+    notes="Create reservation",
+)
+(If these were just audit markers, use record_audit_entry(...) instead.)
+
+B) app/blueprints/api/reservation_routes.py:109
+Row with remaining_quantity=0 → Replace with record_audit_entry(...) (same pattern as above).
+
+C) app/blueprints/products/products.py:42
+Row with remaining_quantity=0 → Replace with record_audit_entry(...).
+
+3) Re-run your guardrail greps
+These should now only hit model declarations (which is fine) and the canonical module:
+
+bash
+Copy
+Edit
+# Direct FIFO writes outside the canonical layer should be gone
+rg -n "execute_deduction_plan|create_deduction_history|add_fifo_entry|remaining_quantity\s*[-+]?=" app \
+  | rg -v "services/inventory_adjustment\.py|blueprints/fifo/services\.py|models/" \
+  || echo "✅ No external FIFO writes found"
+
+# Only read-only FIFO calls elsewhere
+rg -n "FIFOService\.(get_fifo_entries|get_all_fifo_entries|get_expired_fifo_entries)\(" app | sort
+
+# All routes/services that mutate must call the canonical service
+rg -n "process_inventory_adjustment\(" app/blueprints app/services | sort
+4) Minimal wiring tests
+tests/test_reservation_canonicalization.py
+Monkeypatch credit_specific_lot and hit the “release/cancel reservation” path → assert it was called once with fifo_entry_id=source_fifo_id.
+
+tests/test_audit_canonicalization.py
+Monkeypatch record_audit_entry; trigger the two places that used to write remaining_quantity=0 → assert calls.
+
+Keep your earlier expiration/inventory/POS canonicalization tests.
+
+5) PR notes (copy)
+Title: refactor(inventory): finish canonicalization of reservation & audit writes
+Body:
+
+Route/service code no longer mutates FIFO or crafts history rows directly.
+
+Added credit_specific_lot and record_audit_entry helpers in inventory_adjustment.
+
+Updated reservation flows to call canonical helpers.
+
+Added wiring tests.
+
+Guardrail greps show no external FIFO writes.
+
+When those greps return clean (only models + inventory_adjustment.py), you’ve truly locked one public

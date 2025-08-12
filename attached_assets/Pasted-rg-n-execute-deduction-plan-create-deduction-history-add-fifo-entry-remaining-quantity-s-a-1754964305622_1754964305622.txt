@@ -1,0 +1,60 @@
+rg -n "execute_deduction_plan|create_deduction_history|add_fifo_entry|remaining_quantity\s*[-+]?=" app | rg -v "services/inventory_adjustment\.py|blueprints/fifo/services\.py" || echo "✅ No external FIFO writes found"
+rg -n "FIFOService\.(get_fifo_entries|get_all_fifo_entries|get_expired_fifo_entries)\(" app | sort
+rg -n "process_inventory_adjustment\(" app/blueprints | sort
+
+
+results 
+app/services/reservation_service.py:82:            source_entry.remaining_quantity += reservation.quantity
+app/services/reservation_service.py:89:                remaining_quantity=0,  # This is an audit entry, not a FIFO lot
+app/services/reservation_service.py:148:            remaining_quantity=product_item.quantity,
+app/services/reservation_service.py:187:            remaining_quantity=reserved_item.quantity,
+app/models/inventory.py:95:    remaining_quantity = db.Column(db.Float, nullable=True)  # For FIFO tracking
+app/utils/fifo_generator.py:37:def generate_fifo_code(change_type, remaining_quantity=0, batch_label=None):
+app/models/product.py:318:    remaining_quantity = db.Column(db.Float, default=0.0)
+app/models/batch.py:35:    remaining_quantity = db.Column(db.Float, nullable=True)
+app/blueprints/api/reservation_routes.py:109:            remaining_quantity=0,  # Already deducted
+app/blueprints/products/products.py:42:            remaining_quantity=0,
+
+app/blueprints/fifo/services.py:215:            expired_entries = _FIFOService.get_expired_fifo_entries(inventory_item_id)
+app/blueprints/fifo/services.py:234:        fifo_entries = _FIFOService.get_fifo_entries(inventory_item_id)  # Already excludes expired
+app/blueprints/fifo/services.py:38:        return _FIFOService.get_fifo_entries(inventory_item_id)
+app/blueprints/fifo/services.py:517:    return _FIFOService.get_fifo_entries(inventory_item_id)
+app/blueprints/fifo/services.py:520:    return _FIFOService.get_expired_fifo_entries(inventory_item_id)
+app/services/inventory_adjustment.py:412:        all_fifo_entries = FIFOService.get_all_fifo_entries(item_id)
+
+app/blueprints/api/container_routes.py:201:            process_inventory_adjustment(
+app/blueprints/api/container_routes.py:261:                process_inventory_adjustment(
+app/blueprints/api/container_routes.py:282:            process_inventory_adjustment(
+app/blueprints/api/container_routes.py:294:            process_inventory_adjustment(
+app/blueprints/api/container_routes.py:337:            process_inventory_adjustment(
+app/blueprints/api/reservation_routes.py:42:        success = process_inventory_adjustment(
+app/blueprints/batches/add_extra.py:48:        result = process_inventory_adjustment(
+app/blueprints/batches/add_extra.py:97:            result = process_inventory_adjustment(
+app/blueprints/batches/cancel_batch.py:53:                process_inventory_adjustment(
+app/blueprints/batches/cancel_batch.py:67:                process_inventory_adjustment(
+app/blueprints/batches/cancel_batch.py:81:                process_inventory_adjustment(
+app/blueprints/batches/cancel_batch.py:95:                process_inventory_adjustment(
+app/blueprints/batches/finish_batch.py:138:        success = process_inventory_adjustment(
+app/blueprints/batches/finish_batch.py:338:        success = process_inventory_adjustment(
+app/blueprints/batches/finish_batch.py:381:        success = process_inventory_adjustment(
+app/blueprints/batches/start_batch.py:119:            result = process_inventory_adjustment(
+app/blueprints/batches/start_batch.py:72:                        result = process_inventory_adjustment(
+app/blueprints/expiration/services.py:560:                success = process_inventory_adjustment(
+app/blueprints/expiration/services.py:576:                success = process_inventory_adjustment(
+app/blueprints/expiration/services.py:605:                success = process_inventory_adjustment(
+app/blueprints/fifo/__init__.py:16:Use app.services.inventory_adjustment.process_inventory_adjustment() instead.
+app/blueprints/fifo/__init__.py:24:        "Use app.services.inventory_adjustment.process_inventory_adjustment() instead.",
+app/blueprints/fifo/services.py:10:Use app.services.inventory_adjustment.process_inventory_adjustment() instead.
+app/blueprints/fifo/services.py:34:        return process_inventory_adjustment(*args, **kwargs)
+app/blueprints/fifo/services.py:54:        return process_inventory_adjustment(
+app/blueprints/inventory/routes.py:245:        success = process_inventory_adjustment(
+app/blueprints/inventory/routes.py:342:            success = process_inventory_adjustment(
+app/blueprints/inventory/routes.py:381:            success = process_inventory_adjustment(
+app/blueprints/inventory/routes.py:519:        success = process_inventory_adjustment(
+app/blueprints/products/product_inventory_routes.py:153:            success = process_inventory_adjustment(
+app/blueprints/products/product_inventory_routes.py:302:        success = process_inventory_adjustment(
+app/blueprints/products/product_inventory_routes.py:352:        success = process_inventory_adjustment(
+app/blueprints/products/product_inventory_routes.py:405:        success = process_inventory_adjustment(
+app/blueprints/products/product_inventory_routes.py:465:        success = process_inventory_adjustment(
+app/blueprints/products/product_inventory_routes.py:533:        success = process_inventory_adjustment(
+app/blueprints/products/sku.py:266:        process_inventory_adjustment(
