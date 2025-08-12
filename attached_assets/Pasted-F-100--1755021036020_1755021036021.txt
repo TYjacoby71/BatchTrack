@@ -1,0 +1,958 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+_____________________ test_pos_sale_uses_canonical_service _____________________
+
+self = <sqlalchemy.engine.base.Connection object at 0x7f975df2c2d0>
+dialect = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x7f9764f557d0>
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x7f975df388d0>
+statement = <sqlalchemy.dialects.sqlite.base.SQLiteCompiler object at 0x7f975df38910>
+parameters = [(None, None, None, 'Bulk', None, 'Test SKU', ...)]
+
+    def _exec_single_context(
+        self,
+        dialect: Dialect,
+        context: ExecutionContext,
+        statement: Union[str, Compiled],
+        parameters: Optional[_AnyMultiExecuteParams],
+    ) -> CursorResult[Any]:
+        """continue the _execute_context() method for a single DBAPI
+        cursor.execute() or cursor.executemany() call.
+    
+        """
+        if dialect.bind_typing is BindTyping.SETINPUTSIZES:
+            generic_setinputsizes = context._prepare_set_input_sizes()
+    
+            if generic_setinputsizes:
+                try:
+                    dialect.do_set_input_sizes(
+                        context.cursor, generic_setinputsizes, context
+                    )
+                except BaseException as e:
+                    self._handle_dbapi_exception(
+                        e, str(statement), parameters, None, context
+                    )
+    
+        cursor, str_statement, parameters = (
+            context.cursor,
+            context.statement,
+            context.parameters,
+        )
+    
+        effective_parameters: Optional[_AnyExecuteParams]
+    
+        if not context.executemany:
+            effective_parameters = parameters[0]
+        else:
+            effective_parameters = parameters
+    
+        if self._has_events or self.engine._has_events:
+            for fn in self.dispatch.before_cursor_execute:
+                str_statement, effective_parameters = fn(
+                    self,
+                    cursor,
+                    str_statement,
+                    effective_parameters,
+                    context,
+                    context.executemany,
+                )
+    
+        if self._echo:
+            self._log_info(str_statement)
+    
+            stats = context._get_cache_stats()
+    
+            if not self.engine.hide_parameters:
+                self._log_info(
+                    "[%s] %r",
+                    stats,
+                    sql_util._repr_params(
+                        effective_parameters,
+                        batches=10,
+                        ismulti=context.executemany,
+                    ),
+                )
+            else:
+                self._log_info(
+                    "[%s] [SQL parameters hidden due to hide_parameters=True]",
+                    stats,
+                )
+    
+        evt_handled: bool = False
+        try:
+            if context.execute_style is ExecuteStyle.EXECUTEMANY:
+                effective_parameters = cast(
+                    "_CoreMultiExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_executemany:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_executemany(
+                        cursor,
+                        str_statement,
+                        effective_parameters,
+                        context,
+                    )
+            elif not effective_parameters and context.no_parameters:
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute_no_params:
+                        if fn(cursor, str_statement, context):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_execute_no_params(
+                        cursor, str_statement, context
+                    )
+            else:
+                effective_parameters = cast(
+                    "_CoreSingleExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+>                   self.dialect.do_execute(
+                        cursor, str_statement, effective_parameters, context
+                    )
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:1964: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x7f9764f557d0>
+cursor = <sqlite3.Cursor object at 0x7f976510a640>
+statement = 'INSERT INTO product_sku (inventory_item_id, product_id, variant_id, size_label, sku_code, sku, sku_name, quantity_ove..., ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+parameters = (None, None, None, 'Bulk', None, 'Test SKU', ...)
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x7f975df388d0>
+
+    def do_execute(self, cursor, statement, parameters, context=None):
+>       cursor.execute(statement, parameters)
+E       sqlite3.IntegrityError: NOT NULL constraint failed: product_sku.product_id
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py:945: IntegrityError
+
+The above exception was the direct cause of the following exception:
+
+app = <Flask 'app'>
+db_session = <sqlalchemy.orm.scoping.scoped_session object at 0x7f9766f2a090>
+
+    def test_pos_sale_uses_canonical_service(app, db_session):
+        """Test that POS sales use the canonical inventory adjustment service"""
+    
+        # Create test data
+        item = InventoryItem(name="Test Product", quantity=100, unit="count")
+        db_session.add(item)
+    
+        sku = ProductSKU(
+            name="Test SKU",
+            inventory_item_id=item.id,
+            quantity=100
+        )
+        db_session.add(sku)
+>       db_session.commit()
+
+tests/test_pos_integration_canonicalization.py:22: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/scoping.py:599: in commit
+    return self._proxied.commit()
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py:2032: in commit
+    trans.commit(_to_root=True)
+<string>:2: in commit
+    ???
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state_changes.py:139: in _go
+    ret_value = fn(self, *arg, **kw)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py:1313: in commit
+    self._prepare_impl()
+<string>:2: in _prepare_impl
+    ???
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state_changes.py:139: in _go
+    ret_value = fn(self, *arg, **kw)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py:1288: in _prepare_impl
+    self.session.flush()
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py:4353: in flush
+    self._flush(objects)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py:4488: in _flush
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py:4449: in _flush
+    flush_context.execute()
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/unitofwork.py:466: in execute
+    rec.execute(self)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/unitofwork.py:642: in execute
+    util.preloaded.orm_persistence.save_obj(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/persistence.py:93: in save_obj
+    _emit_insert_statements(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/persistence.py:1233: in _emit_insert_statements
+    result = connection.execute(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:1416: in execute
+    return meth(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/elements.py:523: in _execute_on_connection
+    return connection._execute_clauseelement(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:1638: in _execute_clauseelement
+    ret = self._execute_context(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:1843: in _execute_context
+    return self._exec_single_context(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:1983: in _exec_single_context
+    self._handle_dbapi_exception(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:2352: in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:1964: in _exec_single_context
+    self.dialect.do_execute(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x7f9764f557d0>
+cursor = <sqlite3.Cursor object at 0x7f976510a640>
+statement = 'INSERT INTO product_sku (inventory_item_id, product_id, variant_id, size_label, sku_code, sku, sku_name, quantity_ove..., ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+parameters = (None, None, None, 'Bulk', None, 'Test SKU', ...)
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x7f975df388d0>
+
+    def do_execute(self, cursor, statement, parameters, context=None):
+>       cursor.execute(statement, parameters)
+E       sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) NOT NULL constraint failed: product_sku.product_id
+E       [SQL: INSERT INTO product_sku (inventory_item_id, product_id, variant_id, size_label, sku_code, sku, sku_name, quantity_override, unit, low_stock_threshold, fifo_id, batch_id, container_id, retail_price, wholesale_price, profit_margin_target, category, subcategory, tags, description, is_active, is_product_active, is_discontinued, created_at, updated_at, created_by, supplier_name, supplier_sku, supplier_cost, weight, weight_unit, dimensions, barcode, upc, quality_status, compliance_status, quality_checked_by, quality_checked_at, location_id, location_name, temperature_at_time, shopify_product_id, shopify_variant_id, etsy_listing_id, amazon_asin, marketplace_sync_status, marketplace_last_sync, expiration_date, is_perishable, shelf_life_days, organization_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
+E       [parameters: (None, None, None, 'Bulk', None, 'Test SKU', None, 100.0, None, 10.0, None, None, None, None, None, None, None, None, None, None, 1, 1, 0, '2025-08-12 17:33:39.712541', '2025-08-12 17:33:39.712544', None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, 0, None, None)]
+E       (Background on this error at: https://sqlalche.me/e/20/gkpj)
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py:945: IntegrityError
+------------------------------ Captured log setup ------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+=============================== warnings summary ===============================
+tests/test_pos_integration_canonicalization.py::test_pos_sale_uses_canonical_service
+  /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_limiter/extension.py:333: UserWarning: Using the in-memory storage for tracking rate limits as no storage was explicitly specified. This is not recommended for production use. See: https://flask-limiter.readthedocs.io#configuring-a-storage-backend for documentation about configuring the storage backend.
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/test_pos_integration_canonicalization.py::test_pos_sale_uses_canonical_service - sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) NOT NULL constraint...
+1 failed, 1 warning in 4.90s
+
+FF                                                                       [100%]
+=================================== FAILURES ===================================
+________________ test_recount_adjustment_uses_canonical_service ________________
+
+client = <FlaskClient <Flask 'app'>>, app = <Flask 'app'>
+db_session = <sqlalchemy.orm.scoping.scoped_session object at 0x7f33da3e6050>
+test_user = <User test@example.com>
+
+    def test_recount_adjustment_uses_canonical_service(client, app, db_session, test_user):
+        """Test that inventory recount routes use the canonical adjustment service"""
+    
+        # Create test inventory item
+        item = InventoryItem(
+            name="Test Item",
+            quantity=100,
+            unit="count",
+            organization_id=test_user.organization_id
+        )
+        db_session.add(item)
+        db_session.commit()
+    
+        # Mock the canonical service
+        with patch('app.blueprints.inventory.routes.process_inventory_adjustment') as mock_adjustment:
+            mock_adjustment.return_value = True
+    
+            # Login
+            client.post('/auth/login', data={'email': test_user.email, 'password': 'password'})
+    
+            # Make recount request
+            response = client.post(f'/inventory/adjust/{item.id}', data={
+                'adjustment_type': 'recount',
+                'quantity': '80',
+                'notes': 'Physical count adjustment'
+            })
+    
+            # Verify canonical service was called
+>           mock_adjustment.assert_called_once()
+
+tests/test_inventory_routes_canonicalization.py:35: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <MagicMock name='process_inventory_adjustment' id='139860598945360'>
+
+    def assert_called_once(self):
+        """assert that the mock was called only once.
+        """
+        if not self.call_count == 1:
+            msg = ("Expected '%s' to have been called once. Called %s times.%s"
+                   % (self._mock_name or 'mock',
+                      self.call_count,
+                      self._calls_repr()))
+>           raise AssertionError(msg)
+E           AssertionError: Expected 'process_inventory_adjustment' to have been called once. Called 0 times.
+
+/nix/store/7d088dip86hlzri9sk0h78b63yfmx0a0-python3-3.11.13/lib/python3.11/unittest/mock.py:918: AssertionError
+------------------------------ Captured log setup ------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+------------------------------ Captured log call -------------------------------
+INFO     app.utils.unit_utils:unit_utils.py:32 Getting global unit list
+WARNING  app.utils.unit_utils:unit_utils.py:70 No units found, creating fallback units
+_ TestInventoryRoutesCanonicalService.test_adjust_inventory_initial_stock_calls_canonical_service _
+
+self = <tests.test_inventory_routes_canonicalization.TestInventoryRoutesCanonicalService object at 0x7f33d85d8dd0>
+mock_user = <AsyncMock name='current_user' id='139860593160464'>
+mock_item = <MagicMock name='InventoryItem' id='139860596544784'>
+mock_process = <MagicMock name='process_inventory_adjustment' id='139860593431056'>
+client = <FlaskClient <Flask 'app'>>, app = <Flask 'app'>
+
+    @patch('app.blueprints.inventory.routes.process_inventory_adjustment')
+    @patch('app.blueprints.inventory.routes.InventoryItem')
+    @patch('app.blueprints.inventory.routes.current_user')
+    def test_adjust_inventory_initial_stock_calls_canonical_service(self, mock_user, mock_item, mock_process, client, app):
+        """Test that initial stock creation calls process_inventory_adjustment"""
+        with app.test_request_context():
+            # Mock the inventory item with no history
+            mock_inventory_item = MagicMock()
+            mock_inventory_item.id = 1
+            mock_inventory_item.type = 'ingredient'
+            mock_inventory_item.unit = 'g'
+            mock_inventory_item.cost_per_unit = 2.5
+            mock_inventory_item.is_perishable = False
+    
+            mock_item.query.get_or_404.return_value = mock_inventory_item
+            mock_user.id = 1
+            mock_process.return_value = True
+    
+            # Mock InventoryHistory count to simulate no existing history
+            with patch('app.blueprints.inventory.routes.InventoryHistory') as mock_history:
+                mock_history.query.filter_by.return_value.count.return_value = 0
+    
+                # Make POST request to adjust inventory
+                response = client.post('/inventory/adjust/1', data={
+                    'change_type': 'restock',
+                    'quantity': '100.0',
+                    'input_unit': 'g',
+                    'notes': 'Initial stock',
+                    'cost_entry_type': 'per_unit',
+                    'cost_per_unit': '3.0'
+                })
+    
+                # Verify canonical service was called
+>               mock_process.assert_called_once_with(
+                    item_id=1,
+                    quantity=100.0,
+                    change_type="restock",
+                    unit='g',
+                    notes='Initial stock',
+                    created_by=1,
+                    cost_override=3.0
+                )
+
+tests/test_inventory_routes_canonicalization.py:91: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <MagicMock name='process_inventory_adjustment' id='139860593431056'>
+args = ()
+kwargs = {'change_type': 'restock', 'cost_override': 3.0, 'created_by': 1, 'item_id': 1, ...}
+msg = "Expected 'process_inventory_adjustment' to be called once. Called 0 times."
+
+    def assert_called_once_with(self, /, *args, **kwargs):
+        """assert that the mock was called exactly once and that that call was
+        with the specified arguments."""
+        if not self.call_count == 1:
+            msg = ("Expected '%s' to be called once. Called %s times.%s"
+                   % (self._mock_name or 'mock',
+                      self.call_count,
+                      self._calls_repr()))
+>           raise AssertionError(msg)
+E           AssertionError: Expected 'process_inventory_adjustment' to be called once. Called 0 times.
+
+/nix/store/7d088dip86hlzri9sk0h78b63yfmx0a0-python3-3.11.13/lib/python3.11/unittest/mock.py:950: AssertionError
+------------------------------ Captured log setup ------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+=============================== warnings summary ===============================
+tests/test_inventory_routes_canonicalization.py::test_recount_adjustment_uses_canonical_service
+tests/test_inventory_routes_canonicalization.py::TestInventoryRoutesCanonicalService::test_adjust_inventory_initial_stock_calls_canonical_service
+  /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_limiter/extension.py:333: UserWarning: Using the in-memory storage for tracking rate limits as no storage was explicitly specified. This is not recommended for production use. See: https://flask-limiter.readthedocs.io#configuring-a-storage-backend for documentation about configuring the storage backend.
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/test_inventory_routes_canonicalization.py::test_recount_adjustment_uses_canonical_service - AssertionError: Expected 'process_inventory_adjustment' to have been called...
+FAILED tests/test_inventory_routes_canonicalization.py::TestInventoryRoutesCanonicalService::test_adjust_inventory_initial_stock_calls_canonical_service - AssertionError: Expected 'process_inventory_adjustment' to be called once. ...
+2 failed, 2 warnings in 5.85s
+
+.FF                                                                      [100%]
+=================================== FAILURES ===================================
+_________ TestInventoryFIFOCharacterization.test_fifo_deduction_order __________
+
+self = <tests.test_inventory_fifo.TestInventoryFIFOCharacterization object at 0x7f0aabab34d0>
+app = <Flask 'app'>
+db_session = <sqlalchemy.orm.scoping.scoped_session object at 0x7f0aad8aa450>
+test_user = <User test@example.com>, test_org = <Organization 2>
+
+    def test_fifo_deduction_order(self, app, db_session, test_user, test_org):
+        """Test FIFO deduction follows first-in-first-out order."""
+        with app.test_request_context():
+            login_user(test_user)
+    
+            # Create inventory item
+            item = InventoryItem(
+                name="Test Ingredient",
+                type="ingredient",
+                unit="g",
+                quantity=0.0,
+                organization_id=test_org.id,
+                created_by=test_user.id
+            )
+            db_session.add(item)
+            db_session.flush()
+    
+            # Add stock in layers (oldest first)
+>           assert process_inventory_adjustment(
+                item_id=item.id,
+                quantity=100.0,
+                change_type="restock",
+                notes="First batch",
+                created_by=test_user.id
+            )
+
+tests/test_inventory_fifo.py:33: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+app/services/inventory_adjustment.py:445: in process_inventory_adjustment
+    raise e
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+item_id = 1, quantity = 100.0, change_type = 'restock', unit = 'g'
+notes = 'First batch', created_by = 2, cost_override = None, item_type = None
+custom_shelf_life_days = None, kwargs = {}
+InventoryItem = <class 'app.models.inventory.InventoryItem'>
+inspect = <module 'inspect' from '/nix/store/7d088dip86hlzri9sk0h78b63yfmx0a0-python3-3.11.13/lib/python3.11/inspect.py'>
+caller_frame = <frame at 0x7f0aa87f4210, file '/home/runner/workspace/tests/test_inventory_fifo.py', line 33, code test_fifo_deduction_order>
+caller_file = '/home/runner/workspace/tests/test_inventory_fifo.py'
+caller_function = 'test_fifo_deduction_order', is_valid = True, error_msg = ''
+
+    def process_inventory_adjustment(
+        item_id: int,
+        quantity: float,
+        change_type: str,
+        unit: str | None = None,
+        notes: str | None = None,
+        created_by: int | None = None,
+        cost_override: float | None = None,
+        item_type: str | None = None,
+        custom_shelf_life_days: int | None = None,
+        **kwargs,
+    ) -> bool:
+        """
+        Process inventory adjustments through a centralized, canonical service.
+        """
+        from app.models.inventory import InventoryItem
+    
+        if custom_shelf_life_days is None:
+            custom_shelf_life_days = kwargs.get("custom_shelf_life_days")
+        import inspect
+    
+        # Log canonical entry point usage for audit
+        caller_frame = inspect.currentframe().f_back
+        caller_file = caller_frame.f_code.co_filename
+        caller_function = caller_frame.f_code.co_name
+    
+        logger.info(f"CANONICAL INVENTORY ADJUSTMENT: item_id={item_id}, quantity={quantity}, "
+                   f"change_type={change_type}, caller={caller_file}:{caller_function}")
+    
+        # Validate required parameters
+        if not item_id:
+            logger.error("CANONICAL ENTRY: item_id is required")
+            return False
+    
+        if quantity == 0:
+            logger.warning("CANONICAL ENTRY: zero quantity adjustment requested")
+            return True  # No-op but not an error
+        # Start a transaction with explicit rollback protection
+        try:
+            # Pre-validate FIFO sync BEFORE starting any inventory changes (skip for recount)
+            if change_type != 'recount':
+                is_valid, error_msg, inv_qty, fifo_total = validate_inventory_fifo_sync(item_id, item_type)
+                if not is_valid:
+                    raise ValueError(f"Pre-adjustment validation failed - FIFO sync error: {error_msg}")
+    
+            # Get the item - treat item_id as inventory_item_id for unified handling
+            item = InventoryItem.query.get(item_id)
+    
+            if not item:
+                raise ValueError(f"Inventory item not found for ID: {item_id}")
+    
+            # Organization scoping check
+            if current_user and current_user.is_authenticated:
+                if item.organization_id != current_user.organization_id:
+                    raise ValueError("Access denied: Item does not belong to your organization")
+    
+            # Add unit fallback for when unit is None
+            if unit is None:
+                unit = getattr(item, "unit", None)
+    
+            # Convert units if needed
+            # only attempt conversion when there's something to convert
+            if item_type != "product" and getattr(item, "type", None) != "container" and unit and unit != item.unit:
+                conversion = safe_convert(quantity, unit, item.unit, ingredient_id=item.id)
+                if not conversion["ok"]:
+                    raise ValueError(conversion["error"])
+                quantity = conversion["value"]
+    
+            # Determine quantity change and special handling
+            current_quantity = item.quantity
+    
+            if change_type == 'recount':
+                # Recount is special - handle independently from FIFO sync validation
+                return handle_recount_adjustment(item_id, quantity, notes, created_by, item_type)
+            elif change_type in ['spoil', 'trash', 'sold', 'sale', 'gift', 'sample', 'tester', 'quality_fail', 'damaged', 'expired']:
+                qty_change = -abs(quantity)
+            elif change_type == 'reserved':
+                # Handle reservation creation - deduct from available inventory
+                qty_change = -abs(quantity)
+            elif change_type == 'unreserved':
+                # Unreserved operations should only be handled by ReservationService.release_reservation()
+                # This should not be called directly through inventory adjustment
+                raise ValueError("Unreserved operations must use ReservationService.release_reservation()")
+            elif change_type == 'returned':
+                qty_change = quantity
+            else:
+                qty_change = quantity
+    
+            # Handle expiration using ExpirationService
+            from app.blueprints.expiration.services import ExpirationService
+    
+            expiration_date = None
+            shelf_life_to_use = None
+    
+            is_perishable_override = expiration_date is not None or custom_shelf_life_days is not None
+    
+            if is_perishable_override:
+                if expiration_date:
+                    expiration_date = expiration_date
+                elif custom_shelf_life_days:
+                    expiration_date = ExpirationService.calculate_expiration_date(datetime.utcnow(), custom_shelf_life_days)
+                shelf_life_to_use = custom_shelf_life_days
+            elif item.is_perishable and item.shelf_life_days:
+                # Use ExpirationService to get proper expiration date considering batch hierarchy
+                expiration_date = ExpirationService.get_expiration_date_for_new_entry(item_id, batch_id)
+                shelf_life_to_use = item.shelf_life_days
+    
+            # Handle cost calculations
+            if change_type in ['spoil', 'trash']:
+                cost_per_unit = None
+            elif change_type in ['restock', 'finished_batch'] and qty_change > 0:
+                # Calculate weighted average
+                current_value = item.quantity * item.cost_per_unit
+                new_value = qty_change * (cost_override or item.cost_per_unit)
+                total_quantity = item.quantity + qty_change
+    
+                if total_quantity > 0:
+                    weighted_avg_cost = (current_value + new_value) / total_quantity
+                    item.cost_per_unit = weighted_avg_cost
+                else: # If adding to zero quantity, use the new cost
+                    item.cost_per_unit = cost_override or item.cost_per_unit
+    
+                cost_per_unit = cost_override or item.cost_per_unit
+            elif cost_override is not None and change_type == 'cost_override':
+                cost_per_unit = cost_override
+                item.cost_per_unit = cost_override
+            else:
+                cost_per_unit = item.cost_per_unit
+    
+            # Handle inventory changes using FIFO service
+            if qty_change < 0:
+                # Deductions - use FIFO service
+                success, deduction_plan, available_qty = FIFOService.calculate_deduction_plan(
+                    item_id, abs(qty_change), change_type
+                )
+    
+                if not success:
+                    raise ValueError("Insufficient fresh FIFO stock (expired lots frozen)")
+    
+                # Handle reservations specially - create reservations FIRST before any FIFO changes
+                if change_type == 'reserved':
+                    # Only products can be reserved
+                    if item.type != 'product':
+                        raise ValueError("Only products can be reserved, not raw inventory")
+    
+                    # Create reservation tracking with FIFO lot details BEFORE executing deductions
+                    from app.services.reservation_service import ReservationService
+                    reservations_created = []
+                    try:
+                        for fifo_entry_id, qty_deducted, cost_per_unit in deduction_plan:
+                            reservation, error = ReservationService.create_reservation(
+                                inventory_item_id=item_id,
+                                quantity=qty_deducted,
+                                order_id=order_id,
+                                source_fifo_id=fifo_entry_id,
+                                unit_cost=cost_per_unit,
+                                customer=customer,
+                                sale_price=sale_price,
+                                notes=notes or f"Reserved for order {order_id}"
+                            )
+                            if error:
+                                raise ValueError(f"Failed to create reservation: {error}")
+                            reservations_created.append(reservation)
+                    except Exception as e:
+                        # If reservation creation fails, don't execute FIFO deductions
+                        raise ValueError(f"Reservation creation failed, no inventory changes made: {str(e)}")
+    
+                # Execute the deduction plan using FIFO service ONLY after reservations are created successfully
+                FIFOService.execute_deduction_plan(deduction_plan, item_id)
+    
+                # Use FIFO service for all deductions - it routes to the correct history table
+                FIFOService.create_deduction_history(
+                    item_id, deduction_plan, change_type, notes,
+                    batch_id=batch_id, created_by=created_by,
+                    customer=customer, sale_price=sale_price, order_id=order_id
+                )
+            elif qty_change > 0:
+                # Additions - use FIFO service
+                if change_type == 'refunded' and batch_id:
+                    # Handle refund credits using FIFO service
+                    FIFOService.handle_refund_credits(
+                        item_id, qty_change, batch_id, notes, created_by, cost_per_unit
+                    )
+    
+                else:
+                    # Use FIFO service for all additions - it routes to the correct history table
+                    # Handle expiration data
+                    timestamp = datetime.utcnow()
+    
+                    # Determine the correct unit for the history entry
+                    history_unit = 'count' if getattr(item, 'type', None) == 'container' else item.unit
+    
+>                   FIFOService._internal_add_fifo_entry(
+                        inventory_item_id=item_id,
+                        quantity=qty_change,
+                        change_type=change_type,
+                        unit=history_unit,
+                        notes=notes,
+                        cost_per_unit=cost_per_unit,
+                        expiration_date=expiration_date,
+                        shelf_life_days=shelf_life_to_use,
+                        batch_id=batch_id,
+                        created_by=created_by,
+                        customer=customer,
+                        sale_price=sale_price,
+                        order_id=order_id,
+                        custom_expiration_date=expiration_date, # Using the determined expiration_date here
+                        custom_shelf_life_days=shelf_life_to_use # Using the determined shelf_life_to_use here
+                    )
+E                   NameError: name 'FIFOService' is not defined
+
+app/services/inventory_adjustment.py:386: NameError
+------------------------------ Captured log setup ------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+----------------------------- Captured stdout call -----------------------------
+DEBUG Ingredient FIFO validation: item_id=1, org_id=2, current_user_org=2
+DEBUG Ingredient FIFO entries found: 0 for item 1
+------------------------------ Captured log call -------------------------------
+INFO     app.services.inventory_adjustment:inventory_adjustment.py:220 CANONICAL INVENTORY ADJUSTMENT: item_id=1, quantity=100.0, change_type=restock, caller=/home/runner/workspace/tests/test_inventory_fifo.py:test_fifo_deduction_order
+_ TestInventoryFIFOCharacterization.test_inventory_adjustment_delegates_properly _
+
+self = <tests.test_inventory_fifo.TestInventoryFIFOCharacterization object at 0x7f0aabab3b90>
+app = <Flask 'app'>
+db_session = <sqlalchemy.orm.scoping.scoped_session object at 0x7f0aad8aa450>
+test_user = <User test@example.com>, test_org = <Organization 2>
+
+    def test_inventory_adjustment_delegates_properly(self, app, db_session, test_user, test_org):
+        """Verify inventory adjustment service delegates to proper internal systems."""
+        with app.test_request_context():
+            login_user(test_user)
+    
+            item = InventoryItem(
+                name="Test Product",
+                type="product",
+                unit="ml",
+                quantity=0.0,
+                organization_id=test_org.id,
+                created_by=test_user.id
+            )
+            db_session.add(item)
+            db_session.flush()
+    
+            # Test product addition (should use ProductSKUHistory)
+>           result = process_inventory_adjustment(
+                item_id=item.id,
+                quantity=250.0,
+                change_type="finished_batch",
+                notes="Batch completion",
+                created_by=test_user.id
+            )
+
+tests/test_inventory_fifo.py:89: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+app/services/inventory_adjustment.py:445: in process_inventory_adjustment
+    raise e
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+item_id = 1, quantity = 250.0, change_type = 'finished_batch', unit = 'ml'
+notes = 'Batch completion', created_by = 2, cost_override = None
+item_type = None, custom_shelf_life_days = None, kwargs = {}
+InventoryItem = <class 'app.models.inventory.InventoryItem'>
+inspect = <module 'inspect' from '/nix/store/7d088dip86hlzri9sk0h78b63yfmx0a0-python3-3.11.13/lib/python3.11/inspect.py'>
+caller_frame = <frame at 0x7f0aa943f600, file '/home/runner/workspace/tests/test_inventory_fifo.py', line 89, code test_inventory_adjustment_delegates_properly>
+caller_file = '/home/runner/workspace/tests/test_inventory_fifo.py'
+caller_function = 'test_inventory_adjustment_delegates_properly'
+is_valid = True, error_msg = ''
+
+    def process_inventory_adjustment(
+        item_id: int,
+        quantity: float,
+        change_type: str,
+        unit: str | None = None,
+        notes: str | None = None,
+        created_by: int | None = None,
+        cost_override: float | None = None,
+        item_type: str | None = None,
+        custom_shelf_life_days: int | None = None,
+        **kwargs,
+    ) -> bool:
+        """
+        Process inventory adjustments through a centralized, canonical service.
+        """
+        from app.models.inventory import InventoryItem
+    
+        if custom_shelf_life_days is None:
+            custom_shelf_life_days = kwargs.get("custom_shelf_life_days")
+        import inspect
+    
+        # Log canonical entry point usage for audit
+        caller_frame = inspect.currentframe().f_back
+        caller_file = caller_frame.f_code.co_filename
+        caller_function = caller_frame.f_code.co_name
+    
+        logger.info(f"CANONICAL INVENTORY ADJUSTMENT: item_id={item_id}, quantity={quantity}, "
+                   f"change_type={change_type}, caller={caller_file}:{caller_function}")
+    
+        # Validate required parameters
+        if not item_id:
+            logger.error("CANONICAL ENTRY: item_id is required")
+            return False
+    
+        if quantity == 0:
+            logger.warning("CANONICAL ENTRY: zero quantity adjustment requested")
+            return True  # No-op but not an error
+        # Start a transaction with explicit rollback protection
+        try:
+            # Pre-validate FIFO sync BEFORE starting any inventory changes (skip for recount)
+            if change_type != 'recount':
+                is_valid, error_msg, inv_qty, fifo_total = validate_inventory_fifo_sync(item_id, item_type)
+                if not is_valid:
+                    raise ValueError(f"Pre-adjustment validation failed - FIFO sync error: {error_msg}")
+    
+            # Get the item - treat item_id as inventory_item_id for unified handling
+            item = InventoryItem.query.get(item_id)
+    
+            if not item:
+                raise ValueError(f"Inventory item not found for ID: {item_id}")
+    
+            # Organization scoping check
+            if current_user and current_user.is_authenticated:
+                if item.organization_id != current_user.organization_id:
+                    raise ValueError("Access denied: Item does not belong to your organization")
+    
+            # Add unit fallback for when unit is None
+            if unit is None:
+                unit = getattr(item, "unit", None)
+    
+            # Convert units if needed
+            # only attempt conversion when there's something to convert
+            if item_type != "product" and getattr(item, "type", None) != "container" and unit and unit != item.unit:
+                conversion = safe_convert(quantity, unit, item.unit, ingredient_id=item.id)
+                if not conversion["ok"]:
+                    raise ValueError(conversion["error"])
+                quantity = conversion["value"]
+    
+            # Determine quantity change and special handling
+            current_quantity = item.quantity
+    
+            if change_type == 'recount':
+                # Recount is special - handle independently from FIFO sync validation
+                return handle_recount_adjustment(item_id, quantity, notes, created_by, item_type)
+            elif change_type in ['spoil', 'trash', 'sold', 'sale', 'gift', 'sample', 'tester', 'quality_fail', 'damaged', 'expired']:
+                qty_change = -abs(quantity)
+            elif change_type == 'reserved':
+                # Handle reservation creation - deduct from available inventory
+                qty_change = -abs(quantity)
+            elif change_type == 'unreserved':
+                # Unreserved operations should only be handled by ReservationService.release_reservation()
+                # This should not be called directly through inventory adjustment
+                raise ValueError("Unreserved operations must use ReservationService.release_reservation()")
+            elif change_type == 'returned':
+                qty_change = quantity
+            else:
+                qty_change = quantity
+    
+            # Handle expiration using ExpirationService
+            from app.blueprints.expiration.services import ExpirationService
+    
+            expiration_date = None
+            shelf_life_to_use = None
+    
+            is_perishable_override = expiration_date is not None or custom_shelf_life_days is not None
+    
+            if is_perishable_override:
+                if expiration_date:
+                    expiration_date = expiration_date
+                elif custom_shelf_life_days:
+                    expiration_date = ExpirationService.calculate_expiration_date(datetime.utcnow(), custom_shelf_life_days)
+                shelf_life_to_use = custom_shelf_life_days
+            elif item.is_perishable and item.shelf_life_days:
+                # Use ExpirationService to get proper expiration date considering batch hierarchy
+                expiration_date = ExpirationService.get_expiration_date_for_new_entry(item_id, batch_id)
+                shelf_life_to_use = item.shelf_life_days
+    
+            # Handle cost calculations
+            if change_type in ['spoil', 'trash']:
+                cost_per_unit = None
+            elif change_type in ['restock', 'finished_batch'] and qty_change > 0:
+                # Calculate weighted average
+                current_value = item.quantity * item.cost_per_unit
+                new_value = qty_change * (cost_override or item.cost_per_unit)
+                total_quantity = item.quantity + qty_change
+    
+                if total_quantity > 0:
+                    weighted_avg_cost = (current_value + new_value) / total_quantity
+                    item.cost_per_unit = weighted_avg_cost
+                else: # If adding to zero quantity, use the new cost
+                    item.cost_per_unit = cost_override or item.cost_per_unit
+    
+                cost_per_unit = cost_override or item.cost_per_unit
+            elif cost_override is not None and change_type == 'cost_override':
+                cost_per_unit = cost_override
+                item.cost_per_unit = cost_override
+            else:
+                cost_per_unit = item.cost_per_unit
+    
+            # Handle inventory changes using FIFO service
+            if qty_change < 0:
+                # Deductions - use FIFO service
+                success, deduction_plan, available_qty = FIFOService.calculate_deduction_plan(
+                    item_id, abs(qty_change), change_type
+                )
+    
+                if not success:
+                    raise ValueError("Insufficient fresh FIFO stock (expired lots frozen)")
+    
+                # Handle reservations specially - create reservations FIRST before any FIFO changes
+                if change_type == 'reserved':
+                    # Only products can be reserved
+                    if item.type != 'product':
+                        raise ValueError("Only products can be reserved, not raw inventory")
+    
+                    # Create reservation tracking with FIFO lot details BEFORE executing deductions
+                    from app.services.reservation_service import ReservationService
+                    reservations_created = []
+                    try:
+                        for fifo_entry_id, qty_deducted, cost_per_unit in deduction_plan:
+                            reservation, error = ReservationService.create_reservation(
+                                inventory_item_id=item_id,
+                                quantity=qty_deducted,
+                                order_id=order_id,
+                                source_fifo_id=fifo_entry_id,
+                                unit_cost=cost_per_unit,
+                                customer=customer,
+                                sale_price=sale_price,
+                                notes=notes or f"Reserved for order {order_id}"
+                            )
+                            if error:
+                                raise ValueError(f"Failed to create reservation: {error}")
+                            reservations_created.append(reservation)
+                    except Exception as e:
+                        # If reservation creation fails, don't execute FIFO deductions
+                        raise ValueError(f"Reservation creation failed, no inventory changes made: {str(e)}")
+    
+                # Execute the deduction plan using FIFO service ONLY after reservations are created successfully
+                FIFOService.execute_deduction_plan(deduction_plan, item_id)
+    
+                # Use FIFO service for all deductions - it routes to the correct history table
+                FIFOService.create_deduction_history(
+                    item_id, deduction_plan, change_type, notes,
+                    batch_id=batch_id, created_by=created_by,
+                    customer=customer, sale_price=sale_price, order_id=order_id
+                )
+            elif qty_change > 0:
+                # Additions - use FIFO service
+                if change_type == 'refunded' and batch_id:
+                    # Handle refund credits using FIFO service
+                    FIFOService.handle_refund_credits(
+                        item_id, qty_change, batch_id, notes, created_by, cost_per_unit
+                    )
+    
+                else:
+                    # Use FIFO service for all additions - it routes to the correct history table
+                    # Handle expiration data
+                    timestamp = datetime.utcnow()
+    
+                    # Determine the correct unit for the history entry
+                    history_unit = 'count' if getattr(item, 'type', None) == 'container' else item.unit
+    
+>                   FIFOService._internal_add_fifo_entry(
+                        inventory_item_id=item_id,
+                        quantity=qty_change,
+                        change_type=change_type,
+                        unit=history_unit,
+                        notes=notes,
+                        cost_per_unit=cost_per_unit,
+                        expiration_date=expiration_date,
+                        shelf_life_days=shelf_life_to_use,
+                        batch_id=batch_id,
+                        created_by=created_by,
+                        customer=customer,
+                        sale_price=sale_price,
+                        order_id=order_id,
+                        custom_expiration_date=expiration_date, # Using the determined expiration_date here
+                        custom_shelf_life_days=shelf_life_to_use # Using the determined shelf_life_to_use here
+                    )
+E                   NameError: name 'FIFOService' is not defined
+
+app/services/inventory_adjustment.py:386: NameError
+------------------------------ Captured log setup ------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+----------------------------- Captured stdout call -----------------------------
+DEBUG Ingredient FIFO validation: item_id=1, org_id=2, current_user_org=2
+DEBUG Ingredient FIFO entries found: 0 for item 1
+------------------------------ Captured log call -------------------------------
+INFO     app.services.inventory_adjustment:inventory_adjustment.py:220 CANONICAL INVENTORY ADJUSTMENT: item_id=1, quantity=250.0, change_type=finished_batch, caller=/home/runner/workspace/tests/test_inventory_fifo.py:test_inventory_adjustment_delegates_properly
+=============================== warnings summary ===============================
+tests/test_inventory_fifo.py::TestInventoryFIFOCharacterization::test_single_entry_point_exists
+tests/test_inventory_fifo.py::TestInventoryFIFOCharacterization::test_fifo_deduction_order
+tests/test_inventory_fifo.py::TestInventoryFIFOCharacterization::test_inventory_adjustment_delegates_properly
+  /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_limiter/extension.py:333: UserWarning: Using the in-memory storage for tracking rate limits as no storage was explicitly specified. This is not recommended for production use. See: https://flask-limiter.readthedocs.io#configuring-a-storage-backend for documentation about configuring the storage backend.
+    warnings.warn(
+
+tests/test_inventory_fifo.py::TestInventoryFIFOCharacterization::test_fifo_deduction_order
+tests/test_inventory_fifo.py::TestInventoryFIFOCharacterization::test_inventory_adjustment_delegates_properly
+  /home/runner/workspace/app/services/inventory_adjustment.py:98: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    item = InventoryItem.query.get(item_id)
+
+tests/test_inventory_fifo.py::TestInventoryFIFOCharacterization::test_fifo_deduction_order
+tests/test_inventory_fifo.py::TestInventoryFIFOCharacterization::test_inventory_adjustment_delegates_properly
+  /home/runner/workspace/app/services/inventory_adjustment.py:240: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    item = InventoryItem.query.get(item_id)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/test_inventory_fifo.py::TestInventoryFIFOCharacterization::test_fifo_deduction_order - NameError: name 'FIFOService' is not defined
+FAILED tests/test_inventory_fifo.py::TestInventoryFIFOCharacterization::test_inventory_adjustment_delegates_properly - NameError: name 'FIFOService' is not defined
+2 failed, 1 passed, 7 warnings in 6.02s
+
+.                                                                        [100%]
+=============================== warnings summary ===============================
+tests/test_expiration_canonicalization.py::test_expiration_service_uses_canonical_adjustment
+  /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_limiter/extension.py:333: UserWarning: Using the in-memory storage for tracking rate limits as no storage was explicitly specified. This is not recommended for production use. See: https://flask-limiter.readthedocs.io#configuring-a-storage-backend for documentation about configuring the storage backend.
+    warnings.warn(
+
+tests/test_expiration_canonicalization.py::test_expiration_service_uses_canonical_adjustment
+  /home/runner/workspace/app/blueprints/expiration/services.py:545: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    entry = InventoryHistory.query.get(entry_id)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+1 passed, 2 warnings in 3.71s
