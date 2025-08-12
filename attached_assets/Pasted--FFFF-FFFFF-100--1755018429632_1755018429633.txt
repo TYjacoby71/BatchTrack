@@ -1,0 +1,697 @@
+.FFFF........FFFFF................                                       [100%]
+=================================== FAILURES ===================================
+__________________ test_products_routes_uses_canonical_audit ___________________
+
+app = <Flask 'app'>
+
+    def test_products_routes_uses_canonical_audit(app):
+        """Test that product creation uses canonical audit helper"""
+        with app.app_context():
+            with patch('app.services.inventory_adjustment.record_audit_entry') as mock_audit:
+    
+                # Mock the route function that writes audit entries
+                from app.blueprints.products.products import _write_product_created_audit
+    
+                mock_variant = MagicMock()
+                mock_variant.id = 456
+                mock_variant.name = "Test Product"
+    
+                _write_product_created_audit(mock_variant)
+    
+                # Assert canonical helper was called
+>               mock_audit.assert_called_once_with(
+                    item_id=456,
+                    change_type="product_created",
+                    notes="Product variant created: Test Product"
+                )
+
+tests/test_audit_canonicalization.py:43: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <MagicMock name='record_audit_entry' id='140290814314192'>, args = ()
+kwargs = {'change_type': 'product_created', 'item_id': 456, 'notes': 'Product variant created: Test Product'}
+msg = "Expected 'record_audit_entry' to be called once. Called 0 times."
+
+    def assert_called_once_with(self, /, *args, **kwargs):
+        """assert that the mock was called exactly once and that that call was
+        with the specified arguments."""
+        if not self.call_count == 1:
+            msg = ("Expected '%s' to be called once. Called %s times.%s"
+                   % (self._mock_name or 'mock',
+                      self.call_count,
+                      self._calls_repr()))
+>           raise AssertionError(msg)
+E           AssertionError: Expected 'record_audit_entry' to be called once. Called 0 times.
+
+/nix/store/7d088dip86hlzri9sk0h78b63yfmx0a0-python3-3.11.13/lib/python3.11/unittest/mock.py:950: AssertionError
+------------------------------ Captured log setup ------------------------------
+INFO     app:unit_utils.py:20 BatchTrack startup
+------------------------------ Captured log call -------------------------------
+ERROR    app.services.inventory_adjustment:inventory_adjustment.py:739 Error creating audit entry: Incorrect number of values in identifier to formulate primary key for session.get(); primary key columns are 'inventory_item.id'
+______________ test_expiration_service_uses_canonical_adjustment _______________
+
+self = <sqlalchemy.engine.base.Connection object at 0x7f980082abd0>
+dialect = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x7f97fbf996d0>
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x7f97fbc0d210>
+statement = <sqlalchemy.dialects.sqlite.base.SQLiteCompiler object at 0x7f97fbc0d250>
+parameters = [(1, '2025-08-12 16:32:51.756181', None, None, 'count', 50.0, ...)]
+
+    def _exec_single_context(
+        self,
+        dialect: Dialect,
+        context: ExecutionContext,
+        statement: Union[str, Compiled],
+        parameters: Optional[_AnyMultiExecuteParams],
+    ) -> CursorResult[Any]:
+        """continue the _execute_context() method for a single DBAPI
+        cursor.execute() or cursor.executemany() call.
+    
+        """
+        if dialect.bind_typing is BindTyping.SETINPUTSIZES:
+            generic_setinputsizes = context._prepare_set_input_sizes()
+    
+            if generic_setinputsizes:
+                try:
+                    dialect.do_set_input_sizes(
+                        context.cursor, generic_setinputsizes, context
+                    )
+                except BaseException as e:
+                    self._handle_dbapi_exception(
+                        e, str(statement), parameters, None, context
+                    )
+    
+        cursor, str_statement, parameters = (
+            context.cursor,
+            context.statement,
+            context.parameters,
+        )
+    
+        effective_parameters: Optional[_AnyExecuteParams]
+    
+        if not context.executemany:
+            effective_parameters = parameters[0]
+        else:
+            effective_parameters = parameters
+    
+        if self._has_events or self.engine._has_events:
+            for fn in self.dispatch.before_cursor_execute:
+                str_statement, effective_parameters = fn(
+                    self,
+                    cursor,
+                    str_statement,
+                    effective_parameters,
+                    context,
+                    context.executemany,
+                )
+    
+        if self._echo:
+            self._log_info(str_statement)
+    
+            stats = context._get_cache_stats()
+    
+            if not self.engine.hide_parameters:
+                self._log_info(
+                    "[%s] %r",
+                    stats,
+                    sql_util._repr_params(
+                        effective_parameters,
+                        batches=10,
+                        ismulti=context.executemany,
+                    ),
+                )
+            else:
+                self._log_info(
+                    "[%s] [SQL parameters hidden due to hide_parameters=True]",
+                    stats,
+                )
+    
+        evt_handled: bool = False
+        try:
+            if context.execute_style is ExecuteStyle.EXECUTEMANY:
+                effective_parameters = cast(
+                    "_CoreMultiExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_executemany:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_executemany(
+                        cursor,
+                        str_statement,
+                        effective_parameters,
+                        context,
+                    )
+            elif not effective_parameters and context.no_parameters:
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute_no_params:
+                        if fn(cursor, str_statement, context):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_execute_no_params(
+                        cursor, str_statement, context
+                    )
+            else:
+                effective_parameters = cast(
+                    "_CoreSingleExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+>                   self.dialect.do_execute(
+                        cursor, str_statement, effective_parameters, context
+                    )
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:1964: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x7f97fbf996d0>
+cursor = <sqlite3.Cursor object at 0x7f98008d0ec0>
+statement = 'INSERT INTO inventory_history (inventory_item_id, timestamp, change_type, quantity_change, unit, remaining_quantity, ...able, shelf_life_days, expiration_date, organization_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+parameters = (1, '2025-08-12 16:32:51.756181', None, None, 'count', 50.0, ...)
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x7f97fbc0d210>
+
+    def do_execute(self, cursor, statement, parameters, context=None):
+>       cursor.execute(statement, parameters)
+E       sqlite3.IntegrityError: NOT NULL constraint failed: inventory_history.quantity_change
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py:945: IntegrityError
+
+The above exception was the direct cause of the following exception:
+
+app = <Flask 'app'>
+db_session = <sqlalchemy.orm.scoping.scoped_session object at 0x7f980513aad0>
+
+    def test_expiration_service_uses_canonical_adjustment(app, db_session):
+        """Test that expiration disposal uses the canonical inventory adjustment service"""
+    
+        # Create test data
+        item = InventoryItem(name="Test Item", quantity=100, unit="count")
+        db_session.add(item)
+        db_session.commit()
+    
+        fifo_entry = InventoryHistory(
+            inventory_item_id=item.id,
+            remaining_quantity=50,
+            unit="count"
+        )
+        db_session.add(fifo_entry)
+>       db_session.commit()
+
+tests/test_expiration_canonicalization.py:21: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/scoping.py:599: in commit
+    return self._proxied.commit()
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py:2032: in commit
+    trans.commit(_to_root=True)
+<string>:2: in commit
+    ???
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state_changes.py:139: in _go
+    ret_value = fn(self, *arg, **kw)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py:1313: in commit
+    self._prepare_impl()
+<string>:2: in _prepare_impl
+    ???
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state_changes.py:139: in _go
+    ret_value = fn(self, *arg, **kw)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py:1288: in _prepare_impl
+    self.session.flush()
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py:4353: in flush
+    self._flush(objects)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py:4488: in _flush
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py:4449: in _flush
+    flush_context.execute()
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/unitofwork.py:466: in execute
+    rec.execute(self)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/unitofwork.py:642: in execute
+    util.preloaded.orm_persistence.save_obj(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/persistence.py:93: in save_obj
+    _emit_insert_statements(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/persistence.py:1233: in _emit_insert_statements
+    result = connection.execute(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:1416: in execute
+    return meth(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/elements.py:523: in _execute_on_connection
+    return connection._execute_clauseelement(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:1638: in _execute_clauseelement
+    ret = self._execute_context(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:1843: in _execute_context
+    return self._exec_single_context(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:1983: in _exec_single_context
+    self._handle_dbapi_exception(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:2352: in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:1964: in _exec_single_context
+    self.dialect.do_execute(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x7f97fbf996d0>
+cursor = <sqlite3.Cursor object at 0x7f98008d0ec0>
+statement = 'INSERT INTO inventory_history (inventory_item_id, timestamp, change_type, quantity_change, unit, remaining_quantity, ...able, shelf_life_days, expiration_date, organization_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+parameters = (1, '2025-08-12 16:32:51.756181', None, None, 'count', 50.0, ...)
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x7f97fbc0d210>
+
+    def do_execute(self, cursor, statement, parameters, context=None):
+>       cursor.execute(statement, parameters)
+E       sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) NOT NULL constraint failed: inventory_history.quantity_change
+E       [SQL: INSERT INTO inventory_history (inventory_item_id, timestamp, change_type, quantity_change, unit, remaining_quantity, unit_cost, fifo_reference_id, fifo_code, batch_id, note, created_by, quantity_used, used_for_batch_id, is_perishable, shelf_life_days, expiration_date, organization_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
+E       [parameters: (1, '2025-08-12 16:32:51.756181', None, None, 'count', 50.0, None, None, None, None, None, None, 0.0, None, 0, None, None, None)]
+E       (Background on this error at: https://sqlalche.me/e/20/gkpj)
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py:945: IntegrityError
+------------------------------------------------------------ Captured log setup -------------------------------------------------------------
+INFO     app:unit_utils.py:20 BatchTrack startup
+_______________________________ TestExpirationCanonicalService.test_mark_fifo_expired_calls_canonical_service _______________________________
+
+self = <tests.test_expiration_canonicalization.TestExpirationCanonicalService object at 0x7f980317b410>
+mock_user = <AsyncMock name='current_user' id='140290819325904'>, mock_history = <MagicMock name='InventoryHistory' id='140290818917968'>
+mock_process = <MagicMock name='process_inventory_adjustment' id='140290813634448'>
+
+    @patch('app.blueprints.expiration.services.process_inventory_adjustment')
+    @patch('app.blueprints.expiration.services.InventoryHistory')
+    @patch('app.blueprints.expiration.services.current_user')
+    def test_mark_fifo_expired_calls_canonical_service(self, mock_user, mock_history, mock_process):
+        """Test that marking FIFO entry as expired calls process_inventory_adjustment"""
+        from app import create_app
+    
+        app = create_app({'TESTING': True})
+        with app.app_context():
+            # Mock the FIFO entry
+            mock_fifo_entry = MagicMock()
+            mock_fifo_entry.id = 123
+            mock_fifo_entry.inventory_item_id = 456
+            mock_fifo_entry.remaining_quantity = 10.0
+            mock_fifo_entry.unit = 'g'
+    
+            mock_history.query.get.return_value = mock_fifo_entry
+            mock_user.id = 1
+            mock_user.is_authenticated = True
+            mock_process.return_value = True
+    
+            # Call the service
+            success, message = ExpirationService.mark_as_expired('fifo', 123, quantity=5.0, notes="Test expiration")
+    
+            # Verify canonical service was called
+>           mock_process.assert_called_once_with(
+                item_id=456,
+                quantity=-5.0,
+                change_type="spoil",
+                unit='g',
+                notes="Expired lot disposal #123: Test expiration",
+                created_by=1
+            )
+
+tests/test_expiration_canonicalization.py:67: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <MagicMock name='process_inventory_adjustment' id='140290813634448'>, args = ()
+kwargs = {'change_type': 'spoil', 'created_by': 1, 'item_id': 456, 'notes': 'Expired lot disposal #123: Test expiration', ...}
+msg = "Expected 'process_inventory_adjustment' to be called once. Called 0 times."
+
+    def assert_called_once_with(self, /, *args, **kwargs):
+        """assert that the mock was called exactly once and that that call was
+        with the specified arguments."""
+        if not self.call_count == 1:
+            msg = ("Expected '%s' to be called once. Called %s times.%s"
+                   % (self._mock_name or 'mock',
+                      self.call_count,
+                      self._calls_repr()))
+>           raise AssertionError(msg)
+E           AssertionError: Expected 'process_inventory_adjustment' to be called once. Called 0 times.
+
+/nix/store/7d088dip86hlzri9sk0h78b63yfmx0a0-python3-3.11.13/lib/python3.11/unittest/mock.py:950: AssertionError
+------------------------------------------------------------- Captured log call -------------------------------------------------------------
+INFO     app:unit_utils.py:20 BatchTrack startup
+_____________________________ TestExpirationCanonicalService.test_mark_product_expired_calls_canonical_service ______________________________
+
+self = <tests.test_expiration_canonicalization.TestExpirationCanonicalService object at 0x7f980317ba90>
+mock_user = <AsyncMock name='current_user' id='140290812775696'>
+mock_sku_history = <MagicMock name='ProductSKUHistory' id='140290742676432'>
+mock_process = <MagicMock name='process_inventory_adjustment' id='140290740331792'>
+
+    @patch('app.blueprints.expiration.services.process_inventory_adjustment')
+    @patch('app.blueprints.expiration.services.ProductSKUHistory')
+    @patch('app.blueprints.expiration.services.current_user')
+    def test_mark_product_expired_calls_canonical_service(self, mock_user, mock_sku_history, mock_process):
+        """Test that marking product SKU as expired calls process_inventory_adjustment"""
+        from app import create_app
+    
+        app = create_app({'TESTING': True})
+        with app.app_context():
+            # Mock the product SKU history entry
+            mock_sku_entry = MagicMock()
+            mock_sku_entry.id = 789
+            mock_sku_entry.inventory_item_id = 101
+            mock_sku_entry.remaining_quantity = 20.0
+            mock_sku_entry.unit = 'ml'
+    
+            mock_sku_history.query.get.return_value = mock_sku_entry
+            mock_user.id = 2
+            mock_user.is_authenticated = True
+            mock_process.return_value = True
+    
+            # Call the service
+            success, message = ExpirationService.mark_as_expired('product', 789, quantity=15.0, notes="Product expired")
+    
+            # Verify canonical service was called with product type
+>           mock_process.assert_called_once_with(
+                item_id=101,
+                quantity=-15.0,
+                change_type="spoil",
+                unit='ml',
+                notes="Expired product lot disposal #789: Product expired",
+                created_by=2,
+                item_type='product'
+            )
+
+tests/test_expiration_canonicalization.py:104: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <MagicMock name='process_inventory_adjustment' id='140290740331792'>, args = ()
+kwargs = {'change_type': 'spoil', 'created_by': 2, 'item_id': 101, 'item_type': 'product', ...}
+msg = "Expected 'process_inventory_adjustment' to be called once. Called 0 times."
+
+    def assert_called_once_with(self, /, *args, **kwargs):
+        """assert that the mock was called exactly once and that that call was
+        with the specified arguments."""
+        if not self.call_count == 1:
+            msg = ("Expected '%s' to be called once. Called %s times.%s"
+                   % (self._mock_name or 'mock',
+                      self.call_count,
+                      self._calls_repr()))
+>           raise AssertionError(msg)
+E           AssertionError: Expected 'process_inventory_adjustment' to be called once. Called 0 times.
+
+/nix/store/7d088dip86hlzri9sk0h78b63yfmx0a0-python3-3.11.13/lib/python3.11/unittest/mock.py:950: AssertionError
+------------------------------------------------------------- Captured log call -------------------------------------------------------------
+INFO     app:unit_utils.py:20 BatchTrack startup
+________________________________________ TestInventoryFIFOCharacterization.test_fifo_deduction_order ________________________________________
+
+self = <tests.test_inventory_fifo.TestInventoryFIFOCharacterization object at 0x7f9802b80850>, app = <Flask 'app'>
+db_session = <sqlalchemy.orm.scoping.scoped_session object at 0x7f980513aad0>, test_user = <User test@example.com>
+test_org = <Organization 2>
+
+    def test_fifo_deduction_order(self, app, db_session, test_user, test_org):
+        """Test FIFO deduction follows first-in-first-out order."""
+        with app.test_request_context():
+            login_user(test_user)
+    
+            # Create inventory item
+            item = InventoryItem(
+                name="Test Ingredient",
+                type="ingredient",
+                unit="g",
+                quantity=0.0,
+                organization_id=test_org.id,
+                created_by=test_user.id
+            )
+            db_session.add(item)
+            db_session.flush()
+    
+            # Add stock in layers (oldest first)
+>           assert process_inventory_adjustment(
+                item_id=item.id,
+                quantity=100.0,
+                change_type="restock",
+                notes="First batch",
+                created_by=test_user.id
+            )
+E           TypeError: process_inventory_adjustment() got an unexpected keyword argument 'created_by'
+
+tests/test_inventory_fifo.py:33: TypeError
+------------------------------------------------------------ Captured log setup -------------------------------------------------------------
+INFO     app:unit_utils.py:20 BatchTrack startup
+______________________________ TestInventoryFIFOCharacterization.test_inventory_adjustment_delegates_properly _______________________________
+
+self = <tests.test_inventory_fifo.TestInventoryFIFOCharacterization object at 0x7f9802b80f10>, app = <Flask 'app'>
+db_session = <sqlalchemy.orm.scoping.scoped_session object at 0x7f980513aad0>, test_user = <User test@example.com>
+test_org = <Organization 2>
+
+    def test_inventory_adjustment_delegates_properly(self, app, db_session, test_user, test_org):
+        """Verify inventory adjustment service delegates to proper internal systems."""
+        with app.test_request_context():
+            login_user(test_user)
+    
+            item = InventoryItem(
+                name="Test Product",
+                type="product",
+                unit="ml",
+                quantity=0.0,
+                organization_id=test_org.id,
+                created_by=test_user.id
+            )
+            db_session.add(item)
+            db_session.flush()
+    
+            # Test product addition (should use ProductSKUHistory)
+>           result = process_inventory_adjustment(
+                item_id=item.id,
+                quantity=250.0,
+                change_type="finished_batch",
+                notes="Batch completion",
+                created_by=test_user.id
+            )
+E           TypeError: process_inventory_adjustment() got an unexpected keyword argument 'created_by'
+
+tests/test_inventory_fifo.py:89: TypeError
+------------------------------------------------------------ Captured log setup -------------------------------------------------------------
+INFO     app:unit_utils.py:20 BatchTrack startup
+______________________________________________ test_recount_adjustment_uses_canonical_service _______________________________________________
+
+client = <FlaskClient <Flask 'app'>>, app = <Flask 'app'>, db_session = <sqlalchemy.orm.scoping.scoped_session object at 0x7f980513aad0>
+test_user = <User test@example.com>
+
+    def test_recount_adjustment_uses_canonical_service(client, app, db_session, test_user):
+        """Test that inventory recount routes use the canonical adjustment service"""
+    
+        # Create test inventory item
+        item = InventoryItem(
+            name="Test Item",
+            quantity=100,
+            unit="count",
+            organization_id=test_user.organization_id
+        )
+        db_session.add(item)
+        db_session.commit()
+    
+        # Mock the canonical service
+        with patch('app.blueprints.inventory.routes.process_inventory_adjustment') as mock_adjustment:
+            mock_adjustment.return_value = True
+    
+            # Login
+            client.post('/auth/login', data={'email': test_user.email, 'password': 'password'})
+    
+            # Make recount request
+            response = client.post(f'/inventory/adjust/{item.id}', data={
+                'adjustment_type': 'recount',
+                'quantity': '80',
+                'notes': 'Physical count adjustment'
+            })
+    
+            # Verify canonical service was called
+>           mock_adjustment.assert_called_once()
+
+tests/test_inventory_routes_canonicalization.py:35: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <MagicMock name='process_inventory_adjustment' id='140290731968912'>
+
+    def assert_called_once(self):
+        """assert that the mock was called only once.
+        """
+        if not self.call_count == 1:
+            msg = ("Expected '%s' to have been called once. Called %s times.%s"
+                   % (self._mock_name or 'mock',
+                      self.call_count,
+                      self._calls_repr()))
+>           raise AssertionError(msg)
+E           AssertionError: Expected 'process_inventory_adjustment' to have been called once. Called 0 times.
+
+/nix/store/7d088dip86hlzri9sk0h78b63yfmx0a0-python3-3.11.13/lib/python3.11/unittest/mock.py:918: AssertionError
+------------------------------------------------------------ Captured log setup -------------------------------------------------------------
+INFO     app:unit_utils.py:20 BatchTrack startup
+------------------------------------------------------------- Captured log call -------------------------------------------------------------
+INFO     app.utils.unit_utils:unit_utils.py:24 Getting global unit list
+WARNING  app.utils.unit_utils:unit_utils.py:62 No units found, creating fallback units
+ERROR    app.utils.unit_utils:unit_utils.py:77 Error getting global unit list: name 'FallbackUnit' is not defined
+______________________ TestInventoryRoutesCanonicalService.test_adjust_inventory_initial_stock_calls_canonical_service ______________________
+
+self = <tests.test_inventory_routes_canonicalization.TestInventoryRoutesCanonicalService object at 0x7f9802b83150>
+mock_user = <AsyncMock name='current_user' id='140290814676240'>, mock_item = <MagicMock name='InventoryItem' id='140290819090320'>
+mock_process = <MagicMock name='process_inventory_adjustment' id='140290737949008'>, client = <FlaskClient <Flask 'app'>>
+app = <Flask 'app'>
+
+    @patch('app.blueprints.inventory.routes.process_inventory_adjustment')
+    @patch('app.blueprints.inventory.routes.InventoryItem')
+    @patch('app.blueprints.inventory.routes.current_user')
+    def test_adjust_inventory_initial_stock_calls_canonical_service(self, mock_user, mock_item, mock_process, client, app):
+        """Test that initial stock creation calls process_inventory_adjustment"""
+        with app.test_request_context():
+            # Mock the inventory item with no history
+            mock_inventory_item = MagicMock()
+            mock_inventory_item.id = 1
+            mock_inventory_item.type = 'ingredient'
+            mock_inventory_item.unit = 'g'
+            mock_inventory_item.cost_per_unit = 2.5
+            mock_inventory_item.is_perishable = False
+    
+            mock_item.query.get_or_404.return_value = mock_inventory_item
+            mock_user.id = 1
+            mock_process.return_value = True
+    
+            # Mock InventoryHistory count to simulate no existing history
+            with patch('app.blueprints.inventory.routes.InventoryHistory') as mock_history:
+                mock_history.query.filter_by.return_value.count.return_value = 0
+    
+                # Make POST request to adjust inventory
+                response = client.post('/inventory/adjust/1', data={
+                    'change_type': 'restock',
+                    'quantity': '100.0',
+                    'input_unit': 'g',
+                    'notes': 'Initial stock',
+                    'cost_entry_type': 'per_unit',
+                    'cost_per_unit': '3.0'
+                })
+    
+                # Verify canonical service was called
+>               mock_process.assert_called_once_with(
+                    item_id=1,
+                    quantity=100.0,
+                    change_type="restock",
+                    unit='g',
+                    notes='Initial stock',
+                    created_by=1,
+                    cost_override=3.0
+                )
+
+tests/test_inventory_routes_canonicalization.py:91: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <MagicMock name='process_inventory_adjustment' id='140290737949008'>, args = ()
+kwargs = {'change_type': 'restock', 'cost_override': 3.0, 'created_by': 1, 'item_id': 1, ...}
+msg = "Expected 'process_inventory_adjustment' to be called once. Called 0 times."
+
+    def assert_called_once_with(self, /, *args, **kwargs):
+        """assert that the mock was called exactly once and that that call was
+        with the specified arguments."""
+        if not self.call_count == 1:
+            msg = ("Expected '%s' to be called once. Called %s times.%s"
+                   % (self._mock_name or 'mock',
+                      self.call_count,
+                      self._calls_repr()))
+>           raise AssertionError(msg)
+E           AssertionError: Expected 'process_inventory_adjustment' to be called once. Called 0 times.
+
+/nix/store/7d088dip86hlzri9sk0h78b63yfmx0a0-python3-3.11.13/lib/python3.11/unittest/mock.py:950: AssertionError
+------------------------------------------------------------ Captured log setup -------------------------------------------------------------
+INFO     app:unit_utils.py:20 BatchTrack startup
+___________________________________________________ test_pos_sale_uses_canonical_service ____________________________________________________
+
+app = <Flask 'app'>, db_session = <sqlalchemy.orm.scoping.scoped_session object at 0x7f980513aad0>
+
+    def test_pos_sale_uses_canonical_service(app, db_session):
+        """Test that POS sales use the canonical inventory adjustment service"""
+    
+        # Create test data
+        item = InventoryItem(name="Test Product", quantity=100, unit="count")
+        db_session.add(item)
+    
+>       sku = ProductSKU(
+            name="Test SKU",
+            inventory_item_id=item.id,
+            quantity=100
+        )
+
+tests/test_pos_integration_canonicalization.py:16: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+<string>:4: in __init__
+    ???
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <ProductSKU SKU #None>, kwargs = {'inventory_item_id': None, 'name': 'Test SKU', 'quantity': 100}
+cls_ = <class 'app.models.product.ProductSKU'>, k = 'quantity'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+                raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+>           setattr(self, k, kwargs[k])
+E           AttributeError: property 'quantity' of 'ProductSKU' object has no setter
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2178: AttributeError
+------------------------------------------------------------ Captured log setup -------------------------------------------------------------
+INFO     app:unit_utils.py:20 BatchTrack startup
+============================================================= warnings summary ==============================================================
+tests/test_audit_canonicalization.py: 2 warnings
+tests/test_expiration_canonicalization.py: 3 warnings
+tests/test_google_oauth.py: 7 warnings
+tests/test_inventory_fifo.py: 3 warnings
+tests/test_inventory_routes_canonicalization.py: 2 warnings
+tests/test_pos_integration_canonicalization.py: 1 warning
+tests/test_product_sku.py: 4 warnings
+tests/test_reservation_canonicalization.py: 2 warnings
+tests/test_signup_tiers.py: 5 warnings
+tests/test_stripe_webhooks.py: 4 warnings
+  /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_limiter/extension.py:333: UserWarning: Using the in-memory storage for tracking rate limits as no storage was explicitly specified. This is not recommended for production use. See: https://flask-limiter.readthedocs.io#configuring-a-storage-backend for documentation about configuring the storage backend.
+    warnings.warn(
+
+tests/test_audit_canonicalization.py::test_products_routes_uses_canonical_audit
+  /home/runner/workspace/app/services/inventory_adjustment.py:702: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    item = InventoryItem.query.get(item_id)
+
+tests/test_expiration_canonicalization.py::TestExpirationCanonicalService::test_mark_fifo_expired_calls_canonical_service
+  /home/runner/workspace/app/blueprints/expiration/services.py:568: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    fifo_entry = InventoryHistory.query.get(entry_id)
+
+tests/test_expiration_canonicalization.py::TestExpirationCanonicalService::test_mark_product_expired_calls_canonical_service
+  /home/runner/workspace/app/blueprints/expiration/services.py:585: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    sku_entry = ProductSKUHistory.query.get(entry_id)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+========================================================== short test summary info ==========================================================
+FAILED tests/test_audit_canonicalization.py::test_products_routes_uses_canonical_audit - AssertionError: Expected 'record_audit_entry' to be called once. Called 0 times.
+FAILED tests/test_expiration_canonicalization.py::test_expiration_service_uses_canonical_adjustment - sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) NOT NULL constraint failed: inventory_history.quantity_change
+FAILED tests/test_expiration_canonicalization.py::TestExpirationCanonicalService::test_mark_fifo_expired_calls_canonical_service - AssertionError: Expected 'process_inventory_adjustment' to be called once. Called 0 times.
+FAILED tests/test_expiration_canonicalization.py::TestExpirationCanonicalService::test_mark_product_expired_calls_canonical_service - AssertionError: Expected 'process_inventory_adjustment' to be called once. Called 0 times.
+FAILED tests/test_inventory_fifo.py::TestInventoryFIFOCharacterization::test_fifo_deduction_order - TypeError: process_inventory_adjustment() got an unexpected keyword argument 'created_by'
+FAILED tests/test_inventory_fifo.py::TestInventoryFIFOCharacterization::test_inventory_adjustment_delegates_properly - TypeError: process_inventory_adjustment() got an unexpected keyword argument 'created_by'
+FAILED tests/test_inventory_routes_canonicalization.py::test_recount_adjustment_uses_canonical_service - AssertionError: Expected 'process_inventory_adjustment' to have been called once. Called 0 times.
+FAILED tests/test_inventory_routes_canonicalization.py::TestInventoryRoutesCanonicalService::test_adjust_inventory_initial_stock_calls_canonical_service - AssertionError: Expected 'process_inventory_adjustment' to be called once. Called 0 times.
+FAILED tests/test_pos_integration_canonicalization.py::test_pos_sale_uses_canonical_service - AttributeError: property 'quantity' of 'ProductSKU' object has no setter
+9 failed, 25 passed, 36 warnings in 31.17s
