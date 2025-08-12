@@ -13,5 +13,13 @@
     "business_type": "soap_making",
     "timestamp": "2025-08-09T06:35:13.193945",
     "source": "homepage"
+  },
+  {
+    "email": "Test2@hotmail.com",
+    "first_name": "test2",
+    "last_name": "test2",
+    "business_type": "cosmetics",
+    "timestamp": "2025-08-12T00:57:43.750850",
+    "source": "homepage"
   }
 ]
