@@ -134,7 +134,7 @@ def validate_inventory_fifo_sync(item_id, item_type=None):
 
 def process_inventory_adjustment(item_id, quantity, change_type, unit=None, notes=None, 
                                created_by=None, batch_id=None, custom_expiration_date=None, 
-                               item_type=None, **kwargs):
+                               item_type=None, cost_override=None, order_id=None, customer=None, sale_price=None, custom_shelf_life_days=None):
     """
     CANONICAL ENTRY POINT for all inventory adjustments.
 
@@ -151,6 +151,11 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
         batch_id: Associated Batch.id if applicable
         custom_expiration_date: Override expiration date
         item_type: Force item type routing ('ingredient', 'product', 'container')
+        cost_override: Override cost per unit for this adjustment
+        order_id: Associated Order.id if applicable (for reservations)
+        customer: Customer information (for reservations)
+        sale_price: Sale price per unit (for reservations)
+        custom_shelf_life_days: Override shelf life in days
 
     Returns:
         bool: True if adjustment succeeded, False otherwise
@@ -225,13 +230,17 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
         expiration_date = None
         shelf_life_to_use = None
 
-        if custom_expiration_date:
-            expiration_date = custom_expiration_date
+        is_perishable_override = custom_expiration_date is not None or custom_shelf_life_days is not None
+
+        if is_perishable_override:
+            if custom_expiration_date:
+                expiration_date = custom_expiration_date
+            elif custom_shelf_life_days:
+                expiration_date = ExpirationService.calculate_expiration_date(datetime.utcnow(), custom_shelf_life_days)
             shelf_life_to_use = custom_shelf_life_days
-        elif change_type == 'restock' and item.is_perishable and item.shelf_life_days:
-            expiration_date = ExpirationService.calculate_expiration_date(
-                datetime.utcnow(), item.shelf_life_days
-            )
+        elif item.is_perishable and item.shelf_life_days:
+            # Use ExpirationService to get proper expiration date considering batch hierarchy
+            expiration_date = ExpirationService.get_expiration_date_for_new_entry(item_id, batch_id)
             shelf_life_to_use = item.shelf_life_days
 
         # Handle cost calculations
@@ -246,6 +255,8 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
             if total_quantity > 0:
                 weighted_avg_cost = (current_value + new_value) / total_quantity
                 item.cost_per_unit = weighted_avg_cost
+            else: # If adding to zero quantity, use the new cost
+                item.cost_per_unit = cost_override or item.cost_per_unit
 
             cost_per_unit = cost_override or item.cost_per_unit
         elif cost_override is not None and change_type == 'cost_override':
@@ -313,30 +324,11 @@ def process_inventory_adjustment(item_id, quantity, change_type, unit=None, note
                 # Use FIFO service for all additions - it routes to the correct history table
                 # Handle expiration data
                 timestamp = datetime.utcnow()
-                # Handle expiration data using ExpirationService
-                expiration_date = None
-                is_perishable_override = custom_expiration_date is not None or custom_shelf_life_days is not None
-
-                if is_perishable_override:
-                    is_perishable = True
-                    if custom_expiration_date:
-                        expiration_date = custom_expiration_date
-                    elif custom_shelf_life_days:
-                        from app.blueprints.expiration.services import ExpirationService
-                        expiration_date = ExpirationService.calculate_expiration_date(timestamp, custom_shelf_life_days)
-                elif item.is_perishable and item.shelf_life_days:
-                    is_perishable = True
-                    # Use ExpirationService to get proper expiration date considering batch hierarchy
-                    from app.blueprints.expiration.services import ExpirationService
-                    batch_id = None  # Will be set if this is from a batch operation
-                    expiration_date = ExpirationService.get_expiration_date_for_new_entry(item_id, batch_id)
-                else:
-                    is_perishable = False
-
-                # Get the correct unit for history entry
+                
+                # Determine the correct unit for the history entry
                 history_unit = 'count' if getattr(item, 'type', None) == 'container' else item.unit
 
-                FIFOService.add_fifo_entry(
+                FIFOService._internal_add_fifo_entry(
                     inventory_item_id=item_id,
                     quantity=qty_change,
                     change_type=change_type,
@@ -512,7 +504,7 @@ def handle_recount_adjustment(item_id, target_quantity, notes=None, created_by=N
                         print(f"RECOUNT: Filled entry {entry.id} with {fill_amount} (from {old_remaining} to {entry.remaining_quantity})")
 
                         # Create a FIFO history entry for the positive recount addition
-                        FIFOService.add_fifo_entry(
+                        FIFOService._internal_add_fifo_entry(
                             inventory_item_id=item_id,
                             quantity=fill_amount,
                             change_type='recount',
@@ -525,7 +517,7 @@ def handle_recount_adjustment(item_id, target_quantity, notes=None, created_by=N
                 # Create new lot for any remaining quantity
                 if remaining_to_add > 0:
                     print(f"RECOUNT: Creating new lot for remaining {remaining_to_add}")
-                    FIFOService.add_fifo_entry(
+                    FIFOService._internal_add_fifo_entry(
                         inventory_item_id=item_id,
                         quantity=remaining_to_add,
                         change_type='recount',
@@ -540,7 +532,7 @@ def handle_recount_adjustment(item_id, target_quantity, notes=None, created_by=N
 
         # Don't create any summary entries - all recount events are handled by:
         # 1. FIFOService.create_deduction_history() for deductions (already creates proper FIFO entries)
-        # 2. FIFOService.add_fifo_entry() for new lots (already creates proper FIFO entries)
+        # 2. FIFOService._internal_add_fifo_entry() for new lots (already creates proper FIFO entries)
         # 3. Direct FIFO entry updates for filling existing lots
         #
         # No additional summary entries are needed as all actions are properly logged
