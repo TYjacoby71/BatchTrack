@@ -4,6 +4,7 @@ from sqlalchemy import and_, or_
 from typing import List, Dict, Optional, Tuple
 from flask_login import current_user
 import logging
+from app.services.inventory_adjustment import process_inventory_adjustment
 
 # Set logger to INFO level to reduce debug noise
 logger = logging.getLogger(__name__)
@@ -572,7 +573,7 @@ class ExpirationService:
 
                 # Use canonical inventory adjustment service for expired disposal
                 from app.services.inventory_adjustment import process_inventory_adjustment
-                
+
                 success = process_inventory_adjustment(
                     item_id=fifo_entry.inventory_item_id,
                     quantity=-abs(quantity_to_expire),
@@ -601,7 +602,7 @@ class ExpirationService:
 
                 # Use canonical inventory adjustment service for product expiration
                 from app.services.inventory_adjustment import process_inventory_adjustment
-                
+
                 success = process_inventory_adjustment(
                     item_id=history_entry.inventory_item_id,
                     quantity=-abs(quantity_to_expire),

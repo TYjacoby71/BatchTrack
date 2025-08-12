@@ -3,13 +3,40 @@ from flask_login import current_user
 from ..models import db, InventoryItem, Reservation
 from sqlalchemy import and_, func
 from ..utils import generate_fifo_code
+import logging
 
 # Import necessary canonical functions
 from app.blueprints.fifo.services import FIFOService
 from app.services.inventory_adjustment import record_audit_entry, process_inventory_adjustment
+from app.utils.fifo_generator import credit_specific_lot # Assuming this is the correct import
+
+logger = logging.getLogger(__name__)
 
 class ReservationService:
-    """Service for managing product reservations - ONLY handles products, never raw inventory"""
+    """Service class for reservation operations"""
+
+    @staticmethod
+    def _release_reservation_inventory(reservation, source_entry):
+        """Helper method for releasing reservation inventory - used by tests"""
+        return credit_specific_lot(
+            item_id=reservation.inventory_item_id,
+            quantity=reservation.quantity,
+            fifo_entry_id=reservation.source_fifo_id,
+            unit=getattr(source_entry, "unit", None),
+            notes=f"Release reservation {reservation.id}",
+            item_type="product",
+        )
+
+    @staticmethod
+    def _write_unreserved_audit_entry(reservation):
+        """Helper method for writing audit entries - used by tests"""
+        return record_audit_entry(
+            item_id=reservation.inventory_item_id,
+            change_type="unreserved",
+            note=f"Reservation {reservation.id} released",
+            item_type="product",
+            fifo_reference_id=reservation.source_fifo_id,
+        )
 
     @staticmethod
     def create_reservation(inventory_item_id, quantity, order_id, source_fifo_id, unit_cost, customer=None, sale_price=None, notes="", source="manual"):

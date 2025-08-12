@@ -1,12 +1,22 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
-from ...models import db, Product, ProductVariant, ProductSKU, ProductSKUHistory, InventoryItem
+from ...models import db, InventoryItem
+from ...models.product import Product, ProductVariant, ProductSKU, ProductSKUHistory
+from ...models.batch import Batch
+from ...utils.authorization import require_permission
 from ...services.product_service import ProductService
-from ...utils.unit_utils import get_global_unit_list
-from datetime import datetime
-from werkzeug.utils import secure_filename
-import os
-from app.services.inventory_adjustment import record_audit_entry
+from ...utils.fifo_generator import generate_fifo_code
+from ...services.inventory_adjustment import process_inventory_adjustment, record_audit_entry as _record_audit_entry
+import logging
+
+def _write_product_created_audit(sku):
+    """Wrapper for audit entry - used by tests"""
+    return _record_audit_entry(
+        item_id=sku.inventory_item_id,
+        change_type="product_created",
+        note=f"SKU {getattr(sku,'id',None)} created",
+        item_type="product",
+    )
 
 products_bp = Blueprint('products', __name__, url_prefix='/products')
 
@@ -257,6 +267,9 @@ def new_product():
             db.session.add(sku)
             db.session.commit()
 
+            # Call the audit wrapper
+            _write_product_created_audit(sku)
+
             flash('Product created successfully', 'success')
             return redirect(url_for('products.view_product', product_id=sku.inventory_item_id))
 
@@ -468,4 +481,3 @@ def delete_product(product_id):
 # Legacy adjust_sku route removed - use product_inventory routes instead
 
 # API routes moved to product_api.py for better organizationpython
-# Applying the requested changes to fix route references in products.py
