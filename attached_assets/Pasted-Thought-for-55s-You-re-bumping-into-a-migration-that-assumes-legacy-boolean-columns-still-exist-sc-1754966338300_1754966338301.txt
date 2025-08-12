@@ -1,0 +1,97 @@
+Thought for 55s
+You’re bumping into a migration that assumes legacy boolean columns still exist:
+
+scss
+Copy
+Edit
+requires_stripe_billing   (and likely requires_google_billing / requires_whop_billing)
+But earlier revisions already removed/renamed those, so when replace_billing_booleans_with_enums.py tries:
+
+sql
+Copy
+Edit
+UPDATE subscription_tier
+SET tier_type='paid', billing_provider='stripe'
+WHERE requires_stripe_billing = true
+SQLite throws “no such column”.
+
+Two safe ways to fix it—pick one.
+
+Option A (quick, robust): make the migration defensive
+Edit migrations/versions/replace_billing_booleans_with_enums.py so it:
+
+Adds the new columns if missing.
+
+Only runs the UPDATE ... WHERE requires_* statements if those legacy columns exist.
+
+Drops legacy columns only if they exist (use batch_alter_table for SQLite).
+
+Here’s a drop-in upgrade() you can paste (keep your revision / down_revision):
+
+python
+Copy
+Edit
+from alembic import op
+import sqlalchemy as sa
+from sqlalchemy import text
+
+def _cols(table):
+    bind = op.get_bind()
+    return {c["name"] for c in sa.inspect(bind).get_columns(table)}
+
+def upgrade():
+    bind = op.get_bind()
+    cols = _cols("subscription_tier")
+
+    # 1) Ensure new columns exist
+    if "tier_type" not in cols:
+        op.add_column("subscription_tier", sa.Column("tier_type", sa.String(32), nullable=True))
+    if "billing_provider" not in cols:
+        op.add_column("subscription_tier", sa.Column("billing_provider", sa.String(32), nullable=True))
+
+    # 2) Migrate data only if legacy booleans still exist
+    legacy = {"requires_stripe_billing", "requires_google_billing", "requires_whop_billing"} & cols
+    if legacy:
+        bind.execute(text("""
+            UPDATE subscription_tier
+            SET
+              tier_type = CASE
+                WHEN COALESCE(requires_stripe_billing, 0)=1
+                  OR COALESCE(requires_google_billing, 0)=1
+                  OR COALESCE(requires_whop_billing, 0)=1
+                THEN 'paid' ELSE 'free' END,
+              billing_provider = CASE
+                WHEN COALESCE(requires_stripe_billing, 0)=1 THEN 'stripe'
+                WHEN COALESCE(requires_google_billing, 0)=1 THEN 'google'
+                WHEN COALESCE(requires_whop_billing, 0)=1 THEN 'whop'
+                ELSE NULL END
+        """))
+
+        # 3) Drop legacy columns if present (SQLite-safe)
+        with op.batch_alter_table("subscription_tier") as batch:
+            for c in ("requires_stripe_billing", "requires_google_billing", "requires_whop_billing"):
+                if c in cols:
+                    try:
+                        batch.drop_column(c)
+                    except Exception:
+                        pass
+    else:
+        # Legacy columns already gone; set a safe default if still NULL
+        bind.execute(text("UPDATE subscription_tier SET tier_type = COALESCE(tier_type, 'free')"))
+You can leave downgrade() as-is or make it a no-op.
+
+Push and re-run CI. This keeps the chain compatible with both “legacy booleans present” and “already removed” states.
+
+Option B (clean chain): reorder this migration earlier
+If you’re comfortable editing migration links (and you don’t have a live DB depending on the old order), change this file’s down_revision so it runs before the revisions that drop/rename the boolean columns (e.g., before simplify subscription tier model - remove billing fields). Then reset DB in CI. This is tidier historically, but riskier if any environment has already applied the old order.
+
+Sanity checks after patch
+Run these locally or let CI run them:
+
+Initialize DB from empty (your job already does this).
+
+alembic heads → single head.
+
+Optional drift gate: autogenerate should be empty.
+
+If you paste the top of replace_billing_booleans_with_enums.py (its revision and down_revision) and the filenames of the two “remove billing fields” migrations, I can tell you the exact down_revision to use for Option B.
