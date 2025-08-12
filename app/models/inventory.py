@@ -3,6 +3,7 @@ from flask_login import current_user
 from ..extensions import db
 from .mixins import ScopedModelMixin
 from ..utils.timezone_utils import TimezoneUtils
+from sqlalchemy import event
 
 class InventoryItem(ScopedModelMixin, db.Model):
     """Ingredients and raw materials"""
@@ -104,11 +105,30 @@ class InventoryHistory(ScopedModelMixin, db.Model):
     is_perishable = db.Column(db.Boolean, default=False)
     shelf_life_days = db.Column(db.Integer, nullable=True)
     expiration_date = db.Column(db.DateTime, nullable=True)
+    # Organization relationship
+    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)
+
     # Relationships
     inventory_item = db.relationship('InventoryItem', backref='history')
     batch = db.relationship('Batch', foreign_keys=[batch_id])
     used_for_batch = db.relationship('Batch', foreign_keys=[used_for_batch_id])
     user = db.relationship('User')
+
+    def __repr__(self):
+        return f'<InventoryHistory {self.id}: {self.change_type} {self.quantity_change} {self.unit}>'
+
+
+@event.listens_for(InventoryHistory, "before_insert")
+def _set_org_on_history(mapper, connection, target):
+    if getattr(target, "organization_id", None) is None and target.inventory_item_id:
+        inv_tbl = InventoryItem.__table__
+        row = connection.execute(
+            inv_tbl.select()
+                   .with_only_columns(inv_tbl.c.organization_id)
+                   .where(inv_tbl.c.id == target.inventory_item_id)
+        ).first()
+        if row:
+            target.organization_id = row[0]
 
 class BatchInventoryLog(ScopedModelMixin, db.Model):
     """Log batch impacts on inventory for debugging"""
