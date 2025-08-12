@@ -202,31 +202,7 @@ def process_inventory_adjustment(
     item_type: str | None = None,
     **_
 ) -> bool:
-    """
-    CANONICAL ENTRY POINT for all inventory adjustments.
-
-    This function ensures consistent processing of all inventory changes
-    including FIFO ordering, organization scoping, and audit trails.
-
-    Args:
-        item_id: InventoryItem.id to adjust
-        quantity: Amount to adjust (positive=add, negative=deduct)
-        change_type: Type of change ('batch_production', 'restock', etc.)
-        unit: Unit of measurement (optional, uses item default)
-        notes: Description of the change
-        created_by: User.id making the change
-        batch_id: Associated Batch.id if applicable
-        custom_expiration_date: Override expiration date
-        item_type: Force item type routing ('ingredient', 'product', 'container')
-        cost_override: Override cost per unit for this adjustment
-        order_id: Associated Order.id if applicable (for reservations)
-        customer: Customer information (for reservations)
-        sale_price: Sale price per unit (for reservations)
-        custom_shelf_life_days: Override shelf life in days
-
-    Returns:
-        bool: True if adjustment succeeded, False otherwise
-    """
+    """Process inventory adjustment using canonical service"""
     import inspect
 
     # Log canonical entry point usage for audit
@@ -264,12 +240,16 @@ def process_inventory_adjustment(
             if item.organization_id != current_user.organization_id:
                 raise ValueError("Access denied: Item does not belong to your organization")
 
-        # Convert units if needed (except for containers and products)
-        if item_type != 'product' and getattr(item, 'type', None) != 'container' and unit != item.unit:
+        # Add unit fallback for when unit is None
+        if unit is None:
+            unit = getattr(item, "unit", None)
+
+        # Convert units if needed
+        if item_type != "product" and getattr(item, "type", None) != "container" and unit and unit != item.unit:
             conversion = safe_convert(quantity, unit, item.unit, ingredient_id=item.id)
-            if not conversion['ok']:
-                raise ValueError(conversion['error'])
-            quantity = conversion['result']['converted_value']
+            if not conversion["ok"]:
+                raise ValueError(conversion["error"])
+            quantity = conversion["value"]
 
         # Determine quantity change and special handling
         current_quantity = item.quantity

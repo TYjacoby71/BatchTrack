@@ -65,7 +65,7 @@ class InventoryItem(ScopedModelMixin, db.Model):
 
         return max(0, self.quantity - expired_total)
 
-    @property 
+    @property
     def expired_quantity(self):
         """Get expired quantity awaiting physical removal"""
         if not self.is_perishable:

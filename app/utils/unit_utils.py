@@ -2,6 +2,14 @@ from ..models import Unit
 import logging
 from logging.handlers import RotatingFileHandler
 import os
+from typing import Dict, List, Optional, Tuple, Union
+from dataclasses import dataclass
+
+@dataclass(frozen=True)
+class FallbackUnit:
+    name: str
+    aliases: tuple[str, ...] = ()
+    to_base_multiplier: float = 1.0
 
 # Set up logger for this module
 logger = logging.getLogger(__name__)
@@ -62,12 +70,12 @@ def get_global_unit_list():
             logger.warning("No units found, creating fallback units")
             # Create fallback units if none exist
             fallback_units = [
-                FallbackUnit('oz', 'oz', 'weight'),
-                FallbackUnit('g', 'g', 'weight'),
-                FallbackUnit('lb', 'lb', 'weight'),
-                FallbackUnit('ml', 'ml', 'volume'),
-                FallbackUnit('fl oz', 'fl oz', 'volume'),
-                FallbackUnit('count', 'count', 'count')
+                FallbackUnit('oz', ('oz',), 1.0),
+                FallbackUnit('g', ('g',), 1.0),
+                FallbackUnit('lb', ('lb',), 1.0),
+                FallbackUnit('ml', ('ml',), 1.0),
+                FallbackUnit('fl oz', ('fl oz',), 1.0),
+                FallbackUnit('count', ('count',), 1.0)
             ]
             return fallback_units
 
@@ -76,16 +84,16 @@ def get_global_unit_list():
     except Exception as e:
         logger.error(f"Error getting global unit list: {e}")
         # Create fallback unit objects
-        class FallbackUnit:
+        class FallbackUnitLocal: # Renamed to avoid conflict with the dataclass
             def __init__(self, symbol, name, unit_type):
                 self.symbol = symbol
                 self.name = name
                 self.type = unit_type
 
         return [
-            FallbackUnit('g', 'gram', 'weight'),
-            FallbackUnit('ml', 'milliliter', 'volume'),
-            FallbackUnit('count', 'count', 'quantity')
+            FallbackUnitLocal('g', 'gram', 'weight'),
+            FallbackUnitLocal('ml', 'milliliter', 'volume'),
+            FallbackUnitLocal('count', 'count', 'quantity')
         ]
 
 def validate_density_requirements(from_unit, to_unit, ingredient=None):

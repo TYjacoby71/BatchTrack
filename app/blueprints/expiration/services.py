@@ -554,7 +554,7 @@ class ExpirationService:
                     notes=f"Expired lot disposal #{entry_id}: {notes}",
                     created_by=current_user.id if getattr(current_user, "is_authenticated", False) else None,
                 )
-                return result, "ok"
+                return result, "Successfully marked FIFO entry as expired"
 
             elif kind == "product":
                 entry = ProductSKUHistory.query.get(entry_id)
@@ -570,7 +570,7 @@ class ExpirationService:
                     created_by=current_user.id if getattr(current_user, "is_authenticated", False) else None,
                     item_type="product",
                 )
-                return result, "ok"
+                return result, "Successfully marked product FIFO entry as expired"
 
             return False, "Invalid expiration type"
 
