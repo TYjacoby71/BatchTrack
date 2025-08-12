@@ -216,7 +216,7 @@ class ProductSKU(db.Model, ScopedModelMixin):
         # Sum all quantity changes for this SKU
         total = db.session.query(func.sum(ProductSKUHistory.quantity_change)).filter(
             ProductSKUHistory.inventory_item_id == self.inventory_item_id,
-            ProductSKUHistory.product_sku_id == self.id
+            ProductSKUHistory.sku_id == self.id
         ).scalar()
 
         return float(total) if total else 0.0

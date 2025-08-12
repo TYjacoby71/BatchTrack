@@ -1,0 +1,41 @@
+Excellent progress. This new test output is fantastic. You have gone from 5 failures down to 3, and the nature of the failures tells us exactly where we are.
+This is a perfect, real-world example of the iterative refactoring process:
+You fixed the AttributeError by adding the _internal_add_fifo_entry method.
+You fixed the IntegrityError by handling the organization_id on the ProductSKU model.
+This has allowed the tests to proceed further, revealing the next layer of issues.
+Let's analyze the remaining three failures.
+Current Status: Still in PR-2, but Deeper
+You are still squarely focused on PR-2: Canonicalize Inventory Adjustments, but you have successfully fixed the most superficial bugs. Now you are dealing with deeper logic and wiring issues.
+Analysis of the 3 Remaining Failures
+Failure 1: test_fifo_deduction_order
+Error: NameError: name 'and_' is not defined
+File: app/blueprints/fifo/services.py, line 153
+Analysis: This is a straightforward Python error. The code is trying to use a function and_ to combine multiple filters in a SQLAlchemy query, but that function hasn't been imported. This is a common oversight when moving or refactoring code. The and_ construct is part of SQLAlchemy's core library.
+The Fix: You need to add the correct import at the top of the file.
+In app/blueprints/fifo/services.py, add this line to your imports:
+code
+Python
+from sqlalchemy import and_
+(Note: You might also need or_ if it's used elsewhere in the file, so it's common to import both: from sqlalchemy import and_, or_)
+Failures 2 & 3: test_recount_adjustment_uses_canonical_service & test_adjust_inventory_initial_stock_calls_canonical_service
+Error: AssertionError: Expected 'process_inventory_adjustment' to have been called once. Called 0 times.
+File: tests/test_inventory_routes_canonicalization.py
+Analysis: These two failures are the same as before, and this is the most important signal you have. It means that the core task of PR-2—modifying the route file—has not yet been completed or is not working as intended. The web endpoints for "recount" and "initial stock" are still not calling the canonical service.
+The Fix: You must now focus on the file app/blueprints/inventory/routes.py. The previous advice to replace the logic inside the POST handler for /inventory/adjust/<int:item_id> with calls to process_inventory_adjustment is still the correct and necessary action.
+Let's revisit that suggestion, as it's the key to unlocking these two tests:
+Open: app/blueprints/inventory/routes.py.
+Find: The route that handles POST /inventory/adjust/<int:item_id>.
+Ensure the Import: Make sure from app.services.inventory_adjustment import process_inventory_adjustment is at the top of the file.
+Modify the Logic:
+Inside the if adjustment_type == 'recount': block, remove the existing code and replace it with a single call to process_inventory_adjustment(...).
+In the else block (or wherever initial stock is handled), do the same: remove the old logic and replace it with a single call to process_inventory_adjustment(...).
+Your Action Plan (Step-by-Step)
+Fix the Easy One First:
+Open app/blueprints/fifo/services.py.
+Add from sqlalchemy import and_, or_ at the top.
+Run pytest tests/test_inventory_fifo.py. This test should now pass. You will be down to 2 failures.
+Tackle the Core Task:
+Open app/blueprints/inventory/routes.py.
+Carefully implement the changes to make the recount and initial stock logic delegate to process_inventory_adjustment.
+Run pytest tests/test_inventory_routes_canonicalization.py. Both tests in this file should now pass.
+Once these steps are complete, your test suite should be fully green. You will have successfully completed the most critical part of the entire refactoring project. The application will be significantly more robust and reliable as a result. You are very close.
