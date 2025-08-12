@@ -553,66 +553,64 @@ class ExpirationService:
                 logger.error("mark_as_expired called outside app context")
                 return False, "App context required"
 
-            from flask_login import current_user
             from app.services.inventory_adjustment import process_inventory_adjustment
             from app.models import db
 
-            if not current_user.is_authenticated:
+            if not getattr(current_user, "is_authenticated", False):
                 logger.error("mark_as_expired called without authenticated user")
                 return False, "Authentication required"
 
+            # Get user for audit trail
+            user_id = getattr(current_user, "id", None) if getattr(current_user, "is_authenticated", False) else None
+
             if entry_type == 'fifo':
                 from app.models.inventory import InventoryHistory
-                entry = InventoryHistory.query.get(entry_id)
-                if not entry:
+                fifo_entry = InventoryHistory.query.get(entry_id)
+                if not fifo_entry:
                     return False, "FIFO entry not found"
 
-                expire_qty = quantity if quantity is not None else entry.remaining_quantity
-                notes_text = f"Expired lot disposal #{entry_id}: {notes or 'Marked as expired'}"
-
-                # Use canonical inventory adjustment service
+                # Call canonical inventory adjustment service
                 success = process_inventory_adjustment(
-                    item_id=entry.inventory_item_id,
-                    quantity=-expire_qty,  # Negative for disposal
+                    item_id=fifo_entry.inventory_item_id,
+                    quantity=-(quantity or fifo_entry.remaining_quantity),
                     change_type="spoil",
-                    unit=entry.unit,
-                    notes=notes_text,
-                    created_by=current_user.id
+                    unit=fifo_entry.unit,
+                    notes=f"Expired lot disposal #{entry_id}: {notes or ''}".strip(),
+                    created_by=user_id
                 )
+                message = f"Marked FIFO entry #{entry_id} as expired" if success else "Failed to mark FIFO entry as expired"
 
             elif entry_type == 'product':
                 from app.models.product import ProductSKUHistory
-                entry = ProductSKUHistory.query.get(entry_id)
-                if not entry:
+                sku_entry = ProductSKUHistory.query.get(entry_id)
+                if not sku_entry:
                     return False, "Product entry not found"
 
-                expire_qty = quantity if quantity is not None else entry.remaining_quantity
-                notes_text = f"Expired product lot disposal #{entry_id}: {notes or 'Product marked as expired'}"
-
-                # Use canonical inventory adjustment service
+                # Call canonical inventory adjustment service
                 success = process_inventory_adjustment(
-                    item_id=entry.inventory_item_id,
-                    quantity=-expire_qty,  # Negative for disposal
+                    item_id=sku_entry.inventory_item_id,
+                    quantity=-(quantity or sku_entry.remaining_quantity),
                     change_type="spoil",
-                    unit=entry.unit,
-                    notes=notes_text,
-                    created_by=current_user.id,
-                    item_type='product'
+                    unit=sku_entry.unit,
+                    notes=f"Expired product lot disposal #{entry_id}: {notes or ''}".strip(),
+                    created_by=user_id,
+                    item_type="product"
                 )
+                message = f"Marked product SKU #{entry_id} as expired" if success else "Failed to mark product SKU as expired"
             else:
                 return False, "Invalid entry type"
 
             if success:
-                logger.info(f"Marked {expire_qty} units as expired for {entry_type} entry {entry_id}")
-                return True, f"Successfully marked {expire_qty} units as expired"
+                logger.info(f"Marked {quantity or 'all remaining'} units as expired for {entry_type} entry {entry_id}")
+                return True, message
             else:
-                return False, "Failed to process expiration adjustment"
+                return False, message
 
         except Exception as e:
             if has_app_context():
                 from app.models import db
                 db.session.rollback()
-            logger.error(f"Expiration mark failed: {e}")
+            logger.error(f"Expiration mark failed for entry {entry_id} of type {entry_type}: {e}")
             return False, "Error marking as expired"
 
     @staticmethod

@@ -35,7 +35,7 @@ class InventoryItem(ScopedModelMixin, db.Model):
     intermediate = db.Column(db.Boolean, default=False)
 
     # Organization relationship
-    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=False)
+    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)
     organization = db.relationship('Organization', backref='inventory_items')
 
     category = db.relationship('IngredientCategory', backref='inventory_items')

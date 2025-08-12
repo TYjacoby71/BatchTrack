@@ -3,6 +3,8 @@ from flask_login import current_user
 from ..extensions import db
 from .mixins import ScopedModelMixin
 from ..utils.timezone_utils import TimezoneUtils
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import validates, synonym
 
 class Product(ScopedModelMixin, db.Model):
     """Main Product model - represents the parent product"""
@@ -90,9 +92,14 @@ class ProductVariant(ScopedModelMixin, db.Model):
     def __repr__(self):
         return f'<ProductVariant {self.product.name} - {self.name}>'
 
-class ProductSKU(ScopedModelMixin, db.Model):
+class ProductSKU(db.Model, ScopedModelMixin):
     """Product SKU model - represents sellable units of inventory"""
     __tablename__ = 'product_sku'
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    # Add name synonym for test compatibility
+    name = synonym("sku")
 
     # INVENTORY ITEM REFERENCE - unified inventory control (PRIMARY KEY)
     inventory_item_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'), primary_key=True)
@@ -101,7 +108,7 @@ class ProductSKU(ScopedModelMixin, db.Model):
     product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=False)
     variant_id = db.Column(db.Integer, db.ForeignKey('product_variant.id'), nullable=False)
     size_label = db.Column(db.String(64), nullable=False, default='Bulk')
-    sku_code = db.Column(db.String(64), unique=True, nullable=False)
+    sku = db.Column(db.String(64), unique=True, nullable=False) # Renamed from sku_code to sku
     sku_name = db.Column(db.String(128), nullable=True)
 
     # LEGACY FIELDS FOR COMPATIBILITY (will be calculated from inventory_item)

@@ -6,6 +6,7 @@ from ...models.reservation import Reservation
 from ...services.pos_integration import POSIntegrationService
 from app.services.inventory_adjustment import record_audit_entry as _record_audit_entry
 import logging
+import app.services.inventory_adjustment as inv_adj
 
 # This function is intended for test usage and has a different signature.
 # The API usage is handled by the second _write_unreserved_audit function below.
@@ -20,13 +21,11 @@ def _write_unreserved_audit(reservation):
     )
 
 # This is the helper function for API audit entries and its signature is corrected.
-def _write_unreserved_audit(item_id, unit, notes):
-    """Wrapper for audit entry - used by tests"""
-    return _record_audit_entry(
+def _write_unreserved_audit(item_id, unit=None, notes=None):
+    inv_adj.record_audit_entry(
         item_id=item_id,
-        quantity=0,  # No quantity change for audit entry
         change_type="unreserved_audit",
-        notes=f"Unreserved via API: {notes}"
+        notes=f"Unreserved via API: {notes}" if notes else "Unreserved via API"
     )
 
 logger = logging.getLogger(__name__)

@@ -12,22 +12,22 @@ except ImportError:
         def _wrap(f): return f
         return _wrap
 
-def _write_product_created_audit(product_id=None, notes=""):
-    """Helper for product audit entries"""
-    from ...services.inventory_adjustment import record_audit_entry
-    return record_audit_entry(
-        item_id=product_id or 0,
-        quantity=0,
+# Helper for product audit entries, now using canonical service
+import app.services.inventory_adjustment as inv_adj
+
+def _write_product_created_audit(variant):
+    inv_adj.record_audit_entry(
+        item_id=variant.id,
         change_type="product_created",
-        notes=notes
+        notes=f"Product variant created: {getattr(variant, 'name', '')}"
     )
+
 from ...services.product_service import ProductService
 from ...utils.fifo_generator import generate_fifo_code
 from ...services.inventory_adjustment import process_inventory_adjustment, record_audit_entry as _record_audit_entry
-import logging
 
+# Wrapper for audit entry - used by tests
 def _write_product_created_audit(sku):
-    """Wrapper for audit entry - used by tests"""
     return _record_audit_entry(
         item_id=sku.inventory_item_id,
         quantity=0,  # No quantity change for audit entry
