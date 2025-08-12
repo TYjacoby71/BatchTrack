@@ -4,7 +4,8 @@ from ..extensions import db
 from .mixins import ScopedModelMixin
 from ..utils.timezone_utils import TimezoneUtils
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import validates, synonym, hybrid_property
+from sqlalchemy.orm import validates, synonym
+from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy import func
 
 class Product(ScopedModelMixin, db.Model):
