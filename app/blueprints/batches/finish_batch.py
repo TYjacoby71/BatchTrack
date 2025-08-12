@@ -134,7 +134,7 @@ def _create_intermediate_ingredient(batch, final_quantity, output_unit, expirati
             inventory_item.is_perishable = True
             inventory_item.shelf_life_days = batch.shelf_life_days
 
-        # Process inventory adjustment to add the intermediate ingredient
+        # Process inventory adjustment through CANONICAL entry point
         success = process_inventory_adjustment(
             item_id=inventory_item.id,
             quantity=final_quantity,
@@ -143,16 +143,16 @@ def _create_intermediate_ingredient(batch, final_quantity, output_unit, expirati
             notes=f'Batch {batch.label_code} completed',
             created_by=current_user.id,
             custom_expiration_date=expiration_date,
-            item_type='ingredient'  # Ensure proper FIFO routing for intermediate ingredients
+            batch_id=batch.id  # Add batch traceability
         )
 
         if not success:
-            raise ValueError(f"Failed to add intermediate ingredient inventory")
+            raise ValueError(f"Failed to add intermediate ingredient inventory via canonical service")
 
-        logger.info(f"Created intermediate ingredient: {ingredient_name}, quantity: {final_quantity} {output_unit}")
+        logger.info(f"Created intermediate ingredient via canonical service: {ingredient_name}, quantity: {final_quantity} {output_unit}")
 
     except Exception as e:
-        logger.error(f"Error creating intermediate ingredient: {str(e)}")
+        logger.error(f"Error creating intermediate ingredient via canonical service: {str(e)}")
         raise
 
 

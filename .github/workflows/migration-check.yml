@@ -1,0 +1,56 @@
+
+name: Migration Safety Check
+on: [push, pull_request]
+
+jobs:
+  migration-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: 
+          python-version: "3.11"
+          
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          
+      - name: Check for migration drift
+        run: |
+          # Initialize empty database
+          export DATABASE_URL="sqlite:///test_migrations.db"
+          flask db upgrade
+          
+          # Generate migrations from current models
+          flask db migrate -m "test_migration_check" --rev-id test_check
+          
+          # Check if any changes were generated
+          if grep -q "def upgrade" migrations/versions/*test_check*.py; then
+            echo "❌ Migration drift detected! Models don't match migrations."
+            echo "Run 'flask db migrate' and commit the result."
+            exit 1
+          else
+            echo "✅ No migration drift detected."
+          fi
+          
+          # Cleanup
+          rm -f test_migrations.db
+          rm -f migrations/versions/*test_check*.py
+          
+      - name: Check for multiple heads
+        run: |
+          export DATABASE_URL="sqlite:///test_heads.db" 
+          flask db upgrade
+          
+          # Check for multiple heads
+          heads_count=$(flask db heads | wc -l)
+          if [ "$heads_count" -gt 1 ]; then
+            echo "❌ Multiple migration heads detected!"
+            flask db heads
+            exit 1
+          else
+            echo "✅ Single migration head confirmed."
+          fi
+          
+          rm -f test_heads.db

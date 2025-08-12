@@ -1,6 +1,15 @@
 """
-FIFO Service - First In, First Out inventory management
-DEPRECATED: Use app.services.inventory_adjustment instead
+INTERNAL FIFO SERVICE - DO NOT IMPORT DIRECTLY
+==============================================
+
+⚠️  DEPRECATED FOR EXTERNAL USE ⚠️
+
+This module is INTERNAL to app.services.inventory_adjustment only.
+External code must NOT import from here directly.
+
+Use app.services.inventory_adjustment.process_inventory_adjustment() instead.
+
+This service is kept for backward compatibility and internal FIFO logic only.
 """
 
 import logging
@@ -13,8 +22,8 @@ from app.models.models import User
 # FifoInventoryGenerator removed - using generate_fifo_code directly
 from app.utils.timezone_utils import TimezoneUtils
 
-# Temporary compatibility shim for imports
-__all__ = ['FIFOService']
+# INTERNAL USE ONLY - do not import externally
+__all__ = []  # No public exports - use inventory_adjustment service
 
 class FIFOService:
     """TEMP compatibility shim - use process_inventory_adjustment instead"""
