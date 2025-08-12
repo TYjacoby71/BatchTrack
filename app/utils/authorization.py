@@ -8,6 +8,7 @@ Authorization system following industry standard practices:
 5. Other users get permissions based on their assigned roles
 """
 
+import logging
 from flask_login import current_user
 from flask import session, current_app, g, request, jsonify
 
