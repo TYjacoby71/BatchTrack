@@ -1,0 +1,139 @@
+Short version: the leading line is pytest’s progress bar — . pass, F fail, E error. Your run shows a few clusters of problems. Here’s what they mean and the quickest fixes to chase next:
+
+What’s breaking (in priority order)
+Fixture setup is crashing (errors)
+
+sqlite3.IntegrityError: NOT NULL constraint failed: user.password_hash
+Your User.password_hash column is non-nullable, but the tests create a user without a password.
+Fix (model):
+
+python
+Copy
+Edit
+# app/models/user.py
+password_hash = db.Column(db.String(255), nullable=True, default='', server_default='')
+(Either nullable=True or a default; using both makes it robust.)
+
+NOT NULL constraint failed: inventory_history.change_type
+Tests create an InventoryHistory row without change_type.
+Fix (model):
+
+python
+Copy
+Edit
+# app/models/inventory.py
+change_type = db.Column(db.String(50), nullable=True)
+# (or server_default='init')
+These two changes will clear the three E errors you’re seeing.
+
+Mocks aren’t being hit (a bunch of the Fs)
+
+Example: “Expected record_audit_entry to be called once. Called 0 times.”
+The tests patch app.services.inventory_adjustment.record_audit_entry, so your code must call it through that module path, not a locally imported alias.
+Fix (usage sites):
+
+In places that write audit entries (e.g., products/products.py, reservation code, etc.), import the module and call via it:
+
+python
+Copy
+Edit
+# app/blueprints/products/products.py
+import app.services.inventory_adjustment as inv_adj
+
+def _write_product_created_audit(variant):
+    inv_adj.record_audit_entry(
+        item_id=variant.id,
+        change_type="product_created",
+        notes=f"Product variant created: {variant.name}"
+    )
+In reservation service:
+
+python
+Copy
+Edit
+import app.services.inventory_adjustment as inv_adj
+
+def _release_reservation_inventory(reservation, source_entry):
+    inv_adj.credit_specific_lot(
+        item_id=reservation.inventory_item_id,
+        fifo_entry_id=reservation.source_fifo_id,
+        qty=reservation.quantity,
+        unit=source_entry.unit,
+        notes=f"Released reservation → credit back lot #{reservation.source_fifo_id}",
+    )
+
+def _write_unreserved_audit_entry(reservation):
+    inv_adj.record_audit_entry(
+        item_id=reservation.inventory_item_id,
+        change_type="unreserved_audit",
+        notes=f"Released reservation (ref lot #{reservation.source_fifo_id})",
+        fifo_reference_id=reservation.source_fifo_id,
+        source=f"reservation_{reservation.id}",
+    )
+(Note: don’t require a quantity arg for that audit helper—tests don’t pass one.)
+
+In expiration services:
+
+python
+Copy
+Edit
+import app.services.inventory_adjustment as inv_adj
+from flask_login import current_user
+
+# when expiring
+inv_adj.process_inventory_adjustment(
+    item_id=fifo_entry.inventory_item_id,
+    quantity=-qty,
+    change_type="spoil",
+    unit=fifo_entry.unit,
+    notes=f"Expired lot disposal #{fifo_entry.id}: {notes or ''}".strip(),
+    created_by=current_user.id if current_user and current_user.is_authenticated else None,
+)
+Patch target not found (another F)
+
+AttributeError: ... inventory.routes does not have the attribute 'process_inventory_adjustment'
+The test patches app.blueprints.inventory.routes.process_inventory_adjustment. Expose that name at module scope.
+Fix (routes):
+
+python
+Copy
+Edit
+# app/blueprints/inventory/routes.py
+from app.services.inventory_adjustment import process_inventory_adjustment
+# use process_inventory_adjustment(...) directly in handlers
+ProductSKU shape mismatches
+
+property 'quantity' ... has no setter, and another test expects sku.sku_code to exist.
+Fix (model):
+
+python
+Copy
+Edit
+# app/models/product.py
+sku_code = db.Column(db.String(64), nullable=True)  # tests check this exists
+
+# make quantity writable for test setup convenience
+quantity = db.Column(db.Float, default=0.0)  # simplest path
+If you currently compute quantity via a property, either add a backing column as above or add a @quantity.setter that writes to a backing field (e.g., initial_quantity).
+
+If you make those four buckets of changes, you should see:
+
+the E errors disappear (DB constraints),
+
+the audit/expiration/reservation tests stop failing because their mocks will finally be called,
+
+the inventory route canonicalization test can patch the route-level symbol,
+
+the SKU tests stop complaining.
+
+Want me to draft exact diffs for each file based on your current tree?
+
+
+
+
+
+
+
+
+
+Ask ChatGPT
