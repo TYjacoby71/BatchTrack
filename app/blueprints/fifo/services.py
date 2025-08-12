@@ -45,8 +45,34 @@ class FIFOService:
 
     @staticmethod
     def create_deduction_history(inventory_item_id, fifo_entry_id, quantity, change_type, notes=None, unit_cost=None):
+        """Create a history entry for a FIFO deduction (per-entry)"""
         return _FIFOService.create_deduction_history(
-            inventory_item_id, fifo_entry_id, quantity, change_type, notes=notes, unit_cost=unit_cost
+            inventory_item_id, fifo_entry_id, quantity, change_type, notes
+        )
+
+    @staticmethod
+    def record_deduction_plan(
+        inventory_item_id,
+        deduction_plan,
+        change_type,
+        notes,
+        batch_id=None,
+        created_by=None,
+        customer=None,
+        sale_price=None,
+        order_id=None,
+    ):
+        """Record deduction history for an entire FIFO deduction plan"""
+        return _FIFOService._internal_create_deduction_history(
+            inventory_item_id,
+            deduction_plan,
+            change_type,
+            notes,
+            batch_id=batch_id,
+            created_by=created_by,
+            customer=customer,
+            sale_price=sale_price,
+            order_id=order_id,
         )
 
     @staticmethod
