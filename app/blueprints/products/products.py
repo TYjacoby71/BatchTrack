@@ -35,21 +35,14 @@ def create_product_from_data(data):
         db.session.add(product)
         db.session.flush()
 
-        # Create initial history entry
-        history = InventoryHistory(
-            inventory_item_id=product.id,
-            change_type='restock',
-            quantity_change=0,
-            remaining_quantity=0,
-            unit=product.unit,
-            unit_cost=0,
-            note='Initial product creation' + (' via quick add' if data.get('quick_add') else ''),
-            created_by=current_user.id if current_user else None,
-            quantity_used=0,
-            is_perishable=False,
-            organization_id=organization_id
+        # Create initial audit entry using canonical service
+        from app.services.inventory_adjustment import record_audit_entry
+        record_audit_entry(
+            item_id=product.id,
+            change_type='product_creation',
+            notes='Initial product creation' + (' via quick add' if data.get('quick_add') else ''),
+            unit=product.unit
         )
-        db.session.add(history)
         db.session.commit()
 
         return {
