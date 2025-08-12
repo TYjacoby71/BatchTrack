@@ -1,4 +1,3 @@
-
 # app/models/models.py
 # Canonical re-exports for tests/legacy imports. Safe, no-crash imports.
 import importlib
@@ -20,19 +19,19 @@ _export([
     ("inventory", "InventoryHistory", "FIFOLot"),     # alias InventoryHistory as FIFOLot
     ("inventory", "InventoryHistory", None),
     ("inventory", "BatchInventoryLog", None),
-    
+
     # Create Ingredient alias to InventoryItem (common pattern)
     ("inventory", "InventoryItem", "Ingredient"),
-    
+
     # Products
     ("product", "Product", None),
     ("product", "ProductSKU", None),
-    
+
     # Auth/Org/ACL - these are defined in this file below
     ("subscription_tier", "SubscriptionTier", None),
     ("permission", "Permission", None),
     ("role", "Role", None),
-    
+
     # Recipes and Batches
     ("recipe", "Recipe", None),
     ("recipe", "RecipeIngredient", None),
@@ -42,7 +41,7 @@ _export([
     ("batch", "ExtraBatchContainer", None),
     ("batch", "BatchTimer", None),
     ("batch", "ExtraBatchIngredient", None),
-    
+
     # Units and Categories
     ("unit", "Unit", None),
     ("unit", "CustomUnitMapping", None),
@@ -251,6 +250,9 @@ class User(UserMixin, db.Model):
     deleted_at = db.Column(db.DateTime, nullable=True)
     deleted_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     is_deleted = db.Column(db.Boolean, default=False)
+
+    # Legacy compatibility field for tests
+    is_verified = db.Column(db.Boolean, nullable=False, default=False)
 
     def set_password(self, password):
         from werkzeug.security import generate_password_hash
