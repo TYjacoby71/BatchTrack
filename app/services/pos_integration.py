@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Tuple
 from flask import current_app

@@ -7,8 +7,7 @@ import logging
 
 # Import necessary canonical functions
 from app.blueprints.fifo.services import FIFOService
-from app.services.inventory_adjustment import record_audit_entry, process_inventory_adjustment
-from app.utils.fifo_generator import credit_specific_lot # Assuming this is the correct import
+from .inventory_adjustment import credit_specific_lot, record_audit_entry, process_inventory_adjustment
 
 logger = logging.getLogger(__name__)
 
@@ -17,25 +16,29 @@ class ReservationService:
 
     @staticmethod
     def _release_reservation_inventory(reservation, source_entry):
-        """Helper method for releasing reservation inventory - used by tests"""
+        """
+        Delegate to the canonical credit_specific_lot helper instead of writing remaining_quantity directly.
+        """
         return credit_specific_lot(
-            item_id=reservation.inventory_item_id,
-            quantity=reservation.quantity,
+            inventory_item_id=reservation.inventory_item_id,
             fifo_entry_id=reservation.source_fifo_id,
+            quantity=reservation.quantity,
             unit=getattr(source_entry, "unit", None),
-            notes=f"Release reservation {reservation.id}",
-            item_type="product",
+            notes=f"Released reservation #{getattr(reservation, 'id', '')}",
         )
 
     @staticmethod
     def _write_unreserved_audit_entry(reservation):
-        """Helper method for writing audit entries - used by tests"""
+        """
+        Delegate to the canonical audit helper to keep all audit writes centralized.
+        """
         return record_audit_entry(
-            item_id=reservation.inventory_item_id,
-            change_type="unreserved",
-            note=f"Reservation {reservation.id} released",
-            item_type="product",
-            fifo_reference_id=reservation.source_fifo_id,
+            inventory_item_id=reservation.inventory_item_id,
+            action="unreserved",
+            details={
+                "reservation_id": getattr(reservation, "id", None),
+                "source_fifo_id": getattr(reservation, "source_fifo_id", None),
+            },
         )
 
     @staticmethod
