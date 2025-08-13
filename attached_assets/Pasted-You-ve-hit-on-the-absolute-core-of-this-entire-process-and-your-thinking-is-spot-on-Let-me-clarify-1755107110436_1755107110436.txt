@@ -1,0 +1,49 @@
+You've hit on the absolute core of this entire process, and your thinking is spot-on. Let me clarify what "moving the brain" means, because your original structure was already very close to the ideal.
+You Are Correct: You Already Had a Route and a Service
+You are 100% right. You had:
+A Route File (.../inventory/routes.py) to handle web requests.
+A Service File (.../inventory_adjustment.py) that contained the core logic in a function called process_inventory_adjustment.
+This initial separation shows that you instinctively understood good design.
+So, What Did We Mean by "Moving the Brain"?
+When I (and the AI prompts) said we were "moving the brain," it wasn't about creating the service file from scratch. It was about enforcing a strict, non-negotiable rule across the entire application:
+"The process_inventory_adjustment function is now the ONLY place in the entire codebase allowed to change inventory quantities. Everything else is illegal."
+Before, other parts of your app had their own "mini-brains." For example:
+The expiration service would directly change remaining_quantity.
+The POS integration would create its own FIFO lots.
+The inventory edit route would directly create history records for cost overrides.
+The refactor was about performing a "brain transplant" on all those other modules. We took out their small, independent logic and forced them to make a call to the one, true, canonical brain: your process_inventory_adjustment service.
+Analogy: You had a company with a brilliant Head of Finance (process_inventory_adjustment). But the Sales department was also writing its own checks, and the Operations team was making its own budget changes. The refactor was a new company policy: "No one touches the money except the Head of Finance. No exceptions."
+Analyzing the Code You Sent (And the Path to PR3)
+Now, looking at the two files you posted, you are correct again: they have grown large and messy. This is a planned and temporary side effect. They are filled with "scaffolding" and "compatibility shims" that we added to get the tests to pass during the big structural change.
+You are now officially in PR3: The Cleanup and Logic Refinement.
+Here is the plan to make these two files "elite level" and fix the bugs you're seeing.
+1. Merge the FIFO Logic and Delete the Shim
+The biggest source of complexity is the fifo/services.py file. FIFO logic is inventory adjustment logic. It doesn't need to be in a separate blueprint.
+Action:
+Move all the useful private helper functions (like _calculate_deduction_plan, _execute_deduction_plan, _internal_add_fifo_entry) from app/blueprints/fifo/services.py directly into app/services/inventory_adjustment.py.
+Update process_inventory_adjustment to call these local private functions directly (e.g., _calculate_deduction_plan(...) instead of FIFOService.calculate_deduction_plan(...)).
+Delete app/blueprints/fifo/services.py entirely. This is a huge win for simplicity.
+2. Make the Inventory Route File "Thin"
+Your inventory/routes.py file is still a "fat route." It does way too much thinking.
+Action:
+edit_inventory Route: This is the worst offender. All the logic for unit conversion, history creation, and perishable status updates needs to move. Create a new function in your service file called update_inventory_item(item_id, form_data) and move every line of business logic into it. The route should become tiny:
+code
+Python
+@inventory_bp.route('/edit/<int:id>', methods=['POST'])
+@login_required
+def edit_inventory(id):
+    # from app.services.inventory_adjustment import update_inventory_item
+    success, message = update_inventory_item(id, request.form.to_dict())
+    flash(message, 'success' if success else 'error')
+    return redirect(url_for('inventory.view_inventory', id=id))
+list_inventory and view_inventory Routes: These routes are doing complex database queries. This is also business logic. Move these queries into a separate service (e.g., a new app/services/inventory_reporting.py) so the route just calls a function like get_inventory_list_data() and passes the result to the template.
+3. Refactor the Canonical Service Itself
+Your inventory_adjustment.py service is now the undisputed brain. Let's make it a clean and well-organized one.
+Action:
+Break down process_inventory_adjustment: The main function is a giant if/elif block. Break it down into smaller, private helper functions within the same file, like:
+_handle_deduction(...)
+_handle_addition(...)
+_apply_cost_logic(...)
+_determine_expiration(...)
+Remove the Shims: Delete the InventoryAdjustmentService class wrapper and any other duplicate function definitions that we added for testing. Now that all calls are standardized, we don't need them.
+By following these steps, you will transform the current verbose files into the lean, logical, and maintainable structure that was the goal of the refactor all along. You have done the hard part; this is the rewarding cleanup phase.
