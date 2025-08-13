@@ -1,4 +1,3 @@
-
 from flask_login import current_user
 from app.models import db, InventoryItem, InventoryHistory
 from datetime import datetime, timedelta
@@ -119,73 +118,48 @@ def _execute_deduction_plan_internal(deduction_plan, item_id):
 
 
 def _record_deduction_plan_internal(item_id, deduction_plan, change_type, notes, **kwargs):
-    """Record deduction history entries"""
-    from app.models import InventoryItem
+    """
+    Records deduction history entries using the unified history model.
+    No more branching logic - one model handles all inventory types.
+    """
+    from app.models import InventoryItem, UnifiedInventoryHistory
     from app.utils.fifo_generator import generate_fifo_code
 
-    item = InventoryItem.query.get(item_id)
+    item = db.session.get(InventoryItem, item_id)
     if not item:
+        logger.error(f"Cannot record deduction plan: Item {item_id} not found.")
         return False
-
-    # Extract optional parameters
-    batch_id = kwargs.get('batch_id')
-    created_by = kwargs.get('created_by')
-    customer = kwargs.get('customer')
-    sale_price = kwargs.get('sale_price')
-    order_id = kwargs.get('order_id')
-
-    history_unit = 'count' if item.type == 'container' else item.unit
-    org_id = current_user.organization_id if current_user.is_authenticated else item.organization_id
 
     try:
         for entry_id, qty_deducted, unit_cost in deduction_plan:
-            fifo_code = generate_fifo_code(change_type)
-            
-            if item.type == 'product':
-                from app.models.product import ProductSKUHistory
-                history = ProductSKUHistory(
-                    inventory_item_id=item_id,
-                    change_type=change_type,
-                    quantity_change=-qty_deducted,
-                    remaining_quantity=0.0,
-                    unit=history_unit,
-                    notes=notes,
-                    created_by=created_by,
-                    organization_id=org_id,
-                    fifo_code=fifo_code,
-                    fifo_reference_id=entry_id,
-                    unit_cost=unit_cost,
-                    batch_id=batch_id,
-                    customer=customer,
-                    sale_price=sale_price,
-                    order_id=order_id
-                )
-            else:
-                history = InventoryHistory(
-                    inventory_item_id=item_id,
-                    change_type=change_type,
-                    quantity_change=-qty_deducted,
-                    remaining_quantity=0.0,
-                    unit=history_unit,
-                    note=notes,
-                    created_by=created_by,
-                    quantity_used=0.0,
-                    organization_id=org_id,
-                    fifo_code=fifo_code,
-                    fifo_reference_id=entry_id,
-                    unit_cost=unit_cost,
-                    batch_id=batch_id,
-                    customer=customer,
-                    sale_price=sale_price,
-                    order_id=order_id
-                )
-            
-            db.session.add(history)
-        
-        db.session.flush()
+            # Create unified history entry - works for all item types
+            history_entry = UnifiedInventoryHistory(
+                inventory_item_id=item_id,
+                change_type=change_type,
+                quantity_change=-abs(qty_deducted),
+                remaining_quantity=0.0,  # Deductions are audit entries
+                unit='count' if item.type == 'container' else item.unit,
+                fifo_reference_id=entry_id,
+                unit_cost=unit_cost,
+                fifo_code=generate_fifo_code(change_type),
+                batch_id=kwargs.get('batch_id'),
+                created_by=kwargs.get('created_by'),
+                notes=notes,
+                quantity_used=0.0,
+                # Product-specific fields (will be None for ingredients)
+                customer=kwargs.get('customer'),
+                sale_price=kwargs.get('sale_price'),
+                order_id=kwargs.get('order_id'),
+                organization_id=item.organization_id,
+            )
+
+            db.session.add(history_entry)
+
+        db.session.flush()  # Persist all history entries for this plan
         return True
+
     except Exception as e:
-        logger.error(f"Error recording deduction plan: {str(e)}")
+        logger.error(f"Error recording deduction plan: {e}")
         return False
 
 

@@ -63,5 +63,8 @@ try:
 except ImportError:
     pass
 
+# Import unified inventory history model
+from .unified_inventory_history import UnifiedInventoryHistory
+
 # Make sure all exported symbols are available
 __all__ = list([k for k in globals().keys() if not k.startswith('_')])

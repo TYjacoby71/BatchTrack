@@ -1,5 +1,5 @@
 
-from app.models import InventoryItem, InventoryHistory
+from app.models import InventoryItem, UnifiedInventoryHistory
 from sqlalchemy import and_
 
 
@@ -10,10 +10,10 @@ def validate_inventory_fifo_sync(item_id, item_type=None):
         return False, "Item not found", 0, 0
 
     # Get sum of remaining quantities from FIFO entries
-    fifo_entries = InventoryHistory.query.filter(
+    fifo_entries = UnifiedInventoryHistory.query.filter(
         and_(
-            InventoryHistory.inventory_item_id == item_id,
-            InventoryHistory.remaining_quantity > 0
+            UnifiedInventoryHistory.inventory_item_id == item_id,
+            UnifiedInventoryHistory.remaining_quantity > 0
         )
     ).all()
 
