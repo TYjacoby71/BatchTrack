@@ -130,6 +130,8 @@ def handle_recount_adjustment(item_id: int, target_quantity: float, notes: str, 
             if deduct_amount > 0:
                 lot.remaining_quantity -= deduct_amount
                 to_remove -= deduct_amount
+                # Make sure the lot is marked for update in the session
+                db.session.add(lot)
                 record_audit_entry(item_id, 'recount', f"Deducted {deduct_amount} from lot #{lot.id}. {notes or ''}", created_by, item_type, fifo_reference_id=lot.id)
                 logger.info(f"Recount: Deducted {deduct_amount} from lot {lot.id}")
 
@@ -216,6 +218,8 @@ def process_inventory_adjustment(
                     if deduct_amount > 0:
                         lot.remaining_quantity -= deduct_amount
                         to_remove -= deduct_amount
+                        # Make sure the lot is marked for update in the session
+                        db.session.add(lot)
                         record_audit_entry(item_id, change_type, f"Deducted {deduct_amount} from lot #{lot.id}. {notes or ''}", created_by, item_type, fifo_reference_id=lot.id)
 
                 item.quantity += qty_change
@@ -242,6 +246,50 @@ def process_inventory_adjustment(
 
 
 # --- Backwards Compatibility Shim ---
+
+def credit_specific_lot(item_id: int, fifo_entry_id: int, qty: float, unit: str = None, notes: str = None):
+    """
+    Credits (adds back) a specific quantity to a specific FIFO lot entry.
+    Used primarily for reservation releases.
+    """
+    try:
+        item = InventoryItem.query.get(item_id)
+        if not item:
+            raise ValueError(f"Inventory item not found for ID: {item_id}")
+
+        # Determine the correct history model
+        history_cls = ProductSKUHistory if item.type == 'product' else InventoryHistory
+        
+        # Find the specific FIFO entry
+        fifo_entry = history_cls.query.get(fifo_entry_id)
+        if not fifo_entry:
+            raise ValueError(f"FIFO entry not found for ID: {fifo_entry_id}")
+
+        # Credit the quantity back to the lot
+        fifo_entry.remaining_quantity += qty
+        db.session.add(fifo_entry)
+        
+        # Update the item's total quantity
+        item.quantity += qty
+        db.session.add(item)
+        
+        # Record audit entry
+        record_audit_entry(
+            item_id=item_id,
+            change_type="credit_lot",
+            notes=notes or f"Credited {qty} back to lot #{fifo_entry_id}",
+            fifo_reference_id=fifo_entry_id
+        )
+        
+        db.session.commit()
+        logger.info(f"Credited {qty} {unit or item.unit} back to lot #{fifo_entry_id} for item '{item.name}'")
+        return True
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error crediting specific lot {fifo_entry_id}: {e}", exc_info=True)
+        raise e
+
 
 class InventoryAdjustmentService:
     """
