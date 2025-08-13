@@ -1,4 +1,3 @@
-
 """make unit symbol nullable for custom units
 
 Revision ID: fix_unit_symbol_nullable
@@ -19,42 +18,40 @@ depends_on = None
 
 def upgrade():
     """Make unit symbol nullable for custom units"""
-    from sqlalchemy import inspect
-
-    # Get database connection and inspector
-    connection = op.get_bind()
-    inspector = inspect(connection)
-
-    def column_exists(table_name, column_name):
-        """Check if a column exists in a table"""
-        try:
-            columns = [col['name'] for col in inspector.get_columns(table_name)]
-            return column_name in columns
-        except Exception:
-            return False
-
     print("=== Making unit symbol nullable ===")
 
-    with op.batch_alter_table('unit', schema=None) as batch_op:
-        # Make symbol nullable
-        batch_op.alter_column('symbol', nullable=True)
-        
-        # Drop the problematic unique index if it exists
-        try:
-            batch_op.drop_index('ix_unit_standard_unique')
-        except Exception:
-            pass  # Index might not exist
-        
-        # Drop the problematic unique constraint if it exists
-        try:
-            batch_op.drop_constraint('_unit_name_org_uc')
-        except Exception:
-            pass  # Constraint might not exist
-        
-        # Add proper unique constraint for custom units
-        batch_op.create_unique_constraint('_unit_name_org_uc', ['name', 'organization_id'])
+    # Check if the index exists before trying to drop it
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    indexes = inspector.get_indexes('unit')
+    index_names = [idx['name'] for idx in indexes]
 
-    print("✅ Unit symbol nullable migration completed")
+    # Use batch mode for SQLite compatibility
+    with op.batch_alter_table('unit', schema=None) as batch_op:
+        # Drop the unique index first if it exists
+        if 'ix_unit_standard_unique' in index_names:
+            try:
+                batch_op.drop_index('ix_unit_standard_unique')
+                print("   ✅ Dropped ix_unit_standard_unique index")
+            except Exception as e:
+                print(f"   ⚠️  Could not drop index ix_unit_standard_unique: {e}")
+        else:
+            print("   ℹ️  Index ix_unit_standard_unique doesn't exist, skipping")
+
+        # Make symbol nullable
+        batch_op.alter_column('symbol', 
+                             existing_type=sa.String(10),
+                             nullable=True)
+        print("   ✅ Made symbol column nullable")
+
+        # Recreate index without unique constraint for symbol (only if symbol index doesn't exist)
+        if 'ix_unit_symbol' not in index_names:
+            batch_op.create_index('ix_unit_symbol', ['symbol'])
+            print("   ✅ Created new ix_unit_symbol index")
+        else:
+            print("   ℹ️  Index ix_unit_symbol already exists")
+
+    print("✅ Migration completed: Unit symbol is now nullable")
 
 
 def downgrade():
@@ -65,15 +62,15 @@ def downgrade():
         # Make symbol required again (fill nulls first)
         connection = op.get_bind()
         connection.execute(sa.text("UPDATE unit SET symbol = name WHERE symbol IS NULL"))
-        
+
         batch_op.alter_column('symbol', nullable=False)
-        
+
         # Drop the new constraint
         try:
             batch_op.drop_constraint('_unit_name_org_uc')
         except Exception:
             pass
-        
+
         # Restore old constraints
         batch_op.create_index('ix_unit_standard_unique', ['name'], unique=True)
 
