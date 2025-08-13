@@ -495,6 +495,40 @@ def test_inventory_list_performance():
 
 ## Test & Shim Cleanup Strategy
 
+### Complete Shim Inventory (Added During PR2)
+
+#### Service Layer Compatibility Shims
+**In `app/services/inventory_adjustment.py`:**
+- [ ] `InventoryAdjustmentService` class (lines 672-685) - Backwards compatibility wrapper
+- [ ] `record_audit_entry()` duplicate function (lines 657-687) - Legacy signature support
+
+**In `app/blueprints/fifo/services.py`:**
+- [ ] `FIFOService` class (lines 46-100) - Compatibility wrapper for old FIFO calls
+- [ ] `get_fifo_entries()` and `get_expired_fifo_entries()` global functions (lines 450-460)
+- [ ] `recount_fifo()` global function (line 462)
+- [ ] Entire module marked as "INTERNAL USE ONLY" with deprecation warnings
+
+**In `app/services/stock_check.py`:**
+- [ ] `StockCheckService` class (lines 114-147) - Backwards compatibility wrapper with deprecation warnings
+- [ ] Legacy function signatures that bypass canonical service
+
+#### Model Import Compatibility
+**In `app/blueprints/fifo/__init__.py`:**
+- [ ] `DeprecatedFIFOModule` override (lines 17-35) - Intercepts direct imports with warnings
+- [ ] Import monitoring system for external access detection
+
+#### Route Compatibility Layers
+**Test fixtures and route shims:**
+- [ ] Multiple test files with mock compatibility layers
+- [ ] Route handlers that still import deprecated services directly
+- [ ] Legacy parameter handling in API endpoints
+
+#### Database Migration Compatibility
+**Multiple migration files with legacy field support:**
+- [ ] `39e309ff02d1_add_legacy_compatibility_fields_to_.py` - Stripe billing compatibility
+- [ ] `add_legacy_compatibility_fields.py` - General backward compatibility
+- [ ] `replace_billing_booleans_with_enums.py` - Billing system transition support
+
 ### When to Remove Tests and Shims
 
 #### Phase 3 Completion (After PR3c)
@@ -511,18 +545,41 @@ def test_inventory_list_performance():
 - [ ] Clean up model backwards compatibility fields
 - [ ] Remove development-only test utilities
 
-#### Criteria for Cleanup
-1. **All stakeholders migrated** to new patterns
-2. **CI/CD pipeline stable** for 2+ weeks
-3. **No legacy route usage** in logs
-4. **Service layer fully typed** and tested
+#### Criteria for Cleanup (Partner's Timeline)
+1. **PR3 (Now)** - Deprecate, don't delete (add warnings, instrument usage)
+2. **PR3+1 Release** - Observe for 7 days with zero usage confirmation
+3. **PR4** - Safe removal with CI guardrails
 
-### Cleanup Priority Order
-1. **Test shims** - Remove after behavior is stable
-2. **Route compatibility layers** - Remove unused endpoints
-3. **Service backwards compatibility** - Remove deprecated methods
-4. **Model legacy fields** - Remove after data migration
-5. **Development utilities** - Clean up test helpers
+### Cleanup Priority Order (Partner-Aligned)
+1. **Service compatibility wrappers** - `StockCheckService`, `FIFOService`, `InventoryAdjustmentService`
+2. **Global function aliases** - `get_fifo_entries()`, `recount_fifo()` module-level functions
+3. **Import monitoring systems** - `DeprecatedFIFOModule` in `__init__.py`
+4. **Test fixture shims** - Mock compatibility layers in test files
+5. **Legacy migration fields** - Database backward compatibility columns
+
+### Immediate PR3 Actions (Deprecation Phase)
+**Add to all remaining shims:**
+```python
+import warnings
+warnings.warn(
+    "This compatibility layer will be removed in the next release. Use canonical service.",
+    DeprecationWarning,
+    stacklevel=2
+)
+```
+
+**Add usage instrumentation:**
+```python
+import logging
+logger = logging.getLogger(__name__)
+logger.info(f"DEPRECATED_SHIM_USAGE: {caller_module}:{caller_function}")
+```
+
+**Feature flag for staging:**
+```python
+# In config
+FEATURE_DISABLE_SHIMS = os.environ.get('FEATURE_DISABLE_SHIMS', 'False').lower() == 'true'
+```
 
 ## Migration from Current State
 
