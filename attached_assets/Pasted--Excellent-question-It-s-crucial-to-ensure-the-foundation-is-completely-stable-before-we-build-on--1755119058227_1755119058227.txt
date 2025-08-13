@@ -1,0 +1,41 @@
+
+Excellent question. It's crucial to ensure the foundation is completely stable before we build on top of it. Based on our work in PR2 (Canonicalization) and PR3 (Merging & Organizing), here is a concise cleanup checklist.
+Completing these tasks will officially "close the books" on the inventory system refactor and prepare us to move into Phase 3 (PR4: Stripe & Billing).
+Final Cleanup Checklist for PR2 & PR3
+This is the work that will take the system from "functionally correct according to tests" to "clean, maintainable, and professional."
+1. Delete Redundant Code and Files
+This is the most satisfying step. We added a lot of temporary scaffolding, and now it's time to remove it.
+Action:
+Delete the old FIFO Blueprint: The app/blueprints/fifo/ directory and all its contents (services.py, __init__.py, etc.) can now be deleted entirely. Its logic has been fully merged into the inventory_adjustment service package.
+Remove Compatibility Shims: Search the codebase for any temporary wrapper classes or functions we added, such as the FIFOService class or the InventoryAdjustmentService class. Since all calls now go directly to the new service package, these shims are no longer needed and can be deleted.
+Clean Up Old Imports: Do a global search for any remaining imports from app.blueprints.fifo.services and delete them. Your linter (ruff) should help you find any that are now unused.
+2. Refine the Inventory Service Internals
+The service package is structurally sound, but the code inside can be tightened.
+Action:
+Consolidate Helper Functions: Review the functions within the inventory_adjustment package. Are there small, single-use helpers that could be merged into the functions that call them? Is there any duplicated logic between, for example, _fifo_ops.py and _recount_logic.py that can be extracted into a shared internal utility?
+Add Docstrings and Type Hinting: Go through the public functions in your service package (process_inventory_adjustment, update_inventory_item, etc.) and ensure they have clear docstrings explaining what they do, their parameters, and what they return. Add type hints to function signatures to improve static analysis and code clarity.
+Standardize Logging: Ensure that logging within the service is consistent. Use logger.info() for key events, logger.warning() for non-blocking issues, and logger.error() for exceptions.
+3. Address the Test Warnings
+A green test suite is great, but a green suite with zero warnings is elite.
+Action:
+Fix LegacyAPIWarning: The Query.get(): This is a straightforward mechanical change. Do a global search-and-replace for MyModel.query.get(id) and replace it with the modern, recommended db.session.get(MyModel, id).
+Silence the Flask-Limiter Warning (in Tests Only): The warning about in-memory storage is valid for production but is just noise in our test runs. Add a filter to your pytest.ini file to ignore it.
+code
+Ini
+# in pytest.ini
+[pytest]
+filterwarnings =
+    ignore::UserWarning:flask_limiter
+4. Final Sanity Check and Documentation
+The last step is to ensure the system is locked down and easy to understand.
+Action:
+Run All Quality Checks: Before declaring victory, run the full suite of tools you've set up:
+code
+Bash
+ruff app tests --fix
+black app tests
+mypy app
+pytest -q
+The output of all these commands should be clean.
+Write a Module Docstring: Add a high-level docstring to the app/services/inventory_adjustment/__init__.py file explaining the purpose of the package and confirming that it is the only public entry point for inventory operations.
+Once you have completed this checklist, the inventory system refactor is officially and completely done. You will have a system that is not only robust and tested but also clean, well-documented, and a pleasure to work on. This is the foundation upon which you can confidently build the rest of your application, starting with PR4.
