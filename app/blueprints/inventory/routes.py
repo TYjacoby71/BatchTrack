@@ -362,6 +362,11 @@ def adjust_inventory(id):
 
         # Deductive adjustments (spoil, trash, etc.)
         elif adj_type in deductive_types:
+            # Handle unreserved operations specially
+            if adj_type == 'unreserved':
+                flash('Unreserved operations must use ReservationService.release_reservation()', 'error')
+                return redirect(url_for('inventory.view_inventory', id=item.id))
+            
             success = process_inventory_adjustment(
                 item_id=item.id,
                 quantity=qty,  # Service will make this negative
