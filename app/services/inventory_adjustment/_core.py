@@ -6,8 +6,9 @@ from flask_login import current_user
 from app.models import db, InventoryItem
 from ._validation import validate_inventory_fifo_sync
 from ._recount_logic import handle_recount_adjustment
-from ._fifo_ops import _calculate_deduction_plan_internal, _execute_deduction_plan_internal, _record_deduction_plan_internal, _internal_add_fifo_entry_enhanced
+from ._fifo_ops import _calculate_deduction_plan_internal, _execute_deduction_plan_internal, _record_deduction_plan_internal, _internal_add_fifo_entry_enhanced, _calculate_addition_plan_internal, _execute_addition_plan_internal, _record_addition_plan_internal
 from app.services.conversion_wrapper import safe_convert
+from app.services.unit_conversion import ConversionEngine
 
 logger = logging.getLogger(__name__)
 
@@ -38,16 +39,16 @@ def process_inventory_adjustment(
 
         # --- Handle Special Cases First ---
         if change_type == 'recount':
-            return handle_recount_adjustment(item, quantity, notes, created_by, **kwargs)
+            return handle_recount_adjustment(item.id, quantity, notes, created_by, item.type)
 
         # --- Normalize Inputs ---
         final_unit = unit or item.unit
         converted_quantity = quantity
         if final_unit and item.unit and final_unit != item.unit:
-            conversion = safe_convert(quantity, final_unit, item.unit, item.density)
+            conversion = safe_convert(quantity, final_unit, item.unit, ingredient_id=item.id)
             if not conversion["ok"]:
                 raise ValueError(f"Unit conversion failed: {conversion['error']}")
-            converted_quantity = conversion["value"]
+            converted_quantity = conversion["result"]["converted_value"]
 
         # --- Determine Operation Type ---
         additive_types = {'restock', 'manual_add', 'returned', 'refunded', 'recount_increase', 'unreserved'}
@@ -67,7 +68,7 @@ def process_inventory_adjustment(
 
         # --- Final Sync and Commit ---
         _, _, _, final_fifo_total = validate_inventory_fifo_sync(item_id, item.type)
-        item.quantity = final_fifo_total
+        item.quantity = ConversionEngine.round_value(final_fifo_total, 3)
         db.session.commit()
         return True
 
