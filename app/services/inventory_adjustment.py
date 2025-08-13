@@ -15,183 +15,281 @@ logger = logging.getLogger(__name__)
 
 # FIFO logic moved inline to avoid blueprint imports
 
-def validate_inventory_fifo_sync(inventory_item_id, expected_total=None):
-    """
-    Validate that FIFO entries sum to inventory total
-    Returns (is_valid, details)
-    """
-    try:
-        item = InventoryItem.query.get(inventory_item_id)
-        if not item:
-            return False, "Inventory item not found"
+def validate_inventory_fifo_sync(item_id):
+    """Validate that inventory quantity matches FIFO totals"""
+    from app.models import InventoryItem, InventoryHistory
+    from sqlalchemy import and_
 
-        # Get current FIFO total
-        fifo_total = db.session.query(func.sum(InventoryHistory.remaining_quantity)).filter(
-            InventoryHistory.inventory_item_id == inventory_item_id,
+    item = InventoryItem.query.get(item_id)
+    if not item:
+        return False, "Item not found", 0, 0
+
+    # Get sum of remaining quantities from FIFO entries
+    fifo_entries = InventoryHistory.query.filter(
+        and_(
+            InventoryHistory.inventory_item_id == item_id,
             InventoryHistory.remaining_quantity > 0
-        ).scalar() or 0
+        )
+    ).all()
 
-        # Compare with expected or actual inventory quantity
-        target_quantity = expected_total if expected_total is not None else item.quantity
+    fifo_total = sum(float(entry.remaining_quantity) for entry in fifo_entries)
+    inventory_qty = float(item.quantity)
 
-        is_valid = abs(float(fifo_total) - float(target_quantity)) < 0.001
+    # Allow small floating point differences
+    tolerance = 0.001
+    is_valid = abs(inventory_qty - fifo_total) < tolerance
 
-        return is_valid, {
-            'fifo_total': float(fifo_total),
-            'inventory_quantity': float(target_quantity),
-            'difference': float(fifo_total) - float(target_quantity),
-            'is_valid': is_valid
-        }
+    if not is_valid:
+        error_msg = f"FIFO sync error: inventory={inventory_qty}, fifo_total={fifo_total}, diff={abs(inventory_qty - fifo_total)}"
+        return False, error_msg, inventory_qty, fifo_total
+
+    return True, None, inventory_qty, fifo_total
+
+
+def _calculate_deduction_plan(item_id, required_quantity, organization_id):
+    """Calculate which FIFO entries to deduct from and how much"""
+    from app.models import InventoryHistory
+    from sqlalchemy import and_
+
+    # Get available FIFO entries ordered by creation (FIFO)
+    available_entries = InventoryHistory.query.filter(
+        and_(
+            InventoryHistory.inventory_item_id == item_id,
+            InventoryHistory.remaining_quantity > 0
+        )
+    ).order_by(InventoryHistory.timestamp.asc()).all()
+
+    deduction_plan = []
+    remaining_needed = float(required_quantity)
+
+    for entry in available_entries:
+        if remaining_needed <= 0:
+            break
+
+        available_qty = float(entry.remaining_quantity)
+        deduct_from_entry = min(available_qty, remaining_needed)
+
+        deduction_plan.append({
+            'entry_id': entry.id,
+            'deduct_quantity': deduct_from_entry,
+            'new_remaining': available_qty - deduct_from_entry
+        })
+
+        remaining_needed -= deduct_from_entry
+
+    if remaining_needed > 0:
+        return None, f"Insufficient inventory: need {required_quantity}, available {required_quantity - remaining_needed}"
+
+    return deduction_plan, None
+
+
+def _execute_deduction_plan(deduction_plan):
+    """Execute the calculated deduction plan"""
+    from app.models import InventoryHistory, db
+
+    for step in deduction_plan:
+        entry = InventoryHistory.query.get(step['entry_id'])
+        if not entry:
+            return False, f"FIFO entry {step['entry_id']} not found"
+
+        entry.remaining_quantity = step['new_remaining']
+        logging.info(f"Updated InventoryHistory entry {entry.id}: remaining_quantity now {entry.remaining_quantity}")
+
+    try:
+        db.session.flush()
+        return True, None
+    except Exception as e:
+        return False, f"Database error during deduction: {str(e)}"
+
+
+def _internal_add_fifo_entry(item_id, quantity, unit, cost_per_unit, change_type, notes, created_by, custom_expiration_date=None, custom_shelf_life_days=None):
+    """Add a new FIFO entry for inventory additions"""
+    from app.models import InventoryHistory, InventoryItem, db
+    from datetime import datetime, timedelta
+
+    item = InventoryItem.query.get(item_id)
+    if not item:
+        return False, "Item not found"
+
+    # Calculate expiration data
+    expiration_date = None
+    shelf_life_days = None
+    is_perishable = False
+
+    if item.is_perishable:
+        is_perishable = True
+        if custom_expiration_date:
+            expiration_date = custom_expiration_date
+        elif custom_shelf_life_days and custom_shelf_life_days > 0:
+            shelf_life_days = custom_shelf_life_days
+            expiration_date = datetime.utcnow().date() + timedelta(days=shelf_life_days)
+        elif item.shelf_life_days and item.shelf_life_days > 0:
+            shelf_life_days = item.shelf_life_days
+            expiration_date = datetime.utcnow().date() + timedelta(days=shelf_life_days)
+
+    # Create FIFO entry
+    history_entry = InventoryHistory(
+        inventory_item_id=item_id,
+        change_type=change_type,
+        quantity_change=quantity,
+        unit=unit,
+        unit_cost=cost_per_unit,
+        note=notes,
+        created_by=created_by,
+        remaining_quantity=quantity,  # New additions start with full quantity remaining
+        is_perishable=is_perishable,
+        shelf_life_days=shelf_life_days,
+        expiration_date=expiration_date,
+        quantity_used=0.0  # New entries haven't been used yet
+    )
+
+    try:
+        db.session.add(history_entry)
+        db.session.flush()
+        return True, None
+    except Exception as e:
+        return False, f"Error creating FIFO entry: {str(e)}"
+
+
+def update_inventory_item(item_id, form_data):
+    """Handle all inventory item updates through the canonical service"""
+    from app.models import InventoryItem, InventoryHistory, IngredientCategory, db
+    from flask import session
+    from flask_login import current_user
+    from sqlalchemy import and_
+
+    try:
+        item = InventoryItem.query.get_or_404(item_id)
+
+        # Handle unit changes with conversion confirmation
+        if item.type != 'container':
+            new_unit = form_data.get('unit')
+            if new_unit != item.unit:
+                history_count = InventoryHistory.query.filter_by(inventory_item_id=item_id).count()
+                if history_count > 0:
+                    confirm_unit_change = form_data.get('confirm_unit_change') == 'true'
+                    convert_inventory = form_data.get('convert_inventory') == 'true'
+
+                    if not confirm_unit_change:
+                        session['pending_unit_change'] = {
+                            'item_id': item_id,
+                            'old_unit': item.unit,
+                            'new_unit': new_unit,
+                            'current_quantity': item.quantity
+                        }
+                        return False, f'Unit change requires confirmation. Item has {history_count} transaction history entries.'
+
+                    if convert_inventory and item.quantity > 0:
+                        try:
+                            from app.services.unit_conversion import convert_unit
+                            converted_quantity = convert_unit(item.quantity, item.unit, new_unit, item.density)
+                            item.quantity = converted_quantity
+
+                            history = InventoryHistory(
+                                inventory_item_id=item.id,
+                                change_type='unit_conversion',
+                                quantity_change=0,
+                                unit=new_unit,
+                                note=f'Unit converted from {item.unit} to {new_unit}',
+                                created_by=current_user.id,
+                                quantity_used=0.0
+                            )
+                            db.session.add(history)
+                        except Exception as e:
+                            return False, f'Could not convert inventory to new unit: {str(e)}'
+
+                    session.pop('pending_unit_change', None)
+
+        # Update basic fields
+        item.name = form_data.get('name')
+        new_quantity = float(form_data.get('quantity'))
+
+        # Handle perishable status changes
+        is_perishable = form_data.get('is_perishable') == 'on'
+        was_perishable = item.is_perishable
+        old_shelf_life = item.shelf_life_days
+        item.is_perishable = is_perishable
+
+        if is_perishable:
+            shelf_life_days = int(form_data.get('shelf_life_days', 0))
+            item.shelf_life_days = shelf_life_days
+            from datetime import datetime, timedelta
+            if shelf_life_days > 0:
+                item.expiration_date = datetime.utcnow().date() + timedelta(days=shelf_life_days)
+
+                if not was_perishable or old_shelf_life != shelf_life_days:
+                    from app.blueprints.expiration.services import ExpirationService
+                    ExpirationService.update_fifo_expiration_data(item.id, shelf_life_days)
+        else:
+            if was_perishable:
+                item.shelf_life_days = None
+                item.expiration_date = None
+
+                fifo_entries = InventoryHistory.query.filter(
+                    and_(
+                        InventoryHistory.inventory_item_id == item.id,
+                        InventoryHistory.remaining_quantity > 0
+                    )
+                ).all()
+
+                for entry in fifo_entries:
+                    entry.is_perishable = False
+                    entry.shelf_life_days = None
+                    entry.expiration_date = None
+
+        # Handle quantity recount
+        if new_quantity != item.quantity:
+            success = process_inventory_adjustment(
+                item_id=item.id,
+                quantity=new_quantity,
+                change_type='recount',
+                unit=item.unit,
+                notes="Manual quantity update via inventory edit",
+                created_by=current_user.id
+            )
+            if not success:
+                return False, 'Error updating quantity'
+
+        # Handle cost override
+        new_cost = float(form_data.get('cost_per_unit', 0))
+        if form_data.get('override_cost') and new_cost != item.cost_per_unit:
+            history = InventoryHistory(
+                inventory_item_id=item.id,
+                change_type='cost_override',
+                quantity_change=0,
+                unit=item.unit,
+                unit_cost=new_cost,
+                note=f'Cost manually overridden from {item.cost_per_unit} to {new_cost}',
+                created_by=current_user.id,
+                quantity_used=0.0
+            )
+            db.session.add(history)
+            item.cost_per_unit = new_cost
+
+        # Type-specific updates
+        if item.type == 'container':
+            item.storage_amount = float(form_data.get('storage_amount'))
+            item.storage_unit = form_data.get('storage_unit')
+        else:
+            item.unit = form_data.get('unit')
+            category_id = form_data.get('category_id')
+            item.category_id = None if not category_id or category_id == '' else int(category_id)
+            if not item.category_id:
+                item.density = float(form_data.get('density', 1.0))
+            else:
+                category = IngredientCategory.query.get(item.category_id)
+                if category and category.default_density:
+                    item.density = category.default_density
+                else:
+                    item.density = None
+
+        db.session.commit()
+        return True, f'{item.type.title()} updated successfully.'
 
     except Exception as e:
-        logger.error(f"Error validating FIFO sync for item {inventory_item_id}: {e}")
-        return False, f"Validation error: {str(e)}"
-
-
-def validate_inventory_fifo_sync(item_id, item_type=None):
-    """
-    Validates that inventory quantity matches sum of ALL FIFO remaining quantities (including frozen expired)
-    Returns: (is_valid, error_message, inventory_qty, fifo_total)
-    """
-    # Handle different item types
-    if item_type == 'product':
-        from app.models.product import ProductSKU, ProductSKUHistory
-        # For products, item_id should be inventory_item_id
-        item = InventoryItem.query.get(item_id)
-        if not item or item.type != 'product':
-            return False, "Product inventory item not found", 0, 0
-
-        # Find the SKU that uses this inventory item
-        sku = ProductSKU.query.filter_by(inventory_item_id=item_id).first()
-        if not sku:
-            return False, "Product SKU not found for inventory item", 0, 0
-
-        # Get ALL FIFO entries with remaining quantity (including frozen expired ones)
-        from sqlalchemy import and_
-
-        # Ensure we have the correct organization ID
-        if current_user and current_user.is_authenticated:
-            org_id = current_user.organization_id
-        else:
-            org_id = item.organization_id
-
-        # Debug organization scoping
-        print(f"DEBUG ProductSKU FIFO validation: item_id={item_id}, org_id={org_id}, current_user_org={current_user.organization_id if current_user else 'None'}")
-
-        all_fifo_entries = ProductSKUHistory.query.filter(
-            and_(
-                ProductSKUHistory.inventory_item_id == item_id,
-                ProductSKUHistory.remaining_quantity > 0,
-                ProductSKUHistory.organization_id == org_id
-            )
-        ).all()
-
-        print(f"DEBUG ProductSKU FIFO entries found: {len(all_fifo_entries)} for item {item_id}")
-
-        fifo_total = sum(entry.remaining_quantity for entry in all_fifo_entries)
-        current_qty = item.quantity
-        item_name = item.name
-
-        # If there are no FIFO entries but there is inventory, allow it for now
-        # This handles cases where ProductSKUs exist but haven't had FIFO entries created yet
-        if fifo_total == 0 and current_qty > 0:
-            print(f"WARNING: Product SKU {item_name} has inventory ({current_qty}) but no FIFO entries - allowing operation to proceed")
-            return True, "", current_qty, fifo_total
-    else:
-        item = InventoryItem.query.get(item_id)
-        if not item:
-            return False, "Item not found", 0, 0
-
-        # Get ALL InventoryHistory entries with remaining quantity (including frozen expired ones)
-        from sqlalchemy import and_
-
-        # Ensure we have the correct organization ID
-        if current_user and current_user.is_authenticated:
-            org_id = current_user.organization_id
-        else:
-            org_id = item.organization_id
-
-        # Debug organization scoping
-        print(f"DEBUG Ingredient FIFO validation: item_id={item_id}, org_id={org_id}, current_user_org={current_user.organization_id if current_user else 'None'}")
-
-        all_fifo_entries = InventoryHistory.query.filter(
-            and_(
-                InventoryHistory.inventory_item_id == item_id,
-                InventoryHistory.remaining_quantity > 0,
-                InventoryHistory.organization_id == org_id
-            )
-        ).all()
-
-        print(f"DEBUG Ingredient FIFO entries found: {len(all_fifo_entries)} for item {item_id}")
-
-        fifo_total = sum(entry.remaining_quantity for entry in all_fifo_entries)
-        current_qty = item.quantity
-        item_name = item.name
-
-    # Allow small floating point differences (0.001)
-    if abs(current_qty - fifo_total) > 0.001:
-        error_msg = f"SYNC ERROR: {item_name} inventory ({current_qty}) != FIFO total ({fifo_total}) [includes frozen expired]"
-        return False, error_msg, current_qty, fifo_total
-
-    return True, "", current_qty, fifo_total
-
-def credit_specific_lot(item_id: int, fifo_entry_id: int, qty: float, *, unit: str | None = None, notes: str = "") -> bool:
-    """
-    Public seam: credit quantity back to a specific FIFO lot.
-    Keeps all mutations inside the canonical service.
-    """
-    from app.models.inventory import InventoryHistory
-    from app.utils.fifo_generator import generate_fifo_code
-
-    fifo_entry = InventoryHistory.query.get(fifo_entry_id)
-    if not fifo_entry or fifo_entry.inventory_item_id != item_id:
-        return False
-
-    # mutate the lot here (allowed—inside canonical service)
-    fifo_entry.remaining_quantity = float(fifo_entry.remaining_quantity or 0) + float(abs(qty))
-
-    # write a linked history entry (reference the lot we credited)
-    FIFOService.add_fifo_entry(
-        inventory_item_id=item_id,
-        quantity=abs(qty),                 # addition
-        change_type="unreserved",          # or "credit"
-        unit=unit or fifo_entry.unit,
-        notes=notes or f"Credited back to lot #{fifo_entry_id}",
-        fifo_reference_id=fifo_entry_id,
-        fifo_code=generate_fifo_code("unreserved"),
-        quantity_used=0.0,                 # credits don't consume inventory
-    )
-    db.session.commit()
-    return True
-
-
-def record_audit_entry(
-    item_id: int,
-    change_type: str,
-    notes: str,
-    quantity: float | None = None,
-    fifo_reference_id: int | None = None,
-    source: str | None = None,
-) -> None:
-    """
-    Public seam: write an audit-only history entry (no FIFO delta).
-    Keeps routes/services from crafting raw history rows.
-    """
-    from app.utils.fifo_generator import generate_fifo_code
-
-    FIFOService.add_fifo_entry(
-        inventory_item_id=item_id,
-        quantity=0.0,                      # no effect on available FIFO
-        change_type=change_type,
-        unit=unit,
-        notes=notes,
-        fifo_reference_id=fifo_reference_id,
-        source=source,
-        remaining_quantity=0.0,            # explicit for clarity
-        quantity_used=0.0,
-        fifo_code=generate_fifo_code(change_type),
-    )
-    db.session.commit()
+        db.session.rollback()
+        logging.error(f"Error updating inventory item {item_id}: {str(e)}")
+        return False, f'Error saving changes: {str(e)}'
 
 
 def process_inventory_adjustment(
@@ -402,7 +500,7 @@ def process_inventory_adjustment(
                 history_unit = 'count' if getattr(item, 'type', None) == 'container' else item.unit
 
                 FIFOService._internal_add_fifo_entry(
-                    inventory_item_id=item_id,
+                    item_id=item_id,
                     quantity=qty_change,
                     change_type=change_type,
                     unit=history_unit,
@@ -467,16 +565,16 @@ def process_inventory_adjustment(
 def handle_recount_adjustment(item_id, target_quantity, notes=None, created_by=None, item_type='ingredient'):
     """
     Recount sets absolute target quantity with proper lot management:
-    
+
     POSITIVE RECOUNT (increase):
     - Fill existing lots to their full capacity first
     - Create new lot with overflow if needed
     - Log history entry for each lot affected
-    
+
     NEGATIVE RECOUNT (decrease):
     - Consume from all lots (including expired) oldest-first
     - Log history entry for each lot consumed
-    
+
     ALWAYS: Sync item.quantity with sum of all remaining_quantity values
     """
     try:
@@ -495,7 +593,7 @@ def handle_recount_adjustment(item_id, target_quantity, notes=None, created_by=N
 
         current_qty = float(item.quantity or 0.0)
         target_qty = float(target_quantity or 0.0)
-        
+
         if abs(current_qty - target_qty) < 0.001:
             return True  # No change needed
 
@@ -508,7 +606,7 @@ def handle_recount_adjustment(item_id, target_quantity, notes=None, created_by=N
         if item.type == 'product':
             from app.models.product import ProductSKUHistory
             from sqlalchemy import and_
-            
+
             entries = ProductSKUHistory.query.filter(
                 and_(
                     ProductSKUHistory.inventory_item_id == item_id,
@@ -518,7 +616,7 @@ def handle_recount_adjustment(item_id, target_quantity, notes=None, created_by=N
             ).order_by(ProductSKUHistory.timestamp.asc()).all()  # Oldest first
         else:
             from sqlalchemy import and_
-            
+
             entries = InventoryHistory.query.filter(
                 and_(
                     InventoryHistory.inventory_item_id == item_id,
@@ -535,28 +633,28 @@ def handle_recount_adjustment(item_id, target_quantity, notes=None, created_by=N
         if delta > 0:
             remaining_to_add = delta
             history_entries = []
-            
+
             # Fill existing lots to their original capacity first
             for entry in entries:
                 if remaining_to_add <= 0:
                     break
-                
+
                 # Calculate how much this lot can still accept (original quantity_change - remaining)
                 original_qty = float(getattr(entry, 'quantity_change', 0))
                 if original_qty > 0:  # Only fill addition lots, not deduction lots
                     current_remaining = float(entry.remaining_quantity)
                     capacity_available = original_qty - current_remaining
-                    
+
                     if capacity_available > 0:
                         fill_amount = min(remaining_to_add, capacity_available)
                         entry.remaining_quantity = current_remaining + fill_amount
                         remaining_to_add -= fill_amount
-                        
+
                         # Create history entry for this lot fill
                         if item.type == 'product':
                             from app.models.product import ProductSKUHistory
                             from app.utils.fifo_generator import generate_fifo_code
-                            
+
                             history = ProductSKUHistory(
                                 inventory_item_id=item_id,
                                 change_type='recount',
@@ -572,7 +670,7 @@ def handle_recount_adjustment(item_id, target_quantity, notes=None, created_by=N
                             )
                         else:
                             from app.utils.fifo_generator import generate_fifo_code
-                            
+
                             history = InventoryHistory(
                                 inventory_item_id=item_id,
                                 change_type='recount',
@@ -587,7 +685,7 @@ def handle_recount_adjustment(item_id, target_quantity, notes=None, created_by=N
                                 fifo_reference_id=entry.id,
                                 unit_cost=getattr(entry, 'unit_cost', item.cost_per_unit)
                             )
-                        
+
                         db.session.add(history)
                         history_entries.append(history)
                         print(f"RECOUNT: Filled lot {entry.id} with {fill_amount}")
@@ -597,7 +695,7 @@ def handle_recount_adjustment(item_id, target_quantity, notes=None, created_by=N
                 if item.type == 'product':
                     from app.models.product import ProductSKUHistory
                     from app.utils.fifo_generator import generate_fifo_code
-                    
+
                     overflow_lot = ProductSKUHistory(
                         inventory_item_id=item_id,
                         change_type='recount',
@@ -614,7 +712,7 @@ def handle_recount_adjustment(item_id, target_quantity, notes=None, created_by=N
                     )
                 else:
                     from app.utils.fifo_generator import generate_fifo_code
-                    
+
                     overflow_lot = InventoryHistory(
                         inventory_item_id=item_id,
                         change_type='recount',
@@ -630,7 +728,7 @@ def handle_recount_adjustment(item_id, target_quantity, notes=None, created_by=N
                         expiration_date=None,  # Recount lots don't inherit expiration
                         shelf_life_days=None
                     )
-                
+
                 db.session.add(overflow_lot)
                 history_entries.append(overflow_lot)
                 print(f"RECOUNT: Created overflow lot with {remaining_to_add}")
@@ -640,7 +738,7 @@ def handle_recount_adjustment(item_id, target_quantity, notes=None, created_by=N
             to_remove = abs(delta)
             remaining = to_remove
             deduction_plan = []
-            
+
             # Build deduction plan from oldest lots first (including expired)
             for entry in entries:
                 if remaining <= 0:
@@ -657,7 +755,7 @@ def handle_recount_adjustment(item_id, target_quantity, notes=None, created_by=N
                     entry = ProductSKUHistory.query.get(entry_id)
                 else:
                     entry = InventoryHistory.query.get(entry_id)
-                
+
                 if entry:
                     entry.remaining_quantity = float(entry.remaining_quantity) - qty_to_deduct
                     print(f"RECOUNT: Deducted {qty_to_deduct} from lot {entry_id}")
@@ -667,7 +765,7 @@ def handle_recount_adjustment(item_id, target_quantity, notes=None, created_by=N
                 if item.type == 'product':
                     from app.models.product import ProductSKUHistory
                     from app.utils.fifo_generator import generate_fifo_code
-                    
+
                     for entry_id, qty_deducted, unit_cost in deduction_plan:
                         history = ProductSKUHistory(
                             inventory_item_id=item_id,
@@ -685,7 +783,7 @@ def handle_recount_adjustment(item_id, target_quantity, notes=None, created_by=N
                         db.session.add(history)
                 else:
                     from app.utils.fifo_generator import generate_fifo_code
-                    
+
                     for entry_id, qty_deducted, unit_cost in deduction_plan:
                         history = InventoryHistory(
                             inventory_item_id=item_id,
@@ -727,12 +825,12 @@ def handle_recount_adjustment(item_id, target_quantity, notes=None, created_by=N
             ).all()
 
         final_fifo_total = sum(float(entry.remaining_quantity) for entry in final_entries)
-        
+
         print(f"RECOUNT FINAL: inventory={item.quantity}, fifo_total={final_fifo_total}")
-        
+
         if abs(item.quantity - final_fifo_total) > 0.001:
             raise ValueError(f"CRITICAL: FIFO sync failed after recount - inventory={item.quantity}, fifo_total={final_fifo_total}")
-        
+
         return True
 
     except Exception as e:
