@@ -261,14 +261,14 @@
                 </td>
                 <td class="col-unit">{{ item.unit }}</td>
                 <td class="col-quantity">
-                  <span class="badge bg-{{ 'danger' if item.temp_available_quantity == 0 else 'warning' if item.temp_available_quantity <= item.low_stock_threshold else 'success' }}">
-                    {{ "%.2f"|format(item.temp_available_quantity) }} {{ item.unit or 'count' }}
+                  <span class="badge bg-{{ 'danger' if item.quantity == 0 else 'warning' if item.low_stock_threshold and item.quantity <= item.low_stock_threshold else 'success' }}">
+                    {{ "%.2f"|format(item.quantity) }} {{ item.unit or 'count' }}
                   </span>
                 </td>
                 <td class="col-expired">
-                  {% if item.temp_expired_quantity > 0 %}
+                  {% if item.expired_quantity > 0 %}
                     <span class="badge bg-danger">
-                      {{ "%.2f"|format(item.temp_expired_quantity) }} {{ item.unit or 'count' }}
+                      {{ "%.2f"|format(item.expired_quantity) }} {{ item.unit or 'count' }}
                     </span>
                   {% else %}
                     <span class="text-muted">-</span>
@@ -388,7 +388,7 @@
                 <li><label class="dropdown-item"><input type="checkbox" checked data-column="name"> Name</label></li>
                 <li><label class="dropdown-item"><input type="checkbox" checked data-column="storage"> Storage Amount</label></li>
                 <li><label class="dropdown-item"><input type="checkbox" checked data-column="storage_unit"> Storage Unit</label></li>
-                <li><label class="dropdown-item"><input type="checkbox" checked data-column="quantity"> Quantity in Stock</label></li>
+                <li><label class="dropdown-item"><input type="checkbox" checked data-column="quantity"> Quantity</label></li>
                 <li><label class="dropdown-item"><input type="checkbox" checked data-column="expired"> Expired</label></li>
                 <li><label class="dropdown-item"><input type="checkbox" checked data-column="cost"> Cost/Unit</label></li>
                 <li><label class="dropdown-item"><input type="checkbox" checked data-column="freshness"> Freshness</label></li>
@@ -563,14 +563,14 @@
                 <td class="col-storage">{{ item.storage_amount or 'N/A' }}</td>
                 <td class="col-storage_unit">{{ item.storage_unit or 'N/A' }}</td>
                 <td class="col-quantity">
-                  <span class="badge bg-{{ 'danger' if item.temp_available_quantity == 0 else 'warning' if item.temp_available_quantity <= item.low_stock_threshold else 'success' }}">
-                    {{ "%.2f"|format(item.temp_available_quantity) }} {{ item.unit or 'count' }}
+                  <span class="badge bg-{{ 'danger' if item.quantity == 0 else 'warning' if item.low_stock_threshold and item.quantity <= item.low_stock_threshold else 'success' }}">
+                    {{ "%.2f"|format(item.quantity) }} {{ item.unit or 'count' }}
                   </span>
                 </td>
                 <td class="col-expired">
-                  {% if item.temp_expired_quantity > 0 %}
+                  {% if item.expired_quantity > 0 %}
                     <span class="badge bg-danger">
-                      {{ "%.2f"|format(item.temp_expired_quantity) }} {{ item.unit or 'count' }}
+                      {{ "%.2f"|format(item.expired_quantity) }} {{ item.unit or 'count' }}
                     </span>
                   {% else %}
                     <span class="text-muted">-</span>
@@ -760,26 +760,26 @@ function initTablePagination(tableType) {
   });
 
   // Column visibility toggle with localStorage
-  const columnCheckboxes = document.querySelectorAll(`[data-column]`);
-  
+  const columnCheckboxes = document.querySelectorAll(`#${tableId} [data-column]`);
+
   // Load saved column preferences
   const savedColumns = JSON.parse(localStorage.getItem(`${tableType}_columns`) || '{}');
-  
+
   columnCheckboxes.forEach(checkbox => {
     const column = checkbox.dataset.column;
-    
+
     // Apply saved preference if it exists
     if (savedColumns.hasOwnProperty(column)) {
       checkbox.checked = savedColumns[column];
     }
-    
+
     // Apply initial visibility
     const isVisible = checkbox.checked;
     const columnElements = document.querySelectorAll(`#${tableId} .col-${column}`);
     columnElements.forEach(el => {
       el.style.display = isVisible ? '' : 'none';
     });
-    
+
     // Save preference on change
     checkbox.addEventListener('change', function() {
       const column = this.dataset.column;
@@ -788,7 +788,7 @@ function initTablePagination(tableType) {
       columnElements.forEach(el => {
         el.style.display = isVisible ? '' : 'none';
       });
-      
+
       // Save to localStorage
       const currentColumns = JSON.parse(localStorage.getItem(`${tableType}_columns`) || '{}');
       currentColumns[column] = isVisible;
