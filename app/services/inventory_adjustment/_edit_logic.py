@@ -1,116 +1,145 @@
-
+from flask_login import current_user
+from app.models import db, InventoryItem, InventoryHistory, IngredientCategory
+from flask import session
+from sqlalchemy import and_
 import logging
-from datetime import datetime
-from app.models import db, InventoryItem, IngredientCategory, UnifiedInventoryHistory
-from app.services.unit_conversion import ConversionEngine
-from ._validation import validate_inventory_fifo_sync
-from ._fifo_ops import _internal_add_fifo_entry_enhanced
+from ._core import process_inventory_adjustment
 
 logger = logging.getLogger(__name__)
 
-def update_inventory_item(item_id, updates, current_user_id=None):
-    """
-    Update inventory item details while maintaining FIFO integrity.
-    
-    Args:
-        item_id: ID of the inventory item to update
-        updates: Dictionary of fields to update
-        current_user_id: ID of user making the update
-        
-    Returns:
-        tuple: (success: bool, error_message: str or None, updated_item: InventoryItem or None)
-    """
+
+def update_inventory_item(item_id, form_data):
+    """Handle all inventory item updates through the canonical service"""
     try:
-        item = db.session.get(InventoryItem, item_id)
-        if not item:
-            return False, f"Item {item_id} not found", None
-            
-        # Store original values for audit trail
-        original_values = {}
-        
-        # Handle category updates
-        if 'category_id' in updates:
-            category_id = updates['category_id']
-            if category_id:
-                category = db.session.get(IngredientCategory, category_id)
-                if not category:
-                    return False, f"Category {category_id} not found", None
-                if category.organization_id != item.organization_id:
-                    return False, "Category belongs to different organization", None
-                    
-                original_values['category_id'] = item.category_id
-                item.category_id = category_id
-                
-        # Handle name updates
-        if 'name' in updates:
-            original_values['name'] = item.name
-            item.name = updates['name'].strip()
-            
-        # Handle unit updates
-        if 'unit' in updates:
-            new_unit = updates['unit']
+        item = InventoryItem.query.get_or_404(item_id)
+
+        # Handle unit changes with conversion confirmation
+        if item.type != 'container':
+            new_unit = form_data.get('unit')
             if new_unit != item.unit:
-                # Validate unit conversion is possible
-                try:
-                    # Test conversion to ensure units are compatible
-                    test_conversion = ConversionEngine.convert_units(
-                        1.0, item.unit, new_unit, item_type=item.type
+                history_count = InventoryHistory.query.filter_by(inventory_item_id=item_id).count()
+                if history_count > 0:
+                    confirm_unit_change = form_data.get('confirm_unit_change') == 'true'
+                    convert_inventory = form_data.get('convert_inventory') == 'true'
+
+                    if not confirm_unit_change:
+                        session['pending_unit_change'] = {
+                            'item_id': item_id,
+                            'old_unit': item.unit,
+                            'new_unit': new_unit,
+                            'current_quantity': item.quantity
+                        }
+                        return False, f'Unit change requires confirmation. Item has {history_count} transaction history entries.'
+
+                    if convert_inventory and item.quantity > 0:
+                        try:
+                            from app.services.unit_conversion import convert_unit
+                            converted_quantity = convert_unit(item.quantity, item.unit, new_unit, item.density)
+                            item.quantity = converted_quantity
+
+                            history = InventoryHistory(
+                                inventory_item_id=item.id,
+                                change_type='unit_conversion',
+                                quantity_change=0,
+                                unit=new_unit,
+                                note=f'Unit converted from {item.unit} to {new_unit}',
+                                created_by=current_user.id,
+                                quantity_used=0.0
+                            )
+                            db.session.add(history)
+                        except Exception as e:
+                            return False, f'Could not convert inventory to new unit: {str(e)}'
+
+                    session.pop('pending_unit_change', None)
+
+        # Update basic fields
+        item.name = form_data.get('name')
+        
+        # Handle quantity update with recount
+        new_quantity = float(form_data.get('quantity', item.quantity))
+        if abs(new_quantity - item.quantity) > 0.001:
+            # Use recount to set absolute quantity
+            success = process_inventory_adjustment(
+                item_id=item.id,
+                quantity=new_quantity,  # Recount target quantity, not delta
+                change_type='recount',
+                notes=f'Quantity updated via edit: {item.quantity} → {new_quantity}',
+                created_by=current_user.id if current_user.is_authenticated else None,
+                item_type=item.type
+            )
+            if not success:
+                return False, 'Error updating quantity'
+
+        # Handle perishable status changes
+        is_perishable = form_data.get('is_perishable') == 'on'
+        was_perishable = item.is_perishable
+        old_shelf_life = item.shelf_life_days
+        item.is_perishable = is_perishable
+
+        if is_perishable:
+            shelf_life_days = int(form_data.get('shelf_life_days', 0))
+            item.shelf_life_days = shelf_life_days
+            from datetime import datetime, timedelta
+            if shelf_life_days > 0:
+                item.expiration_date = datetime.utcnow().date() + timedelta(days=shelf_life_days)
+
+                if not was_perishable or old_shelf_life != shelf_life_days:
+                    from app.blueprints.expiration.services import ExpirationService
+                    ExpirationService.update_fifo_expiration_data(item.id, shelf_life_days)
+        else:
+            if was_perishable:
+                item.shelf_life_days = None
+                item.expiration_date = None
+
+                fifo_entries = InventoryHistory.query.filter(
+                    and_(
+                        InventoryHistory.inventory_item_id == item.id,
+                        InventoryHistory.remaining_quantity > 0
                     )
-                    original_values['unit'] = item.unit
-                    item.unit = new_unit
-                except Exception as e:
-                    return False, f"Unit conversion error: {str(e)}", None
-                    
-        # Handle cost updates
-        if 'cost_per_unit' in updates:
-            try:
-                new_cost = float(updates['cost_per_unit'])
-                if new_cost < 0:
-                    return False, "Cost per unit cannot be negative", None
-                original_values['cost_per_unit'] = item.cost_per_unit
-                item.cost_per_unit = new_cost
-            except (ValueError, TypeError):
-                return False, "Invalid cost per unit value", None
-                
-        # Handle notes updates
-        if 'notes' in updates:
-            original_values['notes'] = item.notes
-            item.notes = updates['notes']
-            
-        # Handle expiration date updates
-        if 'expiration_date' in updates:
-            original_values['expiration_date'] = item.expiration_date
-            item.expiration_date = updates['expiration_date']
-            
-        # Handle minimum stock level updates
-        if 'minimum_stock_level' in updates:
-            try:
-                new_min = float(updates['minimum_stock_level']) if updates['minimum_stock_level'] else None
-                if new_min is not None and new_min < 0:
-                    return False, "Minimum stock level cannot be negative", None
-                original_values['minimum_stock_level'] = item.minimum_stock_level
-                item.minimum_stock_level = new_min
-            except (ValueError, TypeError):
-                return False, "Invalid minimum stock level value", None
-                
-        # Update timestamps
-        item.updated_at = datetime.utcnow()
-        
-        # Commit the changes
+                ).all()
+
+                for entry in fifo_entries:
+                    entry.is_perishable = False
+                    entry.shelf_life_days = None
+                    entry.expiration_date = None
+
+        # Handle cost override
+        new_cost = float(form_data.get('cost_per_unit', 0))
+        if form_data.get('override_cost') and new_cost != item.cost_per_unit:
+            history = InventoryHistory(
+                inventory_item_id=item.id,
+                change_type='cost_override',
+                quantity_change=0,
+                unit=item.unit,
+                unit_cost=new_cost,
+                note=f'Cost manually overridden from {item.cost_per_unit} to {new_cost}',
+                created_by=current_user.id,
+                quantity_used=0.0
+            )
+            db.session.add(history)
+            item.cost_per_unit = new_cost
+
+        # Type-specific updates
+        if item.type == 'container':
+            item.storage_amount = float(form_data.get('storage_amount'))
+            item.storage_unit = form_data.get('storage_unit')
+        else:
+            item.unit = form_data.get('unit')
+            category_id = form_data.get('category_id')
+            item.category_id = None if not category_id or category_id == '' else int(category_id)
+            if not item.category_id:
+                item.density = float(form_data.get('density', 1.0))
+            else:
+                category = IngredientCategory.query.get(item.category_id)
+                if category and category.default_density:
+                    item.density = category.default_density
+                else:
+                    item.density = None
+
         db.session.commit()
-        
-        # Validate FIFO sync after update
-        is_valid, error_msg, inventory_qty, fifo_total = validate_inventory_fifo_sync(
-            item_id, item.type
-        )
-        
-        if not is_valid:
-            logger.warning(f"FIFO sync warning after item update: {error_msg}")
-            
-        logger.info(f"Updated inventory item {item_id}: {original_values}")
-        return True, None, item
-        
+        return True, f'{item.type.title()} updated successfully.'
+
     except Exception as e:
         db.session.rollback()
-        logger.error(f"Error updating inventory item {item_id}: {e}")
-        return False, f"Update failed: {str(e)}", None
+        logging.error(f"Error updating inventory item {item_id}: {str(e)}")
+        return False, f'Error saving changes: {str(e)}'

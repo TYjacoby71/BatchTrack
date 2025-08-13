@@ -1,84 +1,108 @@
 
-import logging
+"""
+Audit Trail Management for Inventory Adjustments
+
+This module handles all audit trail and history recording for inventory operations.
+"""
+
 from datetime import datetime
-from app.models import db, UnifiedInventoryHistory
-from app.utils.timezone_utils import TimezoneUtils
+from flask_login import current_user
+from app.models import db, InventoryItem, UnifiedInventoryHistory
+from app.utils.fifo_generator import generate_fifo_code
+import logging
 
 logger = logging.getLogger(__name__)
 
-def log_inventory_adjustment(item_id, adjustment_type, quantity_change, notes, created_by):
+
+def audit_event(
+    item_id: int,
+    change_type: str,
+    notes: str = "",
+    created_by: int = None,
+    item_type: str = "ingredient",
+    fifo_reference_id: int = None,
+    unit: str = None,
+    unit_cost: float = None,
+) -> bool:
     """
-    Log an inventory adjustment for audit purposes.
-    
-    Args:
-        item_id: ID of the inventory item
-        adjustment_type: Type of adjustment made
-        quantity_change: Quantity that was changed (positive for additions, negative for deductions)
-        notes: Notes about the adjustment
-        created_by: User ID who made the adjustment
+    Sanctioned audit-only history entry (no inventory change).
+    Uses the same internal helpers so nothing writes outside this module.
     """
     try:
-        # Create audit log entry
-        audit_entry = UnifiedInventoryHistory(
-            inventory_item_id=item_id,
-            change_type=f"audit_{adjustment_type}",
-            quantity_changed=quantity_change,
-            remaining_quantity=0,  # Not applicable for audit entries
-            notes=f"AUDIT: {adjustment_type} - {notes or 'No notes'}",
-            created_by=created_by,
-            created_at=TimezoneUtils.utc_now(),
-            cost_per_unit=0,  # Not applicable for audit entries
-            organization_id=None  # Will be set by the model if needed
-        )
-        
-        db.session.add(audit_entry)
-        
-        logger.info(f"Logged inventory adjustment: item={item_id}, type={adjustment_type}, "
-                   f"change={quantity_change}, user={created_by}")
-        
-    except Exception as e:
-        logger.error(f"Failed to log inventory adjustment: {e}")
-        # Don't raise exception - audit logging shouldn't break the main operation
+        item = InventoryItem.query.get(item_id)
+        if not item:
+            return False
 
+        fifo_code = generate_fifo_code(change_type, 0)
 
-def audit_event(item_id, change_type, notes=None, fifo_reference_id=None, source=None, created_by=None):
-    """
-    Record an audit event for tracking inventory operations.
-    
-    Args:
-        item_id: ID of the inventory item
-        change_type: Type of change/event being audited
-        notes: Optional notes about the event
-        fifo_reference_id: Optional reference to a FIFO entry
-        source: Optional source identifier for the audit event
-        created_by: User ID who triggered the event
-    """
-    try:
-        # Create audit entry
-        audit_entry = UnifiedInventoryHistory(
+        # Use unified history table for all audit entries
+        history = UnifiedInventoryHistory(
             inventory_item_id=item_id,
             change_type=change_type,
-            quantity_changed=0,  # Audit entries don't change quantities
-            remaining_quantity=0,  # Not applicable for audit entries
-            notes=notes or "Audit event",
+            quantity_change=0.0,  # Audit entries don't change quantity
+            remaining_quantity=0.0,  # Audit entries have no FIFO impact
+            unit=unit or item.unit,
+            notes=notes,
             created_by=created_by,
-            created_at=TimezoneUtils.utc_now(),
-            cost_per_unit=0,  # Not applicable for audit entries
-            organization_id=None  # Will be set by the model if needed
+            organization_id=current_user.organization_id if current_user.is_authenticated else item.organization_id,
+            fifo_code=fifo_code,
+            fifo_reference_id=fifo_reference_id,
+            unit_cost=unit_cost
+        )
+
+        db.session.add(history)
+        db.session.commit()
+        return True
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error creating audit entry: {str(e)}")
+        return False
+
+
+def record_audit_entry(
+    item_id: int,
+    change_type: str,
+    quantity_change: float = 0,
+    notes: str | None = None,
+    created_by: int | None = None,
+    **kwargs
+) -> bool:
+    """
+    Record an audit trail entry for inventory operations.
+    
+    This is used for operations that need to log activity but don't affect FIFO lots,
+    such as cost overrides, administrative changes, etc.
+    """
+    try:
+        item = InventoryItem.query.get(item_id)
+        if not item:
+            logger.error(f"Cannot record audit entry - item {item_id} not found")
+            return False
+
+        audit_entry = UnifiedInventoryHistory(
+            inventory_item_id=item_id,
+            organization_id=item.organization_id,
+            timestamp=datetime.utcnow(),
+            change_type=change_type,
+            quantity_change=quantity_change,
+            remaining_quantity=0.0,  # Audit entries don't create FIFO lots
+            unit=item.unit,
+            notes=notes,
+            created_by=created_by,
+            fifo_code=generate_fifo_code(change_type),
+            batch_id=kwargs.get('batch_id'),
+            customer=kwargs.get('customer'),
+            order_id=kwargs.get('order_id'),
+            sale_price=kwargs.get('sale_price')
         )
         
         db.session.add(audit_entry)
+        db.session.commit()
         
-        logger.info(f"Recorded audit event: item={item_id}, type={change_type}, "
-                   f"source={source}, user={created_by}")
+        logger.info(f"Recorded audit entry for item {item_id}: {change_type}")
+        return True
         
     except Exception as e:
-        logger.error(f"Failed to record audit event: {e}")
-        # Don't raise exception - audit logging shouldn't break the main operation
-
-
-def record_audit_entry(item_id, change_type, notes=None, fifo_reference_id=None, source=None, created_by=None):
-    """
-    Alias for audit_event function for backwards compatibility.
-    """
-    return audit_event(item_id, change_type, notes, fifo_reference_id, source, created_by)
+        db.session.rollback()
+        logger.error(f"Failed to record audit entry for item {item_id}: {str(e)}")
+        return False

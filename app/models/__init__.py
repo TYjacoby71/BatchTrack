@@ -40,7 +40,6 @@ except ImportError:
 try:
     from .inventory import InventoryHistory as FIFOLot
     Ingredient = InventoryItem  # Alias for tests expecting Ingredient class
-    from .category import IngredientCategory as Category  # Alias for Category imports
 except ImportError:
     pass
 
