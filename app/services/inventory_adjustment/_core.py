@@ -1,4 +1,3 @@
-
 from flask import current_app
 from flask_login import current_user
 from app.models import db, InventoryItem, InventoryHistory
@@ -11,7 +10,7 @@ import inspect
 
 # Import internal helpers
 from ._validation import validate_inventory_fifo_sync
-from ._fifo_ops import (_calculate_deduction_plan_internal, _execute_deduction_plan_internal, 
+from ._fifo_ops import (_calculate_deduction_plan_internal, _execute_deduction_plan_internal,
                        _record_deduction_plan_internal, _internal_add_fifo_entry_enhanced)
 from ._recount_logic import handle_recount_adjustment
 
@@ -241,10 +240,10 @@ def process_inventory_adjustment(
                 custom_expiration_date=expiration_date,
                 custom_shelf_life_days=shelf_life_to_use
             )
-            
+
             if not success:
                 raise ValueError(error_msg or "Failed to add FIFO entry")
-            
+
             qty_applied_in_fifo = True
 
         # For batch completions, ensure the inventory item inherits perishable settings
