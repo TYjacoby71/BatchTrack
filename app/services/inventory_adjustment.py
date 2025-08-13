@@ -7,13 +7,10 @@ from app.services.unit_conversion import ConversionEngine
 from sqlalchemy import func, and_
 import logging
 
-# Import FIFOService to handle inventory operations
-from app.blueprints.fifo.services import FIFOService
-
 # Initialize logger
 logger = logging.getLogger(__name__)
 
-# FIFO logic moved inline to avoid blueprint imports
+# Core FIFO operations - moved from blueprints/fifo/services.py
 
 def validate_inventory_fifo_sync(item_id):
     """Validate that inventory quantity matches FIFO totals"""
@@ -430,15 +427,15 @@ def process_inventory_adjustment(
         # Track whether we already applied the quantity mutation inside FIFO helpers
         qty_applied_in_fifo = False
 
-        # Handle inventory changes using FIFO service
+        # Handle inventory changes using internal FIFO methods
         if qty_change < 0:
-            # Deductions - use FIFO service
-            success, deduction_plan, available_qty = FIFOService.calculate_deduction_plan(
+            # Deductions - calculate plan first
+            deduction_plan, error_msg = _calculate_deduction_plan_internal(
                 item_id, abs(qty_change), change_type
             )
 
-            if not success:
-                raise ValueError("Insufficient fresh FIFO stock (expired lots frozen)")
+            if not deduction_plan:
+                raise ValueError(error_msg or "Insufficient inventory")
 
             # Handle reservations specially - create reservations FIRST before any FIFO changes
             if change_type == 'reserved':
@@ -451,13 +448,13 @@ def process_inventory_adjustment(
 
                 reservations_created = []
                 try:
-                    for fifo_entry_id, qty_deducted, cost_per_unit in deduction_plan:
+                    for fifo_entry_id, qty_deducted, cost_per_unit_from_plan in deduction_plan:
                         reservation, error = ReservationService.create_reservation(
                             inventory_item_id=item_id,
                             quantity=qty_deducted,
                             order_id=order_id,
                             source_fifo_id=fifo_entry_id,
-                            unit_cost=cost_per_unit,
+                            unit_cost=cost_per_unit_from_plan,
                             customer=customer,
                             sale_price=sale_price,
                             notes=notes or f"Reserved for order {order_id}"
@@ -469,11 +466,13 @@ def process_inventory_adjustment(
                     # If reservation creation fails, don't execute FIFO deductions
                     raise ValueError(f"Reservation creation failed, no inventory changes made: {str(e)}")
 
-            # Execute the deduction plan using FIFO service ONLY after reservations are created successfully
-            FIFOService.execute_deduction_plan(deduction_plan, item_id)
+            # Execute the deduction plan ONLY after reservations are created successfully
+            success, error_msg = _execute_deduction_plan_internal(deduction_plan, item_id)
+            if not success:
+                raise ValueError(error_msg or "Failed to execute deduction plan")
 
-            # Use FIFO service for all deductions - it routes to the correct history table
-            FIFOService.record_deduction_plan(
+            # Record deduction history
+            success = _record_deduction_plan_internal(
                 item_id,
                 deduction_plan,
                 change_type,
@@ -484,39 +483,39 @@ def process_inventory_adjustment(
                 sale_price=sale_price,
                 order_id=order_id,
             )
+            if not success:
+                raise ValueError("Failed to record deduction history")
         elif qty_change > 0:
-            # Additions - use FIFO service
+            # Additions - use internal FIFO methods
             if change_type == 'refunded' and batch_id:
-                # Handle refund credits using FIFO service
-                FIFOService.handle_refund_credits(
-                    item_id, qty_change, batch_id, notes, created_by, cost_per_unit
-                )
-            else:
-                # Use FIFO service for all additions - it routes to the correct history table
-                # Handle expiration data
-                timestamp = datetime.utcnow()
+                # TODO: Handle refund credits - for now use standard addition
+                pass
 
-                # Determine the correct unit for the history entry
-                history_unit = 'count' if getattr(item, 'type', None) == 'container' else item.unit
+            # Determine the correct unit for the history entry
+            history_unit = 'count' if getattr(item, 'type', None) == 'container' else item.unit
 
-                FIFOService._internal_add_fifo_entry(
-                    item_id=item_id,
-                    quantity=qty_change,
-                    change_type=change_type,
-                    unit=history_unit,
-                    notes=notes,
-                    cost_per_unit=cost_per_unit,
-                    expiration_date=expiration_date,
-                    shelf_life_days=shelf_life_to_use,
-                    batch_id=batch_id,
-                    created_by=created_by,
-                    customer=customer,
-                    sale_price=sale_price,
-                    order_id=order_id,
-                    custom_expiration_date=expiration_date, # Using the determined expiration_date here
-                    custom_shelf_life_days=shelf_life_to_use # Using the determined shelf_life_to_use here
-                )
-                qty_applied_in_fifo = True
+            success, error_msg = _internal_add_fifo_entry_enhanced(
+                item_id=item_id,
+                quantity=qty_change,
+                change_type=change_type,
+                unit=history_unit,
+                notes=notes,
+                cost_per_unit=cost_per_unit,
+                expiration_date=expiration_date,
+                shelf_life_days=shelf_life_to_use,
+                batch_id=batch_id,
+                created_by=created_by,
+                customer=customer,
+                sale_price=sale_price,
+                order_id=order_id,
+                custom_expiration_date=expiration_date,
+                custom_shelf_life_days=shelf_life_to_use
+            )
+            
+            if not success:
+                raise ValueError(error_msg or "Failed to add FIFO entry")
+            
+            qty_applied_in_fifo = True
 
         # For batch completions, ensure the inventory item inherits perishable settings
         if change_type == 'finished_batch' and batch_id:
@@ -837,6 +836,285 @@ def handle_recount_adjustment(item_id, target_quantity, notes=None, created_by=N
         db.session.rollback()
         print(f"RECOUNT ERROR: {str(e)}")
         raise e
+
+
+def _calculate_deduction_plan_internal(item_id, required_quantity, change_type='use'):
+    """Calculate FIFO deduction plan with expiration awareness"""
+    from app.models import InventoryItem, InventoryHistory
+    from sqlalchemy import and_
+    from datetime import datetime
+
+    item = InventoryItem.query.get(item_id)
+    if not item:
+        return None, "Item not found"
+
+    # Get organization for proper scoping
+    org_id = current_user.organization_id if current_user.is_authenticated else item.organization_id
+
+    # Use different history tables based on item type
+    if item.type == 'product':
+        from app.models.product import ProductSKUHistory
+        available_entries = ProductSKUHistory.query.filter(
+            and_(
+                ProductSKUHistory.inventory_item_id == item_id,
+                ProductSKUHistory.remaining_quantity > 0,
+                ProductSKUHistory.organization_id == org_id
+            )
+        ).order_by(ProductSKUHistory.timestamp.asc()).all()
+    else:
+        available_entries = InventoryHistory.query.filter(
+            and_(
+                InventoryHistory.inventory_item_id == item_id,
+                InventoryHistory.remaining_quantity > 0,
+                InventoryHistory.organization_id == org_id
+            )
+        ).order_by(InventoryHistory.timestamp.asc()).all()
+
+    # Separate fresh and expired entries
+    today = datetime.now().date()
+    fresh_entries = []
+    expired_entries = []
+
+    for entry in available_entries:
+        if hasattr(entry, 'expiration_date') and entry.expiration_date and entry.expiration_date < today:
+            expired_entries.append(entry)
+        else:
+            fresh_entries.append(entry)
+
+    # For most operations, only use fresh inventory
+    if change_type in ['spoil', 'expired', 'trash']:
+        # These operations can consume from any inventory (including expired)
+        usable_entries = fresh_entries + expired_entries
+    else:
+        # Normal operations should only consume fresh inventory
+        usable_entries = fresh_entries
+
+    deduction_plan = []
+    remaining_needed = float(required_quantity)
+
+    for entry in usable_entries:
+        if remaining_needed <= 0:
+            break
+
+        available_qty = float(entry.remaining_quantity)
+        deduct_from_entry = min(available_qty, remaining_needed)
+
+        if deduct_from_entry > 0:
+            deduction_plan.append((
+                entry.id,
+                deduct_from_entry,
+                getattr(entry, 'unit_cost', None)
+            ))
+            remaining_needed -= deduct_from_entry
+
+    # Check if we have enough fresh inventory for non-spoilage operations
+    if remaining_needed > 0:
+        if change_type not in ['spoil', 'expired', 'trash']:
+            fresh_total = sum(float(e.remaining_quantity) for e in fresh_entries)
+            return None, f"Insufficient fresh inventory: need {required_quantity}, available {fresh_total}"
+        else:
+            # For spoilage/trash, we tried everything and still don't have enough
+            total_available = sum(float(e.remaining_quantity) for e in available_entries)
+            return None, f"Insufficient inventory: need {required_quantity}, available {total_available}"
+
+    return deduction_plan, None
+
+
+def _execute_deduction_plan_internal(deduction_plan, item_id):
+    """Execute FIFO deduction plan"""
+    from app.models import InventoryItem, InventoryHistory
+    from app.models.product import ProductSKUHistory
+
+    item = InventoryItem.query.get(item_id)
+    if not item:
+        return False, "Item not found"
+
+    for entry_id, deduct_quantity, unit_cost in deduction_plan:
+        if item.type == 'product':
+            entry = ProductSKUHistory.query.get(entry_id)
+        else:
+            entry = InventoryHistory.query.get(entry_id)
+
+        if not entry:
+            return False, f"FIFO entry {entry_id} not found"
+
+        new_remaining = float(entry.remaining_quantity) - deduct_quantity
+        entry.remaining_quantity = max(0.0, new_remaining)
+
+    try:
+        db.session.flush()
+        return True, None
+    except Exception as e:
+        return False, f"Database error during deduction: {str(e)}"
+
+
+def _record_deduction_plan_internal(item_id, deduction_plan, change_type, notes, **kwargs):
+    """Record deduction history entries"""
+    from app.models import InventoryItem
+    from app.utils.fifo_generator import generate_fifo_code
+
+    item = InventoryItem.query.get(item_id)
+    if not item:
+        return False
+
+    # Extract optional parameters
+    batch_id = kwargs.get('batch_id')
+    created_by = kwargs.get('created_by')
+    customer = kwargs.get('customer')
+    sale_price = kwargs.get('sale_price')
+    order_id = kwargs.get('order_id')
+
+    history_unit = 'count' if item.type == 'container' else item.unit
+    org_id = current_user.organization_id if current_user.is_authenticated else item.organization_id
+
+    try:
+        for entry_id, qty_deducted, unit_cost in deduction_plan:
+            fifo_code = generate_fifo_code(change_type)
+            
+            if item.type == 'product':
+                from app.models.product import ProductSKUHistory
+                history = ProductSKUHistory(
+                    inventory_item_id=item_id,
+                    change_type=change_type,
+                    quantity_change=-qty_deducted,
+                    remaining_quantity=0.0,
+                    unit=history_unit,
+                    notes=notes,
+                    created_by=created_by,
+                    organization_id=org_id,
+                    fifo_code=fifo_code,
+                    fifo_reference_id=entry_id,
+                    unit_cost=unit_cost,
+                    batch_id=batch_id,
+                    customer=customer,
+                    sale_price=sale_price,
+                    order_id=order_id
+                )
+            else:
+                history = InventoryHistory(
+                    inventory_item_id=item_id,
+                    change_type=change_type,
+                    quantity_change=-qty_deducted,
+                    remaining_quantity=0.0,
+                    unit=history_unit,
+                    note=notes,
+                    created_by=created_by,
+                    quantity_used=0.0,
+                    organization_id=org_id,
+                    fifo_code=fifo_code,
+                    fifo_reference_id=entry_id,
+                    unit_cost=unit_cost,
+                    batch_id=batch_id,
+                    customer=customer,
+                    sale_price=sale_price,
+                    order_id=order_id
+                )
+            
+            db.session.add(history)
+        
+        db.session.flush()
+        return True
+    except Exception as e:
+        logger.error(f"Error recording deduction plan: {str(e)}")
+        return False
+
+
+def _internal_add_fifo_entry_enhanced(item_id, quantity, change_type, unit, notes, cost_per_unit, **kwargs):
+    """Enhanced FIFO entry creation with full parameter support"""
+    from app.models import InventoryItem, InventoryHistory
+    from app.models.product import ProductSKUHistory
+    from app.utils.fifo_generator import generate_fifo_code
+    from datetime import datetime, timedelta
+
+    item = InventoryItem.query.get(item_id)
+    if not item:
+        return False, "Item not found"
+
+    # Extract parameters
+    expiration_date = kwargs.get('expiration_date')
+    shelf_life_days = kwargs.get('shelf_life_days')
+    batch_id = kwargs.get('batch_id')
+    created_by = kwargs.get('created_by')
+    customer = kwargs.get('customer')
+    sale_price = kwargs.get('sale_price')
+    order_id = kwargs.get('order_id')
+    custom_expiration_date = kwargs.get('custom_expiration_date')
+    custom_shelf_life_days = kwargs.get('custom_shelf_life_days')
+
+    # Organization scoping
+    org_id = current_user.organization_id if current_user.is_authenticated else item.organization_id
+
+    # Calculate expiration data
+    final_expiration_date = None
+    final_shelf_life_days = None
+    is_perishable = False
+
+    if item.is_perishable:
+        is_perishable = True
+        if custom_expiration_date:
+            final_expiration_date = custom_expiration_date
+        elif expiration_date:
+            final_expiration_date = expiration_date
+        elif custom_shelf_life_days and custom_shelf_life_days > 0:
+            final_shelf_life_days = custom_shelf_life_days
+            final_expiration_date = datetime.utcnow().date() + timedelta(days=custom_shelf_life_days)
+        elif shelf_life_days and shelf_life_days > 0:
+            final_shelf_life_days = shelf_life_days
+            final_expiration_date = datetime.utcnow().date() + timedelta(days=shelf_life_days)
+        elif item.shelf_life_days and item.shelf_life_days > 0:
+            final_shelf_life_days = item.shelf_life_days
+            final_expiration_date = datetime.utcnow().date() + timedelta(days=item.shelf_life_days)
+
+    fifo_code = generate_fifo_code(change_type)
+
+    try:
+        if item.type == 'product':
+            history_entry = ProductSKUHistory(
+                inventory_item_id=item_id,
+                change_type=change_type,
+                quantity_change=quantity,
+                unit=unit,
+                unit_cost=cost_per_unit,
+                notes=notes,
+                created_by=created_by,
+                remaining_quantity=quantity,
+                is_perishable=is_perishable,
+                shelf_life_days=final_shelf_life_days,
+                expiration_date=final_expiration_date,
+                organization_id=org_id,
+                fifo_code=fifo_code,
+                batch_id=batch_id,
+                customer=customer,
+                sale_price=sale_price,
+                order_id=order_id
+            )
+        else:
+            history_entry = InventoryHistory(
+                inventory_item_id=item_id,
+                change_type=change_type,
+                quantity_change=quantity,
+                unit=unit,
+                unit_cost=cost_per_unit,
+                note=notes,
+                created_by=created_by,
+                remaining_quantity=quantity,
+                is_perishable=is_perishable,
+                shelf_life_days=final_shelf_life_days,
+                expiration_date=final_expiration_date,
+                quantity_used=0.0,
+                organization_id=org_id,
+                fifo_code=fifo_code,
+                batch_id=batch_id,
+                customer=customer,
+                sale_price=sale_price,
+                order_id=order_id
+            )
+
+        db.session.add(history_entry)
+        db.session.flush()
+        return True, None
+    except Exception as e:
+        return False, f"Error creating FIFO entry: {str(e)}"
 
 
 def audit_event(
