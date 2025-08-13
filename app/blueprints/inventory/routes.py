@@ -302,50 +302,105 @@ def adjust_inventory(id):
     notes = form.get('notes') or None
     unit = form.get('input_unit') or getattr(item, 'unit', None)
 
-    if adj_type == 'recount':
-        process_inventory_adjustment(
-            item_id=item.id,
-            quantity=qty,
-            change_type='recount',
-            unit=unit,
-            notes=notes,
-            created_by=getattr(current_user, 'id', None),
-        )
-        return ('', 204)
+    # Define all supported change types
+    deductive_types = {
+        'spoil', 'trash', 'expired', 'gift', 'sample', 'tester',
+        'quality_fail', 'damaged', 'sold', 'sale', 'use', 'batch',
+        'reserved', 'unreserved'
+    }
+    
+    additive_types = {
+        'restock', 'manual_addition', 'returned', 'refunded'
+    }
+    
+    special_types = {
+        'recount', 'cost_override'
+    }
 
-    if adj_type == 'restock':
-        has_hist = InventoryHistory.query.filter_by(inventory_item_id=item.id).count() > 0
-        if not has_hist:
+    try:
+        # Recount (absolute target)
+        if adj_type == 'recount':
+            success = process_inventory_adjustment(
+                item_id=item.id,
+                quantity=qty,
+                change_type='recount',
+                unit=unit,
+                notes=notes,
+                created_by=getattr(current_user, 'id', None),
+            )
+            if success:
+                flash('Inventory recount completed successfully.', 'success')
+            else:
+                flash('Error during recount adjustment.', 'error')
+            return redirect(url_for('inventory.view_inventory', id=item.id))
+
+        # Restock (with optional cost override for first-time)
+        elif adj_type in additive_types:
+            has_hist = InventoryHistory.query.filter_by(inventory_item_id=item.id).count() > 0
             cost_override = None
-            if form.get('cost_entry_type') == 'per_unit' and form.get('cost_per_unit'):
+            
+            if not has_hist and form.get('cost_entry_type') == 'per_unit' and form.get('cost_per_unit'):
                 try:
                     cost_override = float(form.get('cost_per_unit'))
                 except ValueError:
                     cost_override = None
 
-            process_inventory_adjustment(
+            success = process_inventory_adjustment(
                 item_id=item.id,
                 quantity=qty,
-                change_type='restock',
+                change_type=adj_type,
                 unit=unit,
                 notes=notes,
                 created_by=getattr(current_user, 'id', None),
                 cost_override=cost_override,
             )
-            return ('', 204)
+            if success:
+                flash(f'Inventory {adj_type} completed successfully.', 'success')
+            else:
+                flash(f'Error during {adj_type} adjustment.', 'error')
+            return redirect(url_for('inventory.view_inventory', id=item.id))
 
-        # normal restock path
-        process_inventory_adjustment(
-            item_id=item.id,
-            quantity=qty,
-            change_type='restock',
-            unit=unit,
-            notes=notes,
-            created_by=getattr(current_user, 'id', None),
-        )
-        return ('', 204)
+        # Deductive adjustments (spoil, trash, etc.)
+        elif adj_type in deductive_types:
+            success = process_inventory_adjustment(
+                item_id=item.id,
+                quantity=qty,  # Service will make this negative
+                change_type=adj_type,
+                unit=unit,
+                notes=notes,
+                created_by=getattr(current_user, 'id', None),
+            )
+            if success:
+                flash(f'Inventory {adj_type} completed successfully.', 'success')
+            else:
+                flash(f'Error during {adj_type} adjustment.', 'error')
+            return redirect(url_for('inventory.view_inventory', id=item.id))
 
-    return ('Invalid adjustment type', 400)
+        # Cost override
+        elif adj_type == 'cost_override':
+            new_cost = float(form.get('cost_per_unit', 0))
+            success = process_inventory_adjustment(
+                item_id=item.id,
+                quantity=0,  # No quantity change for cost override
+                change_type='cost_override',
+                unit=unit,
+                notes=notes or f'Cost override to {new_cost}',
+                created_by=getattr(current_user, 'id', None),
+                cost_override=new_cost,
+            )
+            if success:
+                flash('Cost override completed successfully.', 'success')
+            else:
+                flash('Error during cost override.', 'error')
+            return redirect(url_for('inventory.view_inventory', id=item.id))
+
+        else:
+            flash(f'Invalid adjustment type: {adj_type}', 'error')
+            return redirect(url_for('inventory.view_inventory', id=item.id))
+
+    except Exception as e:
+        flash(f'Error processing adjustment: {str(e)}', 'error')
+        return redirect(url_for('inventory.view_inventory', id=item.id))
 
 
 @inventory_bp.route('/edit/<int:id>', methods=['POST'])
