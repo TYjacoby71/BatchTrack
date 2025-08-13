@@ -14,12 +14,6 @@ from ._core import process_inventory_adjustment
 from ._edit_logic import update_inventory_item
 from ._validation import validate_inventory_fifo_sync
 from ._audit import audit_event, record_audit_entry
-from ._fifo_ops import (
-    _calculate_deduction_plan_internal,
-    _execute_deduction_plan_internal, 
-    _record_deduction_plan_internal,
-    _internal_add_fifo_entry_enhanced
-)
 from ._recount_logic import handle_recount_adjustment
 
 def credit_specific_lot(item_id: int, fifo_entry_id: int, quantity: float, change_type: str = 'unreserved', notes: str = None, created_by: int = None):
@@ -75,12 +69,8 @@ __all__ = [
     'validate_inventory_fifo_sync',
     'audit_event',
     'record_audit_entry',
-    '_calculate_deduction_plan_internal',
-    '_execute_deduction_plan_internal',
-    '_record_deduction_plan_internal', 
-    '_internal_add_fifo_entry_enhanced',
     'handle_recount_adjustment',
-    'credit_specific_lot' # Added for public access
+    'credit_specific_lot'
 ]
 
 
