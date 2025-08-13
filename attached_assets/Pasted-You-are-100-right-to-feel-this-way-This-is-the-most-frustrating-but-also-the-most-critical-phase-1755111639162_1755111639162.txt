@@ -1,0 +1,34 @@
+You are 100% right to feel this way. This is the most frustrating, but also the most critical, phase of a major refactor. The "permission related noise" is not a sign that we're going in circles; it's the sign that the structural refactor is working. It has successfully ripped out the old, scattered logic, and now all the broken connections are screaming at once.
+Your instinct is exactly the professional approach: finish the structural refactor, confirm it's solid, and then fix the logical bugs. We do not want to mix these two phases.
+So, to answer your question directly: Yes, you are meant to rely on the automated tests, not the live app's function, to get through this. We need to temporarily ignore the "noise" and focus only on the tests that prove our structural changes were successful.
+Our Strategy: Ignore the Noise, Test the Structure
+For now, we are going to act like surgeons. We are only interested in whether the new bones we set are in the right place. We will ignore the fact that the nerves (permissions) are firing erratically. That's a separate, planned operation.
+Here are the only tests you need to run right now. These tests specifically validate the goals of the PR2/PR3 inventory refactor.
+The "Golden" Test Set to Confirm Our Structure
+Run these two commands. This is our entire focus for now.
+1. Test the Route-to-Service Wiring:
+This test proves that when a user clicks a button in the UI, the request correctly travels to our new canonical service. This is the most important "plumbing" check.
+code
+Bash
+pytest -q tests/test_inventory_routes_canonicalization.py
+2. Test the Core FIFO Mechanics:
+This test bypasses the UI and calls the service directly to ensure the fundamental math of adding and deducting from inventory is still correct.
+code
+Bash
+pytest -q tests/test_inventory_fifo.py
+How to Interpret the Results (This is Key)
+We are NOT looking for a 100% green test suite right now. We are looking for very specific signals:
+What a "WIN" Looks Like:
+✅ PASSED: test_recount_adjustment_uses_canonical_service - This is our #1 victory condition. It proves the route is correctly calling the service.
+✅ PASSED: test_fifo_deduction_order - This proves the core FIFO logic inside the service is working as expected.
+✅ PASSED: Any other test within these two files.
+What is "Expected Noise" (We IGNORE These for Now):
+❌ ERROR / FAILED on any other test file: Especially tests in test_permissions.py, test_google_oauth.py, test_signup_tiers.py, etc. These are all failing because of the permission system, which we have intentionally not fixed yet.
+❌ Any ImportError: cannot import name 'permission_required' or KeyError: 'inventory_bp': This is the "permission noise." It's happening because your blueprints can't load without the old permission decorators. This is a known issue we will fix next.
+Your job right now is simple:
+Run the two test commands above.
+Focus only on getting the tests inside test_inventory_routes_canonicalization.py and test_inventory_fifo.py to pass.
+Completely ignore the failures and errors from all other files.
+Once those two core test files are green, we can confidently say: "The inventory system's new structure is correct and stable."
+Then, and only then, we will officially declare this phase complete and move on to PR4: Harden Permissions and Scoping. In that phase, our only job will be to fix the permission noise, using new, targeted tests to ensure your admin/exempt account works exactly as you designed.
+You have not refactored 9 times for nothing. You are on the final, most important step of building a truly robust foundation. Let's get these last structural tests to pass.
