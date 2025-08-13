@@ -35,11 +35,16 @@ def validate_inventory_fifo_sync(item_id, item_type=None):
         history_model = ProductSKUHistory if item_type == 'product' else InventoryHistory
         org_id = item.organization_id
 
-        fifo_total = db.session.query(func.sum(history_model.remaining_quantity)).filter(
+        query = db.session.query(func.sum(history_model.remaining_quantity)).filter(
             history_model.inventory_item_id == item_id,
-            history_model.remaining_quantity > 0,
-            history_model.organization_id == org_id
-        ).scalar() or 0.0
+            history_model.remaining_quantity > 0
+        )
+        
+        # Always add organization scoping
+        if org_id:
+            query = query.filter(history_model.organization_id == org_id)
+            
+        fifo_total = query.scalar() or 0.0
 
         current_qty = float(item.quantity or 0.0)
 
@@ -127,11 +132,17 @@ def record_audit_entry(item_id, quantity, change_type, unit=None, notes=None, cr
 def _get_fifo_entries(item_id, org_id, item_type):
     """Helper function to get FIFO entries for an item"""
     history_model = ProductSKUHistory if item_type == 'product' else InventoryHistory
-    return history_model.query.filter(
+    
+    query = history_model.query.filter(
         history_model.inventory_item_id == item_id,
-        history_model.remaining_quantity > 0,
-        history_model.organization_id == org_id
-    ).order_by(history_model.timestamp.asc()).all()
+        history_model.remaining_quantity > 0
+    )
+    
+    # Always add organization scoping
+    if org_id:
+        query = query.filter(history_model.organization_id == org_id)
+    
+    return query.order_by(history_model.timestamp.asc()).all()
 
 def handle_recount_adjustment(item_id, target_quantity, notes, created_by, item_type):
     """
