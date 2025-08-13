@@ -56,7 +56,7 @@ def handle_recount_adjustment(item_id, target_quantity, notes=None, created_by=N
             return process_inventory_adjustment(
                 item_id=item_id,
                 quantity=abs(delta),
-                change_type='recount_deduction',
+                change_type='recount',
                 unit=getattr(item, 'unit', 'count'),
                 notes=f"{notes or 'Recount decrease'} - Deducted {abs(delta)}",
                 created_by=created_by
