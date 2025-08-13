@@ -110,10 +110,10 @@ def view_inventory(id):
         today = datetime.now().date()
         expired_entries_for_calc = UnifiedInventoryHistory.query.filter(
             and_(
-                InventoryHistory.inventory_item_id == item.id,
-                InventoryHistory.remaining_quantity > 0,
-                InventoryHistory.expiration_date != None,
-                InventoryHistory.expiration_date < today
+                UnifiedInventoryHistory.inventory_item_id == item.id,
+                UnifiedInventoryHistory.remaining_quantity > 0,
+                UnifiedInventoryHistory.expiration_date != None,
+                UnifiedInventoryHistory.expiration_date < today
             )
         ).all()
         item.temp_expired_quantity = sum(float(entry.remaining_quantity) for entry in expired_entries_for_calc)
@@ -165,7 +165,7 @@ def view_inventory(id):
                          get_global_unit_list=get_global_unit_list,
                          get_ingredient_categories=IngredientCategory.query.order_by(IngredientCategory.name).all,
                          User=User,
-                         InventoryHistory=UnifiedInventoryHistory,
+                         UnifiedInventoryHistory=UnifiedInventoryHistory,
                          now=datetime.utcnow(),
                          get_change_type_prefix=get_change_type_prefix,
                          int_to_base36=int_to_base36,

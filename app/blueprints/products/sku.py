@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import login_required, current_user
 from sqlalchemy import and_, or_
 from datetime import datetime, timedelta
-from ...models import db, ProductSKU, ProductSKUHistory, InventoryItem, Reservation
+from ...models import db, ProductSKU, UnifiedInventoryHistory, InventoryItem, Reservation
 from ...services.inventory_adjustment import process_inventory_adjustment
 from ...utils.unit_utils import get_global_unit_list
 from ...utils.timezone_utils import TimezoneUtils
@@ -20,10 +20,10 @@ def view_sku(inventory_item_id):
     sku = ProductSKU.query.filter_by(inventory_item_id=inventory_item_id).first_or_404()
 
     # Get SKU history for this specific SKU using inventory_item_id
-    history = ProductSKUHistory.query.filter_by(
+    history = UnifiedInventoryHistory.query.filter_by(
         inventory_item_id=sku.inventory_item_id,
         organization_id=current_user.organization_id
-    ).order_by(ProductSKUHistory.timestamp.desc()).all()
+    ).order_by(UnifiedInventoryHistory.timestamp.desc()).all()
 
     # Debug logging
     print(f"DEBUG: SKU {sku.inventory_item_id} history count: {len(history)}")
@@ -88,10 +88,10 @@ def edit_sku(inventory_item_id):
                     from ...models.product import ProductSKUHistory
 
                     # Get all FIFO entries with remaining quantity for this SKU
-                    fifo_entries = ProductSKUHistory.query.filter(
+                    fifo_entries = UnifiedInventoryHistory.query.filter(
                         and_(
-                            ProductSKUHistory.inventory_item_id == sku.inventory_item_id,
-                            ProductSKUHistory.remaining_quantity > 0
+                            UnifiedInventoryHistory.inventory_item_id == sku.inventory_item_id,
+                            UnifiedInventoryHistory.remaining_quantity > 0
                         )
                     ).all()
 
@@ -107,12 +107,10 @@ def edit_sku(inventory_item_id):
                 sku.inventory_item.shelf_life_days = None
 
                 # Clear expiration data from FIFO entries when marking as non-perishable
-                from ...models.product import ProductSKUHistory
-
-                fifo_entries = ProductSKUHistory.query.filter(
+                fifo_entries = UnifiedInventoryHistory.query.filter(
                     and_(
-                        ProductSKUHistory.inventory_item_id == sku.inventory_item_id,
-                        ProductSKUHistory.remaining_quantity > 0
+                        UnifiedInventoryHistory.inventory_item_id == sku.inventory_item_id,
+                        UnifiedInventoryHistory.remaining_quantity > 0
                     )
                 ).all()
 
@@ -250,7 +248,7 @@ def execute_merge():
         # Merge history entries
         for source_sku in source_skus:
             # Update all history entries to point to target SKU
-            ProductSKUHistory.query.filter_by(
+            UnifiedInventoryHistory.query.filter_by(
                 inventory_item_id=source_sku.inventory_item_id
             ).update({'inventory_item_id': target_sku.inventory_item_id})
 
@@ -301,7 +299,7 @@ def get_merge_preview(sku_id):
     ).first_or_404()
 
     # Get history count
-    history_count = ProductSKUHistory.query.filter_by(
+    history_count = UnifiedInventoryHistory.query.filter_by(
         inventory_item_id=sku_id
     ).count()
 

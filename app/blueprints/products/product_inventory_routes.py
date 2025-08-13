@@ -208,22 +208,22 @@ def get_sku_fifo_status(sku_id):
 
     logger.info(f"Found SKU: {sku.inventory_item_id}, Product: {sku.product.name if sku.product else 'Unknown'}")
 
-    from ...models import InventoryHistory
+    from ...models import UnifiedInventoryHistory
     from datetime import datetime
 
     today = datetime.now().date()
     inventory_item_id = sku.inventory_item_id
 
     # Get fresh FIFO entries (not expired, with remaining quantity)
-    fresh_entries = InventoryHistory.query.filter(
-        InventoryHistory.inventory_item_id == inventory_item_id,
-        InventoryHistory.remaining_quantity > 0,
-        InventoryHistory.organization_id == current_user.organization_id,
+    fresh_entries = UnifiedInventoryHistory.query.filter(
+        UnifiedInventoryHistory.inventory_item_id == inventory_item_id,
+        UnifiedInventoryHistory.remaining_quantity > 0,
+        UnifiedInventoryHistory.organization_id == current_user.organization_id,
         db.or_(
-            InventoryHistory.expiration_date.is_(None),  # Non-perishable
-            InventoryHistory.expiration_date >= today    # Not expired yet
+            UnifiedInventoryHistory.expiration_date.is_(None),  # Non-perishable
+            UnifiedInventoryHistory.expiration_date >= today    # Not expired yet
         )
-    ).order_by(InventoryHistory.timestamp.asc()).all()
+    ).order_by(UnifiedInventoryHistory.timestamp.asc()).all()
 
     # Get expired FIFO entries (frozen, with remaining quantity)
     expired_entries = InventoryHistory.query.filter(
