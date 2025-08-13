@@ -542,7 +542,7 @@ class ExpirationService:
         """Mark inventory as expired and remove from stock"""
         try:
             if kind == "fifo":
-                entry = db.session.get(UnifiedInventoryHistory, entry_id)
+                entry = InventoryHistory.query.get(entry_id)
                 if not entry:
                     return False, "FIFO entry not found"
 

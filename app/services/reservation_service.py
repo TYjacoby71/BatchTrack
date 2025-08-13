@@ -6,7 +6,7 @@ from ..utils import generate_fifo_code
 import logging
 
 # Import necessary canonical functions
-# FIFO operations now handled through canonical inventory_adjustment service
+from app.blueprints.fifo.services import FIFOService
 import app.services.inventory_adjustment as inv_adj
 
 logger = logging.getLogger(__name__)

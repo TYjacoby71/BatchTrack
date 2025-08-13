@@ -1,41 +1,16 @@
 """
-Centralized Inventory Adjustment Service Package
+Inventory Adjustment Service Package
 
-This package is the single, canonical entry point for ALL inventory operations
-in the BatchTrack application. It replaces and consolidates all previous
-inventory management systems including the legacy FIFO service.
+This package is the canonical, single-source-of-truth for all inventory
+and FIFO-related operations in the application.
 
-Key Features:
-- FIFO (First-In-First-Out) tracking for perishable and non-perishable items
-- Comprehensive inventory adjustments (restock, use, spoil, recount, etc.)
-- Unified history tracking across all inventory types
-- Cost tracking and override capabilities
-- Expiration date management for perishable items
-- Complete audit trail for all inventory changes
-
-Public Interface:
-- process_inventory_adjustment(): Main function for all inventory changes
-- update_inventory_item(): Function for updating item metadata
-- validate_inventory_fifo_sync(): Function for validating FIFO consistency
-
-Usage:
-    from app.services.inventory_adjustment import process_inventory_adjustment
-
-    success = process_inventory_adjustment(
-        item_id=123,
-        quantity=50,
-        change_type='restock',
-        unit='kg',
-        notes='New shipment received',
-        created_by=user.id
-    )
-
-Note: This is the ONLY approved way to modify inventory quantities.
-Direct database writes to inventory tables are forbidden and will
-cause FIFO tracking inconsistencies.
+All external modules (routes, other services, etc.) MUST import from this
+__init__.py file. They are forbidden from importing from the internal
+helper modules (those starting with an underscore).
 """
 
-from ._core import process_inventory_adjustment, validate_inventory_fifo_sync
+# Import the public functions from our internal helper modules
+from ._core import process_inventory_adjustment
 from ._edit_logic import update_inventory_item
 from ._validation import validate_inventory_fifo_sync
 from ._audit import audit_event, record_audit_entry

@@ -8,7 +8,7 @@ from sqlalchemy import and_, func
 from ..utils import generate_fifo_code
 
 # Import necessary canonical functions
-# FIFO operations now handled through canonical inventory_adjustment service
+from app.blueprints.fifo.services import FIFOService
 from app.services.inventory_adjustment import record_audit_entry, process_inventory_adjustment
 
 def _db():
@@ -76,14 +76,8 @@ class POSIntegrationService:
                 _db_session().add(reserved_item)
                 _db_session().flush()
 
-            # Get the source FIFO entry for tracking using canonical service
-            from app.models import UnifiedInventoryHistory
-            fifo_entries = UnifiedInventoryHistory.query.filter_by(
-                inventory_item_id=item_id
-            ).filter(
-                UnifiedInventoryHistory.remaining_quantity > 0
-            ).order_by(UnifiedInventoryHistory.timestamp.asc()).all()
-            
+            # Get the source FIFO entry for tracking
+            fifo_entries = FIFOService.get_fifo_entries(item_id)
             source_fifo_id = None
             source_batch_id = None
 
@@ -387,7 +381,12 @@ class POSIntegrationService:
         )
         return success, ("Sale processed" if success else "Sale failed")
 
-# FIFO operations now handled through canonical inventory_adjustment service
+# Placeholder for FIFOService and Reservation.mark_returned(), Reservation.mark_converted_to_sale()
+# These would be defined in other modules.
+class FIFOService:
+    @staticmethod
+    def get_fifo_entries(item_id):
+        return [] # Dummy implementation
 
 class Reservation:
     def __init__(self, **kwargs):

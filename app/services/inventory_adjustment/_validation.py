@@ -5,7 +5,7 @@ from sqlalchemy import and_
 
 def validate_inventory_fifo_sync(item_id, item_type=None):
     """Validate that inventory quantity matches FIFO totals"""
-    item = db.session.get(InventoryItem, item_id)
+    item = InventoryItem.query.get(item_id)
     if not item:
         return False, "Item not found", 0, 0
 
