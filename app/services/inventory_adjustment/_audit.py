@@ -82,3 +82,66 @@ def record_audit_entry(item_id, quantity, change_type, unit=None, notes=None, cr
         db.session.rollback()
         logger.error(f"Error creating audit entry: {str(e)}")
         return False
+"""
+Audit Trail Management for Inventory Adjustments
+
+This module handles all audit trail and history recording for inventory operations.
+"""
+
+from datetime import datetime
+from app.models import db, UnifiedInventoryHistory
+from app.utils.fifo_generator import generate_fifo_code
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+def record_audit_entry(
+    item_id: int,
+    change_type: str,
+    quantity_change: float = 0,
+    notes: str | None = None,
+    created_by: int | None = None,
+    **kwargs
+) -> bool:
+    """
+    Record an audit trail entry for inventory operations.
+    
+    This is used for operations that need to log activity but don't affect FIFO lots,
+    such as cost overrides, administrative changes, etc.
+    """
+    try:
+        from app.models import InventoryItem
+        
+        item = InventoryItem.query.get(item_id)
+        if not item:
+            logger.error(f"Cannot record audit entry - item {item_id} not found")
+            return False
+
+        audit_entry = UnifiedInventoryHistory(
+            inventory_item_id=item_id,
+            organization_id=item.organization_id,
+            timestamp=datetime.utcnow(),
+            change_type=change_type,
+            quantity_change=quantity_change,
+            remaining_quantity=0.0,  # Audit entries don't create FIFO lots
+            unit=item.unit,
+            notes=notes,
+            created_by=created_by,
+            fifo_code=generate_fifo_code(change_type),
+            batch_id=kwargs.get('batch_id'),
+            customer=kwargs.get('customer'),
+            order_id=kwargs.get('order_id'),
+            sale_price=kwargs.get('sale_price')
+        )
+        
+        db.session.add(audit_entry)
+        db.session.commit()
+        
+        logger.info(f"Recorded audit entry for item {item_id}: {change_type}")
+        return True
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Failed to record audit entry for item {item_id}: {str(e)}")
+        return False

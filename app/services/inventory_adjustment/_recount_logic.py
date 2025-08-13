@@ -60,6 +60,13 @@ def handle_recount_adjustment(item_id, target_quantity, notes=None, created_by=N
         current_fifo_total = sum(float(entry.remaining_quantity) for entry in entries)
         print(f"RECOUNT: Current FIFO total: {current_fifo_total}")
 
+        # Check if FIFO is already at target - no changes needed
+        if abs(current_fifo_total - target_qty) < 0.001:
+            print(f"RECOUNT: FIFO already matches target {target_qty}, no changes needed")
+            item.quantity = target_qty
+            db.session.commit()
+            return True
+
         # INCREASING quantity: fill existing lots then create overflow
         if delta > 0:
             remaining_to_add = delta
