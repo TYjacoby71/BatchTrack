@@ -252,13 +252,22 @@ def adjust_inventory(id):
 
         quantity = float(quantity_str)
 
+        # Handle cost override if provided
+        kwargs = {}
+        if form.get('cost_per_unit'):
+            try:
+                kwargs['cost_override'] = float(form.get('cost_per_unit'))
+            except (ValueError, TypeError):
+                pass
+
         process_inventory_adjustment(
             item_id=id,
             quantity=quantity,
             change_type=adj_type,
             unit=unit,
             notes=notes,
-            created_by=current_user.id
+            created_by=current_user.id,
+            **kwargs
         )
         flash(f'Inventory adjustment "{adj_type.replace("_", " ").title()}" was successful.', 'success')
 
