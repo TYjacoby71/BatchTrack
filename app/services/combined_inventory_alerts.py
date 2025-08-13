@@ -48,21 +48,19 @@ class CombinedInventoryAlertService:
 
     @staticmethod
     def get_low_stock_skus():
-        """Get all product SKUs that are below their low stock threshold"""
+        """Get all product inventory items that are below their low stock threshold"""
         from flask_login import current_user
-        query = db.session.query(ProductSKU).join(
-            InventoryItem, ProductSKU.inventory_item_id == InventoryItem.id
-        ).filter(
+        query = InventoryItem.query.filter(
             and_(
-                InventoryItem.quantity <= ProductSKU.low_stock_threshold,
-                ProductSKU.low_stock_threshold > 0,
-                ProductSKU.is_active == True
+                InventoryItem.type.in_(['product', 'product-reserved']),
+                InventoryItem.low_stock_threshold > 0,
+                InventoryItem.quantity <= InventoryItem.low_stock_threshold
             )
         )
         # Apply organization scoping
         if current_user and current_user.is_authenticated:
             if current_user.organization_id:
-                query = query.filter(ProductSKU.organization_id == current_user.organization_id)
+                query = query.filter(InventoryItem.organization_id == current_user.organization_id)
             # Developer users without organization_id see all data
         else:
             # If not authenticated, return empty result
@@ -71,20 +69,18 @@ class CombinedInventoryAlertService:
 
     @staticmethod
     def get_out_of_stock_skus():
-        """Get all product SKUs that are out of stock"""
+        """Get all product inventory items that are out of stock"""
         from flask_login import current_user
-        query = db.session.query(ProductSKU).join(
-            InventoryItem, ProductSKU.inventory_item_id == InventoryItem.id
-        ).filter(
+        query = InventoryItem.query.filter(
             and_(
-                InventoryItem.quantity == 0,
-                ProductSKU.is_active == True
+                InventoryItem.type.in_(['product', 'product-reserved']),
+                InventoryItem.quantity == 0
             )
         )
         # Apply organization scoping
         if current_user and current_user.is_authenticated:
             if current_user.organization_id:
-                query = query.filter(ProductSKU.organization_id == current_user.organization_id)
+                query = query.filter(InventoryItem.organization_id == current_user.organization_id)
             # Developer users without organization_id see all data
         else:
             # If not authenticated, return empty result
@@ -97,42 +93,44 @@ class CombinedInventoryAlertService:
         # Get raw material alerts
         low_stock_ingredients = CombinedInventoryAlertService.get_low_stock_ingredients()
 
-        # Get product alerts
-        low_stock_skus = CombinedInventoryAlertService.get_low_stock_skus()
-        out_of_stock_skus = CombinedInventoryAlertService.get_out_of_stock_skus()
+        # Get product alerts (these are now InventoryItem objects)
+        low_stock_product_items = CombinedInventoryAlertService.get_low_stock_skus()
+        out_of_stock_product_items = CombinedInventoryAlertService.get_out_of_stock_skus()
 
         # Group products by name to avoid duplicates
         low_stock_products = {}
         out_of_stock_products = {}
 
-        for sku in low_stock_skus:
-            if sku.product.name not in low_stock_products:
-                low_stock_products[sku.product.name] = []
-            low_stock_products[sku.product.name].append(sku)
+        for item in low_stock_product_items:
+            product_name = item.name
+            if product_name not in low_stock_products:
+                low_stock_products[product_name] = []
+            low_stock_products[product_name].append(item)
 
-        for sku in out_of_stock_skus:
-            if sku.product.name not in out_of_stock_products:
-                out_of_stock_products[sku.product.name] = []
-            out_of_stock_products[sku.product.name].append(sku)
+        for item in out_of_stock_product_items:
+            product_name = item.name
+            if product_name not in out_of_stock_products:
+                out_of_stock_products[product_name] = []
+            out_of_stock_products[product_name].append(item)
 
         return {
             # Raw materials
             'low_stock_ingredients': low_stock_ingredients,
             'low_stock_ingredients_count': len(low_stock_ingredients),
 
-            # Products
-            'low_stock_skus': low_stock_skus,
-            'out_of_stock_skus': out_of_stock_skus,
+            # Products (now InventoryItem objects)
+            'low_stock_skus': low_stock_product_items,
+            'out_of_stock_skus': out_of_stock_product_items,
             'low_stock_products': low_stock_products,
             'out_of_stock_products': out_of_stock_products,
-            'low_stock_count': len(low_stock_skus),
-            'out_of_stock_count': len(out_of_stock_skus),
+            'low_stock_count': len(low_stock_product_items),
+            'out_of_stock_count': len(out_of_stock_product_items),
             'affected_products_count': len(set(low_stock_products.keys()) | set(out_of_stock_products.keys())),
 
             # Combined totals
-            'total_low_stock_items': len(low_stock_ingredients) + len(low_stock_skus),
-            'total_critical_items': len(out_of_stock_skus),
-            'has_any_alerts': len(low_stock_ingredients) > 0 or len(low_stock_skus) > 0 or len(out_of_stock_skus) > 0
+            'total_low_stock_items': len(low_stock_ingredients) + len(low_stock_product_items),
+            'total_critical_items': len(out_of_stock_product_items),
+            'has_any_alerts': len(low_stock_ingredients) > 0 or len(low_stock_product_items) > 0 or len(out_of_stock_product_items) > 0
         }
 
     @staticmethod
