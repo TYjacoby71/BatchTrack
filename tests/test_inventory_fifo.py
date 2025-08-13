@@ -20,7 +20,7 @@ class TestInventoryFIFOCharacterization:
             # Create inventory item
             item = InventoryItem(
                 name="Test Ingredient",
-                type="ingredient", 
+                type="ingredient",
                 unit="g",
                 quantity=0.0,
                 organization_id=test_org.id,
@@ -39,7 +39,7 @@ class TestInventoryFIFOCharacterization:
             )
 
             assert process_inventory_adjustment(
-                item_id=item.id, 
+                item_id=item.id,
                 quantity=50.0,
                 change_type="restock",
                 notes="Second batch",
@@ -64,7 +64,7 @@ class TestInventoryFIFOCharacterization:
             result = check_stock_availability([{
                 'item_id': item.id,
                 'quantity_needed': 5.0,
-                'unit': 'count'
+                'unit': 'g'  # Use matching unit to avoid conversion issues
             }])
 
             assert result['can_make'] is True
@@ -78,7 +78,7 @@ class TestInventoryFIFOCharacterization:
                 name="Test Product",
                 type="product",
                 unit="ml",
-                quantity=0.0, 
+                quantity=0.0,
                 organization_id=test_org.id,
                 created_by=test_user.id
             )
