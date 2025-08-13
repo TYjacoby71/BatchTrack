@@ -108,7 +108,7 @@ def view_inventory(id):
     # Calculate expired quantity using temporary attributes
     if item.is_perishable:
         today = datetime.now().date()
-        expired_entries_for_calc = InventoryHistory.query.filter(
+        expired_entries_for_calc = UnifiedInventoryHistory.query.filter(
             and_(
                 InventoryHistory.inventory_item_id == item.id,
                 InventoryHistory.remaining_quantity > 0,
@@ -335,7 +335,7 @@ def adjust_inventory(id):
 
         # Restock (with optional cost override for first-time)
         elif adj_type in additive_types:
-            has_hist = InventoryHistory.query.filter_by(inventory_item_id=item.id).count() > 0
+            has_hist = UnifiedInventoryHistory.query.filter_by(inventory_item_id=item.id).count() > 0
             cost_override = None
 
             if not has_hist and form.get('cost_entry_type') == 'per_unit' and form.get('cost_per_unit'):
