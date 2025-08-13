@@ -124,6 +124,15 @@ def record_audit_entry(item_id, quantity, change_type, unit=None, notes=None, cr
         logger.error(f"Error creating audit entry for item {item_id}: {e}", exc_info=True)
 
 
+def _get_fifo_entries(item_id, org_id, item_type):
+    """Helper function to get FIFO entries for an item"""
+    history_model = ProductSKUHistory if item_type == 'product' else InventoryHistory
+    return history_model.query.filter(
+        history_model.inventory_item_id == item_id,
+        history_model.remaining_quantity > 0,
+        history_model.organization_id == org_id
+    ).order_by(history_model.timestamp.asc()).all()
+
 def handle_recount_adjustment(item_id, target_quantity, notes, created_by, item_type):
     """
     (PRESERVED & FIXED) Sets an absolute target quantity and syncs FIFO lots.
@@ -134,14 +143,25 @@ def handle_recount_adjustment(item_id, target_quantity, notes, created_by, item_
     target_qty = float(target_quantity or 0.0)
     delta = target_qty - current_qty
 
-    if abs(delta) < 0.001: return # No change needed
+    if abs(delta) < 0.001:
+        logger.info(f"Recount for item '{item.name}' has no change needed.")
+        # Still validate and fix any sync issues
+        all_lots = history_model.query.filter(
+            history_model.inventory_item_id == item_id,
+            history_model.remaining_quantity > 0
+        ).order_by(history_model.timestamp.asc()).all()
+        fifo_total = sum(float(lot.remaining_quantity) for lot in all_lots)
+        if abs(target_qty - fifo_total) > 0.001:
+            logger.warning(f"SYNC REPAIR: Item quantity {target_qty} doesn't match FIFO total {fifo_total}. Forcing sync.")
+            item.quantity = fifo_total
+            record_audit_entry(item_id, 0, 'recount', f"Auto-sync repair: Fixed quantity from {target_qty} to {fifo_total}. {notes or ''}", created_by=created_by)
+        else:
+            item.quantity = target_qty
+        return
 
     logger.info(f"RECOUNT: Item '{item.name}' from {current_qty} to {target_qty} (Delta: {delta})")
     history_model = ProductSKUHistory if item_type == 'product' else InventoryHistory
-    all_lots = history_model.query.filter(
-        history_model.inventory_item_id == item_id,
-        history_model.remaining_quantity > 0
-    ).order_by(history_model.timestamp.asc()).all()
+    all_lots = _get_fifo_entries(item_id, item.organization_id, item_type)
 
     if delta > 0: # Increase
         process_inventory_adjustment(item.id, delta, 'restock', notes=f"Recount increase. {notes or ''}", created_by=created_by, item_type=item_type)
@@ -152,9 +172,16 @@ def handle_recount_adjustment(item_id, target_quantity, notes, created_by, item_
             deduct_amount = min(to_remove, float(lot.remaining_quantity))
             if deduct_amount > 0:
                 lot.remaining_quantity -= deduct_amount
+                # Ensure FIFO lot never goes below 0
+                if lot.remaining_quantity < 0:
+                    lot.remaining_quantity = 0.0
                 to_remove -= deduct_amount
                 record_audit_entry(item.id, -deduct_amount, 'recount', notes=f"Deducted from lot #{lot.id}. {notes or ''}", created_by=created_by, fifo_reference_id=lot.id)
 
+    # Ensure item quantity never goes below 0
+    if target_qty < 0:
+        logger.warning(f"Recount target quantity {target_qty} is negative. Setting to 0.")
+        target_qty = 0.0
     item.quantity = target_qty # Set the absolute final quantity
 
 
@@ -200,9 +227,22 @@ def process_inventory_adjustment(
                 for lot in all_lots:
                     if to_remove <= 0: break
                     deduct = min(to_remove, float(lot.remaining_quantity))
+                    # Prevent FIFO lot from going below 0
+                    if lot.remaining_quantity - deduct < 0:
+                        deduct = lot.remaining_quantity
                     lot.remaining_quantity -= deduct
+                    # Ensure FIFO remaining quantity never goes below 0
+                    if lot.remaining_quantity < 0:
+                        lot.remaining_quantity = 0.0
                     to_remove -= deduct
-                item.quantity = float(item.quantity or 0) + qty_change
+                
+                # Prevent item quantity from going below 0
+                new_item_qty = float(item.quantity or 0) + qty_change
+                if new_item_qty < 0:
+                    logger.warning(f"Item {item_id} quantity would go negative ({new_item_qty}). Setting to 0.")
+                    item.quantity = 0.0
+                else:
+                    item.quantity = new_item_qty
                 record_audit_entry(item_id, qty_change, change_type, notes=notes, created_by=created_by)
 
             else:
