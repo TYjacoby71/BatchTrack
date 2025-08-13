@@ -266,9 +266,9 @@
                   </span>
                 </td>
                 <td class="col-expired">
-                  {% if item.temp_expired_quantity > 0 %}
+                  {% if item.expired_quantity > 0 %}
                     <span class="badge bg-danger">
-                      {{ "%.2f"|format(item.temp_expired_quantity) }} {{ item.unit or 'count' }}
+                      {{ "%.2f"|format(item.expired_quantity) }} {{ item.unit or 'count' }}
                     </span>
                   {% else %}
                     <span class="text-muted">-</span>
@@ -568,9 +568,9 @@
                   </span>
                 </td>
                 <td class="col-expired">
-                  {% if item.temp_expired_quantity > 0 %}
+                  {% if item.expired_quantity > 0 %}
                     <span class="badge bg-danger">
-                      {{ "%.2f"|format(item.temp_expired_quantity) }} {{ item.unit or 'count' }}
+                      {{ "%.2f"|format(item.expired_quantity) }} {{ item.unit or 'count' }}
                     </span>
                   {% else %}
                     <span class="text-muted">-</span>
