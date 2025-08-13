@@ -3,6 +3,7 @@ from flask_login import login_required, current_user
 from ...models import db, InventoryItem
 from ...models.product import Product, ProductVariant, ProductSKU, ProductSKUHistory
 from ...models.batch import Batch
+from ...utils.unit_utils import get_global_unit_list
 
 try:
     from ...utils.authorization import require_permission

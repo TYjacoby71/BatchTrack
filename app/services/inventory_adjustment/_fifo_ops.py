@@ -1,7 +1,6 @@
 import logging
 from datetime import datetime
-from app.models import db, InventoryItem
-from app.models.unified_inventory_history import UnifiedInventoryHistory
+from app.models import db, InventoryItem, UnifiedInventoryHistory
 from app.utils.fifo_generator import generate_fifo_code
 
 logger = logging.getLogger(__name__)
