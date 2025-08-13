@@ -1,5 +1,5 @@
 
-from flask_login import current_user
+from flask_login import current_user  
 from app.models import db, InventoryItem, UnifiedInventoryHistory
 from sqlalchemy import and_
 import logging

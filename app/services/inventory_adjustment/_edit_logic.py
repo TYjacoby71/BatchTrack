@@ -1,9 +1,9 @@
-
 from flask_login import current_user
 from app.models import db, InventoryItem, InventoryHistory, IngredientCategory
 from flask import session
 from sqlalchemy import and_
 import logging
+from ._core import process_inventory_adjustment
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +54,21 @@ def update_inventory_item(item_id, form_data):
 
         # Update basic fields
         item.name = form_data.get('name')
-        new_quantity = float(form_data.get('quantity'))
+        
+        # Handle quantity update with recount
+        new_quantity = float(form_data.get('quantity', item.quantity))
+        if abs(new_quantity - item.quantity) > 0.001:
+            # Use recount to set absolute quantity
+            success = process_inventory_adjustment(
+                item_id=item.id,
+                quantity=new_quantity,  # Recount target quantity, not delta
+                change_type='recount',
+                notes=f'Quantity updated via edit: {item.quantity} → {new_quantity}',
+                created_by=current_user.id if current_user.is_authenticated else None,
+                item_type=item.type
+            )
+            if not success:
+                return False, 'Error updating quantity'
 
         # Handle perishable status changes
         is_perishable = form_data.get('is_perishable') == 'on'
@@ -88,20 +102,6 @@ def update_inventory_item(item_id, form_data):
                     entry.is_perishable = False
                     entry.shelf_life_days = None
                     entry.expiration_date = None
-
-        # Handle quantity recount
-        if new_quantity != item.quantity:
-            from ._core import process_inventory_adjustment
-            success = process_inventory_adjustment(
-                item_id=item.id,
-                quantity=new_quantity,
-                change_type='recount',
-                unit=item.unit,
-                notes="Manual quantity update via inventory edit",
-                created_by=current_user.id
-            )
-            if not success:
-                return False, 'Error updating quantity'
 
         # Handle cost override
         new_cost = float(form_data.get('cost_per_unit', 0))
