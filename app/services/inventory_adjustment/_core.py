@@ -262,6 +262,7 @@ def process_inventory_adjustment(
         if not qty_applied_in_fifo:
             rounded_qty_change = ConversionEngine.round_value(qty_change, 3)
             item.quantity = ConversionEngine.round_value(item.quantity + rounded_qty_change, 3)
+            logger.info(f"CORE: Updated inventory item {item_id} quantity directly: {item.quantity - rounded_qty_change} → {item.quantity}")
 
         db.session.commit()
 

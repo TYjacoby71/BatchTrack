@@ -118,7 +118,15 @@ def _internal_add_fifo_entry_enhanced(
             expiration_date=kwargs.get("expiration_date"),
         )
         db.session.add(history_entry)
-        # The commit and parent item quantity update will be handled by the main service function
+
+        # Update parent inventory item quantity
+        from app.services.unit_conversion import ConversionEngine
+        rounded_qty_change = ConversionEngine.round_value(float(quantity), 3)
+        new_quantity = ConversionEngine.round_value(item.quantity + rounded_qty_change, 3)
+
+        logger.info(f"FIFO: Updating inventory item {item_id} quantity: {item.quantity} → {new_quantity}")
+        item.quantity = new_quantity
+
         return True, None
     except TypeError as e:
         logger.error(f"Failed to add FIFO entry for item {item_id}: {e}")

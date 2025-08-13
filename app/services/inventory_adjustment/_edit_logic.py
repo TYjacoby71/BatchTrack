@@ -3,6 +3,7 @@ from app.models import db, InventoryItem, InventoryHistory, IngredientCategory
 from flask import session
 from sqlalchemy import and_
 import logging
+from ._core import process_inventory_adjustment
 
 logger = logging.getLogger(__name__)
 
