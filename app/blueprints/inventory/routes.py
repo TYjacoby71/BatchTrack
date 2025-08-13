@@ -257,7 +257,9 @@ def add_inventory():
             unit=history_unit,
             notes=notes,
             created_by=current_user.id,
-            cost_override=cost_per_unit
+            cost_override=cost_per_unit,
+            custom_expiration_date=item.expiration_date,
+            custom_shelf_life_days=item.shelf_life_days
         )
 
         if not success:
@@ -323,7 +325,7 @@ def adjust_inventory(id):
                 change_type='recount',
                 unit=unit,
                 notes=notes,
-                created_by=getattr(current_user, 'id', None)
+                created_by=getattr(current_user, 'id', None),
             )
             if success:
                 flash('Inventory recount completed successfully.', 'success')
@@ -349,7 +351,7 @@ def adjust_inventory(id):
                 unit=unit,
                 notes=notes,
                 created_by=getattr(current_user, 'id', None),
-                cost_override=cost_override
+                cost_override=cost_override,
             )
             if success:
                 flash(f'Inventory {adj_type} completed successfully.', 'success')
@@ -365,7 +367,7 @@ def adjust_inventory(id):
                 change_type=adj_type,
                 unit=unit,
                 notes=notes,
-                created_by=getattr(current_user, 'id', None)
+                created_by=getattr(current_user, 'id', None),
             )
             if success:
                 flash(f'Inventory {adj_type} completed successfully.', 'success')
@@ -383,7 +385,7 @@ def adjust_inventory(id):
                 unit=unit,
                 notes=notes or f'Cost override to {new_cost}',
                 created_by=getattr(current_user, 'id', None),
-                cost_override=new_cost
+                cost_override=new_cost,
             )
             if success:
                 flash('Cost override completed successfully.', 'success')

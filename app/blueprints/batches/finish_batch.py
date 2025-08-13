@@ -5,7 +5,7 @@ from flask_login import login_required, current_user
 from ...models import db, Batch, Product, ProductVariant, ProductSKU, InventoryItem, InventoryHistory
 from ...models.product import ProductSKU, ProductSKUHistory
 from ...services.inventory_adjustment import process_inventory_adjustment
-# FIFO operations now handled through canonical inventory_adjustment service
+from ..fifo.services import FIFOService
 
 finish_batch_bp = Blueprint('finish_batch', __name__)
 logger = logging.getLogger(__name__)

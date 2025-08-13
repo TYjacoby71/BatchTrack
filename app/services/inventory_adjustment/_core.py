@@ -23,53 +23,16 @@ def process_inventory_adjustment(
     item_id: int,
     quantity: float,
     change_type: str,
-    unit: str = None,
-    notes: str = None,
-    created_by: int = None,
-    cost_override: float = None,
-    custom_expiration_date = None,
-    custom_shelf_life_days: int = None
+    unit: str | None = None,
+    notes: str | None = None,
+    created_by: int | None = None,
+    cost_override: float | None = None,
+    item_type: str | None = None,
+    custom_shelf_life_days: int | None = None,
+    **kwargs,
 ) -> bool:
     """
-    Central function for all inventory adjustments with FIFO tracking.
-
-    This is the single entry point for ALL inventory quantity changes in BatchTrack.
-    It handles FIFO tracking, cost calculations, expiration management, and maintains
-    complete audit trails through the UnifiedInventoryHistory system.
-
-    Supported change types:
-    - Additive: 'restock', 'manual_addition', 'returned', 'refunded'
-    - Deductive: 'use', 'spoil', 'trash', 'expired', 'sold', 'batch', etc.
-    - Special: 'recount' (absolute quantity), 'cost_override' (cost change only)
-
-    Args:
-        item_id (int): ID of the inventory item to adjust
-        quantity (float): Amount to adjust. For deductive operations, use positive
-                         values (the function will make them negative automatically)
-        change_type (str): Type of change - must be a valid adjustment type
-        unit (str, optional): Unit of measurement. Defaults to item's unit
-        notes (str, optional): Description of the adjustment for audit trail
-        created_by (int, optional): ID of user making the adjustment
-        cost_override (float, optional): Override cost per unit for this entry
-        custom_expiration_date (datetime, optional): Custom expiration for perishables
-        custom_shelf_life_days (int, optional): Custom shelf life for perishables
-
-    Returns:
-        bool: True if adjustment was successful and FIFO sync is maintained,
-              False if validation failed or database operation failed
-
-    Raises:
-        Exception: May raise exceptions for database errors or validation failures
-
-    Examples:
-        # Add new stock
-        process_inventory_adjustment(123, 50, 'restock', 'kg', 'New shipment')
-
-        # Use ingredients for production
-        process_inventory_adjustment(123, 10, 'batch', 'kg', 'Batch #456')
-
-        # Set absolute quantity
-        process_inventory_adjustment(123, 75, 'recount', 'kg', 'Physical count')
+    Process inventory adjustments through a centralized, canonical service.
     """
     from app.models.inventory import InventoryItem
 
