@@ -108,12 +108,12 @@ def view_inventory(id):
     # Calculate expired quantity using temporary attributes
     if item.is_perishable:
         today = datetime.now().date()
-        expired_entries_for_calc = InventoryHistory.query.filter(
+        expired_entries_for_calc = UnifiedInventoryHistory.query.filter(
             and_(
-                InventoryHistory.inventory_item_id == item.id,
-                InventoryHistory.remaining_quantity > 0,
-                InventoryHistory.expiration_date != None,
-                InventoryHistory.expiration_date < today
+                UnifiedInventoryHistory.inventory_item_id == item.id,
+                UnifiedInventoryHistory.remaining_quantity > 0,
+                UnifiedInventoryHistory.expiration_date != None,
+                UnifiedInventoryHistory.expiration_date < today
             )
         ).all()
         item.temp_expired_quantity = sum(float(entry.remaining_quantity) for entry in expired_entries_for_calc)
@@ -165,7 +165,7 @@ def view_inventory(id):
                          get_global_unit_list=get_global_unit_list,
                          get_ingredient_categories=IngredientCategory.query.order_by(IngredientCategory.name).all,
                          User=User,
-                         InventoryHistory=UnifiedInventoryHistory,
+                         UnifiedInventoryHistory=UnifiedInventoryHistory,
                          now=datetime.utcnow(),
                          get_change_type_prefix=get_change_type_prefix,
                          int_to_base36=int_to_base36,
@@ -335,7 +335,7 @@ def adjust_inventory(id):
 
         # Restock (with optional cost override for first-time)
         elif adj_type in additive_types:
-            has_hist = InventoryHistory.query.filter_by(inventory_item_id=item.id).count() > 0
+            has_hist = UnifiedInventoryHistory.query.filter_by(inventory_item_id=item.id).count() > 0
             cost_override = None
 
             if not has_hist and form.get('cost_entry_type') == 'per_unit' and form.get('cost_per_unit'):
