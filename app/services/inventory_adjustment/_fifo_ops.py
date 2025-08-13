@@ -189,32 +189,50 @@ def _record_deduction_plan_internal(item_id, deduction_plan, change_type, notes,
         return False
 
 
-def _internal_add_fifo_entry_enhanced(item_id, quantity, change_type, unit, notes, cost_per_unit, **kwargs):
-    """Enhanced FIFO entry creation with full parameter support"""
-    from app.models import InventoryItem, InventoryHistory
+def _internal_add_fifo_entry_enhanced(
+    item_id: int,
+    quantity: float,
+    change_type: str,
+    unit: str | None,
+    notes: str | None,
+    cost_per_unit: float | None,
+    **kwargs,
+) -> tuple[bool, str | None]:
+    """
+    Robustly creates a new FIFO lot and updates the parent inventory item.
+    This is the single source of truth for all inventory additions.
+    """
+    from app.models.inventory import InventoryItem, InventoryHistory
     from app.models.product import ProductSKUHistory
     from app.utils.fifo_generator import generate_fifo_code
     from datetime import datetime, timedelta
 
-    item = InventoryItem.query.get(item_id)
+    item = db.session.get(InventoryItem, item_id)
     if not item:
+        logger.error(f"Cannot add FIFO entry: InventoryItem with ID {item_id} not found.")
         return False, "Item not found"
 
-    # Extract parameters
+    # --- 1. Prepare data for the history record ---
+    history_data = {
+        "inventory_item_id": item_id,
+        "timestamp": datetime.utcnow(),
+        "change_type": change_type,
+        "quantity_change": float(quantity),
+        "unit": unit or item.unit,
+        "remaining_quantity": float(quantity),  # New lots start with full remaining quantity
+        "unit_cost": cost_per_unit,
+        "batch_id": kwargs.get("batch_id"),
+        "created_by": kwargs.get("created_by"),
+        "organization_id": item.organization_id,  # Inherit org_id from the parent item
+        "fifo_code": generate_fifo_code(change_type),
+    }
+
+    # Handle expiration data
     expiration_date = kwargs.get('expiration_date')
     shelf_life_days = kwargs.get('shelf_life_days')
-    batch_id = kwargs.get('batch_id')
-    created_by = kwargs.get('created_by')
-    customer = kwargs.get('customer')
-    sale_price = kwargs.get('sale_price')
-    order_id = kwargs.get('order_id')
     custom_expiration_date = kwargs.get('custom_expiration_date')
     custom_shelf_life_days = kwargs.get('custom_shelf_life_days')
 
-    # Organization scoping
-    org_id = current_user.organization_id if current_user.is_authenticated else item.organization_id
-
-    # Calculate expiration data
     final_expiration_date = None
     final_shelf_life_days = None
     is_perishable = False
@@ -235,53 +253,46 @@ def _internal_add_fifo_entry_enhanced(item_id, quantity, change_type, unit, note
             final_shelf_life_days = item.shelf_life_days
             final_expiration_date = datetime.utcnow().date() + timedelta(days=item.shelf_life_days)
 
-    fifo_code = generate_fifo_code(change_type)
+    history_data.update({
+        "is_perishable": is_perishable,
+        "shelf_life_days": final_shelf_life_days,
+        "expiration_date": final_expiration_date,
+    })
+
+    # --- 2. Create the correct type of history record ---
+    # The models have different column names, so we handle them separately.
+    if item.type == 'product':
+        # ProductSKUHistory has extra fields for sales context
+        product_specific_data = {
+            "customer": kwargs.get("customer"),
+            "sale_price": kwargs.get("sale_price"),
+            "order_id": kwargs.get("order_id"),
+            "notes": notes,  # ProductSKUHistory uses 'notes'
+        }
+        history_data.update(product_specific_data)
+        history_entry = ProductSKUHistory(**history_data)
+    else:
+        # InventoryHistory is for raw ingredients/containers
+        history_data.update({
+            "note": notes,  # InventoryHistory uses 'note'
+            "quantity_used": 0.0,  # Required field for InventoryHistory
+        })
+        history_entry = InventoryHistory(**history_data)
 
     try:
-        if item.type == 'product':
-            history_entry = ProductSKUHistory(
-                inventory_item_id=item_id,
-                change_type=change_type,
-                quantity_change=quantity,
-                unit=unit,
-                unit_cost=cost_per_unit,
-                notes=notes,
-                created_by=created_by,
-                remaining_quantity=quantity,
-                is_perishable=is_perishable,
-                shelf_life_days=final_shelf_life_days,
-                expiration_date=final_expiration_date,
-                organization_id=org_id,
-                fifo_code=fifo_code,
-                batch_id=batch_id,
-                customer=customer,
-                sale_price=sale_price,
-                order_id=order_id
-            )
-        else:
-            history_entry = InventoryHistory(
-                inventory_item_id=item_id,
-                change_type=change_type,
-                quantity_change=quantity,
-                unit=unit,
-                unit_cost=cost_per_unit,
-                note=notes,
-                created_by=created_by,
-                remaining_quantity=quantity,
-                is_perishable=is_perishable,
-                shelf_life_days=final_shelf_life_days,
-                expiration_date=final_expiration_date,
-                quantity_used=0.0,
-                organization_id=org_id,
-                fifo_code=fifo_code,
-                batch_id=batch_id,
-                customer=customer,
-                sale_price=sale_price,
-                order_id=order_id
-            )
-
         db.session.add(history_entry)
-        db.session.flush()
+        db.session.flush()  # Ensure the entry is persisted before updating the parent
+
+        # --- 3. Atomically update the parent InventoryItem quantity ---
+        item.quantity = (item.quantity or 0.0) + float(quantity)
+
+        # The commit will happen in the main process_inventory_adjustment function
         return True, None
+
+    except TypeError as e:
+        # This catches errors like the one you saw: passing an invalid keyword
+        logger.error(f"Error creating history entry for item {item_id}: {e}")
+        return False, f"Error creating FIFO entry: {str(e)}"
     except Exception as e:
+        logger.error(f"Unexpected error creating FIFO entry for item {item_id}: {e}")
         return False, f"Error creating FIFO entry: {str(e)}"
