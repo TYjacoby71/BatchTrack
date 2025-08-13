@@ -15,12 +15,12 @@ def create_app(config=None):
     # Allow tests to override configuration
     if config:
         app.config.update(config)
-    
+
     # Make @login_required a no-op in tests
     if app.config.get("TESTING"):
         app.config["LOGIN_DISABLED"] = True
         app.config.setdefault("WTF_CSRF_ENABLED", False)
-    
+
     # Tests pass DATABASE_URL; SQLAlchemy wants SQLALCHEMY_DATABASE_URI
     if config and "DATABASE_URL" in config:
         app.config["SQLALCHEMY_DATABASE_URI"] = config["DATABASE_URL"]
@@ -243,6 +243,10 @@ def _register_blueprints(app):
 
     # Import blueprints
     blueprints = _import_blueprints()
+
+    # Register public API blueprint before auth routes
+    from app.blueprints.api.public import public_api
+    app.register_blueprint(public_api)
 
     # Register core blueprints
     core_registrations = [
