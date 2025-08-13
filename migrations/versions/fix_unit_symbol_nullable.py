@@ -58,6 +58,12 @@ def downgrade():
     """Restore unit symbol as required"""
     print("=== Restoring unit symbol as required ===")
 
+    # Check what indexes exist first
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    indexes = inspector.get_indexes('unit')
+    index_names = [idx['name'] for idx in indexes]
+
     with op.batch_alter_table('unit', schema=None) as batch_op:
         # Make symbol required again (fill nulls first)
         connection = op.get_bind()
@@ -65,13 +71,17 @@ def downgrade():
 
         batch_op.alter_column('symbol', nullable=False)
 
-        # Drop the new constraint
-        try:
-            batch_op.drop_constraint('_unit_name_org_uc')
-        except Exception:
-            pass
+        # Drop the symbol index if it exists
+        if 'ix_unit_symbol' in index_names:
+            try:
+                batch_op.drop_index('ix_unit_symbol')
+                print("   ✅ Dropped ix_unit_symbol index")
+            except Exception as e:
+                print(f"   ⚠️  Could not drop index ix_unit_symbol: {e}")
 
-        # Restore old constraints
-        batch_op.create_index('ix_unit_standard_unique', ['name'], unique=True)
+        # Create a simple name index (not unique to avoid conflicts)
+        if 'ix_unit_name' not in index_names:
+            batch_op.create_index('ix_unit_name', ['name'])
+            print("   ✅ Created ix_unit_name index")
 
     print("✅ Unit symbol downgrade completed")
