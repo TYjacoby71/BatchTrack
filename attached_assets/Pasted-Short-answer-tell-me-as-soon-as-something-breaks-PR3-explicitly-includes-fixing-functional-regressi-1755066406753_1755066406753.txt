@@ -1,0 +1,153 @@
+Short answer: tell me as soon as something breaks—PR3 explicitly includes fixing functional regressions while the shims are still in place. What you’re seeing (recount desync, restock UI hang, spoil/trash “invalid change type”) should be fixed now in PR3, not deferred.
+
+Here’s a tight, surgical plan you can drop in without re-blowing up routes or tests.
+
+1) Recount: fix desync (use all FIFO entries, including expired)
+Right now the recount path only touches “fresh” lots, so when you recount to 0 it leaves expired lots with remaining qty, and the item’s quantity goes to 0 ⇒ desync.
+
+Patch your handle_recount_adjustment in app/services/inventory_adjustment.py to consume all remaining lots (expired + fresh) when decreasing, and to add a single FIFO entry when increasing:
+
+python
+Copy
+# in app/services/inventory_adjustment.py
+
+from app.extensions import db
+from app.blueprints.fifo.services import FIFOService, _FIFOService
+
+def handle_recount_adjustment(item_id: int, new_quantity: float, notes: str | None, created_by: int | None, item_type: str | None):
+    from app.models.inventory import InventoryItem
+    item = InventoryItem.query.get(item_id)
+    if not item:
+        raise ValueError(f"Inventory item not found for ID: {item_id}")
+
+    current_qty = float(item.quantity or 0.0)
+    diff = float(new_quantity) - current_qty
+
+    # No change
+    if abs(diff) < 1e-9:
+        return True
+
+    if diff > 0:
+        # Increase: add a single FIFO entry (uses current cost/unit)
+        FIFOService._internal_add_fifo_entry(
+            inventory_item_id=item.id,
+            quantity=diff,
+            change_type='recount',           # keep change_type 'recount' for history clarity
+            unit=item.unit or 'count',
+            notes=notes or 'Recount increase',
+            cost_per_unit=item.cost_per_unit,
+            expiration_date=None,
+            shelf_life_days=item.shelf_life_days,
+            created_by=created_by,
+        )
+        # _internal_add_fifo_entry updates item.quantity and commits
+        return True
+
+    # Decrease: consume ALL remaining lots (fresh + expired) oldest-first
+    to_remove = abs(diff)
+
+    all_entries = _FIFOService.get_all_fifo_entries(item.id)  # includes expired
+    remaining = to_remove
+    deduction_plan = []
+    for entry in all_entries:
+        if remaining <= 1e-9:
+            break
+        take = min(float(entry.remaining_quantity or 0.0), remaining)
+        if take > 0:
+            deduction_plan.append((entry.id, take, getattr(entry, 'unit_cost', None)))
+            remaining -= take
+
+    # Execute the decrement across the selected lots
+    FIFOService.execute_deduction_plan(deduction_plan, item.id)
+
+    # Write deduction history rows (keeps change_type 'recount' for transparency)
+    _FIFOService._internal_create_deduction_history(
+        inventory_item_id=item.id,
+        deduction_plan=deduction_plan,
+        change_type='recount',
+        notes=notes or 'Recount decrease',
+        batch_id=None,
+        created_by=created_by,
+        customer=None,
+        sale_price=None,
+        order_id=None,
+    )
+
+    # Ensure the item quantity matches the recount target
+    item.quantity = float(new_quantity)
+    db.session.commit()
+    return True
+Why this works:
+
+Recount down uses _FIFOService.get_all_fifo_entries so expired lots get cleaned up too.
+
+Recount up adds a single entry, keeping history simple and costs stable.
+
+We explicitly set item.quantity = new_quantity after deductions to keep absolute sync.
+
+2) Spoil/Trash “invalid change type”: wire them to the canonical service
+Your adjust_inventory route only handles recount and restock, then returns “Invalid adjustment type” for everything else. Add a pass-through for the other canonical types that process_inventory_adjustment already understands:
+
+python
+Copy
+# in app/blueprints/inventory/routes.py inside adjust_inventory()
+
+    # existing recount/restock branches above...
+
+    # Pass-through for the rest of the canonical change types
+    passthrough_types = {
+        'spoil', 'trash', 'sold', 'sale', 'gift', 'sample', 'tester',
+        'quality_fail', 'damaged', 'expired', 'returned', 'use', 'batch',
+        'reserved'  # note: reservations have special handling in the service
+    }
+
+    if adj_type in passthrough_types:
+        process_inventory_adjustment(
+            item_id=item.id,
+            quantity=qty,           # signage handled in the service
+            change_type=adj_type,
+            unit=unit,
+            notes=notes,
+            created_by=getattr(current_user, 'id', None),
+        )
+        # Prefer redirect for UX over 204 (prevents “hang” on form submit)
+        return redirect(url_for('inventory.view_inventory', id=item.id))
+
+    return ('Invalid adjustment type', 400)
+3) “Submit adjustment” hangs, then reloads
+That “hang then reload” typically happens when the form POST expects a redirect but the server returns 204 and the browser sits idle until something else triggers a reload. The snippet above uses a redirect for all non-AJAX form submissions. If you also have any JS fetch callers that expect 204, keep this tiny helper:
+
+python
+Copy
+# optionally, at the very top of adjust handler after computing adj_type/qty/unit:
+is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+# then, where I returned redirect(...), do:
+if is_ajax:
+    return ('', 204)
+return redirect(url_for('inventory.view_inventory', id=item.id))
+4) Quick sanity checks (helps you verify fixes fast)
+Recount ↓ to zero:
+
+Lots’ remaining_quantity should become zero across the board.
+
+InventoryItem.quantity should equal 0 after the same request.
+
+Spoil/Trash:
+
+No more “Invalid adjustment type” page; you land back on the item view.
+
+New negative history rows with correct remaining_quantity updates.
+
+Restock:
+
+One history row per restock with remaining_quantity increased and no UI hang.
+
+5) What to keep logging during PR3
+While we stabilize, keep these one-liners:
+
+In process_inventory_adjustment (already there) – keep the “CANONICAL INVENTORY ADJUSTMENT” log.
+
+Add a one-time log inside handle_recount_adjustment showing old_qty, new_qty, diff, and total lots touched.
+
+If you see unexpected desyncs, log the tuple (inv_qty, sum(remaining_quantity over ALL lots)) right after recount to confirm they match.
+
