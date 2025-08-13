@@ -1,60 +1,54 @@
-from flask import Blueprint, request, jsonify, render_template, redirect, url_for, flash, session
-from flask_login import login_required, current_user
-from app.models import db, InventoryItem, InventoryHistory, Unit, IngredientCategory, User
-from app.utils.permissions import permission_required
-from app.utils.authorization import role_required
-from app.utils.api_responses import api_error, api_success
-from app.services.inventory_adjustment import process_inventory_adjustment
-from app.services.inventory_alerts import InventoryAlertService
-from app.services.reservation_service import ReservationService
-from app.services.inventory_adjustment import process_inventory_adjustment
-from app.utils.timezone_utils import TimezoneUtils
+# app/blueprints/inventory/routes.py
+
 import logging
-from ...utils.unit_utils import get_global_unit_list
-from ...utils.fifo_generator import get_change_type_prefix, int_to_base36
-from sqlalchemy import and_, or_, func
+from datetime import datetime
+
+from flask import Blueprint, flash, jsonify, redirect, render_template, request, session, url_for
+from flask_login import current_user, login_required
+from sqlalchemy import and_, func
 from sqlalchemy.orm import joinedload
+
+from app.models import (IngredientCategory, InventoryHistory, InventoryItem,
+                        User, db)
+from app.utils.api_responses import api_error
+from app.utils.unit_utils import get_global_unit_list
+# This is the ONLY service needed for adjustments now.
+from app.services.inventory_adjustment import process_inventory_adjustment, validate_inventory_fifo_sync
+# We will need the expiration service for display logic until we refactor it.
+from app.blueprints.expiration.services import ExpirationService
 
 # Import the blueprint from __init__.py instead of creating a new one
 from . import inventory_bp
 
+logger = logging.getLogger(__name__)
+
+
 @inventory_bp.route('/')
 @login_required
 def list_inventory():
+    """Renders the main inventory list page, including freshness and expiration data."""
     inventory_type = request.args.get('type')
     show_archived = request.args.get('show_archived') == 'true'
-    query = InventoryItem.query
+    query = InventoryItem.query.filter_by(organization_id=current_user.organization_id)
 
-    # Add organization scoping - regular users only see their org's inventory
-    if current_user.organization_id:
-        query = query.filter_by(organization_id=current_user.organization_id)
-
-    # Exclude product and product-reserved items from inventory management
     query = query.filter(~InventoryItem.type.in_(['product', 'product-reserved']))
 
-    # Filter by archived status unless show_archived is true
     if not show_archived:
         query = query.filter(InventoryItem.is_archived != True)
 
     if inventory_type:
         query = query.filter_by(type=inventory_type)
 
-    # Order by archived status (active items first) then by name
-    query = query.order_by(InventoryItem.is_archived.asc(), InventoryItem.name.asc())
-    inventory_items = query.all()
-    units = get_global_unit_list()
+    inventory_items = query.order_by(InventoryItem.is_archived.asc(), InventoryItem.name.asc()).all()
     categories = IngredientCategory.query.all()
-    total_value = sum(item.quantity * item.cost_per_unit for item in inventory_items)
+    total_value = sum(item.quantity * item.cost_per_unit for item in inventory_items if item.quantity and item.cost_per_unit)
+    units = get_global_unit_list()
 
-    # Calculate freshness and expired quantities for each item
-    from ...blueprints.expiration.services import ExpirationService
-    from datetime import datetime
-    from sqlalchemy import and_
-
+    # --- THIS IS THE LOGIC THAT WAS MISSING ---
     for item in inventory_items:
         item.freshness_percent = ExpirationService.get_weighted_average_freshness(item.id)
 
-        # Calculate expired quantity using temporary attributes instead of properties
+        # Calculate expired and available quantities for display
         if item.is_perishable:
             today = datetime.now().date()
             expired_entries = InventoryHistory.query.filter(
@@ -70,58 +64,37 @@ def list_inventory():
         else:
             item.temp_expired_quantity = 0
             item.temp_available_quantity = item.quantity
+    # --- END OF MISSING LOGIC ---
 
     return render_template('inventory_list.html',
-                         inventory_items=inventory_items,
-                         items=inventory_items,  # Template expects 'items'
-                         categories=categories,
-                         total_value=total_value,
-                         units=units,
-                         show_archived=show_archived,
-                         get_global_unit_list=get_global_unit_list)
+                           inventory_items=inventory_items,
+                           items=inventory_items,  # Template expects 'items'
+                           categories=categories,
+                           total_value=total_value,
+                           units=units,
+                           show_archived=show_archived,
+                           get_global_unit_list=get_global_unit_list)
+
+
 @inventory_bp.route('/set-columns', methods=['POST'])
 @login_required
 def set_column_visibility():
+    """Saves user's column visibility preferences to the session."""
     columns = request.form.getlist('columns')
     session['inventory_columns'] = columns
     return redirect(url_for('inventory.list_inventory'))
 
+
 @inventory_bp.route('/view/<int:id>')
 @login_required
 def view_inventory(id):
+    """Renders the detailed view for a single inventory item."""
     page = request.args.get('page', 1, type=int)
     per_page = 5
     fifo_filter = request.args.get('fifo') == 'true'
 
     # Get scoped inventory item - regular users only see their org's inventory
-    query = InventoryItem.query
-    if current_user.organization_id:
-        query = query.filter_by(organization_id=current_user.organization_id)
-    item = query.filter_by(id=id).first_or_404()
-
-    # Calculate freshness and expired quantities for this item (same as list_inventory)
-    from ...blueprints.expiration.services import ExpirationService
-    from datetime import datetime
-    from sqlalchemy import and_
-
-    item.freshness_percent = ExpirationService.get_weighted_average_freshness(item.id)
-
-    # Calculate expired quantity using temporary attributes
-    if item.is_perishable:
-        today = datetime.now().date()
-        expired_entries_for_calc = InventoryHistory.query.filter(
-            and_(
-                InventoryHistory.inventory_item_id == item.id,
-                InventoryHistory.remaining_quantity > 0,
-                InventoryHistory.expiration_date != None,
-                InventoryHistory.expiration_date < today
-            )
-        ).all()
-        item.temp_expired_quantity = sum(float(entry.remaining_quantity) for entry in expired_entries_for_calc)
-        item.temp_available_quantity = float(item.quantity) - item.temp_expired_quantity
-    else:
-        item.temp_expired_quantity = 0
-        item.temp_available_quantity = item.quantity
+    item = InventoryItem.query.filter_by(id=id, organization_id=current_user.organization_id).first_or_404()
 
     history_query = InventoryHistory.query.filter_by(inventory_item_id=id).options(
         joinedload(InventoryHistory.batch),
@@ -136,10 +109,26 @@ def view_inventory(id):
     pagination = history_query.paginate(page=page, per_page=per_page, error_out=False)
     history = pagination.items
 
-    from datetime import datetime
+    # --- THIS IS THE LOGIC THAT WAS MISSING ---
+    item.freshness_percent = ExpirationService.get_weighted_average_freshness(item.id)
+    if item.is_perishable:
+        today = datetime.now().date()
+        expired_entries = InventoryHistory.query.filter(
+            and_(
+                InventoryHistory.inventory_item_id == item.id,
+                InventoryHistory.remaining_quantity > 0,
+                InventoryHistory.expiration_date != None,
+                InventoryHistory.expiration_date < today
+            )
+        ).all()
+        item.temp_expired_quantity = sum(float(entry.remaining_quantity) for entry in expired_entries)
+        item.temp_available_quantity = float(item.quantity) - item.temp_expired_quantity
+    else:
+        item.temp_expired_quantity = 0
+        item.temp_available_quantity = item.quantity
+    # --- END OF MISSING LOGIC ---
 
     # Get expired FIFO entries for display
-    from sqlalchemy import and_
     expired_entries = []
     expired_total = 0
     if item.is_perishable:
@@ -154,41 +143,45 @@ def view_inventory(id):
         ).order_by(InventoryHistory.expiration_date.asc()).all()
         expired_total = sum(float(entry.remaining_quantity) for entry in expired_entries)
 
-    from ...utils.timezone_utils import TimezoneUtils
+    from app.utils.timezone_utils import TimezoneUtils
+    from app.utils.fifo_generator import get_change_type_prefix, int_to_base36
     return render_template('inventory/view.html',
-                         abs=abs,
-                         item=item,
-                         history=history,
-                         pagination=pagination,
-                         expired_entries=expired_entries,
-                         expired_total=expired_total,
-                         units=get_global_unit_list(),
-                         get_global_unit_list=get_global_unit_list,
-                         get_ingredient_categories=IngredientCategory.query.order_by(IngredientCategory.name).all,
-                         User=User,
-                         InventoryHistory=InventoryHistory,
-                         now=datetime.utcnow(),
-                         get_change_type_prefix=get_change_type_prefix,
-                         int_to_base36=int_to_base36,
-                         fifo_filter=fifo_filter,
-                         TimezoneUtils=TimezoneUtils)
+                           abs=abs,
+                           item=item,
+                           history=history,
+                           pagination=pagination,
+                           expired_entries=expired_entries,
+                           expired_total=expired_total,
+                           units=get_global_unit_list(),
+                           get_global_unit_list=get_global_unit_list,
+                           get_ingredient_categories=IngredientCategory.query.order_by(IngredientCategory.name).all,
+                           User=User,
+                           InventoryHistory=InventoryHistory,
+                           now=datetime.utcnow(),
+                           get_change_type_prefix=get_change_type_prefix,
+                           int_to_base36=int_to_base36,
+                           fifo_filter=fifo_filter,
+                           TimezoneUtils=TimezoneUtils)
+
 
 @inventory_bp.route('/add', methods=['POST'])
 @login_required
 def add_inventory():
+    """Handles the creation of a new inventory item."""
     name = request.form.get('name')
+    if not name:
+        flash('Item name is required.', 'error')
+        return redirect(url_for('inventory.list_inventory'))
 
-    # Check for duplicate name first
-    existing_item = InventoryItem.query.filter_by(name=name).first()
+    existing_item = InventoryItem.query.filter_by(name=name, organization_id=current_user.organization_id).first()
     if existing_item:
-        flash(f'An item with the name "{name}" already exists. Please choose a different name.', 'error')
+        flash(f'An item named "{name}" already exists.', 'error')
         return redirect(url_for('inventory.list_inventory'))
 
     try:
         quantity = float(request.form.get('quantity', 0))
         unit = request.form.get('unit')
-        item_type = request.form.get('type', 'ingredient')  # 'ingredient', 'container', or 'product'
-        # Handle cost entry type
+        item_type = request.form.get('type', 'ingredient')
         cost_entry_type = request.form.get('cost_entry_type', 'per_unit')
         cost_input = float(request.form.get('cost_per_unit', 0))
 
@@ -196,6 +189,7 @@ def add_inventory():
             cost_per_unit = cost_input / quantity
         else:
             cost_per_unit = cost_input
+
         low_stock_threshold = float(request.form.get('low_stock_threshold', 0))
         is_perishable = request.form.get('is_perishable') == 'on'
         expiration_date = None
@@ -204,7 +198,7 @@ def add_inventory():
         if is_perishable:
             shelf_life_days = int(request.form.get('shelf_life_days', 0))
             if shelf_life_days > 0:
-                from datetime import datetime, timedelta
+                from datetime import timedelta
                 expiration_date = datetime.utcnow().date() + timedelta(days=shelf_life_days)
 
         # Handle container-specific fields and unit assignment
@@ -213,18 +207,12 @@ def add_inventory():
         if item_type == 'container':
             storage_amount = float(request.form.get('storage_amount', 0))
             storage_unit = request.form.get('storage_unit')
-            # For containers, ensure unit is set to empty string and history uses 'count'
             unit = ''  # Containers don't have a unit on the item itself
             history_unit = 'count'  # But history entries use 'count'
         elif item_type == 'product':
-            # Products use count by default but can have other units
             history_unit = unit if unit else 'count'
         else:
-            # For ingredients, use the provided unit for both item and history
             history_unit = unit
-
-        # Debug: ensure history_unit is set correctly
-        print(f"DEBUG: item_type={item_type}, unit={unit}, history_unit={history_unit}")
 
         item = InventoryItem(
             name=name,
@@ -241,381 +229,187 @@ def add_inventory():
             organization_id=current_user.organization_id
         )
         db.session.add(item)
-        db.session.flush()  # Get the ID without committing
+        db.session.flush()
 
-        # Set default notes if it's empty
         notes = request.form.get('notes', '')
         if not notes:
             notes = 'Initial stock creation'
 
-        # Use centralized inventory adjustment service for proper FIFO tracking
-        from app.services.inventory_adjustment import process_inventory_adjustment
+        if quantity > 0:
+            success = process_inventory_adjustment(
+                item_id=item.id,
+                quantity=quantity,
+                change_type='restock',
+                unit=history_unit,
+                notes=notes,
+                created_by=current_user.id,
+                cost_override=cost_per_unit,
+                custom_expiration_date=item.expiration_date,
+                custom_shelf_life_days=item.shelf_life_days
+            )
 
-        success = process_inventory_adjustment(
-            item_id=item.id,
-            quantity=quantity,
-            change_type='restock',
-            unit=history_unit,
-            notes=notes,
-            created_by=current_user.id,
-            cost_override=cost_per_unit,
-            custom_expiration_date=item.expiration_date,
-            custom_shelf_life_days=item.shelf_life_days
-        )
-
-        if not success:
-            db.session.rollback()
-            flash('Error creating inventory item - FIFO sync failed', 'error')
-            return redirect(url_for('inventory.list_inventory'))
+            if not success:
+                db.session.rollback()
+                flash('Error creating inventory item - FIFO sync failed', 'error')
+                return redirect(url_for('inventory.list_inventory'))
 
         db.session.commit()
-        flash('Inventory item added successfully.')
-        return redirect(url_for('inventory.list_inventory'))
-
-    except ValueError as e:
-        print(f"DEBUG: ValueError in add_inventory: {str(e)}")
-        db.session.rollback()
-        flash(f'Invalid input values: {str(e)}', 'error')
-        return redirect(url_for('inventory.list_inventory'))
-    except ImportError as e:
-        print(f"DEBUG: ImportError in add_inventory: {str(e)}")
-        db.session.rollback()
-        flash(f'Import error: {str(e)}', 'error')
-        return redirect(url_for('inventory.list_inventory'))
+        flash('Inventory item added successfully.', 'success')
     except Exception as e:
-        print(f"DEBUG: Unexpected error in add_inventory: {str(e)}")
-        print(f"DEBUG: Exception type: {type(e)}")
-        import traceback
-        traceback.print_exc()
         db.session.rollback()
-        flash(f'Error adding inventory item: {str(e)}', 'error')
-        return redirect(url_for('inventory.list_inventory'))
+        logger.error(f"Error adding inventory item: {e}", exc_info=True)
+        flash(f'Error adding item: {str(e)}', 'error')
+
+    return redirect(url_for('inventory.list_inventory'))
+
 
 @inventory_bp.route('/adjust/<int:id>', methods=['POST'])
 @login_required
 def adjust_inventory(id):
+    """A single, clean route to handle ALL inventory adjustments."""
     item = InventoryItem.query.get_or_404(id)
-
-    form = request.form
-    adj_type = (form.get('adjustment_type') or form.get('change_type') or '').strip().lower()
-    qty = float(form.get('quantity', 0) or 0.0)
-    notes = form.get('notes') or None
-    unit = form.get('input_unit') or getattr(item, 'unit', None)
-
-    # Define all supported change types
-    deductive_types = {
-        'spoil', 'trash', 'expired', 'gift', 'sample', 'tester',
-        'quality_fail', 'damaged', 'sold', 'sale', 'use', 'batch',
-        'reserved', 'unreserved'
-    }
-
-    additive_types = {
-        'restock', 'manual_addition', 'returned', 'refunded'
-    }
-
-    special_types = {
-        'recount', 'cost_override'
-    }
+    if item.organization_id != current_user.organization_id:
+        flash("You do not have permission to adjust this item.", "error")
+        return redirect(url_for('inventory.list_inventory'))
 
     try:
-        # Recount (absolute target)
-        if adj_type == 'recount':
-            success = process_inventory_adjustment(
-                item_id=item.id,
-                quantity=qty,
-                change_type='recount',
-                unit=unit,
-                notes=notes,
-                created_by=getattr(current_user, 'id', None),
-            )
-            if success:
-                flash('Inventory recount completed successfully.', 'success')
-            else:
-                flash('Error during recount adjustment.', 'error')
-            return redirect(url_for('inventory.view_inventory', id=item.id))
+        form = request.form
+        adj_type = (form.get('adjustment_type') or form.get('change_type') or '').strip().lower()
+        quantity_str = form.get('quantity', '0.0')
+        notes = form.get('notes')
+        unit = form.get('input_unit') or item.unit
 
-        # Restock (with optional cost override for first-time)
-        elif adj_type in additive_types:
+        if not adj_type:
+            raise ValueError("An adjustment type (e.g., 'spoil', 'recount') is required.")
+
+        quantity = float(quantity_str)
+
+        # Handle cost override for restock operations
+        cost_override = None
+        if adj_type == 'restock':
             has_hist = InventoryHistory.query.filter_by(inventory_item_id=item.id).count() > 0
-            cost_override = None
-
             if not has_hist and form.get('cost_entry_type') == 'per_unit' and form.get('cost_per_unit'):
                 try:
                     cost_override = float(form.get('cost_per_unit'))
                 except ValueError:
                     cost_override = None
 
-            success = process_inventory_adjustment(
-                item_id=item.id,
-                quantity=qty,
-                change_type=adj_type,
-                unit=unit,
-                notes=notes,
-                created_by=getattr(current_user, 'id', None),
-                cost_override=cost_override,
-            )
-            if success:
-                flash(f'Inventory {adj_type} completed successfully.', 'success')
-            else:
-                flash(f'Error during {adj_type} adjustment.', 'error')
-            return redirect(url_for('inventory.view_inventory', id=item.id))
+        success = process_inventory_adjustment(
+            item_id=id,
+            quantity=quantity,
+            change_type=adj_type,
+            unit=unit,
+            notes=notes,
+            created_by=current_user.id,
+            cost_override=cost_override
+        )
 
-        # Deductive adjustments (spoil, trash, etc.)
-        elif adj_type in deductive_types:
-            # Handle unreserved operations specially
-            if adj_type == 'unreserved':
-                flash('Unreserved operations must use ReservationService.release_reservation()', 'error')
-                return redirect(url_for('inventory.view_inventory', id=item.id))
-
-            success = process_inventory_adjustment(
-                item_id=item.id,
-                quantity=qty,  # Service will make this negative
-                change_type=adj_type,
-                unit=unit,
-                notes=notes,
-                created_by=getattr(current_user, 'id', None),
-            )
-            if success:
-                flash(f'Inventory {adj_type} completed successfully.', 'success')
-            else:
-                flash(f'Error during {adj_type} adjustment.', 'error')
-            return redirect(url_for('inventory.view_inventory', id=item.id))
-
-        # Cost override
-        elif adj_type == 'cost_override':
-            new_cost = float(form.get('cost_per_unit', 0))
-            success = process_inventory_adjustment(
-                item_id=item.id,
-                quantity=0,  # No quantity change for cost override
-                change_type='cost_override',
-                unit=unit,
-                notes=notes or f'Cost override to {new_cost}',
-                created_by=getattr(current_user, 'id', None),
-                cost_override=new_cost,
-            )
-            if success:
-                flash('Cost override completed successfully.', 'success')
-            else:
-                flash('Error during cost override.', 'error')
-            return redirect(url_for('inventory.view_inventory', id=item.id))
-
+        if success:
+            flash(f'Inventory adjustment "{adj_type.replace("_", " ").title()}" was successful.', 'success')
         else:
-            flash(f'Invalid adjustment type: {adj_type}', 'error')
-            return redirect(url_for('inventory.view_inventory', id=item.id))
+            flash(f'Inventory adjustment "{adj_type}" failed.', 'error')
 
+    except ValueError as e:
+        flash(f'Adjustment failed: {str(e)}', 'error')
     except Exception as e:
-        flash(f'Error processing adjustment: {str(e)}', 'error')
-        return redirect(url_for('inventory.view_inventory', id=item.id))
+        flash(f'An unexpected server error occurred. Please contact support.', 'error')
+        logger.error(f"Unexpected error in adjust_inventory for item {id}: {e}", exc_info=True)
+
+    return redirect(url_for('inventory.view_inventory', id=id))
 
 
 @inventory_bp.route('/edit/<int:id>', methods=['POST'])
 @login_required
 def edit_inventory(id):
+    """Handles updates to an inventory item's details."""
     item = InventoryItem.query.get_or_404(id)
-
-    # Handle unit changes with conversion confirmation
-    if item.type != 'container':
-        new_unit = request.form.get('unit')
-        if new_unit != item.unit:
-            # Check if item has any history entries
-            history_count = InventoryHistory.query.filter_by(inventory_item_id=id).count()
-            if history_count > 0:
-                # Check if user confirmed the unit change
-                confirm_unit_change = request.form.get('confirm_unit_change') == 'true'
-                convert_inventory = request.form.get('convert_inventory') == 'true'
-
-                if not confirm_unit_change:
-                    # User hasn't confirmed - show them the options
-                    flash(f'Unit change requires confirmation. Item has {history_count} transaction history entries. History will remain unchanged in original units.', 'warning')
-                    session['pending_unit_change'] = {
-                        'item_id': id,
-                        'old_unit': item.unit,
-                        'new_unit': new_unit,
-                        'current_quantity': item.quantity
-                    }
-                    return redirect(url_for('inventory.view_inventory', id=id))
-                else:
-                    # User confirmed - proceed with unit change
-                    if convert_inventory and item.quantity > 0:
-                        # Try to convert existing inventory to new unit
-                        try:
-                            from app.services.unit_conversion import convert_unit
-                            converted_quantity = convert_unit(item.quantity, item.unit, new_unit, item.density)
-                            item.quantity = converted_quantity
-
-                            # Log this conversion
-                            history = InventoryHistory(
-                                inventory_item_id=item.id,
-                                change_type='unit_conversion',
-                                quantity_change=0,  # No actual quantity change, just unit change
-                                unit=new_unit,  # Record in the new unit
-                                note=f'Unit converted from {item.unit} to {new_unit}. Quantity adjusted from {request.form.get("original_quantity", item.quantity)} {item.unit} to {converted_quantity} {new_unit}',
-                                created_by=current_user.id,
-                                quantity_used=0.0  # Unit conversions don't consume inventory - always 0
-                            )
-                            db.session.add(history)
-                            flash(f'Unit changed and inventory converted: {item.quantity} {item.unit} → {converted_quantity} {new_unit}', 'success')
-                        except Exception as e:
-                            flash(f'Could not convert inventory to new unit: {str(e)}. Unit changed but quantity kept as-is.', 'warning')
-                    else:
-                        flash(f'Unit changed from {item.unit} to {new_unit}. Inventory quantity unchanged.', 'info')
-
-                    # Clear the pending change
-                    session.pop('pending_unit_change', None)
-
-    # Common fields for all types
-    item.name = request.form.get('name')
-    new_quantity = float(request.form.get('quantity'))
-
-    # Handle expiration date if item is perishable
-    is_perishable = request.form.get('is_perishable') == 'on'
-    was_perishable = item.is_perishable
-    old_shelf_life = item.shelf_life_days
-    item.is_perishable = is_perishable
-
-    if is_perishable:
-        shelf_life_days = int(request.form.get('shelf_life_days', 0))
-        item.shelf_life_days = shelf_life_days
-        from datetime import datetime, timedelta
-        if shelf_life_days > 0:
-            item.expiration_date = datetime.utcnow().date() + timedelta(days=shelf_life_days)
-
-            # Update all existing FIFO entries with remaining quantity
-            # This handles both new perishable items and shelf life changes
-            if not was_perishable or old_shelf_life != shelf_life_days:
-                from app.blueprints.expiration.services import ExpirationService
-                ExpirationService.update_fifo_expiration_data(item.id, shelf_life_days)
-    else:
-        # If changing from perishable to non-perishable, clear expiration data
-        if was_perishable:
-            item.shelf_life_days = None
-            item.expiration_date = None
-
-            # Clear expiration data from all FIFO entries
-            fifo_entries = InventoryHistory.query.filter(
-                and_(
-                    InventoryHistory.inventory_item_id == item.id,
-                    InventoryHistory.remaining_quantity > 0
-                )
-            ).all()
-
-            for entry in fifo_entries:
-                entry.is_perishable = False
-                entry.shelf_life_days = None
-                entry.expiration_date = None
-
-    # Handle recount if quantity changed
-    if new_quantity != item.quantity:
-        notes = "Manual quantity update via inventory edit"
-        from app.services.inventory_adjustment import process_inventory_adjustment
-
-        success = process_inventory_adjustment(
-            item_id=item.id,
-            quantity=new_quantity,
-            change_type='recount',
-            unit=item.unit,
-            notes=notes,
-            created_by=current_user.id,
-            item_type='ingredient'  # Raw inventory is ingredient type
-        )
-        if not success:
-            flash('Error updating quantity', 'error')
-            return redirect(url_for('inventory.view_inventory', id=id))
-        item.quantity = new_quantity  # Update main inventory quantity after successful FIFO adjustment
-
-    # Handle cost override (only for manual cost changes from edit modal)
-    new_cost = float(request.form.get('cost_per_unit', 0))
-    if request.form.get('override_cost') and new_cost != item.cost_per_unit:
-        # This is a true cost override - bypasses weighted average
-        history = InventoryHistory(
-            inventory_item_id=item.id,
-            change_type='cost_override',
-            quantity_change=0,
-            unit=item.unit,  # Add the required unit field
-            unit_cost=new_cost,
-            note=f'Cost manually overridden from {item.cost_per_unit} to {new_cost}',
-            created_by=current_user.id,
-            quantity_used=0.0  # Cost overrides don't consume inventory - always null
-        )
-        db.session.add(history)
-        item.cost_per_unit = new_cost
-
-    # Type-specific updates
-    if item.type == 'container':
-        item.storage_amount = float(request.form.get('storage_amount'))
-        item.storage_unit = request.form.get('storage_unit')
-    else:
-        item.unit = request.form.get('unit')
-        category_id = request.form.get('category_id')
-        # Convert empty string to None for PostgreSQL compatibility
-        item.category_id = None if not category_id or category_id == '' else int(category_id)
-        if not item.category_id:  # Custom category selected
-            item.density = float(request.form.get('density', 1.0))
-        else:
-            category = IngredientCategory.query.get(item.category_id)
-            if category and category.default_density:
-                item.density = category.default_density
-            else:
-                item.density = None
+    if item.organization_id != current_user.organization_id:
+        flash("You do not have permission to edit this item.", "error")
+        return redirect(url_for('inventory.list_inventory'))
 
     try:
-        db.session.commit()
-        flash(f'{item.type.title()} updated successfully.')
-    except Exception as e:
-        print(f"DEBUG: Error committing changes in edit_inventory: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        db.session.rollback()
+        item.name = request.form.get('name', item.name)
+        item.low_stock_threshold = float(request.form.get('low_stock_threshold', item.low_stock_threshold or 0.0))
 
-        # Provide user-friendly error messages
-        error_msg = str(e)
-        if 'invalid input syntax for type integer' in error_msg and 'category_id' in error_msg:
-            flash('Invalid category selection. Please choose a valid category or leave blank for custom category.', 'error')
-        elif 'psycopg2.errors' in error_msg:
-            flash('Database error occurred while saving. Please check your input values and try again.', 'error')
-        else:
-            flash(f'Error saving changes: {str(e)}', 'error')
+        # Handle quantity changes via recount
+        new_quantity_str = request.form.get('quantity', '')
+        if new_quantity_str and new_quantity_str.strip():
+            new_quantity = float(new_quantity_str)
+            if new_quantity != item.quantity:
+                notes = "Manual quantity update via inventory edit"
+                success = process_inventory_adjustment(
+                    item_id=item.id,
+                    quantity=new_quantity,
+                    change_type='recount',
+                    unit=item.unit,
+                    notes=notes,
+                    created_by=current_user.id
+                )
+                if not success:
+                    flash('Error updating quantity', 'error')
+                    return redirect(url_for('inventory.view_inventory', id=id))
+
+        db.session.commit()
+        flash(f'"{item.name}" updated successfully.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error editing inventory item {id}: {e}", exc_info=True)
+        flash(f'Error updating item: {str(e)}', 'error')
 
     return redirect(url_for('inventory.view_inventory', id=id))
-
 
 
 @inventory_bp.route('/archive/<int:id>')
 @login_required
 def archive_inventory(id):
+    """Archives an inventory item."""
     item = InventoryItem.query.get_or_404(id)
+    if item.organization_id != current_user.organization_id:
+        flash("You do not have permission to archive this item.", "error")
+        return redirect(url_for('inventory.list_inventory'))
+
     try:
         item.is_archived = True
         db.session.commit()
-        flash('Inventory item archived successfully.')
+        flash(f'"{item.name}" has been archived.', 'success')
     except Exception as e:
         db.session.rollback()
+        logger.error(f"Error archiving item {id}: {e}", exc_info=True)
         flash(f'Error archiving item: {str(e)}', 'error')
+
     return redirect(url_for('inventory.list_inventory'))
+
 
 @inventory_bp.route('/restore/<int:id>')
 @login_required
 def restore_inventory(id):
+    """Restores an archived inventory item."""
     item = InventoryItem.query.get_or_404(id)
+    if item.organization_id != current_user.organization_id:
+        flash("You do not have permission to restore this item.", "error")
+        return redirect(url_for('inventory.list_inventory'))
+
     try:
         item.is_archived = False
         db.session.commit()
-        flash('Inventory item restored successfully.')
+        flash(f'"{item.name}" has been restored.', 'success')
     except Exception as e:
         db.session.rollback()
+        logger.error(f"Error restoring item {id}: {e}", exc_info=True)
         flash(f'Error restoring item: {str(e)}', 'error')
-    return redirect(url_for('inventory.list_inventory'))
+
+    return redirect(url_for('inventory.list_inventory', show_archived='true'))
 
 
 @inventory_bp.route('/debug/<int:id>')
 @login_required
 def debug_inventory(id):
-    """Debug endpoint to check inventory status"""
-    try:
-        item = InventoryItem.query.get_or_404(id)
+    """Provides a JSON endpoint to check the sync status of an inventory item."""
+    item = InventoryItem.query.get_or_404(id)
+    if item.organization_id != current_user.organization_id:
+        return jsonify(api_error("Permission denied")), 403
 
-        # Check FIFO sync
-        from app.services.inventory_adjustment import validate_inventory_fifo_sync
+    try:
         is_valid, error_msg, inv_qty, fifo_total = validate_inventory_fifo_sync(id)
 
         debug_info = {
@@ -624,17 +418,17 @@ def debug_inventory(id):
             'item_quantity': item.quantity,
             'item_unit': item.unit,
             'item_type': item.type,
-            'fifo_valid': is_valid,
-            'fifo_error': error_msg,
-            'inventory_qty': inv_qty,
-            'fifo_total': fifo_total,
-            'history_count': InventoryHistory.query.filter_by(inventory_item_id=id).count()
+            'fifo_is_synced': is_valid,
+            'fifo_sync_message': error_msg,
+            'inventory_quantity_db': inv_qty,
+            'fifo_total_calculated': fifo_total,
+            'history_entry_count': InventoryHistory.query.filter_by(inventory_item_id=id).count()
         }
-
         return jsonify(debug_info)
 
     except Exception as e:
         import traceback
+        logger.error(f"Error in debug_inventory for item {id}: {e}", exc_info=True)
         return jsonify({
             'error': str(e),
             'traceback': traceback.format_exc()
