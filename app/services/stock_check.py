@@ -222,11 +222,21 @@ def universal_stock_check(recipe, scale=1.0, flex_mode=False):
 
 
 class StockCheckService:
-    """Backwards-compatibility wrapper for existing stock check functions"""
+    """DEPRECATED - Backwards-compatibility wrapper for existing stock check functions
+    
+    WARNING: This compatibility layer will be removed in the next release.
+    Use the canonical inventory adjustment service directly.
+    """
 
     @staticmethod
     def check_availability(*args, **kwargs):
         """Check if ingredients are available for production"""
+        import warnings
+        warnings.warn(
+            "StockCheckService.check_availability is deprecated. Use canonical service directly.",
+            DeprecationWarning,
+            stacklevel=2
+        )
         return check_recipe_availability(*args, **kwargs)
 
     @staticmethod
