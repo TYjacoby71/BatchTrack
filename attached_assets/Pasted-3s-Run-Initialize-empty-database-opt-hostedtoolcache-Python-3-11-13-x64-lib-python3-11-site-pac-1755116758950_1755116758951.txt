@@ -1,0 +1,411 @@
+3s
+Run # Initialize empty database
+/opt/hostedtoolcache/Python/3.11.13/x64/lib/python3.11/site-packages/flask_limiter/extension.py:333: UserWarning: Using the in-memory storage for tracking rate limits as no storage was explicitly specified. This is not recommended for production use. See: https://flask-limiter.readthedocs.io#configuring-a-storage-backend for documentation about configuring the storage backend.
+  warnings.warn(
+[2025-08-13 20:22:47,842] INFO in unit_utils: BatchTrack startup
+INFO  [alembic.env] Imported model module: app.models.batch
+INFO  [alembic.env] Imported model module: app.models.billing_snapshot
+INFO  [alembic.env] Imported model module: app.models.category
+INFO  [alembic.env] Imported model module: app.models.developer_permission
+INFO  [alembic.env] Imported model module: app.models.developer_role
+INFO  [alembic.env] Imported model module: app.models.inventory
+INFO  [alembic.env] Imported model module: app.models.mixins
+INFO  [alembic.env] Imported model module: app.models.models
+INFO  [alembic.env] Imported model module: app.models.permission
+INFO  [alembic.env] Imported model module: app.models.pricing_snapshot
+INFO  [alembic.env] Imported model module: app.models.product
+INFO  [alembic.env] Imported model module: app.models.recipe
+INFO  [alembic.env] Imported model module: app.models.reservation
+INFO  [alembic.env] Imported model module: app.models.role
+INFO  [alembic.env] Imported model module: app.models.statistics
+INFO  [alembic.env] Imported model module: app.models.stripe_event
+INFO  [alembic.env] Imported model module: app.models.subscription_tier
+INFO  [alembic.env] Imported model module: app.models.unified_inventory_history
+INFO  [alembic.env] Imported model module: app.models.unit
+INFO  [alembic.env] Imported model module: app.models.user_preferences
+INFO  [alembic.env] Imported model module: app.models.user_role_assignment
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 4481595c5f02, empty message
+INFO  [alembic.runtime.migration] Running upgrade 4481595c5f02 -> 132971c1d456, add all missing columns to match model definitions
+INFO  [alembic.runtime.migration] Running upgrade 132971c1d456 -> f3b0e59fe9c1, add missing recipe columns
+INFO  [alembic.runtime.migration] Running upgrade f3b0e59fe9c1 -> add_missing_timestamps, add missing timestamp columns
+INFO  [alembic.runtime.migration] Running upgrade add_missing_timestamps -> fix_nullable_constraints, fix nullable columns and add constraints
+INFO  [alembic.runtime.migration] Running upgrade fix_nullable_constraints -> add_unit_timestamps, add missing timestamp columns to unit table
+INFO  [alembic.runtime.migration] Running upgrade add_unit_timestamps -> add_missing_created_at_columns, add missing created_at and updated_at columns to all models
+INFO  [alembic.runtime.migration] Running upgrade add_missing_created_at_columns -> add_missing_table_schemas, add missing table schemas for billing_snapshot, pricing_snapshot, and statistics
+INFO  [alembic.runtime.migration] Running upgrade add_missing_table_schemas -> fix_password_hash_length, fix password_hash column length
+INFO  [alembic.runtime.migration] Running upgrade fix_password_hash_length -> 8b7aa70df87d, fix user_role_assignment constraints to allow NULL role_id for developer roles
+INFO  [alembic.runtime.migration] Running upgrade 8b7aa70df87d -> 9d2a5c7f8b1e, fix inventory history constraints
+INFO  [alembic.runtime.migration] Running upgrade 9d2a5c7f8b1e -> 1a2b3c4d5e6f, force drop unwanted columns
+✅ Migration completed: All columns added WITHOUT constraints
+⚠️  TODO: Create a separate migration to add constraints after seeding
+✅ Recipe migration completed: All columns added safely
+=== Adding missing columns and constraints ===
+Warning: Could not create foreign key constraint: No support for ALTER of constraints in SQLite dialect. Please refer to the batch mode feature which allows for SQLite migrations using a copy-and-move strategy.
+Warning: Could not create organization FK: No support for ALTER of constraints in SQLite dialect. Please refer to the batch mode feature which allows for SQLite migrations using a copy-and-move strategy.
+Warning: Could not create developer_role FK: No support for ALTER of constraints in SQLite dialect. Please refer to the batch mode feature which allows for SQLite migrations using a copy-and-move strategy.
+✅ Migration completed: Added missing columns and tables
+=== Fixing nullable columns and adding constraints ===
+Updating user.user_type NULL values...
+Updating organization.is_active NULL values...
+Updating user.is_active NULL values...
+Updating user.is_organization_owner NULL values...
+Updating role.is_system_role NULL values...
+Updating user_role_assignment.is_active NULL values...
+Updating subscription_tier.is_active NULL values...
+✅ Migration completed: Updated NULL values to match model expectations
+⚠️  Note: Columns remain nullable in database schema but models enforce NOT NULL
+=== Adding missing timestamp columns to unit table ===
+Adding timestamp columns to unit table...
+  ✅ Added created_at column
+  ✅ Added updated_at column
+Adding timestamp columns to custom_unit_mapping table...
+  ℹ️  created_at column already exists
+  ✅ Added updated_at column
+Adding timestamp columns to conversion_log table...
+  ✅ Added created_at column
+  ✅ Added updated_at column
+✅ Migration completed: Added missing timestamp columns
+=== Adding missing timestamp columns to all models ===
+   Checking table: batch
+      ✅ Added created_at column
+      ✅ Added updated_at column
+   Checking table: billing_snapshot
+      ✅ Added created_at column
+      ✅ Added updated_at column
+   ⚠️  Skipping 'ingredient_category' - timestamps intentionally excluded
+   Checking table: inventory_item
+      ℹ️  created_at column already exists
+      ℹ️  updated_at column already exists
+      ✅ Table 'inventory_item' timestamp columns up to date
+   Checking table: permission
+      ✅ Added created_at column
+      ✅ Added updated_at column
+   Checking table: pricing_snapshot
+      ✅ Added created_at column
+      ✅ Added updated_at column
+   Checking table: product
+      ℹ️  created_at column already exists
+      ℹ️  updated_at column already exists
+      ✅ Table 'product' timestamp columns up to date
+   Checking table: product_sku
+      ℹ️  created_at column already exists
+      ℹ️  updated_at column already exists
+      ✅ Table 'product_sku' timestamp columns up to date
+   Checking table: product_sku_history
+      ✅ Added created_at column
+      ✅ Added updated_at column
+   Checking table: product_variant
+      ℹ️  created_at column already exists
+      ℹ️  updated_at column already exists
+      ✅ Table 'product_variant' timestamp columns up to date
+   Checking table: recipe
+      ℹ️  created_at column already exists
+      ℹ️  updated_at column already exists
+      ✅ Table 'recipe' timestamp columns up to date
+   Checking table: recipe_ingredient
+      ✅ Added created_at column
+      ✅ Added updated_at column
+   Checking table: reservation
+      ℹ️  created_at column already exists
+      ✅ Added updated_at column
+   Checking table: role
+      ℹ️  created_at column already exists
+      ℹ️  updated_at column already exists
+      ✅ Table 'role' timestamp columns up to date
+   ⚠️  Table 'statistics' doesn't exist, skipping
+   Checking table: subscription_tier
+      ℹ️  created_at column already exists
+      ℹ️  updated_at column already exists
+      ✅ Table 'subscription_tier' timestamp columns up to date
+   Checking table: user_role_assignment
+      ✅ Added created_at column
+      ✅ Added updated_at column
+   Checking table: developer_role
+      ✅ Added created_at column
+      ✅ Added updated_at column
+   Checking table: organization
+      ℹ️  created_at column already exists
+      ℹ️  updated_at column already exists
+      ✅ Table 'organization' timestamp columns up to date
+   Checking table: user
+      ℹ️  created_at column already exists
+      ℹ️  updated_at column already exists
+      ✅ Table 'user' timestamp columns up to date
+   Checking table: custom_unit_mapping
+      ℹ️  created_at column already exists
+      ℹ️  updated_at column already exists
+      ✅ Table 'custom_unit_mapping' timestamp columns up to date
+   Checking table: conversion_log
+      ℹ️  created_at column already exists
+      ℹ️  updated_at column already exists
+      ✅ Table 'conversion_log' timestamp columns up to date
+   Checking table: tag
+      ✅ Added created_at column
+      ✅ Added updated_at column
+✅ Migration completed: Added 19 timestamp columns across all tables
+⚠️  All timestamp columns added as nullable for safety
+=== Adding missing table schemas ===
+   Creating billing_snapshots table...
+   Warning: Could not create billing_snapshots organization FK: No support for ALTER of constraints in SQLite dialect. Please refer to the batch mode feature which allows for SQLite migrations using a copy-and-move strategy.
+   Creating pricing_snapshots table...
+   statistics table already exists - skipping
+   Adding timestamps to existing organization_stats table...
+✅ Missing table schemas processed successfully
+⚠️  Note: Skipping ingredient_category as requested
+=== Fixing password_hash column length ===
+   Updating user.password_hash column length from 120 to 255...
+   ✅ Updated password_hash column to varchar(255)
+✅ Migration completed: password_hash column can now store longer hashes
+=== Fixing user_role_assignment constraints ===
+   Updating user_role_assignment.role_id to allow NULL...
+   ✅ Updated role_id column to allow NULL values
+   ⚠️  Check constraint may already exist: No support for ALTER of constraints in SQLite dialect. Please refer to the batch mode feature which allows for SQLite migrations using a copy-and-move strategy.
+✅ User role assignment constraints fixed successfully
+=== Fixing inventory history constraints ===
+   ✅ inventory_history table already exists
+   Dropping unwanted quantity_before column...
+   ⚠️  Direct SQL drop failed: (sqlite3.OperationalError) near "EXISTS": syntax error
+[SQL: ALTER TABLE inventory_history DROP COLUMN IF EXISTS quantity_before CASCADE]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   ✅ Dropped quantity_before column using batch mode
+   Adding missing column: remaining_quantity
+   Adding missing column: fifo_code
+   Adding missing column: expiration_date
+   Adding missing column: fifo_reference_id
+   Adding missing column: quantity_used
+   Adding missing column: is_perishable
+   Adding missing column: shelf_life_days
+   Updating remaining_quantity for existing records...
+   ✅ Updated remaining_quantity values
+   Cleaning up invalid data...
+   ✅ Cleaned up invalid data
+   ⚠️  Could not add constraint ck_inventory_history_remaining_quantity_non_negative: No support for ALTER of constraints in SQLite dialect. Please refer to the batch mode feature which allows for SQLite migrations using a copy-and-move strategy.
+   ✅ Created index: idx_inventory_history_item_remaining
+   ✅ Created index: idx_inventory_history_fifo_code
+   ✅ Created index: idx_inventory_history_timestamp
+✅ Inventory history constraints fixed successfully
+=== Force dropping unwanted columns ===
+   Database type detected: sqlite
+   ℹ️  Column quantity_before does not exist
+   Attempting to drop column: quantity_after
+   ✅ Dropped column: quantity_after (SQLite)
+   Attempting to drop column: reason
+   ✅ Dropped column: reason (SQLite)
+   Attempting to drop column: user_id
+INFO  [alembic.runtime.migration] Running upgrade 1a2b3c4d5e6f -> add_billing_columns_org, add billing columns to organization
+INFO  [alembic.runtime.migration] Running upgrade add_billing_columns_org -> whop_integration, Add Whop integration fields to Organization
+INFO  [alembic.runtime.migration] Running upgrade whop_integration -> a1b2c3d4e5f6789012345678901234ab, Add Whop integration fields to SubscriptionTier
+INFO  [alembic.runtime.migration] Running upgrade a1b2c3d4e5f6789012345678901234ab -> 0e15af770cb3, simplify subscription tier model - remove billing fields
+INFO  [alembic.runtime.migration] Running upgrade 0e15af770cb3 -> f4e5d6c7b8a9, remove nonexistent billing columns
+INFO  [alembic.runtime.migration] Running upgrade f4e5d6c7b8a9 -> drop_deprecated_billing_columns, drop deprecated billing columns
+INFO  [alembic.runtime.migration] Running upgrade drop_deprecated_billing_columns -> add_offline_billing_support, Add offline billing support
+INFO  [alembic.runtime.migration] Running upgrade add_offline_billing_support -> 3f7a8b9c2d5e, Add offline billing support and missing billing fields
+INFO  [alembic.runtime.migration] Running upgrade 3f7a8b9c2d5e -> 4246268c4e7c, add_oauth_and_email_verification_fields
+INFO  [alembic.runtime.migration] Running upgrade 4246268c4e7c -> fix_missing_email_verification, fix missing email verification columns
+INFO  [alembic.runtime.migration] Running upgrade fix_missing_email_verification -> add_fallback_price_column, add_fallback_price_column
+INFO  [alembic.runtime.migration] Running upgrade add_fallback_price_column -> 9a2b8c4d5e6f, fix missing oauth columns postgresql
+INFO  [alembic.runtime.migration] Running upgrade 9a2b8c4d5e6f -> b5c7d8e9f1a2, replace billing provider booleans with enum fields
+INFO  [alembic.runtime.migration] Running upgrade b5c7d8e9f1a2 -> fix_unit_symbol_nullable, make unit symbol nullable for custom units
+Traceback (most recent call last):
+   ✅ Dropped column: user_id (SQLite)
+  File "/opt/hostedtoolcache/Python/3.11.13/x64/lib/python3.11/site-packages/alembic/operations/batch.py", line 713, in drop_index
+   ✅ Added required column: created_by
+   ✅ Added required column: unit_cost
+=== Force drop completed ===
+=== Adding billing columns to organization table ===
+   ✅ Organization table exists
+   ✅ Column subscription_tier_id already exists
+   Adding column: stripe_subscription_id
+   ✅ Added stripe_subscription_id
+   ✅ Column stripe_customer_id already exists
+   Adding column: billing_info
+   ✅ Added billing_info
+   Adding column: next_billing_date
+   ✅ Added next_billing_date
+   ✅ Column subscription_status already exists
+   Adding column: signup_source
+   ✅ Added signup_source
+   Adding column: promo_code
+   ✅ Added promo_code
+   Adding column: referral_code
+   ✅ Added referral_code
+   ✅ Column contact_email already exists
+   Adding foreign key constraint for subscription_tier_id...
+   ⚠️  Could not add foreign key constraint: No support for ALTER of constraints in SQLite dialect. Please refer to the batch mode feature which allows for SQLite migrations using a copy-and-move strategy.
+   Updating default subscription_status for existing records...
+   ✅ Updated subscription_status defaults
+✅ Billing columns migration completed
+=== Simplifying subscription tier model - removing billing fields ===
+   Checking developer_permission table...
+   ⚠️  developer_permission.updated_at does not exist - skipping
+   ⚠️  developer_permission.created_at does not exist - skipping
+   Checking developer_role table...
+   Dropping developer_role.updated_at
+   Dropping developer_role.created_at
+   Checking subscription_tier table...
+   ⚠️  subscription_tier.whop_plan_id does not exist - skipping
+   ⚠️  subscription_tier.stripe_price_id does not exist - skipping
+   ⚠️  subscription_tier.billing_cycle does not exist - skipping
+✅ Migration completed: Simplified subscription tier model
+=== Removing nonexistent billing columns ===
+   ✅ Column billing_cycle already doesn't exist
+   ✅ Column pricing_category already doesn't exist
+   ✅ Column price_amount already doesn't exist
+   ✅ Column currency already doesn't exist
+=== Migration completed ===
+=== Dropping deprecated billing columns ===
+   ✅ Column billing_cycle doesn't exist (already clean)
+   ✅ Column pricing_category doesn't exist (already clean)
+   ✅ Column price_amount doesn't exist (already clean)
+   ✅ Column currency doesn't exist (already clean)
+=== Migration completed ===
+=== Mock migration: add_offline_billing_support ===
+   No changes to apply - this is a mock revision for production sync
+✅ Mock migration completed
+=== Adding offline billing support and missing billing fields ===
+   Adding offline support to subscription_tier...
+   ✅ Added last_billing_sync
+   ✅ Added grace_period_days
+   Adding fields to organization...
+   Adding column: last_online_sync
+   ✅ Added last_online_sync
+   Adding column: offline_tier_cache
+   ✅ Added offline_tier_cache
+   Adding column: billing_status
+   ✅ Added billing_status
+   ✅ Column stripe_customer_id already exists
+   ✅ Column stripe_subscription_id already exists
+   ✅ Column whop_license_key already exists
+   ✅ Column whop_product_tier already exists
+   ✅ Column whop_verified already exists
+   Updating default values for existing records...
+   ✅ Updated default values
+✅ Offline billing and missing fields migration completed
+=== Adding OAuth and email verification fields ===
+   Adding created_at column to developer_permission...
+   Adding created_at column to developer_role...
+   ⚠️  email_verified column already exists, skipping
+   ⚠️  email_verification_token column already exists, skipping
+   Adding email_verification_sent_at column...
+   Adding oauth_provider column...
+   Adding oauth_provider_id column...
+   ⚠️  password_reset_token column already exists, skipping
+   Adding password_reset_sent_at column...
+   Adding google_id column...
+✅ Migration completed: OAuth and email verification fields
+🔧 Fixing missing email verification columns...
+   ✅ email_verification_sent_at column already exists
+   ✅ password_reset_sent_at column already exists
+✅ Email verification columns fix completed
+=== Adding fallback_price column to subscription_tier ===
+   Adding fallback_price column...
+✅ fallback_price column added successfully
+=== OAuth Column Fix (SQLite/PostgreSQL compatible) ===
+   ⚠️  oauth_provider column already exists, skipping
+   ⚠️  oauth_provider_id column already exists, skipping
+   ⚠️  password_reset_token column already exists, skipping
+   ⚠️  password_reset_sent_at column already exists, skipping
+   ⚠️  email_verification_sent_at column already exists, skipping
+   No columns to add - all OAuth columns already exist
+✅ OAuth columns migration completed
+=== Replacing billing provider booleans with enum fields ===
+   Adding tier_type column...
+   Adding billing_provider column...
+   Migrating existing data from legacy boolean columns...
+   ⚠️  Data migration failed: (sqlite3.OperationalError) no such column: requires_stripe_billing
+[SQL: 
+                UPDATE subscription_tier
+                SET
+                  tier_type = CASE
+                    WHEN COALESCE(requires_stripe_billing, 0) = 1
+                      OR COALESCE(requires_google_billing, 0) = 1  
+                      OR COALESCE(requires_whop_billing, 0) = 1
+                    THEN 'paid' ELSE 'free' END,
+                  billing_provider = CASE
+                    WHEN COALESCE(requires_stripe_billing, 0) = 1 THEN 'stripe'
+                    WHEN COALESCE(requires_google_billing, 0) = 1 THEN 'google'
+                    WHEN COALESCE(requires_whop_billing, 0) = 1 THEN 'whop'
+                    ELSE NULL END
+            ]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+   Dropping legacy boolean columns...
+   ✅ Dropped requires_whop_billing
+✅ Billing provider enum migration completed
+=== Making unit symbol nullable ===
+    del self.indexes[idx.name]  # type: ignore[arg-type]
+        ~~~~~~~~~~~~^^^^^^^^^^
+KeyError: 'ix_unit_standard_unique'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/opt/hostedtoolcache/Python/3.11.13/x64/bin/flask", line 7, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/opt/hostedtoolcache/Python/3.11.13/x64/lib/python3.11/site-packages/flask/cli.py", line 1129, in main
+    cli.main()
+  File "/opt/hostedtoolcache/Python/3.11.13/x64/lib/python3.11/site-packages/click/core.py", line 1082, in main
+    rv = self.invoke(ctx)
+         ^^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.11.13/x64/lib/python3.11/site-packages/click/core.py", line 1697, in invoke
+    return _process_result(sub_ctx.command.invoke(sub_ctx))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.11.13/x64/lib/python3.11/site-packages/click/core.py", line 1697, in invoke
+    return _process_result(sub_ctx.command.invoke(sub_ctx))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.11.13/x64/lib/python3.11/site-packages/click/core.py", line 1443, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.11.13/x64/lib/python3.11/site-packages/click/core.py", line 788, in invoke
+    return __callback(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.11.13/x64/lib/python3.11/site-packages/click/decorators.py", line 33, in new_func
+    return f(get_current_context(), *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.11.13/x64/lib/python3.11/site-packages/flask/cli.py", line 400, in decorator
+    return ctx.invoke(f, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.11.13/x64/lib/python3.11/site-packages/click/core.py", line 788, in invoke
+    return __callback(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.11.13/x64/lib/python3.11/site-packages/flask_migrate/cli.py", line 150, in upgrade
+    _upgrade(directory, revision, sql, tag, x_arg)
+  File "/opt/hostedtoolcache/Python/3.11.13/x64/lib/python3.11/site-packages/flask_migrate/__init__.py", line 111, in wrapped
+    f(*args, **kwargs)
+  File "/opt/hostedtoolcache/Python/3.11.13/x64/lib/python3.11/site-packages/flask_migrate/__init__.py", line 200, in upgrade
+    command.upgrade(config, revision, sql=sql, tag=tag)
+  File "/opt/hostedtoolcache/Python/3.11.13/x64/lib/python3.11/site-packages/alembic/command.py", line 408, in upgrade
+    script.run_env()
+  File "/opt/hostedtoolcache/Python/3.11.13/x64/lib/python3.11/site-packages/alembic/script/base.py", line 586, in run_env
+    util.load_python_file(self.dir, "env.py")
+  File "/opt/hostedtoolcache/Python/3.11.13/x64/lib/python3.11/site-packages/alembic/util/pyfiles.py", line 95, in load_python_file
+    module = load_module_py(module_id, path)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.11.13/x64/lib/python3.11/site-packages/alembic/util/pyfiles.py", line 113, in load_module_py
+    spec.loader.exec_module(module)  # type: ignore
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap_external>", line 940, in exec_module
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "/home/runner/work/BatchTrack/BatchTrack/migrations/env.py", line 145, in <module>
+    run_migrations_online()
+  File "/home/runner/work/BatchTrack/BatchTrack/migrations/env.py", line 139, in run_migrations_online
+    context.run_migrations()
+  File "<string>", line 8, in run_migrations
+  File "/opt/hostedtoolcache/Python/3.11.13/x64/lib/python3.11/site-packages/alembic/runtime/environment.py", line 946, in run_migrations
+    self.get_context().run_migrations(**kw)
+  File "/opt/hostedtoolcache/Python/3.11.13/x64/lib/python3.11/site-packages/alembic/runtime/migration.py", line 623, in run_migrations
+    step.migration_fn(**kw)
+  File "/home/runner/work/BatchTrack/BatchTrack/migrations/versions/fix_unit_symbol_nullable.py", line 38, in upgrade
+    with op.batch_alter_table('unit', schema=None) as batch_op:
+  File "/opt/hostedtoolcache/Python/3.11.13/x64/lib/python3.11/contextlib.py", line 144, in __exit__
+    next(self.gen)
+  File "/opt/hostedtoolcache/Python/3.11.13/x64/lib/python3.11/site-packages/alembic/operations/base.py", line 397, in batch_alter_table
+    impl.flush()
+  File "/opt/hostedtoolcache/Python/3.11.13/x64/lib/python3.11/site-packages/alembic/operations/batch.py", line 161, in flush
+    fn(*arg, **kw)
+  File "/opt/hostedtoolcache/Python/3.11.13/x64/lib/python3.11/site-packages/alembic/operations/batch.py", line 715, in drop_index
+    raise ValueError("No such index: '%s'" % idx.name)
+ValueError: No such index: 'ix_unit_standard_unique'
+Error: Process completed with exit code 1.
