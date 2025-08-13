@@ -1,6 +1,6 @@
 from flask import current_app
 from flask_login import current_user
-from app.models import db, InventoryItem, InventoryHistory
+from app.models import db, InventoryItem, UnifiedInventoryHistory
 from datetime import datetime, timedelta
 from app.services.conversion_wrapper import safe_convert
 from app.services.unit_conversion import ConversionEngine
@@ -222,6 +222,32 @@ def process_inventory_adjustment(
 
             # Determine the correct unit for the history entry
             history_unit = 'count' if getattr(item, 'type', None) == 'container' else item.unit
+
+            # Create unified history record - works for all item types
+            # This section was updated to use the UnifiedInventoryHistory model and remove branching logic.
+            # Product-specific fields are now handled within this single model.
+            history = UnifiedInventoryHistory(
+                inventory_item_id=item.id,
+                change_type=change_type,
+                quantity_change=float(quantity),
+                remaining_quantity=item.quantity, # This should be the quantity BEFORE the change
+                unit=history_unit,
+                unit_cost=cost_per_unit,
+                fifo_code=batch_id, # Assuming batch_id can act as fifo_code for simplicity
+                batch_id=batch_id,
+                notes=notes,
+                created_by=created_by,
+                quantity_used=0, # Not directly applicable for additions in this context
+                is_perishable=item.is_perishable,
+                shelf_life_days=shelf_life_to_use,
+                expiration_date=expiration_date,
+                organization_id=item.organization_id,
+                # Product-specific fields (will be None for ingredients)
+                customer=customer,
+                sale_price=sale_price,
+                order_id=order_id
+            )
+            db.session.add(history)
 
             success, error_msg = _internal_add_fifo_entry_enhanced(
                 item_id=item_id,

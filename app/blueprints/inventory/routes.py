@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify, render_template, redirect, url_for, flash, session
 from flask_login import login_required, current_user
-from app.models import db, InventoryItem, InventoryHistory, Unit, IngredientCategory, User
+from app.models import db, InventoryItem, UnifiedInventoryHistory, Unit, IngredientCategory, User
 from app.utils.permissions import permission_required
 from app.utils.authorization import role_required
 from app.utils.api_responses import api_error, api_success
@@ -56,12 +56,12 @@ def list_inventory():
         # Calculate expired quantity using temporary attributes instead of properties
         if item.is_perishable:
             today = datetime.now().date()
-            expired_entries = InventoryHistory.query.filter(
+            expired_entries = UnifiedInventoryHistory.query.filter(
                 and_(
-                    InventoryHistory.inventory_item_id == item.id,
-                    InventoryHistory.remaining_quantity > 0,
-                    InventoryHistory.expiration_date != None,
-                    InventoryHistory.expiration_date < today
+                    UnifiedInventoryHistory.inventory_item_id == item.id,
+                    UnifiedInventoryHistory.remaining_quantity > 0,
+                    UnifiedInventoryHistory.expiration_date != None,
+                    UnifiedInventoryHistory.expiration_date < today
                 )
             ).all()
             item.temp_expired_quantity = sum(float(entry.remaining_quantity) for entry in expired_entries)
@@ -122,16 +122,16 @@ def view_inventory(id):
         item.temp_expired_quantity = 0
         item.temp_available_quantity = item.quantity
 
-    history_query = InventoryHistory.query.filter_by(inventory_item_id=id).options(
-        joinedload(InventoryHistory.batch),
-        joinedload(InventoryHistory.used_for_batch)
+    history_query = UnifiedInventoryHistory.query.filter_by(inventory_item_id=id).options(
+        joinedload(UnifiedInventoryHistory.batch),
+        joinedload(UnifiedInventoryHistory.used_for_batch)
     )
 
     # Apply FIFO filter at database level if requested
     if fifo_filter:
-        history_query = history_query.filter(InventoryHistory.remaining_quantity > 0)
+        history_query = history_query.filter(UnifiedInventoryHistory.remaining_quantity > 0)
 
-    history_query = history_query.order_by(InventoryHistory.timestamp.desc())
+    history_query = history_query.order_by(UnifiedInventoryHistory.timestamp.desc())
     pagination = history_query.paginate(page=page, per_page=per_page, error_out=False)
     history = pagination.items
 
@@ -143,14 +143,14 @@ def view_inventory(id):
     expired_total = 0
     if item.is_perishable:
         today = datetime.now().date()
-        expired_entries = InventoryHistory.query.filter(
+        expired_entries = UnifiedInventoryHistory.query.filter(
             and_(
-                InventoryHistory.inventory_item_id == id,
-                InventoryHistory.remaining_quantity > 0,
-                InventoryHistory.expiration_date != None,
-                InventoryHistory.expiration_date < today
+                UnifiedInventoryHistory.inventory_item_id == id,
+                UnifiedInventoryHistory.remaining_quantity > 0,
+                UnifiedInventoryHistory.expiration_date != None,
+                UnifiedInventoryHistory.expiration_date < today
             )
-        ).order_by(InventoryHistory.expiration_date.asc()).all()
+        ).order_by(UnifiedInventoryHistory.expiration_date.asc()).all()
         expired_total = sum(float(entry.remaining_quantity) for entry in expired_entries)
 
     from ...utils.timezone_utils import TimezoneUtils
@@ -165,7 +165,7 @@ def view_inventory(id):
                          get_global_unit_list=get_global_unit_list,
                          get_ingredient_categories=IngredientCategory.query.order_by(IngredientCategory.name).all,
                          User=User,
-                         InventoryHistory=InventoryHistory,
+                         InventoryHistory=UnifiedInventoryHistory,
                          now=datetime.utcnow(),
                          get_change_type_prefix=get_change_type_prefix,
                          int_to_base36=int_to_base36,
@@ -465,7 +465,7 @@ def debug_inventory(id):
             'fifo_error': error_msg,
             'inventory_qty': inv_qty,
             'fifo_total': fifo_total,
-            'history_count': InventoryHistory.query.filter_by(inventory_item_id=id).count()
+            'history_count': UnifiedInventoryHistory.query.filter_by(inventory_item_id=id).count()
         }
 
         return jsonify(debug_info)
