@@ -8,11 +8,12 @@ from sqlalchemy import func, and_
 import logging
 import inspect
 
-# Import internal helpers
+# Import internal helpers - using relative imports within package
 from ._validation import validate_inventory_fifo_sync
 from ._fifo_ops import (_calculate_deduction_plan_internal, _execute_deduction_plan_internal,
                        _record_deduction_plan_internal, _internal_add_fifo_entry_enhanced)
 from ._recount_logic import handle_recount_adjustment
+from ._audit import record_audit_entry
 
 # Initialize logger
 logger = logging.getLogger(__name__)

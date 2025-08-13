@@ -1,4 +1,11 @@
 
+"""
+Audit Trail Management for Inventory Adjustments
+
+This module handles all audit trail and history recording for inventory operations.
+"""
+
+from datetime import datetime
 from flask_login import current_user
 from app.models import db, InventoryItem, UnifiedInventoryHistory
 from app.utils.fifo_generator import generate_fifo_code
@@ -52,33 +59,50 @@ def audit_event(
         return False
 
 
-def record_audit_entry(item_id, quantity, change_type, unit=None, notes=None, created_by=None, **kwargs):
+def record_audit_entry(
+    item_id: int,
+    change_type: str,
+    quantity_change: float = 0,
+    notes: str | None = None,
+    created_by: int | None = None,
+    **kwargs
+) -> bool:
     """
-    Public helper for audit-only records (remaining_quantity=0, no inventory change)
-    Used for tracking reservations, conversions, etc. without affecting FIFO
+    Record an audit trail entry for inventory operations.
+    
+    This is used for operations that need to log activity but don't affect FIFO lots,
+    such as cost overrides, administrative changes, etc.
     """
     try:
         item = InventoryItem.query.get(item_id)
         if not item:
+            logger.error(f"Cannot record audit entry - item {item_id} not found")
             return False
 
-        # Use unified history table for all audit entries
-        history = UnifiedInventoryHistory(
+        audit_entry = UnifiedInventoryHistory(
             inventory_item_id=item_id,
+            organization_id=item.organization_id,
+            timestamp=datetime.utcnow(),
             change_type=change_type,
-            quantity_change=0.0,  # Audit entries don't change quantity
-            remaining_quantity=0.0,  # Audit entries have no FIFO impact
-            unit=unit or item.unit,
+            quantity_change=quantity_change,
+            remaining_quantity=0.0,  # Audit entries don't create FIFO lots
+            unit=item.unit,
             notes=notes,
             created_by=created_by,
-            organization_id=current_user.organization_id if current_user.is_authenticated else item.organization_id,
-            **kwargs
+            fifo_code=generate_fifo_code(change_type),
+            batch_id=kwargs.get('batch_id'),
+            customer=kwargs.get('customer'),
+            order_id=kwargs.get('order_id'),
+            sale_price=kwargs.get('sale_price')
         )
-
-        db.session.add(history)
+        
+        db.session.add(audit_entry)
         db.session.commit()
+        
+        logger.info(f"Recorded audit entry for item {item_id}: {change_type}")
         return True
+        
     except Exception as e:
         db.session.rollback()
-        logger.error(f"Error creating audit entry: {str(e)}")
+        logger.error(f"Failed to record audit entry for item {item_id}: {str(e)}")
         return False
