@@ -92,6 +92,11 @@ def _internal_add_fifo_entry_enhanced(
         return False, f"Item with ID {item_id} not found."
 
     try:
+        # Prevent adding entries with zero or negative quantity
+        if float(quantity) <= 0:
+            logger.warning(f"Ignoring zero or negative quantity adjustment for item {item_id}: {quantity}")
+            return True, None # Treat as a successful no-op
+
         history_entry = UnifiedInventoryHistory(
             inventory_item_id=item_id,
             organization_id=item.organization_id,

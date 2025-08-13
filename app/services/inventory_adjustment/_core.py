@@ -57,7 +57,7 @@ def process_inventory_adjustment(
         logger.error("CANONICAL ENTRY: item_id is required")
         return False
 
-    if quantity == 0:
+    if quantity == 0 and change_type != 'recount':
         logger.warning("CANONICAL ENTRY: zero quantity adjustment requested")
         return True  # No-op but not an error
 
@@ -97,6 +97,7 @@ def process_inventory_adjustment(
 
         if change_type == 'recount':
             # Recount is special - handle independently from FIFO sync validation
+            logger.info(f"RECOUNT: Processing recount from {current_quantity} to {quantity}")
             return handle_recount_adjustment(item_id, quantity, notes, created_by, item_type)
         elif change_type in ['spoil', 'trash', 'sold', 'sale', 'gift', 'sample', 'tester', 'quality_fail', 'damaged', 'expired', 'use', 'batch']:
             qty_change = -abs(quantity)
