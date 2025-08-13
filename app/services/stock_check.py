@@ -1,4 +1,3 @@
-
 from datetime import date
 from sqlalchemy import and_, or_
 from flask_login import current_user
@@ -52,48 +51,71 @@ def _available_qty(inventory_item_id: int, include_expired: bool) -> float:
     return float(sum(float(getattr(e, "remaining_quantity", 0.0)) for e in entries))
 
 
-def check_stock_availability(requirements, include_expired: bool = False):
+def check_stock_availability(inventory_requirements):
     """
-    Compatibility helper.
-
-    - If `requirements` is a list of dicts like:
-        [{"item_id": 1, "quantity_needed": 5.0, "unit": "count"}, ...]
-      returns:
-        {
-          "can_make": bool,
-          "details": [{"item_id": ..., "needed": ..., "available": ..., "ok": ...}, ...],
-          "shortages": [ ...subset of details where ok == False... ]
-        }
-
-    - If `requirements` is a single item_id (legacy path), returns the same dict
-      for that single item using quantity_needed=0 (always ok if any stock).
+    Check if we have enough inventory to fulfill the given requirements.
+    inventory_requirements: List of dicts with keys: item_id, quantity_needed, unit
+    Returns: Dict with 'can_make': bool, 'missing_items': list
     """
-    # Normalize to list-of-dicts
-    if isinstance(requirements, list):
-        reqs = requirements
-    elif isinstance(requirements, dict):
-        reqs = [requirements]
-    else:
-        # legacy: a single item_id was passed
-        reqs = [{"item_id": int(requirements), "quantity_needed": 0.0, "unit": None}]
+    from app.models import InventoryItem
+    from app.services.conversion_wrapper import safe_convert
 
-    details = []
-    for r in reqs:
-        item_id = int(r.get("item_id"))
-        needed = float(r.get("quantity_needed", 0.0))
-        # Note: unit conversion is out of scope here; tests pass simple counts.
-        available = _available_qty(item_id, include_expired)
-        ok = available >= needed
-        details.append({
-            "item_id": item_id,
-            "needed": needed,
-            "available": available,
-            "ok": ok,
-        })
+    missing_items = []
+    can_make = True
 
-    can_make = all(d["ok"] for d in details)
-    shortages = [d for d in details if not d["ok"]]
-    return {"can_make": can_make, "details": details, "shortages": shortages}
+    for requirement in inventory_requirements:
+        inventory_item_id = requirement['item_id']
+        quantity_needed = requirement['quantity_needed']
+        unit_needed = requirement['unit']
+
+        item = InventoryItem.query.get(inventory_item_id)
+        if not item:
+            missing_items.append({
+                'item_id': inventory_item_id,
+                'item_name': 'Unknown Item',
+                'quantity_needed': quantity_needed,
+                'quantity_available': 0,
+                'unit': unit_needed
+            })
+            can_make = False
+            continue
+
+        # If units match exactly, no conversion needed
+        if unit_needed == item.unit:
+            converted_quantity = quantity_needed
+        else:
+            # Try to convert units
+            conversion_result = safe_convert(quantity_needed, unit_needed, item.unit, ingredient_id=item.id)
+            if conversion_result['ok']:
+                converted_quantity = conversion_result['result']['converted_value']
+            else:
+                # Cannot convert - this is a blocking error
+                missing_items.append({
+                    'item_id': inventory_item_id,
+                    'item_name': item.name,
+                    'quantity_needed': quantity_needed,
+                    'quantity_available': item.quantity,
+                    'unit': unit_needed,
+                    'conversion_error': conversion_result['error']
+                })
+                can_make = False
+                continue
+
+        # Check if we have enough quantity
+        if item.quantity < converted_quantity:
+            missing_items.append({
+                'item_id': inventory_item_id,
+                'item_name': item.name,
+                'quantity_needed': quantity_needed,
+                'quantity_available': item.quantity,
+                'unit': unit_needed
+            })
+            can_make = False
+
+    return {
+        'can_make': can_make,
+        'missing_items': missing_items
+    }
 
 
 # Optional convenience alias
@@ -223,7 +245,7 @@ def universal_stock_check(recipe, scale=1.0, flex_mode=False):
 
 class StockCheckService:
     """DEPRECATED - Backwards-compatibility wrapper for existing stock check functions
-    
+
     WARNING: This compatibility layer will be removed in the next release.
     Use the canonical inventory adjustment service directly.
     """
