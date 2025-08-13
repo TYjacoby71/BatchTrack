@@ -75,8 +75,8 @@ class TestInventoryRoutesCanonicalService:
             mock_user.organization_id = 1
             mock_process.return_value = True
             
-            # Mock InventoryHistory count to simulate no existing history
-            with patch('app.blueprints.inventory.routes.InventoryHistory') as mock_history:
+            # Mock UnifiedInventoryHistory count to simulate no existing history
+            with patch('app.blueprints.inventory.routes.UnifiedInventoryHistory') as mock_history:
                 mock_history.query.filter_by.return_value.count.return_value = 0
                 
                 # Make POST request to adjust inventory

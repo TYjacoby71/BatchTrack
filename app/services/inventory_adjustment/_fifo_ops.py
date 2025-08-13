@@ -167,106 +167,71 @@ def _internal_add_fifo_entry_enhanced(
     item_id: int,
     quantity: float,
     change_type: str,
-    unit: str | None,
-    notes: str | None,
-    cost_per_unit: float | None,
-    **kwargs,
-) -> tuple[bool, str | None]:
+    unit: str,
+    notes: str = None,
+    cost_per_unit: float = None,
+    expiration_date=None,
+    shelf_life_days: int = None,
+    batch_id: int = None,
+    created_by: int = None,
+    customer: str = None,
+    sale_price: float = None,
+    order_id: str = None,
+    custom_expiration_date=None,
+    custom_shelf_life_days: int = None
+) -> tuple[bool, str]:
     """
-    Robustly creates a new FIFO lot and updates the parent inventory item.
-    This is the single source of truth for all inventory additions.
+    Internal helper to add FIFO entry with enhanced tracking.
+    This creates the actual FIFO inventory tracking record.
     """
-    from app.models.inventory import InventoryItem, InventoryHistory
-    from app.models.product import ProductSKUHistory
+    from app.models import db, UnifiedInventoryHistory, InventoryItem
     from app.utils.fifo_generator import generate_fifo_code
-    from datetime import datetime, timedelta
-
-    item = db.session.get(InventoryItem, item_id)
-    if not item:
-        logger.error(f"Cannot add FIFO entry: InventoryItem with ID {item_id} not found.")
-        return False, "Item not found"
-
-    # --- 1. Prepare data for the history record ---
-    history_data = {
-        "inventory_item_id": item_id,
-        "timestamp": datetime.utcnow(),
-        "change_type": change_type,
-        "quantity_change": float(quantity),
-        "unit": unit or item.unit,
-        "remaining_quantity": float(quantity),  # New lots start with full remaining quantity
-        "unit_cost": cost_per_unit,
-        "batch_id": kwargs.get("batch_id"),
-        "created_by": kwargs.get("created_by"),
-        "organization_id": item.organization_id,  # Inherit org_id from the parent item
-        "fifo_code": generate_fifo_code(change_type),
-    }
-
-    # Handle expiration data
-    expiration_date = kwargs.get('expiration_date')
-    shelf_life_days = kwargs.get('shelf_life_days')
-    custom_expiration_date = kwargs.get('custom_expiration_date')
-    custom_shelf_life_days = kwargs.get('custom_shelf_life_days')
-
-    final_expiration_date = None
-    final_shelf_life_days = None
-    is_perishable = False
-
-    if item.is_perishable:
-        is_perishable = True
-        if custom_expiration_date:
-            final_expiration_date = custom_expiration_date
-        elif expiration_date:
-            final_expiration_date = expiration_date
-        elif custom_shelf_life_days and custom_shelf_life_days > 0:
-            final_shelf_life_days = custom_shelf_life_days
-            final_expiration_date = datetime.utcnow().date() + timedelta(days=custom_shelf_life_days)
-        elif shelf_life_days and shelf_life_days > 0:
-            final_shelf_life_days = shelf_life_days
-            final_expiration_date = datetime.utcnow().date() + timedelta(days=shelf_life_days)
-        elif item.shelf_life_days and item.shelf_life_days > 0:
-            final_shelf_life_days = item.shelf_life_days
-            final_expiration_date = datetime.utcnow().date() + timedelta(days=item.shelf_life_days)
-
-    history_data.update({
-        "is_perishable": is_perishable,
-        "shelf_life_days": final_shelf_life_days,
-        "expiration_date": final_expiration_date,
-    })
-
-    # --- 2. Create the correct type of history record ---
-    # The models have different column names, so we handle them separately.
-    if item.type == 'product':
-        # ProductSKUHistory has extra fields for sales context
-        product_specific_data = {
-            "customer": kwargs.get("customer"),
-            "sale_price": kwargs.get("sale_price"),
-            "order_id": kwargs.get("order_id"),
-            "notes": notes,  # ProductSKUHistory uses 'notes'
-        }
-        history_data.update(product_specific_data)
-        history_entry = ProductSKUHistory(**history_data)
-    else:
-        # InventoryHistory is for raw ingredients/containers
-        history_data.update({
-            "note": notes,  # InventoryHistory uses 'note'
-            "quantity_used": 0.0,  # Required field for InventoryHistory
-        })
-        history_entry = InventoryHistory(**history_data)
 
     try:
-        db.session.add(history_entry)
-        db.session.flush()  # Ensure the entry is persisted before updating the parent
+        item = InventoryItem.query.get(item_id)
+        if not item:
+            return False, f"Item {item_id} not found"
 
-        # --- 3. Atomically update the parent InventoryItem quantity ---
-        item.quantity = (item.quantity or 0.0) + float(quantity)
+        # Generate FIFO reference
+        fifo_reference_id = generate_fifo_code()
 
-        # The commit will happen in the main process_inventory_adjustment function
+        # Use provided expiration date or calculate from shelf life
+        final_expiration_date = custom_expiration_date or expiration_date
+        final_shelf_life = custom_shelf_life_days or shelf_life_days
+
+        # Create FIFO entry in UnifiedInventoryHistory
+        fifo_entry = UnifiedInventoryHistory(
+            inventory_item_id=item_id,
+            change_type=change_type,
+            quantity_change=quantity,
+            remaining_quantity=quantity,  # For additions, remaining = quantity added
+            unit=unit,
+            unit_cost=cost_per_unit,
+            fifo_reference_id=fifo_reference_id,
+            fifo_code=fifo_reference_id,  # Use same as reference for now
+            batch_id=batch_id,
+            notes=notes,
+            created_by=created_by,
+            quantity_used=0.0,  # No usage yet for new additions
+            is_perishable=item.is_perishable,
+            shelf_life_days=final_shelf_life,
+            expiration_date=final_expiration_date,
+            organization_id=item.organization_id,
+            # Product-specific fields
+            customer=customer,
+            sale_price=sale_price,
+            order_id=order_id
+        )
+
+        db.session.add(fifo_entry)
+        db.session.flush()  # Get the ID
+
+        # Update the item quantity
+        item.quantity = item.quantity + quantity
+
+        logger.info(f"Created FIFO entry {fifo_entry.id} for item {item_id}, quantity {quantity}")
         return True, None
 
-    except TypeError as e:
-        # This catches errors like the one you saw: passing an invalid keyword
-        logger.error(f"Error creating history entry for item {item_id}: {e}")
-        return False, f"Error creating FIFO entry: {str(e)}"
     except Exception as e:
-        logger.error(f"Unexpected error creating FIFO entry for item {item_id}: {e}")
-        return False, f"Error creating FIFO entry: {str(e)}"
+        logger.error(f"Failed to add FIFO entry for item {item_id}: {str(e)}")
+        return False, str(e)
