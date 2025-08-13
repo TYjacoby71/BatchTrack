@@ -66,10 +66,10 @@ def process_inventory_adjustment(
                 cost_override, custom_expiration_date, custom_shelf_life_days, **kwargs
             )
 
-        # Handle deductive changes (spoil, trash, use, batch, recount_deduction, etc.)
+        # Handle deductive changes (spoil, trash, use, batch, recount, etc.)
         elif change_type in ['spoil', 'trash', 'expired', 'gift', 'sample', 'tester',
                            'quality_fail', 'damaged', 'sold', 'sale', 'use', 'batch',
-                           'reserved', 'unreserved', 'recount_deduction']:
+                           'reserved', 'unreserved', 'recount']:
             return _handle_deductive_adjustment(
                 item_id, quantity, change_type, unit, notes, created_by, **kwargs
             )
