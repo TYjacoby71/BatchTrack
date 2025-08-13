@@ -1,228 +1,241 @@
+# PR3: Code Quality & Performance (Refined)
 
-# PR3: Code Quality & Performance Optimization
+## Overview
+Phase 3 focuses on code quality improvements, performance optimization, and security hardening while maintaining the stable foundation built in Phases 1-2. This plan incorporates partner feedback for tighter, more incremental delivery.
 
-## Goal
-With inventory canonicalization complete and all tests green, PR3 focuses on making the codebase production-ready through service consolidation, type safety, performance optimization, and security hardening.
+## Goals
+1. **Service Consolidation** - Hardened external service integrations with idempotency
+2. **Route Optimization** - Thin routes with validation layer and uniform error handling
+3. **Type Safety** - Strategic typing implementation with mypy
+4. **Performance** - Targeted database optimization and N+1 elimination
+5. **Security** - Production-ready security headers and rate limiting
 
-## Status: Ready to Begin
-- ✅ All characterization tests passing (24/24)
-- ✅ Inventory canonicalization complete
-- ✅ CI/CD pipeline stable
-- ✅ No regression risks from Phase 2
+## Incremental Delivery Strategy (Recommended)
 
-## Phase 3 Objectives
+### PR3a: Service Consolidation (Week 1)
+**Focus**: External service hardening with proper idempotency
 
-### 1. Service Layer Consolidation (High Priority)
-**Goal**: Centralize all external integrations and remove business logic from routes
+#### Stripe Service Hardening
+- [ ] **Events Table**: `stripe_events` with `event_id` UNIQUE, `processed_at`, `status`, `payload_hash`
+- [ ] **Idempotent Processing**: Upsert then process; wrap in DB transaction
+- [ ] **Interface**: `StripeService.handle_event(event)` that's idempotent by design
+- [ ] **Error Recovery**: Failed event retry with exponential backoff
 
-#### Stripe Integration Consolidation
-- **Target Files**: 
-  - `app/blueprints/billing/routes.py` (617 LOC - needs thinning)
-  - `app/services/stripe_service.py` (consolidation target)
-- **Actions**:
-  - Move all Stripe API calls to `stripe_service.py`
-  - Implement webhook idempotency with event ID persistence
-  - Add signature verification enforcement
-  - Ensure routes only: validate → call service → return response
+#### OAuth Service Security
+- [ ] **PKCE + State**: Enable code challenge/verifier + state validation
+- [ ] **Secure Cookies**: `Secure=True, HttpOnly=True, SameSite=Lax`
+- [ ] **Nonce Rotation**: Generate and validate nonce properly
+- [ ] **Rate Limits**: Direct limits on `/auth/*` endpoints
 
-#### Google OAuth Consolidation  
-- **Target Files**:
-  - `app/blueprints/auth/routes.py` (596 LOC - needs thinning)
-  - `app/services/oauth_service.py` (consolidation target)
-- **Actions**:
-  - Centralize all Google API calls in `oauth_service.py`
-  - Implement state/nonce verification
-  - Add CSRF protection on auth forms
-  - Add rate limiting to `/auth/*` endpoints
+#### Service Interface Design
+- [ ] **Abstract Classes**: Define interfaces/ports for external services
+- [ ] **Dependency Injection**: Routes depend on abstractions, not implementations
+- [ ] **Testing**: Enable easy mocking and provider swaps
 
-#### Shopify/Whop Integration Seams
-- **Target Files**: Any files with Shopify/Whop logic
-- **Actions**:
-  - Isolate external calls in dedicated service modules
-  - Remove direct API calls from routes
+### PR3b: Route Thinning & Validation (Week 2)
+**Focus**: Parse → Service → Jsonify pattern with validation
 
-### 2. Route Handler Optimization (High Priority)
-**Goal**: Transform fat routes into thin orchestrators
+#### Validation Layer
+- [ ] **Pydantic Schemas**: All request/response bodies in `schemas/`
+- [ ] **Uniform Error Envelope**: `{"error":{"code","message","details"}}`
+- [ ] **Exception Mapper**: Centralized HTTP status + error code mapping
+- [ ] **Input Sanitization**: Comprehensive validation and sanitization
 
-#### Primary Targets (by LOC and risk):
-1. **`app/blueprints/developer/routes.py`** (908 LOC)
-   - Extract permission/tier logic to services
-   - Create `organization_service.py` for admin operations
-   
-2. **`app/blueprints/organization/routes.py`** (748 LOC)
-   - Move DB logic to `statistics_service.py`
-   - Extract user management to dedicated service
-   
-3. **`app/blueprints/inventory/routes.py`** (660 LOC)
-   - Already partially done; complete delegation to services
-   - Ensure all paths use `inventory_adjustment.py`
+#### Route Optimization
+- [ ] **Business Logic Extraction**: Move complex logic to services
+- [ ] **Standardized Flow**: Routes: parse → service → jsonify
+- [ ] **Target LOC**: Routes ≤ 100 LOC average in target blueprints
+- [ ] **Error Consistency**: Uniform error responses across all endpoints
 
-#### Route Refactor Pattern:
-```python
-# BEFORE (fat route)
-@bp.route('/example', methods=['POST'])
-def example_route():
-    # validation logic
-    # database queries
-    # business logic
-    # external API calls
-    # response formatting
+### PR3c: Type Safety, Performance & Security (Week 3)
+**Focus**: Production readiness with monitoring
 
-# AFTER (thin route)
-@bp.route('/example', methods=['POST'])
-def example_route():
-    data = validate_request(request.json)
-    result = ExampleService.process_example(data)
-    return jsonify(result)
+#### Type Safety Implementation
+- [ ] **MyPy Config**: `mypy.ini` with SQLAlchemy plugin
+- [ ] **Strict Services**: `disallow-untyped-defs = True` in `app/services/**`
+- [ ] **Typed Returns**: TypedDict/Pydantic models for service JSON shapes
+- [ ] **Target Coverage**: ≥80% type coverage in service layer
+
+#### Database Performance
+- [ ] **Strategic Indexes** (Alembic migrations):
+  - `InventoryHistory (inventory_item_id, remaining_quantity)`
+  - `InventoryHistory (inventory_item_id, expiration_date)`
+  - `InventoryHistory (organization_id, timestamp)`
+  - `ProductSKUHistory` equivalents
+  - `AuditLog (organization_id, created_at)`
+- [ ] **N+1 Elimination**: Apply `selectinload/joinedload` in hot paths
+- [ ] **Query Monitoring**: Log >100ms queries with route + query count
+
+#### Security Hardening
+- [ ] **Form Protection**: CSRF on all forms
+- [ ] **Security Headers**: Global CSP + Referrer-Policy, HSTS in production
+- [ ] **Webhook Security**: Signature check → idempotency check → process → mark processed
+- [ ] **Brute Force Protection**: Rate limits on login, password reset
+
+## Technical Implementation Details
+
+### 1. Stripe Event Idempotency Table
+```sql
+CREATE TABLE stripe_events (
+    id SERIAL PRIMARY KEY,
+    stripe_event_id VARCHAR(255) UNIQUE NOT NULL,
+    event_type VARCHAR(100) NOT NULL,
+    processed_at TIMESTAMP,
+    status VARCHAR(20) DEFAULT 'pending',
+    payload_hash VARCHAR(64) NOT NULL,
+    error_message TEXT,
+    created_at TIMESTAMP DEFAULT NOW()
+);
 ```
 
-### 3. Type Safety Implementation (Medium Priority)
-**Goal**: Add comprehensive typing for better IDE support and error prevention
+### 2. Service Interface Pattern
+```python
+from abc import ABC, abstractmethod
+from typing import Dict, TypedDict
 
-#### Typing Strategy:
-- **Phase 3A**: Add types to service layer public methods
-- **Phase 3B**: Add types to model properties and relationships
-- **Phase 3C**: Add Pydantic schemas for request/response validation
-- **Phase 3D**: Enable mypy strict mode incrementally
+class WebhookResult(TypedDict):
+    success: bool
+    message: str
+    processed_at: Optional[datetime]
 
-#### Target Files for Typing:
-- `app/services/*.py` - All service method signatures
-- `app/models/*.py` - SQLAlchemy model improvements
-- Route handlers - Request/response type hints
+class BillingServiceInterface(ABC):
+    @abstractmethod
+    def handle_webhook_event(self, event_data: Dict) -> WebhookResult:
+        pass
+```
 
-### 4. Performance Optimization (Medium Priority)
-**Goal**: Eliminate N+1 queries and optimize database access patterns
+### 3. Route Validation Pattern
+```python
+from pydantic import BaseModel, ValidationError
+from app.schemas import ErrorEnvelope
 
-#### Database Optimization:
-- **Query Analysis**: Identify N+1 patterns in services
-- **Index Strategy**: Add strategic indexes via Alembic migrations
-- **Eager Loading**: Optimize SQLAlchemy relationships
-- **Connection Pooling**: Verify database connection efficiency
+class InventoryAdjustmentRequest(BaseModel):
+    quantity: float
+    change_type: str
+    notes: Optional[str] = None
 
-#### Monitoring Integration:
-- Add query performance logging
-- Implement slow query detection
-- Add database connection metrics
+@inventory_bp.route('/adjust/<int:id>', methods=['POST'])
+def adjust_inventory(id: int):
+    try:
+        # Parse & validate
+        data = InventoryAdjustmentRequest.model_validate(request.json)
 
-### 5. Security Hardening (High Priority)
-**Goal**: Production-ready security controls
+        # Service call
+        result = inventory_service.adjust_inventory(id, data)
 
-#### Authentication & Authorization:
-- **CSRF Protection**: All forms protected
-- **Rate Limiting**: Auth and webhook endpoints
-- **Session Security**: Secure cookie settings
-- **OAuth Security**: State/nonce verification
+        # Response
+        return jsonify(result)
 
-#### API Security:
-- **Input Validation**: Pydantic schemas at boundaries
-- **SQL Injection**: Verify parameterized queries
-- **CORS Configuration**: Proper origin restrictions
-- **Webhook Security**: Signature verification + idempotency
+    except ValidationError as e:
+        return jsonify(ErrorEnvelope(
+            error={"code": "VALIDATION_ERROR", "message": str(e), "details": e.errors()}
+        )), 400
+```
 
-#### Data Protection:
-- **Sensitive Data**: Audit logging practices
-- **Environment Variables**: Secure secret management
-- **Database Security**: Connection encryption verification
+### 4. Performance Monitoring
+```python
+import time
+import logging
+from sqlalchemy import event
 
-## Implementation Plan
+@event.listens_for(Engine, "before_cursor_execute")
+def receive_before_cursor_execute(conn, cursor, statement, parameters, context, executemany):
+    context._query_start_time = time.time()
 
-### Week 1: Service Consolidation
-- **Days 1-2**: Stripe service consolidation + webhook idempotency
-- **Days 3-4**: Google OAuth consolidation + security hardening
-- **Days 5-7**: Route thinning (developer, organization blueprints)
+@event.listens_for(Engine, "after_cursor_execute") 
+def receive_after_cursor_execute(conn, cursor, statement, parameters, context, executemany):
+    total = time.time() - context._query_start_time
+    if total > 0.1:  # Log queries >100ms
+        logger.warning(f"Slow query ({total:.3f}s): {statement[:200]}...")
+```
 
-### Week 2: Quality & Performance
-- **Days 1-3**: Type safety implementation (services + models)
-- **Days 4-5**: Performance optimization (queries + indexes)
-- **Days 6-7**: Security audit + remaining hardening
+## CI/CD Pipeline Enhancement
 
-## Testing Strategy
+### Quality Gates (All PRs)
+- [ ] **pytest**: All tests must pass
+- [ ] **ruff**: Code formatting and linting
+- [ ] **mypy**: Type checking (informational initially)
+- [ ] **bandit -q**: Security scanning (informational)
 
-### Regression Prevention:
-- All existing characterization tests must remain green
-- Add new service-level unit tests for consolidated logic
-- Integration tests for external service boundaries
+### Smoke Tests
+- [ ] **Post-deploy**: Hit key routes after deployment
+- [ ] **Performance Guard**: Ensure hot paths execute ≤ N queries
+- [ ] **Security Validation**: CSRF, headers, rate limits active
 
-### New Test Coverage:
-- Webhook idempotency tests
-- OAuth state/nonce validation tests
-- Rate limiting behavior tests
-- CSRF protection tests
+## Success Metrics (Sharpened)
 
-### Performance Testing:
-- Query performance benchmarks
-- Load testing for critical endpoints
-- Database connection stress tests
+### Code Quality
+- [ ] Routes ≤ 100 LOC average in target blueprints
+- [ ] Service methods: 100% typed
+- [ ] Overall service layer: ≥80% typed  
+- [ ] Zero direct external service calls from routes
 
-## Success Metrics
+### Performance
+- [ ] P99 route latency ≤ 200ms (dev/proxy env)
+- [ ] Zero known N+1 on critical paths
+- [ ] Strategic indexes deployed and monitored
+- [ ] Query timing logs active
 
-### Code Quality:
-- [ ] Routes average <100 LOC (currently 400-900 LOC)
-- [ ] All external API calls centralized in services
-- [ ] Business logic removed from view functions
-- [ ] Type coverage >80% on service layer
+### Security
+- [ ] CSRF on all forms
+- [ ] CSP present with proper directives
+- [ ] Webhook sig/idempotency enforced
+- [ ] Rate limiting on auth endpoints
+- [ ] OAuth PKCE + state validation
 
-### Performance:
-- [ ] Zero N+1 queries in critical paths
-- [ ] Database queries <50ms average
-- [ ] API response times <200ms
-- [ ] Proper database indexing strategy
+### Development Experience
+- [ ] Type errors caught in CI
+- [ ] Uniform error responses
+- [ ] Easy service mocking for tests
+- [ ] Performance regression detection
 
-### Security:
-- [ ] All forms CSRF protected
-- [ ] Rate limiting on auth/webhook endpoints
-- [ ] Webhook signature verification enforced
-- [ ] OAuth state/nonce validation verified
-- [ ] Input validation at all boundaries
+## Testing Strategy (Minimal, High-Value)
 
-### Maintainability:
-- [ ] Service dependencies clearly defined
-- [ ] External integrations properly isolated
-- [ ] Consistent error handling patterns
-- [ ] Comprehensive logging with context
+### Service Layer Tests
+- [ ] **Stripe Idempotency**: Same event twice → processed once
+- [ ] **OAuth Security**: State/nonce/PKCE negative cases
+- [ ] **Route Thinness**: Unit tests asserting routes only call service + return mapped results
 
-## Risk Mitigation
+### Performance Guards
+- [ ] **Query Counter**: Hot path executes ≤ N queries (fixture-based)
+- [ ] **Response Time**: Critical endpoints respond in <200ms
+- [ ] **Memory Usage**: No obvious memory leaks in service calls
 
-### Breaking Changes Prevention:
-- Maintain all existing API contracts
-- Preserve all template rendering behavior
-- Keep all webhook endpoint signatures unchanged
-- Maintain database schema compatibility
+### Security Tests
+- [ ] **CSRF**: Forms reject requests without valid tokens
+- [ ] **Rate Limiting**: Auth endpoints properly throttle
+- [ ] **Headers**: Security headers present in responses
 
-### Rollback Strategy:
-- Each service consolidation in separate commit
-- Feature flags for new security controls
-- Database migrations with tested rollback procedures
-- CI/CD pipeline validates each step
+## Migration from Current State
 
-## Acceptance Criteria
+### Phase 2 Complete Prerequisites
+- ✅ Canonical inventory service (`process_inventory_adjustment`) stable
+- ✅ All inventory changes flow through canonical service
+- ✅ Test suite: 24/24 tests passing
+- ✅ Legacy shims removed, business logic out of routes
 
-### Technical Requirements:
-- [ ] All tests passing (characterization + new)
-- [ ] CI/CD pipeline green (lint, type, test)
-- [ ] No regression in API behavior
-- [ ] Performance benchmarks met or improved
+### Risk Mitigation
+- **Backwards Compatibility**: Service interfaces maintain existing signatures initially
+- **Performance Monitoring**: Benchmark before/after for regression detection  
+- **Incremental Security**: Add security features progressively, not all-or-nothing
+- **CI/CD Safety**: Quality gates prevent broken code from merging
 
-### Security Requirements:
-- [ ] Security audit checklist complete
-- [ ] Webhook idempotency verified
-- [ ] CSRF protection verified
-- [ ] Rate limiting verified
-- [ ] OAuth security verified
+## Alternative: Single PR3 (Original Plan)
+If team prefers single large PR:
+- Complete all work in one comprehensive PR
+- More thorough integration testing
+- Single large code review
+- Higher risk but potentially faster if no issues
 
-### Quality Requirements:
-- [ ] Code review checklist satisfied
-- [ ] Documentation updated
-- [ ] Type coverage targets met
-- [ ] Service boundaries clearly defined
+**Recommendation**: Use incremental delivery (PR3a/b/c) for safer, faster feedback cycles.
 
 ## Next Steps After PR3
 
-### Phase 4 Preview: Production Readiness
+### Phase 4: Production Readiness
 - Production environment configuration
-- Monitoring and alerting setup
+- Monitoring and alerting setup  
 - Backup and disaster recovery
 - Performance monitoring dashboard
 - User documentation and API specs
 
-**Target**: Production-ready codebase with enterprise-grade quality, security, and performance standards.
+**Target**: Production-ready codebase with enterprise-grade quality, security, and performance characteristics.
