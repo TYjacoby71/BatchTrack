@@ -150,6 +150,14 @@ def handle_recount_adjustment(item_id, target_quantity, notes, created_by, item_
     This implements the user's specific business rules.
     """
     item = InventoryItem.query.get(item_id)
+    if not item:
+        raise ValueError(f"Item {item_id} not found")
+        
+    # Ensure we have the organization_id for proper scoping
+    org_id = item.organization_id
+    if not org_id:
+        logger.warning(f"Item {item_id} has no organization_id - this could cause scoping issues")
+    
     current_qty = float(item.quantity or 0.0)
     target_qty = float(target_quantity or 0.0)
     delta = target_qty - current_qty
@@ -157,8 +165,7 @@ def handle_recount_adjustment(item_id, target_quantity, notes, created_by, item_
     if abs(delta) < 0.001:
         logger.info(f"Recount for item '{item.name}' has no change needed.")
         # Still validate and fix any sync issues
-        history_model = ProductSKUHistory if item_type == 'product' else InventoryHistory
-        all_lots = _get_fifo_entries(item_id, item.organization_id, item_type)
+        all_lots = _get_fifo_entries(item_id, org_id, item_type)
         fifo_total = sum(float(lot.remaining_quantity) for lot in all_lots)
         if abs(target_qty - fifo_total) > 0.001:
             logger.warning(f"SYNC REPAIR: Item quantity {target_qty} doesn't match FIFO total {fifo_total}. Forcing sync.")
@@ -168,9 +175,8 @@ def handle_recount_adjustment(item_id, target_quantity, notes, created_by, item_
             item.quantity = target_qty
         return
 
-    logger.info(f"RECOUNT: Item '{item.name}' from {current_qty} to {target_qty} (Delta: {delta})")
-    history_model = ProductSKUHistory if item_type == 'product' else InventoryHistory
-    all_lots = _get_fifo_entries(item_id, item.organization_id, item_type)
+    logger.info(f"RECOUNT: Item '{item.name}' (org: {org_id}) from {current_qty} to {target_qty} (Delta: {delta})")
+    all_lots = _get_fifo_entries(item_id, org_id, item_type)
 
     if delta > 0: # Increase
         process_inventory_adjustment(item.id, delta, 'restock', notes=f"Recount increase. {notes or ''}", created_by=created_by, item_type=item_type)
@@ -228,14 +234,19 @@ def process_inventory_adjustment(
             elif change_type in DEDUCTIVE_TYPES:
                 qty_change = -abs(quantity)
                 to_remove = abs(quantity)
-                history_model = ProductSKUHistory if item_type == 'product' else InventoryHistory
-                all_lots = _get_fifo_entries(item_id, item.organization_id, item_type)
+                
+                # Ensure we have organization_id for proper scoping
+                org_id = item.organization_id
+                if not org_id:
+                    logger.warning(f"Item {item_id} has no organization_id - this could cause scoping issues")
+                
+                all_lots = _get_fifo_entries(item_id, org_id, item_type)
                 available = sum(float(l.remaining_quantity) for l in all_lots)
                 
                 if to_remove > available: 
-                    raise ValueError(f"Insufficient stock. Required: {to_remove}, Available: {available}")
+                    raise ValueError(f"Insufficient stock for item {item_id} (org: {org_id}). Required: {to_remove}, Available: {available}")
 
-                logger.info(f"FIFO DEDUCTION: Removing {to_remove} from {len(all_lots)} lots")
+                logger.info(f"FIFO DEDUCTION: Removing {to_remove} from {len(all_lots)} lots for item {item_id} (org: {org_id})")
                 
                 for lot in all_lots:
                     if to_remove <= 0: 
