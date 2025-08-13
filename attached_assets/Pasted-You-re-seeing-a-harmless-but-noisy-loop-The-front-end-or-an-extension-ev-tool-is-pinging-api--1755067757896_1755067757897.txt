@@ -1,0 +1,180 @@
+You’re seeing a harmless but noisy loop:
+
+The front-end (or an extension/“ev tool”) is pinging /api/server-time every ~30s.
+
+That endpoint currently requires auth, so Flask-Login 302-redirects to /auth/login.
+
+Each hit also calls your “OAuth is properly configured” check, so you get a debug line every time.
+
+Two tiny fixes will quiet the console and stop the redirect churn—without changing app behavior.
+
+1) Make /api/server-time public (no login)
+If you already have this route, remove @login_required. If you don’t, add a small public route and exempt it from rate-limit:
+
+python
+Copy
+# e.g., app/blueprints/api/public.py
+from flask import Blueprint, jsonify, make_response
+from datetime import datetime, timezone
+from app.extensions import limiter
+
+public_api = Blueprint("public_api", __name__)
+
+@public_api.route("/api/server-time", methods=["GET"])
+@limiter.exempt
+def server_time():
+    ts = datetime.now(timezone.utc).isoformat()
+    resp = make_response(jsonify({"server_time": ts}))
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
+Register it in create_app() before auth routes:
+
+python
+Copy
+from app.blueprints.api.public import public_api
+app.register_blueprint(public_api)
+Why: the login page (and your dev tools) can ping this without being signed in, so no more 302 spam.
+
+2) Log “OAuth is properly configured” only once
+Right now that message prints on every login page hit. Gate it so it logs once per worker:
+
+python
+Copy
+# app/services/oauth_service.py
+import logging
+logger = logging.getLogger(__name__)
+_OAUTH_OK_LOGGED = False
+
+def log_oauth_ok_once():
+    global _OAUTH_OK_LOGGED
+    if not _OAUTH_OK_LOGGED:
+        logger.debug("OAuth is properly configured")
+        _OAUTH_OK_LOGGED = True
+Call log_oauth_ok_once() where you currently do the repeated debug call, or call it once during app startup when you validate config. Also remove any print() duplicates; stick to logger.
+
+Optional (if you still see doubles)
+If you’re getting each line twice, your module logger might be propagating to the root logger and has its own handler. Disable propagation where you set up the module logger:
+
+python
+Copy
+logger = logging.getLogger(__name__)
+logger.propagate = False
+Quick sanity check
+Open your login page; you should no longer see repeating 302 lines to /api/server-time.
+
+Hit the endpoint directly: curl -i https://…/api/server-time → 200 with JSON time.
+
+You should see “OAuth is properly configured” at most once after a (re)deploy.
+
+If you want to keep /api/server-time authenticated instead, you’ll need to (a) stop pinging it from the login page, or (b) make the front-end fetch include credentials and handle 401. The public route is the simplest, least invasive fix.
+
+
+
+
+
+
+
+
+Sources
+You said:
+why would I want to remove login? i am logged in. and i spent a lot of time building roles, permissions, subscription tiers, and other rules
+
+
+ChatGPT said:
+Totally fair pushback — you don’t have to remove auth. The 302s mean the request hitting /api/server-time isn’t carrying your session, so Flask-Login treats it as unauthenticated and redirects to /auth/login. That’s why you see “OAuth is properly configured” over and over (the login page is what renders that log line).
+
+Here’s how to keep your roles/tiers/auth and stop the noise/hang:
+
+What’s happening
+/api/server-time is marked @login_required.
+
+Something (your front-end heartbeat, a browser extension, or a page script) calls it every ~30s.
+
+That call is missing cookies (or is cross-origin/iframe where SameSite blocks cookies), so Flask-Login redirects (302) to /auth/login.
+
+Hitting the login page prints your “OAuth configured” debug each time.
+
+Keep it protected; fix the flow
+1) Make API unauthorized return JSON 401 (no redirect)
+Keep @login_required. Just stop redirecting API callers to HTML login:
+
+python
+Copy
+# in your login manager setup (likely create_app)
+from flask import request, jsonify, redirect, url_for
+from flask_login import LoginManager
+
+login_manager = LoginManager()
+# ... init app etc.
+
+@login_manager.unauthorized_handler
+def handle_unauthorized():
+    # Don’t redirect API clients; return 401 JSON instead
+    if request.path.startswith("/api/"):
+        return jsonify({"error": "unauthenticated"}), 401
+    # Normal browser pages still redirect to login
+    return redirect(url_for("auth.login", next=request.url))
+This preserves auth but eliminates the churn back to /auth/login.
+
+2) Ensure the client includes the session cookie
+Wherever you’re calling /api/server-time, include credentials:
+
+js
+Copy
+// JS fetch
+fetch("/api/server-time", { credentials: "include" })
+  .then(r => {
+    if (r.status === 401) { /* not logged in – ignore or show subtle UI */ }
+    return r.json();
+  })
+  .then(console.log)
+  .catch(console.error);
+If you’re using Axios:
+
+js
+Copy
+axios.get("/api/server-time", { withCredentials: true });
+3) Check cookie settings for your environment
+If the request is cross-site (iframe/extension/different subdomain), cookies can be blocked by SameSite. Pick the right combo:
+
+Same host + https (normal pages)
+
+python
+Copy
+SESSION_COOKIE_SAMESITE = "Lax"
+SESSION_COOKIE_SECURE = True
+Cross-site (iframe / extension / different subdomain)
+
+python
+Copy
+SESSION_COOKIE_SAMESITE = "None"   # MUST be "None" (case-sensitive)
+SESSION_COOKIE_SECURE = True       # required with SameSite=None
+# optionally:
+# SESSION_COOKIE_DOMAIN = ".yourdomain.com"  # if using subdomains
+Do the same for REMEMBER_COOKIE_* if you use “remember me”.
+
+4) Log the “OAuth configured” line only once
+Independent of auth, gate the noisy debug to one-time:
+
+python
+Copy
+# app/services/oauth_service.py
+import logging
+logger = logging.getLogger(__name__)
+_OAUTH_OK_LOGGED = False
+
+def log_oauth_ok_once():
+    global _OAUTH_OK_LOGGED
+    if not _OAUTH_OK_LOGGED:
+        logger.debug("OAuth is properly configured")
+        _OAUTH_OK_LOGGED = True
+Call log_oauth_ok_once() where you currently print that line (or during app startup).
+
+Quick verification
+Hit /api/server-time while logged out → 401 JSON, not a 302.
+
+Hit it while logged in (and credentials: 'include') → 200 JSON.
+
+Console noise stops; “OAuth is properly configured” appears once per worker, not every 30s.
+
+This keeps your auth/roles/tiers intact, fixes the hanging feel (no redirect waterfall), and quiets the logs.
