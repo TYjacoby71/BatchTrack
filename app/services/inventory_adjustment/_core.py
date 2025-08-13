@@ -1,3 +1,4 @@
+
 import inspect
 import logging
 from datetime import datetime
@@ -65,10 +66,10 @@ def process_inventory_adjustment(
                 cost_override, custom_expiration_date, custom_shelf_life_days, **kwargs
             )
 
-        # Handle deductive changes (spoil, trash, use, batch, etc.)
+        # Handle deductive changes (spoil, trash, use, batch, recount_deduction, etc.)
         elif change_type in ['spoil', 'trash', 'expired', 'gift', 'sample', 'tester',
                            'quality_fail', 'damaged', 'sold', 'sale', 'use', 'batch',
-                           'reserved', 'unreserved']:
+                           'reserved', 'unreserved', 'recount_deduction']:
             return _handle_deductive_adjustment(
                 item_id, quantity, change_type, unit, notes, created_by, **kwargs
             )
@@ -130,7 +131,8 @@ def _handle_deductive_adjustment(item_id, quantity, change_type, unit, notes, cr
         from ._fifo_ops import (
             _calculate_deduction_plan_internal, 
             _execute_deduction_plan_internal,
-            _record_deduction_plan_internal
+            _record_deduction_plan_internal,
+            calculate_current_fifo_total
         )
 
         item = db.session.get(InventoryItem, item_id)
@@ -164,12 +166,12 @@ def _handle_deductive_adjustment(item_id, quantity, change_type, unit, notes, cr
             logger.error(f"Deduction recording failed")
             return False
 
-        # Update item quantity
-        total_deducted = sum(qty for _, qty, _ in deduction_plan)
-        item.quantity = max(0, item.quantity - total_deducted)
+        # Sync item quantity to FIFO total (authoritative source)
+        current_fifo_total = calculate_current_fifo_total(item_id)
+        item.quantity = current_fifo_total
 
         db.session.commit()
-        record_audit_entry(item_id, change_type, notes or f'Deducted {total_deducted} {final_unit}')
+        record_audit_entry(item_id, change_type, notes or f'Deducted {abs(quantity)} {final_unit}')
 
         return True
 

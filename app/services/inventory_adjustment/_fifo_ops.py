@@ -9,16 +9,17 @@ logger = logging.getLogger(__name__)
 def identify_lots(item_id):
     """
     Identify consumable lots for an inventory item.
-    Lots are FIFO entries where:
-    - quantity_change > 0 (additive)
-    - remaining_quantity > 0 (still has consumable inventory)
-    - Initially: remaining_quantity == quantity_change (hasn't been consumed from)
     
-    Returns list of lot entries ordered by timestamp (FIFO)
+    LOTS are FIFO events where:
+    - quantity_change > 0 (inventory was added for consumption)
+    - remaining_quantity > 0 (still has consumable inventory)
+    
+    These lots house the consumable inventory. All other events must interact 
+    with them using FIFO logic.
     """
     lots = UnifiedInventoryHistory.query.filter(
         UnifiedInventoryHistory.inventory_item_id == item_id,
-        UnifiedInventoryHistory.quantity_change > 0,  # Only additive entries
+        UnifiedInventoryHistory.quantity_change > 0,  # Only additive events
         UnifiedInventoryHistory.remaining_quantity > 0  # Has remaining consumable quantity
     ).order_by(UnifiedInventoryHistory.timestamp.asc()).all()
     
@@ -29,8 +30,6 @@ def identify_refillable_lots(item_id):
     """
     Identify lots that can be refilled during recount operations.
     These are additive entries where remaining_quantity < original quantity_change.
-    
-    Returns list of (lot_entry, available_capacity) tuples
     """
     lots = UnifiedInventoryHistory.query.filter(
         UnifiedInventoryHistory.inventory_item_id == item_id,
@@ -47,6 +46,15 @@ def identify_refillable_lots(item_id):
             refillable_lots.append((lot, available_capacity))
     
     return refillable_lots
+
+
+def calculate_current_fifo_total(item_id):
+    """
+    Calculate total consumable inventory from FIFO lots.
+    This is the authoritative source of how much inventory is actually available.
+    """
+    lots = identify_lots(item_id)
+    return sum(float(lot.remaining_quantity) for lot in lots)
 
 
 def _calculate_deduction_plan_internal(item_id, required_quantity, change_type='use'):
