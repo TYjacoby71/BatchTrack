@@ -4,10 +4,9 @@ from app.models import db, InventoryItem, InventoryHistory, Unit, IngredientCate
 from app.utils.permissions import permission_required
 from app.utils.authorization import role_required
 from app.utils.api_responses import api_error, api_success
-from app.services.inventory_adjustment import process_inventory_adjustment
+from app.services.inventory_adjustment import process_inventory_adjustment, update_inventory_item
 from app.services.inventory_alerts import InventoryAlertService
 from app.services.reservation_service import ReservationService
-from app.services.inventory_adjustment import process_inventory_adjustment
 from app.utils.timezone_utils import TimezoneUtils
 import logging
 from ...utils.unit_utils import get_global_unit_list
@@ -406,7 +405,12 @@ def adjust_inventory(id):
 @inventory_bp.route('/edit/<int:id>', methods=['POST'])
 @login_required
 def edit_inventory(id):
-    from app.services.inventory_adjustment import update_inventory_item
+    # Get scoped inventory item first to ensure access
+    query = InventoryItem.query
+    if current_user.organization_id:
+        query = query.filter_by(organization_id=current_user.organization_id)
+    item = query.filter_by(id=id).first_or_404()
+    
     success, message = update_inventory_item(id, request.form.to_dict())
     flash(message, 'success' if success else 'error')
     return redirect(url_for('inventory.view_inventory', id=id))
