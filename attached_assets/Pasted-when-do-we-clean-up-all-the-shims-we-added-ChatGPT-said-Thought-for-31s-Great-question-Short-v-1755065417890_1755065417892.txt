@@ -1,0 +1,100 @@
+when do we clean up all the shims we added?
+
+
+ChatGPT said:
+
+Thought for 31s
+Great question. Short version: don’t rip them out in PR3 while you’re still moving routes/services around. Treat shim cleanup as a controlled deprecation that finishes right after PR3, once you’ve proven zero usage.
+
+Here’s a tight, safe timeline:
+
+When to remove the shims
+PR3 (now) — Deprecate, don’t delete
+
+Mark shims deprecated
+
+Add DeprecationWarning (and one-time log) in each shim entrypoint.
+
+Put a loud header comment: “DEPRECATED – removal in next release.”
+
+Instrument usage
+
+Each shim call logs shim.name, caller module, and a counter (Prometheus/StatsD or simple INFO log with a distinctive tag).
+
+Feature flag
+
+Add FEATURE_DISABLE_SHIMS (default: False). In staging, set True to ensure the app runs without shims.
+
+Search-and-block in CI
+
+Add a pre-commit/CI check that fails if any app code (outside the canonical service) imports a shim module (simple grep deny-list).
+
+Release after PR3 (PR3+1) — Verify zero usage
+5. Observe for ~7 days (or one deploy cycle)
+
+Confirm zero shim hits in logs/metrics in production and staging.
+
+Keep the flag FEATURE_DISABLE_SHIMS=True in staging the whole time.
+
+PR4 (immediately after the observation window) — Remove
+6. Delete shims and:
+
+Move any still-needed internals behind the canonical service (private helpers).
+
+Remove __all__ exports and any alias functions.
+
+Delete deny-listed imports in tests (or update tests to call the canonical service).
+
+Guardrails
+
+Keep the CI grep rule permanently to prevent reintroduction.
+
+Add a unit test that asserts old import paths raise ImportError (defensive).
+
+What exactly gets cleaned up
+Focus on anything we added as a bridge during PR2:
+
+FIFO shim (the compat FIFOService that forwards to the canonical service):
+
+Keep only read-only helpers (e.g., get_fifo_entries, get_expired_fifo_entries) if other views/templates rely on them, or move those queries under a read model/query service.
+
+Remove mutation helpers (deduct_fifo, execute_deduction_plan, create_deduction_history) once all writes run through process_inventory_adjustment.
+
+Stock check compatibility helpers (e.g., check_stock_availability wrappers):
+
+Keep the thin wrapper (stable shape) but make it call the canonical read/query path.
+
+If nothing external calls the old signature, remove; otherwise keep as a 1-liner adapter.
+
+Any route-level shortcuts that bypass the canonical path:
+
+Already redirected in PR2; in PR4, delete the dead code paths and their form handlers.
+
+Acceptance criteria for deletion
+Grep shows no imports of shim modules outside canonical code.
+
+Logs/metrics show 0 shim calls for at least one full deploy window.
+
+Staging runs with FEATURE_DISABLE_SHIMS=True without errors.
+
+All tests green, plus a specific test that the old import path is gone.
+
+Why not sooner?
+Shims are your safety net while you finish consolidation in PR3 (Stripe/OAuth/route thinning). Deleting them early increases blast radius and complicates rollbacks. The small delay costs little but buys you confidence.
+
+If you want, I can drop in:
+
+A tiny ShimUsageFilter logger + decorator to tag/limit warnings,
+
+A sample CI grep rule,
+
+And a settings.py pattern for FEATURE_DISABLE_SHIMS.
+
+
+
+
+
+
+
+
+Sources
