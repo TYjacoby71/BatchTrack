@@ -1,38 +1,41 @@
-# app/services/inventory_adjustment/_audit.py
 
 import logging
-from app.models import db, InventoryItem, UnifiedInventoryHistory
-from app.utils.fifo_generator import generate_fifo_code
+from datetime import datetime
+from app.models import db, UnifiedInventoryHistory
+from app.utils.timezone_utils import TimezoneUtils
 
 logger = logging.getLogger(__name__)
 
-def audit_event(item_id: int, change_type: str, notes: str = "", created_by: int = None, **kwargs) -> bool:
+def log_inventory_adjustment(item_id, adjustment_type, quantity_change, notes, created_by):
     """
-    Creates a sanctioned, non-FIFO, audit-only history entry.
-    This does NOT affect inventory quantity.
+    Log an inventory adjustment for audit purposes.
+    
+    Args:
+        item_id: ID of the inventory item
+        adjustment_type: Type of adjustment made
+        quantity_change: Quantity that was changed (positive for additions, negative for deductions)
+        notes: Notes about the adjustment
+        created_by: User ID who made the adjustment
     """
-    item = db.session.get(InventoryItem, item_id)
-    if not item:
-        logger.error(f"Audit event failed: Item {item_id} not found.")
-        return False
-
     try:
+        # Create audit log entry
         audit_entry = UnifiedInventoryHistory(
             inventory_item_id=item_id,
-            organization_id=item.organization_id,
-            change_type=change_type,
-            quantity_change=0.0,
-            remaining_quantity=0.0,
-            unit=item.unit,
-            notes=notes,
+            change_type=f"audit_{adjustment_type}",
+            quantity_changed=quantity_change,
+            remaining_quantity=0,  # Not applicable for audit entries
+            notes=f"AUDIT: {adjustment_type} - {notes or 'No notes'}",
             created_by=created_by,
-            fifo_code=generate_fifo_code(change_type),
-            **kwargs
+            created_at=TimezoneUtils.utc_now(),
+            cost_per_unit=0,  # Not applicable for audit entries
+            organization_id=None  # Will be set by the model if needed
         )
+        
         db.session.add(audit_entry)
-        db.session.commit()
-        return True
+        
+        logger.info(f"Logged inventory adjustment: item={item_id}, type={adjustment_type}, "
+                   f"change={quantity_change}, user={created_by}")
+        
     except Exception as e:
-        logger.error(f"Failed to create audit entry for item {item_id}: {e}")
-        db.session.rollback()
-        return False
+        logger.error(f"Failed to log inventory adjustment: {e}")
+        # Don't raise exception - audit logging shouldn't break the main operation
