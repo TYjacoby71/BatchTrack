@@ -106,7 +106,16 @@ def handle_recount_adjustment(item_id: int, target_quantity: float, notes: str, 
     delta = target_qty - current_qty
 
     if abs(delta) < 0.001:
-        logger.info(f"Recount for item '{item.name}' has no change. Skipping.")
+        logger.info(f"Recount for item '{item.name}' has no change needed.")
+        # Still validate and fix any sync issues
+        all_lots = _get_fifo_entries(item_id, org_id, item_type)
+        fifo_total = sum(float(lot.remaining_quantity) for lot in all_lots)
+        if abs(target_qty - fifo_total) > 0.001:
+            logger.warning(f"SYNC REPAIR: Item quantity {target_qty} doesn't match FIFO total {fifo_total}. Forcing sync.")
+            item.quantity = fifo_total
+            record_audit_entry(item_id, 'recount', f"Auto-sync repair: Fixed quantity from {target_qty} to {fifo_total}. {notes or ''}", created_by, item_type)
+        else:
+            item.quantity = target_qty
         return
 
     logger.info(f"RECOUNT START: Item '{item.name}' from {current_qty} to {target_qty} (Delta: {delta})")
@@ -159,8 +168,13 @@ def process_inventory_adjustment(
     caller_info = f"{caller_frame.f_code.co_filename}:{caller_frame.f_code.co_name}"
     logger.info(f"CANONICAL ADJUSTMENT: item_id={item_id}, qty={quantity}, type='{change_type}', caller='{caller_info}'")
 
-    if not all([item_id, quantity, change_type]):
-        raise ValueError("item_id, quantity, and change_type are required.")
+    # Special validation for recounts (quantity can be 0)
+    if change_type == 'recount':
+        if not all([item_id is not None, quantity is not None, change_type]):
+            raise ValueError("item_id, quantity, and change_type are required.")
+    else:
+        if not all([item_id, quantity, change_type]):
+            raise ValueError("item_id, quantity, and change_type are required.")
 
     try:
         item = InventoryItem.query.get(item_id)
@@ -259,7 +273,7 @@ def credit_specific_lot(item_id: int, fifo_entry_id: int, qty: float, unit: str 
 
         # Determine the correct history model
         history_cls = ProductSKUHistory if item.type == 'product' else InventoryHistory
-        
+
         # Find the specific FIFO entry
         fifo_entry = history_cls.query.get(fifo_entry_id)
         if not fifo_entry:
@@ -268,11 +282,11 @@ def credit_specific_lot(item_id: int, fifo_entry_id: int, qty: float, unit: str 
         # Credit the quantity back to the lot
         fifo_entry.remaining_quantity += qty
         db.session.add(fifo_entry)
-        
+
         # Update the item's total quantity
         item.quantity += qty
         db.session.add(item)
-        
+
         # Record audit entry
         record_audit_entry(
             item_id=item_id,
@@ -280,11 +294,11 @@ def credit_specific_lot(item_id: int, fifo_entry_id: int, qty: float, unit: str 
             notes=notes or f"Credited {qty} back to lot #{fifo_entry_id}",
             fifo_reference_id=fifo_entry_id
         )
-        
+
         db.session.commit()
         logger.info(f"Credited {qty} {unit or item.unit} back to lot #{fifo_entry_id} for item '{item.name}'")
         return True
-        
+
     except Exception as e:
         db.session.rollback()
         logger.error(f"Error crediting specific lot {fifo_entry_id}: {e}", exc_info=True)
