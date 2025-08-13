@@ -1,4 +1,3 @@
-
 import logging
 from datetime import datetime
 from app.models import db, InventoryItem
@@ -104,7 +103,7 @@ def _internal_add_fifo_entry_enhanced(
             remaining_quantity=float(quantity),
             unit_cost=cost_per_unit,
             notes=notes,
-            fifo_code=generate_fifo_code(change_type),
+            fifo_code=generate_fifo_code(change_type, remaining_quantity=float(quantity)),
             batch_id=kwargs.get("batch_id"),
             created_by=kwargs.get("created_by"),
             customer=kwargs.get("customer"),
