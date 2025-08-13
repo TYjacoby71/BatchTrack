@@ -206,20 +206,18 @@ class ProductSKU(db.Model, ScopedModelMixin):
 
     @hybrid_property
     def quantity(self):
-        """Get current quantity from history"""
+        """Get current quantity from inventory item"""
         if hasattr(self, '_quantity') and self._quantity is not None:
             return self._quantity
 
         if not self.inventory_item_id:
             return 0.0
 
-        # Sum all quantity changes for this SKU
-        total = db.session.query(func.sum(ProductSKUHistory.quantity_change)).filter(
-            ProductSKUHistory.inventory_item_id == self.inventory_item_id,
-            ProductSKUHistory.sku_id == self.id
-        ).scalar()
-
-        return float(total) if total else 0.0
+        # Get quantity directly from inventory item
+        if self.inventory_item:
+            return float(self.inventory_item.quantity or 0.0)
+        
+        return 0.0
 
     @quantity.setter
     def quantity(self, value):
@@ -332,15 +330,7 @@ class ProductSKU(db.Model, ScopedModelMixin):
         qty = kwargs.pop("quantity", None)
         super().__init__(**kwargs)
         if qty is not None:
-            self.quantity_override = qty
-
-    @property
-    def quantity(self):
-        return self.quantity_override
-
-    @quantity.setter
-    def quantity(self, value):
-        self.quantity_override = value
+            self._quantity = qty
 
     def __repr__(self):
         return f'<ProductSKU {self.display_name}>'
