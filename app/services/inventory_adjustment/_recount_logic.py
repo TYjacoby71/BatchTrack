@@ -1,6 +1,6 @@
 
 from flask_login import current_user
-from app.models import db, InventoryItem, InventoryHistory
+from app.models import db, InventoryItem, UnifiedInventoryHistory
 from sqlalchemy import and_
 import logging
 
@@ -48,23 +48,13 @@ def handle_recount_adjustment(item_id, target_quantity, notes=None, created_by=N
         print(f"RECOUNT: {item.name} from {current_qty} to {target_qty} (delta: {delta})")
 
         # Get ALL FIFO entries with remaining quantity > 0 (including expired)
-        if item.type == 'product':
-            from app.models.product import ProductSKUHistory
-            entries = ProductSKUHistory.query.filter(
-                and_(
-                    ProductSKUHistory.inventory_item_id == item_id,
-                    ProductSKUHistory.remaining_quantity > 0,
-                    ProductSKUHistory.organization_id == org_id
-                )
-            ).order_by(ProductSKUHistory.timestamp.asc()).all()  # Oldest first
-        else:
-            entries = InventoryHistory.query.filter(
-                and_(
-                    InventoryHistory.inventory_item_id == item_id,
-                    InventoryHistory.remaining_quantity > 0,
-                    InventoryHistory.organization_id == org_id
-                )
-            ).order_by(InventoryHistory.timestamp.asc()).all()  # Oldest first
+        entries = UnifiedInventoryHistory.query.filter(
+            and_(
+                UnifiedInventoryHistory.inventory_item_id == item_id,
+                UnifiedInventoryHistory.remaining_quantity > 0,
+                UnifiedInventoryHistory.organization_id == org_id
+            )
+        ).order_by(UnifiedInventoryHistory.timestamp.asc()).all()  # Oldest first
 
         # Calculate current FIFO total
         current_fifo_total = sum(float(entry.remaining_quantity) for entry in entries)
@@ -92,40 +82,21 @@ def handle_recount_adjustment(item_id, target_quantity, notes=None, created_by=N
                         remaining_to_add -= fill_amount
 
                         # Create history entry for this lot fill
-                        if item.type == 'product':
-                            from app.models.product import ProductSKUHistory
-                            from app.utils.fifo_generator import generate_fifo_code
+                        from app.utils.fifo_generator import generate_fifo_code
 
-                            history = ProductSKUHistory(
-                                inventory_item_id=item_id,
-                                change_type='recount',
-                                quantity_change=fill_amount,
-                                remaining_quantity=0.0,  # Recount adjustments don't create new FIFO
-                                unit=history_unit,
-                                notes=f"{notes or 'Recount fill'} - Added to existing lot {entry.id}",
-                                created_by=created_by,
-                                organization_id=org_id,
-                                fifo_code=generate_fifo_code('recount'),
-                                fifo_reference_id=entry.id,
-                                unit_cost=getattr(entry, 'unit_cost', item.cost_per_unit)
-                            )
-                        else:
-                            from app.utils.fifo_generator import generate_fifo_code
-
-                            history = InventoryHistory(
-                                inventory_item_id=item_id,
-                                change_type='recount',
-                                quantity_change=fill_amount,
-                                remaining_quantity=0.0,  # Recount adjustments don't create new FIFO
-                                unit=history_unit,
-                                note=f"{notes or 'Recount fill'} - Added to existing lot {entry.id}",
-                                created_by=created_by,
-                                quantity_used=0.0,
-                                organization_id=org_id,
-                                fifo_code=generate_fifo_code('recount'),
-                                fifo_reference_id=entry.id,
-                                unit_cost=getattr(entry, 'unit_cost', item.cost_per_unit)
-                            )
+                        history = UnifiedInventoryHistory(
+                            inventory_item_id=item_id,
+                            change_type='recount',
+                            quantity_change=fill_amount,
+                            remaining_quantity=0.0,  # Recount adjustments don't create new FIFO
+                            unit=history_unit,
+                            notes=f"{notes or 'Recount fill'} - Added to existing lot {entry.id}",
+                            created_by=created_by,
+                            organization_id=org_id,
+                            fifo_code=generate_fifo_code('recount'),
+                            fifo_reference_id=entry.id,
+                            unit_cost=getattr(entry, 'unit_cost', item.cost_per_unit)
+                        )
 
                         db.session.add(history)
                         history_entries.append(history)
@@ -133,42 +104,22 @@ def handle_recount_adjustment(item_id, target_quantity, notes=None, created_by=N
 
             # Create overflow lot if there's still quantity to add
             if remaining_to_add > 0:
-                if item.type == 'product':
-                    from app.models.product import ProductSKUHistory
-                    from app.utils.fifo_generator import generate_fifo_code
+                from app.utils.fifo_generator import generate_fifo_code
 
-                    overflow_lot = ProductSKUHistory(
-                        inventory_item_id=item_id,
-                        change_type='recount',
-                        quantity_change=remaining_to_add,
-                        remaining_quantity=remaining_to_add,  # New lot with full quantity
-                        unit=history_unit,
-                        notes=f"{notes or 'Recount overflow'} - New lot for overflow",
-                        created_by=created_by,
-                        organization_id=org_id,
-                        fifo_code=generate_fifo_code('recount'),
-                        unit_cost=item.cost_per_unit,
-                        expiration_date=None,  # Recount lots don't inherit expiration
-                        shelf_life_days=None
-                    )
-                else:
-                    from app.utils.fifo_generator import generate_fifo_code
-
-                    overflow_lot = InventoryHistory(
-                        inventory_item_id=item_id,
-                        change_type='recount',
-                        quantity_change=remaining_to_add,
-                        remaining_quantity=remaining_to_add,  # New lot with full quantity
-                        unit=history_unit,
-                        note=f"{notes or 'Recount overflow'} - New lot for overflow",
-                        created_by=created_by,
-                        quantity_used=0.0,
-                        organization_id=org_id,
-                        fifo_code=generate_fifo_code('recount'),
-                        unit_cost=item.cost_per_unit,
-                        expiration_date=None,  # Recount lots don't inherit expiration
-                        shelf_life_days=None
-                    )
+                overflow_lot = UnifiedInventoryHistory(
+                    inventory_item_id=item_id,
+                    change_type='recount',
+                    quantity_change=remaining_to_add,
+                    remaining_quantity=remaining_to_add,  # New lot with full quantity
+                    unit=history_unit,
+                    notes=f"{notes or 'Recount overflow'} - New lot for overflow",
+                    created_by=created_by,
+                    organization_id=org_id,
+                    fifo_code=generate_fifo_code('recount'),
+                    unit_cost=item.cost_per_unit,
+                    expiration_date=None,  # Recount lots don't inherit expiration
+                    shelf_life_days=None
+                )
 
                 db.session.add(overflow_lot)
                 history_entries.append(overflow_lot)
@@ -191,79 +142,43 @@ def handle_recount_adjustment(item_id, target_quantity, notes=None, created_by=N
 
             # Apply deductions to FIFO entries (decrement remaining_quantity)
             for entry_id, qty_to_deduct, unit_cost in deduction_plan:
-                if item.type == 'product':
-                    from app.models.product import ProductSKUHistory
-                    entry = ProductSKUHistory.query.get(entry_id)
-                else:
-                    entry = InventoryHistory.query.get(entry_id)
-
+                entry = UnifiedInventoryHistory.query.get(entry_id)
                 if entry:
                     entry.remaining_quantity = float(entry.remaining_quantity) - qty_to_deduct
                     print(f"RECOUNT: Deducted {qty_to_deduct} from lot {entry_id}")
 
             # Create deduction history entries for audit trail
             if deduction_plan:
-                if item.type == 'product':
-                    from app.models.product import ProductSKUHistory
-                    from app.utils.fifo_generator import generate_fifo_code
+                from app.utils.fifo_generator import generate_fifo_code
 
-                    for entry_id, qty_deducted, unit_cost in deduction_plan:
-                        history = ProductSKUHistory(
-                            inventory_item_id=item_id,
-                            change_type='recount',
-                            quantity_change=-qty_deducted,
-                            remaining_quantity=0.0,  # Deductions don't add new FIFO
-                            unit=history_unit,
-                            notes=f"{notes or 'Recount deduction'} - Consumed from lot {entry_id}",
-                            created_by=created_by,
-                            organization_id=org_id,
-                            fifo_code=generate_fifo_code('recount'),
-                            fifo_reference_id=entry_id,
-                            unit_cost=unit_cost
-                        )
-                        db.session.add(history)
-                else:
-                    from app.utils.fifo_generator import generate_fifo_code
-
-                    for entry_id, qty_deducted, unit_cost in deduction_plan:
-                        history = InventoryHistory(
-                            inventory_item_id=item_id,
-                            change_type='recount',
-                            quantity_change=-qty_deducted,
-                            remaining_quantity=0.0,  # Deductions don't add new FIFO
-                            unit=history_unit,
-                            note=f"{notes or 'Recount deduction'} - Consumed from lot {entry_id}",
-                            created_by=created_by,
-                            quantity_used=0.0,
-                            organization_id=org_id,
-                            fifo_code=generate_fifo_code('recount'),
-                            fifo_reference_id=entry_id,
-                            unit_cost=unit_cost
-                        )
-                        db.session.add(history)
+                for entry_id, qty_deducted, unit_cost in deduction_plan:
+                    history = UnifiedInventoryHistory(
+                        inventory_item_id=item_id,
+                        change_type='recount',
+                        quantity_change=-qty_deducted,
+                        remaining_quantity=0.0,  # Deductions don't add new FIFO
+                        unit=history_unit,
+                        notes=f"{notes or 'Recount deduction'} - Consumed from lot {entry_id}",
+                        created_by=created_by,
+                        organization_id=org_id,
+                        fifo_code=generate_fifo_code('recount'),
+                        fifo_reference_id=entry_id,
+                        unit_cost=unit_cost
+                    )
+                    db.session.add(history)
 
         # Set item to target quantity (absolute sync)
         item.quantity = target_qty
         db.session.commit()
 
         # Validate final sync state
-        if item.type == 'product':
-            from app.models.product import ProductSKUHistory
-            final_entries = ProductSKUHistory.query.filter(
-                and_(
-                    ProductSKUHistory.inventory_item_id == item_id,
-                    ProductSKUHistory.remaining_quantity > 0,
-                    ProductSKUHistory.organization_id == org_id
-                )
-            ).all()
-        else:
-            final_entries = InventoryHistory.query.filter(
-                and_(
-                    InventoryHistory.inventory_item_id == item_id,
-                    InventoryHistory.remaining_quantity > 0,
-                    InventoryHistory.organization_id == org_id
-                )
-            ).all()
+        final_entries = UnifiedInventoryHistory.query.filter(
+            and_(
+                UnifiedInventoryHistory.inventory_item_id == item_id,
+                UnifiedInventoryHistory.remaining_quantity > 0,
+                UnifiedInventoryHistory.organization_id == org_id
+            )
+        ).all()
 
         final_fifo_total = sum(float(entry.remaining_quantity) for entry in final_entries)
 
