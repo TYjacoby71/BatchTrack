@@ -146,10 +146,8 @@ def handle_recount_adjustment(item_id, target_quantity, notes, created_by, item_
     if abs(delta) < 0.001:
         logger.info(f"Recount for item '{item.name}' has no change needed.")
         # Still validate and fix any sync issues
-        all_lots = history_model.query.filter(
-            history_model.inventory_item_id == item_id,
-            history_model.remaining_quantity > 0
-        ).order_by(history_model.timestamp.asc()).all()
+        history_model = ProductSKUHistory if item_type == 'product' else InventoryHistory
+        all_lots = _get_fifo_entries(item_id, item.organization_id, item_type)
         fifo_total = sum(float(lot.remaining_quantity) for lot in all_lots)
         if abs(target_qty - fifo_total) > 0.001:
             logger.warning(f"SYNC REPAIR: Item quantity {target_qty} doesn't match FIFO total {fifo_total}. Forcing sync.")
@@ -220,29 +218,37 @@ def process_inventory_adjustment(
                 qty_change = -abs(quantity)
                 to_remove = abs(quantity)
                 history_model = ProductSKUHistory if item_type == 'product' else InventoryHistory
-                all_lots = history_model.query.filter(history_model.inventory_item_id == item_id, history_model.remaining_quantity > 0).order_by(history_model.timestamp.asc()).all()
-                available = sum(l.remaining_quantity for l in all_lots)
-                if to_remove > available: raise ValueError(f"Insufficient stock. Required: {to_remove}, Available: {available}")
-
-                for lot in all_lots:
-                    if to_remove <= 0: break
-                    deduct = min(to_remove, float(lot.remaining_quantity))
-                    # Prevent FIFO lot from going below 0
-                    if lot.remaining_quantity - deduct < 0:
-                        deduct = lot.remaining_quantity
-                    lot.remaining_quantity -= deduct
-                    # Ensure FIFO remaining quantity never goes below 0
-                    if lot.remaining_quantity < 0:
-                        lot.remaining_quantity = 0.0
-                    to_remove -= deduct
+                all_lots = _get_fifo_entries(item_id, item.organization_id, item_type)
+                available = sum(float(l.remaining_quantity) for l in all_lots)
                 
-                # Prevent item quantity from going below 0
+                if to_remove > available: 
+                    raise ValueError(f"Insufficient stock. Required: {to_remove}, Available: {available}")
+
+                logger.info(f"FIFO DEDUCTION: Removing {to_remove} from {len(all_lots)} lots")
+                
+                for lot in all_lots:
+                    if to_remove <= 0: 
+                        break
+                    
+                    current_remaining = float(lot.remaining_quantity)
+                    deduct = min(to_remove, current_remaining)
+                    
+                    if deduct > 0:
+                        lot.remaining_quantity = max(0.0, current_remaining - deduct)
+                        to_remove -= deduct
+                        logger.info(f"  Deducted {deduct} from lot #{lot.id}, remaining: {lot.remaining_quantity}")
+                        
+                        # Add the lot to the session so changes are tracked
+                        db.session.add(lot)
+                
+                # Update item quantity
                 new_item_qty = float(item.quantity or 0) + qty_change
                 if new_item_qty < 0:
                     logger.warning(f"Item {item_id} quantity would go negative ({new_item_qty}). Setting to 0.")
                     item.quantity = 0.0
                 else:
                     item.quantity = new_item_qty
+                    
                 record_audit_entry(item_id, qty_change, change_type, notes=notes, created_by=created_by)
 
             else:
