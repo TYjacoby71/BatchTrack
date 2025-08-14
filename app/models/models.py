@@ -338,6 +338,10 @@ class User(UserMixin, db.Model):
 
     def has_permission(self, permission_name):
         """Check if user has a specific permission through any of their roles"""
+        # Handle enum permission names by converting to string
+        if hasattr(permission_name, 'value'):
+            permission_name = permission_name.value
+            
         # Developers check their developer roles
         if self.user_type == 'developer':
             return self.has_developer_permission(permission_name)
