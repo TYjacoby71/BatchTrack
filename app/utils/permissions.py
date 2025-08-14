@@ -19,8 +19,14 @@ def require_permission(permission_name):
     """
     def decorator(f):
         @wraps(f)
-        @login_required
         def decorated_function(*args, **kwargs):
+            # Check authentication first, with JSON-aware response
+            if not current_user.is_authenticated:
+                if _wants_json():
+                    return jsonify(error="unauthorized"), 401
+                abort(401)
+            
+            # Check permission
             if not current_user.has_permission(permission_name):
                 if _wants_json():
                     return jsonify(error="forbidden", permission=permission_name), 403
