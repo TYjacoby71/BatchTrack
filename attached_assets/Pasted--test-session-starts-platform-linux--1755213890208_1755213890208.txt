@@ -1,0 +1,401 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.13, pytest-8.3.5, pluggy-1.5.0 -- /home/runner/workspace/.pythonlibs/bin/python
+cachedir: .pytest_cache
+rootdir: /home/runner/workspace
+collected 49 items
+
+tests/test_audit_canonicalization.py::test_api_reservation_routes_uses_canonical_audit PASSED [  2%]
+tests/test_audit_canonicalization.py::test_products_routes_uses_canonical_audit PASSED [  4%]
+tests/test_auth_permissions.py::TestAuthPermissions::test_permission_required_decorator_allows_with_permission PASSED [  6%]
+tests/test_auth_permissions.py::TestAuthPermissions::test_permission_required_returns_json_for_api PASSED [  8%]
+tests/test_auth_permissions.py::TestAuthPermissions::test_any_permission_required_decorator PASSED [ 10%]
+tests/test_auth_permissions.py::TestAuthPermissions::test_tier_required_decorator PASSED [ 12%]
+tests/test_auth_permissions.py::TestAuthPermissions::test_user_has_any_permission_method PASSED [ 14%]
+tests/test_auth_permissions.py::TestAuthPermissions::test_api_unauth_returns_json_401 PASSED [ 16%]
+tests/test_auth_permissions.py::TestAuthPermissions::test_web_unauth_redirects_to_login PASSED [ 18%]
+tests/test_auth_permissions.py::TestAuthPermissions::test_csrf_token_available_in_templates FAILED [ 20%]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_tier_permission_is_the_hard_ceiling PASSED [ 22%]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[active-200] FAILED [ 24%]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[past_due-302] PASSED [ 26%]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[suspended-302] PASSED [ 28%]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[canceled-302] PASSED [ 30%]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_developer_can_masquerade_regardless_of_billing FAILED [ 32%]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_complete_security_cascade PASSED [ 34%]
+tests/test_expiration_canonicalization.py::test_expiration_service_uses_canonical_adjustment PASSED [ 36%]
+tests/test_expiration_canonicalization.py::TestExpirationCanonicalService::test_mark_fifo_expired_calls_canonical_service PASSED [ 38%]
+tests/test_expiration_canonicalization.py::TestExpirationCanonicalService::test_mark_product_expired_calls_canonical_service PASSED [ 40%]
+tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_oauth_service_exists PASSED [ 42%]
+tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_auth_login_endpoint_exists PASSED [ 44%]
+tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_auth_callback_endpoint_exists PASSED [ 46%]
+tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_oauth_state_validation_path PASSED [ 48%]
+tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_oauth_service_methods_exist PASSED [ 51%]
+tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_oauth_configuration_status PASSED [ 53%]
+tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_oauth_callback_invalid_state PASSED [ 55%]
+tests/test_inventory_fifo.py::TestInventoryFIFOCharacterization::test_single_entry_point_exists PASSED [ 57%]
+tests/test_inventory_fifo.py::TestInventoryFIFOCharacterization::test_fifo_deduction_order PASSED [ 59%]
+tests/test_inventory_fifo.py::TestInventoryFIFOCharacterization::test_inventory_adjustment_delegates_properly PASSED [ 61%]
+tests/test_inventory_routes_canonicalization.py::test_recount_adjustment_uses_canonical_service PASSED [ 63%]
+tests/test_inventory_routes_canonicalization.py::TestInventoryRoutesCanonicalService::test_adjust_inventory_initial_stock_calls_canonical_service PASSED [ 65%]
+tests/test_pos_integration_canonicalization.py::test_pos_sale_uses_canonical_service PASSED [ 67%]
+tests/test_pos_integration_canonicalization.py::TestPOSIntegrationCanonicalService::test_reserve_inventory_calls_canonical_service PASSED [ 69%]
+tests/test_product_sku.py::TestProductSKUCharacterization::test_product_creation_flow PASSED [ 71%]
+tests/test_product_sku.py::TestProductSKUCharacterization::test_sku_generation_constraints PASSED [ 73%]
+tests/test_product_sku.py::TestProductSKUCharacterization::test_product_service_exists PASSED [ 75%]
+tests/test_product_sku.py::TestProductSKUCharacterization::test_sku_creation_validation PASSED [ 77%]
+tests/test_reservation_canonicalization.py::test_credit_specific_lot_called_on_reservation_release PASSED [ 79%]
+tests/test_reservation_canonicalization.py::test_record_audit_entry_called_for_unreserved_audit PASSED [ 81%]
+tests/test_signup_tiers.py::TestSignupTierCharacterization::test_signup_endpoint_exists PASSED [ 83%]
+tests/test_signup_tiers.py::TestSignupTierCharacterization::test_tier_bypass_behavior PASSED [ 85%]
+tests/test_signup_tiers.py::TestSignupTierCharacterization::test_organization_tier_assignment PASSED [ 87%]
+tests/test_signup_tiers.py::TestSignupTierCharacterization::test_permission_gating_exists PASSED [ 89%]
+tests/test_signup_tiers.py::TestSignupTierCharacterization::test_signup_service_delegation PASSED [ 91%]
+tests/test_stripe_webhooks.py::TestStripeWebhookCharacterization::test_stripe_service_exists PASSED [ 93%]
+tests/test_stripe_webhooks.py::TestStripeWebhookCharacterization::test_webhook_signature_verification_path_exists FAILED [ 95%]
+tests/test_stripe_webhooks.py::TestStripeWebhookCharacterization::test_webhook_idempotency_behavior FAILED [ 97%]
+tests/test_stripe_webhooks.py::TestStripeWebhookCharacterization::test_stripe_service_methods_exist PASSED [100%]
+
+======================================= FAILURES ========================================
+______________ TestAuthPermissions.test_csrf_token_available_in_templates _______________
+
+self = <tests.test_auth_permissions.TestAuthPermissions object at 0x7fa69bf86450>
+app = <Flask 'app'>, client = <FlaskClient <Flask 'app'>>, test_user = <User test_9d12f2>
+
+code
+Code
+download
+content_copy
+expand_less
+
+def test_csrf_token_available_in_templates(self, app, client, test_user):
+    """Test that csrf_token is available in templates for an authenticated user"""
+    with app.app_context():
+        from flask import render_template_string
+        from flask_login import login_user
+
+        @app.route("/_csrf_check")
+        def _csrf_check():
+            # This route now requires login because of our middleware
+            return render_template_string('<meta name="csrf-token" content="{{ csrf_token() }}">')
+
+        # Log in the user using Flask-Login within the client session
+        with client:
+            # Set up the session to simulate a logged-in user
+            with client.session_transaction() as sess:
+                sess['_user_id'] = str(test_user.id)
+                sess['_fresh'] = True
+
+            # Make the request - Flask-Login will load the user from session
+            resp = client.get("/_csrf_check")
+code
+Code
+download
+content_copy
+expand_less
+IGNORE_WHEN_COPYING_START
+IGNORE_WHEN_COPYING_END
+assert resp.status_code == 200
+
+E               assert 302 == 200
+E                +  where 302 = <WrapperTestResponse streamed [302 FOUND]>.status_code
+
+tests/test_auth_permissions.py:117: AssertionError
+---------------------------------- Captured log setup -----------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+_______ TestBillingAndTierEnforcement.test_billing_status_enforcement[active-200] _______
+
+self = <tests.test_billing_and_tier_enforcement.TestBillingAndTierEnforcement object at 0x7fa69bf8d590>
+app = <Flask 'app'>, client = <FlaskClient <Flask 'app'>>, test_user = <User test_bbbf67>
+billing_status = 'active', expected_status_code = 200
+
+code
+Code
+download
+content_copy
+expand_less
+IGNORE_WHEN_COPYING_START
+IGNORE_WHEN_COPYING_END
+@pytest.mark.parametrize("billing_status, expected_status_code", [
+    ('active', 200),
+    ('past_due', 302),
+    ('suspended', 302),
+    ('canceled', 302),
+])
+def test_billing_status_enforcement(self, app, client, test_user, billing_status, expected_status_code):
+    """
+    Tests that the billing middleware blocks access for non-active billing statuses.
+    """
+    with app.app_context():
+        # ARRANGE
+        # Update the user's organization with the test billing status
+        org = test_user.organization
+        org.billing_status = billing_status
+        # FIX 2: Remove the redundant db.session.add(org) - object is already attached
+        db.session.commit()
+
+        # Create a simple protected route to test against
+        @app.route('/_protected_dashboard')
+        def _protected_dashboard():
+            return "Welcome to the dashboard", 200
+
+        # ACT
+        # Log the user in and try to access the protected route
+        with client:
+            with client.session_transaction() as sess:
+                sess['_user_id'] = str(test_user.id)
+                sess['_fresh'] = True
+
+            response = client.get('/_protected_dashboard')
+
+            # ASSERT
+code
+Code
+download
+content_copy
+expand_less
+IGNORE_WHEN_COPYING_START
+IGNORE_WHEN_COPYING_END
+assert response.status_code == expected_status_code
+
+E               assert 302 == 200
+E                +  where 302 = <WrapperTestResponse streamed [302 FOUND]>.status_code
+
+tests/test_billing_and_tier_enforcement.py:104: AssertionError
+---------------------------------- Captured log setup -----------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+___ TestBillingAndTierEnforcement.test_developer_can_masquerade_regardless_of_billing ___
+
+self = <tests.test_billing_and_tier_enforcement.TestBillingAndTierEnforcement object at 0x7fa69bf8e350>
+app = <Flask 'app'>, client = <FlaskClient <Flask 'app'>>
+
+code
+Code
+download
+content_copy
+expand_less
+IGNORE_WHEN_COPYING_START
+IGNORE_WHEN_COPYING_END
+def test_developer_can_masquerade_regardless_of_billing(self, app, client):
+    """
+    Tests that developers can access customer data even if billing is bad.
+    """
+    with app.app_context():
+        # ARRANGE: Create a developer user
+        from app.models import SubscriptionTier
+
+        # Get or create developer tier
+        dev_tier = SubscriptionTier.query.filter_by(key='developer').first()
+        if not dev_tier:
+            # FIX 3: Remove invalid keyword arguments
+            dev_tier = SubscriptionTier(
+                name='Developer',
+                key='developer'
+            )
+            db.session.add(dev_tier)
+            db.session.flush()  # Get the ID
+
+        dev_org = Organization(
+            name='Dev Org',
+            subscription_tier_id=dev_tier.id,
+            billing_status='active'
+        )
+        db.session.add(dev_org)
+        db.session.flush()  # Get the ID
+
+        developer = User(
+            email='dev@batchtrack.com',
+            username='developer',
+            user_type='developer',
+            organization=dev_org
+        )
+        db.session.add(developer)
+
+        # Create a customer org with bad billing
+        customer_tier = SubscriptionTier(
+            name='Pro',
+            key='pro'
+        )
+        db.session.add(customer_tier)
+        db.session.flush()  # Get the ID
+
+        customer_org = Organization(
+            name='Customer Org',
+            subscription_tier_id=customer_tier.id,
+            billing_status='past_due'  # Bad billing
+        )
+        db.session.add(customer_org)
+        db.session.flush()  # Get the ID
+
+        customer = User(
+            email='customer@example.com',
+            username='customer',
+            organization=customer_org
+        )
+        db.session.add(customer)
+        db.session.commit()
+
+        # Create protected route
+        @app.route('/_masquerade_test')
+        def _masquerade_test():
+            return "Developer access granted", 200
+
+        # ACT: Developer accesses customer route
+        with client:
+            with client.session_transaction() as sess:
+                sess['_user_id'] = str(developer.id)
+                sess['_fresh'] = True
+                sess['masquerade_org_id'] = customer_org.id  # Masquerading
+
+            response = client.get('/_masquerade_test')
+
+            # ASSERT: Developer should have access despite customer's bad billing
+code
+Code
+download
+content_copy
+expand_less
+IGNORE_WHEN_COPYING_START
+IGNORE_WHEN_COPYING_END
+assert response.status_code == 200
+
+E               assert 302 == 200
+E                +  where 302 = <WrapperTestResponse streamed [302 FOUND]>.status_code
+
+tests/test_billing_and_tier_enforcement.py:184: AssertionError
+---------------------------------- Captured log setup -----------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+___ TestStripeWebhookCharacterization.test_webhook_signature_verification_path_exists ___
+
+self = <tests.test_stripe_webhooks.TestStripeWebhookCharacterization object at 0x7fa69a0fc790>
+app = <Flask 'app'>, client = <FlaskClient <Flask 'app'>>
+
+code
+Code
+download
+content_copy
+expand_less
+IGNORE_WHEN_COPYING_START
+IGNORE_WHEN_COPYING_END
+def test_webhook_signature_verification_path_exists(self, app, client):
+    """Test that webhook signature verification is implemented."""
+    with app.app_context():
+        # Test that the webhook endpoint exists
+        response = client.post('/billing/webhook',
+                             data='{"test": "data"}',
+                             headers={'Content-Type': 'application/json'})
+
+        # We expect some kind of response (likely error due to missing signature)
+        # This characterizes current behavior
+code
+Code
+download
+content_copy
+expand_less
+IGNORE_WHEN_COPYING_START
+IGNORE_WHEN_COPYING_END
+assert response.status_code in [200, 400, 401, 403]
+
+E           assert 302 in [200, 400, 401, 403]
+E            +  where 302 = <WrapperTestResponse streamed [302 FOUND]>.status_code
+
+tests/test_stripe_webhooks.py:32: AssertionError
+---------------------------------- Captured log setup -----------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+__________ TestStripeWebhookCharacterization.test_webhook_idempotency_behavior __________
+
+self = <tests.test_stripe_webhooks.TestStripeWebhookCharacterization object at 0x7fa69a0fcdd0>
+mock_construct = <MagicMock name='construct_event' id='140353502207440'>
+app = <Flask 'app'>, client = <FlaskClient <Flask 'app'>>
+
+code
+Code
+download
+content_copy
+expand_less
+IGNORE_WHEN_COPYING_START
+IGNORE_WHEN_COPYING_END
+@patch('stripe.Webhook.construct_event')
+def test_webhook_idempotency_behavior(self, mock_construct, app, client):
+    """Test current webhook idempotency handling."""
+    with app.app_context():
+        # Mock a valid Stripe event
+        mock_event = MagicMock()
+        mock_event.id = 'evt_test_123'
+        mock_event.type = 'customer.subscription.updated'
+        mock_event.data = {'object': {'id': 'sub_test'}}
+        mock_construct.return_value = mock_event
+
+        # Send webhook twice to test idempotency
+        webhook_data = json.dumps({'id': 'evt_test_123', 'type': 'test'})
+        headers = {
+            'Content-Type': 'application/json',
+            'Stripe-Signature': 'test_signature'
+        }
+
+        response1 = client.post('/billing/webhook', data=webhook_data, headers=headers)
+        response2 = client.post('/billing/webhook', data=webhook_data, headers=headers)
+
+        # Characterize current behavior - both should succeed
+        # but second should not have side effects
+code
+Code
+download
+content_copy
+expand_less
+IGNORE_WHEN_COPYING_START
+IGNORE_WHEN_COPYING_END
+assert response1.status_code in [200, 400, 401, 403]
+
+E           assert 302 in [200, 400, 401, 403]
+E            +  where 302 = <WrapperTestResponse streamed [302 FOUND]>.status_code
+
+tests/test_stripe_webhooks.py:57: AssertionError
+---------------------------------- Captured log setup -----------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+=================================== warnings summary ====================================
+tests/test_audit_canonicalization.py: 2 warnings
+tests/test_auth_permissions.py: 8 warnings
+tests/test_billing_and_tier_enforcement.py: 7 warnings
+tests/test_expiration_canonicalization.py: 3 warnings
+tests/test_google_oauth.py: 7 warnings
+tests/test_inventory_fifo.py: 3 warnings
+tests/test_inventory_routes_canonicalization.py: 2 warnings
+tests/test_pos_integration_canonicalization.py: 1 warning
+tests/test_product_sku.py: 4 warnings
+tests/test_reservation_canonicalization.py: 2 warnings
+tests/test_signup_tiers.py: 5 warnings
+tests/test_stripe_webhooks.py: 4 warnings
+/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_limiter/extension.py:333: UserWarning: Using the in-memory storage for tracking rate limits as no storage was explicitly specified. This is not recommended for production use. See: https://flask-limiter.readthedocs.io#configuring-a-storage-backend for documentation about configuring the storage backend.
+warnings.warn(
+
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_tier_permission_is_the_hard_ceiling
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_tier_permission_is_the_hard_ceiling
+/home/runner/workspace/app/models/models.py:325: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+role = Role.query.get(assignment.role_id)
+
+tests/test_expiration_canonicalization.py::test_expiration_service_uses_canonical_adjustment
+/home/runner/workspace/app/blueprints/expiration/services.py:545: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+entry = InventoryHistory.query.get(entry_id)
+
+tests/test_inventory_fifo.py::TestInventoryFIFOCharacterization::test_fifo_deduction_order
+tests/test_inventory_fifo.py::TestInventoryFIFOCharacterization::test_fifo_deduction_order
+tests/test_inventory_fifo.py::TestInventoryFIFOCharacterization::test_fifo_deduction_order
+tests/test_inventory_fifo.py::TestInventoryFIFOCharacterization::test_inventory_adjustment_delegates_properly
+/home/runner/workspace/app/services/inventory_adjustment/_audit.py:77: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+item = InventoryItem.query.get(item_id)
+
+tests/test_inventory_fifo.py::TestInventoryFIFOCharacterization::test_fifo_deduction_order
+/home/runner/workspace/app/services/stock_check.py:71: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+item = InventoryItem.query.get(inventory_item_id)
+
+tests/test_inventory_routes_canonicalization.py::test_recount_adjustment_uses_canonical_service
+/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_sqlalchemy/query.py:30: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+rv = self.get(ident)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+================================ short test summary info ================================
+FAILED tests/test_auth_permissions.py::TestAuthPermissions::test_csrf_token_available_in_templates - assert 302 == 200
+FAILED tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[active-200] - assert 302 == 200
+FAILED tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_developer_can_masquerade_regardless_of_billing - assert 302 == 200
+FAILED tests/test_stripe_webhooks.py::TestStripeWebhookCharacterization::test_webhook_signature_verification_path_exists - assert 302 in [200, 400, 401, 403]
+FAILED tests/test_stripe_webhooks.py::TestStripeWebhookCharacterization::test_webhook_idempotency_behavior - assert 302 in [200, 400, 401, 403]
+====================== 5 failed, 44 passed, 57 warnings in 50.16s =======================
