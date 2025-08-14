@@ -77,6 +77,7 @@ def _init_extensions(app):
     from flask_limiter.util import get_remote_address
     from sqlalchemy.pool import StaticPool
     from .models import db, User
+    from .extensions import csrf
 
     # Fix SQLite engine options for testing
     uri = app.config.get("SQLALCHEMY_DATABASE_URI", "")
@@ -92,20 +93,30 @@ def _init_extensions(app):
 
     # Initialize database
     db.init_app(app)
-
-    # Initialize extensions
-    from .extensions import migrate, login_manager, mail, csrf, limiter # limiter is initialized separately
-
     migrate.init_app(app, db)
     login_manager.init_app(app)
-    login_manager.login_view = 'auth.login'
+    csrf.init_app(app)
+    limiter.init_app(app)
 
+    # Configure login manager
+    login_manager.login_view = 'auth.login'
+    login_manager.login_message = 'Please log in to access this page.'
+    login_manager.login_message_category = 'info'
+
+    # Add CSRF token to all templates
+    from flask_wtf.csrf import generate_csrf
+    @app.context_processor
+    def inject_csrf_token():
+        return dict(csrf_token=generate_csrf)
+
+    # Configure unauthorized handler for API vs HTML responses
     @login_manager.unauthorized_handler
     def _unauthorized():
         from flask import request, jsonify, redirect, url_for
-        if request.path.startswith("/api") or (
+        wants_json = request.path.startswith("/api") or (
             "application/json" in request.accept_mimetypes and not request.accept_mimetypes.accept_html
-        ):
+        )
+        if wants_json:
             return jsonify({"error": "unauthorized"}), 401
         return redirect(url_for("auth.login"))
 
@@ -425,7 +436,7 @@ def _register_template_context(app):
     def inject_csrf_token():
         """Make CSRF token available to templates"""
         return dict(csrf_token=generate_csrf)
-        
+
     @app.context_processor  
     def inject_units():
         from .utils.unit_utils import get_global_unit_list

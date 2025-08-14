@@ -65,3 +65,45 @@ class TestAuthPermissions:
             # Test with empty permissions
             result = user.has_any_permission(['perm.a', 'perm.b'])
             assert result is False
+
+    def test_api_unauth_returns_json_401(self, app, client):
+        """Test that API endpoints return 401 JSON when unauthorized"""
+        with app.app_context():
+            @app.route("/api/_perm_test")
+            @permission_required("some.permission")
+            def _p():
+                return {"ok": True}
+
+            resp = client.get("/api/_perm_test", headers={"Accept": "application/json"})
+            assert resp.status_code == 401
+            assert resp.is_json
+            json_data = resp.get_json()
+            assert json_data.get("error") == "unauthorized"
+
+    def test_web_unauth_redirects_to_login(self, app, client):
+        """Test that web pages redirect to login when unauthorized"""
+        with app.app_context():
+            from flask_login import login_required
+            
+            @app.route("/web/_perm_test")
+            @login_required
+            @permission_required("some.permission")
+            def _w():
+                return "ok"
+
+            resp = client.get("/web/_perm_test", follow_redirects=False)
+            assert resp.status_code == 302
+            assert "/auth/login" in resp.headers.get("Location", "")
+
+    def test_csrf_token_available_in_templates(self, app, client):
+        """Test that csrf_token is available in templates"""
+        with app.app_context():
+            from flask import render_template_string
+            
+            @app.route("/_csrf_check")
+            def _csrf_check():
+                return render_template_string('<meta name="csrf-token" content="{{ csrf_token() }}">')
+            
+            resp = client.get("/_csrf_check")
+            assert resp.status_code == 200
+            assert b'meta name="csrf-token"' in resp.data
