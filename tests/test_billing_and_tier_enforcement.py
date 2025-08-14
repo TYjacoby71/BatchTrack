@@ -1,8 +1,10 @@
 
 import pytest
-from app.models import db, User, Organization, SubscriptionTier, Role, Permission
 from flask_login import login_user
+from app.models import db, User, Organization, SubscriptionTier, Role, Permission
 
+# FIX 1: Add the missing import for AppPermission
+from app.utils.permissions import AppPermission
 
 class TestBillingAndTierEnforcement:
     """Test the full security cascade: billing status -> tier -> role -> permission"""
@@ -23,9 +25,7 @@ class TestBillingAndTierEnforcement:
             # 2. Create a "Hobbyist" tier that can ONLY view products
             hobbyist_tier = SubscriptionTier(
                 name='hobbyist',
-                key='hobbyist',
-                max_users=5,
-                max_organizations=1
+                key='hobbyist'
             )
             hobbyist_tier.permissions = [perm_view]  # Only view, no create
             db.session.add(hobbyist_tier)
@@ -79,7 +79,7 @@ class TestBillingAndTierEnforcement:
             # Update the user's organization with the test billing status
             org = test_user.organization
             org.billing_status = billing_status
-            db.session.add(org)
+            # FIX 2: Remove the redundant db.session.add(org) - object is already attached
             db.session.commit()
 
             # Create a simple protected route to test against
@@ -114,11 +114,10 @@ class TestBillingAndTierEnforcement:
             # Get or create developer tier
             dev_tier = SubscriptionTier.query.filter_by(key='developer').first()
             if not dev_tier:
+                # FIX 3: Remove invalid keyword arguments
                 dev_tier = SubscriptionTier(
                     name='Developer',
-                    key='developer',
-                    max_users=999,
-                    max_organizations=999
+                    key='developer'
                 )
                 db.session.add(dev_tier)
 
@@ -140,9 +139,7 @@ class TestBillingAndTierEnforcement:
             # Create a customer org with bad billing
             customer_tier = SubscriptionTier(
                 name='Pro',
-                key='pro',
-                max_users=10,
-                max_organizations=1
+                key='pro'
             )
             db.session.add(customer_tier)
 
@@ -194,9 +191,7 @@ class TestBillingAndTierEnforcement:
             # 2. Create a "Pro" tier with batch permissions but no admin
             pro_tier = SubscriptionTier(
                 name='Pro',
-                key='pro',
-                max_users=10,
-                max_organizations=1
+                key='pro'
             )
             pro_tier.permissions = [perm_batch_view, perm_batch_create]  # No admin
             db.session.add(pro_tier)
