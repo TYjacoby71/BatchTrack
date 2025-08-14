@@ -60,7 +60,7 @@ def process_inventory_adjustment(
             return False
 
         # Handle additive changes (restock, manual_addition, etc.)
-        elif change_type in ['restock', 'manual_addition', 'returned', 'refunded']:
+        elif change_type in ['restock', 'manual_addition', 'returned', 'refunded', 'finished_batch']:
             return _handle_additive_adjustment(
                 item_id, quantity, change_type, unit, notes, created_by, 
                 cost_override, custom_expiration_date, custom_shelf_life_days, **kwargs
