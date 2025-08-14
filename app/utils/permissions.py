@@ -6,9 +6,41 @@ from typing import Iterable
 from flask_login import current_user
 from functools import wraps
 from flask import abort, g, session, current_app
+from enum import Enum
 import logging
 
 logger = logging.getLogger(__name__)
+
+class AppPermission(Enum):
+    """Enumeration of application permissions"""
+    # Product permissions
+    PRODUCT_VIEW = "product.view"
+    PRODUCT_CREATE = "product.create"
+    PRODUCT_EDIT = "product.edit"
+    PRODUCT_DELETE = "product.delete"
+    
+    # Batch permissions
+    BATCH_VIEW = "batch.view"
+    BATCH_CREATE = "batch.create"
+    BATCH_START = "batch.start"
+    BATCH_FINISH = "batch.finish"
+    BATCH_CANCEL = "batch.cancel"
+    
+    # Inventory permissions
+    INVENTORY_VIEW = "inventory.view"
+    INVENTORY_EDIT = "inventory.edit"
+    INVENTORY_ADJUST = "inventory.adjust"
+    INVENTORY_DELETE = "inventory.delete"
+    
+    # Admin permissions
+    ADMIN = "admin"
+    USER_MANAGEMENT = "user.management"
+    ROLE_MANAGEMENT = "role.management"
+    
+    # Organization permissions
+    ORGANIZATION_VIEW = "organization.view"
+    ORGANIZATION_EDIT = "organization.edit"
+    ORGANIZATION_BILLING = "organization.billing"
 
 def _wants_json() -> bool:
     """Check if the request wants JSON response"""

@@ -1,0 +1,514 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.13, pytest-8.3.5, pluggy-1.5.0 -- /home/runner/workspace/.pythonlibs/bin/python
+cachedir: .pytest_cache
+rootdir: /home/runner/workspace
+collected 7 items                                                              
+
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_tier_permission_is_the_hard_ceiling FAILED [ 14%]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[active-200] FAILED [ 28%]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[past_due-302] PASSED [ 42%]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[suspended-302] PASSED [ 57%]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[canceled-302] PASSED [ 71%]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_developer_can_masquerade_regardless_of_billing FAILED [ 85%]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_complete_security_cascade FAILED [100%]
+
+=================================== FAILURES ===================================
+____ TestBillingAndTierEnforcement.test_tier_permission_is_the_hard_ceiling ____
+
+self = <tests.test_billing_and_tier_enforcement.TestBillingAndTierEnforcement object at 0x7f5629254550>
+app = <Flask 'app'>
+
+    def test_tier_permission_is_the_hard_ceiling(self, app):
+        """
+        Tests that a user is BLOCKED from an action if their org's tier
+        does not allow it, even if their role DOES have the permission.
+        """
+        with app.app_context():
+            # ARRANGE: Create a complex state
+    
+            # 1. Create permissions
+            perm_view = Permission(name=AppPermission.PRODUCT_VIEW.value)
+            perm_create = Permission(name=AppPermission.PRODUCT_CREATE.value)
+            db.session.add_all([perm_view, perm_create])
+    
+            # 2. Create a "Hobbyist" tier that can ONLY view products
+            hobbyist_tier = SubscriptionTier(
+                name='hobbyist',
+                key='hobbyist'
+            )
+            hobbyist_tier.permissions = [perm_view]  # Only view, no create
+            db.session.add(hobbyist_tier)
+    
+            # 3. Create an Organization subscribed to the Hobbyist tier
+            org = Organization(
+                name='Test Hobby Org',
+                subscription_tier=hobbyist_tier,
+                billing_status='active'
+            )
+            db.session.add(org)
+    
+            # 4. Create a Role that has MORE permissions than the tier allows
+>           overpowered_role = Role(
+                name='Manager',
+                organization=org
+            )
+
+tests/test_billing_and_tier_enforcement.py:42: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+<string>:4: in __init__
+    ???
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <Role Manager>
+kwargs = {'name': 'Manager', 'organization': <Organization (transient 140007919472272)>}
+cls_ = <class 'app.models.role.Role'>, k = 'organization'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'organization' is an invalid keyword argument for Role
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+------------------------------ Captured log setup ------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+__ TestBillingAndTierEnforcement.test_billing_status_enforcement[active-200] ___
+
+self = <tests.test_billing_and_tier_enforcement.TestBillingAndTierEnforcement object at 0x7f5629256310>
+app = <Flask 'app'>, client = <FlaskClient <Flask 'app'>>
+test_user = <User test@example.com>, billing_status = 'active'
+expected_status_code = 200
+
+    @pytest.mark.parametrize("billing_status, expected_status_code", [
+        ('active', 200),
+        ('past_due', 302),
+        ('suspended', 302),
+        ('canceled', 302),
+    ])
+    def test_billing_status_enforcement(self, app, client, test_user, billing_status, expected_status_code):
+        """
+        Tests that the billing middleware blocks access for non-active billing statuses.
+        """
+        with app.app_context():
+            # ARRANGE
+            # Update the user's organization with the test billing status
+            org = test_user.organization
+            org.billing_status = billing_status
+            # FIX 2: Remove the redundant db.session.add(org) - object is already attached
+            db.session.commit()
+    
+            # Create a simple protected route to test against
+            @app.route('/_protected_dashboard')
+            def _protected_dashboard():
+                return "Welcome to the dashboard", 200
+    
+            # ACT
+            # Log the user in and try to access the protected route
+            with client:
+                with client.session_transaction() as sess:
+                    sess['_user_id'] = str(test_user.id)
+                    sess['_fresh'] = True
+    
+                response = client.get('/_protected_dashboard')
+    
+                # ASSERT
+>               assert response.status_code == expected_status_code
+E               assert 302 == 200
+E                +  where 302 = <WrapperTestResponse streamed [302 FOUND]>.status_code
+
+tests/test_billing_and_tier_enforcement.py:100: AssertionError
+------------------------------ Captured log setup ------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+_ TestBillingAndTierEnforcement.test_developer_can_masquerade_regardless_of_billing _
+
+self = <sqlalchemy.engine.base.Connection object at 0x7f5621579e90>
+dialect = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x7f5621816410>
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x7f5621599590>
+
+    def _exec_insertmany_context(
+        self,
+        dialect: Dialect,
+        context: ExecutionContext,
+    ) -> CursorResult[Any]:
+        """continue the _execute_context() method for an "insertmanyvalues"
+        operation, which will invoke DBAPI
+        cursor.execute() one or more times with individual log and
+        event hook calls.
+    
+        """
+    
+        if dialect.bind_typing is BindTyping.SETINPUTSIZES:
+            generic_setinputsizes = context._prepare_set_input_sizes()
+        else:
+            generic_setinputsizes = None
+    
+        cursor, str_statement, parameters = (
+            context.cursor,
+            context.statement,
+            context.parameters,
+        )
+    
+        effective_parameters = parameters
+    
+        engine_events = self._has_events or self.engine._has_events
+        if self.dialect._has_events:
+            do_execute_dispatch: Iterable[Any] = (
+                self.dialect.dispatch.do_execute
+            )
+        else:
+            do_execute_dispatch = ()
+    
+        if self._echo:
+            stats = context._get_cache_stats() + " (insertmanyvalues)"
+    
+        preserve_rowcount = context.execution_options.get(
+            "preserve_rowcount", False
+        )
+        rowcount = 0
+    
+        for imv_batch in dialect._deliver_insertmanyvalues_batches(
+            self,
+            cursor,
+            str_statement,
+            effective_parameters,
+            generic_setinputsizes,
+            context,
+        ):
+            if imv_batch.processed_setinputsizes:
+                try:
+                    dialect.do_set_input_sizes(
+                        context.cursor,
+                        imv_batch.processed_setinputsizes,
+                        context,
+                    )
+                except BaseException as e:
+                    self._handle_dbapi_exception(
+                        e,
+                        sql_util._long_statement(imv_batch.replaced_statement),
+                        imv_batch.replaced_parameters,
+                        None,
+                        context,
+                        is_sub_exec=True,
+                    )
+    
+            sub_stmt = imv_batch.replaced_statement
+            sub_params = imv_batch.replaced_parameters
+    
+            if engine_events:
+                for fn in self.dispatch.before_cursor_execute:
+                    sub_stmt, sub_params = fn(
+                        self,
+                        cursor,
+                        sub_stmt,
+                        sub_params,
+                        context,
+                        True,
+                    )
+    
+            if self._echo:
+                self._log_info(sql_util._long_statement(sub_stmt))
+    
+                imv_stats = f""" {imv_batch.batchnum}/{
+                            imv_batch.total_batches
+                } ({
+                    'ordered'
+                    if imv_batch.rows_sorted else 'unordered'
+                }{
+                    '; batch not supported'
+                    if imv_batch.is_downgraded
+                    else ''
+                })"""
+    
+                if imv_batch.batchnum == 1:
+                    stats += imv_stats
+                else:
+                    stats = f"insertmanyvalues{imv_stats}"
+    
+                if not self.engine.hide_parameters:
+                    self._log_info(
+                        "[%s] %r",
+                        stats,
+                        sql_util._repr_params(
+                            sub_params,
+                            batches=10,
+                            ismulti=False,
+                        ),
+                    )
+                else:
+                    self._log_info(
+                        "[%s] [SQL parameters hidden due to "
+                        "hide_parameters=True]",
+                        stats,
+                    )
+    
+            try:
+                for fn in do_execute_dispatch:
+                    if fn(
+                        cursor,
+                        sub_stmt,
+                        sub_params,
+                        context,
+                    ):
+                        break
+                else:
+>                   dialect.do_execute(
+                        cursor,
+                        sub_stmt,
+                        sub_params,
+                        context,
+                    )
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:2115: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x7f5621816410>
+cursor = <sqlite3.Cursor object at 0x7f56215454c0>
+statement = 'INSERT INTO organization (name, contact_email, created_at, is_active, signup_source, promo_code, referral_code, subsc..._tier, billing_status, last_online_sync) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id'
+parameters = ('Dev Org', None, '2025-08-14 22:30:41.925265', 1, None, None, ...)
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x7f5621599590>
+
+    def do_execute(self, cursor, statement, parameters, context=None):
+>       cursor.execute(statement, parameters)
+E       sqlite3.ProgrammingError: Error binding parameter 17: type 'SubscriptionTier' is not supported
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py:945: ProgrammingError
+
+The above exception was the direct cause of the following exception:
+
+self = <tests.test_billing_and_tier_enforcement.TestBillingAndTierEnforcement object at 0x7f5629257090>
+app = <Flask 'app'>, client = <FlaskClient <Flask 'app'>>
+
+    def test_developer_can_masquerade_regardless_of_billing(self, app, client):
+        """
+        Tests that developers can access customer data even if billing is bad.
+        """
+        with app.app_context():
+            # ARRANGE: Create a developer user
+            from app.models import SubscriptionTier
+    
+            # Get or create developer tier
+            dev_tier = SubscriptionTier.query.filter_by(key='developer').first()
+            if not dev_tier:
+                # FIX 3: Remove invalid keyword arguments
+                dev_tier = SubscriptionTier(
+                    name='Developer',
+                    key='developer'
+                )
+                db.session.add(dev_tier)
+    
+            dev_org = Organization(
+                name='Dev Org',
+                subscription_tier=dev_tier,
+                billing_status='active'
+            )
+            db.session.add(dev_org)
+    
+            developer = User(
+                email='dev@batchtrack.com',
+                username='developer',
+                user_type='developer',
+                organization=dev_org
+            )
+            db.session.add(developer)
+    
+            # Create a customer org with bad billing
+            customer_tier = SubscriptionTier(
+                name='Pro',
+                key='pro'
+            )
+            db.session.add(customer_tier)
+    
+            customer_org = Organization(
+                name='Customer Org',
+                subscription_tier=customer_tier,
+                billing_status='past_due'  # Bad billing
+            )
+            db.session.add(customer_org)
+    
+            customer = User(
+                email='customer@example.com',
+                username='customer',
+                organization=customer_org
+            )
+            db.session.add(customer)
+>           db.session.commit()
+
+tests/test_billing_and_tier_enforcement.py:159: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/scoping.py:599: in commit
+    return self._proxied.commit()
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py:2032: in commit
+    trans.commit(_to_root=True)
+<string>:2: in commit
+    ???
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state_changes.py:139: in _go
+    ret_value = fn(self, *arg, **kw)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py:1313: in commit
+    self._prepare_impl()
+<string>:2: in _prepare_impl
+    ???
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state_changes.py:139: in _go
+    ret_value = fn(self, *arg, **kw)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py:1288: in _prepare_impl
+    self.session.flush()
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py:4353: in flush
+    self._flush(objects)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py:4488: in _flush
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py:4449: in _flush
+    flush_context.execute()
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/unitofwork.py:466: in execute
+    rec.execute(self)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/unitofwork.py:642: in execute
+    util.preloaded.orm_persistence.save_obj(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/persistence.py:93: in save_obj
+    _emit_insert_statements(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/persistence.py:1143: in _emit_insert_statements
+    result = connection.execute(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:1416: in execute
+    return meth(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/elements.py:523: in _execute_on_connection
+    return connection._execute_clauseelement(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:1638: in _execute_clauseelement
+    ret = self._execute_context(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:1841: in _execute_context
+    return self._exec_insertmany_context(dialect, context)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:2123: in _exec_insertmany_context
+    self._handle_dbapi_exception(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:2352: in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:2115: in _exec_insertmany_context
+    dialect.do_execute(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x7f5621816410>
+cursor = <sqlite3.Cursor object at 0x7f56215454c0>
+statement = 'INSERT INTO organization (name, contact_email, created_at, is_active, signup_source, promo_code, referral_code, subsc..._tier, billing_status, last_online_sync) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id'
+parameters = ('Dev Org', None, '2025-08-14 22:30:41.925265', 1, None, None, ...)
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x7f5621599590>
+
+    def do_execute(self, cursor, statement, parameters, context=None):
+>       cursor.execute(statement, parameters)
+E       sqlalchemy.exc.ProgrammingError: (sqlite3.ProgrammingError) Error binding parameter 17: type 'SubscriptionTier' is not supported
+E       [SQL: INSERT INTO organization (name, contact_email, created_at, is_active, signup_source, promo_code, referral_code, subscription_tier_id, whop_license_key, whop_product_tier, whop_verified, stripe_subscription_id, stripe_customer_id, billing_info, next_billing_date, subscription_status, subscription_tier, billing_status, last_online_sync) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id]
+E       [parameters: ('Dev Org', None, '2025-08-14 22:30:41.925265', 1, None, None, None, None, None, None, 0, None, None, None, None, 'inactive', <SubscriptionTier Developer>, 'active', None)]
+E       (Background on this error at: https://sqlalche.me/e/20/f405)
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py:945: ProgrammingError
+------------------------------ Captured log setup ------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+_________ TestBillingAndTierEnforcement.test_complete_security_cascade _________
+
+self = <tests.test_billing_and_tier_enforcement.TestBillingAndTierEnforcement object at 0x7f5629257750>
+app = <Flask 'app'>
+
+    def test_complete_security_cascade(self, app):
+        """
+        Tests the complete security flow: billing -> tier -> role -> permission
+        """
+        with app.app_context():
+            # ARRANGE: Create a realistic scenario
+    
+            # 1. Create permissions
+            perm_batch_view = Permission(name=AppPermission.BATCH_VIEW.value)
+            perm_batch_create = Permission(name=AppPermission.BATCH_CREATE.value)
+            perm_admin = Permission(name=AppPermission.ADMIN.value)
+            db.session.add_all([perm_batch_view, perm_batch_create, perm_admin])
+    
+            # 2. Create a "Pro" tier with batch permissions but no admin
+            pro_tier = SubscriptionTier(
+                name='Pro',
+                key='pro'
+            )
+            pro_tier.permissions = [perm_batch_view, perm_batch_create]  # No admin
+            db.session.add(pro_tier)
+    
+            # 3. Create organization with active billing
+            org = Organization(
+                name='Pro Company',
+                subscription_tier=pro_tier,
+                billing_status='active'
+            )
+            db.session.add(org)
+    
+            # 4. Create a manager role (subset of tier permissions)
+>           manager_role = Role(
+                name='Manager',
+                organization=org
+            )
+
+tests/test_billing_and_tier_enforcement.py:208: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+<string>:4: in __init__
+    ???
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <Role Manager>
+kwargs = {'name': 'Manager', 'organization': <Organization (transient 140007916311248)>}
+cls_ = <class 'app.models.role.Role'>, k = 'organization'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'organization' is an invalid keyword argument for Role
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+------------------------------ Captured log setup ------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+=============================== warnings summary ===============================
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_tier_permission_is_the_hard_ceiling
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[active-200]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[past_due-302]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[suspended-302]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[canceled-302]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_developer_can_masquerade_regardless_of_billing
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_complete_security_cascade
+  /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_limiter/extension.py:333: UserWarning: Using the in-memory storage for tracking rate limits as no storage was explicitly specified. This is not recommended for production use. See: https://flask-limiter.readthedocs.io#configuring-a-storage-backend for documentation about configuring the storage backend.
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_tier_permission_is_the_hard_ceiling - TypeError: 'organization' is an invalid keyword argument for Role
+FAILED tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[active-200] - assert 302 == 200
+FAILED tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_developer_can_masquerade_regardless_of_billing - sqlalchemy.exc.ProgrammingError: (sqlite3.ProgrammingError) Error binding p...
+FAILED tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_complete_security_cascade - TypeError: 'organization' is an invalid keyword argument for Role
+=================== 4 failed, 3 passed, 7 warnings in 12.92s ===================
