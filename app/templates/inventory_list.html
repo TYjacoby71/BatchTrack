@@ -226,7 +226,10 @@
           <small class="form-text text-muted" id="addIngredientCostHelp">Enter cost per unit</small>
         </div>
         <div class="col-auto">
-          <button type="submit" class="btn btn-success">Save</button>
+          <button type="submit" class="btn btn-success" id="saveIngredientBtn">
+            <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+            Save
+          </button>
           <button type="button" class="btn btn-secondary" onclick="toggleIngredientForm()">Cancel</button>
         </div>
       </div>
@@ -439,7 +442,10 @@
           <small class="form-text text-muted" id="addContainerCostHelp">Enter cost per container</small>
         </div>
         <div class="col-auto">
-          <button type="submit" class="btn btn-success">Save</button>
+          <button type="submit" class="btn btn-success" id="saveContainerBtn">
+            <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+            Save
+          </button>
           <button type="button" class="btn btn-secondary" onclick="toggleContainerForm()">Cancel</button>
         </div>
       </div>
@@ -634,6 +640,28 @@ document.addEventListener('DOMContentLoaded', function() {
   // Initialize pagination for both tables
   initTablePagination('ingredients');
   initTablePagination('containers');
+  
+  // Add form submission handlers for better UX
+  const ingredientForm = document.getElementById('addIngredientForm');
+  const containerForm = document.getElementById('addContainerForm');
+  
+  if (ingredientForm) {
+    ingredientForm.addEventListener('submit', function() {
+      const btn = document.getElementById('saveIngredientBtn');
+      const spinner = btn.querySelector('.spinner-border');
+      btn.disabled = true;
+      spinner.classList.remove('d-none');
+    });
+  }
+  
+  if (containerForm) {
+    containerForm.addEventListener('submit', function() {
+      const btn = document.getElementById('saveContainerBtn');
+      const spinner = btn.querySelector('.spinner-border');
+      btn.disabled = true;
+      spinner.classList.remove('d-none');
+    });
+  }
 });
 
 function initTablePagination(tableType) {
