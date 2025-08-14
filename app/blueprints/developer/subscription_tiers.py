@@ -53,13 +53,10 @@ def sync_tier_to_database(tier_key, tier_config):
     tier_record.description = tier_config.get('description', '')
     tier_record.user_limit = tier_config.get('user_limit', 1)
     tier_record.is_customer_facing = tier_config.get('is_customer_facing', True)
-    tier_record.is_available = tier_config.get('is_available', True)
-    tier_record.tier_type = tier_config.get('tier_type', 'paid')
-
-    # Billing provider specifies which system to check for paid tiers
-    billing_provider = tier_config.get('billing_provider')
-    if billing_provider:
-        tier_record.billing_provider = billing_provider
+    
+    # New billing configuration
+    tier_record.billing_provider = tier_config.get('billing_provider', 'exempt')
+    tier_record.is_billing_exempt = tier_config.get('is_billing_exempt', False)
 
     # Integration keys for linking to external products
     stripe_lookup_key = tier_config.get('stripe_lookup_key')
@@ -147,6 +144,19 @@ def create_tier():
             except Exception as e:
                 flash(f'Warning: Could not create Stripe secrets: {str(e)}', 'warning')
 
+        # Get billing configuration
+        billing_provider = request.form.get('billing_provider', 'exempt')
+        is_billing_exempt = request.form.get('is_billing_exempt') == 'on'
+        
+        # Validate integration requirements
+        if not is_billing_exempt and billing_provider != 'exempt':
+            if billing_provider == 'stripe' and not request.form.get('stripe_lookup_key', '').strip():
+                flash('Stripe lookup key is required for Stripe billing', 'error')
+                return redirect(url_for('developer.subscription_tiers.create_tier'))
+            elif billing_provider == 'whop' and not request.form.get('whop_product_key', '').strip():
+                flash('Whop product key is required for Whop billing', 'error')
+                return redirect(url_for('developer.subscription_tiers.create_tier'))
+
         # Get form data
         fallback_features = [f.strip() for f in request.form.get('fallback_features', '').split('\n') if f.strip()]
         user_limit = int(request.form.get('user_limit', 1))
@@ -154,13 +164,12 @@ def create_tier():
         new_tier = {
             'name': tier_name,
             'permissions': [],  # Will be configured on edit page - system access control
-            'stripe_lookup_key': request.form.get('stripe_lookup_key', ''),
-            'whop_product_key': request.form.get('whop_product_key', ''),
+            'stripe_lookup_key': request.form.get('stripe_lookup_key', '') if billing_provider == 'stripe' else '',
+            'whop_product_key': request.form.get('whop_product_key', '') if billing_provider == 'whop' else '',
             'user_limit': user_limit,
             'is_customer_facing': request.form.get('is_customer_facing') == 'on',
-            'is_available': request.form.get('is_available') == 'on',
-            'tier_type': request.form.get('tier_type', 'paid'),
-            'billing_provider': request.form.get('billing_provider', ''),
+            'billing_provider': billing_provider,
+            'is_billing_exempt': is_billing_exempt,
             'fallback_features': fallback_features,  # Customer-facing features for display
             'fallback_price': request.form.get('fallback_price', '$0'),
             'stripe_features': [],  # Features from Stripe product data
@@ -195,37 +204,29 @@ def edit_tier(tier_key):
     if request.method == 'POST':
         tier = tiers[tier_key]
 
+        # Get billing configuration
+        billing_provider = request.form.get('billing_provider', 'exempt')
+        is_billing_exempt = request.form.get('is_billing_exempt') == 'on'
+        
+        # Validate integration requirements
+        if not is_billing_exempt and billing_provider != 'exempt':
+            if billing_provider == 'stripe' and not request.form.get('stripe_lookup_key', '').strip():
+                flash('Stripe lookup key is required for Stripe billing', 'error')
+                return redirect(url_for('developer.subscription_tiers.edit_tier', tier_key=tier_key))
+            elif billing_provider == 'whop' and not request.form.get('whop_product_key', '').strip():
+                flash('Whop product key is required for Whop billing', 'error')
+                return redirect(url_for('developer.subscription_tiers.edit_tier', tier_key=tier_key))
+
         # Update tier data from form
         tier['name'] = request.form.get('tier_name', tier['name'])
         tier['user_limit'] = int(request.form.get('user_limit', tier.get('user_limit', 1)))
         tier['is_customer_facing'] = 'is_customer_facing' in request.form
-        tier['is_available'] = 'is_available' in request.form
-        tier['requires_stripe_billing'] = 'requires_stripe_billing' in request.form
-
-        # Pricing configuration (simplified - Stripe handles billing cycle, price, currency)
-        tier['pricing_category'] = request.form.get('pricing_category', 'monthly')
-
-        # Payment provider settings - simplified
-        tier['supports_whop'] = 'supports_whop' in request.form
+        tier['billing_provider'] = billing_provider
+        tier['is_billing_exempt'] = is_billing_exempt
 
         tier['permissions'] = request.form.getlist('permissions')
-        tier['stripe_lookup_key'] = request.form.get('stripe_lookup_key', '')
-        tier['whop_product_key'] = request.form.get('whop_product_key', '')
-        tier['whop_product_name'] = request.form.get('whop_product_name', '')
-
-        user_limit_str = request.form.get('user_limit', '1')
-        try:
-            user_limit = int(user_limit_str)
-        except (ValueError, TypeError):
-            user_limit = 1  # Default fallback
-
-        tier['user_limit'] = user_limit
-
-        # Update visibility controls
-        tier['is_customer_facing'] = request.form.get('is_customer_facing') == 'on'
-        tier['is_available'] = request.form.get('is_available') == 'on'
-        tier['tier_type'] = request.form.get('tier_type', 'paid')
-        tier['billing_provider'] = request.form.get('billing_provider', '')
+        tier['stripe_lookup_key'] = request.form.get('stripe_lookup_key', '') if billing_provider == 'stripe' else ''
+        tier['whop_product_key'] = request.form.get('whop_product_key', '') if billing_provider == 'whop' else ''
 
         tier['fallback_features'] = [f.strip() for f in request.form.get('fallback_features', '').split('\n') if f.strip()]
         tier['fallback_price'] = request.form.get('fallback_price', '$0')

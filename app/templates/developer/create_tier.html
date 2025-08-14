@@ -29,7 +29,7 @@
                         <div class="mb-3">
                             <label for="tier_key" class="form-label">Tier Key</label>
                             <input type="text" class="form-control" id="tier_key" name="tier_key" required
-                                   placeholder="e.g., startup, professional" 
+                                   placeholder="e.g., startup, professional"
                                    pattern="[a-z_]+" title="Use lowercase letters and underscores only">
                             <small class="form-text text-muted">Internal identifier (lowercase, underscores only)</small>
                         </div>
@@ -46,12 +46,14 @@
                             <small class="form-text text-muted">Use -1 for unlimited users (recommended for exempt tier only)</small>
                         </div>
 
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="is_available" name="is_available" checked>
-                            <label class="form-check-label" for="is_available">
-                                Available for use
-                            </label>
-                            <small class="form-text text-muted">Unchecked tiers won't be shown anywhere</small>
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="is_customer_facing" name="is_customer_facing" checked>
+                                <label class="form-check-label" for="is_customer_facing">
+                                    Customer Facing
+                                </label>
+                            </div>
+                            <small class="form-text text-muted">If checked, this tier will be visible to customers.</small>
                         </div>
 
                         <div class="alert alert-info">
@@ -102,7 +104,27 @@
                             <small class="form-text text-muted">Links to Whop product (if using Whop billing)</small>
                         </div>
 
-                        
+                        <div class="mb-3">
+                            <label for="billing_provider" class="form-label">Billing Provider</label>
+                            <select class="form-select" id="billing_provider" name="billing_provider" required>
+                                <option value="stripe">Stripe</option>
+                                <option value="whop">Whop</option>
+                                <option value="exempt">Exempt (No Billing)</option>
+                            </select>
+                            <div class="form-text">Choose how customers will be billed for this tier.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="is_billing_exempt" name="is_billing_exempt">
+                                <label class="form-check-label" for="is_billing_exempt">
+                                    Override Billing Requirements
+                                </label>
+                            </div>
+                            <div class="form-text">Check this to allow access without valid billing (for testing/special cases).</div>
+                        </div>
+
+
                     </div>
                 </div>
             </div>
@@ -125,7 +147,7 @@
 
                         <div class="mb-3">
                             <label for="fallback_price" class="form-label">Fallback Price</label>
-                            <input type="text" class="form-control" id="fallback_price" name="fallback_price" 
+                            <input type="text" class="form-control" id="fallback_price" name="fallback_price"
                                    placeholder="$19/month" value="$0">
                             <small class="form-text text-muted">Display price when external pricing unavailable</small>
                         </div>
@@ -133,7 +155,7 @@
                 </div>
             </div>
         </div>
-                
+
 
 
         <!-- Actions -->

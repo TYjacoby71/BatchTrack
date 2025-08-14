@@ -196,9 +196,9 @@ class AuthorizationHierarchy:
         if not organization.tier:
             return False, "No valid subscription tier"
 
-        # Check if tier is available and customer-facing
-        if not organization.tier.is_available:
-            return False, "Subscription tier is not available"
+        # Check if tier has valid integration setup
+        if not organization.tier.has_valid_integration:
+            return False, "Subscription tier integration not configured"
 
         # For billing-required tiers, check billing status
         if organization.tier.requires_stripe_billing or organization.tier.requires_whop_billing:
