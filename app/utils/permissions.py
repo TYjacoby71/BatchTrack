@@ -429,22 +429,7 @@ class UserTypeManager:
         db.session.commit()
         return org, owner
 
-def _testing_ok() -> bool:
-    try:
-        return bool(current_app.config.get("TESTING"))
-    except Exception:
-        return False
 
-def permission_required(*perms):
-    def deco(fn):
-        @wraps(fn)
-        def wrapper(*a, **kw):
-            if _testing_ok():
-                return fn(*a, **kw)
-            # TODO: real permission check later
-            return fn(*a, **kw)
-        return wrapper
-    return deco
 
 def role_required(*roles):
     """
