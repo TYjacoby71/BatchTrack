@@ -1,0 +1,100 @@
+Thought for 32s
+I can’t run your suite from here, but here’s exactly how to verify the fix on your side and what you should see.
+
+1) Make sure the decorator is the only definition
+In app/utils/permissions.py, keep a single implementation and an alias. Nothing else at the bottom of the file.
+
+python
+Copy
+Edit
+# app/utils/permissions.py
+from functools import wraps
+from flask import request, jsonify, current_app
+from flask_login import current_user
+from werkzeug.exceptions import Forbidden
+
+def _wants_json() -> bool:
+    if request.path.startswith("/api"):
+        return True
+    accept = request.accept_mimetypes
+    return "application/json" in accept and not accept.accept_html
+
+def require_permission(permission_name: str):
+    def decorator(f):
+        @wraps(f)
+        def decorated(*args, **kwargs):
+            # Auth check
+            if not current_user or not current_user.is_authenticated:
+                if _wants_json():
+                    return jsonify({"error": "unauthorized"}), 401
+                return current_app.login_manager.unauthorized()  # will redirect
+
+            # Permission check
+            if not current_user.has_permission(permission_name):
+                if _wants_json():
+                    return jsonify({
+                        "error": "forbidden",
+                        "permission": permission_name
+                    }), 403
+                raise Forbidden("You do not have the required permissions.")
+            return f(*args, **kwargs)
+        return decorated
+    return decorator
+
+# Back-compat export
+permission_required = require_permission
+Sanity check (should return only this file; no stray re-definitions):
+
+bash
+Copy
+Edit
+git grep -n "def permission_required" -- app
+git grep -n "def require_permission" -- app
+2) Ensure Flask-Login returns JSON for unauth’ed API hits
+In app/__init__.py, keep an API-aware unauthorized handler:
+
+python
+Copy
+Edit
+@login_manager.unauthorized_handler
+def _unauthorized():
+    from flask import request, jsonify, redirect, url_for
+    if request.path.startswith("/api") or (
+        "application/json" in request.accept_mimetypes and not request.accept_mimetypes.accept_html
+    ):
+        return jsonify({"error": "unauthorized"}), 401
+    return redirect(url_for("auth.login"))
+3) Run the focused test first
+bash
+Copy
+Edit
+python -m pytest tests/test_auth_permissions.py::TestAuthPermissions::test_permission_required_returns_json_for_api -v
+Expected: PASSED
+(If you still see a 302, it means another decorator is intercepting first. Remove any @login_required stacked ahead of @permission_required on API endpoints; the permission decorator already handles auth + JSON/HTML branching.)
+
+4) Run the full suite
+bash
+Copy
+Edit
+python -m pytest -q
+Expected: all green as before (now with the auth JSON test passing).
+
+5) Quick manual spot-check (optional)
+Unauthenticated API call should return JSON 401:
+
+bash
+Copy
+Edit
+curl -i -H "Accept: application/json" http://localhost:5000/api/test-perm
+# HTTP/1.1 401 ...  body: {"error":"unauthorized"}
+Authenticated user without the permission should get JSON 403:
+
+bash
+Copy
+Edit
+# using your session cookie or token
+curl -i -H "Accept: application/json" --cookie "session=..." http://localhost:5000/api/test-perm
+# HTTP/1.1 403 ...  body: {"error":"forbidden","permission":"test.permission"}
+HTML page (non-API) without auth should still redirect (302) to login.
+
+If anything still fails, paste the single failing test’s assertion and the response headers/body, and I’ll zero in
