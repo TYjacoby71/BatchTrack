@@ -97,23 +97,32 @@ def _init_extensions(app):
     db.init_app(app)
 
     # Initialize extensions
-    from .extensions import migrate, login_manager, mail, csrf # limiter is initialized separately
+    from .extensions import migrate, login_manager, mail, csrf, limiter # limiter is initialized separately
 
     migrate.init_app(app, db)
     login_manager.init_app(app)
     mail.init_app(app)
     csrf.init_app(app)
-    # Limiter is now initialized separately after this function
-    # limiter.init_app(app) 
+    limiter.init_app(app)
 
 def _configure_login_manager(app):
     """Configure Flask-Login settings"""
     from .extensions import login_manager
     from .models import User
 
+    # Configure login manager
     login_manager.login_view = 'auth.login'
     login_manager.login_message = 'Please log in to access this page.'
-    login_manager.session_protection = "strong"
+    login_manager.login_message_category = 'info'
+
+    # JSON-aware unauthorized handler to prevent 302 loops for API calls
+    @login_manager.unauthorized_handler
+    def handle_unauthorized():
+        from flask import request, jsonify, redirect, url_for
+        wants_json = request.path.startswith("/api/") or request.accept_mimetypes.best == "application/json"
+        if wants_json:
+            return jsonify(error="unauthorized", message="Authentication required"), 401
+        return redirect(url_for("auth.login", next=request.url))
 
     @login_manager.user_loader
     def load_user(user_id):
@@ -423,6 +432,8 @@ def _register_template_context(app):
 
     # Import models once
     from .models import Unit, IngredientCategory
+    from .utils.timezone_utils import TimezoneUtils
+    from flask_login import current_user
 
     @app.context_processor  
     def inject_units():
@@ -503,11 +514,20 @@ def _register_template_context(app):
 
     @app.context_processor
     def inject_timezone_utils():
-        from .utils.timezone_utils import TimezoneUtils
         return dict(
             TimezoneUtils=TimezoneUtils,
             TimezoneUtils_global=TimezoneUtils,
             current_time=TimezoneUtils.utc_now
+        )
+
+    # Inject permission helpers into Jinja context
+    @app.context_processor
+    def inject_permissions():
+        from flask_login import current_user
+        return dict(
+            has_permission=(lambda p: current_user.is_authenticated and current_user.has_permission(p)),
+            has_any_permission=(lambda *ps: current_user.is_authenticated and current_user.has_any_permission(ps)),
+            user_tier=(lambda: getattr(getattr(current_user, 'organization', None), 'subscription_tier', 'free') if current_user.is_authenticated else 'free'),
         )
 
     # Register template globals
@@ -590,6 +610,17 @@ def _register_template_filters(app):
         val1 = getattr(item, attr1, 0) or 0
         val2 = getattr(item, attr2, 0) or 0
         return float(val1) * float(val2)
+
+    @app.template_filter('format_datetime')
+    def format_datetime(dt):
+        if dt is None:
+            return 'Never'
+        # Convert to user's timezone
+        user_tz = 'UTC'
+        if current_user.is_authenticated and current_user.timezone:
+            user_tz = current_user.timezone
+        local_dt = TimezoneUtils.convert_to_timezone(dt, user_tz)
+        return local_dt.strftime('%Y-%m-%d %H:%M:%S %Z')
 
 def _add_core_routes(app):
     """Add core application routes"""

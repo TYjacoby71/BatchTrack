@@ -356,6 +356,13 @@ class User(UserMixin, db.Model):
 
         return False
 
+    def has_any_permission(self, permissions):
+        """Check if user has any of the specified permissions"""
+        for permission_name in permissions:
+            if self.has_permission(permission_name):
+                return True
+        return False
+
     def has_developer_permission(self, permission_name):
         """Check if developer user has a specific developer permission"""
         if self.user_type != 'developer':

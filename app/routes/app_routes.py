@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, sessio
 from ..models import Recipe, InventoryItem, Batch
 from ..services.stock_check import universal_stock_check
 from flask_login import login_required, current_user
-from ..utils.permissions import require_permission, get_effective_organization_id
+from ..utils.permissions import require_permission, get_effective_organization_id, permission_required, any_permission_required
 from ..services.combined_inventory_alerts import CombinedInventoryAlertService
 from ..blueprints.expiration.services import ExpirationService
 from ..services.dashboard_alerts import DashboardAlertService
@@ -145,6 +145,7 @@ def check_stock():
 
 @app_routes_bp.route('/unit-manager')
 @login_required
+@permission_required('manage_units')
 def unit_manager():
     return redirect(url_for('conversion.manage_units'))
 
@@ -188,6 +189,7 @@ def api_dashboard_alerts():
 
 @app_routes_bp.route('/fault-log')
 @login_required
+@permission_required('view_fault_log')
 def view_fault_log():
     try:
         import json
