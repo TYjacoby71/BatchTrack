@@ -32,7 +32,7 @@ def register_middleware(app):
         # Require authentication
         if not current_user.is_authenticated:
             if wants_json():
-                return jsonify({"error": "Authentication required"}), 401
+                return jsonify({"error": "unauthorized"}), 401
             return redirect(url_for('auth.login'))
 
         # Handle developer masquerade
