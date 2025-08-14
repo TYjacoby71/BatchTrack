@@ -77,7 +77,7 @@ def _init_extensions(app):
     from flask_limiter.util import get_remote_address
     from sqlalchemy.pool import StaticPool
     from .models import db, User
-    from .extensions import csrf
+    from .extensions import csrf, migrate
 
     # Fix SQLite engine options for testing
     uri = app.config.get("SQLALCHEMY_DATABASE_URI", "")
@@ -94,10 +94,13 @@ def _init_extensions(app):
     # Initialize database
     db.init_app(app)
     migrate.init_app(app, db)
-    login_manager.init_app(app)
     csrf.init_app(app)
-    limiter.init_app(app)
 
+    # Import and configure extensions
+    from .extensions import login_manager, limiter
+    login_manager.init_app(app)
+    limiter.init_app(app)
+    
     # Configure login manager
     login_manager.login_view = 'auth.login'
     login_manager.login_message = 'Please log in to access this page.'
