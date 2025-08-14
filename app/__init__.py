@@ -101,7 +101,8 @@ def _init_extensions(app):
 
     migrate.init_app(app, db)
     login_manager.init_app(app)
-    mail.init_app(app)
+    if mail is not None:
+        mail.init_app(app)
     csrf.init_app(app)
     limiter.init_app(app)
 

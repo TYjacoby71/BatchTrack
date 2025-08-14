@@ -5,6 +5,14 @@ from flask_wtf.csrf import CSRFProtect
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
+# Add Flask-Mail import with fallback
+try:
+    from flask_mail import Mail
+    mail = Mail()
+except ImportError:
+    # Flask-Mail not installed - create a dummy object
+    mail = None
+
 db = SQLAlchemy()
 migrate = Migrate()
 login_manager = LoginManager()
