@@ -116,14 +116,17 @@ def _configure_login_manager(app):
     login_manager.login_message = 'Please log in to access this page.'
     login_manager.login_message_category = 'info'
 
-    # JSON-aware unauthorized handler to prevent 302 loops for API calls
+    # Add JSON-aware unauthorized handler for API endpoints
     @login_manager.unauthorized_handler
     def handle_unauthorized():
         from flask import request, jsonify, redirect, url_for
-        wants_json = request.path.startswith("/api/") or request.accept_mimetypes.best == "application/json"
-        if wants_json:
-            return jsonify(error="unauthorized", message="Authentication required"), 401
-        return redirect(url_for("auth.login", next=request.url))
+
+        # Check if this is an API endpoint that expects JSON
+        if request.path.startswith("/api/"):
+            return jsonify(error="unauthorized"), 401
+
+        # For non-API endpoints, use normal redirect
+        return redirect(url_for('auth.login'))
 
     @login_manager.user_loader
     def load_user(user_id):
