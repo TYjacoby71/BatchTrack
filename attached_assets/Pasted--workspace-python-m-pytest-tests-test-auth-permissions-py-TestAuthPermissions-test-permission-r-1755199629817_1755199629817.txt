@@ -1,0 +1,45 @@
+~/workspace$ python -m pytest tests/test_auth_permissions.py::TestAuthPermissions::test_permission_required_returns_json_for_api -v -s
+=========================================================== test session starts ============================================================
+platform linux -- Python 3.11.13, pytest-8.3.5, pluggy-1.5.0 -- /home/runner/workspace/.pythonlibs/bin/python
+cachedir: .pytest_cache
+rootdir: /home/runner/workspace
+collected 1 item                                                                                                                           
+
+tests/test_auth_permissions.py::TestAuthPermissions::test_permission_required_returns_json_for_api FAILED
+
+================================================================= FAILURES =================================================================
+____________________________________ TestAuthPermissions.test_permission_required_returns_json_for_api _____________________________________
+
+self = <tests.test_auth_permissions.TestAuthPermissions object at 0x7fd012cd3850>, app = <Flask 'app'>, client = <FlaskClient <Flask 'app'>>
+
+    def test_permission_required_returns_json_for_api(self, app, client):
+        """Test that API endpoints return JSON when permission denied"""
+        with app.app_context():
+            @app.route('/api/test-perm')
+            @permission_required('test.permission')
+            def api_test_route():
+                return {'status': 'success'}
+    
+            response = client.get('/api/test-perm')
+            # Should return JSON unauthorized response
+>           assert response.status_code == 401
+E           assert 302 == 401
+E            +  where 302 = <WrapperTestResponse streamed [302 FOUND]>.status_code
+
+tests/test_auth_permissions.py:34: AssertionError
+------------------------------------------------------------ Captured log setup ------------------------------------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+============================================================= warnings summary =============================================================
+tests/test_auth_permissions.py::TestAuthPermissions::test_permission_required_returns_json_for_api
+  /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_limiter/extension.py:333: UserWarning: Using the in-memory storage for tracking rate limits as no storage was explicitly specified. This is not recommended for production use. See: https://flask-limiter.readthedocs.io#configuring-a-storage-backend for documentation about configuring the storage backend.
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+========================================================= short test summary info ==========================================================
+FAILED tests/test_auth_permissions.py::TestAuthPermissions::test_permission_required_returns_json_for_api - assert 302 == 401
+======================================================= 1 failed, 1 warning in 3.20s =======================================================
+~/workspace$ 
+
+
+
+
