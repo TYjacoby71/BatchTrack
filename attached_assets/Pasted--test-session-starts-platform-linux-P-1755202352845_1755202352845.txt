@@ -1,0 +1,50 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.13, pytest-8.3.5, pluggy-1.5.0 -- /home/runner/workspace/.pythonlibs/bin/python
+cachedir: .pytest_cache
+rootdir: /home/runner/workspace
+collected 1 item                                                               
+
+tests/test_auth_permissions.py::TestAuthPermissions::test_csrf_token_available_in_templates FAILED [100%]
+
+======================================= FAILURES ========================================
+______________ TestAuthPermissions.test_csrf_token_available_in_templates _______________
+
+self = <tests.test_auth_permissions.TestAuthPermissions object at 0x7fdc1e0a3550>
+app = <Flask 'app'>, client = <FlaskClient <Flask 'app'>>
+test_user = <User test@example.com>
+
+    def test_csrf_token_available_in_templates(self, app, client, test_user):
+        """Test that csrf_token is available in templates for an authenticated user"""
+        with app.app_context():
+            from flask import render_template_string
+            from flask_login import login_user
+    
+            @app.route("/_csrf_check")
+            def _csrf_check():
+                # This route now requires login because of our middleware
+                return render_template_string('<meta name="csrf-token" content="{{ csrf_token() }}">')
+    
+            # Log in the user using Flask-Login within the test client context
+            with client:
+                # First, establish the app context and login the user
+                with app.test_request_context():
+                    login_user(test_user)
+    
+                # Now make the request with the authenticated session
+                resp = client.get("/_csrf_check")
+>               assert resp.status_code == 200
+E               assert 302 == 200
+E                +  where 302 = <WrapperTestResponse streamed [302 FOUND]>.status_code
+
+tests/test_auth_permissions.py:116: AssertionError
+---------------------------------- Captured log setup -----------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+=================================== warnings summary ====================================
+tests/test_auth_permissions.py::TestAuthPermissions::test_csrf_token_available_in_templates
+  /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_limiter/extension.py:333: UserWarning: Using the in-memory storage for tracking rate limits as no storage was explicitly specified. This is not recommended for production use. See: https://flask-limiter.readthedocs.io#configuring-a-storage-backend for documentation about configuring the storage backend.
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+================================ short test summary info ================================
+FAILED tests/test_auth_permissions.py::TestAuthPermissions::test_csrf_token_available_in_templates - assert 302 == 200
+============================= 1 failed, 1 warning in 6.54s ==============================
