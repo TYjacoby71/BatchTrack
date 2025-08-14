@@ -1,64 +1,68 @@
-# In app/services/inventory_adjustment/_recount_logic.py
 import logging
 from app.models import db, InventoryItem
-from ._fifo_ops import _calculate_deduction_plan_internal, _execute_deduction_plan_internal, _record_deduction_plan_internal, _internal_add_fifo_entry_enhanced, _calculate_addition_plan_internal, _execute_addition_plan_internal, _record_addition_plan_internal
-from ._validation import validate_inventory_fifo_sync
 
 logger = logging.getLogger(__name__)
 
-def handle_recount_adjustment(item_id, target_quantity, notes, created_by, item_type):
+
+def handle_recount_adjustment(item_id, target_quantity, notes=None, created_by=None, item_type='ingredient'):
     """
-    Handles a recount by calculating the delta and applying it by either
-    refilling/creating new lots (increase) or deducting from existing lots (decrease).
+    DUMB recount handler - calculates delta and delegates to canonical service.
+
+    This handler is "dumb" about FIFO logic. It only:
+    1. Gets current FIFO total from FIFO service
+    2. Calculates delta
+    3. Delegates back to process_inventory_adjustment with proper change_type
+
+    The canonical service handles all FIFO orchestration.
     """
-    item = db.session.get(InventoryItem, item_id)
-    if not item:
-        raise ValueError(f"Recount failed: Item {item_id} not found.")
+    try:
+        # Get the item
+        item = InventoryItem.query.get(item_id)
+        if not item:
+            raise ValueError(f"Inventory item not found for ID: {item_id}")
 
-    # 1. Get the authoritative current total from all valid FIFO lots.
-    _, _, _, current_fifo_total = validate_inventory_fifo_sync(item_id, item_type)
+        # Get current FIFO total from authoritative source
+        from ._fifo_ops import calculate_current_fifo_total
+        current_fifo_total = calculate_current_fifo_total(item_id)
+        target_qty = float(target_quantity or 0.0)
 
-    delta = float(target_quantity) - current_fifo_total
+        # Calculate delta
+        delta = target_qty - current_fifo_total
 
-    if abs(delta) < 0.001:
-        item.quantity = current_fifo_total # Ensure sync even if no change
-        db.session.commit()
-        return True
+        print(f"RECOUNT: {item.name} - FIFO total: {current_fifo_total}, target: {target_qty}, delta: {delta}")
 
-    # --- 2. Apply the Delta using FIFO Helpers ---
-    if delta > 0:
-        # INCREASE: Refill existing lots first, then create an overflow lot.
-        addition_plan, overflow = _calculate_addition_plan_internal(item_id, delta)
+        # No change needed
+        if abs(delta) < 0.001:
+            # Still sync item.quantity to FIFO total for consistency
+            item.quantity = current_fifo_total
+            db.session.commit()
+            return True
 
-        if addition_plan:
-            _execute_addition_plan_internal(addition_plan, item_id)
-            _record_addition_plan_internal(item_id, addition_plan, 'recount_increase', notes or "Recount refill", created_by=created_by)
-
-        if overflow > 0:
-            _internal_add_fifo_entry_enhanced(
+        # Delegate to canonical service based on delta direction
+        if delta > 0:
+            # Need to add inventory - use restock change type
+            from ._core import process_inventory_adjustment
+            return process_inventory_adjustment(
                 item_id=item_id,
-                quantity=overflow,
-                change_type='recount_increase', # This is a new, true lot
-                unit=item.unit,
-                notes=notes or "Recount overflow",
-                cost_per_unit=item.cost_per_unit,
+                quantity=delta,
+                change_type='restock',
+                unit=getattr(item, 'unit', 'count'),
+                notes=f"{notes or 'Recount increase'} - Added {delta}",
+                created_by=created_by
+            )
+        else:
+            # Need to deduct inventory - use recount change type for deduction
+            from ._core import process_inventory_adjustment
+            return process_inventory_adjustment(
+                item_id=item_id,
+                quantity=abs(delta),
+                change_type='recount',
+                unit=getattr(item, 'unit', 'count'),
+                notes=f"{notes or 'Recount decrease'} - Deducted {abs(delta)}",
                 created_by=created_by
             )
 
-    else: # delta < 0
-        # DECREASE: Create and execute a deduction plan.
-        to_deduct = abs(delta)
-        deduction_plan, error = _calculate_deduction_plan_internal(item_id, to_deduct, 'recount_decrease')
-        if error:
-            raise ValueError(f"Recount decrease failed: {error}")
-
-        _execute_deduction_plan_internal(deduction_plan, item_id)
-        _record_deduction_plan_internal(item_id, deduction_plan, 'recount_decrease', notes or "Recount deduction", created_by=created_by)
-
-    # --- 3. Final Sync ---
-    # After all operations, the parent item's quantity MUST equal the new FIFO total.
-    _, _, _, new_fifo_total = validate_inventory_fifo_sync(item_id, item_type)
-    item.quantity = new_fifo_total
-    db.session.commit()
-
-    return True
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"RECOUNT ERROR: {str(e)}")
+        raise e

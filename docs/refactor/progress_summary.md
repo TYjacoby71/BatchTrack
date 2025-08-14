@@ -7,9 +7,9 @@
 - **Security audit baseline established**
 - **Migration system stabilized**
 
-## ✅ Phase 2 Complete: Structural Cleanup
+## ✅ Phase 2 Complete: Structural Cleanup & Inventory Canonicalization
 
-### Inventory Canonicalization Status
+### Inventory Canonicalization Status - COMPLETE ✅
 ✅ **Canonical Service Fully Implemented**: `app/services/inventory_adjustment.py::process_inventory_adjustment()`
 
 ✅ **All Major Routes Updated**:
@@ -31,20 +31,92 @@
 - **inventory_routes_canonicalization**: ✅ PASSING
 - **All characterization tests**: ✅ 24/24 PASSING
 
-## 🚧 Phase 3 Ready: Code Quality & Performance
+## 🚧 Phase 3 Active: Billing System Hardening & Service Consolidation (PR4)
 
-### Current Focus Areas for PR3
-1. **Route Handler Optimization** - Remove remaining business logic from view functions
-2. **Service Layer Consolidation** - Centralize external service calls (Stripe, Google OAuth, Shopify)
-3. **Type Safety Implementation** - Add comprehensive typing with mypy strict mode
-4. **Performance Optimization** - Address N+1 queries and add strategic indexes
-5. **Security Hardening** - Implement CSRF, rate limiting, and webhook idempotency
+### Current Focus Areas for PR4
+**Primary Goal**: Complete billing system integration with robust error handling and service consolidation
+
+#### 1. **Stripe Service Hardening** 🔄 IN PROGRESS
+- [ ] **Events Table**: Implement `stripe_events` with `event_id` UNIQUE, `processed_at`, `status`, `payload_hash`
+- [ ] **Idempotent Processing**: Upsert → process → mark complete with DB transactions
+- [ ] **Webhook Security**: Signature verification → idempotency check → process → mark processed
+- [ ] **Error Recovery**: Failed event retry with exponential backoff
+- [ ] **Interface Standardization**: `StripeService.handle_event(event)` that's idempotent by design
+
+#### 2. **Whop Integration Completion** 🔄 IN PROGRESS
+- [ ] **License Verification**: Complete Whop license key validation system
+- [ ] **Webhook Processing**: Secure Whop webhook handling with proper validation
+- [ ] **Tier Synchronization**: Auto-sync subscription tiers from Whop to internal system
+- [ ] **Fallback Handling**: Graceful degradation when Whop services are unavailable
+
+#### 3. **Billing Service Interface Design** 📋 PLANNED
+- [ ] **Abstract Classes**: Define interfaces/ports for external billing services
+- [ ] **Dependency Injection**: Routes depend on abstractions, not implementations
+- [ ] **Provider Swapping**: Enable easy switching between Stripe/Whop/future providers
+- [ ] **Testing Interface**: Mock-friendly design for comprehensive testing
+
+#### 4. **Organization Billing Model Cleanup** 📋 PLANNED
+- [ ] **Remove Legacy Fields**: Clean up deprecated Stripe-specific columns
+- [ ] **Subscription Tier Integration**: Complete migration to unified `SubscriptionTier` model
+- [ ] **Billing Status Standardization**: Consistent status across all billing providers
+- [ ] **Audit Trail**: Complete billing change logging and audit capabilities
+
+### Technical Implementation Priorities
+
+#### Week 1: Stripe Hardening
+```sql
+-- Stripe Events Table Structure
+CREATE TABLE stripe_events (
+    id SERIAL PRIMARY KEY,
+    stripe_event_id VARCHAR(255) UNIQUE NOT NULL,
+    event_type VARCHAR(100) NOT NULL,
+    processed_at TIMESTAMP,
+    status VARCHAR(20) DEFAULT 'pending',
+    payload_hash VARCHAR(64) NOT NULL,
+    error_message TEXT,
+    retry_count INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+#### Week 2: Service Abstraction
+```python
+# Billing Service Interface
+from abc import ABC, abstractmethod
+from typing import Dict, TypedDict, Optional
+from datetime import datetime
+
+class WebhookResult(TypedDict):
+    success: bool
+    message: str
+    processed_at: Optional[datetime]
+    event_id: str
+
+class BillingServiceInterface(ABC):
+    @abstractmethod
+    def handle_webhook_event(self, event_data: Dict) -> WebhookResult:
+        pass
+    
+    @abstractmethod
+    def create_subscription(self, customer_id: str, price_id: str) -> Dict:
+        pass
+```
+
+#### Week 3: Integration & Testing
+- Complete end-to-end billing flow testing
+- Webhook replay protection validation
+- Provider failover testing
+- Performance optimization
 
 ## 📁 Key Reference Files
 - `docs/refactor/00_repo_map.md` - Master plan
 - `docs/refactor/pr2_inventory_call_sites.md` - Call site analysis (COMPLETED)
-- `docs/refactor/pr3_quality_performance.md` - Next phase plan
+- `docs/refactor/pr3_quality_performance.md` - Phase 3 implementation details
 - `app/services/inventory_adjustment.py` - Canonical service (STABLE)
+- `app/services/stripe_service.py` - Stripe integration (NEEDS HARDENING)
+- `app/services/whop_service.py` - Whop integration (IN PROGRESS)
+- `app/models/models.py::Organization` - Organization billing model (NEEDS CLEANUP)
 - `tests/` - Complete test suite (24 tests, ALL PASSING)
 
 ## 🔒 Development Guardrails Active
@@ -54,6 +126,60 @@
 - FIFO consistency maintained ✅
 - CI/CD pipeline enforced ✅
 
-**Status**: Phase 2 COMPLETE - Ready for PR3
-**Next**: Code quality, performance, and security hardening
-**Estimated Timeline**: 1-2 weeks for Phase 3 completion
+## 🎯 Phase 3 Success Metrics
+
+### Billing System Reliability
+- [ ] Zero webhook processing failures in testing
+- [ ] 100% idempotency for all billing operations
+- [ ] <500ms webhook processing time
+- [ ] Complete audit trail for all billing changes
+
+### Service Architecture
+- [ ] Zero direct external service calls from routes
+- [ ] All billing providers behind unified interface
+- [ ] 100% test coverage for billing service layer
+- [ ] Clean separation of concerns (routes → services → providers)
+
+### Code Quality
+- [ ] No legacy billing fields in Organization model
+- [ ] Consistent error handling across all billing operations
+- [ ] Comprehensive logging for billing events
+- [ ] Type safety for all billing service methods
+
+## 🚧 Phase 4 Ready: Security & Performance (Future)
+
+### Planned for Post-PR4
+1. **Security Hardening** - CSRF, rate limiting, security headers
+2. **Performance Optimization** - N+1 elimination, strategic indexes
+3. **Type Safety Implementation** - Comprehensive typing with mypy
+4. **Route Optimization** - Thin routes with validation layer
+
+## Next Immediate Actions (PR4 Sprint 1)
+
+### This Week
+1. **Implement Stripe Events Table** - Migration + model
+2. **Add Webhook Idempotency** - Processing pipeline with upsert logic
+3. **Stripe Service Interface** - Abstract base class design
+4. **Basic Error Recovery** - Retry mechanism for failed events
+
+### Sprint Goals
+- [ ] Stripe webhooks are idempotent and reliable
+- [ ] Complete separation of billing logic from routes
+- [ ] Foundation for multi-provider billing support
+- [ ] Enhanced error handling and logging
+
+**Status**: Phase 2 COMPLETE - Phase 3 (PR4) ACTIVE
+**Current Focus**: Billing system hardening and service consolidation
+**Estimated Timeline**: 3-4 weeks for complete Phase 3 implementation
+**Next Milestone**: Robust, provider-agnostic billing system with comprehensive error handling
+
+## 🔄 Migration Strategy from Current State
+
+### Immediate Next Steps
+1. Run full test suite to confirm Phase 2 stability
+2. Create Stripe events table migration
+3. Implement webhook idempotency layer
+4. Begin service interface abstraction
+5. Add comprehensive billing operation logging
+
+**Ready to begin PR4 - Billing System Hardening**

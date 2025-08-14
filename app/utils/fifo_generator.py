@@ -52,7 +52,6 @@ def generate_fifo_code(change_type, remaining_quantity=0, batch_label=None):
         return f"BCH-{batch_label}"
 
     # Recount operations should ALWAYS use RCN prefix, never LOT
-    # This ensures all recount entries are identifiable regardless of whether they create lots
     if change_type == 'recount':
         prefix = 'RCN'
     else:
