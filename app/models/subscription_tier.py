@@ -62,6 +62,9 @@ class SubscriptionTier(db.Model):
 
     def has_permission(self, permission_name):
         """Check if tier includes a specific permission"""
+        # Handle enum permission names by converting to string
+        if hasattr(permission_name, 'value'):
+            permission_name = permission_name.value
         return any(p.name == permission_name for p in self.permissions)
 
     @property
