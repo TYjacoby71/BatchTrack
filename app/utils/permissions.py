@@ -39,7 +39,8 @@ def require_permission(permission_name):
             if not current_user.is_authenticated:
                 if wants_json:
                     return jsonify(error="unauthorized"), 401
-                abort(401)
+                # For web requests, let Flask-Login handle the redirect
+                return current_app.login_manager.unauthorized()
 
             # Check permission
             if not current_user.has_permission(permission_name):
@@ -60,10 +61,19 @@ def any_permission_required(*perms: str):
     """
     def decorator(f):
         @wraps(f)
-        @login_required
         def decorated_function(*args, **kwargs):
+            # Check if this should return JSON (API endpoints)
+            wants_json = _wants_json()
+
+            # Check authentication first, with JSON-aware response
+            if not current_user.is_authenticated:
+                if wants_json:
+                    return jsonify(error="unauthorized"), 401
+                # For web requests, let Flask-Login handle the redirect
+                return current_app.login_manager.unauthorized()
+
             if not current_user.has_any_permission(perms):
-                if _wants_json():
+                if wants_json:
                     return jsonify(error="forbidden_any", permissions=list(perms)), 403
                 raise Forbidden("You do not have any of the required permissions.")
             return f(*args, **kwargs)
@@ -78,11 +88,20 @@ def tier_required(min_tier: str):
 
     def decorator(f):
         @wraps(f)
-        @login_required
         def decorated_function(*args, **kwargs):
+            # Check if this should return JSON (API endpoints)
+            wants_json = _wants_json()
+
+            # Check authentication first, with JSON-aware response
+            if not current_user.is_authenticated:
+                if wants_json:
+                    return jsonify(error="unauthorized"), 401
+                # For web requests, let Flask-Login handle the redirect
+                return current_app.login_manager.unauthorized()
+
             org = getattr(current_user, "organization", None)
             if not org:
-                if _wants_json():
+                if wants_json:
                     return jsonify(error="no_organization"), 403
                 raise Forbidden("No organization found.")
 
@@ -92,13 +111,13 @@ def tier_required(min_tier: str):
                 required_index = TIER_ORDER.index(min_tier)
 
                 if current_index < required_index:
-                    if _wants_json():
+                    if wants_json:
                         return jsonify(error="tier_forbidden", required=min_tier, current=current_tier), 403
                     raise Forbidden(f"Requires {min_tier} tier or higher.")
 
             except ValueError:
                 # Unknown tier, deny access
-                if _wants_json():
+                if wants_json:
                     return jsonify(error="unknown_tier"), 403
                 raise Forbidden("Unknown subscription tier.")
 
