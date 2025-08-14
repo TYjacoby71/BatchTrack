@@ -8,74 +8,67 @@ from functools import wraps
 from flask import abort, g, session, current_app
 import logging
 
+logger = logging.getLogger(__name__)
+
 def _wants_json() -> bool:
-    """Check if client expects JSON response"""
-    # Check if path starts with /api/
-    if request.path.startswith("/api/"):
+    """Check if the request wants JSON response"""
+    # API endpoints should always return JSON
+    if request.path.startswith("/api"):
         return True
 
-    # Check Accept header preference
-    if request.accept_mimetypes.best == "application/json":
-        return True
+    # Check Accept header
+    accept = request.accept_mimetypes
+    return "application/json" in accept and not accept.accept_html
 
-    # Check if Content-Type indicates JSON request
-    if request.content_type and "application/json" in request.content_type:
-        return True
-
-    return False
-
-def require_permission(permission_name):
-    """
-    Decorator to require a specific permission for a route
-    Enhanced with JSON-aware responses for API endpoints
-    """
+def require_permission(permission_name: str):
+    """Decorator that requires a specific permission and handles JSON/HTML responses appropriately"""
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
-            # Check if this should return JSON (API endpoints)
-            wants_json = _wants_json()
-
-            # Check authentication first, with JSON-aware response
-            if not current_user.is_authenticated:
-                if wants_json:
-                    return jsonify(error="unauthorized"), 401
-                # For web requests, let Flask-Login handle the redirect
+            # Check if user is authenticated
+            if not current_user or not current_user.is_authenticated:
+                if _wants_json():
+                    return jsonify({"error": "unauthorized"}), 401
+                # Let Flask-Login handle HTML redirects
                 return current_app.login_manager.unauthorized()
 
             # Check permission
             if not current_user.has_permission(permission_name):
-                if wants_json:
-                    return jsonify(error="forbidden", permission=permission_name), 403
-                abort(403)
+                if _wants_json():
+                    return jsonify({
+                        "error": "forbidden",
+                        "permission": permission_name
+                    }), 403
+                # HTML request - raise Forbidden for standard error page
+                raise Forbidden("You do not have the required permissions.")
 
             return f(*args, **kwargs)
         return decorated_function
     return decorator
 
-# Alias for consistency with existing code
+# Alias for backward compatibility
 permission_required = require_permission
 
-def any_permission_required(*perms: str):
-    """
-    Decorator requiring any one of the specified permissions
-    """
+def any_permission_required(*permission_names):
+    """Decorator that requires any one of the specified permissions"""
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
-            # Check if this should return JSON (API endpoints)
-            wants_json = _wants_json()
-
-            # Check authentication first, with JSON-aware response
-            if not current_user.is_authenticated:
-                if wants_json:
-                    return jsonify(error="unauthorized"), 401
-                # For web requests, let Flask-Login handle the redirect
+            if not current_user or not current_user.is_authenticated:
+                if _wants_json():
+                    return jsonify({"error": "unauthorized"}), 401
                 return current_app.login_manager.unauthorized()
 
-            if not current_user.has_any_permission(perms):
-                if wants_json:
-                    return jsonify(error="forbidden_any", permissions=list(perms)), 403
+            # Check if user has any of the required permissions
+            if not any(current_user.has_permission(perm) for perm in permission_names):
+                if _wants_json():
+                    return jsonify({
+                        "error": "forbidden",
+                        "permissions": list(permission_names),
+                        "message": f"Requires one of: {', '.join(permission_names)}"
+                    }), 403
                 raise Forbidden("You do not have any of the required permissions.")
+
             return f(*args, **kwargs)
         return decorated_function
     return decorator
@@ -291,20 +284,13 @@ def get_user_permissions():
     return AuthorizationHierarchy.get_user_effective_permissions(current_user)
 
 def get_effective_organization_id():
-    """Get the effective organization ID for the current user (DEVELOPER-ONLY FUNCTION)"""
-    if not current_user.is_authenticated:
-        return None
-
-    # Check for developer masquerade context in g first
-    if hasattr(g, 'effective_org_id'):
-        return g.effective_org_id
-
-    # For developers in customer view mode
+    """Get the effective organization ID for the current user context"""
+    # For developers viewing an organization
     if current_user.user_type == 'developer':
         return session.get('dev_selected_org_id')
 
-    # Regular users should use current_user.organization_id directly
-    return current_user.organization_id
+    # For regular users
+    return current_user.organization_id if current_user.organization_id else None
 
 def get_effective_organization():
     """Get the effective organization for the current user"""
@@ -400,7 +386,7 @@ class UserTypeManager:
         return names.get(user_type, 'Team Member')
 
     @staticmethod
-    def create_organization_with_owner(org_name, owner_username, owner_email, subscription_tier='solo'):
+    def create_organization_with_owner(org_name, owner_email, subscription_tier='solo'):
         """Create new organization with owner user"""
         from app.models import Organization, User, Role
         from app.extensions import db
@@ -414,8 +400,9 @@ class UserTypeManager:
         db.session.flush()
 
         # Create owner user
+        username = owner_email.split('@')[0] + '_owner'
         owner = User(
-            username=owner_username,
+            username=username,
             email=owner_email,
             organization_id=org.id,
             user_type='organization_owner'

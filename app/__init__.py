@@ -101,33 +101,16 @@ def _init_extensions(app):
 
     migrate.init_app(app, db)
     login_manager.init_app(app)
-    if mail is not None:
-        mail.init_app(app)
-    csrf.init_app(app)
-    limiter.init_app(app)
-
-def _configure_login_manager(app):
-    """Configure Flask-Login settings"""
-    from .extensions import login_manager
-    from .models import User
-
-    # Configure login manager
     login_manager.login_view = 'auth.login'
-    login_manager.login_message = 'Please log in to access this page.'
-    login_manager.login_message_category = 'info'
 
-    # Add JSON-aware unauthorized handler for API endpoints
     @login_manager.unauthorized_handler
-    def unauthorized():
-        """Handle unauthorized access with content-type aware responses"""
-        # Check if this is an API request that expects JSON
-        if (request.path.startswith('/api/') or 
-            request.headers.get('Accept', '').startswith('application/json') or
-            request.headers.get('Content-Type', '').startswith('application/json')):
-            return jsonify(error="unauthorized"), 401
-
-        # For web requests, redirect to login
-        return redirect(url_for('auth.login'))
+    def _unauthorized():
+        from flask import request, jsonify, redirect, url_for
+        if request.path.startswith("/api") or (
+            "application/json" in request.accept_mimetypes and not request.accept_mimetypes.accept_html
+        ):
+            return jsonify({"error": "unauthorized"}), 401
+        return redirect(url_for("auth.login"))
 
     @login_manager.user_loader
     def load_user(user_id):
