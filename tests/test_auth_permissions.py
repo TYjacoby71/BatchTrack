@@ -98,15 +98,16 @@ class TestAuthPermissions:
         """Test that csrf_token is available in templates for an authenticated user"""
         with app.app_context():
             from flask import render_template_string
-            from flask_login import login_user
-
-            # Log the user in before the request
-            login_user(test_user)
 
             @app.route("/_csrf_check")
             def _csrf_check():
                 # This route now requires login because of our middleware
                 return render_template_string('<meta name="csrf-token" content="{{ csrf_token() }}">')
+
+            # Log in the user using the test client
+            with client.session_transaction() as sess:
+                sess['_user_id'] = str(test_user.id)
+                sess['_fresh'] = True
 
             resp = client.get("/_csrf_check")
             assert resp.status_code == 200
