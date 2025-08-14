@@ -171,7 +171,7 @@ from .timezone_utils import TimezoneUtils
 def register_template_filters(app):
     """Register all Jinja2 template filters"""
     
-    from ..filters.product_filters import (
+    from app.filters.product_filters import (
         product_variant_name, ingredient_cost_currency, safe_float,
         register_filters
     )
@@ -206,7 +206,7 @@ def register_template_filters(app):
         return local_dt.strftime('%Y-%m-%d %H:%M:%S %Z')
 
     # Register template globals
-    from .utils.permissions import (
+    from .permissions import (
         has_permission, has_role, has_subscription_feature, 
         is_organization_owner, is_developer
     )
