@@ -175,118 +175,20 @@ def view_inventory(id):
 @inventory_bp.route('/add', methods=['POST'])
 @login_required
 def add_inventory():
-    name = request.form.get('name')
-
-    # Check for duplicate name first
-    existing_item = InventoryItem.query.filter_by(name=name).first()
-    if existing_item:
-        flash(f'An item with the name "{name}" already exists. Please choose a different name.', 'error')
-        return redirect(url_for('inventory.list_inventory'))
-
+    """Thin controller - delegates to inventory creation service"""
     try:
-        quantity = float(request.form.get('quantity', 0))
-        unit = request.form.get('unit')
-        item_type = request.form.get('type', 'ingredient')  # 'ingredient', 'container', or 'product'
-        # Handle cost entry type
-        cost_entry_type = request.form.get('cost_entry_type', 'per_unit')
-        cost_input = float(request.form.get('cost_per_unit', 0))
-
-        if cost_entry_type == 'total' and quantity > 0:
-            cost_per_unit = cost_input / quantity
-        else:
-            cost_per_unit = cost_input
-        low_stock_threshold = float(request.form.get('low_stock_threshold', 0))
-        is_perishable = request.form.get('is_perishable') == 'on'
-        expiration_date = None
-
-        shelf_life_days = None
-        if is_perishable:
-            shelf_life_days = int(request.form.get('shelf_life_days', 0))
-            if shelf_life_days > 0:
-                from datetime import datetime, timedelta
-                expiration_date = datetime.utcnow().date() + timedelta(days=shelf_life_days)
-
-        # Handle container-specific fields and unit assignment
-        storage_amount = None
-        storage_unit = None
-        if item_type == 'container':
-            storage_amount = float(request.form.get('storage_amount', 0))
-            storage_unit = request.form.get('storage_unit')
-            # For containers, ensure unit is set to empty string and history uses 'count'
-            unit = ''  # Containers don't have a unit on the item itself
-            history_unit = 'count'  # But history entries use 'count'
-        elif item_type == 'product':
-            # Products use count by default but can have other units
-            history_unit = unit if unit else 'count'
-        else:
-            # For ingredients, use the provided unit for both item and history
-            history_unit = unit
-
-        # Debug: ensure history_unit is set correctly
-        print(f"DEBUG: item_type={item_type}, unit={unit}, history_unit={history_unit}")
-
-        item = InventoryItem(
-            name=name,
-            quantity=0,  # Start at 0, will be updated by history
-            unit=unit,
-            type=item_type,
-            cost_per_unit=cost_per_unit,
-            low_stock_threshold=low_stock_threshold,
-            is_perishable=is_perishable,
-            shelf_life_days=shelf_life_days,
-            expiration_date=expiration_date,
-            storage_amount=storage_amount,
-            storage_unit=storage_unit,
-            organization_id=current_user.organization_id
+        from app.services.inventory_adjustment import create_inventory_item
+        
+        success, message, item_id = create_inventory_item(
+            form_data=request.form.to_dict(),
+            organization_id=current_user.organization_id,
+            created_by=current_user.id
         )
-        db.session.add(item)
-        db.session.flush()  # Get the ID without committing
-
-        # Set default notes if it's empty
-        notes = request.form.get('notes', '')
-        if not notes:
-            notes = 'Initial stock creation'
-
-        # Use centralized inventory adjustment service for proper FIFO tracking
-        from app.services.inventory_adjustment import process_inventory_adjustment
-
-        success = process_inventory_adjustment(
-            item_id=item.id,
-            quantity=quantity,
-            change_type='restock',
-            unit=history_unit,
-            notes=notes,
-            created_by=current_user.id,
-            cost_override=cost_per_unit,
-            custom_expiration_date=item.expiration_date,
-            custom_shelf_life_days=item.shelf_life_days
-        )
-
-        if not success:
-            db.session.rollback()
-            flash('Error creating inventory item - FIFO sync failed', 'error')
-            return redirect(url_for('inventory.list_inventory'))
-
-        db.session.commit()
-        flash('Inventory item added successfully.')
+        
+        flash(message, 'success' if success else 'error')
         return redirect(url_for('inventory.list_inventory'))
-
-    except ValueError as e:
-        print(f"DEBUG: ValueError in add_inventory: {str(e)}")
-        db.session.rollback()
-        flash(f'Invalid input values: {str(e)}', 'error')
-        return redirect(url_for('inventory.list_inventory'))
-    except ImportError as e:
-        print(f"DEBUG: ImportError in add_inventory: {str(e)}")
-        db.session.rollback()
-        flash(f'Import error: {str(e)}', 'error')
-        return redirect(url_for('inventory.list_inventory'))
+        
     except Exception as e:
-        print(f"DEBUG: Unexpected error in add_inventory: {str(e)}")
-        print(f"DEBUG: Exception type: {type(e)}")
-        import traceback
-        traceback.print_exc()
-        db.session.rollback()
         flash(f'Error adding inventory item: {str(e)}', 'error')
         return redirect(url_for('inventory.list_inventory'))
 

@@ -12,6 +12,7 @@ helper modules (those starting with an underscore).
 # Import the public functions from our internal helper modules
 from ._core import process_inventory_adjustment
 from ._edit_logic import update_inventory_item
+from ._creation_logic import create_inventory_item
 from ._validation import validate_inventory_fifo_sync
 from ._audit import audit_event, record_audit_entry
 from ._recount_logic import handle_recount_adjustment
@@ -65,7 +66,8 @@ def credit_specific_lot(item_id: int, fifo_entry_id: int, quantity: float, chang
 # Define what is public. Everything else is private.
 __all__ = [
     'process_inventory_adjustment',
-    'update_inventory_item', 
+    'update_inventory_item',
+    'create_inventory_item',
     'validate_inventory_fifo_sync',
     'audit_event',
     'record_audit_entry',
