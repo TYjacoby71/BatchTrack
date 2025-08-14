@@ -206,7 +206,7 @@ def register_template_filters(app):
         return local_dt.strftime('%Y-%m-%d %H:%M:%S %Z')
 
     # Register template globals
-    from .utils.permissions import (
+    from .permissions import (
         has_permission, has_role, has_subscription_feature, 
         is_organization_owner, is_developer
     )
