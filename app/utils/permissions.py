@@ -6,21 +6,22 @@ from typing import Iterable
 from flask_login import current_user
 from functools import wraps
 from flask import abort, g, session, current_app
+import logging
 
 def _wants_json() -> bool:
     """Check if client expects JSON response"""
     # Check if path starts with /api/
     if request.path.startswith("/api/"):
         return True
-    
+
     # Check Accept header preference
     if request.accept_mimetypes.best == "application/json":
         return True
-        
+
     # Check if Content-Type indicates JSON request
     if request.content_type and "application/json" in request.content_type:
         return True
-        
+
     return False
 
 def require_permission(permission_name):
@@ -33,13 +34,13 @@ def require_permission(permission_name):
         def decorated_function(*args, **kwargs):
             # Check if this should return JSON (API endpoints)
             wants_json = _wants_json()
-            
+
             # Check authentication first, with JSON-aware response
             if not current_user.is_authenticated:
                 if wants_json:
                     return jsonify(error="unauthorized"), 401
                 abort(401)
-            
+
             # Check permission
             if not current_user.has_permission(permission_name):
                 if wants_json:
