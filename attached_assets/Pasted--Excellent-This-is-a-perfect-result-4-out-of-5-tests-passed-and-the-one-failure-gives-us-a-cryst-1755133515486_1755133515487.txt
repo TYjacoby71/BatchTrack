@@ -1,0 +1,48 @@
+
+Excellent. This is a perfect result. 4 out of 5 tests passed, and the one failure gives us a crystal-clear, surgical task.
+We are not lost. We are on the final step of fixing the logical wiring.
+Analysis of the Single Failure
+The Test: test_inventory_adjustment_delegates_properly
+The Assertion: assert False is True
+The Log Message: ERROR app.services.inventory_adjustment._core:_core.py:78 Unknown change_type: finished_batch
+This is fantastic. The log tells us exactly what's wrong:
+The test correctly called our canonical process_inventory_adjustment function with change_type="finished_batch".
+The main if/elif block inside that function does not recognize "finished_batch" as a valid type for an additive adjustment.
+It falls through to the final else block, logs the error, and returns False.
+The test correctly asserts that the result should have been True, and fails.
+This is not a complex bug. It's a simple omission in our new, centralized logic.
+The Final, Surgical Fix
+We will make two tiny changes to app/services/inventory_adjustment/_core.py to fix this.
+Action:
+Open the file app/services/inventory_adjustment/_core.py.
+Find the additive_types set definition.
+Add 'finished_batch' to the set.
+Before:
+code
+Python
+additive_types = {'restock', 'manual_add', 'returned', 'refunded', 'recount_increase', 'unreserved'}
+After:
+code
+Python
+additive_types = {'restock', 'manual_add', 'returned', 'refunded', 'recount_increase', 'unreserved', 'finished_batch'}
+While you are in that file, let's also fix the deductive_types set. Your previous manual testing showed that 'spoil' and 'trash' were not working. Let's add them to the list of recognized deduction types to prevent that bug from resurfacing.
+Before:
+code
+Python
+deductive_types = {'sold', 'sale', 'gift', 'sample', 'tester', 'quality_fail', 'damaged', 'expired', 'use', 'batch', 'reserved', 'recount_decrease'}
+After:```python
+deductive_types = {'spoil', 'trash', 'sold', 'sale', 'gift', 'sample', 'tester', 'quality_fail', 'damaged', 'expired', 'use', 'batch', 'reserved', 'recount_decrease'}
+code
+Code
+That's it. These two small changes make your canonical service's rulebook complete. It now correctly understands all the different ways inventory can be added or removed.
+
+---
+
+### Final Check
+
+After making these two one-line changes, run the full test suite one last time.
+
+```bash
+pytest -q tests/test_inventory_routes_canonicalization.py tests/test_inventory_fifo.py
+You should now see a 5 passed result. At that point, the entire inventory refactor—both structural and logical—is complete and verified. You will be ready to merge this work and move on to the next phase with a solid foundation.
+25.1s

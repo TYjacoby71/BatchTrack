@@ -99,7 +99,7 @@ def upgrade():
                existing_type=sa.INTEGER(),
                nullable=True)
         batch_op.create_index(batch_op.f('ix_product_sku_inventory_item_id'), ['inventory_item_id'], unique=False)
-        batch_op.create_unique_constraint(None, ['sku'])
+        batch_op.create_unique_constraint('uq_product_sku_sku', ['sku'])
 
     with op.batch_alter_table('product_sku_history', schema=None) as batch_op:
         batch_op.alter_column('organization_id',
@@ -261,7 +261,7 @@ def downgrade():
                nullable=False)
 
     with op.batch_alter_table('product_sku', schema=None) as batch_op:
-        batch_op.drop_constraint(None, type_='unique')
+        batch_op.drop_constraint('uq_product_sku_sku', type_='unique')
         batch_op.drop_index(batch_op.f('ix_product_sku_inventory_item_id'))
         batch_op.alter_column('organization_id',
                existing_type=sa.INTEGER(),
