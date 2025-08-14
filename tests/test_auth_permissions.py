@@ -105,13 +105,13 @@ class TestAuthPermissions:
                 # This route now requires login because of our middleware
                 return render_template_string('<meta name="csrf-token" content="{{ csrf_token() }}">')
 
-            # Properly log in the user using Flask-Login
+            # Log in the user using Flask-Login within the test client context
             with client:
-                with client.session_transaction() as sess:
-                    sess['_user_id'] = str(test_user.id)
-                    sess['_fresh'] = True
+                # First, establish the app context and login the user
+                with app.test_request_context():
+                    login_user(test_user)
                 
-                # Make a request within the client context so Flask-Login loads the user
+                # Now make the request with the authenticated session
                 resp = client.get("/_csrf_check")
                 assert resp.status_code == 200
                 assert b'csrf-token' in resp.data
