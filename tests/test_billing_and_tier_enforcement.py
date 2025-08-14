@@ -29,19 +29,21 @@ class TestBillingAndTierEnforcement:
             )
             hobbyist_tier.permissions = [perm_view]  # Only view, no create
             db.session.add(hobbyist_tier)
+            db.session.flush()  # Get the ID
 
             # 3. Create an Organization subscribed to the Hobbyist tier
             org = Organization(
                 name='Test Hobby Org',
-                subscription_tier=hobbyist_tier,
+                subscription_tier_id=hobbyist_tier.id,
                 billing_status='active'
             )
             db.session.add(org)
+            db.session.flush()  # Get the ID
 
             # 4. Create a Role that has MORE permissions than the tier allows
             overpowered_role = Role(
                 name='Manager',
-                organization=org
+                organization_id=org.id
             )
             overpowered_role.permissions = [perm_view, perm_create]  # More than tier allows
             db.session.add(overpowered_role)
@@ -120,13 +122,15 @@ class TestBillingAndTierEnforcement:
                     key='developer'
                 )
                 db.session.add(dev_tier)
+                db.session.flush()  # Get the ID
 
             dev_org = Organization(
                 name='Dev Org',
-                subscription_tier=dev_tier,
+                subscription_tier_id=dev_tier.id,
                 billing_status='active'
             )
             db.session.add(dev_org)
+            db.session.flush()  # Get the ID
 
             developer = User(
                 email='dev@batchtrack.com',
@@ -142,13 +146,15 @@ class TestBillingAndTierEnforcement:
                 key='pro'
             )
             db.session.add(customer_tier)
+            db.session.flush()  # Get the ID
 
             customer_org = Organization(
                 name='Customer Org',
-                subscription_tier=customer_tier,
+                subscription_tier_id=customer_tier.id,
                 billing_status='past_due'  # Bad billing
             )
             db.session.add(customer_org)
+            db.session.flush()  # Get the ID
 
             customer = User(
                 email='customer@example.com',
@@ -195,19 +201,21 @@ class TestBillingAndTierEnforcement:
             )
             pro_tier.permissions = [perm_batch_view, perm_batch_create]  # No admin
             db.session.add(pro_tier)
+            db.session.flush()  # Get the ID
 
             # 3. Create organization with active billing
             org = Organization(
                 name='Pro Company',
-                subscription_tier=pro_tier,
+                subscription_tier_id=pro_tier.id,
                 billing_status='active'
             )
             db.session.add(org)
+            db.session.flush()  # Get the ID
 
             # 4. Create a manager role (subset of tier permissions)
             manager_role = Role(
                 name='Manager',
-                organization=org
+                organization_id=org.id
             )
             manager_role.permissions = [perm_batch_view]  # Only view, not create
             db.session.add(manager_role)
