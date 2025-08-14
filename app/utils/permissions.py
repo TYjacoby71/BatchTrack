@@ -39,7 +39,8 @@ def require_permission(permission_name):
             if not current_user.is_authenticated:
                 if wants_json:
                     return jsonify(error="unauthorized"), 401
-                abort(401)
+                # For web requests, let Flask-Login handle the redirect
+                return current_app.login_manager.unauthorized()
 
             # Check permission
             if not current_user.has_permission(permission_name):
@@ -68,7 +69,8 @@ def any_permission_required(*perms: str):
             if not current_user.is_authenticated:
                 if wants_json:
                     return jsonify(error="unauthorized"), 401
-                abort(401)
+                # For web requests, let Flask-Login handle the redirect
+                return current_app.login_manager.unauthorized()
 
             if not current_user.has_any_permission(perms):
                 if wants_json:
@@ -94,7 +96,8 @@ def tier_required(min_tier: str):
             if not current_user.is_authenticated:
                 if wants_json:
                     return jsonify(error="unauthorized"), 401
-                abort(401)
+                # For web requests, let Flask-Login handle the redirect
+                return current_app.login_manager.unauthorized()
 
             org = getattr(current_user, "organization", None)
             if not org:
