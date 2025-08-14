@@ -510,7 +510,7 @@ class User(UserMixin, db.Model):
             return 'Team Member (No Roles)'
 
     def __repr__(self):
-        return f'<User {self.email}>'
+        return f'<User {self.username}>'
 
 @event.listens_for(User, "before_insert")
 def _default_username_before_insert(mapper, connection, target):

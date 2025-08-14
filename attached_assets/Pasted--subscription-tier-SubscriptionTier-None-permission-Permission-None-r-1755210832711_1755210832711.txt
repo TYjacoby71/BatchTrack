@@ -1,0 +1,98 @@
+    ("subscription_tier", "SubscriptionTier", None),
+    ("permission", "Permission", None),
+    ("role", "Role", None),
+
+    # Recipes and Batches
+    ("recipe", "Recipe", None),
+    ("recipe", "RecipeIngredient", None),
+    ("batch", "Batch", None),
+    ("batch", "BatchIngredient", None),
+    ("batch", "BatchContainer", None),
+    ("batch", "ExtraBatchContainer", None),
+--
+    subscription_tier_id = db.Column(db.Integer, db.ForeignKey('subscription_tier.id'), nullable=True)
+
+    # Whop integration fields (replacing Stripe)
+    whop_license_key = db.Column(db.String(128), nullable=True)
+    whop_product_tier = db.Column(db.String(32), nullable=True)
+    whop_verified = db.Column(db.Boolean, default=False)
+
+    # Legacy Stripe fields (keep for migration compatibility)
+    stripe_subscription_id = db.Column(db.String(128), nullable=True)  # DEPRECATED
+    stripe_customer_id = db.Column(db.String(255), nullable=True)
+    billing_info = db.Column(db.Text, nullable=True)  # JSON field for billing details
+--
+    subscription_tier = db.Column(db.String(32), default='free')  # DEPRECATED - use tier relationship
+
+    # Billing fields
+    stripe_customer_id = db.Column(db.String(255), nullable=True)
+    whop_license_key = db.Column(db.String(255), nullable=True)
+    billing_status = db.Column(db.String(50), default='active')  # active, suspended, cancelled
+
+    # Offline support
+    last_online_sync = db.Column(db.DateTime, nullable=True)
+    offline_tier_cache = db.Column(db.JSON, nullable=True)  # Cached tier permissions for offline use
+
+--
+    tier = db.relationship('SubscriptionTier', foreign_keys=[subscription_tier_id])
+
+    @property
+    def active_users_count(self):
+        # Only count users that belong to this organization AND are not developers
+        return len([u for u in self.users if u.is_active and u.user_type != 'developer' and u.organization_id == self.id])
+
+    @property
+    def owner(self):
+        """Get the organization owner (first created user)"""
+        return User.query.filter_by(organization_id=self.id).order_by(User.created_at).first()
+--
+    def effective_subscription_tier(self):
+        """Get the effective subscription tier key"""
+        return self.tier.key if self.tier else 'free'
+
+    @property
+    def subscription_tier_obj(self):
+        """Get the full SubscriptionTier object (alias for .tier)"""
+        return self.tier
+
+    def get_subscription_features(self):
+        """Get list of features for current subscription tier"""
+        if not self.tier:
+            return []
+
+        # Load tier configuration
+        from ..blueprints.developer.subscription_tiers import load_tiers_config
+        tiers_config = load_tiers_config()
+
+        if self.tier.key in tiers_config:
+            return tiers_config[self.tier.key].get('features', [])
+
+        return []
+
+    def get_tier_display_name(self):
+        """Get the display name for the current subscription tier"""
+        if not self.tier:
+--
+                if permission and permission.is_available_for_tier(self.organization.effective_subscription_tier):
+                    return True
+
+        return False
+
+    def has_any_permission(self, permissions):
+        """Check if user has any of the specified permissions"""
+        for permission_name in permissions:
+            if self.has_permission(permission_name):
+                return True
+        return False
+--
+            tier = self.organization.subscription_tier.title()
+            return f'{tier} Owner'
+        else:
+            roles = self.get_active_roles()
+            if roles:
+                role_names = [role.name for role in roles]
+                return f'Team Member ({", ".join(role_names)})'
+            return 'Team Member (No Roles)'
+
+    def __repr__(self):
+        return f'<User {self.email}>'
