@@ -1,7 +1,6 @@
 
 import pytest
 from app.models import db, User, Organization, SubscriptionTier, Role, Permission
-from app.utils.permissions import AppPermission
 from flask_login import login_user
 
 
