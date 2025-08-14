@@ -1,0 +1,77 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.13, pytest-8.3.5, pluggy-1.5.0 -- /home/runner/workspace/.pythonlibs/bin/python
+cachedir: .pytest_cache
+rootdir: /home/runner/workspace
+collected 1 item                                                               
+
+tests/test_auth_permissions.py::TestAuthPermissions::test_permission_required_returns_json_for_api ERROR [100%]
+
+======================================== ERRORS =========================================
+__ ERROR at setup of TestAuthPermissions.test_permission_required_returns_json_for_api __
+
+    @pytest.fixture
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+>       app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+        })
+
+tests/conftest.py:18: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+config = {'DATABASE_URL': 'sqlite:////tmp/tmpc1zdq78s', 'SECRET_KEY': 'test-secret-key', 'STRIPE_SECRET_KEY': 'sk_test_fake', 'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake', ...}
+
+    def create_app(config=None):
+        app = Flask(__name__, static_folder='static', static_url_path='/static')
+    
+        # Load default configuration
+        app.config.from_object('app.config.Config')
+    
+        # Allow tests to override configuration
+        if config:
+            app.config.update(config)
+    
+        # Make @login_required a no-op in tests
+        if app.config.get("TESTING"):
+            app.config["LOGIN_DISABLED"] = True
+            app.config.setdefault("WTF_CSRF_ENABLED", False)
+    
+        # Tests pass DATABASE_URL; SQLAlchemy wants SQLALCHEMY_DATABASE_URI
+        if config and "DATABASE_URL" in config:
+            app.config["SQLALCHEMY_DATABASE_URI"] = config["DATABASE_URL"]
+        app.config['UPLOAD_FOLDER'] = 'static/product_images'
+        os.makedirs('static/product_images', exist_ok=True)
+    
+        # Production security settings
+        if os.environ.get('REPLIT_DEPLOYMENT') == 'true':
+            _configure_production_security(app)
+    
+        # Initialize extensions
+        _init_extensions(app)
+    
+        # Initialize limiter with app
+        from .extensions import limiter
+        limiter.init_app(app)
+    
+        # Configure Flask-Login
+>       _configure_login_manager(app)
+E       NameError: name '_configure_login_manager' is not defined
+
+app/__init__.py:42: NameError
+=================================== warnings summary ====================================
+tests/test_auth_permissions.py::TestAuthPermissions::test_permission_required_returns_json_for_api
+  /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_limiter/extension.py:333: UserWarning: Using the in-memory storage for tracking rate limits as no storage was explicitly specified. This is not recommended for production use. See: https://flask-limiter.readthedocs.io#configuring-a-storage-backend for documentation about configuring the storage backend.
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+================================ short test summary info ================================
+ERROR tests/test_auth_permissions.py::TestAuthPermissions::test_permission_required_returns_json_for_api - NameError: name '_configure_login_manager' is not defined
+============================== 1 warning, 1 error in 0.47s ==============================
