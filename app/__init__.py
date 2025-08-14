@@ -38,9 +38,6 @@ def create_app(config=None):
     from .extensions import limiter
     limiter.init_app(app)
 
-    # Configure Flask-Login
-    _configure_login_manager(app)
-
     # Register middleware
     _register_middleware(app)
 
