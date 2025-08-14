@@ -419,7 +419,13 @@ def _register_template_context(app):
     from .models import Unit, IngredientCategory
     from .utils.timezone_utils import TimezoneUtils
     from flask_login import current_user
+    from flask_wtf.csrf import generate_csrf
 
+    @app.context_processor
+    def inject_csrf_token():
+        """Make CSRF token available to templates"""
+        return dict(csrf_token=generate_csrf)
+        
     @app.context_processor  
     def inject_units():
         from .utils.unit_utils import get_global_unit_list
