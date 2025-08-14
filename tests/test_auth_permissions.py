@@ -33,6 +33,8 @@ class TestAuthPermissions:
             # Should return JSON unauthorized response
             assert response.status_code == 401
             assert response.is_json
+            json_data = response.get_json()
+            assert json_data['error'] == 'unauthorized'
     
     def test_any_permission_required_decorator(self, app):
         """Test any_permission_required decorator structure"""

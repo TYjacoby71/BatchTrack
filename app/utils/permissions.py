@@ -9,8 +9,19 @@ from flask import abort, g, session, current_app
 
 def _wants_json() -> bool:
     """Check if client expects JSON response"""
-    return request.path.startswith("/api/") or \
-           request.accept_mimetypes.best == "application/json"
+    # Check if path starts with /api/
+    if request.path.startswith("/api/"):
+        return True
+    
+    # Check Accept header preference
+    if request.accept_mimetypes.best == "application/json":
+        return True
+        
+    # Check if Content-Type indicates JSON request
+    if request.content_type and "application/json" in request.content_type:
+        return True
+        
+    return False
 
 def require_permission(permission_name):
     """
@@ -20,15 +31,18 @@ def require_permission(permission_name):
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
+            # Check if this should return JSON (API endpoints)
+            wants_json = _wants_json()
+            
             # Check authentication first, with JSON-aware response
             if not current_user.is_authenticated:
-                if _wants_json():
+                if wants_json:
                     return jsonify(error="unauthorized"), 401
                 abort(401)
             
             # Check permission
             if not current_user.has_permission(permission_name):
-                if _wants_json():
+                if wants_json:
                     return jsonify(error="forbidden", permission=permission_name), 403
                 abort(403)
 
