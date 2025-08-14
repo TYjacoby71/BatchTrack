@@ -76,9 +76,10 @@
                                         <input class="form-check-input" type="checkbox" id="is_available" name="is_available" 
                                            {% if tier.get('is_available', True) %}checked{% endif %}>
                                         <label class="form-check-label" for="is_available">
-                                            Available
+                                            Available for Assignment
                                         </label>
                                     </div>
+                                    <div class="form-text">Uncheck to temporarily disable this tier.</div>
                                 </div>
                             </div>
                             <div class="col-md-6">
@@ -108,6 +109,26 @@
                             </h5>
                         </div>
                         <div class="card-body">
+                            <div class="mb-3">
+                            <label for="billing_provider" class="form-label">Billing Provider</label>
+                            <select class="form-select" id="billing_provider" name="billing_provider" required>
+                                <option value="stripe" {% if tier.get('billing_provider') == 'stripe' %}selected{% endif %}>Stripe</option>
+                                <option value="whop" {% if tier.get('billing_provider') == 'whop' %}selected{% endif %}>Whop</option>
+                                <option value="exempt" {% if tier.get('billing_provider') == 'exempt' %}selected{% endif %}>Exempt (No Billing)</option>
+                            </select>
+                            <div class="form-text">Choose how customers will be billed for this tier.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="is_billing_exempt" name="is_billing_exempt" 
+                                       {% if tier.get('is_billing_exempt') %}checked{% endif %}>
+                                <label class="form-check-label" for="is_billing_exempt">
+                                    Override Billing Requirements
+                                </label>
+                            </div>
+                            <div class="form-text">Check this to allow access without valid billing (for testing/special cases).</div>
+                        </div>
                             <div class="form-group">
                                 <label for="stripe_lookup_key">Stripe Lookup Key</label>
                                 <input type="text" class="form-control" name="stripe_lookup_key" id="stripe_lookup_key" 
