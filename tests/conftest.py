@@ -105,8 +105,60 @@ def test_org(db_session):
     return org
 
 @pytest.fixture
-def test_user(db_session, test_org):
-    user = User(email="test@example.com", is_active=True, organization_id=test_org.id)
-    db_session.add(user)
-    db_session.commit()
-    return user
+def test_user(app):
+    """Create a test customer user with basic permissions and organization"""
+    with app.app_context():
+        # Create a test organization
+        org = Organization(name='Test Organization', billing_status='active')
+        db.session.add(org)
+        db.session.flush()  # Get the ID
+
+        # Create a basic tier
+        tier = SubscriptionTier(
+            name='Basic',
+            key='basic',
+            user_limit=5
+        )
+        db.session.add(tier)
+        db.session.flush()
+
+        # Assign tier to organization
+        org.subscription_tier_id = tier.id
+
+        user = User(
+            username='testuser',
+            email='test@example.com',
+            organization_id=org.id,
+            user_type='customer',  # Explicitly set as customer
+            is_active=True
+        )
+        db.session.add(user)
+        db.session.commit()
+
+        yield user
+
+        # Cleanup
+        db.session.delete(user)
+        db.session.delete(org)
+        db.session.delete(tier)
+        db.session.commit()
+
+@pytest.fixture
+def developer_user(app):
+    """Create a test developer user with no organization"""
+    with app.app_context():
+        user = User(
+            username='developer',
+            email='dev@batchtrack.com',
+            organization_id=None,  # Developers have no organization
+            user_type='developer',
+            is_active=True
+        )
+        db.session.add(user)
+        db.session.commit()
+
+        yield user
+
+        # Cleanup
+        db.session.delete(user)
+        db.session.commit()
