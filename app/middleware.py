@@ -1,4 +1,3 @@
-
 import os
 from flask import request, redirect, url_for, jsonify, session, g, flash
 from flask_login import current_user
@@ -6,8 +5,45 @@ from .extensions import login_manager
 from .utils.http import wants_json
 
 def register_middleware(app):
-    """Register all application middleware"""
-    
+    """Register all middleware functions with the Flask app"""
+
+    @app.before_request
+    def billing_enforcement():
+        """
+        Enforce billing and subscription tier requirements before each request.
+        This is the SINGLE POINT where billing is checked across the entire app.
+        """
+        # Skip enforcement for static files, auth routes, and API endpoints
+        if (request.endpoint and 
+            (request.endpoint.startswith('static') or
+             request.endpoint.startswith('auth.') or
+             request.endpoint.startswith('api.') or
+             request.endpoint in ['homepage', 'billing.upgrade', 'billing.webhook'])):
+            return
+
+        # Skip for unauthenticated users
+        if not current_user.is_authenticated:
+            return
+
+        # IMPORTANT: Skip for developers - they have no organization and no billing
+        if current_user.user_type == 'developer':
+            return
+
+        # Check if user has organization (required for customers)
+        organization = current_user.organization
+        if not organization:
+            flash('No organization assigned. Please contact support.', 'error')
+            return redirect(url_for('billing.upgrade'))
+
+        # Check if organization has exempt tier (no billing required)
+        if organization.tier and organization.tier.is_exempt_from_billing:
+            return  # Exempt tiers skip billing checks
+
+        # Check billing status - ONLY for organizations that require it
+        if organization.billing_status != 'active':
+            flash('Your subscription requires attention. Please update your billing.', 'warning')
+            return redirect(url_for('billing.upgrade'))
+
     @app.before_request
     def _global_login_gate():
         """Unified authentication and authorization gate"""
