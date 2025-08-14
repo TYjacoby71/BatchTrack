@@ -1,0 +1,84 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.13, pytest-8.3.5, pluggy-1.5.0 -- /home/runner/workspace/.pythonlibs/bin/python
+cachedir: .pytest_cache
+rootdir: /home/runner/workspace
+collected 1 item                                                               
+
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_tier_permission_is_the_hard_ceiling FAILED [100%]
+
+======================================= FAILURES ========================================
+________ TestBillingAndTierEnforcement.test_tier_permission_is_the_hard_ceiling _________
+
+self = <tests.test_billing_and_tier_enforcement.TestBillingAndTierEnforcement object at 0x7feb6ce95550>
+app = <Flask 'app'>
+
+    def test_tier_permission_is_the_hard_ceiling(self, app):
+        """
+        Tests that a user is BLOCKED from an action if their org's tier
+        does not allow it, even if their role DOES have the permission.
+        """
+        with app.app_context():
+            # ARRANGE: Create a complex state
+    
+            # 1. Create permissions
+            perm_view = Permission(name=AppPermission.PRODUCT_VIEW.value)
+            perm_create = Permission(name=AppPermission.PRODUCT_CREATE.value)
+            db.session.add_all([perm_view, perm_create])
+    
+            # 2. Create a "Hobbyist" tier that can ONLY view products
+            hobbyist_tier = SubscriptionTier(
+                name='hobbyist',
+                key='hobbyist'
+            )
+            hobbyist_tier.permissions = [perm_view]  # Only view, no create
+            db.session.add(hobbyist_tier)
+            db.session.flush()  # Get the ID
+    
+            # 3. Create an Organization subscribed to the Hobbyist tier
+            org = Organization(
+                name='Test Hobby Org',
+                subscription_tier_id=hobbyist_tier.id,
+                billing_status='active'
+            )
+            db.session.add(org)
+            db.session.flush()  # Get the ID
+    
+            # 4. Create a Role that has MORE permissions than the tier allows
+            overpowered_role = Role(
+                name='Manager',
+                organization_id=org.id
+            )
+            overpowered_role.permissions = [perm_view, perm_create]  # More than tier allows
+            db.session.add(overpowered_role)
+    
+            # 5. Create a User with that powerful role
+            user = User(
+                email='test@hobby.org',
+                username='hobbytest',
+                organization=org
+            )
+            user.roles = [overpowered_role]
+            db.session.add(user)
+            db.session.commit()
+    
+            # ACT & ASSERT
+    
+            # This should succeed because the Hobbyist tier allows 'product:view'
+>           assert user.has_permission(AppPermission.PRODUCT_VIEW) is True
+E           AssertionError: assert False is True
+E            +  where False = has_permission(<AppPermission.PRODUCT_VIEW: 'product.view'>)
+E            +    where has_permission = <User hobbytest>.has_permission
+E            +    and   <AppPermission.PRODUCT_VIEW: 'product.view'> = AppPermission.PRODUCT_VIEW
+
+tests/test_billing_and_tier_enforcement.py:64: AssertionError
+---------------------------------- Captured log setup -----------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+=================================== warnings summary ====================================
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_tier_permission_is_the_hard_ceiling
+  /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_limiter/extension.py:333: UserWarning: Using the in-memory storage for tracking rate limits as no storage was explicitly specified. This is not recommended for production use. See: https://flask-limiter.readthedocs.io#configuring-a-storage-backend for documentation about configuring the storage backend.
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+================================ short test summary info ================================
+FAILED tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_tier_permission_is_the_hard_ceiling - AssertionError: assert False is True
+============================= 1 failed, 1 warning in 5.51s ==============================

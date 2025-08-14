@@ -1,0 +1,50 @@
+class User(UserMixin, db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(64), unique=True, nullable=False)
+    password_hash = db.Column(db.String(255), nullable=True, default='', server_default='')
+    first_name = db.Column(db.String(64), nullable=True)
+    last_name = db.Column(db.String(64), nullable=True)
+    email = db.Column(db.String(120), nullable=True)
+    phone = db.Column(db.String(20), nullable=True)
+    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)
+    user_type = db.Column(db.String(32), default='customer')  # 'developer', 'customer'
+    _is_organization_owner = db.Column('is_organization_owner', db.Boolean, nullable=True, default=False)  # Flag for organization owners (only for customer users)
+
+    @property
+    def is_organization_owner(self):
+        """Check if user has organization owner role - AUTHORITATIVE"""
+        if self.user_type != 'customer':
+            return False
+
+        # Check active roles for organization_owner role
+        roles = self.get_active_roles()
+        return any(role.name == 'organization_owner' for role in roles)
+
+    @is_organization_owner.setter
+    def is_organization_owner(self, value):
+        """Sync the flag for legacy compatibility and assign/remove role"""
+        self._is_organization_owner = value
+
+        if value is True and self.user_type == 'customer' and self.id:
+            # Ensure role is assigned
+            self.ensure_organization_owner_role()
+        elif value is False and self.id:
+            # Remove the role
+            from .role import Role
+            org_owner_role = Role.query.filter_by(name='organization_owner', is_system_role=True).first()
+            if org_owner_role:
+                self.remove_role(org_owner_role)
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
+    last_login = db.Column(db.DateTime, nullable=True)
+    timezone = db.Column(db.String(64), default='UTC')
+    # role_id removed - using UserRoleAssignment table instead
+
+    # Email verification fields
+    email_verified = db.Column(db.Boolean, default=False)
+    email_verification_token = db.Column(db.String(255), nullable=True)
+    email_verification_sent_at = db.Column(db.DateTime, nullable=True)
+
+    # OAuth fields
+    oauth_provider = db.Column(db.String(50), nullable=True)  # 'google', etc.
+    oauth_provider_id = db.Column(db.String(255), nullable=True)
