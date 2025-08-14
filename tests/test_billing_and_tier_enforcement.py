@@ -52,11 +52,13 @@ class TestBillingAndTierEnforcement:
             user = User(
                 email='test@hobby.org',
                 username='hobbytest',
-                organization=org
+                organization_id=org.id
             )
-            user.roles = [overpowered_role]
             db.session.add(user)
             db.session.commit()
+            
+            # Assign the role properly using the role assignment system
+            user.assign_role(overpowered_role)
 
             # ACT & ASSERT
             
