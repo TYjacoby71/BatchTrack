@@ -165,3 +165,76 @@ def register_filters(app):
         # Convert UTC to user's timezone
         user_time = TimezoneUtils.to_user_timezone(datetime_obj)
         return user_time.strftime(format_string)
+from flask_login import current_user
+from .timezone_utils import TimezoneUtils
+
+def register_template_filters(app):
+    """Register all Jinja2 template filters"""
+    
+    from .filters.product_filters import (
+        product_variant_name, ingredient_cost_currency, safe_float,
+        register_filters
+    )
+
+    # Register product filters
+    register_filters(app)
+
+    # Register custom filters
+    app.jinja_env.filters.update({
+        'product_variant_name': product_variant_name,
+        'ingredient_cost_currency': ingredient_cost_currency,
+        'safe_float': safe_float
+    })
+
+    @app.template_filter('attr_multiply')
+    def attr_multiply_filter(item, attr1, attr2):
+        if item is None:
+            return 0
+        val1 = getattr(item, attr1, 0) or 0
+        val2 = getattr(item, attr2, 0) or 0
+        return float(val1) * float(val2)
+
+    @app.template_filter('format_datetime')
+    def format_datetime(dt):
+        if dt is None:
+            return 'Never'
+        # Convert to user's timezone
+        user_tz = 'UTC'
+        if current_user.is_authenticated and current_user.timezone:
+            user_tz = current_user.timezone
+        local_dt = TimezoneUtils.convert_to_timezone(dt, user_tz)
+        return local_dt.strftime('%Y-%m-%d %H:%M:%S %Z')
+
+    # Register template globals
+    from .utils.permissions import (
+        has_permission, has_role, has_subscription_feature, 
+        is_organization_owner, is_developer
+    )
+
+    def template_has_permission(permission_name):
+        try:
+            return has_permission(permission_name)
+        except Exception:
+            return False
+
+    def template_has_role(role_name):
+        try:
+            return has_role(role_name)
+        except Exception:
+            return False
+
+    def template_is_org_owner():
+        try:
+            return is_organization_owner()
+        except Exception:
+            return False
+
+    # Register globals
+    app.jinja_env.globals.update({
+        'has_permission': template_has_permission,
+        'has_role': template_has_role,
+        'has_subscription_feature': has_subscription_feature,
+        'is_organization_owner': template_is_org_owner,
+        'is_developer': is_developer,
+        'can_access_route': lambda route_path: True,  # Deprecated but maintained
+    })
