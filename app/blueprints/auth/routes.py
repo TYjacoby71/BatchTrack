@@ -47,7 +47,7 @@ class LoginForm(FlaskForm):
     submit = SubmitField('Login')
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
-@limiter.limit("60/minute")
+@limiter.limit("30/minute")
 def login():
     if current_user.is_authenticated:
         return redirect(url_for('app_routes.dashboard'))
@@ -88,7 +88,7 @@ def login():
     return render_template('auth/login.html', form=form, oauth_available=OAuthService.is_oauth_configured())
 
 @auth_bp.route('/oauth/google')
-@limiter.limit("30/minute")
+@limiter.limit("20/minute")
 def oauth_google():
     """Initiate Google OAuth flow"""
     logger.info("OAuth Google route accessed")
@@ -357,7 +357,7 @@ def debug_oauth_config():
     })
 
 @auth_bp.route('/signup', methods=['GET', 'POST'])
-@limiter.limit("30/minute")
+@limiter.limit("20/minute")
 def signup():
     """Simplified signup flow - tier selection only, then redirect to payment"""
     if current_user.is_authenticated:

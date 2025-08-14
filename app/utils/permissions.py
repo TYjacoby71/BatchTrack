@@ -1,8 +1,92 @@
+from flask import abort, flash, redirect, url_for, request, jsonify
+from flask_login import current_user, login_required
+from functools import wraps
+from werkzeug.exceptions import Forbidden
+from typing import Iterable
 from flask_login import current_user
 from functools import wraps
 from flask import abort, g, session, current_app
 
-def require_permission(permission_name, require_org_scoping=True):
+def _wants_json() -> bool:
+    """Check if client expects JSON response"""
+    return request.path.startswith("/api/") or \
+           request.accept_mimetypes.best == "application/json"
+
+def require_permission(permission_name):
+    """
+    Decorator to require a specific permission for a route
+    Enhanced with JSON-aware responses for API endpoints
+    """
+    def decorator(f):
+        @wraps(f)
+        @login_required
+        def decorated_function(*args, **kwargs):
+            if not current_user.has_permission(permission_name):
+                if _wants_json():
+                    return jsonify(error="forbidden", permission=permission_name), 403
+                abort(403)
+
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
+
+# Alias for consistency with existing code
+permission_required = require_permission
+
+def any_permission_required(*perms: str):
+    """
+    Decorator requiring any one of the specified permissions
+    """
+    def decorator(f):
+        @wraps(f)
+        @login_required
+        def decorated_function(*args, **kwargs):
+            if not current_user.has_any_permission(perms):
+                if _wants_json():
+                    return jsonify(error="forbidden_any", permissions=list(perms)), 403
+                raise Forbidden("You do not have any of the required permissions.")
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
+
+def tier_required(min_tier: str):
+    """
+    Decorator requiring minimum subscription tier
+    """
+    TIER_ORDER = ["free", "starter", "pro", "business", "enterprise"]
+
+    def decorator(f):
+        @wraps(f)
+        @login_required
+        def decorated_function(*args, **kwargs):
+            org = getattr(current_user, "organization", None)
+            if not org:
+                if _wants_json():
+                    return jsonify(error="no_organization"), 403
+                raise Forbidden("No organization found.")
+
+            current_tier = getattr(org, 'subscription_tier', 'free')
+            try:
+                current_index = TIER_ORDER.index(current_tier)
+                required_index = TIER_ORDER.index(min_tier)
+
+                if current_index < required_index:
+                    if _wants_json():
+                        return jsonify(error="tier_forbidden", required=min_tier, current=current_tier), 403
+                    raise Forbidden(f"Requires {min_tier} tier or higher.")
+
+            except ValueError:
+                # Unknown tier, deny access
+                if _wants_json():
+                    return jsonify(error="unknown_tier"), 403
+                raise Forbidden("Unknown subscription tier.")
+
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
+
+
+def require_permission_with_org_scoping(permission_name, require_org_scoping=True):
     """
     Decorator to require a specific permission for a route
     Also enforces organization scoping by default
