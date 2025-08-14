@@ -171,7 +171,7 @@ from .timezone_utils import TimezoneUtils
 def register_template_filters(app):
     """Register all Jinja2 template filters"""
     
-    from .filters.product_filters import (
+    from ..filters.product_filters import (
         product_variant_name, ingredient_cost_currency, safe_float,
         register_filters
     )
