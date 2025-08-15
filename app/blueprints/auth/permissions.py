@@ -2,7 +2,7 @@ from flask import render_template, request, jsonify, flash, redirect, url_for, a
 from flask_login import login_required, current_user
 from app.models import Permission, Role, User, DeveloperPermission
 from app.extensions import db
-from app.utils.authorization import require_permission
+from app.utils.permissions import require_permission
 from app.blueprints.developer.subscription_tiers import load_tiers_config
 
 def get_tier_permissions(tier_key):
