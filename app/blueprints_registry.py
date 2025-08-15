@@ -1,10 +1,9 @@
-
 import logging
 logger = logging.getLogger(__name__)
 
 def register_blueprints(app):
     """Register all application blueprints"""
-    
+
     # Public API that must be before auth
     try:
         from app.blueprints.api.public import public_api
@@ -121,9 +120,13 @@ def register_blueprints(app):
     try:
         from .blueprints.billing.routes import billing_bp
         app.register_blueprint(billing_bp)
-        logger.debug("Billing blueprint registered successfully")
+        logger.info("Blueprint 'billing' registered successfully.")
+    except ImportError as e:
+        logger.error(f"Failed to import billing blueprint: {e}")
+        # Continue without billing blueprint in case of import issues
     except Exception as e:
         logger.error(f"Failed to register billing blueprint: {e}")
+        # Continue without billing blueprint in case of registration issues
 
     # CSRF exemptions
     try:

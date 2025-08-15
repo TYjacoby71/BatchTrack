@@ -94,9 +94,6 @@ class Organization(db.Model):
     next_billing_date = db.Column(db.Date, nullable=True)
     subscription_status = db.Column(db.String(32), default='inactive')  # active, past_due, canceled, etc.
 
-    # Keep old string field for migration compatibility only (DO NOT USE)
-    subscription_tier = db.Column(db.String(32), default='free')  # DEPRECATED - use tier relationship
-
     # Billing fields
     stripe_customer_id = db.Column(db.String(255), nullable=True)
     whop_license_key = db.Column(db.String(255), nullable=True)
@@ -108,7 +105,8 @@ class Organization(db.Model):
 
     # Relationships
     users = db.relationship('User', backref='organization')
-    tier = db.relationship('SubscriptionTier', foreign_keys=[subscription_tier_id])
+    subscription_tier = db.relationship('SubscriptionTier', foreign_keys=[subscription_tier_id])
+    tier = db.relationship('SubscriptionTier', foreign_keys=[subscription_tier_id])  # Alias for backward compatibility
 
     @property
     def active_users_count(self):

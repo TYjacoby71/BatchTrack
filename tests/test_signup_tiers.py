@@ -40,7 +40,7 @@ class TestSignupTierCharacterization:
         """Test that permission gating system exists."""
         with app.app_context():
             # Verify permission system components exist
-            from app.utils.authorization import has_permission
+            from app.utils.permissions import has_permission
             from app.models.models import Permission, Role
 
             # These should exist for feature gating
