@@ -62,7 +62,7 @@ def auth_headers():
 
 
 def _create_test_data():
-    """Create basic test data"""
+    """Create basic test data with correct object relationships"""
     from app.models.subscription_tier import SubscriptionTier
     from app.models.models import Organization, User
     from app.extensions import db
@@ -78,10 +78,10 @@ def _create_test_data():
     db.session.add(tier)
     db.session.commit()
 
-    # Create a test organization
+    # Create a test organization - THE FIX: Pass the tier object, not tier.id
     org = Organization(
         name='Test Organization',
-        subscription_tier=tier.id
+        subscription_tier=tier  # Pass the full object to the relationship
     )
     db.session.add(org)
     db.session.commit()
@@ -89,9 +89,10 @@ def _create_test_data():
     # Create a test user
     user = User(
         email='test@example.com',
+        username='testuser',  # Added username for completeness
         password_hash='test_hash',
         is_verified=True,
-        organization_id=org.id
+        organization_id=org.id  # This is correct - organization_id is a foreign key
     )
     db.session.add(user)
     db.session.commit()
