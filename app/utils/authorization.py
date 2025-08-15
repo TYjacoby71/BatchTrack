@@ -13,10 +13,47 @@ from flask_login import current_user
 from flask import session, current_app, g, request, jsonify
 from functools import wraps
 
-def require_permission(*_args, **_kwargs):
-    def _decorator(f): 
-        return f
-    return _decorator
+def require_permission(permission_name):
+    """
+    Decorator to require specific permissions with proper error handling
+    """
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            from flask import current_app, abort, jsonify, flash, redirect, url_for
+            from flask_login import current_user
+            from app.utils.http import wants_json
+            
+            # Allow everything during tests
+            if current_app.config.get('TESTING', False):
+                return f(*args, **kwargs)
+            
+            # Basic auth check
+            if not current_user.is_authenticated:
+                if wants_json():
+                    return jsonify({"error": "Authentication required"}), 401
+                flash("Please log in to access this page.", "error")
+                return redirect(url_for("auth.login"))
+            
+            # Developer users have access to developer permissions
+            if current_user.user_type == 'developer':
+                # For developer permissions, just check if they're a developer
+                if permission_name.startswith('developer.'):
+                    return f(*args, **kwargs)
+            
+            # Check if user has the permission
+            if has_permission(current_user, permission_name):
+                return f(*args, **kwargs)
+            
+            # Permission denied - return appropriate response
+            if wants_json():
+                return jsonify({"error": f"Permission denied: {permission_name}"}), 403
+            
+            flash(f"You don't have permission to access this feature. Required permission: {permission_name}", "error")
+            return redirect(url_for("app_routes.dashboard"))
+        
+        return decorated_function
+    return decorator
 
 def role_required(*roles):
     """

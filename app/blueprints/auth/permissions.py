@@ -18,7 +18,7 @@ def get_tier_permissions(tier_key):
     ).all()
     return permissions
 
-@require_permission('dev.system_admin')
+@require_permission('developer.system_management')
 @login_required
 def manage_permissions():
     """Show system permissions management page"""
@@ -68,7 +68,7 @@ def manage_permissions():
     return render_template('auth/permissions.html', 
                          permission_categories=permission_categories)
 
-@require_permission('dev.system_admin')
+@require_permission('developer.system_management')
 @login_required
 def toggle_permission_status():
     """Toggle active/inactive status of a permission"""

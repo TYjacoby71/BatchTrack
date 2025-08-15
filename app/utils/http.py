@@ -6,4 +6,4 @@ def wants_json() -> bool:
     if request.path.startswith("/api"):
         return True
     accept = request.accept_mimetypes
-    return ("application/json" in accept) and (not accept.accept_html)
+    return ("application/json" in accept) and (not accept.accept("text/html"))
