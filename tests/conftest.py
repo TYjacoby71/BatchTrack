@@ -1,3 +1,4 @@
+
 """
 Pytest configuration and shared fixtures for BatchTrack tests.
 """
@@ -9,7 +10,7 @@ from app.extensions import db
 from app.models.models import User, Organization, SubscriptionTier, Permission, Role
 
 
-@pytest.fixture
+@pytest.fixture(scope='function')  # Changed to function scope for isolation
 def app():
     """Create and configure a new app instance for each test."""
     # Create a temporary file to use as the database
@@ -22,6 +23,7 @@ def app():
         'SECRET_KEY': 'test-secret-key',
         'STRIPE_SECRET_KEY': 'sk_test_fake',
         'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+        # Don't disable login - we need to test permissions properly
     })
 
     with app.app_context():
@@ -31,6 +33,9 @@ def app():
         _create_test_data()
 
         yield app
+
+        # Clean up database
+        db.drop_all()
 
     os.close(db_fd)
     os.unlink(db_path)
@@ -78,7 +83,7 @@ def _create_test_data():
     db.session.add(tier)
     db.session.commit()
 
-    # Create a test organization - THE FIX: Pass the tier object, not tier.id
+    # Create a test organization - Pass the tier object, not tier.id
     org = Organization(
         name='Test Organization',
         subscription_tier=tier  # Pass the full object to the relationship
@@ -97,6 +102,7 @@ def _create_test_data():
     db.session.add(user)
     db.session.commit()
 
+
 @pytest.fixture
 def test_org(db_session):
     org = Organization(name="Test Org")
@@ -104,10 +110,15 @@ def test_org(db_session):
     db_session.commit()
     return org
 
+
 @pytest.fixture
 def test_user(app):
     """Create a test customer user with basic permissions and organization"""
     with app.app_context():
+        # Use unique username per test to avoid conflicts
+        import time
+        unique_username = f'testuser_{int(time.time() * 1000000)}'
+        
         # Create a test organization
         org = Organization(name='Test Organization', billing_status='active')
         db.session.add(org)
@@ -126,8 +137,8 @@ def test_user(app):
         org.subscription_tier_id = tier.id
 
         user = User(
-            username='testuser',
-            email='test@example.com',
+            username=unique_username,  # Use unique username
+            email=f'{unique_username}@example.com',  # Use unique email too
             organization_id=org.id,
             user_type='customer',  # Explicitly set as customer
             is_active=True
@@ -137,19 +148,20 @@ def test_user(app):
 
         yield user
 
-        # Cleanup
-        db.session.delete(user)
-        db.session.delete(org)
-        db.session.delete(tier)
-        db.session.commit()
+        # Cleanup is handled by the app fixture dropping all tables
+
 
 @pytest.fixture
 def developer_user(app):
     """Create a test developer user with no organization"""
     with app.app_context():
+        # Use unique username per test to avoid conflicts
+        import time
+        unique_username = f'developer_{int(time.time() * 1000000)}'
+        
         user = User(
-            username='developer',
-            email='dev@batchtrack.com',
+            username=unique_username,
+            email=f'{unique_username}@batchtrack.com',
             organization_id=None,  # Developers have no organization
             user_type='developer',
             is_active=True
@@ -159,6 +171,4 @@ def developer_user(app):
 
         yield user
 
-        # Cleanup
-        db.session.delete(user)
-        db.session.commit()
+        # Cleanup is handled by the app fixture dropping all tables
