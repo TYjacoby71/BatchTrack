@@ -296,9 +296,8 @@ def signup_data():
     from ...models.subscription_tier import SubscriptionTier
 
     available_tiers_db = SubscriptionTier.query.filter_by(
-        is_customer_facing=True,
-        is_available=True
-    ).all()
+            is_customer_facing=True).filter(
+            SubscriptionTier.billing_provider != 'exempt').order_by(SubscriptionTier.user_limit).all()
 
     # Further filter by subscription_type = 'monthly' (this should be a database column)
     # For now, show all customer-facing tiers since subscription_type might not be implemented yet
@@ -367,9 +366,8 @@ def signup():
     from ...models.subscription_tier import SubscriptionTier
 
     available_tiers_db = SubscriptionTier.query.filter_by(
-        is_customer_facing=True,
-        is_available=True
-    ).all()
+            is_customer_facing=True).filter(
+            SubscriptionTier.billing_provider != 'exempt').order_by(SubscriptionTier.user_limit).all()
 
     tiers_config = load_tiers_config()
 
