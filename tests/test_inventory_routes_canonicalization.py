@@ -1,12 +1,18 @@
 import pytest
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 from app.models.inventory import InventoryItem
 
 
-def test_recount_adjustment_uses_canonical_service(client, app, db_session, test_user):
+@patch('app.middleware.current_user')
+def test_recount_adjustment_uses_canonical_service(mock_middleware_user, client, app, db_session, test_user):
     """Test that inventory recount routes use the canonical adjustment service"""
 
     with app.test_request_context():
+        # Configure middleware user mock
+        mock_middleware_user.is_authenticated = True
+        mock_middleware_user.user_type = 'regular' 
+        mock_middleware_user.organization = test_user.organization
+        mock_middleware_user.organization_id = test_user.organization_id
         # Create test inventory item
         item = InventoryItem(
             name="Test Item", 
@@ -59,8 +65,9 @@ class TestInventoryRoutesCanonicalService:
 
     @patch('app.services.inventory_adjustment.process_inventory_adjustment')
     @patch('app.blueprints.inventory.routes.InventoryItem')
+    @patch('app.middleware.current_user')
     @patch('app.blueprints.inventory.routes.current_user')
-    def test_adjust_inventory_initial_stock_calls_canonical_service(self, mock_user, mock_item, mock_process, client, app):
+    def test_adjust_inventory_initial_stock_calls_canonical_service(self, mock_route_user, mock_middleware_user, mock_item, mock_process, client, app):
         """Test that initial stock creation calls process_inventory_adjustment"""
         with app.test_request_context():
             # Mock the inventory item with no history
@@ -73,13 +80,21 @@ class TestInventoryRoutesCanonicalService:
             mock_inventory_item.organization_id = 1
 
             mock_item.query.get_or_404.return_value = mock_inventory_item
-            mock_user.id = 1
-            mock_user.organization_id = 1
+            
+            # Configure both middleware and route user mocks
+            for mock_user in [mock_route_user, mock_middleware_user]:
+                mock_user.id = 1
+                mock_user.organization_id = 1
+                mock_user.is_authenticated = True
+                mock_user.user_type = 'regular'
+                mock_user.organization = MagicMock()
+                mock_user.organization.is_active = True
+                
             mock_process.return_value = True
 
             # Log in the mock user for the test
             with client.session_transaction() as sess:
-                sess['_user_id'] = str(mock_user.id)
+                sess['_user_id'] = str(mock_route_user.id)
                 sess['_fresh'] = True
 
             # Mock UnifiedInventoryHistory count to simulate no existing history
