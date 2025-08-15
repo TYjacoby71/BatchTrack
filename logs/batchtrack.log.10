@@ -1,11 +1,11 @@
-2025-08-15 21:58:42,960 ERROR: Webhook signature verification failed: (sqlite3.ProgrammingError) Error binding parameter 1: type 'MagicMock' is not supported
+2025-08-15 22:07:11,961 ERROR: Webhook signature verification failed: (sqlite3.ProgrammingError) Error binding parameter 1: type 'MagicMock' is not supported
 [SQL: INSERT INTO stripe_event (event_id, event_type, received_at, processed_at, status, error_message) VALUES (?, ?, ?, ?, ?, ?)]
-[parameters: (<MagicMock name='construct_event().__getitem__()' id='140603433458704'>, <MagicMock name='construct_event().__getitem__()' id='140603433458704'>, '2025-08-15 21:58:42.960477', None, 'received', None)]
+[parameters: (<MagicMock name='construct_event().__getitem__()' id='140325682400336'>, <MagicMock name='construct_event().__getitem__()' id='140325682400336'>, '2025-08-15 22:07:11.961294', None, 'received', None)]
 (Background on this error at: https://sqlalche.me/e/20/f405) [in /home/runner/workspace/app/blueprints/billing/routes.py:413]
-2025-08-15 21:58:42,989 INFO: Received Stripe webhook: <MagicMock name='construct_event().__getitem__()' id='140603433458704'> [in /home/runner/workspace/app/blueprints/billing/routes.py:404]
-2025-08-15 21:58:43,007 ERROR: Webhook signature verification failed: This Session's transaction has been rolled back due to a previous exception during flush. To begin a new transaction with this Session, first issue Session.rollback(). Original exception was: (sqlite3.ProgrammingError) Error binding parameter 1: type 'MagicMock' is not supported
+2025-08-15 22:07:11,991 INFO: Received Stripe webhook: <MagicMock name='construct_event().__getitem__()' id='140325682400336'> [in /home/runner/workspace/app/blueprints/billing/routes.py:404]
+2025-08-15 22:07:12,009 ERROR: Webhook signature verification failed: This Session's transaction has been rolled back due to a previous exception during flush. To begin a new transaction with this Session, first issue Session.rollback(). Original exception was: (sqlite3.ProgrammingError) Error binding parameter 1: type 'MagicMock' is not supported
 [SQL: INSERT INTO stripe_event (event_id, event_type, received_at, processed_at, status, error_message) VALUES (?, ?, ?, ?, ?, ?)]
-[parameters: (<MagicMock name='construct_event().__getitem__()' id='140603433458704'>, <MagicMock name='construct_event().__getitem__()' id='140603433458704'>, '2025-08-15 21:58:42.960477', None, 'received', None)]
+[parameters: (<MagicMock name='construct_event().__getitem__()' id='140325682400336'>, <MagicMock name='construct_event().__getitem__()' id='140325682400336'>, '2025-08-15 22:07:11.961294', None, 'received', None)]
 (Background on this error at: https://sqlalche.me/e/20/f405) (Background on this error at: https://sqlalche.me/e/20/7s2a) [in /home/runner/workspace/app/blueprints/billing/routes.py:413]
-2025-08-15 21:58:43,602 INFO: Blueprint 'billing' registered successfully. [in /home/runner/workspace/app/blueprints_registry.py:123]
-2025-08-15 21:58:43,616 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-08-15 22:07:12,570 INFO: Blueprint 'billing' registered successfully. [in /home/runner/workspace/app/blueprints_registry.py:123]
+2025-08-15 22:07:12,584 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
