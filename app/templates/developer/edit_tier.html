@@ -1,262 +1,114 @@
+
 {% extends 'layout.html' %}
-
-{% block title %}Edit Subscription Tier - Developer{% endblock %}
-
 {% block content %}
-<div class="container-fluid py-4">
+<div class="container-fluid">
     <div class="row">
         <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="mb-0">
-                        <i class="fas fa-edit text-primary"></i> Edit Subscription Tier: {{ tier.name }}
-                    </h3>
-                    <p class="text-muted mb-0">Tier Key: <strong>{{ tier_key }}</strong></p>
-                </div>
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>Edit Subscription Tier: {{ tier.name }}</h2>
+                <a href="{{ url_for('developer.subscription_tiers.manage_tiers') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Tiers
+                </a>
             </div>
-        </div>
-    </div>
 
-    <form method="post">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-
-        <div class="row mt-4">
-            <!-- Basic Information -->
-            <div class="col-md-6">
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="mb-0">Basic Information</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="mb-3">
-                            <label for="tier_name" class="form-label">Tier Name</label>
-                            <input type="text" class="form-control" id="tier_name" name="tier_name" 
-                                   value="{{ tier.name }}" required>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="pricing_category" class="form-label">Pricing Category</label>
-                            <select class="form-select" id="pricing_category" name="pricing_category">
-                                <option value="monthly" {% if tier.get('pricing_category', 'monthly') == 'monthly' %}selected{% endif %}>Monthly</option>
-                                <option value="yearly" {% if tier.get('pricing_category') == 'yearly' %}selected{% endif %}>Yearly</option>
-                                <option value="promotional" {% if tier.get('pricing_category') == 'promotional' %}selected{% endif %}>Promotional</option>
-                            </select>
-                            <div class="form-text">Billing cycle, price, and currency are managed by Stripe</div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="user_limit" class="form-label">User Limit</label>
-                            <input type="number" class="form-control" id="user_limit" name="user_limit" 
-                                   value="{{ tier.user_limit if tier.user_limit is defined else 1 }}" min="-1"
-                                   placeholder="Enter number of users (use -1 for unlimited)">
-                            <small class="form-text text-muted">
-                                {% if tier_key == 'exempt' %}
-                                    Use -1 for unlimited users (exempt tier only)
-                                {% else %}
-                                    Enter maximum number of users for this tier (use -1 for unlimited)
-                                {% endif %}
-                            </small>
-                        </div>
-
-                        <!-- Visibility Controls -->
+            <div class="card">
+                <div class="card-body">
+                    <form method="POST">
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
+                                    <label for="key" class="form-label">Tier Key</label>
+                                    <input type="text" class="form-control" id="key" name="key" 
+                                           value="{{ tier.key }}" readonly>
+                                    <div class="form-text">Key cannot be changed after creation</div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="name" class="form-label">Display Name</label>
+                                    <input type="text" class="form-control" id="name" name="name" 
+                                           value="{{ tier.name }}" required>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="description" class="form-label">Description</label>
+                                    <textarea class="form-control" id="description" name="description" rows="3">{{ tier.description or '' }}</textarea>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="user_limit" class="form-label">User Limit</label>
+                                    <input type="number" class="form-control" id="user_limit" name="user_limit" 
+                                           value="{{ tier.user_limit }}" min="1" required>
+                                    <div class="form-text">Set to -1 for unlimited users</div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="fallback_price" class="form-label">Display Price</label>
+                                    <input type="text" class="form-control" id="fallback_price" name="fallback_price" 
+                                           value="{{ tier.fallback_price }}" placeholder="$0">
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Visibility</label>
                                     <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="is_customer_facing" name="is_customer_facing"
-                                               {% if tier.get('is_customer_facing', True) %}checked{% endif %}>
+                                        <input type="checkbox" class="form-check-input" id="is_customer_facing" 
+                                               name="is_customer_facing" {{ 'checked' if tier.is_customer_facing else '' }}>
                                         <label class="form-check-label" for="is_customer_facing">
-                                            Customer Facing
+                                            Show to customers
                                         </label>
+                                        <div class="form-text">Unchecked tiers are hidden from public view</div>
                                     </div>
                                 </div>
 
                                 <div class="mb-3">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="is_available" name="is_available" 
-                                           {% if tier.get('is_available', True) %}checked{% endif %}>
-                                        <label class="form-check-label" for="is_available">
-                                            Available for Assignment
-                                        </label>
-                                    </div>
-                                    <div class="form-text">Uncheck to temporarily disable this tier.</div>
+                                    <label for="billing_provider" class="form-label">Billing Provider</label>
+                                    <select class="form-select" id="billing_provider" name="billing_provider" onchange="toggleBillingFields()">
+                                        <option value="exempt" {{ 'selected' if tier.billing_provider == 'exempt' else '' }}>Exempt (No Billing)</option>
+                                        <option value="stripe" {{ 'selected' if tier.billing_provider == 'stripe' else '' }}>Stripe</option>
+                                        <option value="whop" {{ 'selected' if tier.billing_provider == 'whop' else '' }}>Whop</option>
+                                    </select>
                                 </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="alert alert-info">
-                                    <h6><i class="fas fa-info-circle"></i> Auto-Detection</h6>
-                                    <small>
-                                        Billing provider is automatically determined by product keys:<br>
-                                        • <strong>Stripe only:</strong> Stripe lookup key provided<br>
-                                        • <strong>Whop only:</strong> Whop product key provided<br>
-                                        • <strong>Both:</strong> Both keys provided<br>
-                                        • <strong>None:</strong> No keys (exempt/free tier)
-                                    </small>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
 
-            <!-- Payment Integration Sections -->
-            <div class="col-md-6">
-                    <!-- Stripe Integration Section -->
-                    <div class="card mb-4">
-                        <div class="card-header">
-                            <h5 class="mb-0">
-                                <i class="fab fa-stripe text-primary"></i> Stripe Integration
-                            </h5>
+                                <div class="mb-3">
+                                    <div class="form-check">
+                                        <input type="checkbox" class="form-check-input" id="is_billing_exempt" 
+                                               name="is_billing_exempt" {{ 'checked' if tier.is_billing_exempt else '' }}
+                                               onchange="toggleBillingFields()">
+                                        <label class="form-check-label" for="is_billing_exempt">
+                                            <strong>Billing Exempt Override</strong>
+                                        </label>
+                                        <div class="form-text">Check to bypass all billing requirements</div>
+                                    </div>
+                                </div>
+
+                                <div id="stripe_fields" class="mb-3" style="display: none;">
+                                    <label for="stripe_lookup_key" class="form-label">Stripe Lookup Key</label>
+                                    <input type="text" class="form-control" id="stripe_lookup_key" name="stripe_lookup_key" 
+                                           value="{{ tier.stripe_lookup_key or '' }}" placeholder="batchtrack_team_monthly">
+                                </div>
+
+                                <div id="whop_fields" class="mb-3" style="display: none;">
+                                    <label for="whop_product_key" class="form-label">Whop Product Key</label>
+                                    <input type="text" class="form-control" id="whop_product_key" name="whop_product_key" 
+                                           value="{{ tier.whop_product_key or '' }}" placeholder="whop_product_123">
+                                </div>
+                            </div>
                         </div>
-                        <div class="card-body">
-                            <div class="mb-3">
-                            <label for="billing_provider" class="form-label">Billing Provider</label>
-                            <select class="form-select" id="billing_provider" name="billing_provider" required>
-                                <option value="stripe" {% if tier.get('billing_provider') == 'stripe' %}selected{% endif %}>Stripe</option>
-                                <option value="whop" {% if tier.get('billing_provider') == 'whop' %}selected{% endif %}>Whop</option>
-                                <option value="exempt" {% if tier.get('billing_provider') == 'exempt' %}selected{% endif %}>Exempt (No Billing)</option>
-                            </select>
-                            <div class="form-text">Choose how customers will be billed for this tier.</div>
-                        </div>
+
+                        <hr>
 
                         <div class="mb-3">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="is_billing_exempt" name="is_billing_exempt" 
-                                       {% if tier.get('is_billing_exempt') %}checked{% endif %}>
-                                <label class="form-check-label" for="is_billing_exempt">
-                                    Override Billing Requirements
-                                </label>
-                            </div>
-                            <div class="form-text">Check this to allow access without valid billing (for testing/special cases).</div>
-                        </div>
-                            <div class="form-group">
-                                <label for="stripe_lookup_key">Stripe Lookup Key</label>
-                                <input type="text" class="form-control" name="stripe_lookup_key" id="stripe_lookup_key" 
-                                       value="{{ tier.get('stripe_lookup_key', '') }}" 
-                                       placeholder="e.g., batchtrack_solo_monthly">
-                                <small class="form-text text-muted">
-                                    This key links the tier to Stripe products. Must match your Stripe product configuration.
-                                </small>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Whop Integration Section -->
-                    <div class="card mb-4">
-                        <div class="card-header">
-                            <h5 class="mb-0">
-                                <i class="fas fa-shopping-cart text-success"></i> Whop Integration
-                            </h5>
-                        </div>
-                        <div class="card-body">
-                            <div class="form-group">
-                                <label for="whop_product_key">Whop Product Key</label>
-                                <input type="text" class="form-control" name="whop_product_key" id="whop_product_key" 
-                                       value="{{ tier.get('whop_product_key', '') }}" 
-                                       placeholder="e.g., batchtrack-lifetime">
-                                <small class="form-text text-muted">
-                                    Unique key to identify this product in Whop
-                                </small>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="whop_product_name">Whop Product Name</label>
-                                <input type="text" class="form-control" name="whop_product_name" id="whop_product_name" 
-                                       value="{{ tier.get('whop_product_name', '') }}" 
-                                       placeholder="e.g., BatchTrack Lifetime Access">
-                                <small class="form-text text-muted">
-                                    Display name for the product in Whop
-                                </small>
-                            </div>
-                        </div>
-                    </div>
-            </div>
-        </div>
-
-        <!-- Permissions and Features Section -->
-        <div class="row mt-4">
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="mb-0">Permissions and Features</h5>
-                    </div>
-                    <div class="card-body">
-                        <!-- Tier Permissions -->
-                        <div class="mb-4">
-                            <h6 class="text-muted mb-3">
-                                Access Control Permissions 
-                                <small class="text-info">({{ permissions|length }} total system permissions)</small>
-                            </h6>
-                            <p class="text-muted small mb-3">
-                                <i class="fas fa-info-circle"></i> These control what users can access in the application. 
-                                Customer-facing features (AI, integrations) are managed in the billing system.
-                            </p>
-
-                            <!-- Permission Selection Controls -->
-                            <div class="mb-3">
-                                <button type="button" class="btn btn-sm btn-outline-primary me-2" onclick="selectAllPermissions()">
-                                    Select All
-                                </button>
-                                <button type="button" class="btn btn-sm btn-outline-secondary me-2" onclick="deselectAllPermissions()">
-                                    Deselect All
-                                </button>
-                                <span class="text-muted small" id="selectedCount">
-                                    {{ tier.permissions|length if tier.permissions else 0 }} selected
-                                </span>
-                            </div>
-
-                            <!-- Scrollable Permissions Container -->
-                            <div class="permissions-container" style="max-height: 400px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 0.375rem; padding: 1rem; background-color: #f8f9fa;">
-                                <div class="row">
-                                    {% for permission in permissions %}
-                                    <div class="col-md-6 col-lg-4 mb-3">
-                                        <div class="form-check">
-                                            <input class="form-check-input permission-checkbox" type="checkbox" 
-                                                   name="permissions" value="{{ permission.name }}" 
-                                                   id="perm_{{ permission.id }}"
-                                                   {% if permission.name in tier.permissions %}checked{% endif %}
-                                                   onchange="updateSelectedCount()">
-                                            <label class="form-check-label" for="perm_{{ permission.id }}" style="font-size: 0.875rem;">
-                                                <strong>{{ permission.name }}</strong><br>
-                                                <span class="text-muted" style="font-size: 0.75rem;">{{ permission.description or 'No description' }}</span>
-                                            </label>
-                                        </div>
-                                    </div>
-                                    {% endfor %}
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Feature Groups -->
-                        <div class="mb-4">
-                            <label class="form-label">
-                                <i class="fas fa-layer-group text-success"></i> Feature Groups
-                            </label>
-                            <div class="form-text mb-2">Select high-level feature groups for organizational purposes.</div>
-                            {% set available_feature_groups = [
-                                'basic_dashboard',
-                                'full_dashboard', 
-                                'limited_inventory',
-                                'full_inventory',
-                                'batch_production',
-                                'recipe_management',
-                                'product_catalog',
-                                'team_management',
-                                'basic_reports',
-                                'advanced_reports',
-                                'api_access',
-                                'integrations',
-                                'system_admin'
-                            ] %}
+                            <label class="form-label">Permissions</label>
                             <div class="row">
-                                {% for feature_group in available_feature_groups %}
-                                <div class="col-md-4 col-lg-3 mb-1">
+                                {% for permission in all_permissions %}
+                                <div class="col-md-4 mb-2">
                                     <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="feature_groups" 
-                                               value="{{ feature_group }}" id="fg_{{ loop.index }}"
-                                               {% if feature_group in tier.get('feature_groups', []) %}checked{% endif %}>
-                                        <label class="form-check-label small" for="fg_{{ loop.index }}">
-                                            {{ feature_group.replace('_', ' ').title() }}
+                                        <input type="checkbox" class="form-check-input" 
+                                               id="perm_{{ permission.id }}" name="permissions" value="{{ permission.id }}"
+                                               {{ 'checked' if permission in tier.permissions else '' }}>
+                                        <label class="form-check-label" for="perm_{{ permission.id }}">
+                                            {{ permission.display_name or permission.name }}
                                         </label>
                                     </div>
                                 </div>
@@ -264,307 +116,40 @@
                             </div>
                         </div>
 
-                        <!-- Stripe Features -->
-                        <div class="mb-4">
-                            <label class="form-label">
-                                <i class="fas fa-credit-card text-info"></i> Stripe Features
-                            </label>
-                            {% if tier.stripe_features %}
-                                <ul class="list-group">
-                                    {% for feature in tier.stripe_features %}
-                                        <li class="list-group-item py-1 small">{{ feature }}</li>
-                                    {% endfor %}
-                                </ul>
-                                <small class="form-text text-muted">These features are synced from Stripe product configuration.</small>
-                            {% else %}
-                                <p class="text-muted">No features synced from Stripe. Check your Stripe product configuration.</p>
-                            {% endif %}
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">Update Tier</button>
+                            <a href="{{ url_for('developer.subscription_tiers.manage_tiers') }}" class="btn btn-secondary">Cancel</a>
                         </div>
-
-                        <!-- Fallback Features -->
-                        <div class="mb-3">
-                            <label for="fallback_features" class="form-label">
-                                <i class="fas fa-list text-warning"></i> Fallback Features (Local Override)
-                            </label>
-                            <textarea class="form-control" id="fallback_features" name="fallback_features" rows="4">{{ tier.fallback_features | join('\n') if tier.fallback_features else '' }}</textarea>
-                            <small class="form-text text-muted">Used only if Stripe sync fails. One feature per line.</small>
-                        </div>
-
-                        <!-- Fallback Pricing Section -->
-                        <hr class="my-4">
-                        <h6 class="text-muted">Fallback Pricing (used when Stripe is not available)</h6>
-
-                        <!-- Pricing Configuration -->
-            <div class="form-group">
-                <label for="fallback_price">Fallback Price (display only):</label>
-                <input type="text" id="fallback_price" name="fallback_price" class="form-control" 
-                       value="{{ tier.fallback_price or '$0' }}">
-                <small class="form-text text-muted">Price shown when Stripe pricing is unavailable. Will be auto-updated when synced with Stripe.</small>
-            </div>
-
-            {% if tier.stripe_price %}
-            <div class="alert alert-success">
-                <strong>Current Stripe Price:</strong> {{ tier.stripe_price }}
-                {% if tier.last_synced %}
-                <br><small>Last synced: {{ tier.last_synced }}</small>
-                {% endif %}
-            </div>
-            {% endif %}
-                    </div>
+                    </form>
                 </div>
             </div>
         </div>
-
-        <!-- Actions -->
-        <div class="row mt-4">
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-body d-flex justify-content-between align-items-center">
-                        <div>
-                            {% if tier_key != 'exempt' %}
-                            <button type="button" class="btn btn-danger" 
-                                    onclick="confirmDelete('{{ tier_key }}', '{{ tier.name }}')">
-                                <i class="fas fa-trash"></i> Delete Tier
-                            </button>
-                            {% endif %}
-                        </div>
-                        <div>
-                            <a href="{{ url_for('developer.subscription_tiers.manage_tiers') }}" class="btn btn-secondary me-2">
-                                Cancel
-                            </a>
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-save"></i> Update Tier
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Delete Confirmation Modal -->
-        <div class="modal fade" id="deleteModal" tabindex="-1">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">Confirm Delete</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <p>Are you sure you want to delete the subscription tier "<span id="tierName"></span>"?</p>
-                        <p class="text-warning"><i class="fas fa-exclamation-triangle"></i> This action cannot be undone.</p>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <form id="deleteForm" method="post" style="display: inline;">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                            <button type="submit" class="btn btn-danger">Delete Tier</button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </form>
+    </div>
 </div>
-{% endblock %}
 
-{% block scripts %}
 <script>
-// Update visibility based on tier type changes
-document.addEventListener('DOMContentLoaded', function() {
-    // Initialize selected count
-    updateSelectedCount();
-});
-
-function selectAllPermissions() {
-    const checkboxes = document.querySelectorAll('.permission-checkbox');
-    checkboxes.forEach(checkbox => {
-        checkbox.checked = true;
-    });
-    updateSelectedCount();
-}
-
-function deselectAllPermissions() {
-    const checkboxes = document.querySelectorAll('.permission-checkbox');
-    checkboxes.forEach(checkbox => {
-        checkbox.checked = false;
-    });
-    updateSelectedCount();
-}
-
-function updateSelectedCount() {
-    const checkboxes = document.querySelectorAll('.permission-checkbox');
-    const selectedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
-    document.getElementById('selectedCount').textContent = selectedCount + ' selected';
-}
-
-function updatePricing() {
-    // Placeholder for pricing update functionality
-}
-
-function getCSRFToken() {
-    return document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-}
-
-function confirmDelete(tierKey, tierName) {
-    const deleteModal = document.getElementById('deleteModal');
-    if (deleteModal) {
-        document.getElementById('tierName').textContent = tierName;
-        const deleteForm = document.getElementById('deleteForm');
-        deleteForm.action = `/developer/subscription-tiers/delete/${tierKey}`;
-        const modal = new bootstrap.Modal(deleteModal);
-        modal.show();
-    } else {
-        // Fallback to simple confirm
-        if (confirm(`Are you sure you want to delete the "${tierName}" tier? This cannot be undone.`)) {
-            window.location.href = `/developer/subscription-tiers/delete/${tierKey}`;
+function toggleBillingFields() {
+    const provider = document.getElementById('billing_provider').value;
+    const isExempt = document.getElementById('is_billing_exempt').checked;
+    
+    const stripeFields = document.getElementById('stripe_fields');
+    const whopFields = document.getElementById('whop_fields');
+    
+    // Hide all fields by default
+    stripeFields.style.display = 'none';
+    whopFields.style.display = 'none';
+    
+    // Show relevant fields if not exempt
+    if (!isExempt) {
+        if (provider === 'stripe') {
+            stripeFields.style.display = 'block';
+        } else if (provider === 'whop') {
+            whopFields.style.display = 'block';
         }
     }
 }
 
-// Feature group to permissions mapping - comprehensive mapping based on actual permission names
-const featureGroupPermissions = {
-    'basic_dashboard': [
-        'dashboard.view'
-    ],
-    'full_dashboard': [
-        'dashboard.view', 
-        'dashboard.admin'
-    ],
-    'limited_inventory': [
-        'inventory.view'
-    ],
-    'full_inventory': [
-        'inventory.view', 
-        'inventory.create', 
-        'inventory.edit', 
-        'inventory.delete',
-        'inventory.adjust',
-        'inventory.fifo',
-        'inventory.reserve',
-        'inventory.view_costs'
-    ],
-    'batch_production': [
-        'batches.view', 
-        'batches.create', 
-        'batches.edit',
-        'batches.start',
-        'batches.finish',
-        'batches.cancel',
-        'batches.view_costs'
-    ],
-    'recipe_management': [
-        'recipes.view', 
-        'recipes.create', 
-        'recipes.edit',
-        'recipes.delete',
-        'recipes.scale',
-        'recipes.duplicate',
-        'recipes.import',
-        'recipes.export',
-        'recipes.plan_production'
-    ],
-    'product_catalog': [
-        'products.view', 
-        'products.create', 
-        'products.edit',
-        'products.delete',
-        'products.manage_variants',
-        'products.manage_pricing',
-        'products.export',
-        'products.import',
-        'products.sales_tracking'
-    ],
-    'team_management': [
-        'users.manage', 
-        'roles.manage',
-        'organization.view',
-        'organization.edit',
-        'organization.manage_users',
-        'organization.manage_roles',
-        'organization.manage_billing',
-        'organization.view_audit_logs'
-    ],
-    'basic_reports': [
-        'reports.view'
-    ],
-    'advanced_reports': [
-        'reports.view', 
-        'reports.export',
-        'reports.advanced',
-        'reports.custom'
-    ],
-    'api_access': [
-        'api.access',
-        'api.read',
-        'api.write',
-        'integrations.api_access'
-    ],
-    'integrations': [
-        'integrations.manage',
-        'integrations.shopify',
-        'integrations.marketplace',
-        'integrations.api_access'
-    ],
-    'system_admin': [
-        'system.admin',
-        'alerts.manage',
-        'alerts.view',
-        'alerts.dismiss'
-    ]
-};
-
-// Handle feature group checkboxes and bidirectional sync
-document.addEventListener('DOMContentLoaded', function() {
-    const featureGroupCheckboxes = document.querySelectorAll('input[name="feature_groups"]');
-    const permissionCheckboxes = document.querySelectorAll('input[name="permissions"]');
-
-    // Function to update feature group status based on permissions
-    function updateFeatureGroupStatus() {
-        featureGroupCheckboxes.forEach(checkbox => {
-            const featureGroup = checkbox.value;
-            const permissions = featureGroupPermissions[featureGroup] || [];
-
-            if (permissions.length === 0) {
-                checkbox.checked = false;
-                return;
-            }
-
-            // Check if all permissions for this feature group are selected
-            const checkedPermissions = permissions.filter(permissionName => {
-                const permissionCheckbox = document.querySelector(`input[name="permissions"][value="${permissionName}"]`);
-                return permissionCheckbox && permissionCheckbox.checked;
-            });
-
-            // Feature group is checked if at least 50% of its permissions are checked
-            checkbox.checked = checkedPermissions.length >= Math.ceil(permissions.length * 0.5);
-        });
-    }
-
-    // Handle feature group changes
-    featureGroupCheckboxes.forEach(checkbox => {
-        checkbox.addEventListener('change', function() {
-            const featureGroup = this.value;
-            const permissions = featureGroupPermissions[featureGroup] || [];
-            const isChecked = this.checked;
-
-            permissions.forEach(permissionName => {
-                const permissionCheckbox = document.querySelector(`input[name="permissions"][value="${permissionName}"]`);
-                if (permissionCheckbox) {
-                    permissionCheckbox.checked = isChecked;
-                }
-            });
-        });
-    });
-
-    // Handle permission changes to update feature groups
-    permissionCheckboxes.forEach(checkbox => {
-        checkbox.addEventListener('change', function() {
-            updateFeatureGroupStatus();
-        });
-    });
-
-    // Initialize feature group status on page load
-    updateFeatureGroupStatus();
-});
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', toggleBillingFields);
 </script>
 {% endblock %}

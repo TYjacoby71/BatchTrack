@@ -2,7 +2,7 @@
 """clean subscription tier billing structure
 
 Revision ID: clean_subscription_tier_billing
-Revises: 4481595c5f02
+Revises: 57d6ce45a761
 Create Date: 2025-08-14 23:45:00.000000
 
 """
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = 'clean_subscription_tier_billing'
-down_revision = '4481595c5f02'
+down_revision = '57d6ce45a761'
 branch_labels = None
 depends_on = None
 

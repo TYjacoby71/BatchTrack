@@ -1,6 +1,5 @@
 from datetime import datetime
 from ..extensions import db
-from ..utils.timezone_utils import TimezoneUtils
 from sqlalchemy.ext.hybrid import hybrid_property
 
 class SubscriptionTier(db.Model):
@@ -10,9 +9,6 @@ class SubscriptionTier(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), nullable=False)  # "Solo Plan", "Team Plan", etc.
     key = db.Column(db.String(32), nullable=False, unique=True)  # "solo", "team", etc.
-
-    # NEW: stable programmatic key the app/tests expect
-    tier_key = db.Column(db.String(64), unique=True, nullable=True, index=True)
 
     description = db.Column(db.Text, nullable=True)
 
@@ -34,11 +30,11 @@ class SubscriptionTier(db.Model):
 
     # NEW: Billing configuration - cleaner approach
     billing_provider = db.Column(db.String(32), nullable=False, default='exempt')  # 'stripe', 'whop', 'exempt'
-    is_billing_exempt = db.Column(db.Boolean, default=False)  # Override to bypass billing checks
+    is_billing_exempt = db.Column(db.Boolean, default=False, index=True)  # Override to bypass billing checks
 
     # Integration keys for linking to external products (required unless exempt)
-    stripe_lookup_key = db.Column(db.String(128), nullable=True)  # Links to Stripe product
-    whop_product_key = db.Column(db.String(128), nullable=True)   # Links to Whop product
+    stripe_lookup_key = db.Column(db.String(128), nullable=True, unique=True)  # Links to Stripe product
+    whop_product_key = db.Column(db.String(128), nullable=True, unique=True)   # Links to Whop product
 
     # Pricing for display and offline use
     fallback_price = db.Column(db.String(32), default='$0')
@@ -48,8 +44,8 @@ class SubscriptionTier(db.Model):
     grace_period_days = db.Column(db.Integer, default=7)  # Days to allow offline usage
 
     # Metadata
-    created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
-    updated_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now, onupdate=TimezoneUtils.utc_now)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Relationships
     permissions = db.relationship('Permission', secondary='subscription_tier_permission',
@@ -128,9 +124,6 @@ class SubscriptionTier(db.Model):
     @classmethod
     def get_by_key(cls, key: str):
         return cls.query.filter_by(tier_key=key).first()
-
-    
-
 
     def __repr__(self):
         return f'<SubscriptionTier {self.name}>'

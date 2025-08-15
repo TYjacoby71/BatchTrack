@@ -1,178 +1,153 @@
 {% extends 'layout.html' %}
-
-{% block title %}Create Subscription Tier - Developer{% endblock %}
-
 {% block content %}
-<div class="container-fluid py-4">
+<div class="container-fluid">
     <div class="row">
         <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>Create New Subscription Tier</h2>
+                <a href="{{ url_for('developer.subscription_tiers.manage_tiers') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Tiers
+                </a>
+            </div>
+
             <div class="card">
-                <div class="card-header">
-                    <h3 class="mb-0">
-                        <i class="fas fa-plus text-primary"></i> Create New Subscription Tier
-                    </h3>
-                    <p class="text-muted mb-0">Configure a new subscription tier with product integration</p>
+                <div class="card-body">
+                    <form method="POST">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="key" class="form-label">Tier Key *</label>
+                                    <input type="text" class="form-control" id="key" name="key" required>
+                                    <div class="form-text">Unique identifier (e.g., "team", "enterprise")</div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="name" class="form-label">Display Name *</label>
+                                    <input type="text" class="form-control" id="name" name="name" required>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="description" class="form-label">Description</label>
+                                    <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="user_limit" class="form-label">User Limit</label>
+                                    <input type="number" class="form-control" id="user_limit" name="user_limit" 
+                                           value="1" min="1" required>
+                                    <div class="form-text">Set to -1 for unlimited users</div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="fallback_price" class="form-label">Display Price</label>
+                                    <input type="text" class="form-control" id="fallback_price" name="fallback_price" 
+                                           value="$0" placeholder="$0">
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Visibility</label>
+                                    <div class="form-check">
+                                        <input type="checkbox" class="form-check-input" id="is_customer_facing" 
+                                               name="is_customer_facing" checked>
+                                        <label class="form-check-label" for="is_customer_facing">
+                                            Show to customers
+                                        </label>
+                                        <div class="form-text">Unchecked tiers are hidden from public view</div>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="billing_provider" class="form-label">Billing Provider *</label>
+                                    <select class="form-select" id="billing_provider" name="billing_provider" 
+                                            onchange="toggleBillingFields()" required>
+                                        <option value="exempt">Exempt (No Billing)</option>
+                                        <option value="stripe">Stripe</option>
+                                        <option value="whop">Whop</option>
+                                    </select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <div class="form-check">
+                                        <input type="checkbox" class="form-check-input" id="is_billing_exempt" 
+                                               name="is_billing_exempt" onchange="toggleBillingFields()">
+                                        <label class="form-check-label" for="is_billing_exempt">
+                                            <strong>Billing Exempt Override</strong>
+                                        </label>
+                                        <div class="form-text">Check to bypass all billing requirements</div>
+                                    </div>
+                                </div>
+
+                                <div id="stripe_fields" class="mb-3" style="display: none;">
+                                    <label for="stripe_lookup_key" class="form-label">Stripe Lookup Key *</label>
+                                    <input type="text" class="form-control" id="stripe_lookup_key" name="stripe_lookup_key" 
+                                           placeholder="batchtrack_team_monthly">
+                                    <div class="form-text">Must match a Stripe price lookup key</div>
+                                </div>
+
+                                <div id="whop_fields" class="mb-3" style="display: none;">
+                                    <label for="whop_product_key" class="form-label">Whop Product Key *</label>
+                                    <input type="text" class="form-control" id="whop_product_key" name="whop_product_key" 
+                                           placeholder="whop_product_123">
+                                    <div class="form-text">Must match a Whop product identifier</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <div class="mb-3">
+                            <label class="form-label">Permissions</label>
+                            <div class="row">
+                                {% for permission in all_permissions %}
+                                <div class="col-md-4 mb-2">
+                                    <div class="form-check">
+                                        <input type="checkbox" class="form-check-input" 
+                                               id="perm_{{ permission.id }}" name="permissions" value="{{ permission.id }}">
+                                        <label class="form-check-label" for="perm_{{ permission.id }}">
+                                            {{ permission.display_name or permission.name }}
+                                        </label>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">Create Tier</button>
+                            <a href="{{ url_for('developer.subscription_tiers.manage_tiers') }}" class="btn btn-secondary">Cancel</a>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
     </div>
-
-    <form method="post">
-        <div class="row mt-4">
-            <!-- Basic Information -->
-            <div class="col-md-6">
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="mb-0">Basic Information</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="mb-3">
-                            <label for="tier_key" class="form-label">Tier Key</label>
-                            <input type="text" class="form-control" id="tier_key" name="tier_key" required
-                                   placeholder="e.g., startup, professional"
-                                   pattern="[a-z_]+" title="Use lowercase letters and underscores only">
-                            <small class="form-text text-muted">Internal identifier (lowercase, underscores only)</small>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="tier_name" class="form-label">Display Name *</label>
-                            <input type="text" class="form-control" id="tier_name" name="tier_name" required
-                                   placeholder="e.g., Startup Plan, Professional Plan">
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="user_limit" class="form-label">User Limit</label>
-                            <input type="number" class="form-control" id="user_limit" name="user_limit" value="1" min="-1">
-                            <small class="form-text text-muted">Use -1 for unlimited users (recommended for exempt tier only)</small>
-                        </div>
-
-                        <div class="mb-3">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="is_customer_facing" name="is_customer_facing" checked>
-                                <label class="form-check-label" for="is_customer_facing">
-                                    Customer Facing
-                                </label>
-                            </div>
-                            <small class="form-text text-muted">If checked, this tier will be visible to customers.</small>
-                        </div>
-
-                        <div class="alert alert-info">
-                            <h6><i class="fas fa-info-circle"></i> Auto-Detection</h6>
-                            <small>
-                                Billing provider is automatically determined by product keys you enter below.
-                            </small>
-                        </div>
-
-
-                    </div>
-                </div>
-            </div>
-
-            <!-- Product Integration -->
-            <div class="col-md-6">
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="mb-0">Product Integration</h5>
-                        <small class="text-muted">System will automatically create secure environment secrets for price IDs</small>
-                    </div>
-                    <div class="card-body">
-                        <div class="mb-3">
-                            <label for="stripe_lookup_key" class="form-label">Stripe Product Lookup Key</label>
-                            <input type="text" class="form-control" id="stripe_lookup_key" name="stripe_lookup_key"
-                                   placeholder="solo_plan_monthly">
-                            <small class="form-text text-muted">Links to Stripe product for pricing sync</small>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="stripe_monthly_price_id" class="form-label">Stripe Monthly Price ID</label>
-                            <input type="text" class="form-control" id="stripe_monthly_price_id" name="stripe_monthly_price_id"
-                                   placeholder="price_1234567890...">
-                            <small class="form-text text-muted">Monthly subscription price ID from Stripe</small>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="stripe_yearly_price_id" class="form-label">Stripe Yearly Price ID</label>
-                            <input type="text" class="form-control" id="stripe_yearly_price_id" name="stripe_yearly_price_id"
-                                   placeholder="price_0987654321...">
-                            <small class="form-text text-muted">Yearly subscription price ID from Stripe</small>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="whop_product_key" class="form-label">Whop Product Key</label>
-                            <input type="text" class="form-control" id="whop_product_key" name="whop_product_key"
-                                   placeholder="whop_prod_123">
-                            <small class="form-text text-muted">Links to Whop product (if using Whop billing)</small>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="billing_provider" class="form-label">Billing Provider</label>
-                            <select class="form-select" id="billing_provider" name="billing_provider" required>
-                                <option value="stripe">Stripe</option>
-                                <option value="whop">Whop</option>
-                                <option value="exempt">Exempt (No Billing)</option>
-                            </select>
-                            <div class="form-text">Choose how customers will be billed for this tier.</div>
-                        </div>
-
-                        <div class="mb-3">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="is_billing_exempt" name="is_billing_exempt">
-                                <label class="form-check-label" for="is_billing_exempt">
-                                    Override Billing Requirements
-                                </label>
-                            </div>
-                            <div class="form-text">Check this to allow access without valid billing (for testing/special cases).</div>
-                        </div>
-
-
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="row mt-4">
-            <!-- Fallback Configuration -->
-            <div class="col-md-6">
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="mb-0">Fallback Configuration</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="mb-3">
-                            <label for="fallback_features" class="form-label">Fallback Customer Features (one per line)</label>
-                            <textarea class="form-control" id="fallback_features" name="fallback_features" rows="8"
-                                      placeholder="One customer feature per line:&#10;Up to 25 users&#10;AI Recipe Optimization&#10;Shopify Integration&#10;Priority Support&#10;Advanced Analytics"></textarea>
-                            <small class="form-text text-muted">Customer-facing features displayed when Stripe/Whop data unavailable. Separate from system permissions.</small>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="fallback_price" class="form-label">Fallback Price</label>
-                            <input type="text" class="form-control" id="fallback_price" name="fallback_price"
-                                   placeholder="$19/month" value="$0">
-                            <small class="form-text text-muted">Display price when external pricing unavailable</small>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-
-
-        <!-- Actions -->
-        <div class="row mt-4">
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-body text-end">
-                        <a href="{{ url_for('developer.subscription_tiers.manage_tiers') }}" class="btn btn-secondary me-2">
-                            Cancel
-                        </a>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-save"></i> Create Tier
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </form>
 </div>
+
+<script>
+function toggleBillingFields() {
+    const provider = document.getElementById('billing_provider').value;
+    const isExempt = document.getElementById('is_billing_exempt').checked;
+
+    const stripeFields = document.getElementById('stripe_fields');
+    const whopFields = document.getElementById('whop_fields');
+
+    // Hide all fields by default
+    stripeFields.style.display = 'none';
+    whopFields.style.display = 'none';
+
+    // Show relevant fields if not exempt
+    if (!isExempt) {
+        if (provider === 'stripe') {
+            stripeFields.style.display = 'block';
+        } else if (provider === 'whop') {
+            whopFields.style.display = 'block';
+        }
+    }
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', toggleBillingFields);
+</script>
 {% endblock %}
