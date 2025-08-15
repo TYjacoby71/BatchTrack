@@ -106,7 +106,7 @@ class Organization(db.Model):
     # Relationships
     users = db.relationship('User', backref='organization')
     subscription_tier = db.relationship('SubscriptionTier', foreign_keys=[subscription_tier_id])
-    tier = db.relationship('SubscriptionTier', foreign_keys=[subscription_tier_id])  # Alias for backward compatibility
+    tier = db.relationship('SubscriptionTier', foreign_keys=[subscription_tier_id], overlaps="subscription_tier")  # Alias for backward compatibility
 
     @property
     def active_users_count(self):
