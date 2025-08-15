@@ -27,14 +27,16 @@ def register_middleware(app):
 
         # Handle developer users first - they bypass all billing checks
         if getattr(current_user, 'user_type', None) == 'developer':
-            if not request.path.startswith("/developer/") and session.get('dev_selected_org_id') is None:
+            selected_org_id = session.get('dev_selected_org_id') or session.get('masquerade_org_id')
+            if not request.path.startswith("/developer/") and selected_org_id is None:
                 flash('Please select an organization to access customer features.', 'warning')
                 return redirect(url_for('developer.organizations'))
 
             # If developer is masquerading, set effective org
-            if session.get('dev_selected_org_id'):
+            selected_org_id = session.get('dev_selected_org_id') or session.get('masquerade_org_id')
+            if selected_org_id:
                 from app.models import Organization
-                g.effective_org = Organization.query.get(session.get('dev_selected_org_id'))
+                g.effective_org = Organization.query.get(selected_org_id)
                 g.is_developer_masquerade = True
             return  # Developers bypass all further checks
 
