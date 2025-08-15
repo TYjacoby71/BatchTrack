@@ -122,7 +122,7 @@ def register_middleware(app):
             return
 
         if current_user.is_authenticated and current_user.organization:
-            from .utils.authorization import AuthorizationHierarchy
+            from .utils.permissions import AuthorizationHierarchy
             has_access, reason = AuthorizationHierarchy.check_organization_access(current_user.organization)
             if not has_access:
                 if reason == 'organization_suspended':
