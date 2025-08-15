@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required
 from app.models import db, Permission, SubscriptionTier, Organization
-from app.utils.permissions import permission_required
+from app.utils.permissions import require_permission # Assuming this is the correct import
 import logging
 import json
 import os
@@ -31,7 +31,7 @@ subscription_tiers_bp = Blueprint('subscription_tiers', __name__, url_prefix='/s
 
 @subscription_tiers_bp.route('/')
 @login_required
-@permission_required('developer.system_management')
+@require_permission('developer.system_management')
 def manage_tiers():
     """Main page to view all tiers directly from the database."""
     all_tiers = SubscriptionTier.query.order_by(SubscriptionTier.name).all()
@@ -42,7 +42,7 @@ def manage_tiers():
 
 @subscription_tiers_bp.route('/create', methods=['GET', 'POST'])
 @login_required
-@permission_required('developer.system_management')
+@require_permission('developer.system_management')
 def create_tier():
     """Create a new SubscriptionTier record directly in the database."""
     if request.method == 'POST':
@@ -111,7 +111,7 @@ def create_tier():
 
 @subscription_tiers_bp.route('/edit/<int:tier_id>', methods=['GET', 'POST'])
 @login_required
-@permission_required('developer.system_management')
+@require_permission('developer.system_management')
 def edit_tier(tier_id):
     """Edit an existing tier by its database ID."""
     tier = db.session.get(SubscriptionTier, tier_id)
@@ -171,7 +171,7 @@ def edit_tier(tier_id):
 
 @subscription_tiers_bp.route('/delete/<int:tier_id>', methods=['POST'])
 @login_required
-@permission_required('developer.system_management')
+@require_permission('developer.system_management')
 def delete_tier(tier_id):
     """Delete a tier from the database, with safety checks."""
     tier = db.session.get(SubscriptionTier, tier_id)
@@ -206,7 +206,7 @@ def delete_tier(tier_id):
 
 @subscription_tiers_bp.route('/api/tiers')
 @login_required
-@permission_required('developer.system_management')
+@require_permission('developer.system_management')
 def api_get_tiers():
     """API endpoint to get all tiers as JSON."""
     tiers = SubscriptionTier.query.filter_by(is_customer_facing=True).all()
