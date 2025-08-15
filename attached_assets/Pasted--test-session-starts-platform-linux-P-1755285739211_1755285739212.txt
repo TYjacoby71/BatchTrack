@@ -1,0 +1,617 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.13, pytest-8.3.5, pluggy-1.5.0 -- /home/runner/workspace/.pythonlibs/bin/python
+cachedir: .pytest_cache
+rootdir: /home/runner/workspace
+collected 16 items                                                             
+
+tests/test_signup_tiers.py::TestSignupTierCharacterization::test_signup_endpoint_exists PASSED [  6%]
+tests/test_signup_tiers.py::TestSignupTierCharacterization::test_tier_bypass_behavior PASSED [ 12%]
+tests/test_signup_tiers.py::TestSignupTierCharacterization::test_organization_tier_assignment PASSED [ 18%]
+tests/test_signup_tiers.py::TestSignupTierCharacterization::test_permission_gating_exists FAILED [ 25%]
+tests/test_signup_tiers.py::TestSignupTierCharacterization::test_signup_service_delegation PASSED [ 31%]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_tier_permission_is_the_hard_ceiling PASSED [ 37%]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[active-200] FAILED [ 43%]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[past_due-302] FAILED [ 50%]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[suspended-302] FAILED [ 56%]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[canceled-302] FAILED [ 62%]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_developer_can_masquerade_regardless_of_billing FAILED [ 68%]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_complete_security_cascade PASSED [ 75%]
+tests/test_stripe_webhooks.py::TestStripeWebhookCharacterization::test_stripe_service_exists PASSED [ 81%]
+tests/test_stripe_webhooks.py::TestStripeWebhookCharacterization::test_webhook_signature_verification_path_exists FAILED [ 87%]
+tests/test_stripe_webhooks.py::TestStripeWebhookCharacterization::test_webhook_idempotency_behavior FAILED [ 93%]
+tests/test_stripe_webhooks.py::TestStripeWebhookCharacterization::test_stripe_service_methods_exist PASSED [100%]
+
+======================================= FAILURES ========================================
+_____________ TestSignupTierCharacterization.test_permission_gating_exists ______________
+
+self = <tests.test_signup_tiers.TestSignupTierCharacterization object at 0x7fd978c7a950>
+app = <Flask 'app'>
+
+    def test_permission_gating_exists(self, app):
+        """Test that permission gating system exists."""
+        with app.app_context():
+            # Verify permission system components exist
+>           from app.utils.authorization import has_permission
+E           ImportError: cannot import name 'has_permission' from 'app.utils.authorization' (/home/runner/workspace/app/utils/authorization.py)
+
+tests/test_signup_tiers.py:43: ImportError
+---------------------------------- Captured log setup -----------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+_______ TestBillingAndTierEnforcement.test_billing_status_enforcement[active-200] _______
+
+self = <tests.test_billing_and_tier_enforcement.TestBillingAndTierEnforcement object at 0x7fd97bddbd90>
+app = <Flask 'app'>, client = <FlaskClient <Flask 'app'>>, test_user = <User testuser>
+billing_status = 'active', expected_status_code = 200
+
+    @pytest.mark.parametrize("billing_status, expected_status_code", [
+        ('active', 200),
+        ('past_due', 302),
+        ('suspended', 302),
+        ('canceled', 302),
+    ])
+    def test_billing_status_enforcement(self, app, client, test_user, billing_status, expected_status_code):
+        """
+        Tests that the billing middleware blocks access for non-active billing statuses.
+        """
+        with app.app_context():
+            # ARRANGE
+            # Update the user's organization with the test billing status
+            org = test_user.organization
+            org.billing_status = billing_status
+            db.session.commit()
+    
+            # Create a simple protected route to test against
+            @app.route('/_protected_dashboard')
+            def _protected_dashboard():
+                return "Welcome to the dashboard", 200
+    
+            # ACT
+            # Log the user in and try to access the protected route
+            with client:
+                with client.session_transaction() as sess:
+                    sess['_user_id'] = str(test_user.id)
+                    sess['_fresh'] = True
+    
+>               response = client.get('/_protected_dashboard')
+
+tests/test_billing_and_tier_enforcement.py:100: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+.pythonlibs/lib/python3.11/site-packages/werkzeug/test.py:1162: in get
+    return self.open(*args, **kw)
+.pythonlibs/lib/python3.11/site-packages/flask/testing.py:235: in open
+    response = super().open(
+.pythonlibs/lib/python3.11/site-packages/werkzeug/test.py:1116: in open
+    response_parts = self.run_wsgi_app(request.environ, buffered=buffered)
+.pythonlibs/lib/python3.11/site-packages/werkzeug/test.py:988: in run_wsgi_app
+    rv = run_wsgi_app(self.application, environ, buffered=buffered)
+.pythonlibs/lib/python3.11/site-packages/werkzeug/test.py:1264: in run_wsgi_app
+    app_rv = app(environ, start_response)
+.pythonlibs/lib/python3.11/site-packages/flask/app.py:1536: in __call__
+    return self.wsgi_app(environ, start_response)
+.pythonlibs/lib/python3.11/site-packages/flask/app.py:1514: in wsgi_app
+    response = self.handle_exception(e)
+.pythonlibs/lib/python3.11/site-packages/flask/app.py:1511: in wsgi_app
+    response = self.full_dispatch_request()
+.pythonlibs/lib/python3.11/site-packages/flask/app.py:919: in full_dispatch_request
+    rv = self.handle_user_exception(e)
+.pythonlibs/lib/python3.11/site-packages/flask/app.py:915: in full_dispatch_request
+    rv = self.preprocess_request()
+.pythonlibs/lib/python3.11/site-packages/flask/app.py:1291: in preprocess_request
+    rv = self.ensure_sync(before_func)()
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    @app.before_request
+    def billing_enforcement():
+        """
+        Enforce billing and subscription tier requirements before each request.
+        This is the SINGLE POINT where billing is checked across the entire app.
+        """
+        # Skip enforcement for static files, auth routes, and API endpoints
+        if (request.endpoint and
+            (request.endpoint.startswith('static') or
+             request.endpoint.startswith('auth.') or
+             request.endpoint.startswith('api.') or
+             request.endpoint in ['homepage', 'billing.upgrade', 'billing.webhook'])):
+            return
+    
+        # Skip for unauthenticated users
+        if not current_user.is_authenticated:
+            return
+    
+        # Handle developer users first - they bypass all billing checks
+        if getattr(current_user, 'user_type', None) == 'developer':
+            if not request.path.startswith("/developer/") and session.get('dev_selected_org_id') is None:
+                flash('Please select an organization to access customer features.', 'warning')
+                return redirect(url_for('developer.organizations'))
+    
+            # If developer is masquerading, set effective org
+            if session.get('dev_selected_org_id'):
+                from app.models import Organization
+                g.effective_org = Organization.query.get(session.get('dev_selected_org_id'))
+                g.is_developer_masquerade = True
+            return  # Developers bypass all further checks
+    
+        # Check organization billing status for regular users
+        if current_user.organization:
+            org = current_user.organization
+            if org.subscription_tier:
+                tier = org.subscription_tier
+                # Only enforce billing if tier requires it and org isn't exempt
+>               if (not tier.is_billing_exempt and
+                    tier.billing_provider not in ['exempt'] and
+                    org.billing_status not in ['active']):
+E                   AttributeError: 'str' object has no attribute 'is_billing_exempt'
+
+app/middleware.py:47: AttributeError
+---------------------------------- Captured log setup -----------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+______ TestBillingAndTierEnforcement.test_billing_status_enforcement[past_due-302] ______
+
+self = <tests.test_billing_and_tier_enforcement.TestBillingAndTierEnforcement object at 0x7fd978c581d0>
+app = <Flask 'app'>, client = <FlaskClient <Flask 'app'>>, test_user = <User testuser>
+billing_status = 'past_due', expected_status_code = 302
+
+    @pytest.mark.parametrize("billing_status, expected_status_code", [
+        ('active', 200),
+        ('past_due', 302),
+        ('suspended', 302),
+        ('canceled', 302),
+    ])
+    def test_billing_status_enforcement(self, app, client, test_user, billing_status, expected_status_code):
+        """
+        Tests that the billing middleware blocks access for non-active billing statuses.
+        """
+        with app.app_context():
+            # ARRANGE
+            # Update the user's organization with the test billing status
+            org = test_user.organization
+            org.billing_status = billing_status
+            db.session.commit()
+    
+            # Create a simple protected route to test against
+            @app.route('/_protected_dashboard')
+            def _protected_dashboard():
+                return "Welcome to the dashboard", 200
+    
+            # ACT
+            # Log the user in and try to access the protected route
+            with client:
+                with client.session_transaction() as sess:
+                    sess['_user_id'] = str(test_user.id)
+                    sess['_fresh'] = True
+    
+>               response = client.get('/_protected_dashboard')
+
+tests/test_billing_and_tier_enforcement.py:100: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+.pythonlibs/lib/python3.11/site-packages/werkzeug/test.py:1162: in get
+    return self.open(*args, **kw)
+.pythonlibs/lib/python3.11/site-packages/flask/testing.py:235: in open
+    response = super().open(
+.pythonlibs/lib/python3.11/site-packages/werkzeug/test.py:1116: in open
+    response_parts = self.run_wsgi_app(request.environ, buffered=buffered)
+.pythonlibs/lib/python3.11/site-packages/werkzeug/test.py:988: in run_wsgi_app
+    rv = run_wsgi_app(self.application, environ, buffered=buffered)
+.pythonlibs/lib/python3.11/site-packages/werkzeug/test.py:1264: in run_wsgi_app
+    app_rv = app(environ, start_response)
+.pythonlibs/lib/python3.11/site-packages/flask/app.py:1536: in __call__
+    return self.wsgi_app(environ, start_response)
+.pythonlibs/lib/python3.11/site-packages/flask/app.py:1514: in wsgi_app
+    response = self.handle_exception(e)
+.pythonlibs/lib/python3.11/site-packages/flask/app.py:1511: in wsgi_app
+    response = self.full_dispatch_request()
+.pythonlibs/lib/python3.11/site-packages/flask/app.py:919: in full_dispatch_request
+    rv = self.handle_user_exception(e)
+.pythonlibs/lib/python3.11/site-packages/flask/app.py:915: in full_dispatch_request
+    rv = self.preprocess_request()
+.pythonlibs/lib/python3.11/site-packages/flask/app.py:1291: in preprocess_request
+    rv = self.ensure_sync(before_func)()
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    @app.before_request
+    def billing_enforcement():
+        """
+        Enforce billing and subscription tier requirements before each request.
+        This is the SINGLE POINT where billing is checked across the entire app.
+        """
+        # Skip enforcement for static files, auth routes, and API endpoints
+        if (request.endpoint and
+            (request.endpoint.startswith('static') or
+             request.endpoint.startswith('auth.') or
+             request.endpoint.startswith('api.') or
+             request.endpoint in ['homepage', 'billing.upgrade', 'billing.webhook'])):
+            return
+    
+        # Skip for unauthenticated users
+        if not current_user.is_authenticated:
+            return
+    
+        # Handle developer users first - they bypass all billing checks
+        if getattr(current_user, 'user_type', None) == 'developer':
+            if not request.path.startswith("/developer/") and session.get('dev_selected_org_id') is None:
+                flash('Please select an organization to access customer features.', 'warning')
+                return redirect(url_for('developer.organizations'))
+    
+            # If developer is masquerading, set effective org
+            if session.get('dev_selected_org_id'):
+                from app.models import Organization
+                g.effective_org = Organization.query.get(session.get('dev_selected_org_id'))
+                g.is_developer_masquerade = True
+            return  # Developers bypass all further checks
+    
+        # Check organization billing status for regular users
+        if current_user.organization:
+            org = current_user.organization
+            if org.subscription_tier:
+                tier = org.subscription_tier
+                # Only enforce billing if tier requires it and org isn't exempt
+>               if (not tier.is_billing_exempt and
+                    tier.billing_provider not in ['exempt'] and
+                    org.billing_status not in ['active']):
+E                   AttributeError: 'str' object has no attribute 'is_billing_exempt'
+
+app/middleware.py:47: AttributeError
+---------------------------------- Captured log setup -----------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+_____ TestBillingAndTierEnforcement.test_billing_status_enforcement[suspended-302] ______
+
+self = <tests.test_billing_and_tier_enforcement.TestBillingAndTierEnforcement object at 0x7fd978c58590>
+app = <Flask 'app'>, client = <FlaskClient <Flask 'app'>>, test_user = <User testuser>
+billing_status = 'suspended', expected_status_code = 302
+
+    @pytest.mark.parametrize("billing_status, expected_status_code", [
+        ('active', 200),
+        ('past_due', 302),
+        ('suspended', 302),
+        ('canceled', 302),
+    ])
+    def test_billing_status_enforcement(self, app, client, test_user, billing_status, expected_status_code):
+        """
+        Tests that the billing middleware blocks access for non-active billing statuses.
+        """
+        with app.app_context():
+            # ARRANGE
+            # Update the user's organization with the test billing status
+            org = test_user.organization
+            org.billing_status = billing_status
+            db.session.commit()
+    
+            # Create a simple protected route to test against
+            @app.route('/_protected_dashboard')
+            def _protected_dashboard():
+                return "Welcome to the dashboard", 200
+    
+            # ACT
+            # Log the user in and try to access the protected route
+            with client:
+                with client.session_transaction() as sess:
+                    sess['_user_id'] = str(test_user.id)
+                    sess['_fresh'] = True
+    
+>               response = client.get('/_protected_dashboard')
+
+tests/test_billing_and_tier_enforcement.py:100: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+.pythonlibs/lib/python3.11/site-packages/werkzeug/test.py:1162: in get
+    return self.open(*args, **kw)
+.pythonlibs/lib/python3.11/site-packages/flask/testing.py:235: in open
+    response = super().open(
+.pythonlibs/lib/python3.11/site-packages/werkzeug/test.py:1116: in open
+    response_parts = self.run_wsgi_app(request.environ, buffered=buffered)
+.pythonlibs/lib/python3.11/site-packages/werkzeug/test.py:988: in run_wsgi_app
+    rv = run_wsgi_app(self.application, environ, buffered=buffered)
+.pythonlibs/lib/python3.11/site-packages/werkzeug/test.py:1264: in run_wsgi_app
+    app_rv = app(environ, start_response)
+.pythonlibs/lib/python3.11/site-packages/flask/app.py:1536: in __call__
+    return self.wsgi_app(environ, start_response)
+.pythonlibs/lib/python3.11/site-packages/flask/app.py:1514: in wsgi_app
+    response = self.handle_exception(e)
+.pythonlibs/lib/python3.11/site-packages/flask/app.py:1511: in wsgi_app
+    response = self.full_dispatch_request()
+.pythonlibs/lib/python3.11/site-packages/flask/app.py:919: in full_dispatch_request
+    rv = self.handle_user_exception(e)
+.pythonlibs/lib/python3.11/site-packages/flask/app.py:915: in full_dispatch_request
+    rv = self.preprocess_request()
+.pythonlibs/lib/python3.11/site-packages/flask/app.py:1291: in preprocess_request
+    rv = self.ensure_sync(before_func)()
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    @app.before_request
+    def billing_enforcement():
+        """
+        Enforce billing and subscription tier requirements before each request.
+        This is the SINGLE POINT where billing is checked across the entire app.
+        """
+        # Skip enforcement for static files, auth routes, and API endpoints
+        if (request.endpoint and
+            (request.endpoint.startswith('static') or
+             request.endpoint.startswith('auth.') or
+             request.endpoint.startswith('api.') or
+             request.endpoint in ['homepage', 'billing.upgrade', 'billing.webhook'])):
+            return
+    
+        # Skip for unauthenticated users
+        if not current_user.is_authenticated:
+            return
+    
+        # Handle developer users first - they bypass all billing checks
+        if getattr(current_user, 'user_type', None) == 'developer':
+            if not request.path.startswith("/developer/") and session.get('dev_selected_org_id') is None:
+                flash('Please select an organization to access customer features.', 'warning')
+                return redirect(url_for('developer.organizations'))
+    
+            # If developer is masquerading, set effective org
+            if session.get('dev_selected_org_id'):
+                from app.models import Organization
+                g.effective_org = Organization.query.get(session.get('dev_selected_org_id'))
+                g.is_developer_masquerade = True
+            return  # Developers bypass all further checks
+    
+        # Check organization billing status for regular users
+        if current_user.organization:
+            org = current_user.organization
+            if org.subscription_tier:
+                tier = org.subscription_tier
+                # Only enforce billing if tier requires it and org isn't exempt
+>               if (not tier.is_billing_exempt and
+                    tier.billing_provider not in ['exempt'] and
+                    org.billing_status not in ['active']):
+E                   AttributeError: 'str' object has no attribute 'is_billing_exempt'
+
+app/middleware.py:47: AttributeError
+---------------------------------- Captured log setup -----------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+______ TestBillingAndTierEnforcement.test_billing_status_enforcement[canceled-302] ______
+
+self = <tests.test_billing_and_tier_enforcement.TestBillingAndTierEnforcement object at 0x7fd978c58850>
+app = <Flask 'app'>, client = <FlaskClient <Flask 'app'>>, test_user = <User testuser>
+billing_status = 'canceled', expected_status_code = 302
+
+    @pytest.mark.parametrize("billing_status, expected_status_code", [
+        ('active', 200),
+        ('past_due', 302),
+        ('suspended', 302),
+        ('canceled', 302),
+    ])
+    def test_billing_status_enforcement(self, app, client, test_user, billing_status, expected_status_code):
+        """
+        Tests that the billing middleware blocks access for non-active billing statuses.
+        """
+        with app.app_context():
+            # ARRANGE
+            # Update the user's organization with the test billing status
+            org = test_user.organization
+            org.billing_status = billing_status
+            db.session.commit()
+    
+            # Create a simple protected route to test against
+            @app.route('/_protected_dashboard')
+            def _protected_dashboard():
+                return "Welcome to the dashboard", 200
+    
+            # ACT
+            # Log the user in and try to access the protected route
+            with client:
+                with client.session_transaction() as sess:
+                    sess['_user_id'] = str(test_user.id)
+                    sess['_fresh'] = True
+    
+>               response = client.get('/_protected_dashboard')
+
+tests/test_billing_and_tier_enforcement.py:100: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+.pythonlibs/lib/python3.11/site-packages/werkzeug/test.py:1162: in get
+    return self.open(*args, **kw)
+.pythonlibs/lib/python3.11/site-packages/flask/testing.py:235: in open
+    response = super().open(
+.pythonlibs/lib/python3.11/site-packages/werkzeug/test.py:1116: in open
+    response_parts = self.run_wsgi_app(request.environ, buffered=buffered)
+.pythonlibs/lib/python3.11/site-packages/werkzeug/test.py:988: in run_wsgi_app
+    rv = run_wsgi_app(self.application, environ, buffered=buffered)
+.pythonlibs/lib/python3.11/site-packages/werkzeug/test.py:1264: in run_wsgi_app
+    app_rv = app(environ, start_response)
+.pythonlibs/lib/python3.11/site-packages/flask/app.py:1536: in __call__
+    return self.wsgi_app(environ, start_response)
+.pythonlibs/lib/python3.11/site-packages/flask/app.py:1514: in wsgi_app
+    response = self.handle_exception(e)
+.pythonlibs/lib/python3.11/site-packages/flask/app.py:1511: in wsgi_app
+    response = self.full_dispatch_request()
+.pythonlibs/lib/python3.11/site-packages/flask/app.py:919: in full_dispatch_request
+    rv = self.handle_user_exception(e)
+.pythonlibs/lib/python3.11/site-packages/flask/app.py:915: in full_dispatch_request
+    rv = self.preprocess_request()
+.pythonlibs/lib/python3.11/site-packages/flask/app.py:1291: in preprocess_request
+    rv = self.ensure_sync(before_func)()
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    @app.before_request
+    def billing_enforcement():
+        """
+        Enforce billing and subscription tier requirements before each request.
+        This is the SINGLE POINT where billing is checked across the entire app.
+        """
+        # Skip enforcement for static files, auth routes, and API endpoints
+        if (request.endpoint and
+            (request.endpoint.startswith('static') or
+             request.endpoint.startswith('auth.') or
+             request.endpoint.startswith('api.') or
+             request.endpoint in ['homepage', 'billing.upgrade', 'billing.webhook'])):
+            return
+    
+        # Skip for unauthenticated users
+        if not current_user.is_authenticated:
+            return
+    
+        # Handle developer users first - they bypass all billing checks
+        if getattr(current_user, 'user_type', None) == 'developer':
+            if not request.path.startswith("/developer/") and session.get('dev_selected_org_id') is None:
+                flash('Please select an organization to access customer features.', 'warning')
+                return redirect(url_for('developer.organizations'))
+    
+            # If developer is masquerading, set effective org
+            if session.get('dev_selected_org_id'):
+                from app.models import Organization
+                g.effective_org = Organization.query.get(session.get('dev_selected_org_id'))
+                g.is_developer_masquerade = True
+            return  # Developers bypass all further checks
+    
+        # Check organization billing status for regular users
+        if current_user.organization:
+            org = current_user.organization
+            if org.subscription_tier:
+                tier = org.subscription_tier
+                # Only enforce billing if tier requires it and org isn't exempt
+>               if (not tier.is_billing_exempt and
+                    tier.billing_provider not in ['exempt'] and
+                    org.billing_status not in ['active']):
+E                   AttributeError: 'str' object has no attribute 'is_billing_exempt'
+
+app/middleware.py:47: AttributeError
+---------------------------------- Captured log setup -----------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+___ TestBillingAndTierEnforcement.test_developer_can_masquerade_regardless_of_billing ___
+
+self = <tests.test_billing_and_tier_enforcement.TestBillingAndTierEnforcement object at 0x7fd978c59b50>
+app = <Flask 'app'>, client = <FlaskClient <Flask 'app'>>
+
+    def test_developer_can_masquerade_regardless_of_billing(self, app, client):
+        """
+        Tests that developers can access customer data even if billing is bad.
+        """
+        with app.app_context():
+            # ARRANGE: Create a developer user (NO organization)
+            developer = User(
+                email='dev@batchtrack.com',
+                username='developer',
+                user_type='developer',
+                organization_id=None  # Developers have no organization
+            )
+            db.session.add(developer)
+    
+            # Create a customer org with bad billing
+            customer_tier = SubscriptionTier(
+                name='Pro',
+                key='pro'
+            )
+            db.session.add(customer_tier)
+            db.session.flush()  # Get the ID
+    
+            customer_org = Organization(
+                name='Customer Org',
+                subscription_tier_id=customer_tier.id,
+                billing_status='past_due'  # Bad billing
+            )
+            db.session.add(customer_org)
+            db.session.flush()  # Get the ID
+    
+            customer = User(
+                email='customer@example.com',
+                username='customer',
+                organization=customer_org
+            )
+            db.session.add(customer)
+            db.session.commit()
+    
+            # Create protected route
+            @app.route('/_masquerade_test')
+            def _masquerade_test():
+                return "Developer access granted", 200
+    
+            # ACT: Developer accesses customer route
+            with client:
+                with client.session_transaction() as sess:
+                    sess['_user_id'] = str(developer.id)
+                    sess['_fresh'] = True
+                    sess['masquerade_org_id'] = customer_org.id  # Masquerading
+    
+                response = client.get('/_masquerade_test')
+    
+                # ASSERT: Developer should have access despite customer's bad billing
+>               assert response.status_code == 200
+E               assert 302 == 200
+E                +  where 302 = <WrapperTestResponse streamed [302 FOUND]>.status_code
+
+tests/test_billing_and_tier_enforcement.py:162: AssertionError
+---------------------------------- Captured log setup -----------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+___ TestStripeWebhookCharacterization.test_webhook_signature_verification_path_exists ___
+
+self = <tests.test_stripe_webhooks.TestStripeWebhookCharacterization object at 0x7fd97710e7d0>
+app = <Flask 'app'>, client = <FlaskClient <Flask 'app'>>
+
+    def test_webhook_signature_verification_path_exists(self, app, client):
+        """Test that webhook signature verification is implemented."""
+        with app.app_context():
+            # Test that the webhook endpoint exists
+            response = client.post('/billing/webhook',
+                                 data='{"test": "data"}',
+                                 headers={'Content-Type': 'application/json'})
+    
+            # We expect some kind of response (likely error due to missing signature)
+            # This characterizes current behavior
+>           assert response.status_code in [200, 400, 401, 403]
+E           assert 404 in [200, 400, 401, 403]
+E            +  where 404 = <WrapperTestResponse streamed [404 NOT FOUND]>.status_code
+
+tests/test_stripe_webhooks.py:32: AssertionError
+---------------------------------- Captured log setup -----------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+__________ TestStripeWebhookCharacterization.test_webhook_idempotency_behavior __________
+
+self = <tests.test_stripe_webhooks.TestStripeWebhookCharacterization object at 0x7fd97710ed50>
+mock_construct = <MagicMock name='construct_event' id='140571950644560'>
+app = <Flask 'app'>, client = <FlaskClient <Flask 'app'>>
+
+    @patch('stripe.Webhook.construct_event')
+    def test_webhook_idempotency_behavior(self, mock_construct, app, client):
+        """Test current webhook idempotency handling."""
+        with app.app_context():
+            # Mock a valid Stripe event
+            mock_event = MagicMock()
+            mock_event.id = 'evt_test_123'
+            mock_event.type = 'customer.subscription.updated'
+            mock_event.data = {'object': {'id': 'sub_test'}}
+            mock_construct.return_value = mock_event
+    
+            # Send webhook twice to test idempotency
+            webhook_data = json.dumps({'id': 'evt_test_123', 'type': 'test'})
+            headers = {
+                'Content-Type': 'application/json',
+                'Stripe-Signature': 'test_signature'
+            }
+    
+            response1 = client.post('/billing/webhook', data=webhook_data, headers=headers)
+            response2 = client.post('/billing/webhook', data=webhook_data, headers=headers)
+    
+            # Characterize current behavior - both should succeed
+            # but second should not have side effects
+>           assert response1.status_code in [200, 400, 401, 403]
+E           assert 404 in [200, 400, 401, 403]
+E            +  where 404 = <WrapperTestResponse streamed [404 NOT FOUND]>.status_code
+
+tests/test_stripe_webhooks.py:57: AssertionError
+---------------------------------- Captured log setup -----------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+=================================== warnings summary ====================================
+tests/test_signup_tiers.py: 5 warnings
+tests/test_billing_and_tier_enforcement.py: 7 warnings
+tests/test_stripe_webhooks.py: 4 warnings
+  /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_limiter/extension.py:333: UserWarning: Using the in-memory storage for tracking rate limits as no storage was explicitly specified. This is not recommended for production use. See: https://flask-limiter.readthedocs.io#configuring-a-storage-backend for documentation about configuring the storage backend.
+    warnings.warn(
+
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_tier_permission_is_the_hard_ceiling
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_tier_permission_is_the_hard_ceiling
+  /home/runner/workspace/app/models/models.py:325: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    role = Role.query.get(assignment.role_id)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+================================ short test summary info ================================
+FAILED tests/test_signup_tiers.py::TestSignupTierCharacterization::test_permission_gating_exists - ImportError: cannot import name 'has_permission' from 'app.utils.authorization' (/ho...
+FAILED tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[active-200] - AttributeError: 'str' object has no attribute 'is_billing_exempt'
+FAILED tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[past_due-302] - AttributeError: 'str' object has no attribute 'is_billing_exempt'
+FAILED tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[suspended-302] - AttributeError: 'str' object has no attribute 'is_billing_exempt'
+FAILED tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[canceled-302] - AttributeError: 'str' object has no attribute 'is_billing_exempt'
+FAILED tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_developer_can_masquerade_regardless_of_billing - assert 302 == 200
+FAILED tests/test_stripe_webhooks.py::TestStripeWebhookCharacterization::test_webhook_signature_verification_path_exists - assert 404 in [200, 400, 401, 403]
+FAILED tests/test_stripe_webhooks.py::TestStripeWebhookCharacterization::test_webhook_idempotency_behavior - assert 404 in [200, 400, 401, 403]
+======================= 8 failed, 8 passed, 18 warnings in 19.27s =======================
