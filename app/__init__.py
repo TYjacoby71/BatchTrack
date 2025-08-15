@@ -26,7 +26,7 @@ def create_app(config=None):
     # Testing configuration
     if app.config.get('TESTING'):
         # Keep CSRF disabled for form tests, but allow login security to function
-        app.config.setdefault('WTF_CSRF_ENABLED', False)
+        app.config.setdefault("WTF_CSRF_ENABLED", False)
 
     # Tests pass DATABASE_URL; SQLAlchemy wants SQLALCHEMY_DATABASE_URI
     if config and "DATABASE_URL" in config:

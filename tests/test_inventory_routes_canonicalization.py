@@ -3,16 +3,10 @@ from unittest.mock import patch, MagicMock
 from app.models.inventory import InventoryItem
 
 
-@patch('app.middleware.current_user')
-def test_recount_adjustment_uses_canonical_service(mock_middleware_user, client, app, db_session, test_user):
+def test_recount_adjustment_uses_canonical_service(client, app, db_session, test_user):
     """Test that inventory recount routes use the canonical adjustment service"""
 
-    with app.test_request_context():
-        # Configure middleware user mock
-        mock_middleware_user.is_authenticated = True
-        mock_middleware_user.user_type = 'regular' 
-        mock_middleware_user.organization = test_user.organization
-        mock_middleware_user.organization_id = test_user.organization_id
+    with app.app_context():
         # Create test inventory item
         item = InventoryItem(
             name="Test Item", 
@@ -69,7 +63,7 @@ class TestInventoryRoutesCanonicalService:
     @patch('app.blueprints.inventory.routes.current_user')
     def test_adjust_inventory_initial_stock_calls_canonical_service(self, mock_route_user, mock_middleware_user, mock_item, mock_process, client, app):
         """Test that initial stock creation calls process_inventory_adjustment"""
-        with app.test_request_context():
+        with app.app_context():
             # Mock the inventory item with no history
             mock_inventory_item = MagicMock()
             mock_inventory_item.id = 1

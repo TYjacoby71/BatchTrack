@@ -1,0 +1,29 @@
+That is the perfect question to ask. "Is this a test problem or an app problem?" Answering that correctly is the key to efficient debugging.
+What we are testing right now is the fundamental integrity of your security and core services. The test failures are not about specific customer-facing permissions yet. They are about the foundational "guardrails" of your application.
+Let's break it down.
+This is Almost Entirely a Test Problem
+The test results tell a clear story: your application code is likely fine, but your tests are being run in a way that makes it look broken.
+Think of it like this: You have a high-security vault door (your app's security middleware). You've hired a security guard (your tests) to make sure the door works. But the guard is testing the door with a master key that opens everything. When they report back, "The door didn't lock!", the problem isn't the door—it's the fact that they used a key that bypasses the lock.
+That is exactly what's happening here. The failures fall into two categories, both of which are test problems:
+Category 1: The Security is Disabled (The 200 vs 401/302 Failures)
+Tests: test_permission_required_returns_json_for_api, test_api_unauth_returns_json_401, test_billing_status_enforcement[...]
+Failure: The tests expect an error (401 or 302), but they get a 200 OK.
+Root Cause: This proves that your security system is being completely bypassed during the test run. There is almost certainly a configuration setting that says, "If TESTING is true, disable all login and permission checks."
+Conclusion: This is a TEST PROBLEM. The application code that enforces security isn't even being executed.
+Category 2: The Security is Working but the Test Doesn't Log In (The Called 0 times Failures)
+Tests: test_recount_adjustment_uses_canonical_service, test_adjust_inventory_initial_stock_calls_canonical_service
+Failure: The tests expect a core service to be called, but it's called zero times.
+Root Cause: This is a direct consequence of the first problem. If we were to fix the "security disabled" issue, these tests would immediately fail differently. They would be correctly blocked by the security middleware because the test client isn't logged in. The route function is never reached, so the service is never called.
+Conclusion: This is also a TEST PROBLEM. The test isn't correctly simulating a logged-in user, so it can't get past the security that should be there.
+What We Are Not Testing Yet
+To answer your second question: no, we are not yet assessing whether all 44 customer-facing permissions are respected. That is the next, higher-level phase of testing.
+Right now, we are performing "characterization" and "integration" tests on the most fundamental security layers:
+Authentication: Does the system correctly block anonymous users? (Our tests say NO, because the system is turned off).
+Billing Status: Does the system correctly block users with bad billing? (Our tests say NO, for the same reason).
+Canonical Service Calls: Does a route correctly call its intended service if the user is valid? (Our tests say NO, because the user isn't valid).
+The Definitive Fix: Let's Fix the Tests
+We need to fix the test environment so that it accurately reflects reality.
+Turn Security ON During Tests: We must find and remove the LOGIN_DISABLED or similar setting in your app/__init__.py or tests/conftest.py. Security must be active to be tested.
+Log Users In For Tests That Need It: For tests that are supposed to test the behavior of a valid, logged-in user (like the inventory tests), we must add the code to actually log that user in.
+This is the only way forward. Fixing the tests will allow us to see the true behavior of your application code, which I suspect is already very close to being correct.
+18.2s
