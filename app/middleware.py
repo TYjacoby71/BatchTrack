@@ -32,11 +32,11 @@ def register_middleware(app):
             org = current_user.organization
             tier = org.subscription_tier
 
-            # THE FIX: Check if tier requires billing enforcement
+            # THE FIX: Strengthen billing enforcement logic
             # 1. Is there a tier?
             # 2. Does that tier REQUIRE a billing check? (i.e., it is NOT exempt)
             # 3. If it requires a check, is the organization's status NOT 'active'?
-            if tier and getattr(tier, 'is_billing_exempt', True) == False and org.billing_status != 'active':
+            if tier and not getattr(tier, 'is_billing_exempt', True) and org.billing_status != 'active':
                 flash('Your subscription requires attention to continue accessing these features.', 'warning')
                 return redirect(url_for('billing.upgrade'))
 
