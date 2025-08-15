@@ -1,4 +1,3 @@
-
 from flask import abort, flash, redirect, url_for, request, jsonify, session, current_app
 from flask_login import current_user, login_required
 from functools import wraps
@@ -16,25 +15,25 @@ class AppPermission(Enum):
     PRODUCT_CREATE = "product.create"
     PRODUCT_EDIT = "product.edit"
     PRODUCT_DELETE = "product.delete"
-    
+
     # Batch permissions
     BATCH_VIEW = "batch.view"
     BATCH_CREATE = "batch.create"
     BATCH_START = "batch.start"
     BATCH_FINISH = "batch.finish"
     BATCH_CANCEL = "batch.cancel"
-    
+
     # Inventory permissions
     INVENTORY_VIEW = "inventory.view"
     INVENTORY_EDIT = "inventory.edit"
     INVENTORY_ADJUST = "inventory.adjust"
     INVENTORY_DELETE = "inventory.delete"
-    
+
     # Admin permissions
     ADMIN = "admin"
     USER_MANAGEMENT = "user.management"
     ROLE_MANAGEMENT = "role.management"
-    
+
     # Organization permissions
     ORGANIZATION_VIEW = "organization.view"
     ORGANIZATION_EDIT = "organization.edit"
@@ -56,31 +55,31 @@ def require_permission(permission_name: str):
             # Allow everything during tests
             if current_app.config.get('TESTING', False):
                 return f(*args, **kwargs)
-            
+
             # Basic auth check
             if not current_user.is_authenticated:
                 if wants_json():
                     return jsonify({"error": "Authentication required"}), 401
                 flash("Please log in to access this page.", "error")
                 return redirect(url_for("auth.login"))
-            
+
             # Developer users have access to developer permissions
             if current_user.user_type == 'developer':
                 # For developer permissions, just check if they're a developer
                 if permission_name.startswith('developer.'):
                     return f(*args, **kwargs)
-            
+
             # Check if user has the permission using authorization hierarchy
             if has_permission(current_user, permission_name):
                 return f(*args, **kwargs)
-            
+
             # Permission denied - return appropriate response
             if wants_json():
                 return jsonify({"error": f"Permission denied: {permission_name}"}), 403
-            
+
             flash(f"You don't have permission to access this feature. Required permission: {permission_name}", "error")
             return redirect(url_for("app_routes.dashboard"))
-        
+
         return decorated_function
     return decorator
 
@@ -167,11 +166,11 @@ def role_required(*roles):
             # Allow everything during tests
             if current_app.config.get('TESTING', False):
                 return f(*args, **kwargs)
-            
+
             # Basic auth check for non-test environments
             if not current_user.is_authenticated:
                 abort(401)
-            
+
             # TODO: Implement proper role checking
             # For now, just check if user is authenticated
             return f(*args, **kwargs)
@@ -193,7 +192,7 @@ def get_user_permissions(user=None):
     """Get all permissions for the current user using authorization hierarchy"""
     if not user:
         user = current_user
-        
+
     if not user or not user.is_authenticated:
         return []
 
@@ -278,7 +277,7 @@ def _org_tier_includes_permission(organization, permission_name):
     """
     if not organization or not organization.tier:
         return False
-    
+
     # Use the authorization hierarchy
     tier_permissions = AuthorizationHierarchy.get_tier_allowed_permissions(organization)
     return permission_name in tier_permissions
@@ -294,7 +293,7 @@ class AuthorizationHierarchy:
         if not organization:
             return False, "No organization"
 
-        # Exempt organizations always have access
+        # Exempt organizations have access
         if organization.effective_subscription_tier == 'exempt':
             return True, "Exempt status"
 
@@ -344,7 +343,7 @@ class AuthorizationHierarchy:
             # For developer permissions, check if they have the specific developer permission
             if permission_name.startswith('developer.'):
                 return True  # All developers get all developer permissions
-            
+
             # For organization permissions when in customer view mode
             selected_org_id = session.get('dev_selected_org_id')
             if not selected_org_id:
@@ -431,7 +430,7 @@ class AuthorizationHierarchy:
         if not organization:
             return False, "No organization found"
 
-        # Exempt organizations always have access
+        # Exempt organizations have access
         if organization.effective_subscription_tier == 'exempt':
             return True, "Exempt organization"
 
