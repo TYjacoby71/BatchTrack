@@ -1,7 +1,7 @@
 
-from flask import jsonify, redirect, url_for
+from flask import jsonify, redirect, url_for, request
 from .extensions import login_manager
-from .utils.http import wants_json
+# Import moved inline to avoid circular imports
 
 def configure_login_manager(app):
     """Configure Flask-Login with JSON-aware unauthorized handler"""
@@ -12,7 +12,11 @@ def configure_login_manager(app):
 
     @login_manager.unauthorized_handler
     def _unauthorized():
-        if wants_json():
+        # Check if this is an API request (inline to avoid circular imports)
+        if (request.is_json or 
+            request.path.startswith('/api/') or 
+            'application/json' in request.headers.get('Accept', '') or
+            'application/json' in request.headers.get('Content-Type', '')):
             return jsonify({"error": "unauthorized"}), 401
         return redirect(url_for("auth.login"))
 

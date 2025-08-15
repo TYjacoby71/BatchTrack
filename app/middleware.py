@@ -1,7 +1,7 @@
 import os
 from flask import request, redirect, url_for, jsonify, session, g, flash
 from flask_login import current_user
-from .utils.http import wants_json
+# Import moved inline to avoid circular imports
 
 def register_middleware(app):
     """Register all middleware functions with the Flask app."""
@@ -24,7 +24,11 @@ def register_middleware(app):
 
         # 2. Check for authentication. Everything from here on requires a logged-in user.
         if not current_user.is_authenticated:
-            if wants_json():
+            # Check if this is an API request (inline to avoid circular imports)
+            if (request.is_json or 
+                request.path.startswith('/api/') or 
+                'application/json' in request.headers.get('Accept', '') or
+                'application/json' in request.headers.get('Content-Type', '')):
                 return jsonify(error="Authentication required"), 401
             return redirect(url_for('auth.login', next=request.url))
 
