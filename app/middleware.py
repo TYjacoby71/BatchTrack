@@ -12,6 +12,7 @@ def register_middleware(app):
         """
         Enforce billing and subscription tier requirements before each request.
         This is the SINGLE POINT where billing is checked across the entire app.
+        This runs AFTER authentication is confirmed in _global_login_gate.
         """
         # Skip enforcement for static files, auth routes, and API endpoints
         if (request.endpoint and
@@ -21,24 +22,13 @@ def register_middleware(app):
              request.endpoint in ['homepage', 'billing.upgrade', 'billing.webhook'])):
             return
 
-        # Skip for unauthenticated users
+        # Skip for unauthenticated users (they'll be handled by _global_login_gate)
         if not current_user.is_authenticated:
             return
 
         # Handle developer users first - they bypass all billing checks
         if getattr(current_user, 'user_type', None) == 'developer':
-            selected_org_id = session.get('dev_selected_org_id') or session.get('masquerade_org_id')
-            if not request.path.startswith("/developer/") and selected_org_id is None:
-                flash('Please select an organization to access customer features.', 'warning')
-                return redirect(url_for('developer.organizations'))
-
-            # If developer is masquerading, set effective org
-            selected_org_id = session.get('dev_selected_org_id') or session.get('masquerade_org_id')
-            if selected_org_id:
-                from app.models import Organization
-                g.effective_org = Organization.query.get(selected_org_id)
-                g.is_developer_masquerade = True
-            return  # Developers bypass all further checks
+            return  # Developers bypass all billing checks
 
         # Check organization billing status for regular users
         if current_user.organization:
@@ -69,10 +59,6 @@ def register_middleware(app):
         ]):
             return
 
-
-        # Test bypass for inventory adjust (matches current behavior)
-        if app.config.get("TESTING") and request.path.startswith("/inventory/adjust"):
-            return
 
         # Require authentication
         if not current_user.is_authenticated:
