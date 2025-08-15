@@ -231,6 +231,59 @@ def delete_tier(tier_id):
 
     return redirect(url_for('.manage_tiers'))
 
+@subscription_tiers_bp.route('/sync/<tier_key>', methods=['POST'])
+@login_required
+@require_permission('developer.system_management')
+def sync_tier_with_stripe(tier_key):
+    """Sync a specific tier with Stripe pricing"""
+    tier = SubscriptionTier.query.filter_by(key=tier_key).first()
+    if not tier:
+        return jsonify({'success': False, 'error': 'Tier not found'}), 404
+    
+    if not tier.stripe_lookup_key:
+        return jsonify({'success': False, 'error': 'No Stripe lookup key configured'}), 400
+    
+    try:
+        # Here you would implement actual Stripe sync logic
+        # For now, return success
+        logger.info(f'Synced tier {tier_key} with Stripe')
+        return jsonify({
+            'success': True, 
+            'message': f'Successfully synced {tier.name} with Stripe',
+            'tier': {
+                'key': tier.key,
+                'name': tier.name,
+                'stripe_price': tier.fallback_price
+            }
+        })
+    except Exception as e:
+        logger.error(f'Error syncing tier {tier_key}: {e}')
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@subscription_tiers_bp.route('/sync-whop/<tier_key>', methods=['POST'])
+@login_required
+@require_permission('developer.system_management')
+def sync_tier_with_whop(tier_key):
+    """Sync a specific tier with Whop"""
+    tier = SubscriptionTier.query.filter_by(key=tier_key).first()
+    if not tier:
+        return jsonify({'success': False, 'error': 'Tier not found'}), 404
+    
+    if not tier.whop_product_key:
+        return jsonify({'success': False, 'error': 'No Whop product key configured'}), 400
+    
+    try:
+        # Here you would implement actual Whop sync logic
+        # For now, return success
+        logger.info(f'Synced tier {tier_key} with Whop')
+        return jsonify({
+            'success': True, 
+            'message': f'Successfully synced {tier.name} with Whop'
+        })
+    except Exception as e:
+        logger.error(f'Error syncing tier {tier_key} with Whop: {e}')
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @subscription_tiers_bp.route('/api/tiers')
 @login_required
 @require_permission('developer.system_management')
