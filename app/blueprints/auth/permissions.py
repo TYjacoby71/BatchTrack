@@ -73,6 +73,7 @@ def manage_permissions():
     return render_template('auth/permissions.html', 
                          permission_categories=permission_categories)
 
+@auth_bp.route('/permissions/toggle-status', methods=['POST'])
 @login_required
 def toggle_permission_status():
     """Toggle active/inactive status of a permission"""
