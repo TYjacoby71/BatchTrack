@@ -228,7 +228,7 @@ def adjust_inventory(item_id):
         return redirect(url_for('.view_inventory', id=item_id))
 
     # --- 2. Call the ONE canonical service with all the data ---
-    success, message = process_inventory_adjustment(
+    success = process_inventory_adjustment(
         item_id=item.id,
         quantity=quantity,
         change_type=adjustment_type,
@@ -240,7 +240,10 @@ def adjust_inventory(item_id):
     )
 
     # --- 3. Flash the result and redirect ---
-    flash(message, 'success' if success else 'error')
+    if success:
+        flash(f'{adjustment_type.title()} of {abs(quantity)} {form_data.get("input_unit") or item.unit} completed successfully', 'success')
+    else:
+        flash(f'Failed to {adjustment_type} inventory', 'error')
     return redirect(url_for('.view_inventory', id=item_id))
 
 
