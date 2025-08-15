@@ -16,8 +16,15 @@ branch_labels = None
 depends_on = None
 
 def upgrade():
-    # Add new billing columns
-    op.add_column('subscription_tier', sa.Column('is_billing_exempt', sa.Boolean(), default=False))
+    # Helper function to check if column exists
+    def column_exists(table_name, column_name):
+        inspector = sa.inspect(op.get_bind())
+        columns = [col['name'] for col in inspector.get_columns(table_name)]
+        return column_name in columns
+    
+    # Add new billing columns only if they don't exist
+    if not column_exists('subscription_tier', 'is_billing_exempt'):
+        op.add_column('subscription_tier', sa.Column('is_billing_exempt', sa.Boolean(), default=False))
     
     # For SQLite compatibility, use batch_alter_table for column modifications
     with op.batch_alter_table('subscription_tier', schema=None) as batch_op:
@@ -28,17 +35,13 @@ def upgrade():
                              server_default='exempt')
     
     # Remove deprecated columns if they exist
-    try:
+    if column_exists('subscription_tier', 'is_available'):
         with op.batch_alter_table('subscription_tier', schema=None) as batch_op:
             batch_op.drop_column('is_available')
-    except:
-        pass  # Column may not exist
         
-    try:
+    if column_exists('subscription_tier', 'tier_type'):
         with op.batch_alter_table('subscription_tier', schema=None) as batch_op:
             batch_op.drop_column('tier_type')
-    except:
-        pass  # Column may not exist
 
 def downgrade():
     # Add back deprecated columns
