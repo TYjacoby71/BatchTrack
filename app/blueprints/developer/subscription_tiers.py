@@ -64,6 +64,7 @@ def manage_tiers():
     
     return render_template('developer/subscription_tiers.html',
                            tiers=tiers_dict,
+                           tiers_dict=tiers_dict,
                            all_permissions=all_permissions)
 
 @subscription_tiers_bp.route('/create', methods=['GET', 'POST'])
