@@ -19,20 +19,24 @@ def upgrade():
     # Add new billing columns
     op.add_column('subscription_tier', sa.Column('is_billing_exempt', sa.Boolean(), default=False))
     
-    # Update billing_provider to be non-nullable with default
-    op.alter_column('subscription_tier', 'billing_provider', 
-                   existing_type=sa.String(32),
-                   nullable=False,
-                   server_default='exempt')
+    # For SQLite compatibility, use batch_alter_table for column modifications
+    with op.batch_alter_table('subscription_tier', schema=None) as batch_op:
+        # Update billing_provider to be non-nullable with default
+        batch_op.alter_column('billing_provider', 
+                             existing_type=sa.String(32),
+                             nullable=False,
+                             server_default='exempt')
     
     # Remove deprecated columns if they exist
     try:
-        op.drop_column('subscription_tier', 'is_available')
+        with op.batch_alter_table('subscription_tier', schema=None) as batch_op:
+            batch_op.drop_column('is_available')
     except:
         pass  # Column may not exist
         
     try:
-        op.drop_column('subscription_tier', 'tier_type')
+        with op.batch_alter_table('subscription_tier', schema=None) as batch_op:
+            batch_op.drop_column('tier_type')
     except:
         pass  # Column may not exist
 
@@ -42,10 +46,12 @@ def downgrade():
     op.add_column('subscription_tier', sa.Column('tier_type', sa.String(32), default='paid'))
     
     # Make billing_provider nullable again
-    op.alter_column('subscription_tier', 'billing_provider', 
-                   existing_type=sa.String(32),
-                   nullable=True,
-                   server_default=None)
+    with op.batch_alter_table('subscription_tier', schema=None) as batch_op:
+        batch_op.alter_column('billing_provider', 
+                             existing_type=sa.String(32),
+                             nullable=True,
+                             server_default=None)
     
     # Remove new columns
-    op.drop_column('subscription_tier', 'is_billing_exempt')
+    with op.batch_alter_table('subscription_tier', schema=None) as batch_op:
+        batch_op.drop_column('is_billing_exempt')
