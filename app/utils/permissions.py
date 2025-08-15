@@ -339,11 +339,17 @@ class AuthorizationHierarchy:
         3. Check if user role grants permission
         """
 
-        # Developers in non-customer mode have full access
+        # Developers have full access - they are super admins
         if user.user_type == 'developer':
+            # For developer permissions, check if they have the specific developer permission
+            if permission_name.startswith('developer.'):
+                return True  # All developers get all developer permissions
+            
+            # For organization permissions when in customer view mode
             selected_org_id = session.get('dev_selected_org_id')
             if not selected_org_id:
-                return True  # Developer mode - full access
+                return True  # Developer mode - full access to all organization permissions too
+            # If viewing a specific organization, continue with organization checks
 
         # Get organization (handle developer customer view)
         organization = get_effective_organization()
