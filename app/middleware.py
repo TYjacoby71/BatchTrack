@@ -14,7 +14,7 @@ def register_middleware(app):
         This is the SINGLE POINT where billing is checked across the entire app.
         """
         # Skip enforcement for static files, auth routes, and API endpoints
-        if (request.endpoint and 
+        if (request.endpoint and
             (request.endpoint.startswith('static') or
              request.endpoint.startswith('auth.') or
              request.endpoint.startswith('api.') or
@@ -25,41 +25,48 @@ def register_middleware(app):
         if not current_user.is_authenticated:
             return
 
-        # IMPORTANT: Skip for developers - they have no organization and no billing
-        if current_user.user_type == 'developer':
-            return
+        # Handle developer users first - they bypass all billing checks
+        if getattr(current_user, 'user_type', None) == 'developer':
+            if not request.path.startswith("/developer/") and session.get('dev_selected_org_id') is None:
+                flash('Please select an organization to access customer features.', 'warning')
+                return redirect(url_for('developer.organizations'))
 
-        # Check if user has organization (required for customers)
-        organization = current_user.organization
-        if not organization:
-            flash('No organization assigned. Please contact support.', 'error')
-            return redirect(url_for('billing.upgrade'))
+            # If developer is masquerading, set effective org
+            if session.get('dev_selected_org_id'):
+                from app.models import Organization
+                g.effective_org = Organization.query.get(session.get('dev_selected_org_id'))
+                g.is_developer_masquerade = True
+            return  # Developers bypass all further checks
 
-        # Check if organization has exempt tier (no billing required)
-        if organization.tier and organization.tier.is_exempt_from_billing:
-            return  # Exempt tiers skip billing checks
-
-        # Check billing status - ONLY for organizations that require it
-        if organization.billing_status != 'active':
-            flash('Your subscription requires attention. Please update your billing.', 'warning')
-            return redirect(url_for('billing.upgrade'))
+        # Check organization billing status for regular users
+        if current_user.organization:
+            org = current_user.organization
+            if org.subscription_tier:
+                tier = org.subscription_tier
+                # Only enforce billing if tier requires it and org isn't exempt
+                if (not tier.is_billing_exempt and
+                    tier.billing_provider not in ['exempt'] and
+                    org.billing_status not in ['active']):
+                    flash('Your organization account requires attention. Please review your subscription.', 'warning')
+                    return redirect(url_for('billing.upgrade'))
 
     @app.before_request
     def _global_login_gate():
         """Unified authentication and authorization gate"""
         # Fast-path public endpoints
-        public = {
-            "static", "auth.login", "auth.logout", "auth.signup",
-            "billing.webhooks", "homepage"
-        }
+        public_paths = ['/', '/homepage', '/static/', '/api/waitlist']
+
+        # Special handling for billing webhooks - they need to be completely public
+        if request.path == '/billing/webhook' and request.method == 'POST':
+            return
+
         if request.endpoint and any([
-            request.endpoint in public,
-            request.path.startswith("/static/"),
-            request.path.startswith("/billing/webhooks/"),
+            request.endpoint in ["auth.login", "auth.logout", "auth.signup", "homepage"],
+            any(request.path.startswith(p) for p in public_paths),
             request.path.startswith("/api/waitlist"),
-            request.path in ("/", "/homepage"),
         ]):
             return
+
 
         # Test bypass for inventory adjust (matches current behavior)
         if app.config.get("TESTING") and request.path.startswith("/inventory/adjust"):
