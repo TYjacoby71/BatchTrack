@@ -1,0 +1,432 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.13, pytest-8.3.5, pluggy-1.5.0 -- /home/runner/workspace/.pythonlibs/bin/python
+cachedir: .pytest_cache
+rootdir: /home/runner/workspace
+collected 21 items                                                             
+
+tests/test_auth_permissions.py::TestAuthPermissions::test_permission_required_decorator_allows_with_permission PASSED [  4%]
+tests/test_auth_permissions.py::TestAuthPermissions::test_permission_required_returns_json_for_api FAILED [  9%]
+tests/test_auth_permissions.py::TestAuthPermissions::test_any_permission_required_decorator PASSED [ 14%]
+tests/test_auth_permissions.py::TestAuthPermissions::test_tier_required_decorator PASSED [ 19%]
+tests/test_auth_permissions.py::TestAuthPermissions::test_user_has_any_permission_method PASSED [ 23%]
+tests/test_auth_permissions.py::TestAuthPermissions::test_api_unauth_returns_json_401 FAILED [ 28%]
+tests/test_auth_permissions.py::TestAuthPermissions::test_web_unauth_redirects_to_login PASSED [ 33%]
+tests/test_auth_permissions.py::TestAuthPermissions::test_csrf_token_available_in_templates PASSED [ 38%]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_tier_permission_is_the_hard_ceiling PASSED [ 42%]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[active-200] PASSED [ 47%]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[past_due-302] FAILED [ 52%]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[suspended-302] FAILED [ 57%]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[canceled-302] FAILED [ 61%]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_developer_can_masquerade_regardless_of_billing PASSED [ 66%]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_complete_security_cascade PASSED [ 71%]
+tests/test_stripe_webhooks.py::TestStripeWebhookCharacterization::test_stripe_service_exists PASSED [ 76%]
+tests/test_stripe_webhooks.py::TestStripeWebhookCharacterization::test_webhook_signature_verification_path_exists FAILED [ 80%]
+tests/test_stripe_webhooks.py::TestStripeWebhookCharacterization::test_webhook_idempotency_behavior FAILED [ 85%]
+tests/test_stripe_webhooks.py::TestStripeWebhookCharacterization::test_stripe_service_methods_exist PASSED [ 90%]
+tests/test_inventory_routes_canonicalization.py::test_recount_adjustment_uses_canonical_service FAILED [ 95%]
+tests/test_inventory_routes_canonicalization.py::TestInventoryRoutesCanonicalService::test_adjust_inventory_initial_stock_calls_canonical_service FAILED [100%]
+
+=================================== FAILURES ===================================
+______ TestAuthPermissions.test_permission_required_returns_json_for_api _______
+
+self = <tests.test_auth_permissions.TestAuthPermissions object at 0x7fe37ab47650>
+app = <Flask 'app'>, client = <FlaskClient <Flask 'app'>>
+
+    def test_permission_required_returns_json_for_api(self, app, client):
+        """Test that API endpoints return JSON when permission denied"""
+        with app.app_context():
+            @app.route('/api/test-perm')
+            @permission_required('test.permission')
+            def api_test_route():
+                return {'status': 'success'}
+    
+            response = client.get('/api/test-perm')
+            # Should return JSON unauthorized response
+>           assert response.status_code == 401
+E           assert 200 == 401
+E            +  where 200 = <WrapperTestResponse streamed [200 OK]>.status_code
+
+tests/test_auth_permissions.py:33: AssertionError
+------------------------------ Captured log setup ------------------------------
+INFO     app.blueprints_registry:blueprints_registry.py:123 Blueprint 'billing' registered successfully.
+INFO     app:unit_utils.py:28 BatchTrack startup
+_____________ TestAuthPermissions.test_api_unauth_returns_json_401 _____________
+
+self = <tests.test_auth_permissions.TestAuthPermissions object at 0x7fe37ab55110>
+app = <Flask 'app'>, client = <FlaskClient <Flask 'app'>>
+
+    def test_api_unauth_returns_json_401(self, app, client):
+        """Test that API endpoints return 401 JSON when unauthorized"""
+        with app.app_context():
+            @app.route("/api/_perm_test")
+            @permission_required("some.permission")
+            def _p():
+                return {"ok": True}
+    
+            resp = client.get("/api/_perm_test", headers={"Accept": "application/json"})
+>           assert resp.status_code == 401
+E           assert 200 == 401
+E            +  where 200 = <WrapperTestResponse streamed [200 OK]>.status_code
+
+tests/test_auth_permissions.py:77: AssertionError
+------------------------------ Captured log setup ------------------------------
+INFO     app.blueprints_registry:blueprints_registry.py:123 Blueprint 'billing' registered successfully.
+INFO     app:unit_utils.py:28 BatchTrack startup
+_ TestBillingAndTierEnforcement.test_billing_status_enforcement[past_due-302] __
+
+self = <tests.test_billing_and_tier_enforcement.TestBillingAndTierEnforcement object at 0x7fe37ab5c710>
+app = <Flask 'app'>, client = <FlaskClient <Flask 'app'>>
+test_user = <User testuser_1755286974139904>, billing_status = 'past_due'
+expected_status_code = 302
+
+    @pytest.mark.parametrize("billing_status, expected_status_code", [
+        ('active', 200),
+        ('past_due', 302),
+        ('suspended', 302),
+        ('canceled', 302),
+    ])
+    def test_billing_status_enforcement(self, app, client, test_user, billing_status, expected_status_code):
+        """
+        Tests that the billing middleware blocks access for non-active billing statuses.
+        """
+        with app.app_context():
+            # ARRANGE
+            # Update the user's organization with the test billing status
+            org = test_user.organization
+            org.billing_status = billing_status
+            db.session.commit()
+    
+            # Create a simple protected route to test against
+            @app.route('/_protected_dashboard')
+            def _protected_dashboard():
+                return "Welcome to the dashboard", 200
+    
+            # ACT
+            # Log the user in and try to access the protected route
+            with client:
+                with client.session_transaction() as sess:
+                    sess['_user_id'] = str(test_user.id)
+                    sess['_fresh'] = True
+    
+                response = client.get('/_protected_dashboard')
+    
+                # ASSERT
+>               assert response.status_code == expected_status_code
+E               assert 200 == 302
+E                +  where 200 = <WrapperTestResponse streamed [200 OK]>.status_code
+
+tests/test_billing_and_tier_enforcement.py:103: AssertionError
+------------------------------ Captured log setup ------------------------------
+INFO     app.blueprints_registry:blueprints_registry.py:123 Blueprint 'billing' registered successfully.
+INFO     app:unit_utils.py:28 BatchTrack startup
+_ TestBillingAndTierEnforcement.test_billing_status_enforcement[suspended-302] _
+
+self = <tests.test_billing_and_tier_enforcement.TestBillingAndTierEnforcement object at 0x7fe37ab5c850>
+app = <Flask 'app'>, client = <FlaskClient <Flask 'app'>>
+test_user = <User testuser_1755286975461933>, billing_status = 'suspended'
+expected_status_code = 302
+
+    @pytest.mark.parametrize("billing_status, expected_status_code", [
+        ('active', 200),
+        ('past_due', 302),
+        ('suspended', 302),
+        ('canceled', 302),
+    ])
+    def test_billing_status_enforcement(self, app, client, test_user, billing_status, expected_status_code):
+        """
+        Tests that the billing middleware blocks access for non-active billing statuses.
+        """
+        with app.app_context():
+            # ARRANGE
+            # Update the user's organization with the test billing status
+            org = test_user.organization
+            org.billing_status = billing_status
+            db.session.commit()
+    
+            # Create a simple protected route to test against
+            @app.route('/_protected_dashboard')
+            def _protected_dashboard():
+                return "Welcome to the dashboard", 200
+    
+            # ACT
+            # Log the user in and try to access the protected route
+            with client:
+                with client.session_transaction() as sess:
+                    sess['_user_id'] = str(test_user.id)
+                    sess['_fresh'] = True
+    
+                response = client.get('/_protected_dashboard')
+    
+                # ASSERT
+>               assert response.status_code == expected_status_code
+E               assert 200 == 302
+E                +  where 200 = <WrapperTestResponse streamed [200 OK]>.status_code
+
+tests/test_billing_and_tier_enforcement.py:103: AssertionError
+------------------------------ Captured log setup ------------------------------
+INFO     app.blueprints_registry:blueprints_registry.py:123 Blueprint 'billing' registered successfully.
+INFO     app:unit_utils.py:28 BatchTrack startup
+_ TestBillingAndTierEnforcement.test_billing_status_enforcement[canceled-302] __
+
+self = <tests.test_billing_and_tier_enforcement.TestBillingAndTierEnforcement object at 0x7fe37ab5cad0>
+app = <Flask 'app'>, client = <FlaskClient <Flask 'app'>>
+test_user = <User testuser_1755286976945114>, billing_status = 'canceled'
+expected_status_code = 302
+
+    @pytest.mark.parametrize("billing_status, expected_status_code", [
+        ('active', 200),
+        ('past_due', 302),
+        ('suspended', 302),
+        ('canceled', 302),
+    ])
+    def test_billing_status_enforcement(self, app, client, test_user, billing_status, expected_status_code):
+        """
+        Tests that the billing middleware blocks access for non-active billing statuses.
+        """
+        with app.app_context():
+            # ARRANGE
+            # Update the user's organization with the test billing status
+            org = test_user.organization
+            org.billing_status = billing_status
+            db.session.commit()
+    
+            # Create a simple protected route to test against
+            @app.route('/_protected_dashboard')
+            def _protected_dashboard():
+                return "Welcome to the dashboard", 200
+    
+            # ACT
+            # Log the user in and try to access the protected route
+            with client:
+                with client.session_transaction() as sess:
+                    sess['_user_id'] = str(test_user.id)
+                    sess['_fresh'] = True
+    
+                response = client.get('/_protected_dashboard')
+    
+                # ASSERT
+>               assert response.status_code == expected_status_code
+E               assert 200 == 302
+E                +  where 200 = <WrapperTestResponse streamed [200 OK]>.status_code
+
+tests/test_billing_and_tier_enforcement.py:103: AssertionError
+------------------------------ Captured log setup ------------------------------
+INFO     app.blueprints_registry:blueprints_registry.py:123 Blueprint 'billing' registered successfully.
+INFO     app:unit_utils.py:28 BatchTrack startup
+_ TestStripeWebhookCharacterization.test_webhook_signature_verification_path_exists _
+
+self = <tests.test_stripe_webhooks.TestStripeWebhookCharacterization object at 0x7fe3790684d0>
+app = <Flask 'app'>, client = <FlaskClient <Flask 'app'>>
+
+    def test_webhook_signature_verification_path_exists(self, app, client):
+        """Test that webhook signature verification is implemented."""
+        with app.app_context():
+            # Test that the webhook endpoint exists
+            response = client.post('/billing/webhook',
+                                 data='{"test": "data"}',
+                                 headers={'Content-Type': 'application/json'})
+    
+            # We expect some kind of response (likely error due to missing signature)
+            # This characterizes current behavior
+>           assert response.status_code in [200, 400, 401, 403]
+E           assert 404 in [200, 400, 401, 403]
+E            +  where 404 = <WrapperTestResponse streamed [404 NOT FOUND]>.status_code
+
+tests/test_stripe_webhooks.py:32: AssertionError
+------------------------------ Captured log setup ------------------------------
+INFO     app.blueprints_registry:blueprints_registry.py:123 Blueprint 'billing' registered successfully.
+INFO     app:unit_utils.py:28 BatchTrack startup
+_____ TestStripeWebhookCharacterization.test_webhook_idempotency_behavior ______
+
+self = <tests.test_stripe_webhooks.TestStripeWebhookCharacterization object at 0x7fe379068a50>
+mock_construct = <MagicMock name='construct_event' id='140614857754256'>
+app = <Flask 'app'>, client = <FlaskClient <Flask 'app'>>
+
+    @patch('stripe.Webhook.construct_event')
+    def test_webhook_idempotency_behavior(self, mock_construct, app, client):
+        """Test current webhook idempotency handling."""
+        with app.app_context():
+            # Mock a valid Stripe event
+            mock_event = MagicMock()
+            mock_event.id = 'evt_test_123'
+            mock_event.type = 'customer.subscription.updated'
+            mock_event.data = {'object': {'id': 'sub_test'}}
+            mock_construct.return_value = mock_event
+    
+            # Send webhook twice to test idempotency
+            webhook_data = json.dumps({'id': 'evt_test_123', 'type': 'test'})
+            headers = {
+                'Content-Type': 'application/json',
+                'Stripe-Signature': 'test_signature'
+            }
+    
+            response1 = client.post('/billing/webhook', data=webhook_data, headers=headers)
+            response2 = client.post('/billing/webhook', data=webhook_data, headers=headers)
+    
+            # Characterize current behavior - both should succeed
+            # but second should not have side effects
+>           assert response1.status_code in [200, 400, 401, 403]
+E           assert 404 in [200, 400, 401, 403]
+E            +  where 404 = <WrapperTestResponse streamed [404 NOT FOUND]>.status_code
+
+tests/test_stripe_webhooks.py:57: AssertionError
+------------------------------ Captured log setup ------------------------------
+INFO     app.blueprints_registry:blueprints_registry.py:123 Blueprint 'billing' registered successfully.
+INFO     app:unit_utils.py:28 BatchTrack startup
+________________ test_recount_adjustment_uses_canonical_service ________________
+
+client = <FlaskClient <Flask 'app'>>, app = <Flask 'app'>
+db_session = <sqlalchemy.orm.scoping.scoped_session object at 0x7fe37b3051d0>
+test_user = <User testuser_1755286986842723>
+
+    def test_recount_adjustment_uses_canonical_service(client, app, db_session, test_user):
+        """Test that inventory recount routes use the canonical adjustment service"""
+    
+        with app.test_request_context():
+            # Create test inventory item
+            item = InventoryItem(
+                name="Test Item",
+                quantity=100,
+                unit="count",
+                organization_id=test_user.organization_id
+            )
+            db_session.add(item)
+            db_session.commit()
+    
+            # Mock the canonical service
+            with patch('app.services.inventory_adjustment.process_inventory_adjustment') as mock_adjustment:
+                mock_adjustment.return_value = True
+    
+                # Mock current_user
+                with patch('app.blueprints.inventory.routes.current_user', test_user):
+                    # Make recount request
+                    response = client.post(f'/inventory/adjust/{item.id}', data={
+                        'adjustment_type': 'recount',
+                        'quantity': '80',
+                        'notes': 'Physical count adjustment'
+                    })
+    
+                    # Verify canonical service was called
+>                   mock_adjustment.assert_called_once()
+
+tests/test_inventory_routes_canonicalization.py:35: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <MagicMock name='process_inventory_adjustment' id='140614867916880'>
+
+    def assert_called_once(self):
+        """assert that the mock was called only once.
+        """
+        if not self.call_count == 1:
+            msg = ("Expected '%s' to have been called once. Called %s times.%s"
+                   % (self._mock_name or 'mock',
+                      self.call_count,
+                      self._calls_repr()))
+>           raise AssertionError(msg)
+E           AssertionError: Expected 'process_inventory_adjustment' to have been called once. Called 0 times.
+
+/nix/store/7d088dip86hlzri9sk0h78b63yfmx0a0-python3-3.11.13/lib/python3.11/unittest/mock.py:918: AssertionError
+------------------------------ Captured log setup ------------------------------
+INFO     app.blueprints_registry:blueprints_registry.py:123 Blueprint 'billing' registered successfully.
+INFO     app:unit_utils.py:28 BatchTrack startup
+_ TestInventoryRoutesCanonicalService.test_adjust_inventory_initial_stock_calls_canonical_service _
+
+self = <tests.test_inventory_routes_canonicalization.TestInventoryRoutesCanonicalService object at 0x7fe379b57b50>
+mock_user = <AsyncMock name='current_user' id='140614867935760'>
+mock_item = <MagicMock name='InventoryItem' id='140614862206672'>
+mock_process = <MagicMock name='process_inventory_adjustment' id='140614868175504'>
+client = <FlaskClient <Flask 'app'>>, app = <Flask 'app'>
+
+    @patch('app.services.inventory_adjustment.process_inventory_adjustment')
+    @patch('app.blueprints.inventory.routes.InventoryItem')
+    @patch('app.blueprints.inventory.routes.current_user')
+    def test_adjust_inventory_initial_stock_calls_canonical_service(self, mock_user, mock_item, mock_process, client, app):
+        """Test that initial stock creation calls process_inventory_adjustment"""
+        with app.test_request_context():
+            # Mock the inventory item with no history
+            mock_inventory_item = MagicMock()
+            mock_inventory_item.id = 1
+            mock_inventory_item.type = 'ingredient'
+            mock_inventory_item.unit = 'g'
+            mock_inventory_item.cost_per_unit = 2.5
+            mock_inventory_item.is_perishable = False
+            mock_inventory_item.organization_id = 1
+    
+            mock_item.query.get_or_404.return_value = mock_inventory_item
+            mock_user.id = 1
+            mock_user.organization_id = 1
+            mock_process.return_value = True
+    
+            # Mock UnifiedInventoryHistory count to simulate no existing history
+            with patch('app.blueprints.inventory.routes.UnifiedInventoryHistory') as mock_history:
+                mock_history.query.filter_by.return_value.count.return_value = 0
+    
+                # Make POST request to adjust inventory
+                response = client.post('/inventory/adjust/1', data={
+                    'adjustment_type': 'restock',
+                    'quantity': '100.0',
+                    'input_unit': 'g',
+                    'notes': 'Initial stock',
+                    'cost_entry_type': 'per_unit',
+                    'cost_per_unit': '3.0'
+                })
+    
+                # Verify canonical service was called
+>               mock_process.assert_called_once()
+
+tests/test_inventory_routes_canonicalization.py:93: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <MagicMock name='process_inventory_adjustment' id='140614868175504'>
+
+    def assert_called_once(self):
+        """assert that the mock was called only once.
+        """
+        if not self.call_count == 1:
+            msg = ("Expected '%s' to have been called once. Called %s times.%s"
+                   % (self._mock_name or 'mock',
+                      self.call_count,
+                      self._calls_repr()))
+>           raise AssertionError(msg)
+E           AssertionError: Expected 'process_inventory_adjustment' to have been called once. Called 0 times.
+
+/nix/store/7d088dip86hlzri9sk0h78b63yfmx0a0-python3-3.11.13/lib/python3.11/unittest/mock.py:918: AssertionError
+------------------------------ Captured log setup ------------------------------
+INFO     app.blueprints_registry:blueprints_registry.py:123 Blueprint 'billing' registered successfully.
+INFO     app:unit_utils.py:28 BatchTrack startup
+=============================== warnings summary ===============================
+tests/test_auth_permissions.py: 8 warnings
+tests/test_billing_and_tier_enforcement.py: 7 warnings
+tests/test_stripe_webhooks.py: 4 warnings
+tests/test_inventory_routes_canonicalization.py: 2 warnings
+  /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_limiter/extension.py:333: UserWarning: Using the in-memory storage for tracking rate limits as no storage was explicitly specified. This is not recommended for production use. See: https://flask-limiter.readthedocs.io#configuring-a-storage-backend for documentation about configuring the storage backend.
+    warnings.warn(
+
+tests/test_auth_permissions.py: 8 warnings
+tests/test_billing_and_tier_enforcement.py: 7 warnings
+tests/test_stripe_webhooks.py: 4 warnings
+tests/test_inventory_routes_canonicalization.py: 1 warning
+  /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_sqlalchemy/extension.py:881: SAWarning: Can't sort tables for DROP; an unresolvable foreign key dependency exists between tables: batch, product_sku; and backend does not support ALTER.  To restore at least a partial sort, apply use_alter=True to ForeignKey and ForeignKeyConstraint objects involved in the cycle to mark these as known cycles that will be ignored.
+    getattr(metadata, op_name)(bind=engine)
+
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_tier_permission_is_the_hard_ceiling
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_tier_permission_is_the_hard_ceiling
+  /home/runner/workspace/app/models/models.py:323: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    role = Role.query.get(assignment.role_id)
+
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_developer_can_masquerade_regardless_of_billing
+  /home/runner/workspace/app/middleware.py:39: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    g.effective_org = Organization.query.get(selected_org_id)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/test_auth_permissions.py::TestAuthPermissions::test_permission_required_returns_json_for_api - assert 200 == 401
+FAILED tests/test_auth_permissions.py::TestAuthPermissions::test_api_unauth_returns_json_401 - assert 200 == 401
+FAILED tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[past_due-302] - assert 200 == 302
+FAILED tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[suspended-302] - assert 200 == 302
+FAILED tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[canceled-302] - assert 200 == 302
+FAILED tests/test_stripe_webhooks.py::TestStripeWebhookCharacterization::test_webhook_signature_verification_path_exists - assert 404 in [200, 400, 401, 403]
+FAILED tests/test_stripe_webhooks.py::TestStripeWebhookCharacterization::test_webhook_idempotency_behavior - assert 404 in [200, 400, 401, 403]
+FAILED tests/test_inventory_routes_canonicalization.py::test_recount_adjustment_uses_canonical_service - AssertionError: Expected 'process_inventory_adjustment' to have been called...
+FAILED tests/test_inventory_routes_canonicalization.py::TestInventoryRoutesCanonicalService::test_adjust_inventory_initial_stock_calls_canonical_service - AssertionError: Expected 'process_inventory_adjustment' to have been called...
+================== 9 failed, 12 passed, 44 warnings in 32.29s ==================
