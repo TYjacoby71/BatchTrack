@@ -56,10 +56,10 @@ def require_permission(permission_name: str):
             if current_app.config.get('SKIP_PERMISSIONS'):
                 return f(*args, **kwargs)
 
-            # Basic auth check
+            # Basic auth check - check authentication first
             if not current_user.is_authenticated:
                 if wants_json():
-                    return jsonify({"error": "Authentication required"}), 401
+                    return jsonify({"error": "unauthorized"}), 401
                 flash("Please log in to access this page.", "error")
                 return redirect(url_for("auth.login"))
 

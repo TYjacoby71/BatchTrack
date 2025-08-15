@@ -178,16 +178,16 @@ def add_inventory():
     """Thin controller - delegates to inventory creation service"""
     try:
         from app.services.inventory_adjustment import create_inventory_item
-        
+
         success, message, item_id = create_inventory_item(
             form_data=request.form.to_dict(),
             organization_id=current_user.organization_id,
             created_by=current_user.id
         )
-        
+
         flash(message, 'success' if success else 'error')
         return redirect(url_for('inventory.list_inventory'))
-        
+
     except Exception as e:
         flash(f'Error adding inventory item: {str(e)}', 'error')
         return redirect(url_for('inventory.list_inventory'))
@@ -202,6 +202,15 @@ def adjust_inventory(id):
     qty = float(form.get('quantity', 0) or 0.0)
     notes = form.get('notes') or None
     unit = form.get('input_unit') or getattr(item, 'unit', None)
+    expiration_date_str = form.get('expiration_date')
+    expiration_date = None
+    if expiration_date_str:
+        try:
+            from datetime import datetime
+            expiration_date = datetime.strptime(expiration_date_str, '%Y-%m-%d').date()
+        except ValueError:
+            flash('Invalid expiration date format. Please use YYYY-MM-DD.', 'error')
+            return redirect(url_for('inventory.view_inventory', id=item.id))
 
     # Define all supported change types
     deductive_types = {
@@ -237,10 +246,8 @@ def adjust_inventory(id):
 
         # Restock (with optional cost override for first-time)
         elif adj_type in additive_types:
-            has_hist = UnifiedInventoryHistory.query.filter_by(inventory_item_id=item.id).count() > 0
             cost_override = None
-
-            if not has_hist and form.get('cost_entry_type') == 'per_unit' and form.get('cost_per_unit'):
+            if form.get('cost_entry_type') == 'per_unit' and form.get('cost_per_unit'):
                 try:
                     cost_override = float(form.get('cost_per_unit'))
                 except ValueError:
@@ -254,6 +261,7 @@ def adjust_inventory(id):
                 notes=notes,
                 created_by=getattr(current_user, 'id', None),
                 cost_override=cost_override,
+                expiration_date=expiration_date
             )
             if success:
                 flash(f'Inventory {adj_type} completed successfully.', 'success')
@@ -270,6 +278,7 @@ def adjust_inventory(id):
                 unit=unit,
                 notes=notes,
                 created_by=getattr(current_user, 'id', None),
+                expiration_date=expiration_date
             )
             if success:
                 flash(f'Inventory {adj_type} completed successfully.', 'success')
@@ -312,7 +321,7 @@ def edit_inventory(id):
     if current_user.organization_id:
         query = query.filter_by(organization_id=current_user.organization_id)
     item = query.filter_by(id=id).first_or_404()
-    
+
     success, message = update_inventory_item(id, request.form.to_dict())
     flash(message, 'success' if success else 'error')
     return redirect(url_for('inventory.view_inventory', id=id))
