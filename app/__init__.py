@@ -26,7 +26,7 @@ def create_app(config=None):
 
     # Testing tweaks
     if app.config.get("TESTING"):
-        app.config["LOGIN_DISABLED"] = True
+        # Don't disable login in tests - we need to test permissions properly
         app.config.setdefault("WTF_CSRF_ENABLED", False)
 
     # Tests pass DATABASE_URL; SQLAlchemy wants SQLALCHEMY_DATABASE_URI
