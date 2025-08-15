@@ -9,42 +9,36 @@ def register_middleware(app):
 
     @app.before_request
     def billing_enforcement():
-        """
-        Enforce billing and subscription tier requirements before each request.
-        This is the SINGLE POINT where billing is checked across the entire app.
-        This runs AFTER authentication is confirmed in _global_login_gate.
-        """
-        # Skip middleware only if explicitly disabled (not just because we're testing)
-        if app.config.get('DISABLE_AUTH_MIDDLEWARE'):
+        """Enforce billing status for organization access"""
+        # Skip for static files and certain routes
+        if request.endpoint and (
+            request.endpoint.startswith('static') or
+            request.endpoint in ['auth.login', 'auth.signup', 'auth.logout', 'homepage', 'legal.privacy_policy', 'legal.terms_of_service'] or
+            request.endpoint.startswith('billing.') or
+            request.endpoint.startswith('developer.')
+        ):
             return
 
-        # Skip for static files, auth routes, and API endpoints
-        if (request.endpoint and
-            (request.endpoint.startswith('static') or
-             request.endpoint.startswith('auth.') or
-             request.endpoint.startswith('api.') or
-             request.endpoint in ['homepage', 'billing.upgrade', 'billing.webhook'])):
+        # Skip for unauthenticated users
+        if not current_user or not current_user.is_authenticated:
             return
 
-        # Skip for unauthenticated users (they'll be handled by _global_login_gate)
-        if not current_user.is_authenticated:
+        # Skip for developers (they can access everything)
+        if current_user.user_type == 'developer':
             return
-
-        # Handle developer users first - they bypass all billing checks
-        if getattr(current_user, 'user_type', None) == 'developer':
-            return  # Developers bypass all billing checks
 
         # Check organization billing status for regular users
         if current_user.organization:
             org = current_user.organization
-            if org.subscription_tier:
-                tier = org.subscription_tier
-                # Only enforce billing if tier requires it and org isn't exempt
-                if (not tier.is_billing_exempt and
-                    tier.billing_provider not in ['exempt'] and
-                    org.billing_status not in ['active']):
-                    flash('Your organization account requires attention. Please review your subscription.', 'warning')
-                    return redirect(url_for('billing.upgrade'))
+            tier = org.subscription_tier
+
+            # THE FIX: Check if tier requires billing enforcement
+            # 1. Is there a tier?
+            # 2. Does that tier REQUIRE a billing check? (i.e., it is NOT exempt)
+            # 3. If it requires a check, is the organization's status NOT 'active'?
+            if tier and getattr(tier, 'is_billing_exempt', True) == False and org.billing_status != 'active':
+                flash('Your subscription requires attention to continue accessing these features.', 'warning')
+                return redirect(url_for('billing.upgrade'))
 
     @app.before_request
     def _global_login_gate():

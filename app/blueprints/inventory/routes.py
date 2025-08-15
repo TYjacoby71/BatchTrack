@@ -253,6 +253,7 @@ def adjust_inventory(id):
                 except ValueError:
                     cost_override = None
 
+            # THE FIX: Always use canonical service - no special case for initial stock
             success = process_inventory_adjustment(
                 item_id=item.id,
                 quantity=qty,
