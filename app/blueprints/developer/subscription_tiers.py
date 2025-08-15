@@ -34,10 +34,35 @@ subscription_tiers_bp = Blueprint('subscription_tiers', __name__, url_prefix='/s
 @require_permission('developer.system_management')
 def manage_tiers():
     """Main page to view all tiers directly from the database."""
-    all_tiers = SubscriptionTier.query.order_by(SubscriptionTier.name).all()
+    all_tiers_db = SubscriptionTier.query.order_by(SubscriptionTier.name).all()
     all_permissions = Permission.query.order_by(Permission.name).all()
+    
+    # Convert to dictionary format expected by template
+    tiers_dict = {}
+    for tier in all_tiers_db:
+        tiers_dict[tier.key] = {
+            'name': tier.name,
+            'description': tier.description,
+            'user_limit': tier.user_limit,
+            'is_customer_facing': tier.is_customer_facing,
+            'is_available': getattr(tier, 'is_available', True),
+            'billing_provider': tier.billing_provider,
+            'is_billing_exempt': tier.is_billing_exempt,
+            'stripe_lookup_key': tier.stripe_lookup_key,
+            'whop_product_key': tier.whop_product_key,
+            'fallback_price': tier.fallback_price,
+            'stripe_price': tier.fallback_price,  # For template compatibility
+            'last_synced': None,  # TODO: Add sync tracking
+            'whop_last_synced': None,  # TODO: Add whop sync tracking
+            'permissions': [p.name for p in tier.permissions],
+            'pricing_category': 'standard',  # Default value
+            'billing_cycle': 'monthly',  # Default value
+            'requires_stripe_billing': tier.requires_stripe_billing,
+            'supports_whop': bool(tier.whop_product_key)
+        }
+    
     return render_template('developer/subscription_tiers.html',
-                           tiers=all_tiers,
+                           tiers=tiers_dict,
                            all_permissions=all_permissions)
 
 @subscription_tiers_bp.route('/create', methods=['GET', 'POST'])
