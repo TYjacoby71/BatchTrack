@@ -1,4 +1,3 @@
-
 import os
 import logging
 from flask import Flask, redirect, url_for, render_template
@@ -18,21 +17,21 @@ logger = logging.getLogger(__name__)
 def create_app(config=None):
     """Create and configure Flask application"""
     app = Flask(__name__, static_folder="static", static_url_path="/static")
-    
+
     # Load configuration
     app.config.from_object("app.config.Config")
     if config:
         app.config.update(config)
 
-    # Testing tweaks
-    if app.config.get("TESTING"):
-        # Don't disable login in tests - we need to test permissions properly
-        app.config.setdefault("WTF_CSRF_ENABLED", False)
+    # Testing configuration
+    if app.config.get('TESTING'):
+        # Keep CSRF disabled for form tests, but allow login security to function
+        app.config.setdefault('WTF_CSRF_ENABLED', False)
 
     # Tests pass DATABASE_URL; SQLAlchemy wants SQLALCHEMY_DATABASE_URI
     if config and "DATABASE_URL" in config:
         app.config["SQLALCHEMY_DATABASE_URI"] = config["DATABASE_URL"]
-    
+
     app.config['UPLOAD_FOLDER'] = 'static/product_images'
     os.makedirs('static/product_images', exist_ok=True)
 
@@ -64,7 +63,7 @@ def create_app(config=None):
 
     # Add core routes
     _add_core_routes(app)
-    
+
     # Setup logging
     _setup_logging(app)
 
