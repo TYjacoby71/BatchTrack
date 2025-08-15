@@ -189,7 +189,7 @@
                     <!-- Edit Button Row - Always spans full width -->
                     <div class="row g-0">
                         <div class="col-12">
-                            <a href="{{ url_for('developer.subscription_tiers.edit_tier', tier_key=tier_key) }}" 
+                            <a href="{{ url_for('developer.subscription_tiers.edit_tier', tier_id=tiers_dict[tier_key].get('id', 1)) }}" 
                                class="btn btn-primary btn-sm w-100 rounded-0 {{ 'rounded-bottom' if not (has_stripe or has_whop) else '' }}">
                                 <i class="fas fa-edit"></i> Edit Tier
                             </a>

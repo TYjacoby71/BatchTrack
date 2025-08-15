@@ -4,6 +4,7 @@ from ...models import db, Batch, BatchIngredient, BatchContainer, ExtraBatchIngr
 from datetime import datetime
 from ...utils import get_setting
 from ...services.inventory_adjustment import process_inventory_adjustment
+from app.utils.permissions import role_required
 
 cancel_batch_bp = Blueprint('cancel_batch', __name__)
 

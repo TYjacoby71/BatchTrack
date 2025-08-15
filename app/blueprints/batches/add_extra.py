@@ -3,6 +3,7 @@ from flask_login import login_required, current_user
 from ...models import db, Batch, InventoryItem, ExtraBatchContainer, ExtraBatchIngredient, BatchContainer
 from ...services.unit_conversion import ConversionEngine
 from ...services.inventory_adjustment import process_inventory_adjustment
+from app.utils.permissions import role_required
 # Removed unnecessary service import
 
 add_extra_bp = Blueprint('add_extra', __name__)
@@ -76,7 +77,7 @@ def add_extra_to_batch(batch_id):
         )
         db.session.add(new_extra)
 
-    # Handle extra ingredients 
+    # Handle extra ingredients
     for item in extra_ingredients:
         inventory_item = InventoryItem.query.get(item["item_id"])
         if not inventory_item:
@@ -107,7 +108,7 @@ def add_extra_to_batch(batch_id):
             if not result:
                 errors.append({
                     "item": inventory_item.name,
-                    "message": "Not enough in stock", 
+                    "message": "Not enough in stock",
                     "needed": needed_amount,
                     "needed_unit": inventory_item.unit
                 })

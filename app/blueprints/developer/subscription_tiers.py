@@ -41,6 +41,7 @@ def manage_tiers():
     tiers_dict = {}
     for tier in all_tiers_db:
         tiers_dict[tier.key] = {
+            'id': tier.id,  # Include the tier ID
             'name': tier.name,
             'description': tier.description,
             'user_limit': tier.user_limit,

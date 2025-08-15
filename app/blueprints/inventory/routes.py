@@ -2,7 +2,7 @@ from flask import Blueprint, request, jsonify, render_template, redirect, url_fo
 from flask_login import login_required, current_user
 from app.models import db, InventoryItem, UnifiedInventoryHistory, Unit, IngredientCategory, User
 from app.utils.permissions import permission_required
-from app.utils.authorization import role_required
+from app.utils.permissions import role_required
 from app.utils.api_responses import api_error, api_success
 from app.services.inventory_adjustment import process_inventory_adjustment, update_inventory_item
 from app.services.inventory_alerts import InventoryAlertService
