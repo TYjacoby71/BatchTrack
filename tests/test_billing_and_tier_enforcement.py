@@ -83,6 +83,21 @@ class TestBillingAndTierEnforcement:
             # Update the user's organization with the test billing status
             org = test_user.organization
             org.billing_status = billing_status
+
+            # THE FIX: Ensure the user is on a tier that REQUIRES a billing check
+            if not org.subscription_tier or getattr(org.subscription_tier, 'is_billing_exempt', True):
+                from app.models.subscription_tier import SubscriptionTier
+                non_exempt_tier = SubscriptionTier.query.filter_by(is_billing_exempt=False).first()
+                if not non_exempt_tier:  # Create one if it doesn't exist
+                    non_exempt_tier = SubscriptionTier(
+                        name="Paid Tier", 
+                        key="paid", 
+                        is_billing_exempt=False, 
+                        billing_provider='stripe'
+                    )
+                    db.session.add(non_exempt_tier)
+                org.subscription_tier = non_exempt_tier
+
             db.session.commit()
 
             # Create a simple protected route to test against
