@@ -1,4 +1,3 @@
-
 from typing import Dict, List, Optional
 from datetime import datetime, timedelta
 from flask_login import current_user
@@ -271,17 +270,17 @@ class DashboardAlertService:
             # Auto-complete expired timers first
             from ..services.timer_service import TimerService
             TimerService.complete_expired_timers()
-            
+
             # Use BatchTimer model which exists in your system
             from ..models import BatchTimer
             from ..utils.timezone_utils import TimezoneUtils
-            
+
             # Get active timers with simple organization scoping
             query = BatchTimer.query.filter_by(status='active')
-            
+
             if current_user and current_user.is_authenticated and current_user.organization_id:
                 query = query.filter(BatchTimer.organization_id == current_user.organization_id)
-            
+
             active_timers = query.all()
             expired_timers = []
 
@@ -308,13 +307,13 @@ class DashboardAlertService:
         """Get count of products with inventory issues"""
         try:
             from ..models.product import ProductSKU
-            
+
             # SKUs with zero or negative inventory - simple organization scoping
             query = ProductSKU.query.filter(ProductSKU.current_quantity <= 0)
-            
+
             if current_user and current_user.is_authenticated and current_user.organization_id:
                 query = query.filter(ProductSKU.organization_id == current_user.organization_id)
-            
+
             issues = query.count()
             return issues
         except:
