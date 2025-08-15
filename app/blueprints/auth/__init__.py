@@ -1,7 +1,10 @@
 from flask import Blueprint
 
-auth_bp = Blueprint('auth', __name__, template_folder='templates')
+auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
 
-# Import routes to register them with the blueprint
 from . import routes
-from . import permissions
+from .permissions import manage_permissions, toggle_permission_status
+
+# Add permission routes
+auth_bp.add_url_rule('/permissions', 'manage_permissions', manage_permissions, methods=['GET'])
+auth_bp.add_url_rule('/permissions/toggle', 'toggle_permission_status', toggle_permission_status, methods=['POST'])

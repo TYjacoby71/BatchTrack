@@ -1,8 +1,8 @@
-from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for, abort
+from flask import render_template, request, jsonify, flash, redirect, url_for, abort
 from flask_login import login_required, current_user
 from app.models import Permission, Role, User, DeveloperPermission
 from app.extensions import db
-from app.utils.permissions import require_permission
+from app.utils.authorization import require_permission
 from app.blueprints.developer.subscription_tiers import load_tiers_config
 
 def get_tier_permissions(tier_key):
@@ -18,10 +18,13 @@ def get_tier_permissions(tier_key):
     ).all()
     return permissions
 
-@require_permission('developer.system_management')
 @login_required
 def manage_permissions():
     """Show system permissions management page"""
+    # Check if user has developer access
+    if not current_user.user_type == 'developer':
+        abort(403)
+    
     # Get both developer permissions and organization permissions
     dev_permissions = DeveloperPermission.query.all()
     org_permissions = Permission.query.all()
@@ -68,10 +71,13 @@ def manage_permissions():
     return render_template('auth/permissions.html', 
                          permission_categories=permission_categories)
 
-@require_permission('developer.system_management')
 @login_required
 def toggle_permission_status():
     """Toggle active/inactive status of a permission"""
+    # Check if user has developer access
+    if not current_user.user_type == 'developer':
+        return jsonify({'success': False, 'message': 'Insufficient permissions'}), 403
+    
     data = request.get_json()
     permission_id = data.get('permission_id')
     permission_table = data.get('table')
