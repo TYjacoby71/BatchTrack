@@ -41,6 +41,10 @@ class SubscriptionTier(db.Model):
     def get_permissions(self):
         """Get all permissions for this tier"""
         return [p.name for p in self.permissions]
+    
+    def get_permission_names(self):
+        """Get permission names as a list"""
+        return [p.name for p in self.permissions]
 
     def has_permission(self, permission_name):
         """Check if tier includes a specific permission"""

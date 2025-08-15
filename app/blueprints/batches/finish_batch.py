@@ -6,6 +6,7 @@ from ...models import db, Batch, Product, ProductVariant, ProductSKU, InventoryI
 from ...models.product import ProductSKU, ProductSKUHistory
 from ...services.inventory_adjustment import process_inventory_adjustment
 from ..fifo.services import FIFOService
+from app.utils.permissions import role_required
 
 finish_batch_bp = Blueprint('finish_batch', __name__)
 logger = logging.getLogger(__name__)

@@ -271,6 +271,18 @@ def has_subscription_feature(feature):
     org_features = current_user.organization.get_subscription_features()
     return feature in org_features or 'all_features' in org_features
 
+def _org_tier_includes_permission(organization, permission_name):
+    """
+    Check if organization's tier includes the specified permission
+    Legacy function name for backward compatibility during transition
+    """
+    if not organization or not organization.tier:
+        return False
+    
+    # Use the authorization hierarchy
+    tier_permissions = AuthorizationHierarchy.get_tier_allowed_permissions(organization)
+    return permission_name in tier_permissions
+
 class AuthorizationHierarchy:
     """Handles the authorization hierarchy for the application"""
 
@@ -327,11 +339,17 @@ class AuthorizationHierarchy:
         3. Check if user role grants permission
         """
 
-        # Developers in non-customer mode have full access
+        # Developers have full access - they are super admins
         if user.user_type == 'developer':
+            # For developer permissions, check if they have the specific developer permission
+            if permission_name.startswith('developer.'):
+                return True  # All developers get all developer permissions
+            
+            # For organization permissions when in customer view mode
             selected_org_id = session.get('dev_selected_org_id')
             if not selected_org_id:
-                return True  # Developer mode - full access
+                return True  # Developer mode - full access to all organization permissions too
+            # If viewing a specific organization, continue with organization checks
 
         # Get organization (handle developer customer view)
         organization = get_effective_organization()

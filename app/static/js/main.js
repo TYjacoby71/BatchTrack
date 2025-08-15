@@ -103,6 +103,21 @@ document.addEventListener('DOMContentLoaded', function() {
   // Initialize clock
   updateClock();
   setInterval(updateClock, 30000);
+  
+  // Debug navigation clicks
+  console.log('Page loaded:', window.location.pathname);
+  
+  // Track permissions navigation attempts
+  document.addEventListener('click', function(e) {
+    const link = e.target.closest('a[href*="permissions"]');
+    if (link) {
+      console.log('Permissions link clicked:', {
+        href: link.href,
+        text: link.textContent.trim(),
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
   // Initialize all Select2 dropdowns
   const select2Config = {
     placeholder: 'Select...',

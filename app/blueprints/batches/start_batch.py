@@ -6,6 +6,7 @@ from sqlalchemy import extract
 from ...services.unit_conversion import ConversionEngine
 from ...services.inventory_adjustment import process_inventory_adjustment
 from ...utils.timezone_utils import TimezoneUtils
+from app.utils.permissions import role_required
 
 start_batch_bp = Blueprint('start_batch', __name__)
 
