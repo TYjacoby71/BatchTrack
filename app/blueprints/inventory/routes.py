@@ -17,6 +17,14 @@ from sqlalchemy.orm import joinedload
 # Import the blueprint from __init__.py instead of creating a new one
 from . import inventory_bp
 
+def can_edit_inventory_item(item):
+    """Helper function to check if current user can edit an inventory item"""
+    if not current_user.is_authenticated:
+        return False
+    if current_user.user_type == 'developer':
+        return True
+    return item.organization_id == current_user.organization_id
+
 @inventory_bp.route('/')
 @login_required
 def list_inventory():

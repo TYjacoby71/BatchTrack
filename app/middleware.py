@@ -30,19 +30,19 @@ def register_middleware(app):
 
         # 3. Handle developer "super admin" and masquerade logic.
         if getattr(current_user, 'user_type', None) == 'developer':
-            # Developers can access their own pages without masquerading
-            if request.path.startswith("/developer/") or request.path.startswith("/auth/permissions"):
-                return  # Allow developer access
-
             selected_org_id = session.get("dev_selected_org_id")
-            if not selected_org_id:
+            # If no org selected, redirect to organization selection unless it's a developer-specific or auth permission page
+            if not selected_org_id and not (request.path.startswith("/developer/") or request.path.startswith("/auth/permissions")):
                 flash("Please select an organization to view customer features.", "warning")
                 return redirect(url_for("developer.organizations"))
 
-            from .models import Organization
-            from .extensions import db
-            g.effective_org = db.session.get(Organization, selected_org_id)
-            g.is_developer_masquerade = True
+            # If an org is selected, set it as the effective org for the request
+            if selected_org_id:
+                from .models import Organization
+                from .extensions import db
+                g.effective_org = db.session.get(Organization, selected_org_id)
+                g.is_developer_masquerade = True
+            
             # IMPORTANT: Developers bypass the billing check below.
             return
 
@@ -53,9 +53,9 @@ def register_middleware(app):
 
             # This is the strict billing logic our tests require.
             if not tier.is_billing_exempt and org.billing_status != 'active':
-                flash('Your subscription requires attention to continue accessing these features.', 'warning')
                 # Do not block access to the billing page itself!
                 if request.endpoint and not request.endpoint.startswith('billing.'):
+                    flash('Your subscription requires attention to continue accessing these features.', 'warning')
                     return redirect(url_for('billing.upgrade'))
 
         # 5. If all checks pass, do nothing and allow the request to proceed.
