@@ -1,6 +1,7 @@
 from flask import current_app, session, g
 from flask_login import current_user
 from flask_wtf.csrf import generate_csrf
+from .utils.permissions import has_permission
 from .utils.timezone_utils import TimezoneUtils
 
 def register_template_context(app):
@@ -9,6 +10,10 @@ def register_template_context(app):
     @app.context_processor
     def _inject_csrf():
         return dict(csrf_token=generate_csrf)
+
+    @app.context_processor
+    def _inject_permissions():
+        return dict(has_permission=has_permission)
 
     @app.context_processor
     def _inject_units_and_categories():
