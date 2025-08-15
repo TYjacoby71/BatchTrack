@@ -33,7 +33,7 @@ class TestAuthPermissions:
             assert response.status_code == 401
             assert response.is_json
             json_data = response.get_json()
-            assert json_data['error'] == 'unauthorized'
+            assert json_data['error'] == 'Authentication required'
 
     def test_any_permission_required_decorator(self, app):
         """Test any_permission_required decorator structure"""
@@ -77,7 +77,7 @@ class TestAuthPermissions:
             assert resp.status_code == 401
             assert resp.is_json
             json_data = resp.get_json()
-            assert json_data.get("error") == "unauthorized"
+            assert json_data.get("error") == "Authentication required"
 
     def test_web_unauth_redirects_to_login(self, app, client):
         """Test that web pages redirect to login when unauthorized"""
