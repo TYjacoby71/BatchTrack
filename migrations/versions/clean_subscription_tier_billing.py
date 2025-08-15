@@ -26,6 +26,12 @@ def upgrade():
     if not column_exists('subscription_tier', 'is_billing_exempt'):
         op.add_column('subscription_tier', sa.Column('is_billing_exempt', sa.Boolean(), default=False))
     
+    # First, update any NULL billing_provider values to 'exempt'
+    connection = op.get_bind()
+    connection.execute(
+        sa.text("UPDATE subscription_tier SET billing_provider = 'exempt' WHERE billing_provider IS NULL")
+    )
+    
     # For SQLite compatibility, use batch_alter_table for column modifications
     with op.batch_alter_table('subscription_tier', schema=None) as batch_op:
         # Update billing_provider to be non-nullable with default
