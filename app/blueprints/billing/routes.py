@@ -151,7 +151,7 @@ def complete_signup_from_stripe():
             logger.error("Failed to retrieve checkout session")
             flash('Checkout session not found', 'error')
             return redirect(url_for('auth.signup'))
-        
+
         logger.info(f"Retrieved checkout session: {checkout_session.id}")
 
         # Get customer details
@@ -160,7 +160,7 @@ def complete_signup_from_stripe():
             logger.error("Failed to retrieve customer")
             flash('Customer information not found', 'error')
             return redirect(url_for('auth.signup'))
-        
+
         logger.info(f"Retrieved customer: {customer.id}")
 
         # Extract user info from checkout session
