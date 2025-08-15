@@ -192,126 +192,48 @@ def add_inventory():
         flash(f'Error adding inventory item: {str(e)}', 'error')
         return redirect(url_for('inventory.list_inventory'))
 
-@inventory_bp.route('/adjust/<int:id>', methods=['POST'])
+@inventory_bp.route('/adjust/<int:item_id>', methods=['POST'])
 @login_required
-def adjust_inventory(id):
-    item = InventoryItem.query.get_or_404(id)
+def adjust_inventory(item_id):
+    """
+    A thin controller that delegates ALL adjustment logic to the canonical service.
+    This fixes the "initial stock" bug.
+    """
+    item = db.session.get(InventoryItem, item_id)
+    if not item:
+        flash("Inventory item not found.", "error")
+        return redirect(url_for('.list_inventory'))
 
-    form = request.form
-    adj_type = (form.get('adjustment_type') or form.get('change_type') or '').strip().lower()
-    qty = float(form.get('quantity', 0) or 0.0)
-    notes = form.get('notes') or None
-    unit = form.get('input_unit') or getattr(item, 'unit', None)
-    expiration_date_str = form.get('expiration_date')
-    expiration_date = None
-    if expiration_date_str:
-        try:
-            from datetime import datetime
-            expiration_date = datetime.strptime(expiration_date_str, '%Y-%m-%d').date()
-        except ValueError:
-            flash('Invalid expiration date format. Please use YYYY-MM-DD.', 'error')
-            return redirect(url_for('inventory.view_inventory', id=item.id))
+    # Authority check
+    if not can_edit_inventory_item(item):
+        flash('Permission denied.', 'error')
+        return redirect(url_for('.list_inventory'))
 
-    # Define all supported change types
-    deductive_types = {
-        'spoil', 'trash', 'expired', 'gift', 'sample', 'tester',
-        'quality_fail', 'damaged', 'sold', 'sale', 'use', 'batch',
-        'reserved', 'unreserved'
-    }
-
-    additive_types = {
-        'restock', 'manual_addition', 'returned', 'refunded'
-    }
-
-    special_types = {
-        'recount', 'cost_override'
-    }
+    # --- 1. Gather all data from the form ---
+    form_data = request.form
+    adjustment_type = form_data.get('adjustment_type', '').strip().lower()
 
     try:
-        # Recount (absolute target)
-        if adj_type == 'recount':
-            success = process_inventory_adjustment(
-                item_id=item.id,
-                quantity=qty,
-                change_type='recount',
-                unit=unit,
-                notes=notes,
-                created_by=getattr(current_user, 'id', None),
-            )
-            if success:
-                flash('Inventory recount completed successfully.', 'success')
-            else:
-                flash('Error during recount adjustment.', 'error')
-            return redirect(url_for('inventory.view_inventory', id=item.id))
+        quantity = float(form_data.get('quantity', 0.0))
+    except (ValueError, TypeError):
+        flash("Invalid quantity provided.", "error")
+        return redirect(url_for('.view_inventory', id=item_id))
 
-        # Restock (with optional cost override for first-time)
-        elif adj_type in additive_types:
-            cost_override = None
-            if form.get('cost_entry_type') == 'per_unit' and form.get('cost_per_unit'):
-                try:
-                    cost_override = float(form.get('cost_per_unit'))
-                except ValueError:
-                    cost_override = None
+    # --- 2. Call the ONE canonical service with all the data ---
+    success, message = process_inventory_adjustment(
+        item_id=item.id,
+        quantity=quantity,
+        change_type=adjustment_type,
+        notes=form_data.get('notes'),
+        unit=form_data.get('input_unit') or item.unit,
+        cost_override=float(form_data.get('cost_per_unit')) if form_data.get('cost_per_unit') else None,
+        expiration_date_str=form_data.get('expiration_date'),  # Let the service handle parsing
+        created_by=current_user.id
+    )
 
-            # Always use canonical service - no special case for initial stock
-            success = process_inventory_adjustment(
-                item_id=item.id,
-                quantity=qty,
-                change_type=adj_type,
-                unit=unit,
-                notes=notes,
-                created_by=getattr(current_user, 'id', None),
-                cost_override=cost_override,
-                expiration_date=expiration_date
-            )
-            if success:
-                flash(f'Inventory {adj_type} completed successfully.', 'success')
-            else:
-                flash(f'Error during {adj_type} adjustment.', 'error')
-            return redirect(url_for('inventory.view_inventory', id=item.id))
-
-        # Deductive adjustments (spoil, trash, etc.)
-        elif adj_type in deductive_types:
-            success = process_inventory_adjustment(
-                item_id=item.id,
-                quantity=qty,  # Service will make this negative
-                change_type=adj_type,
-                unit=unit,
-                notes=notes,
-                created_by=getattr(current_user, 'id', None),
-                expiration_date=expiration_date
-            )
-            if success:
-                flash(f'Inventory {adj_type} completed successfully.', 'success')
-            else:
-                flash(f'Error during {adj_type} adjustment.', 'error')
-            return redirect(url_for('inventory.view_inventory', id=item.id))
-
-        # Cost override
-        elif adj_type == 'cost_override':
-            new_cost = float(form.get('cost_per_unit', 0))
-            success = process_inventory_adjustment(
-                item_id=item.id,
-                quantity=0,  # No quantity change for cost override
-                change_type='cost_override',
-                unit=unit,
-                notes=notes or f'Cost override to {new_cost}',
-                created_by=getattr(current_user, 'id', None),
-                cost_override=new_cost,
-            )
-            if success:
-                flash('Cost override completed successfully.', 'success')
-            else:
-                flash('Error during cost override.', 'error')
-            return redirect(url_for('inventory.view_inventory', id=item.id))
-
-        else:
-            flash(f'Invalid adjustment type: {adj_type}', 'error')
-            return redirect(url_for('inventory.view_inventory', id=item.id))
-
-    except Exception as e:
-        flash(f'Error processing adjustment: {str(e)}', 'error')
-        return redirect(url_for('inventory.view_inventory', id=item.id))
+    # --- 3. Flash the result and redirect ---
+    flash(message, 'success' if success else 'error')
+    return redirect(url_for('.view_inventory', id=item_id))
 
 
 @inventory_bp.route('/edit/<int:id>', methods=['POST'])
