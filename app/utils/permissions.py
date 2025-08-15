@@ -271,6 +271,18 @@ def has_subscription_feature(feature):
     org_features = current_user.organization.get_subscription_features()
     return feature in org_features or 'all_features' in org_features
 
+def _org_tier_includes_permission(organization, permission_name):
+    """
+    Check if organization's tier includes the specified permission
+    Legacy function name for backward compatibility during transition
+    """
+    if not organization or not organization.tier:
+        return False
+    
+    # Use the authorization hierarchy
+    tier_permissions = AuthorizationHierarchy.get_tier_allowed_permissions(organization)
+    return permission_name in tier_permissions
+
 class AuthorizationHierarchy:
     """Handles the authorization hierarchy for the application"""
 
