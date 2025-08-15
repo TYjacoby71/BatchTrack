@@ -1,4 +1,3 @@
-
 """
 Pytest configuration and shared fixtures for BatchTrack tests.
 """
@@ -23,6 +22,8 @@ def app():
         'SECRET_KEY': 'test-secret-key',
         'STRIPE_SECRET_KEY': 'sk_test_fake',
         'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+        'LOGIN_DISABLED': False,  # Ensure authentication is active in tests
+        'TESTING_DISABLE_AUTH': False  # Disable any test-specific auth bypass
         # Don't disable login - we need to test permissions properly
     })
 
@@ -118,7 +119,7 @@ def test_user(app):
         # Use unique username per test to avoid conflicts
         import time
         unique_username = f'testuser_{int(time.time() * 1000000)}'
-        
+
         # Create a test organization
         org = Organization(name='Test Organization', billing_status='active')
         db.session.add(org)
@@ -158,7 +159,7 @@ def developer_user(app):
         # Use unique username per test to avoid conflicts
         import time
         unique_username = f'developer_{int(time.time() * 1000000)}'
-        
+
         user = User(
             username=unique_username,
             email=f'{unique_username}@batchtrack.com',

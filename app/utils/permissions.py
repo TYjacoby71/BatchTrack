@@ -52,8 +52,8 @@ def require_permission(permission_name: str):
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
-            # Allow everything during tests
-            if current_app.config.get('TESTING', False):
+            # Skip permissions only if explicitly disabled
+            if current_app.config.get('SKIP_PERMISSIONS'):
                 return f(*args, **kwargs)
 
             # Basic auth check
