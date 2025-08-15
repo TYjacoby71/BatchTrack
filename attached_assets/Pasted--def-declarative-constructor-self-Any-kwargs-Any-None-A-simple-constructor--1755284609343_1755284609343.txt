@@ -1,0 +1,1705 @@
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+---------------------------------- Captured log setup -----------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+______ ERROR at setup of TestGoogleOAuthCharacterization.test_oauth_service_exists ______
+
+    @pytest.fixture
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:31: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:71: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>, k = 'tier_key'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+---------------------------------- Captured log setup -----------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+___ ERROR at setup of TestGoogleOAuthCharacterization.test_auth_login_endpoint_exists ___
+
+    @pytest.fixture
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:31: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:71: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>, k = 'tier_key'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+---------------------------------- Captured log setup -----------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+_ ERROR at setup of TestGoogleOAuthCharacterization.test_auth_callback_endpoint_exists __
+
+    @pytest.fixture
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:31: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:71: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>, k = 'tier_key'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+---------------------------------- Captured log setup -----------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+__ ERROR at setup of TestGoogleOAuthCharacterization.test_oauth_state_validation_path ___
+
+    @pytest.fixture
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:31: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:71: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>, k = 'tier_key'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+---------------------------------- Captured log setup -----------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+__ ERROR at setup of TestGoogleOAuthCharacterization.test_oauth_service_methods_exist ___
+
+    @pytest.fixture
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:31: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:71: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>, k = 'tier_key'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+---------------------------------- Captured log setup -----------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+___ ERROR at setup of TestGoogleOAuthCharacterization.test_oauth_configuration_status ___
+
+    @pytest.fixture
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:31: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:71: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>, k = 'tier_key'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+---------------------------------- Captured log setup -----------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+__ ERROR at setup of TestGoogleOAuthCharacterization.test_oauth_callback_invalid_state __
+
+    @pytest.fixture
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:31: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:71: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>, k = 'tier_key'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+---------------------------------- Captured log setup -----------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+__ ERROR at setup of TestInventoryFIFOCharacterization.test_single_entry_point_exists ___
+
+    @pytest.fixture
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:31: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:71: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>, k = 'tier_key'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+---------------------------------- Captured log setup -----------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+_____ ERROR at setup of TestInventoryFIFOCharacterization.test_fifo_deduction_order _____
+
+    @pytest.fixture
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:31: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:71: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>, k = 'tier_key'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+---------------------------------- Captured log setup -----------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+_ ERROR at setup of TestInventoryFIFOCharacterization.test_inventory_adjustment_delegates_properly _
+
+    @pytest.fixture
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:31: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:71: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>, k = 'tier_key'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+---------------------------------- Captured log setup -----------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+___________ ERROR at setup of test_recount_adjustment_uses_canonical_service ____________
+
+    @pytest.fixture
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:31: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:71: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>, k = 'tier_key'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+---------------------------------- Captured log setup -----------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+________________ ERROR at setup of test_pos_sale_uses_canonical_service _________________
+
+    @pytest.fixture
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:31: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:71: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>, k = 'tier_key'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+---------------------------------- Captured log setup -----------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+______ ERROR at setup of TestProductSKUCharacterization.test_product_creation_flow ______
+
+    @pytest.fixture
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:31: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:71: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>, k = 'tier_key'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+---------------------------------- Captured log setup -----------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+___ ERROR at setup of TestProductSKUCharacterization.test_sku_generation_constraints ____
+
+    @pytest.fixture
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:31: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:71: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>, k = 'tier_key'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+---------------------------------- Captured log setup -----------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+_____ ERROR at setup of TestProductSKUCharacterization.test_product_service_exists ______
+
+    @pytest.fixture
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:31: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:71: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>, k = 'tier_key'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+---------------------------------- Captured log setup -----------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+_____ ERROR at setup of TestProductSKUCharacterization.test_sku_creation_validation _____
+
+    @pytest.fixture
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:31: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:71: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>, k = 'tier_key'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+---------------------------------- Captured log setup -----------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+_______ ERROR at setup of test_credit_specific_lot_called_on_reservation_release ________
+
+    @pytest.fixture
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:31: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:71: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>, k = 'tier_key'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+---------------------------------- Captured log setup -----------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+_________ ERROR at setup of test_record_audit_entry_called_for_unreserved_audit _________
+
+    @pytest.fixture
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:31: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:71: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>, k = 'tier_key'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+---------------------------------- Captured log setup -----------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+_____ ERROR at setup of TestSignupTierCharacterization.test_signup_endpoint_exists ______
+
+    @pytest.fixture
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:31: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:71: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>, k = 'tier_key'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+---------------------------------- Captured log setup -----------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+______ ERROR at setup of TestSignupTierCharacterization.test_tier_bypass_behavior _______
+
+    @pytest.fixture
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:31: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:71: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>, k = 'tier_key'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+---------------------------------- Captured log setup -----------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+__ ERROR at setup of TestSignupTierCharacterization.test_organization_tier_assignment ___
+
+    @pytest.fixture
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:31: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:71: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>, k = 'tier_key'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+---------------------------------- Captured log setup -----------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+____ ERROR at setup of TestSignupTierCharacterization.test_permission_gating_exists _____
+
+    @pytest.fixture
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:31: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:71: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>, k = 'tier_key'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+---------------------------------- Captured log setup -----------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+____ ERROR at setup of TestSignupTierCharacterization.test_signup_service_delegation ____
+
+    @pytest.fixture
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:31: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:71: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>, k = 'tier_key'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+---------------------------------- Captured log setup -----------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+____ ERROR at setup of TestStripeWebhookCharacterization.test_stripe_service_exists _____
+
+    @pytest.fixture
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:31: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:71: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>, k = 'tier_key'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+---------------------------------- Captured log setup -----------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+_ ERROR at setup of TestStripeWebhookCharacterization.test_webhook_signature_verification_path_exists _
+
+    @pytest.fixture
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:31: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:71: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>, k = 'tier_key'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+---------------------------------- Captured log setup -----------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+_ ERROR at setup of TestStripeWebhookCharacterization.test_webhook_idempotency_behavior _
+
+    @pytest.fixture
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:31: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:71: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>, k = 'tier_key'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+---------------------------------- Captured log setup -----------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+_ ERROR at setup of TestStripeWebhookCharacterization.test_stripe_service_methods_exist _
+
+    @pytest.fixture
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:31: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:71: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>, k = 'tier_key'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+---------------------------------- Captured log setup -----------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+=================================== warnings summary ====================================
+tests/test_audit_canonicalization.py: 2 warnings
+tests/test_auth_permissions.py: 8 warnings
+tests/test_billing_and_tier_enforcement.py: 7 warnings
+tests/test_expiration_canonicalization.py: 3 warnings
+tests/test_google_oauth.py: 7 warnings
+tests/test_inventory_fifo.py: 3 warnings
+tests/test_inventory_routes_canonicalization.py: 2 warnings
+tests/test_pos_integration_canonicalization.py: 1 warning
+tests/test_product_sku.py: 4 warnings
+tests/test_reservation_canonicalization.py: 2 warnings
+tests/test_signup_tiers.py: 5 warnings
+tests/test_stripe_webhooks.py: 4 warnings
+  /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_limiter/extension.py:333: UserWarning: Using the in-memory storage for tracking rate limits as no storage was explicitly specified. This is not recommended for production use. See: https://flask-limiter.readthedocs.io#configuring-a-storage-backend for documentation about configuring the storage backend.
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+================================ short test summary info ================================
+ERROR tests/test_audit_canonicalization.py::test_api_reservation_routes_uses_canonical_audit - TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+ERROR tests/test_audit_canonicalization.py::test_products_routes_uses_canonical_audit - TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+ERROR tests/test_auth_permissions.py::TestAuthPermissions::test_permission_required_decorator_allows_with_permission - TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+ERROR tests/test_auth_permissions.py::TestAuthPermissions::test_permission_required_returns_json_for_api - TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+ERROR tests/test_auth_permissions.py::TestAuthPermissions::test_any_permission_required_decorator - TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+ERROR tests/test_auth_permissions.py::TestAuthPermissions::test_tier_required_decorator - TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+ERROR tests/test_auth_permissions.py::TestAuthPermissions::test_user_has_any_permission_method - TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+ERROR tests/test_auth_permissions.py::TestAuthPermissions::test_api_unauth_returns_json_401 - TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+ERROR tests/test_auth_permissions.py::TestAuthPermissions::test_web_unauth_redirects_to_login - TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+ERROR tests/test_auth_permissions.py::TestAuthPermissions::test_csrf_token_available_in_templates - TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+ERROR tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_tier_permission_is_the_hard_ceiling - TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+ERROR tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[active-200] - TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+ERROR tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[past_due-302] - TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+ERROR tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[suspended-302] - TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+ERROR tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[canceled-302] - TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+ERROR tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_developer_can_masquerade_regardless_of_billing - TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+ERROR tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_complete_security_cascade - TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+ERROR tests/test_expiration_canonicalization.py::test_expiration_service_uses_canonical_adjustment - TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+ERROR tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_oauth_service_exists - TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+ERROR tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_auth_login_endpoint_exists - TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+ERROR tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_auth_callback_endpoint_exists - TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+ERROR tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_oauth_state_validation_path - TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+ERROR tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_oauth_service_methods_exist - TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+ERROR tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_oauth_configuration_status - TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+ERROR tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_oauth_callback_invalid_state - TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+ERROR tests/test_inventory_fifo.py::TestInventoryFIFOCharacterization::test_single_entry_point_exists - TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+ERROR tests/test_inventory_fifo.py::TestInventoryFIFOCharacterization::test_fifo_deduction_order - TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+ERROR tests/test_inventory_fifo.py::TestInventoryFIFOCharacterization::test_inventory_adjustment_delegates_properly - TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+ERROR tests/test_inventory_routes_canonicalization.py::test_recount_adjustment_uses_canonical_service - TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+ERROR tests/test_pos_integration_canonicalization.py::test_pos_sale_uses_canonical_service - TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+ERROR tests/test_product_sku.py::TestProductSKUCharacterization::test_product_creation_flow - TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+ERROR tests/test_product_sku.py::TestProductSKUCharacterization::test_sku_generation_constraints - TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+ERROR tests/test_product_sku.py::TestProductSKUCharacterization::test_product_service_exists - TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+ERROR tests/test_product_sku.py::TestProductSKUCharacterization::test_sku_creation_validation - TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+ERROR tests/test_reservation_canonicalization.py::test_credit_specific_lot_called_on_reservation_release - TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+ERROR tests/test_reservation_canonicalization.py::test_record_audit_entry_called_for_unreserved_audit - TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+ERROR tests/test_signup_tiers.py::TestSignupTierCharacterization::test_signup_endpoint_exists - TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+ERROR tests/test_signup_tiers.py::TestSignupTierCharacterization::test_tier_bypass_behavior - TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+ERROR tests/test_signup_tiers.py::TestSignupTierCharacterization::test_organization_tier_assignment - TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+ERROR tests/test_signup_tiers.py::TestSignupTierCharacterization::test_permission_gating_exists - TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+ERROR tests/test_signup_tiers.py::TestSignupTierCharacterization::test_signup_service_delegation - TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+ERROR tests/test_stripe_webhooks.py::TestStripeWebhookCharacterization::test_stripe_service_exists - TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+ERROR tests/test_stripe_webhooks.py::TestStripeWebhookCharacterization::test_webhook_signature_verification_path_exists - TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+ERROR tests/test_stripe_webhooks.py::TestStripeWebhookCharacterization::test_webhook_idempotency_behavior - TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+ERROR tests/test_stripe_webhooks.py::TestStripeWebhookCharacterization::test_stripe_service_methods_exist - TypeError: 'tier_key' is an invalid keyword argument for SubscriptionTier
+====================== 4 passed, 48 warnings, 45 errors in 46.20s =======================
