@@ -71,7 +71,6 @@ def _create_test_data():
     tier = SubscriptionTier(
         name='Test Tier',
         key='test',
-        tier_key='test',
         max_users=5,
         max_monthly_batches=100,
         is_customer_facing=True
