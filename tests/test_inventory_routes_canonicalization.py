@@ -22,8 +22,8 @@ def test_recount_adjustment_uses_canonical_service(client, app, db_session, test
             sess['_user_id'] = str(test_user.id)
             sess['_fresh'] = True
 
-        # Mock the canonical service
-        with patch('app.services.inventory_adjustment.process_inventory_adjustment') as mock_adjustment:
+        # Mock the canonical service at the route import path
+        with patch('app.blueprints.inventory.routes.process_inventory_adjustment') as mock_adjustment:
             mock_adjustment.return_value = True
 
             # Make recount request
@@ -57,7 +57,7 @@ class TestInventoryRoutesCanonicalService:
     def client(self, app):
         return app.test_client()
 
-    @patch('app.services.inventory_adjustment.process_inventory_adjustment')
+    @patch('app.blueprints.inventory.routes.process_inventory_adjustment')
     @patch('app.blueprints.inventory.routes.InventoryItem')
     @patch('app.middleware.current_user')
     @patch('app.blueprints.inventory.routes.current_user')

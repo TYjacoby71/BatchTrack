@@ -14,7 +14,11 @@ def register_middleware(app):
         This is the SINGLE POINT where billing is checked across the entire app.
         This runs AFTER authentication is confirmed in _global_login_gate.
         """
-        # Skip enforcement for static files, auth routes, and API endpoints
+        # Skip middleware only if explicitly disabled (not just because we're testing)
+        if app.config.get('DISABLE_AUTH_MIDDLEWARE'):
+            return
+
+        # Skip for static files, auth routes, and API endpoints
         if (request.endpoint and
             (request.endpoint.startswith('static') or
              request.endpoint.startswith('auth.') or
