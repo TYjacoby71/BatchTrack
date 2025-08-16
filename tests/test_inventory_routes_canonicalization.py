@@ -9,8 +9,8 @@ def test_recount_adjustment_uses_canonical_service(client, app, db_session, test
     with app.app_context():
         # Create test inventory item
         item = InventoryItem(
-            name="Test Item", 
-            quantity=100, 
+            name="Test Item",
+            quantity=100,
             unit="count",
             organization_id=test_user.organization_id
         )
@@ -74,7 +74,7 @@ class TestInventoryRoutesCanonicalService:
             mock_inventory_item.organization_id = 1
 
             mock_item.query.get_or_404.return_value = mock_inventory_item
-            
+
             # Configure both middleware and route user mocks
             for mock_user in [mock_route_user, mock_middleware_user]:
                 mock_user.id = 1
@@ -83,7 +83,7 @@ class TestInventoryRoutesCanonicalService:
                 mock_user.user_type = 'regular'
                 mock_user.organization = MagicMock()
                 mock_user.organization.is_active = True
-                
+
             mock_process.return_value = True
 
             # Log in the mock user for the test
