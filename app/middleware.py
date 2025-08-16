@@ -25,8 +25,8 @@ def register_middleware(app):
         # 2. Check for authentication. Everything from here on requires a logged-in user.
         if not current_user.is_authenticated:
             # Check if this is an API request (inline to avoid circular imports)
-            if (request.is_json or 
-                request.path.startswith('/api/') or 
+            if (request.is_json or
+                request.path.startswith('/api/') or
                 'application/json' in request.headers.get('Accept', '') or
                 'application/json' in request.headers.get('Content-Type', '')):
                 return jsonify(error="Authentication required"), 401
@@ -63,7 +63,10 @@ def register_middleware(app):
             # 2. If it requires a check, is the organization's status NOT 'active'?
             if not tier.is_billing_exempt and org.billing_status != 'active':
                 # Do not block access to the billing page itself!
-                if request.endpoint and not request.endpoint.startswith('billing.'):
+                endpoint_name = request.endpoint or ''
+                if not endpoint_name.startswith('billing.'):
+                    # Debug info
+                    print(f"BILLING MIDDLEWARE: Blocking access - billing_status={org.billing_status}, endpoint={endpoint_name}")
                     flash('Your subscription requires attention to continue accessing these features.', 'warning')
                     return redirect(url_for('billing.upgrade'))
 

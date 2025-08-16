@@ -107,6 +107,10 @@ class TestBillingAndTierEnforcement:
                     sess['_user_id'] = str(test_user.id)
                     sess['_fresh'] = True
 
+                # Debug: Verify the org and tier are set up correctly
+                print(f"DEBUG: User {test_user.id}, Org billing_status={org.billing_status}")
+                print(f"DEBUG: Tier exempt={org.subscription_tier.is_billing_exempt if org.subscription_tier else 'None'}")
+
                 response = client.get('/_protected_dashboard')
 
                 # ASSERT
