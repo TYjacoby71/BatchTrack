@@ -86,7 +86,7 @@ class TestInventoryFIFOCharacterization:
             db_session.flush()
 
             # Test product addition (should use ProductSKUHistory)
-            result = process_inventory_adjustment(
+            success, message = process_inventory_adjustment(
                 item_id=item.id,
                 quantity=250.0,
                 change_type="finished_batch",
@@ -94,6 +94,6 @@ class TestInventoryFIFOCharacterization:
                 created_by=test_user.id
             )
 
-            assert result is True
+            assert success is True
             db_session.refresh(item)
             assert item.quantity == 250.0
