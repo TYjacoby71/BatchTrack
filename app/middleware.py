@@ -36,7 +36,7 @@ def register_middleware(app):
         if getattr(current_user, 'user_type', None) == 'developer':
             selected_org_id = session.get("dev_selected_org_id")
             masquerade_org_id = session.get("masquerade_org_id")  # Support both session keys
-            
+
             # If no org selected, redirect to organization selection unless it's a developer-specific or auth permission page
             if not selected_org_id and not masquerade_org_id and not (request.path.startswith("/developer/") or request.path.startswith("/auth/permissions")):
                 flash("Please select an organization to view customer features.", "warning")
@@ -49,7 +49,7 @@ def register_middleware(app):
                 from .extensions import db
                 g.effective_org = db.session.get(Organization, effective_org_id)
                 g.is_developer_masquerade = True
-            
+
             # IMPORTANT: Developers bypass the billing check below.
             return
 
@@ -58,8 +58,10 @@ def register_middleware(app):
             org = current_user.organization
             tier = org.subscription_tier
 
-            # This is the strict billing logic our tests require.
-            if not getattr(tier, 'is_billing_exempt', True) and org.billing_status != 'active':
+            # THE FIX: This is the strict billing logic our tests require.
+            # 1. Does the tier REQUIRE a billing check? (i.e., it is NOT exempt)
+            # 2. If it requires a check, is the organization's status NOT 'active'?
+            if not tier.is_billing_exempt and org.billing_status != 'active':
                 # Do not block access to the billing page itself!
                 if request.endpoint and not request.endpoint.startswith('billing.'):
                     flash('Your subscription requires attention to continue accessing these features.', 'warning')
