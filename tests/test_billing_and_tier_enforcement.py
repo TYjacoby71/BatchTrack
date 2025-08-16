@@ -1,4 +1,3 @@
-
 import pytest
 from flask_login import login_user
 from app.models import db, User, Organization, SubscriptionTier, Role, Permission
@@ -16,7 +15,7 @@ class TestBillingAndTierEnforcement:
         """
         with app.app_context():
             # ARRANGE: Create a complex state
-            
+
             # 1. Create permissions
             perm_view = Permission(name=AppPermission.PRODUCT_VIEW.value)
             perm_create = Permission(name=AppPermission.PRODUCT_CREATE.value)
@@ -56,12 +55,12 @@ class TestBillingAndTierEnforcement:
             )
             db.session.add(user)
             db.session.commit()
-            
+
             # Assign the role properly using the role assignment system
             user.assign_role(overpowered_role)
 
             # ACT & ASSERT
-            
+
             # This should succeed because the Hobbyist tier allows 'product:view'
             assert user.has_permission(AppPermission.PRODUCT_VIEW) is True
 
@@ -84,17 +83,13 @@ class TestBillingAndTierEnforcement:
             org = test_user.organization
             org.billing_status = billing_status
 
-            # THE FIX: Ensure the user is on a tier that REQUIRES a billing check
-            if not org.subscription_tier or getattr(org.subscription_tier, 'is_billing_exempt', True):
+            # THE FIX: This block ensures the user is on a tier that REQUIRES a billing check.
+            if not org.subscription_tier or org.subscription_tier.is_billing_exempt:
                 from app.models.subscription_tier import SubscriptionTier
+                # Find a non-exempt tier in the DB or create one for the test
                 non_exempt_tier = SubscriptionTier.query.filter_by(is_billing_exempt=False).first()
-                if not non_exempt_tier:  # Create one if it doesn't exist
-                    non_exempt_tier = SubscriptionTier(
-                        name="Paid Tier", 
-                        key="paid", 
-                        is_billing_exempt=False, 
-                        billing_provider='stripe'
-                    )
+                if not non_exempt_tier:
+                    non_exempt_tier = SubscriptionTier(name="Paid Tier", key="paid", is_billing_exempt=False, billing_provider='stripe')
                     db.session.add(non_exempt_tier)
                 org.subscription_tier = non_exempt_tier
 
@@ -182,7 +177,7 @@ class TestBillingAndTierEnforcement:
         """
         with app.app_context():
             # ARRANGE: Create a realistic scenario
-            
+
             # 1. Create permissions
             perm_batch_view = Permission(name=AppPermission.BATCH_VIEW.value)
             perm_batch_create = Permission(name=AppPermission.BATCH_CREATE.value)
