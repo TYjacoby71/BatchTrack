@@ -118,7 +118,7 @@
           <p>Please make the initial stock entry to begin tracking this item. This will create your first FIFO entry and allow you to manage inventory properly.</p>
         </div>
         
-        <form id="initialInventoryForm" method="POST" action="{{ url_for('inventory.adjust_inventory', id=item.id) }}">
+        <form id="initialInventoryForm" method="POST" action="{{ url_for('inventory.adjust_inventory', item_id=item.id) }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <input type="hidden" name="change_type" value="restock">
           

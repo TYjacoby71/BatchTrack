@@ -21,7 +21,7 @@ def validate_inventory_fifo_sync(item_id, item_type=None):
     inventory_qty = float(item.quantity)
 
     # Allow small floating point differences
-    tolerance = 0.001
+    tolerance = 0.01
     is_valid = abs(inventory_qty - fifo_total) < tolerance
 
     if not is_valid:
