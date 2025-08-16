@@ -1,3 +1,4 @@
+
 import logging
 from datetime import datetime, timedelta
 from app.models import db, InventoryItem
@@ -9,7 +10,7 @@ logger = logging.getLogger(__name__)
 def create_inventory_item(form_data: dict, organization_id: int, created_by: int) -> tuple[bool, str, int]:
     """
     Canonical service for creating new inventory items.
-
+    
     Returns:
         tuple: (success: bool, message: str, item_id: int)
     """
@@ -18,7 +19,7 @@ def create_inventory_item(form_data: dict, organization_id: int, created_by: int
         name = form_data.get('name', '').strip()
         if not name:
             return False, "Item name is required", None
-
+            
         # Check for duplicate name
         existing_item = InventoryItem.query.filter_by(
             name=name, 
@@ -31,19 +32,19 @@ def create_inventory_item(form_data: dict, organization_id: int, created_by: int
         quantity = float(form_data.get('quantity', 0))
         unit = form_data.get('unit', '')
         item_type = form_data.get('type', 'ingredient')
-
+        
         # Handle cost calculation
         cost_entry_type = form_data.get('cost_entry_type', 'per_unit')
         cost_input = float(form_data.get('cost_per_unit', 0))
-
+        
         if cost_entry_type == 'total' and quantity > 0:
             cost_per_unit = cost_input / quantity
         else:
             cost_per_unit = cost_input
-
+            
         low_stock_threshold = float(form_data.get('low_stock_threshold', 0))
         is_perishable = form_data.get('is_perishable') == 'on'
-
+        
         # Handle expiration
         expiration_date = None
         shelf_life_days = None
@@ -56,7 +57,7 @@ def create_inventory_item(form_data: dict, organization_id: int, created_by: int
         storage_amount = None
         storage_unit = None
         history_unit = unit
-
+        
         if item_type == 'container':
             storage_amount = float(form_data.get('storage_amount', 0))
             storage_unit = form_data.get('storage_unit', '')
@@ -80,13 +81,13 @@ def create_inventory_item(form_data: dict, organization_id: int, created_by: int
             storage_unit=storage_unit,
             organization_id=organization_id
         )
-
+        
         db.session.add(item)
         db.session.flush()  # Get the ID without committing
 
         # Use canonical adjustment service for initial stock
         notes = form_data.get('notes', '') or 'Initial stock creation'
-
+        
         success = process_inventory_adjustment(
             item_id=item.id,
             quantity=quantity,
@@ -103,28 +104,16 @@ def create_inventory_item(form_data: dict, organization_id: int, created_by: int
             db.session.rollback()
             return False, 'Error creating inventory item - FIFO sync failed', None
 
-        # Validate FIFO sync after creation with tolerance for small floating point differences
-        is_valid, error_msg, inv_qty, fifo_total = validate_inventory_fifo_sync(item.id)
-        if not is_valid:
-            # Allow small floating point differences (less than 0.01)
-            tolerance = 0.01
-            if abs(inv_qty - fifo_total) > tolerance:
-                logger.error(f"FIFO sync failed after creation: {error_msg}")
-                db.session.rollback()
-                return False, "Error creating inventory item - FIFO sync failed", None
-            else:
-                logger.warning(f"Minor FIFO sync difference within tolerance: {error_msg}")
-
         db.session.commit()
         record_audit_entry(item.id, 'item_created', f'Created item: {name}')
-
+        
         return True, 'Inventory item added successfully', item.id
 
     except ValueError as e:
         logger.error(f"ValueError in create_inventory_item: {str(e)}")
         db.session.rollback()
         return False, f'Invalid input values: {str(e)}', None
-
+        
     except Exception as e:
         logger.error(f"Unexpected error in create_inventory_item: {str(e)}")
         db.session.rollback()

@@ -39,14 +39,6 @@ def process_inventory_adjustment(
             logger.error(f"Inventory item not found: {item_id}")
             return False
 
-        # Check if this is an initial stock case (item with no FIFO history)
-        if _is_initial_stock_case(item_id):
-            logger.info(f"INITIAL STOCK: Detected item {item_id} has no FIFO history, delegating to creation logic")
-            return _handle_initial_stock_via_creation_logic(
-                item_id, quantity, change_type, unit, notes, created_by,
-                cost_override, custom_expiration_date, custom_shelf_life_days, **kwargs
-            )
-
         # Handle recount with special logic that uses FIFO service
         if change_type == 'recount':
             logger.info(f"RECOUNT: Processing recount from {item.quantity} to {quantity}")
@@ -185,86 +177,5 @@ def _handle_deductive_adjustment(item_id, quantity, change_type, unit, notes, cr
 
     except Exception as e:
         logger.error(f"Error in deductive adjustment: {str(e)}")
-        db.session.rollback()
-        return False
-
-
-def _is_initial_stock_case(item_id: int) -> bool:
-    """Check if item has no existing FIFO history."""
-    return UnifiedInventoryHistory.query.filter_by(inventory_item_id=item_id).count() == 0
-
-
-def _handle_initial_stock_via_creation_logic(
-    item_id: int, quantity: float, change_type: str, unit: str = None,
-    notes: str = None, created_by: int = None, cost_override: float = None,
-    custom_expiration_date=None, custom_shelf_life_days: int = None, **kwargs
-) -> bool:
-    """
-    Handle initial stock by using the same logic as create_inventory_item.
-    This ensures consistent FIFO setup for new items.
-    """
-    try:
-        from ._creation_logic import create_inventory_item
-        
-        item = db.session.get(InventoryItem, item_id)
-        if not item:
-            return False
-
-        # If quantity is 0, just create a history entry noting initial creation
-        if quantity == 0:
-            logger.info(f"Creating initial zero-stock entry for item {item_id}")
-            history_entry = UnifiedInventoryHistory(
-                inventory_item_id=item_id,
-                change_type='item_created',
-                quantity_change=0.0,
-                unit=unit or item.unit or 'count',
-                unit_cost=cost_override or item.cost_per_unit or 0.0,
-                remaining_quantity=0.0,
-                notes=notes or 'Initial item creation - no stock added',
-                created_by=created_by,
-                is_perishable=item.is_perishable or False,
-                shelf_life_days=custom_shelf_life_days or item.shelf_life_days,
-                expiration_date=custom_expiration_date
-            )
-            db.session.add(history_entry)
-            db.session.commit()
-            record_audit_entry(item_id, 'item_created', 'Initial creation with zero stock')
-            return True
-
-        # For non-zero quantities, prepare form data that matches creation logic
-        form_data = {
-            'name': item.name,
-            'quantity': str(quantity),
-            'unit': unit or item.unit or 'count',
-            'type': item.type or 'ingredient',
-            'cost_entry_type': 'per_unit',
-            'cost_per_unit': str(cost_override or item.cost_per_unit or 0),
-            'low_stock_threshold': str(item.low_stock_threshold or 0),
-            'is_perishable': 'on' if item.is_perishable else '',
-            'shelf_life_days': str(custom_shelf_life_days or item.shelf_life_days or 0),
-            'notes': notes or 'Initial stock via adjustment',
-            'storage_amount': str(item.storage_amount or 0),
-            'storage_unit': item.storage_unit or '',
-        }
-
-        # Delete the existing empty item to avoid duplicate name conflict
-        db.session.delete(item)
-        db.session.flush()
-
-        # Use creation logic to properly set up the item with FIFO
-        success, message, new_item_id = create_inventory_item(
-            form_data, item.organization_id, created_by or 1
-        )
-
-        if success:
-            logger.info(f"Initial stock setup completed via creation logic: item {new_item_id}")
-            return True
-        else:
-            logger.error(f"Creation logic failed: {message}")
-            db.session.rollback()
-            return False
-
-    except Exception as e:
-        logger.error(f"Error in initial stock via creation logic: {str(e)}")
         db.session.rollback()
         return False
