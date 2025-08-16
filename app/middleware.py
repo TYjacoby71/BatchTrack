@@ -59,7 +59,7 @@ def register_middleware(app):
             tier = org.subscription_tier
 
             # THE FIX: This is the strict billing logic our tests require.
-            # 1. Does the tier REQUIRE a billing check? (i.e., it is NOT exempt)
+            # 1. Does the tier REQUIRE a billing check? (i.e. it is NOT exempt)
             # 2. If it requires a check, is the organization's status NOT 'active'?
             if not tier.is_billing_exempt and org.billing_status != 'active':
                 # Do not block access to the billing page itself!

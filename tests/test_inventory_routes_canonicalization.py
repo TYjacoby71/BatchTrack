@@ -61,7 +61,8 @@ class TestInventoryRoutesCanonicalService:
     @patch('app.blueprints.inventory.routes.InventoryItem')
     @patch('app.middleware.current_user')
     @patch('app.blueprints.inventory.routes.current_user')
-    def test_adjust_inventory_initial_stock_calls_canonical_service(self, mock_route_user, mock_middleware_user, mock_item, mock_process, client, app):
+    @patch('app.authz.load_user')
+    def test_adjust_inventory_initial_stock_calls_canonical_service(self, mock_load_user, mock_route_user, mock_middleware_user, mock_item, mock_process, client, app):
         """Test that initial stock creation calls process_inventory_adjustment"""
         with app.app_context():
             # Mock the inventory item with no history
@@ -76,6 +77,14 @@ class TestInventoryRoutesCanonicalService:
             mock_item.query.get_or_404.return_value = mock_inventory_item
 
             # Configure both middleware and route user mocks
+            mock_user_obj = MagicMock()
+            mock_user_obj.id = 1
+            mock_user_obj.organization_id = 1
+            mock_user_obj.is_authenticated = True
+            mock_user_obj.user_type = 'regular'
+            mock_user_obj.organization = MagicMock()
+            mock_user_obj.organization.is_active = True
+
             for mock_user in [mock_route_user, mock_middleware_user]:
                 mock_user.id = 1
                 mock_user.organization_id = 1
@@ -84,6 +93,8 @@ class TestInventoryRoutesCanonicalService:
                 mock_user.organization = MagicMock()
                 mock_user.organization.is_active = True
 
+            # Mock the user loader to return our mock user
+            mock_load_user.return_value = mock_user_obj
             mock_process.return_value = True
 
             # Log in the mock user for the test
