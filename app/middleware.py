@@ -22,8 +22,13 @@ def register_middleware(app):
         if request.endpoint in public_endpoints:
             return  # Stop processing, allow the request
 
+        # Debug: Track middleware execution
+        print(f"MIDDLEWARE DEBUG: Processing {request.method} {request.path}, endpoint={request.endpoint}")
+        print(f"MIDDLEWARE DEBUG: User authenticated={current_user.is_authenticated}")
+
         # 2. Check for authentication. Everything from here on requires a logged-in user.
         if not current_user.is_authenticated:
+            print(f"MIDDLEWARE DEBUG: User not authenticated, checking if API request")
             # Check if this is an API request (inline to avoid circular imports)
             if (request.is_json or
                 request.path.startswith('/api/') or
@@ -61,14 +66,20 @@ def register_middleware(app):
             # THE FIX: This is the strict billing logic our tests require.
             # 1. Does the tier REQUIRE a billing check? (i.e. it is NOT exempt)
             # 2. If it requires a check, is the organization's status NOT 'active'?
+            print(f"MIDDLEWARE DEBUG: Checking billing - tier.is_billing_exempt={tier.is_billing_exempt}, org.billing_status={org.billing_status}")
             if not tier.is_billing_exempt and org.billing_status != 'active':
                 # Do not block access to the billing page itself!
                 endpoint_name = request.endpoint or ''
+                print(f"MIDDLEWARE DEBUG: Billing check failed - endpoint={endpoint_name}")
                 if not endpoint_name.startswith('billing.'):
                     # Debug info
                     print(f"BILLING MIDDLEWARE: Blocking access - billing_status={org.billing_status}, endpoint={endpoint_name}")
                     flash('Your subscription requires attention to continue accessing these features.', 'warning')
                     return redirect(url_for('billing.upgrade'))
+                else:
+                    print(f"MIDDLEWARE DEBUG: Allowing billing endpoint access")
+            else:
+                print(f"MIDDLEWARE DEBUG: Billing check passed")
 
         # 5. If all checks pass, do nothing and allow the request to proceed.
         return None
