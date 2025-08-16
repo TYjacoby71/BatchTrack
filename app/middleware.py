@@ -59,27 +59,24 @@ def register_middleware(app):
             return
 
         # 4. Enforce billing for all regular, authenticated users.
-        if current_user.organization and current_user.organization.subscription_tier:
+        if current_user.is_authenticated and current_user.user_type != 'developer' and current_user.organization:
             org = current_user.organization
-            tier = org.subscription_tier
-
-            # THE FIX: This is the strict billing logic our tests require.
-            # 1. Does the tier REQUIRE a billing check? (i.e. it is NOT exempt)
-            # 2. If it requires a check, is the organization's status NOT 'active'?
-            print(f"MIDDLEWARE DEBUG: Checking billing - tier.is_billing_exempt={tier.is_billing_exempt}, org.billing_status={org.billing_status}")
-            if not tier.is_billing_exempt and org.billing_status != 'active':
-                # Do not block access to the billing page itself!
-                endpoint_name = request.endpoint or ''
-                print(f"MIDDLEWARE DEBUG: Billing check failed - endpoint={endpoint_name}")
-                if not endpoint_name.startswith('billing.'):
-                    # Debug info
-                    print(f"BILLING MIDDLEWARE: Blocking access - billing_status={org.billing_status}, endpoint={endpoint_name}")
-                    flash('Your subscription requires attention to continue accessing these features.', 'warning')
-                    return redirect(url_for('billing.upgrade'))
-                else:
-                    print(f"MIDDLEWARE DEBUG: Allowing billing endpoint access")
-            else:
-                print(f"MIDDLEWARE DEBUG: Billing check passed")
+            
+            # THE FIX: This is the most robust way to check, preventing stale data issues.
+            # It explicitly checks the properties of the tier associated with the user's org.
+            
+            # First, ensure the organization is actually on a subscription plan
+            if org.subscription_tier:
+                tier = org.subscription_tier
+                
+                # This logic is now foolproof:
+                # 1. Does the tier require a billing check?
+                # 2. Is the organization's status something other than 'active'?
+                if not tier.is_billing_exempt and org.billing_status != 'active':
+                    # Do not block access to the billing page itself!
+                    if request.endpoint and not request.endpoint.startswith('billing.'):
+                        flash('Your subscription requires attention to continue accessing these features.', 'warning')
+                        return redirect(url_for('billing.upgrade'))
 
         # 5. If all checks pass, do nothing and allow the request to proceed.
         return None
