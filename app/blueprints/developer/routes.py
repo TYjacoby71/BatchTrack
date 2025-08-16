@@ -28,7 +28,7 @@ developer_bp.register_blueprint(system_roles_bp)
 developer_bp.register_blueprint(subscription_tiers_bp)
 
 @developer_bp.before_request
-def require_developer():
+def require_developer_access():
     """Ensure only developers can access these routes"""
     if not current_user.is_authenticated:
         flash('Developer access required', 'error')
