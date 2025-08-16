@@ -12,6 +12,9 @@ def register_middleware(app):
         The single, unified security checkpoint for every request.
         Checks are performed in order from least to most expensive.
         """
+        # --- DEBUG: Confirm this middleware is executing ---
+        print("--- EXECUTING CORRECT MIDDLEWARE ---")
+        
         # 1. Fast-path for completely public endpoints.
         # This is the ONLY list of public routes needed.
         public_endpoints = [
