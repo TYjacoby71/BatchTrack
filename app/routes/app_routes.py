@@ -258,3 +258,14 @@ def get_server_time():
         'user_time': user_time.isoformat() if user_time else server_utc.isoformat(),
         'timestamp': server_utc.timestamp()
     })
+
+@app_routes_bp.route('/')
+def index():
+    """Landing page - redirect based on user type and authentication"""
+    if current_user.is_authenticated:
+        if current_user.user_type == 'developer':
+            return redirect(url_for('developer.dashboard'))
+        else:
+            return redirect(url_for('app_routes.dashboard'))
+    else:
+        return redirect(url_for('auth.login'))
