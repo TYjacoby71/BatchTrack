@@ -124,8 +124,8 @@ def test_user(app):
         import time
         unique_username = f'testuser_{int(time.time() * 1000000)}'
 
-        # Create a test organization
-        org = Organization(name='Test Organization', billing_status='active')
+        # Create a test organization with no hardcoded billing_status (will use model default)
+        org = Organization(name='Test Organization')
         db.session.add(org)
         db.session.flush()  # Get the ID
 

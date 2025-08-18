@@ -1,0 +1,281 @@
+================================== test session starts ==================================
+platform linux -- Python 3.11.13, pytest-8.3.5, pluggy-1.5.0 -- /home/runner/workspace/.pythonlibs/bin/python
+cachedir: .pytest_cache
+rootdir: /home/runner/workspace
+collected 4 items                                                                       
+
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[active-200] FAILED [ 25%]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[past_due-302] FAILED [ 50%]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[suspended-302] FAILED [ 75%]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[canceled-302] FAILED [100%]
+
+======================================= FAILURES ========================================
+_______ TestBillingAndTierEnforcement.test_billing_status_enforcement[active-200] _______
+
+self = <tests.test_billing_and_tier_enforcement.TestBillingAndTierEnforcement object at 0x7f43fa2cc0d0>
+app = <Flask 'app'>, client = <FlaskClient <Flask 'app'>>
+test_user = <User testuser_1755554658531929>, billing_status = 'active'
+expected_status_code = 200
+
+    @pytest.mark.parametrize("billing_status, expected_status_code", [
+        ('active', 200),
+        ('past_due', 302),
+        ('suspended', 302),
+        ('canceled', 302),
+    ])
+    def test_billing_status_enforcement(self, app, client, test_user, billing_status, expected_status_code):
+        """
+        Tests that the billing middleware blocks access for non-active billing statuses.
+        """
+        with app.app_context():
+            # ARRANGE
+            # Update the user's organization with the test billing status
+            org = test_user.organization
+            org.billing_status = billing_status
+    
+            # THE FIX: This block ensures the user is on a tier that REQUIRES a billing check.
+            if not org.subscription_tier or org.subscription_tier.is_billing_exempt:
+                from app.models.subscription_tier import SubscriptionTier
+                # Find a non-exempt tier in the DB or create one for the test
+                non_exempt_tier = SubscriptionTier.query.filter_by(is_billing_exempt=False).first()
+                if not non_exempt_tier:
+                    non_exempt_tier = SubscriptionTier(name="Paid Tier", key="paid", is_billing_exempt=False, billing_provider='stripe')
+                    db.session.add(non_exempt_tier)
+                org.subscription_tier = non_exempt_tier
+    
+            # CRITICAL: Force commit and refresh to ensure changes are persisted
+            db.session.commit()
+>           db.session.refresh(org)
+
+tests/test_billing_and_tier_enforcement.py:98: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/scoping.py:1765: in refresh
+    return self._proxied.refresh(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py:3147: in refresh
+    self._expire_state(state, attribute_names)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py:3273: in _expire_state
+    self._validate_persistent(state)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <sqlalchemy.orm.session.Session object at 0x7f43f3229190>
+state = <sqlalchemy.orm.state.InstanceState object at 0x7f43f348e630>
+
+    def _validate_persistent(self, state: InstanceState[Any]) -> None:
+        if not self.identity_map.contains_state(state):
+>           raise sa_exc.InvalidRequestError(
+                "Instance '%s' is not persistent within this Session"
+                % state_str(state)
+            )
+E           sqlalchemy.exc.InvalidRequestError: Instance '<Organization at 0x7f43f37f5090>' is not persistent within this Session
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py:4139: InvalidRequestError
+---------------------------------- Captured log setup -----------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+______ TestBillingAndTierEnforcement.test_billing_status_enforcement[past_due-302] ______
+
+self = <tests.test_billing_and_tier_enforcement.TestBillingAndTierEnforcement object at 0x7f43fa2cc350>
+app = <Flask 'app'>, client = <FlaskClient <Flask 'app'>>
+test_user = <User testuser_1755554661015901>, billing_status = 'past_due'
+expected_status_code = 302
+
+    @pytest.mark.parametrize("billing_status, expected_status_code", [
+        ('active', 200),
+        ('past_due', 302),
+        ('suspended', 302),
+        ('canceled', 302),
+    ])
+    def test_billing_status_enforcement(self, app, client, test_user, billing_status, expected_status_code):
+        """
+        Tests that the billing middleware blocks access for non-active billing statuses.
+        """
+        with app.app_context():
+            # ARRANGE
+            # Update the user's organization with the test billing status
+            org = test_user.organization
+            org.billing_status = billing_status
+    
+            # THE FIX: This block ensures the user is on a tier that REQUIRES a billing check.
+            if not org.subscription_tier or org.subscription_tier.is_billing_exempt:
+                from app.models.subscription_tier import SubscriptionTier
+                # Find a non-exempt tier in the DB or create one for the test
+                non_exempt_tier = SubscriptionTier.query.filter_by(is_billing_exempt=False).first()
+                if not non_exempt_tier:
+                    non_exempt_tier = SubscriptionTier(name="Paid Tier", key="paid", is_billing_exempt=False, billing_provider='stripe')
+                    db.session.add(non_exempt_tier)
+                org.subscription_tier = non_exempt_tier
+    
+            # CRITICAL: Force commit and refresh to ensure changes are persisted
+            db.session.commit()
+>           db.session.refresh(org)
+
+tests/test_billing_and_tier_enforcement.py:98: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/scoping.py:1765: in refresh
+    return self._proxied.refresh(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py:3147: in refresh
+    self._expire_state(state, attribute_names)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py:3273: in _expire_state
+    self._validate_persistent(state)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <sqlalchemy.orm.session.Session object at 0x7f43f2c18750>
+state = <sqlalchemy.orm.state.InstanceState object at 0x7f43f30c3dd0>
+
+    def _validate_persistent(self, state: InstanceState[Any]) -> None:
+        if not self.identity_map.contains_state(state):
+>           raise sa_exc.InvalidRequestError(
+                "Instance '%s' is not persistent within this Session"
+                % state_str(state)
+            )
+E           sqlalchemy.exc.InvalidRequestError: Instance '<Organization at 0x7f43f329b290>' is not persistent within this Session
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py:4139: InvalidRequestError
+---------------------------------- Captured log setup -----------------------------------
+INFO     app.blueprints_registry:blueprints_registry.py:123 Blueprint 'billing' registered successfully.
+INFO     app:unit_utils.py:28 BatchTrack startup
+_____ TestBillingAndTierEnforcement.test_billing_status_enforcement[suspended-302] ______
+
+self = <tests.test_billing_and_tier_enforcement.TestBillingAndTierEnforcement object at 0x7f43fa2cc890>
+app = <Flask 'app'>, client = <FlaskClient <Flask 'app'>>
+test_user = <User testuser_1755554662502218>, billing_status = 'suspended'
+expected_status_code = 302
+
+    @pytest.mark.parametrize("billing_status, expected_status_code", [
+        ('active', 200),
+        ('past_due', 302),
+        ('suspended', 302),
+        ('canceled', 302),
+    ])
+    def test_billing_status_enforcement(self, app, client, test_user, billing_status, expected_status_code):
+        """
+        Tests that the billing middleware blocks access for non-active billing statuses.
+        """
+        with app.app_context():
+            # ARRANGE
+            # Update the user's organization with the test billing status
+            org = test_user.organization
+            org.billing_status = billing_status
+    
+            # THE FIX: This block ensures the user is on a tier that REQUIRES a billing check.
+            if not org.subscription_tier or org.subscription_tier.is_billing_exempt:
+                from app.models.subscription_tier import SubscriptionTier
+                # Find a non-exempt tier in the DB or create one for the test
+                non_exempt_tier = SubscriptionTier.query.filter_by(is_billing_exempt=False).first()
+                if not non_exempt_tier:
+                    non_exempt_tier = SubscriptionTier(name="Paid Tier", key="paid", is_billing_exempt=False, billing_provider='stripe')
+                    db.session.add(non_exempt_tier)
+                org.subscription_tier = non_exempt_tier
+    
+            # CRITICAL: Force commit and refresh to ensure changes are persisted
+            db.session.commit()
+>           db.session.refresh(org)
+
+tests/test_billing_and_tier_enforcement.py:98: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/scoping.py:1765: in refresh
+    return self._proxied.refresh(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py:3147: in refresh
+    self._expire_state(state, attribute_names)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py:3273: in _expire_state
+    self._validate_persistent(state)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <sqlalchemy.orm.session.Session object at 0x7f43f2a49c10>
+state = <sqlalchemy.orm.state.InstanceState object at 0x7f43f35a3230>
+
+    def _validate_persistent(self, state: InstanceState[Any]) -> None:
+        if not self.identity_map.contains_state(state):
+>           raise sa_exc.InvalidRequestError(
+                "Instance '%s' is not persistent within this Session"
+                % state_str(state)
+            )
+E           sqlalchemy.exc.InvalidRequestError: Instance '<Organization at 0x7f43f2dc7650>' is not persistent within this Session
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py:4139: InvalidRequestError
+---------------------------------- Captured log setup -----------------------------------
+INFO     app.blueprints_registry:blueprints_registry.py:123 Blueprint 'billing' registered successfully.
+INFO     app:unit_utils.py:28 BatchTrack startup
+______ TestBillingAndTierEnforcement.test_billing_status_enforcement[canceled-302] ______
+
+self = <tests.test_billing_and_tier_enforcement.TestBillingAndTierEnforcement object at 0x7f43fa2ccc90>
+app = <Flask 'app'>, client = <FlaskClient <Flask 'app'>>
+test_user = <User testuser_1755554664223966>, billing_status = 'canceled'
+expected_status_code = 302
+
+    @pytest.mark.parametrize("billing_status, expected_status_code", [
+        ('active', 200),
+        ('past_due', 302),
+        ('suspended', 302),
+        ('canceled', 302),
+    ])
+    def test_billing_status_enforcement(self, app, client, test_user, billing_status, expected_status_code):
+        """
+        Tests that the billing middleware blocks access for non-active billing statuses.
+        """
+        with app.app_context():
+            # ARRANGE
+            # Update the user's organization with the test billing status
+            org = test_user.organization
+            org.billing_status = billing_status
+    
+            # THE FIX: This block ensures the user is on a tier that REQUIRES a billing check.
+            if not org.subscription_tier or org.subscription_tier.is_billing_exempt:
+                from app.models.subscription_tier import SubscriptionTier
+                # Find a non-exempt tier in the DB or create one for the test
+                non_exempt_tier = SubscriptionTier.query.filter_by(is_billing_exempt=False).first()
+                if not non_exempt_tier:
+                    non_exempt_tier = SubscriptionTier(name="Paid Tier", key="paid", is_billing_exempt=False, billing_provider='stripe')
+                    db.session.add(non_exempt_tier)
+                org.subscription_tier = non_exempt_tier
+    
+            # CRITICAL: Force commit and refresh to ensure changes are persisted
+            db.session.commit()
+>           db.session.refresh(org)
+
+tests/test_billing_and_tier_enforcement.py:98: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/scoping.py:1765: in refresh
+    return self._proxied.refresh(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py:3147: in refresh
+    self._expire_state(state, attribute_names)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py:3273: in _expire_state
+    self._validate_persistent(state)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <sqlalchemy.orm.session.Session object at 0x7f43f3083310>
+state = <sqlalchemy.orm.state.InstanceState object at 0x7f43f28bfe30>
+
+    def _validate_persistent(self, state: InstanceState[Any]) -> None:
+        if not self.identity_map.contains_state(state):
+>           raise sa_exc.InvalidRequestError(
+                "Instance '%s' is not persistent within this Session"
+                % state_str(state)
+            )
+E           sqlalchemy.exc.InvalidRequestError: Instance '<Organization at 0x7f43f2b86910>' is not persistent within this Session
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py:4139: InvalidRequestError
+---------------------------------- Captured log setup -----------------------------------
+INFO     app.blueprints_registry:blueprints_registry.py:123 Blueprint 'billing' registered successfully.
+INFO     app:unit_utils.py:28 BatchTrack startup
+=================================== warnings summary ====================================
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[active-200]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[past_due-302]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[suspended-302]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[canceled-302]
+  /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_limiter/extension.py:333: UserWarning: Using the in-memory storage for tracking rate limits as no storage was explicitly specified. This is not recommended for production use. See: https://flask-limiter.readthedocs.io#configuring-a-storage-backend for documentation about configuring the storage backend.
+    warnings.warn(
+
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[active-200]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[past_due-302]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[suspended-302]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[canceled-302]
+  /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_sqlalchemy/extension.py:881: SAWarning: Can't sort tables for DROP; an unresolvable foreign key dependency exists between tables: batch, product_sku; and backend does not support ALTER.  To restore at least a partial sort, apply use_alter=True to ForeignKey and ForeignKeyConstraint objects involved in the cycle to mark these as known cycles that will be ignored.
+    getattr(metadata, op_name)(bind=engine)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+================================ short test summary info ================================
+FAILED tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[active-200] - sqlalchemy.exc.InvalidRequestError: Instance '<Organization at 0x7f43f37f5090>' is n...
+FAILED tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[past_due-302] - sqlalchemy.exc.InvalidRequestError: Instance '<Organization at 0x7f43f329b290>' is n...
+FAILED tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[suspended-302] - sqlalchemy.exc.InvalidRequestError: Instance '<Organization at 0x7f43f2dc7650>' is n...
+FAILED tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[canceled-302] - sqlalchemy.exc.InvalidRequestError: Instance '<Organization at 0x7f43f2b86910>' is n...
+============================ 4 failed, 8 warnings in 11.02s =============================

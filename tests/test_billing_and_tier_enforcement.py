@@ -93,7 +93,12 @@ class TestBillingAndTierEnforcement:
                     db.session.add(non_exempt_tier)
                 org.subscription_tier = non_exempt_tier
 
+            # CRITICAL: Force commit and refresh to ensure changes are persisted
             db.session.commit()
+            db.session.refresh(org)
+            
+            # Verify the billing status was actually set
+            assert org.billing_status == billing_status, f"Expected {billing_status}, got {org.billing_status}"
 
             # Create a simple protected route to test against
             @app.route('/_protected_dashboard')
