@@ -13,7 +13,7 @@ class OfflineBillingService:
 
     @staticmethod
     def cache_tier_for_offline(organization):
-        """Cache current tier permissions for offline use"""
+        """Cache essential tier data for offline use - simple and focused"""
         if not organization or not organization.subscription_tier_obj:
             return False
 
@@ -23,7 +23,7 @@ class OfflineBillingService:
             'permissions': organization.subscription_tier_obj.get_permissions(),
             'user_limit': organization.subscription_tier_obj.user_limit,
             'cached_at': TimezoneUtils.utc_now().isoformat(),
-            'billing_status': organization.billing_status
+            'billing_status': getattr(organization, 'billing_status', 'active')
         }
 
         organization.offline_tier_cache = tier_cache

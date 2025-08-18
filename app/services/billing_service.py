@@ -16,52 +16,34 @@ class BillingService:
     @staticmethod
     def get_comprehensive_pricing_data():
         """
-        Get comprehensive pricing data for display in organization dashboard and settings
-        Returns pricing information with fallback for offline mode
-        
-        Note: This handles customer-facing features (AI, integrations, etc.)
-        System permissions are handled separately in subscription tier management
+        Get pricing data from config file - simple and reliable
+        Works both online and offline since config is local
         """
         try:
-            # Load tier configuration
+            # Load tier configuration from local file
             from ..blueprints.developer.subscription_tiers import load_tiers_config
             tiers_config = load_tiers_config()
 
-            # Basic pricing structure - can be enhanced with Stripe/Whop data
+            # Simple pricing structure from config
             pricing_data = {
-                'tiers': {},
+                'tiers': tiers_config,
                 'currency': 'USD',
                 'billing_cycles': ['monthly', 'yearly'],
                 'available': True
             }
 
-            # Convert tier config to pricing display format
-            for tier_key, tier_info in tiers_config.items():
-                pricing_data['tiers'][tier_key] = {
-                    'name': tier_info.get('name', tier_key.title()),
-                    'price_monthly': tier_info.get('price_monthly', 0),
-                    'price_yearly': tier_info.get('price_yearly', 0),
-                    'features': tier_info.get('features', []),
-                    'user_limit': tier_info.get('user_limit', 1),
-                    'description': tier_info.get('description', ''),
-                    'popular': tier_info.get('popular', False)
-                }
-
             return pricing_data
 
         except Exception as e:
-            print(f"Error getting comprehensive pricing data: {str(e)}")
-            # Fallback pricing data
+            logger.error(f"Error loading pricing config: {str(e)}")
+            # Simple fallback - always works
             return {
                 'tiers': {
-                    'free': {'name': 'Free', 'price_monthly': 0, 'price_yearly': 0, 'features': ['Basic features'], 'user_limit': 1},
-                    'team': {'name': 'Team', 'price_monthly': 29, 'price_yearly': 290, 'features': ['Team features'], 'user_limit': 10},
-                    'enterprise': {'name': 'Enterprise', 'price_monthly': 99, 'price_yearly': 990, 'features': ['All features'], 'user_limit': -1}
+                    'exempt': {'name': 'Free', 'price_monthly': 0, 'price_yearly': 0, 'features': ['Basic features'], 'user_limit': 1}
                 },
                 'currency': 'USD',
                 'billing_cycles': ['monthly', 'yearly'],
-                'available': False,
-                'error': 'Pricing data temporarily unavailable'
+                'available': True
             }
 
     @staticmethod

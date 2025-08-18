@@ -1,4 +1,5 @@
 
+
 """clean subscription tier model use lookup keys
 
 Revision ID: 758a11548815
@@ -38,7 +39,7 @@ def upgrade():
     inspector = sa.inspect(connection)
     existing_columns = [col['name'] for col in inspector.get_columns('subscription_tier')]
     
-    # Add columns that don't exist
+    # Add columns that don't exist with proper types
     if 'user_limit' not in existing_columns:
         op.add_column('subscription_tier', sa.Column('user_limit', sa.Integer(), nullable=False, server_default='1'))
         
@@ -99,7 +100,7 @@ def upgrade():
     columns_to_drop = [
         'grace_period_days', 'max_users', 'stripe_price_id_yearly',
         'max_monthly_batches', 'stripe_product_id', 'stripe_price_id_monthly',
-        'stripe_price_id', 'last_billing_sync', 'tier_key'
+        'stripe_price_id', 'last_billing_sync', 'tier_key', 'fallback_price'
     ]
     
     for col in columns_to_drop:

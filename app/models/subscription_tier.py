@@ -1,3 +1,4 @@
+
 from datetime import datetime
 from ..extensions import db
 
@@ -8,7 +9,7 @@ subscription_tier_permission = db.Table('subscription_tier_permission',
 )
 
 class SubscriptionTier(db.Model):
-    """Clean subscription tier model - uses lookup keys, not hardcoded price IDs"""
+    """Clean subscription tier model - uses lookup keys, simple pricing from config"""
     __tablename__ = 'subscription_tier'
 
     id = db.Column(db.Integer, primary_key=True)
@@ -18,8 +19,6 @@ class SubscriptionTier(db.Model):
 
     # Core tier limits
     user_limit = db.Column(db.Integer, default=1, nullable=False)
-    max_users = db.Column(db.Integer, default=1, nullable=False)  # Compatibility
-    max_monthly_batches = db.Column(db.Integer, default=100, nullable=False)  # Compatibility
 
     # Visibility control
     is_customer_facing = db.Column(db.Boolean, default=True, nullable=False)
@@ -29,12 +28,8 @@ class SubscriptionTier(db.Model):
     is_billing_exempt = db.Column(db.Boolean, default=False, nullable=False, index=True)
 
     # The ONLY external product links - stable lookup keys
-    # Remove unique=True from these columns - constraints are defined in __table_args__
     stripe_lookup_key = db.Column(db.String(128), nullable=True)
     whop_product_key = db.Column(db.String(128), nullable=True)
-
-    # Display-only pricing (fallback when offline)
-    fallback_price = db.Column(db.String(32), default='$0')
 
     # Metadata
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -90,6 +85,26 @@ class SubscriptionTier(db.Model):
     def can_be_deleted(self):
         """Check if this tier can be safely deleted"""
         return self.key != 'exempt'  # Protect system exempt tier
+
+    def get_pricing_info(self):
+        """Get pricing info from config file - simple and clean"""
+        try:
+            from ..blueprints.developer.subscription_tiers import load_tiers_config
+            tiers_config = load_tiers_config()
+            return tiers_config.get(self.key, {
+                'name': self.name,
+                'price_monthly': 0,
+                'price_yearly': 0,
+                'features': []
+            })
+        except Exception:
+            # Minimal fallback - no complex pricing logic
+            return {
+                'name': self.name,
+                'price_monthly': 0,
+                'price_yearly': 0,
+                'features': []
+            }
 
     def __repr__(self):
         return f'<SubscriptionTier {self.name}>'
