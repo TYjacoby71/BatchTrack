@@ -70,7 +70,7 @@ class TestInventoryRoutesCanonicalService:
                 sess['_fresh'] = True
 
             # Mock db.session.get to return the mock user when queried by middleware
-            with patch('app.middleware.db.session.get') as mock_db_get:
+            with patch('app.extensions.db.session.get') as mock_db_get:
                 mock_db_get.return_value = mock_user_obj
 
             # Mock UnifiedInventoryHistory count to simulate no existing history

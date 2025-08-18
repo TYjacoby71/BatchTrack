@@ -19,7 +19,7 @@ def register_middleware(app):
         # This is the ONLY list of public routes needed.
         public_endpoints = [
             'static', 'auth.login', 'auth.signup', 'auth.logout',
-            'homepage', 'legal.privacy_policy', 'legal.terms_of_service',
+            'homepage', 'index', 'legal.privacy_policy', 'legal.terms_of_service',
             'billing.webhook'  # Stripe webhook is a critical public endpoint
         ]
         if request.endpoint in public_endpoints:
