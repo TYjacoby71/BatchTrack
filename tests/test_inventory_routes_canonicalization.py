@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import patch, MagicMock
 from app import create_app
 from app.extensions import db
-from app.models.models import User, Organization
+from app.models.models import User, Organization, InventoryItem
 
 
 # Helper function to create a mock user with organization
@@ -29,7 +29,7 @@ class TestInventoryRoutesCanonicalService:
     def client(self, app):
         return app.test_client()
 
-    @patch('app.authz.load_user')
+    @patch('flask_login.utils._get_user')
     @patch('app.blueprints.inventory.routes.process_inventory_adjustment')
     @patch('app.blueprints.inventory.routes.InventoryItem')
     @patch('app.middleware.current_user')
@@ -108,8 +108,8 @@ def test_recount_adjustment_uses_canonical_service(client, app, test_user):
             unit="count",
             organization_id=test_user.organization_id
         )
-        db_session.add(item)
-        db_session.commit()
+        db.session.add(item)
+        db.session.commit()
 
         # Log in the user for the test
         with client.session_transaction() as sess:
