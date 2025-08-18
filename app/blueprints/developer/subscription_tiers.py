@@ -222,7 +222,6 @@ def edit_tier(tier_id):
             tier.is_billing_exempt = is_billing_exempt
             tier.stripe_lookup_key = stripe_key or None
             tier.whop_product_key = whop_key or None
-            tier.fallback_price = request.form.get('fallback_price', tier.fallback_price) # Keep original if not provided
 
             # Update permissions
             permission_ids = request.form.getlist('permissions', type=int)
@@ -303,7 +302,7 @@ def sync_tier_with_stripe(tier_key):
             'tier': {
                 'key': tier.key,
                 'name': tier.name,
-                'stripe_price': tier.fallback_price
+                'stripe_price': 'N/A'  # No longer stored locally
             }
         })
     except Exception as e:
