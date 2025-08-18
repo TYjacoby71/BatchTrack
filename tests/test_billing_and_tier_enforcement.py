@@ -78,27 +78,40 @@ class TestBillingAndTierEnforcement:
         Tests that the billing middleware blocks access for non-active billing statuses.
         """
         with app.app_context():
-            # ARRANGE
-            # Update the user's organization with the test billing status
-            org = test_user.organization
-            org.billing_status = billing_status
+            # ARRANGE - Use fresh database queries to avoid session issues
+            from app.models import Organization
+            from app.models.subscription_tier import SubscriptionTier
+            
+            # Get fresh objects from the database
+            fresh_user = db.session.get(User, test_user.id)
+            fresh_org = db.session.get(Organization, fresh_user.organization_id)
+            
+            # Update the organization's billing status
+            fresh_org.billing_status = billing_status
 
             # THE FIX: This block ensures the user is on a tier that REQUIRES a billing check.
-            if not org.subscription_tier or org.subscription_tier.is_billing_exempt:
-                from app.models.subscription_tier import SubscriptionTier
+            if not fresh_org.subscription_tier or fresh_org.subscription_tier.is_billing_exempt:
                 # Find a non-exempt tier in the DB or create one for the test
                 non_exempt_tier = SubscriptionTier.query.filter_by(is_billing_exempt=False).first()
                 if not non_exempt_tier:
-                    non_exempt_tier = SubscriptionTier(name="Paid Tier", key="paid", is_billing_exempt=False, billing_provider='stripe')
+                    non_exempt_tier = SubscriptionTier(
+                        name="Paid Tier", 
+                        key="paid", 
+                        is_billing_exempt=False, 
+                        billing_provider='stripe',
+                        user_limit=10
+                    )
                     db.session.add(non_exempt_tier)
-                org.subscription_tier = non_exempt_tier
+                    db.session.flush()  # Get the ID
+                
+                fresh_org.subscription_tier_id = non_exempt_tier.id
 
-            # CRITICAL: Force commit and refresh to ensure changes are persisted
+            # CRITICAL: Force commit to ensure changes are persisted
             db.session.commit()
-            db.session.refresh(org)
             
-            # Verify the billing status was actually set
-            assert org.billing_status == billing_status, f"Expected {billing_status}, got {org.billing_status}"
+            # Verify the billing status was actually set by querying fresh from DB
+            verification_org = db.session.get(Organization, fresh_org.id)
+            assert verification_org.billing_status == billing_status, f"Expected {billing_status}, got {verification_org.billing_status}"
 
             # Create a simple protected route to test against
             @app.route('/_protected_dashboard')
@@ -108,12 +121,12 @@ class TestBillingAndTierEnforcement:
             # ACT
             # Log the user in and try to access the protected route
             with client.session_transaction() as sess:
-                sess['_user_id'] = str(test_user.id)
+                sess['_user_id'] = str(fresh_user.id)
                 sess['_fresh'] = True
 
             # Debug: Verify the org and tier are set up correctly
-            print(f"DEBUG: User {test_user.id}, Org billing_status={org.billing_status}")
-            print(f"DEBUG: Tier exempt={org.subscription_tier.is_billing_exempt if org.subscription_tier else 'None'}")
+            print(f"DEBUG: User {fresh_user.id}, Org billing_status={verification_org.billing_status}")
+            print(f"DEBUG: Tier exempt={verification_org.subscription_tier.is_billing_exempt if verification_org.subscription_tier else 'None'}")
 
             response = client.get('/_protected_dashboard')
 
