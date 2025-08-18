@@ -2,11 +2,12 @@
 
 Revision ID: e0c3f7e2036e
 Revises: clean_subscription_tier_billing
-Create Date: 2025-08-15 17:45:34.930504
+Create Date: 2024-08-06 19:52:56.789123
 
 """
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy import inspect
 
 
 # revision identifiers, used by Alembic.
