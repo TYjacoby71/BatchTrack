@@ -17,8 +17,24 @@ class TestInventoryRoutesCanonicalService:
             # Create all tables
             db.create_all()
             
-            # Create a real test organization
-            test_org = Organization(name='Test Organization')
+            # Create subscription tier first (needed for middleware)
+            from app.models.subscription_tier import SubscriptionTier
+            test_tier = SubscriptionTier(
+                name='Test Tier',
+                key='test_tier',
+                is_billing_exempt=True,  # Bypass billing checks
+                billing_provider='exempt',
+                user_limit=10
+            )
+            db.session.add(test_tier)
+            db.session.flush()
+            
+            # Create a real test organization with subscription tier
+            test_org = Organization(
+                name='Test Organization',
+                subscription_tier_id=test_tier.id,
+                billing_status='active'  # Ensure billing is active
+            )
             db.session.add(test_org)
             db.session.flush()  # Get the ID
             
