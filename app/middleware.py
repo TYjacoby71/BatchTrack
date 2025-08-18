@@ -14,7 +14,7 @@ def register_middleware(app):
         """
         # --- DEBUG: Confirm this middleware is executing ---
         print("--- EXECUTING CORRECT MIDDLEWARE ---")
-        
+
         # 1. Fast-path for completely public endpoints.
         # This is the ONLY list of public routes needed.
         public_endpoints = [
@@ -62,24 +62,33 @@ def register_middleware(app):
             return
 
         # 4. Enforce billing for all regular, authenticated users.
-        if current_user.is_authenticated and current_user.user_type != 'developer' and current_user.organization:
-            org = current_user.organization
-            
-            # THE FIX: This is the most robust way to check, preventing stale data issues.
-            # It explicitly checks the properties of the tier associated with the user's org.
-            
-            # First, ensure the organization is actually on a subscription plan
-            if org.subscription_tier:
-                tier = org.subscription_tier
-                
-                # This logic is now foolproof:
-                # 1. Does the tier require a billing check?
-                # 2. Is the organization's status something other than 'active'?
-                if not tier.is_billing_exempt and org.billing_status != 'active':
-                    # Do not block access to the billing page itself!
-                    if request.endpoint and not request.endpoint.startswith('billing.'):
-                        flash('Your subscription requires attention to continue accessing these features.', 'warning')
-                        return redirect(url_for('billing.upgrade'))
+        # Check if user is authenticated
+        if hasattr(g, 'current_user') and g.current_user and g.current_user.is_authenticated:
+            print(f"MIDDLEWARE DEBUG: User authenticated=True")
+
+            # Check billing status enforcement for non-exempt users
+            user_org = g.current_user.organization
+            if user_org and user_org.subscription_tier:
+                tier = user_org.subscription_tier
+                # Only enforce billing for non-exempt tiers
+                if not tier.is_billing_exempt and tier.billing_provider != 'exempt':
+                    billing_status = getattr(user_org, 'billing_status', None)
+                    print(f"MIDDLEWARE DEBUG: Billing status={billing_status}, tier_exempt={tier.is_billing_exempt}")
+
+                    # Block access for non-active billing statuses
+                    if billing_status and billing_status not in ['active', 'trialing']:
+                        print(f"MIDDLEWARE DEBUG: Blocking access due to billing status: {billing_status}")
+                        if request.path.startswith('/api/'):
+                            return jsonify({'error': 'Billing issue detected. Please update your payment method.'}), 402
+                        else:
+                            flash('Your subscription needs attention. Please update your payment method.', 'warning')
+                            return redirect(url_for('billing.upgrade'))
+
+            # User is authenticated and billing is okay, continue to route
+            return None
+        else:
+            print(f"MIDDLEWARE DEBUG: User authenticated=False")
+            print(f"MIDDLEWARE DEBUG: User not authenticated, checking if API request")
 
         # 5. If all checks pass, do nothing and allow the request to proceed.
         return None

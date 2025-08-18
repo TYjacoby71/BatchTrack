@@ -1,9 +1,104 @@
 import pytest
 from unittest.mock import patch, MagicMock
-from app.models.inventory import InventoryItem
+from app import create_app
+from app.extensions import db
+from app.models.user import User
+from app.models.organization import Organization
 
 
-def test_recount_adjustment_uses_canonical_service(client, app, db_session, test_user):
+# Helper function to create a mock user with organization
+def mock_user_with_org():
+    mock_user = MagicMock(spec=User)
+    mock_user.id = 1
+    mock_user.organization_id = 1
+    mock_user.is_authenticated = True
+    mock_user.user_type = 'regular'
+    mock_user.organization = MagicMock(spec=Organization)
+    mock_user.organization.is_active = True
+    return mock_user
+
+
+class TestInventoryRoutesCanonicalService:
+    """Verify inventory routes use canonical inventory adjustment service"""
+
+    @pytest.fixture
+    def app(self):
+        app = create_app({'TESTING': True, 'SQLALCHEMY_DATABASE_URI': 'sqlite:///:memory:'})
+        return app
+
+    @pytest.fixture
+    def client(self, app):
+        return app.test_client()
+
+    @patch('app.authz.load_user')
+    @patch('app.blueprints.inventory.routes.process_inventory_adjustment')
+    @patch('app.blueprints.inventory.routes.InventoryItem')
+    @patch('app.middleware.current_user')
+    @patch('app.blueprints.inventory.routes.current_user')
+    def test_adjust_inventory_initial_stock_calls_canonical_service(self, mock_route_user, mock_middleware_user, mock_item, mock_process, mock_user_query, app, client):
+        """Test that initial stock adjustment uses canonical inventory service"""
+        # Mock the user query to return our test user
+        mock_user_query.get.return_value = mock_user_with_org()
+
+        with app.app_context():
+            # Mock the inventory item with no history
+            mock_inventory_item = MagicMock()
+            mock_inventory_item.id = 1
+            mock_inventory_item.type = 'ingredient'
+            mock_inventory_item.unit = 'g'
+            mock_inventory_item.cost_per_unit = 2.5
+            mock_inventory_item.is_perishable = False
+            mock_inventory_item.organization_id = 1
+
+            mock_item.query.get_or_404.return_value = mock_inventory_item
+
+            # Configure both middleware and route user mocks
+            mock_user_obj = mock_user_with_org()
+
+            for mock_user in [mock_route_user, mock_middleware_user]:
+                mock_user.id = mock_user_obj.id
+                mock_user.organization_id = mock_user_obj.organization_id
+                mock_user.is_authenticated = mock_user_obj.is_authenticated
+                mock_user.user_type = mock_user_obj.user_type
+                mock_user.organization = mock_user_obj.organization
+
+            # Mock the user loader to return our mock user
+            mock_process.return_value = True
+
+            # Log in the mock user for the test
+            with client.session_transaction() as sess:
+                sess['_user_id'] = str(mock_route_user.id)
+                sess['_fresh'] = True
+
+            # Mock UnifiedInventoryHistory count to simulate no existing history
+            with patch('app.blueprints.inventory.routes.UnifiedInventoryHistory') as mock_history:
+                mock_history.query.filter_by.return_value.count.return_value = 0
+
+                # Make POST request to adjust inventory
+                response = client.post('/inventory/adjust/1', data={
+                    'adjustment_type': 'restock',
+                    'quantity': '100.0',
+                    'input_unit': 'g',
+                    'notes': 'Initial stock',
+                    'cost_entry_type': 'per_unit',
+                    'cost_per_unit': '3.0'
+                })
+
+                # Verify canonical service was called
+                mock_process.assert_called_once()
+                call_args = mock_process.call_args
+
+                # Check the arguments passed to the function
+                assert call_args[1]['item_id'] == 1
+                assert call_args[1]['quantity'] == 100.0
+                assert call_args[1]['change_type'] == "restock"
+                assert call_args[1]['unit'] == 'g'
+                assert call_args[1]['notes'] == 'Initial stock'
+                assert call_args[1]['created_by'] == 1
+                assert call_args[1]['cost_override'] == 3.0
+
+# Original test case, kept for context or potential future use
+def test_recount_adjustment_uses_canonical_service(client, app, test_user):
     """Test that inventory recount routes use the canonical adjustment service"""
 
     with app.app_context():
@@ -40,91 +135,3 @@ def test_recount_adjustment_uses_canonical_service(client, app, db_session, test
             assert call_args[1]['item_id'] == item.id
             assert call_args[1]['change_type'] == 'recount'
             assert 'Physical count' in call_args[1]['notes']
-import pytest
-from unittest.mock import patch, MagicMock
-from app import create_app
-from app.extensions import db
-
-class TestInventoryRoutesCanonicalService:
-    """Verify inventory routes use canonical inventory adjustment service"""
-
-    @pytest.fixture
-    def app(self):
-        app = create_app({'TESTING': True, 'SQLALCHEMY_DATABASE_URI': 'sqlite:///:memory:'})
-        return app
-
-    @pytest.fixture
-    def client(self, app):
-        return app.test_client()
-
-    @patch('app.blueprints.inventory.routes.process_inventory_adjustment')
-    @patch('app.blueprints.inventory.routes.InventoryItem')
-    @patch('app.middleware.current_user')
-    @patch('app.blueprints.inventory.routes.current_user')
-    @patch('app.authz.load_user')
-    def test_adjust_inventory_initial_stock_calls_canonical_service(self, mock_load_user, mock_route_user, mock_middleware_user, mock_item, mock_process, client, app):
-        """Test that initial stock creation calls process_inventory_adjustment"""
-        with app.app_context():
-            # Mock the inventory item with no history
-            mock_inventory_item = MagicMock()
-            mock_inventory_item.id = 1
-            mock_inventory_item.type = 'ingredient'
-            mock_inventory_item.unit = 'g'
-            mock_inventory_item.cost_per_unit = 2.5
-            mock_inventory_item.is_perishable = False
-            mock_inventory_item.organization_id = 1
-
-            mock_item.query.get_or_404.return_value = mock_inventory_item
-
-            # Configure both middleware and route user mocks
-            mock_user_obj = MagicMock()
-            mock_user_obj.id = 1
-            mock_user_obj.organization_id = 1
-            mock_user_obj.is_authenticated = True
-            mock_user_obj.user_type = 'regular'
-            mock_user_obj.organization = MagicMock()
-            mock_user_obj.organization.is_active = True
-
-            for mock_user in [mock_route_user, mock_middleware_user]:
-                mock_user.id = 1
-                mock_user.organization_id = 1
-                mock_user.is_authenticated = True
-                mock_user.user_type = 'regular'
-                mock_user.organization = MagicMock()
-                mock_user.organization.is_active = True
-
-            # Mock the user loader to return our mock user
-            mock_load_user.return_value = mock_user_obj
-            mock_process.return_value = True
-
-            # Log in the mock user for the test
-            with client.session_transaction() as sess:
-                sess['_user_id'] = str(mock_route_user.id)
-                sess['_fresh'] = True
-
-            # Mock UnifiedInventoryHistory count to simulate no existing history
-            with patch('app.blueprints.inventory.routes.UnifiedInventoryHistory') as mock_history:
-                mock_history.query.filter_by.return_value.count.return_value = 0
-
-                # Make POST request to adjust inventory
-                response = client.post('/inventory/adjust/1', data={
-                    'adjustment_type': 'restock',
-                    'quantity': '100.0',
-                    'input_unit': 'g',
-                    'notes': 'Initial stock',
-                    'cost_entry_type': 'per_unit',
-                    'cost_per_unit': '3.0'
-                })
-
-                # Verify canonical service was called
-                mock_process.assert_called_once()
-                call_args = mock_process.call_args
-
-                # Check the arguments passed to the function
-                assert call_args[1]['item_id'] == 1
-                assert call_args[1]['quantity'] == 100.0
-                assert call_args[1]['change_type'] == "restock"
-                assert call_args[1]['unit'] == 'g'
-                assert call_args[1]['notes'] == 'Initial stock'
-                assert call_args[1]['created_by'] == 1
-                assert call_args[1]['cost_override'] == 3.0
