@@ -1,4 +1,3 @@
-
 from datetime import datetime
 from ..extensions import db
 
@@ -9,7 +8,7 @@ subscription_tier_permission = db.Table('subscription_tier_permission',
 )
 
 class SubscriptionTier(db.Model):
-    """Clean subscription tier model - uses lookup keys, simple pricing from config"""
+    """Clean subscription tier model - NO pricing, just tier structure"""
     __tablename__ = 'subscription_tier'
 
     id = db.Column(db.Integer, primary_key=True)
@@ -85,26 +84,6 @@ class SubscriptionTier(db.Model):
     def can_be_deleted(self):
         """Check if this tier can be safely deleted"""
         return self.key != 'exempt'  # Protect system exempt tier
-
-    def get_pricing_info(self):
-        """Get pricing info from config file - simple and clean"""
-        try:
-            from ..blueprints.developer.subscription_tiers import load_tiers_config
-            tiers_config = load_tiers_config()
-            return tiers_config.get(self.key, {
-                'name': self.name,
-                'price_monthly': 0,
-                'price_yearly': 0,
-                'features': []
-            })
-        except Exception:
-            # Minimal fallback - no complex pricing logic
-            return {
-                'name': self.name,
-                'price_monthly': 0,
-                'price_yearly': 0,
-                'features': []
-            }
 
     def __repr__(self):
         return f'<SubscriptionTier {self.name}>'

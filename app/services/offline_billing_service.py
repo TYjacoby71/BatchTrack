@@ -1,104 +1,100 @@
 
 import logging
 from datetime import datetime, timedelta
-from flask import current_app
-from ..models import db, Organization
-from ..utils.timezone_utils import TimezoneUtils
-from .billing_service import BillingService
+from ..models.subscription_tier import SubscriptionTier
+from ..models.models import Organization
+from ..extensions import db
 
 logger = logging.getLogger(__name__)
 
 class OfflineBillingService:
-    """Service for handling offline billing validation and sync"""
-
+    """
+    Offline billing service - NO pricing information stored
+    Works purely with tier assignments and billing provider verification
+    """
+    
     @staticmethod
-    def cache_tier_for_offline(organization):
-        """Cache essential tier data for offline use - simple and focused"""
-        if not organization or not organization.subscription_tier_obj:
+    def sync_tier_permissions(organization):
+        """Sync tier permissions for offline organizations"""
+        try:
+            if not organization or not organization.subscription_tier_obj:
+                logger.warning(f"No valid tier for organization {organization.id if organization else 'None'}")
+                return False
+                
+            tier = organization.subscription_tier_obj
+            
+            # For offline mode, we only care about tier structure, not pricing
+            logger.info(f"Organization {organization.id} has tier {tier.key} with {len(tier.permissions)} permissions")
+            
+            # Update last sync time
+            organization.last_online_sync = datetime.utcnow()
+            db.session.commit()
+            
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error syncing tier permissions for org {organization.id if organization else 'None'}: {e}")
             return False
-
-        tier_cache = {
-            'tier_key': organization.subscription_tier_obj.key,
-            'tier_name': organization.subscription_tier_obj.name,
-            'permissions': organization.subscription_tier_obj.get_permissions(),
-            'user_limit': organization.subscription_tier_obj.user_limit,
-            'cached_at': TimezoneUtils.utc_now().isoformat(),
-            'billing_status': getattr(organization, 'billing_status', 'active')
-        }
-
-        organization.offline_tier_cache = tier_cache
-        organization.last_online_sync = TimezoneUtils.utc_now()
-        db.session.commit()
-        
-        logger.info(f"Cached tier data for offline use: {organization.id}")
-        return True
-
+    
     @staticmethod
     def validate_offline_access(organization):
-        """Check if organization can access features while offline"""
+        """Validate offline access without pricing checks"""
         if not organization:
-            return False, "No organization"
-
-        # If online, always use live billing
-        if OfflineBillingService.is_online():
-            return BillingService.validate_tier_access(organization)
-
-        # Offline validation
-        if not organization.offline_tier_cache:
-            return False, "No cached tier data for offline use"
-
-        cache_date = datetime.fromisoformat(organization.offline_tier_cache['cached_at'])
-        grace_period = timedelta(days=7)  # Default grace period
-
-        if TimezoneUtils.utc_now() - cache_date > grace_period:
-            return False, "Offline grace period expired"
-
-        # Check cached billing status
-        cached_status = organization.offline_tier_cache.get('billing_status', 'active')
-        if cached_status != 'active':
-            return False, "Cached billing status invalid"
-
-        return True, "Offline access valid"
-
-    @staticmethod
-    def get_cached_permissions(organization):
-        """Get permissions from offline cache"""
-        if not organization or not organization.offline_tier_cache:
-            return []
+            return False, "no_organization"
+            
+        if not organization.subscription_tier_obj:
+            return False, "no_tier_assigned"
+            
+        tier = organization.subscription_tier_obj
         
-        return organization.offline_tier_cache.get('permissions', [])
-
+        # Exempt tiers always work offline
+        if tier.is_exempt_from_billing:
+            return True, "exempt_tier"
+            
+        # For paid tiers, we need to check if they have valid billing integration
+        # but we don't check pricing - that's handled by the billing provider
+        if tier.has_valid_integration:
+            return True, "valid_integration"
+            
+        return False, "invalid_tier_configuration"
+    
     @staticmethod
-    def is_online():
-        """Check if application has internet connectivity"""
-        # Simple check - in production you might ping a service
-        # For now, assume we're always online in development
-        return True
-
+    def get_offline_tier_info(tier_key):
+        """Get tier info for offline mode - structure only, no pricing"""
+        tier = SubscriptionTier.query.filter_by(key=tier_key).first()
+        if not tier:
+            return None
+            
+        return {
+            'key': tier.key,
+            'name': tier.name,
+            'description': tier.description,
+            'user_limit': tier.user_limit,
+            'permissions': tier.get_permission_names(),
+            'billing_provider': tier.billing_provider,
+            'is_billing_exempt': tier.is_billing_exempt,
+            'requires_online_verification': not tier.is_billing_exempt
+        }
+    
     @staticmethod
-    def sync_billing_status():
-        """Sync all organizations' billing status when coming online"""
-        organizations = Organization.query.filter(
-            Organization.offline_tier_cache.isnot(None)
-        ).all()
-
-        synced_count = 0
-        for org in organizations:
-            try:
-                # Update from live billing system
-                if org.stripe_customer_id:
-                    # Sync with Stripe
-                    pass  # Implement Stripe sync
-                elif org.whop_license_key:
-                    # Sync with Whop
-                    pass  # Implement Whop sync
+    def cache_tier_structure(organization):
+        """Cache tier structure for offline use - NO PRICING"""
+        try:
+            if not organization.subscription_tier_obj:
+                return False
                 
-                # Update cache
-                OfflineBillingService.cache_tier_for_offline(org)
-                synced_count += 1
+            tier_info = OfflineBillingService.get_offline_tier_info(
+                organization.subscription_tier_obj.key
+            )
+            
+            if tier_info:
+                # Store tier structure cache (no pricing)
+                organization.offline_tier_cache = tier_info
+                organization.last_online_sync = datetime.utcnow()
+                db.session.commit()
+                return True
                 
-            except Exception as e:
-                logger.error(f"Failed to sync billing for org {org.id}: {e}")
-
-        logger.info(f"Synced billing for {synced_count} organizations")
-        return synced_count
+        except Exception as e:
+            logger.error(f"Error caching tier structure: {e}")
+            
+        return False
