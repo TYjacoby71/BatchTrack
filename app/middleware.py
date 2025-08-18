@@ -27,7 +27,7 @@ def register_middleware(app):
 
         # Debug: Track middleware execution
         print(f"MIDDLEWARE DEBUG: Processing {request.method} {request.path}, endpoint={request.endpoint}")
-        
+
         # Force reload current_user to ensure fresh session data
         from flask_login import current_user as fresh_current_user
 
@@ -69,14 +69,24 @@ def register_middleware(app):
 
         # 4. Enforce billing for all regular, authenticated users.
         if fresh_current_user.is_authenticated and getattr(fresh_current_user, 'user_type', None) != 'developer':
-            org = fresh_current_user.organization
-            
+            # CRITICAL FIX: Force completely fresh database query to avoid session isolation issues
+            from .models import User, Organization
+            from .extensions import db
+
+            # Get fresh user and organization data from current session
+            fresh_user = db.session.get(User, fresh_current_user.id)
+            if fresh_user and fresh_user.organization_id:
+                # Force fresh load of organization to get latest billing_status
+                org = db.session.get(Organization, fresh_user.organization_id)
+            else:
+                org = None
+
             print(f"DEBUG: User {fresh_current_user.id}, Org billing_status={org.billing_status if org else 'NO_ORG'}")
-            
+
             if org and org.subscription_tier:
                 tier = org.subscription_tier
                 print(f"DEBUG: Tier exempt={tier.is_billing_exempt}")
-                
+
                 # SIMPLE BILLING LOGIC:
                 # If billing bypass is NOT enabled, require active billing status
                 if not tier.is_billing_exempt:
