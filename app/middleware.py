@@ -71,21 +71,20 @@ def register_middleware(app):
         if fresh_current_user.is_authenticated and getattr(fresh_current_user, 'user_type', None) != 'developer':
             org = fresh_current_user.organization
             
-            # This is the most robust way to check, preventing stale data issues.
             if org and org.subscription_tier:
                 tier = org.subscription_tier
                 
-                # This logic is now foolproof:
-                # 1. Does the tier REQUIRE a billing check?
-                # 2. Is the organization's status something other than 'active'?
-                if not tier.is_billing_exempt and org.billing_status != 'active':
-                    # Do not block access to the billing page itself!
-                    if request.endpoint and not request.endpoint.startswith('billing.'):
-                        if request.path.startswith('/api/'):
-                            return jsonify({'error': 'Billing issue detected. Please update your payment method.'}), 402
-                        else:
-                            flash('Your subscription requires attention to continue accessing these features.', 'warning')
-                            return redirect(url_for('billing.upgrade'))
+                # SIMPLE BILLING LOGIC:
+                # If billing bypass is NOT enabled, require active billing status
+                if not tier.is_billing_exempt:
+                    if org.billing_status != 'active':
+                        # Do not block access to the billing page itself!
+                        if request.endpoint and not request.endpoint.startswith('billing.'):
+                            if request.path.startswith('/api/'):
+                                return jsonify({'error': 'Billing issue detected. Please update your payment method.'}), 402
+                            else:
+                                flash('Your subscription requires attention to continue accessing these features.', 'warning')
+                                return redirect(url_for('billing.upgrade'))
 
         # 5. If all checks pass, do nothing and allow the request to proceed.
         return None

@@ -113,13 +113,19 @@ def create_tier():
             flash(f"A tier with the key '{key}' already exists.", 'error')
             return redirect(url_for('.create_tier'))
 
-        # Enforce billing integration requirements
+        # STRICT BILLING REQUIREMENTS:
+        # Unless billing bypass is explicitly enabled, require proper billing integration
         if not is_billing_exempt:
-            if billing_provider == 'stripe' and not stripe_key:
-                flash('A Stripe Lookup Key is required for Stripe-billed tiers.', 'error')
-                return redirect(url_for('.create_tier'))
-            if billing_provider == 'whop' and not whop_key:
-                flash('A Whop Product Key is required for Whop-billed tiers.', 'error')
+            if billing_provider == 'stripe':
+                if not stripe_key:
+                    flash('A Stripe Lookup Key is required for Stripe-billed tiers. Enable billing bypass if you want to skip billing requirements.', 'error')
+                    return redirect(url_for('.create_tier'))
+            elif billing_provider == 'whop':
+                if not whop_key:
+                    flash('A Whop Product Key is required for Whop-billed tiers. Enable billing bypass if you want to skip billing requirements.', 'error')
+                    return redirect(url_for('.create_tier'))
+            else:
+                flash('You must select either Stripe or Whop as billing provider, or enable billing bypass.', 'error')
                 return redirect(url_for('.create_tier'))
 
         # Database Insertion
@@ -173,13 +179,19 @@ def edit_tier(tier_id):
         stripe_key = request.form.get('stripe_lookup_key', '').strip()
         whop_key = request.form.get('whop_product_key', '').strip()
 
-        # Enforce billing integration requirements
+        # STRICT BILLING REQUIREMENTS:
+        # Unless billing bypass is explicitly enabled, require proper billing integration
         if not is_billing_exempt:
-            if billing_provider == 'stripe' and not stripe_key:
-                flash('A Stripe Lookup Key is required for Stripe-billed tiers.', 'error')
-                return redirect(url_for('.edit_tier', tier_id=tier_id))
-            if billing_provider == 'whop' and not whop_key:
-                flash('A Whop Product Key is required for Whop-billed tiers.', 'error')
+            if billing_provider == 'stripe':
+                if not stripe_key:
+                    flash('A Stripe Lookup Key is required for Stripe-billed tiers. Enable billing bypass if you want to skip billing requirements.', 'error')
+                    return redirect(url_for('.edit_tier', tier_id=tier_id))
+            elif billing_provider == 'whop':
+                if not whop_key:
+                    flash('A Whop Product Key is required for Whop-billed tiers. Enable billing bypass if you want to skip billing requirements.', 'error')
+                    return redirect(url_for('.edit_tier', tier_id=tier_id))
+            else:
+                flash('You must select either Stripe or Whop as billing provider, or enable billing bypass.', 'error')
                 return redirect(url_for('.edit_tier', tier_id=tier_id))
 
         # Update and Save
