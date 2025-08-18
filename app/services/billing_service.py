@@ -9,60 +9,9 @@ logger = logging.getLogger(__name__)
 
 class BillingService:
     """
-    Comprehensive billing service handling both Stripe and Whop integrations
-    with offline support and robust error handling
+    Clean billing service - NO hardcoded pricing
+    All pricing comes from external billing providers (Stripe, Whop) or environment config
     """
-
-    @staticmethod
-    def get_comprehensive_pricing_data():
-        """
-        Get comprehensive pricing data for display in organization dashboard and settings
-        Returns pricing information with fallback for offline mode
-        
-        Note: This handles customer-facing features (AI, integrations, etc.)
-        System permissions are handled separately in subscription tier management
-        """
-        try:
-            # Load tier configuration
-            from ..blueprints.developer.subscription_tiers import load_tiers_config
-            tiers_config = load_tiers_config()
-
-            # Basic pricing structure - can be enhanced with Stripe/Whop data
-            pricing_data = {
-                'tiers': {},
-                'currency': 'USD',
-                'billing_cycles': ['monthly', 'yearly'],
-                'available': True
-            }
-
-            # Convert tier config to pricing display format
-            for tier_key, tier_info in tiers_config.items():
-                pricing_data['tiers'][tier_key] = {
-                    'name': tier_info.get('name', tier_key.title()),
-                    'price_monthly': tier_info.get('price_monthly', 0),
-                    'price_yearly': tier_info.get('price_yearly', 0),
-                    'features': tier_info.get('features', []),
-                    'user_limit': tier_info.get('user_limit', 1),
-                    'description': tier_info.get('description', ''),
-                    'popular': tier_info.get('popular', False)
-                }
-
-            return pricing_data
-
-        except Exception as e:
-            print(f"Error getting comprehensive pricing data: {str(e)}")
-            # Fallback pricing data
-            return {
-                'tiers': {
-                    'free': {'name': 'Free', 'price_monthly': 0, 'price_yearly': 0, 'features': ['Basic features'], 'user_limit': 1},
-                    'team': {'name': 'Team', 'price_monthly': 29, 'price_yearly': 290, 'features': ['Team features'], 'user_limit': 10},
-                    'enterprise': {'name': 'Enterprise', 'price_monthly': 99, 'price_yearly': 990, 'features': ['All features'], 'user_limit': -1}
-                },
-                'currency': 'USD',
-                'billing_cycles': ['monthly', 'yearly'],
-                'available': False,
-                'error': 'Pricing data temporarily unavailable'
-            }
 
     @staticmethod
     def get_tier_for_organization(organization):
@@ -113,17 +62,26 @@ class BillingService:
     def get_available_tiers():
         """Get all available customer-facing tiers"""
         return SubscriptionTier.query.filter_by(
-            is_customer_facing=True,
-            is_available=True
+            is_customer_facing=True
         ).all()
 
     @staticmethod
     def get_live_pricing_data():
-        """Get live pricing data for signup page"""
+        """Get live pricing data from external billing providers ONLY"""
         from .stripe_service import StripeService
 
-        # This now calls the clean Stripe service
-        return StripeService.get_all_available_pricing()
+        # Only get pricing from actual billing providers - no fallbacks
+        try:
+            return StripeService.get_all_available_pricing()
+        except Exception as e:
+            logger.warning(f"Could not fetch live pricing: {e}")
+            return {
+                'tiers': [],
+                'currency': 'USD',
+                'billing_cycles': ['monthly', 'yearly'],
+                'available': False,
+                'error': 'Pricing unavailable - check billing provider configuration'
+            }
 
     @staticmethod
     def validate_tier_access(organization):
@@ -143,7 +101,7 @@ class BillingService:
             return True, "exempt_tier"
 
         # Check if billing verification is required
-        if not tier_obj.requires_billing_check:
+        if not tier_obj.requires_stripe_billing and not tier_obj.requires_whop_billing:
             return True, "no_billing_required"
 
         # Check billing status for paid tiers

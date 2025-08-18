@@ -1,6 +1,8 @@
+
 {
   "solo": {
     "name": "Solo Maker",
+    "description": "Perfect for individual makers and small producers",
     "permissions": [
       "dashboard.view",
       "inventory.view",
@@ -58,41 +60,19 @@
     "stripe_lookup_key": "batchtrack_solo_monthly",
     "user_limit": 1,
     "is_customer_facing": true,
-    "is_available": true,
-    "fallback_features": [
+    "billing_provider": "stripe",
+    "features": [
       "Complete batch tracking with FIFO",
       "Recipe management and scaling",
       "Expiration alerts and freshness tracking",
       "Unit conversion tools",
       "1 user account",
       "Email support"
-    ],
-    "stripe_features": [
-      "This subscription tier is for the solo maker that needs a place to log there work. No headache dealing with the team features",
-      "just you and your genius!"
-    ],
-    "stripe_price_monthly": "$8",
-    "stripe_price_yearly": "$85",
-    "last_synced": "2025-08-06T23:11:36.110385",
-    "fallback_price_monthly": "$0",
-    "fallback_price_yearly": "$0",
-    "stripe_price_id_monthly": "price_1RnRlnF4Y9XQgiJBzKnYadVL",
-    "stripe_price_id_yearly": "price_1RnS1vF4Y9XQgiJBZUqN2aWW",
-    "requires_stripe_billing": true,
-    "supports_stripe": true,
-    "supports_whop": true,
-    "whop_only": false,
-    "whop_product_key": "",
-    "whop_product_name": "",
-    "pricing_category": "monthly",
-    "fallback_price": "$7",
-    "stripe_price": "$7",
-    "stripe_price_id": "price_1RnRlnF4Y9XQgiJBzKnYadVL",
-    "tier_type": "paid",
-    "billing_provider": "stripe"
+    ]
   },
   "team": {
     "name": "Team Plan",
+    "description": "Collaboration tools for small teams",
     "permissions": [
       "dashboard.view",
       "inventory.view",
@@ -156,39 +136,19 @@
     "stripe_lookup_key": "batchtrack_team_monthly",
     "user_limit": 10,
     "is_customer_facing": true,
-    "is_available": true,
-    "fallback_features": [
+    "billing_provider": "stripe",
+    "features": [
       "Everything in Solo Plan",
       "Product catalog with variants",
       "Team collaboration (up to 10 users)",
       "Custom role management",
       "Basic reporting and analytics",
       "Priority email support"
-    ],
-    "stripe_features": [
-      "BatchTrack Team PlanUnlock full BatchTrack functionality with an organization dashboard and three included team seats (one organization owner and two team members). Perfect for small teams managing production and inventory collaboratively."
-    ],
-    "stripe_price_monthly": "$15",
-    "stripe_price_yearly": "$160",
-    "last_synced": "2025-08-14T23:36:30.168927",
-    "stripe_price_id_monthly": "price_1RnRzOF4Y9XQgiJB7cuiGZf4",
-    "stripe_price_id_yearly": "price_1RnSCIF4Y9XQgiJBeA7UZPzD",
-    "fallback_price_monthly": "$0",
-    "fallback_price_yearly": "$0",
-    "requires_stripe_billing": true,
-    "supports_stripe": true,
-    "supports_whop": true,
-    "whop_only": false,
-    "whop_product_key": "test",
-    "whop_product_name": "test",
-    "stripe_price": "$15",
-    "stripe_price_id": "price_1RnRzOF4Y9XQgiJB7cuiGZf4",
-    "fallback_price": "$15",
-    "tier_type": "paid",
-    "billing_provider": "stripe"
+    ]
   },
   "enterprise": {
     "name": "Enterprise Plan",
+    "description": "Full-scale production management",
     "permissions": [
       "dashboard.view",
       "inventory.view",
@@ -218,8 +178,8 @@
     "stripe_lookup_key": "batchtrack_enterprise_monthly",
     "user_limit": -1,
     "is_customer_facing": true,
-    "is_available": true,
-    "fallback_features": [
+    "billing_provider": "stripe",
+    "features": [
       "Everything in Team Plan",
       "Unlimited users and organizations",
       "Advanced reporting and analytics",
@@ -228,32 +188,11 @@
       "Accounting software integration",
       "Dedicated account manager",
       "Priority phone support"
-    ],
-    "stripe_features": [
-      "Manage production at scale with all BatchTrack features",
-      "organization dashboard access",
-      "and five team seats (one organization owner plus four team members). Ideal for growing brands and boutique manufacturers needing full team collaboration."
-    ],
-    "stripe_price_monthly": "$20",
-    "stripe_price_yearly": "$220",
-    "last_synced": "2025-08-06T00:41:03.050906",
-    "fallback_price_monthly": "$0",
-    "fallback_price_yearly": "$0",
-    "stripe_price_id_monthly": "price_1RnS8pF4Y9XQgiJBr3Wq1LIH",
-    "stripe_price_id_yearly": "price_1RnSArF4Y9XQgiJBmKTnZhSo",
-    "supports_stripe": true,
-    "supports_whop": true,
-    "whop_only": false,
-    "whop_product_key": "",
-    "whop_product_name": "",
-    "stripe_price": "$20",
-    "stripe_price_id": "price_1RnS8pF4Y9XQgiJBr3Wq1LIH",
-    "fallback_price": "$20",
-    "tier_type": "paid",
-    "billing_provider": "stripe"
+    ]
   },
   "exempt": {
     "name": "Exempt Plan",
+    "description": "System tier for testing and special accounts",
     "permissions": [
       "dashboard.view",
       "inventory.view",
@@ -300,19 +239,9 @@
       "ai.demand_forecasting",
       "ai.quality_insights"
     ],
-    "stripe_lookup_key": "",
-    "whop_product_key": "",
     "user_limit": -1,
     "is_customer_facing": false,
-    "is_available": true,
-    "tier_type": "paid",
-    "billing_provider": "",
-    "requires_stripe_billing": false,
-    "pricing_category": "monthly",
-    "supports_whop": false,
-    "feature_groups": [],
-    "whop_product_name": "",
-    "fallback_features": [],
-    "fallback_price": "$0"
+    "billing_provider": "exempt",
+    "features": []
   }
 }

@@ -173,12 +173,12 @@ class Organization(db.Model):
         return self.tier.name
 
     def get_pricing_data(self):
-        """Get dynamic pricing data from Stripe"""
+        """Get pricing data from local config - simple and always available"""
         try:
-            from ..services.pricing_service import PricingService
-            return PricingService.get_pricing_data()
-        except ImportError:
-            return None
+            from ..services.billing_service import BillingService
+            return BillingService.get_comprehensive_pricing_data()
+        except Exception:
+            return {'tiers': {}, 'available': False}
 
     def is_owner(self, user):
         """Check if user is owner of this organization"""

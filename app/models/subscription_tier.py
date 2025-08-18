@@ -8,7 +8,7 @@ subscription_tier_permission = db.Table('subscription_tier_permission',
 )
 
 class SubscriptionTier(db.Model):
-    """Clean subscription tier model - uses lookup keys, not hardcoded price IDs"""
+    """Clean subscription tier model - NO pricing, just tier structure"""
     __tablename__ = 'subscription_tier'
 
     id = db.Column(db.Integer, primary_key=True)
@@ -18,8 +18,6 @@ class SubscriptionTier(db.Model):
 
     # Core tier limits
     user_limit = db.Column(db.Integer, default=1, nullable=False)
-    max_users = db.Column(db.Integer, default=1, nullable=False)  # Compatibility
-    max_monthly_batches = db.Column(db.Integer, default=100, nullable=False)  # Compatibility
 
     # Visibility control
     is_customer_facing = db.Column(db.Boolean, default=True, nullable=False)
@@ -29,12 +27,8 @@ class SubscriptionTier(db.Model):
     is_billing_exempt = db.Column(db.Boolean, default=False, nullable=False, index=True)
 
     # The ONLY external product links - stable lookup keys
-    # Remove unique=True from these columns - constraints are defined in __table_args__
     stripe_lookup_key = db.Column(db.String(128), nullable=True)
     whop_product_key = db.Column(db.String(128), nullable=True)
-
-    # Display-only pricing (fallback when offline)
-    fallback_price = db.Column(db.String(32), default='$0')
 
     # Metadata
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
