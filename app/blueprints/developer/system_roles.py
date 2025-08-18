@@ -10,22 +10,16 @@ from werkzeug.security import generate_password_hash
 
 system_roles_bp = Blueprint('system_roles', __name__)
 
-@system_roles_bp.before_request
-def require_developer_for_system_roles():
-    """Ensure only developers can access system roles routes"""
-    # Check if this is an API request that expects JSON
-    from app.utils.http import wants_json
-    
-    if not current_user.is_authenticated or current_user.user_type != 'developer':
-        if wants_json():
-            return jsonify({'error': 'Developer access required'}), 403
-        flash('Developer access required', 'error')
-        return redirect(url_for('auth.login'))
+# Note: Developer access is now handled by the main middleware
+# The before_request decorator was causing conflicts with the main security checkpoint
 
 @system_roles_bp.route('/system-roles')
 @login_required
 def manage_system_roles():
     """Manage system roles and developer users"""
+    if current_user.user_type != 'developer':
+        flash('Developer access required', 'error')
+        return redirect(url_for('auth.login'))
     system_roles = Role.query.filter_by(is_system_role=True).all()
     developer_roles = DeveloperRole.query.filter_by(is_active=True).all()
     developer_users = User.query.filter_by(user_type='developer').all()
