@@ -1,0 +1,3099 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.13, pytest-8.3.5, pluggy-1.5.0 -- /home/runner/workspace/.pythonlibs/bin/python
+cachedir: .pytest_cache
+rootdir: /home/runner/workspace
+collected 49 items                                      
+
+tests/test_audit_canonicalization.py::test_api_reservation_routes_uses_canonical_audit ERROR [  2%]
+tests/test_audit_canonicalization.py::test_products_routes_uses_canonical_audit ERROR [  4%]
+tests/test_auth_permissions.py::TestAuthPermissions::test_permission_required_decorator_allows_with_permission ERROR [  6%]
+tests/test_auth_permissions.py::TestAuthPermissions::test_permission_required_returns_json_for_api ERROR [  8%]
+tests/test_auth_permissions.py::TestAuthPermissions::test_any_permission_required_decorator ERROR [ 10%]
+tests/test_auth_permissions.py::TestAuthPermissions::test_tier_required_decorator ERROR [ 12%]
+tests/test_auth_permissions.py::TestAuthPermissions::test_user_has_any_permission_method ERROR [ 14%]
+tests/test_auth_permissions.py::TestAuthPermissions::test_api_unauth_returns_json_401 ERROR [ 16%]
+tests/test_auth_permissions.py::TestAuthPermissions::test_web_unauth_redirects_to_login ERROR [ 18%]
+tests/test_auth_permissions.py::TestAuthPermissions::test_csrf_token_available_in_templates ERROR [ 20%]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_tier_permission_is_the_hard_ceiling ERROR [ 22%]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[active-200] ERROR [ 24%]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[past_due-302] ERROR [ 26%]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[suspended-302] ERROR [ 28%]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[canceled-302] ERROR [ 30%]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_developer_can_masquerade_regardless_of_billing ERROR [ 32%]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_complete_security_cascade ERROR [ 34%]
+tests/test_expiration_canonicalization.py::test_expiration_service_uses_canonical_adjustment ERROR [ 36%]
+tests/test_expiration_canonicalization.py::TestExpirationCanonicalService::test_mark_fifo_expired_calls_canonical_service PASSED [ 38%]
+tests/test_expiration_canonicalization.py::TestExpirationCanonicalService::test_mark_product_expired_calls_canonical_service PASSED [ 40%]
+tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_oauth_service_exists ERROR [ 42%]
+tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_auth_login_endpoint_exists ERROR [ 44%]
+tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_auth_callback_endpoint_exists ERROR [ 46%]
+tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_oauth_state_validation_path ERROR [ 48%]
+tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_oauth_service_methods_exist ERROR [ 51%]
+tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_oauth_configuration_status ERROR [ 53%]
+tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_oauth_callback_invalid_state ERROR [ 55%]
+tests/test_inventory_fifo.py::TestInventoryFIFOCharacterization::test_single_entry_point_exists ERROR [ 57%]
+tests/test_inventory_fifo.py::TestInventoryFIFOCharacterization::test_fifo_deduction_order ERROR [ 59%]
+tests/test_inventory_fifo.py::TestInventoryFIFOCharacterization::test_inventory_adjustment_delegates_properly ERROR [ 61%]
+tests/test_inventory_routes_canonicalization.py::test_recount_adjustment_uses_canonical_service ERROR [ 63%]
+tests/test_inventory_routes_canonicalization.py::TestInventoryRoutesCanonicalService::test_adjust_inventory_initial_stock_calls_canonical_service FAILED [ 65%]
+tests/test_pos_integration_canonicalization.py::test_pos_sale_uses_canonical_service ERROR [ 67%]
+tests/test_pos_integration_canonicalization.py::TestPOSIntegrationCanonicalService::test_reserve_inventory_calls_canonical_service PASSED [ 69%]
+tests/test_product_sku.py::TestProductSKUCharacterization::test_product_creation_flow ERROR [ 71%]
+tests/test_product_sku.py::TestProductSKUCharacterization::test_sku_generation_constraints ERROR [ 73%]
+tests/test_product_sku.py::TestProductSKUCharacterization::test_product_service_exists ERROR [ 75%]
+tests/test_product_sku.py::TestProductSKUCharacterization::test_sku_creation_validation ERROR [ 77%]
+tests/test_reservation_canonicalization.py::test_credit_specific_lot_called_on_reservation_release ERROR [ 79%]
+tests/test_reservation_canonicalization.py::test_record_audit_entry_called_for_unreserved_audit ERROR [ 81%]
+tests/test_signup_tiers.py::TestSignupTierCharacterization::test_signup_endpoint_exists ERROR [ 83%]
+tests/test_signup_tiers.py::TestSignupTierCharacterization::test_tier_bypass_behavior ERROR [ 85%]
+tests/test_signup_tiers.py::TestSignupTierCharacterization::test_organization_tier_assignment ERROR [ 87%]
+tests/test_signup_tiers.py::TestSignupTierCharacterization::test_permission_gating_exists ERROR [ 89%]
+tests/test_signup_tiers.py::TestSignupTierCharacterization::test_signup_service_delegation ERROR [ 91%]
+tests/test_stripe_webhooks.py::TestStripeWebhookCharacterization::test_stripe_service_exists ERROR [ 93%]
+tests/test_stripe_webhooks.py::TestStripeWebhookCharacterization::test_webhook_signature_verification_path_exists ERROR [ 95%]
+tests/test_stripe_webhooks.py::TestStripeWebhookCharacterization::test_webhook_idempotency_behavior ERROR [ 97%]
+tests/test_stripe_webhooks.py::TestStripeWebhookCharacterization::test_stripe_service_methods_exist ERROR [100%]
+
+======================== ERRORS =========================
+_ ERROR at setup of test_api_reservation_routes_uses_canonical_audit _
+
+    @pytest.fixture(scope='function')  # Changed to function scope for isolation
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+            'LOGIN_DISABLED': False,  # Ensure authentication is active in tests
+            'TESTING_DISABLE_AUTH': False  # Disable any test-specific auth bypass
+            # Don't disable login - we need to test permissions properly
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:77: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>
+k = 'max_users'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'max_users' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+------------------ Captured log setup -------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+_ ERROR at setup of test_products_routes_uses_canonical_audit _
+
+    @pytest.fixture(scope='function')  # Changed to function scope for isolation
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+            'LOGIN_DISABLED': False,  # Ensure authentication is active in tests
+            'TESTING_DISABLE_AUTH': False  # Disable any test-specific auth bypass
+            # Don't disable login - we need to test permissions properly
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:77: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>
+k = 'max_users'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'max_users' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+------------------ Captured log setup -------------------
+INFO     app.blueprints_registry:blueprints_registry.py:123 Blueprint 'billing' registered successfully.
+INFO     app:unit_utils.py:28 BatchTrack startup
+_ ERROR at setup of TestAuthPermissions.test_permission_required_decorator_allows_with_permission _
+
+    @pytest.fixture(scope='function')  # Changed to function scope for isolation
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+            'LOGIN_DISABLED': False,  # Ensure authentication is active in tests
+            'TESTING_DISABLE_AUTH': False  # Disable any test-specific auth bypass
+            # Don't disable login - we need to test permissions properly
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:77: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>
+k = 'max_users'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'max_users' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+------------------ Captured log setup -------------------
+INFO     app.blueprints_registry:blueprints_registry.py:123 Blueprint 'billing' registered successfully.
+INFO     app:unit_utils.py:28 BatchTrack startup
+_ ERROR at setup of TestAuthPermissions.test_permission_required_returns_json_for_api _
+
+    @pytest.fixture(scope='function')  # Changed to function scope for isolation
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+            'LOGIN_DISABLED': False,  # Ensure authentication is active in tests
+            'TESTING_DISABLE_AUTH': False  # Disable any test-specific auth bypass
+            # Don't disable login - we need to test permissions properly
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:77: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>
+k = 'max_users'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'max_users' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+------------------ Captured log setup -------------------
+INFO     app.blueprints_registry:blueprints_registry.py:123 Blueprint 'billing' registered successfully.
+INFO     app:unit_utils.py:28 BatchTrack startup
+_ ERROR at setup of TestAuthPermissions.test_any_permission_required_decorator _
+
+    @pytest.fixture(scope='function')  # Changed to function scope for isolation
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+            'LOGIN_DISABLED': False,  # Ensure authentication is active in tests
+            'TESTING_DISABLE_AUTH': False  # Disable any test-specific auth bypass
+            # Don't disable login - we need to test permissions properly
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:77: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>
+k = 'max_users'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'max_users' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+------------------ Captured log setup -------------------
+INFO     app.blueprints_registry:blueprints_registry.py:123 Blueprint 'billing' registered successfully.
+INFO     app:unit_utils.py:28 BatchTrack startup
+_ ERROR at setup of TestAuthPermissions.test_tier_required_decorator _
+
+    @pytest.fixture(scope='function')  # Changed to function scope for isolation
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+            'LOGIN_DISABLED': False,  # Ensure authentication is active in tests
+            'TESTING_DISABLE_AUTH': False  # Disable any test-specific auth bypass
+            # Don't disable login - we need to test permissions properly
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:77: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>
+k = 'max_users'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'max_users' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+------------------ Captured log setup -------------------
+INFO     app.blueprints_registry:blueprints_registry.py:123 Blueprint 'billing' registered successfully.
+INFO     app:unit_utils.py:28 BatchTrack startup
+_ ERROR at setup of TestAuthPermissions.test_user_has_any_permission_method _
+
+    @pytest.fixture(scope='function')  # Changed to function scope for isolation
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+            'LOGIN_DISABLED': False,  # Ensure authentication is active in tests
+            'TESTING_DISABLE_AUTH': False  # Disable any test-specific auth bypass
+            # Don't disable login - we need to test permissions properly
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:77: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>
+k = 'max_users'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'max_users' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+------------------ Captured log setup -------------------
+INFO     app.blueprints_registry:blueprints_registry.py:123 Blueprint 'billing' registered successfully.
+INFO     app:unit_utils.py:28 BatchTrack startup
+_ ERROR at setup of TestAuthPermissions.test_api_unauth_returns_json_401 _
+
+    @pytest.fixture(scope='function')  # Changed to function scope for isolation
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+            'LOGIN_DISABLED': False,  # Ensure authentication is active in tests
+            'TESTING_DISABLE_AUTH': False  # Disable any test-specific auth bypass
+            # Don't disable login - we need to test permissions properly
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:77: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>
+k = 'max_users'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'max_users' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+------------------ Captured log setup -------------------
+INFO     app.blueprints_registry:blueprints_registry.py:123 Blueprint 'billing' registered successfully.
+INFO     app:unit_utils.py:28 BatchTrack startup
+_ ERROR at setup of TestAuthPermissions.test_web_unauth_redirects_to_login _
+
+    @pytest.fixture(scope='function')  # Changed to function scope for isolation
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+            'LOGIN_DISABLED': False,  # Ensure authentication is active in tests
+            'TESTING_DISABLE_AUTH': False  # Disable any test-specific auth bypass
+            # Don't disable login - we need to test permissions properly
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:77: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>
+k = 'max_users'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'max_users' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+------------------ Captured log setup -------------------
+INFO     app.blueprints_registry:blueprints_registry.py:123 Blueprint 'billing' registered successfully.
+INFO     app:unit_utils.py:28 BatchTrack startup
+_ ERROR at setup of TestAuthPermissions.test_csrf_token_available_in_templates _
+
+    @pytest.fixture(scope='function')  # Changed to function scope for isolation
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+            'LOGIN_DISABLED': False,  # Ensure authentication is active in tests
+            'TESTING_DISABLE_AUTH': False  # Disable any test-specific auth bypass
+            # Don't disable login - we need to test permissions properly
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:77: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>
+k = 'max_users'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'max_users' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+------------------ Captured log setup -------------------
+INFO     app.blueprints_registry:blueprints_registry.py:123 Blueprint 'billing' registered successfully.
+INFO     app:unit_utils.py:28 BatchTrack startup
+_ ERROR at setup of TestBillingAndTierEnforcement.test_tier_permission_is_the_hard_ceiling _
+
+    @pytest.fixture(scope='function')  # Changed to function scope for isolation
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+            'LOGIN_DISABLED': False,  # Ensure authentication is active in tests
+            'TESTING_DISABLE_AUTH': False  # Disable any test-specific auth bypass
+            # Don't disable login - we need to test permissions properly
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:77: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>
+k = 'max_users'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'max_users' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+------------------ Captured log setup -------------------
+INFO     app.blueprints_registry:blueprints_registry.py:123 Blueprint 'billing' registered successfully.
+INFO     app:unit_utils.py:28 BatchTrack startup
+_ ERROR at setup of TestBillingAndTierEnforcement.test_billing_status_enforcement[active-200] _
+
+    @pytest.fixture(scope='function')  # Changed to function scope for isolation
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+            'LOGIN_DISABLED': False,  # Ensure authentication is active in tests
+            'TESTING_DISABLE_AUTH': False  # Disable any test-specific auth bypass
+            # Don't disable login - we need to test permissions properly
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:77: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>
+k = 'max_users'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'max_users' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+------------------ Captured log setup -------------------
+INFO     app.blueprints_registry:blueprints_registry.py:123 Blueprint 'billing' registered successfully.
+INFO     app:unit_utils.py:28 BatchTrack startup
+_ ERROR at setup of TestBillingAndTierEnforcement.test_billing_status_enforcement[past_due-302] _
+
+    @pytest.fixture(scope='function')  # Changed to function scope for isolation
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+            'LOGIN_DISABLED': False,  # Ensure authentication is active in tests
+            'TESTING_DISABLE_AUTH': False  # Disable any test-specific auth bypass
+            # Don't disable login - we need to test permissions properly
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:77: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>
+k = 'max_users'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'max_users' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+------------------ Captured log setup -------------------
+INFO     app.blueprints_registry:blueprints_registry.py:123 Blueprint 'billing' registered successfully.
+INFO     app:unit_utils.py:28 BatchTrack startup
+_ ERROR at setup of TestBillingAndTierEnforcement.test_billing_status_enforcement[suspended-302] _
+
+    @pytest.fixture(scope='function')  # Changed to function scope for isolation
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+            'LOGIN_DISABLED': False,  # Ensure authentication is active in tests
+            'TESTING_DISABLE_AUTH': False  # Disable any test-specific auth bypass
+            # Don't disable login - we need to test permissions properly
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:77: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>
+k = 'max_users'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'max_users' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+------------------ Captured log setup -------------------
+INFO     app.blueprints_registry:blueprints_registry.py:123 Blueprint 'billing' registered successfully.
+INFO     app:unit_utils.py:28 BatchTrack startup
+_ ERROR at setup of TestBillingAndTierEnforcement.test_billing_status_enforcement[canceled-302] _
+
+    @pytest.fixture(scope='function')  # Changed to function scope for isolation
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+            'LOGIN_DISABLED': False,  # Ensure authentication is active in tests
+            'TESTING_DISABLE_AUTH': False  # Disable any test-specific auth bypass
+            # Don't disable login - we need to test permissions properly
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:77: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>
+k = 'max_users'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'max_users' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+------------------ Captured log setup -------------------
+INFO     app.blueprints_registry:blueprints_registry.py:123 Blueprint 'billing' registered successfully.
+INFO     app:unit_utils.py:28 BatchTrack startup
+_ ERROR at setup of TestBillingAndTierEnforcement.test_developer_can_masquerade_regardless_of_billing _
+
+    @pytest.fixture(scope='function')  # Changed to function scope for isolation
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+            'LOGIN_DISABLED': False,  # Ensure authentication is active in tests
+            'TESTING_DISABLE_AUTH': False  # Disable any test-specific auth bypass
+            # Don't disable login - we need to test permissions properly
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:77: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>
+k = 'max_users'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'max_users' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+------------------ Captured log setup -------------------
+INFO     app.blueprints_registry:blueprints_registry.py:123 Blueprint 'billing' registered successfully.
+INFO     app:unit_utils.py:28 BatchTrack startup
+_ ERROR at setup of TestBillingAndTierEnforcement.test_complete_security_cascade _
+
+    @pytest.fixture(scope='function')  # Changed to function scope for isolation
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+            'LOGIN_DISABLED': False,  # Ensure authentication is active in tests
+            'TESTING_DISABLE_AUTH': False  # Disable any test-specific auth bypass
+            # Don't disable login - we need to test permissions properly
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:77: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>
+k = 'max_users'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'max_users' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+------------------ Captured log setup -------------------
+INFO     app.blueprints_registry:blueprints_registry.py:123 Blueprint 'billing' registered successfully.
+INFO     app:unit_utils.py:28 BatchTrack startup
+_ ERROR at setup of test_expiration_service_uses_canonical_adjustment _
+
+    @pytest.fixture(scope='function')  # Changed to function scope for isolation
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+            'LOGIN_DISABLED': False,  # Ensure authentication is active in tests
+            'TESTING_DISABLE_AUTH': False  # Disable any test-specific auth bypass
+            # Don't disable login - we need to test permissions properly
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:77: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>
+k = 'max_users'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'max_users' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+------------------ Captured log setup -------------------
+INFO     app.blueprints_registry:blueprints_registry.py:123 Blueprint 'billing' registered successfully.
+INFO     app:unit_utils.py:28 BatchTrack startup
+_ ERROR at setup of TestGoogleOAuthCharacterization.test_oauth_service_exists _
+
+    @pytest.fixture(scope='function')  # Changed to function scope for isolation
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+            'LOGIN_DISABLED': False,  # Ensure authentication is active in tests
+            'TESTING_DISABLE_AUTH': False  # Disable any test-specific auth bypass
+            # Don't disable login - we need to test permissions properly
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:77: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>
+k = 'max_users'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'max_users' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+------------------ Captured log setup -------------------
+INFO     app.blueprints_registry:blueprints_registry.py:123 Blueprint 'billing' registered successfully.
+INFO     app:unit_utils.py:28 BatchTrack startup
+_ ERROR at setup of TestGoogleOAuthCharacterization.test_auth_login_endpoint_exists _
+
+    @pytest.fixture(scope='function')  # Changed to function scope for isolation
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+            'LOGIN_DISABLED': False,  # Ensure authentication is active in tests
+            'TESTING_DISABLE_AUTH': False  # Disable any test-specific auth bypass
+            # Don't disable login - we need to test permissions properly
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:77: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>
+k = 'max_users'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'max_users' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+------------------ Captured log setup -------------------
+INFO     app.blueprints_registry:blueprints_registry.py:123 Blueprint 'billing' registered successfully.
+INFO     app:unit_utils.py:28 BatchTrack startup
+_ ERROR at setup of TestGoogleOAuthCharacterization.test_auth_callback_endpoint_exists _
+
+    @pytest.fixture(scope='function')  # Changed to function scope for isolation
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+            'LOGIN_DISABLED': False,  # Ensure authentication is active in tests
+            'TESTING_DISABLE_AUTH': False  # Disable any test-specific auth bypass
+            # Don't disable login - we need to test permissions properly
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:77: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>
+k = 'max_users'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'max_users' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+------------------ Captured log setup -------------------
+INFO     app.blueprints_registry:blueprints_registry.py:123 Blueprint 'billing' registered successfully.
+INFO     app:unit_utils.py:28 BatchTrack startup
+_ ERROR at setup of TestGoogleOAuthCharacterization.test_oauth_state_validation_path _
+
+    @pytest.fixture(scope='function')  # Changed to function scope for isolation
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+            'LOGIN_DISABLED': False,  # Ensure authentication is active in tests
+            'TESTING_DISABLE_AUTH': False  # Disable any test-specific auth bypass
+            # Don't disable login - we need to test permissions properly
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:77: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>
+k = 'max_users'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'max_users' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+------------------ Captured log setup -------------------
+INFO     app.blueprints_registry:blueprints_registry.py:123 Blueprint 'billing' registered successfully.
+INFO     app:unit_utils.py:28 BatchTrack startup
+_ ERROR at setup of TestGoogleOAuthCharacterization.test_oauth_service_methods_exist _
+
+    @pytest.fixture(scope='function')  # Changed to function scope for isolation
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+            'LOGIN_DISABLED': False,  # Ensure authentication is active in tests
+            'TESTING_DISABLE_AUTH': False  # Disable any test-specific auth bypass
+            # Don't disable login - we need to test permissions properly
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:77: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>
+k = 'max_users'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'max_users' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+------------------ Captured log setup -------------------
+INFO     app.blueprints_registry:blueprints_registry.py:123 Blueprint 'billing' registered successfully.
+INFO     app:unit_utils.py:28 BatchTrack startup
+_ ERROR at setup of TestGoogleOAuthCharacterization.test_oauth_configuration_status _
+
+    @pytest.fixture(scope='function')  # Changed to function scope for isolation
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+            'LOGIN_DISABLED': False,  # Ensure authentication is active in tests
+            'TESTING_DISABLE_AUTH': False  # Disable any test-specific auth bypass
+            # Don't disable login - we need to test permissions properly
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:77: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>
+k = 'max_users'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'max_users' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+------------------ Captured log setup -------------------
+INFO     app.blueprints_registry:blueprints_registry.py:123 Blueprint 'billing' registered successfully.
+INFO     app:unit_utils.py:28 BatchTrack startup
+_ ERROR at setup of TestGoogleOAuthCharacterization.test_oauth_callback_invalid_state _
+
+    @pytest.fixture(scope='function')  # Changed to function scope for isolation
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+            'LOGIN_DISABLED': False,  # Ensure authentication is active in tests
+            'TESTING_DISABLE_AUTH': False  # Disable any test-specific auth bypass
+            # Don't disable login - we need to test permissions properly
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:77: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>
+k = 'max_users'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'max_users' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+------------------ Captured log setup -------------------
+INFO     app.blueprints_registry:blueprints_registry.py:123 Blueprint 'billing' registered successfully.
+INFO     app:unit_utils.py:28 BatchTrack startup
+_ ERROR at setup of TestInventoryFIFOCharacterization.test_single_entry_point_exists _
+
+    @pytest.fixture(scope='function')  # Changed to function scope for isolation
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+            'LOGIN_DISABLED': False,  # Ensure authentication is active in tests
+            'TESTING_DISABLE_AUTH': False  # Disable any test-specific auth bypass
+            # Don't disable login - we need to test permissions properly
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:77: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>
+k = 'max_users'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'max_users' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+------------------ Captured log setup -------------------
+INFO     app.blueprints_registry:blueprints_registry.py:123 Blueprint 'billing' registered successfully.
+INFO     app:unit_utils.py:28 BatchTrack startup
+_ ERROR at setup of TestInventoryFIFOCharacterization.test_fifo_deduction_order _
+
+    @pytest.fixture(scope='function')  # Changed to function scope for isolation
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+            'LOGIN_DISABLED': False,  # Ensure authentication is active in tests
+            'TESTING_DISABLE_AUTH': False  # Disable any test-specific auth bypass
+            # Don't disable login - we need to test permissions properly
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:77: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>
+k = 'max_users'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'max_users' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+------------------ Captured log setup -------------------
+INFO     app.blueprints_registry:blueprints_registry.py:123 Blueprint 'billing' registered successfully.
+INFO     app:unit_utils.py:28 BatchTrack startup
+_ ERROR at setup of TestInventoryFIFOCharacterization.test_inventory_adjustment_delegates_properly _
+
+    @pytest.fixture(scope='function')  # Changed to function scope for isolation
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+            'LOGIN_DISABLED': False,  # Ensure authentication is active in tests
+            'TESTING_DISABLE_AUTH': False  # Disable any test-specific auth bypass
+            # Don't disable login - we need to test permissions properly
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:77: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>
+k = 'max_users'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'max_users' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+------------------ Captured log setup -------------------
+INFO     app.blueprints_registry:blueprints_registry.py:123 Blueprint 'billing' registered successfully.
+INFO     app:unit_utils.py:28 BatchTrack startup
+_ ERROR at setup of test_recount_adjustment_uses_canonical_service _
+
+    @pytest.fixture(scope='function')  # Changed to function scope for isolation
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+            'LOGIN_DISABLED': False,  # Ensure authentication is active in tests
+            'TESTING_DISABLE_AUTH': False  # Disable any test-specific auth bypass
+            # Don't disable login - we need to test permissions properly
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:77: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>
+k = 'max_users'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'max_users' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+------------------ Captured log setup -------------------
+INFO     app.blueprints_registry:blueprints_registry.py:123 Blueprint 'billing' registered successfully.
+INFO     app:unit_utils.py:28 BatchTrack startup
+_ ERROR at setup of test_pos_sale_uses_canonical_service _
+
+    @pytest.fixture(scope='function')  # Changed to function scope for isolation
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+            'LOGIN_DISABLED': False,  # Ensure authentication is active in tests
+            'TESTING_DISABLE_AUTH': False  # Disable any test-specific auth bypass
+            # Don't disable login - we need to test permissions properly
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:77: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>
+k = 'max_users'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'max_users' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+------------------ Captured log setup -------------------
+INFO     app.blueprints_registry:blueprints_registry.py:123 Blueprint 'billing' registered successfully.
+INFO     app:unit_utils.py:28 BatchTrack startup
+_ ERROR at setup of TestProductSKUCharacterization.test_product_creation_flow _
+
+    @pytest.fixture(scope='function')  # Changed to function scope for isolation
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+            'LOGIN_DISABLED': False,  # Ensure authentication is active in tests
+            'TESTING_DISABLE_AUTH': False  # Disable any test-specific auth bypass
+            # Don't disable login - we need to test permissions properly
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:77: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>
+k = 'max_users'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'max_users' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+------------------ Captured log setup -------------------
+INFO     app.blueprints_registry:blueprints_registry.py:123 Blueprint 'billing' registered successfully.
+INFO     app:unit_utils.py:28 BatchTrack startup
+_ ERROR at setup of TestProductSKUCharacterization.test_sku_generation_constraints _
+
+    @pytest.fixture(scope='function')  # Changed to function scope for isolation
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+            'LOGIN_DISABLED': False,  # Ensure authentication is active in tests
+            'TESTING_DISABLE_AUTH': False  # Disable any test-specific auth bypass
+            # Don't disable login - we need to test permissions properly
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:77: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>
+k = 'max_users'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'max_users' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+------------------ Captured log setup -------------------
+INFO     app.blueprints_registry:blueprints_registry.py:123 Blueprint 'billing' registered successfully.
+INFO     app:unit_utils.py:28 BatchTrack startup
+_ ERROR at setup of TestProductSKUCharacterization.test_product_service_exists _
+
+    @pytest.fixture(scope='function')  # Changed to function scope for isolation
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+            'LOGIN_DISABLED': False,  # Ensure authentication is active in tests
+            'TESTING_DISABLE_AUTH': False  # Disable any test-specific auth bypass
+            # Don't disable login - we need to test permissions properly
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:77: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>
+k = 'max_users'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'max_users' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+------------------ Captured log setup -------------------
+INFO     app.blueprints_registry:blueprints_registry.py:123 Blueprint 'billing' registered successfully.
+INFO     app:unit_utils.py:28 BatchTrack startup
+_ ERROR at setup of TestProductSKUCharacterization.test_sku_creation_validation _
+
+    @pytest.fixture(scope='function')  # Changed to function scope for isolation
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+            'LOGIN_DISABLED': False,  # Ensure authentication is active in tests
+            'TESTING_DISABLE_AUTH': False  # Disable any test-specific auth bypass
+            # Don't disable login - we need to test permissions properly
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:77: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>
+k = 'max_users'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'max_users' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+------------------ Captured log setup -------------------
+INFO     app.blueprints_registry:blueprints_registry.py:123 Blueprint 'billing' registered successfully.
+INFO     app:unit_utils.py:28 BatchTrack startup
+_ ERROR at setup of test_credit_specific_lot_called_on_reservation_release _
+
+    @pytest.fixture(scope='function')  # Changed to function scope for isolation
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+            'LOGIN_DISABLED': False,  # Ensure authentication is active in tests
+            'TESTING_DISABLE_AUTH': False  # Disable any test-specific auth bypass
+            # Don't disable login - we need to test permissions properly
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:77: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>
+k = 'max_users'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'max_users' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+------------------ Captured log setup -------------------
+INFO     app.blueprints_registry:blueprints_registry.py:123 Blueprint 'billing' registered successfully.
+INFO     app:unit_utils.py:28 BatchTrack startup
+_ ERROR at setup of test_record_audit_entry_called_for_unreserved_audit _
+
+    @pytest.fixture(scope='function')  # Changed to function scope for isolation
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+            'LOGIN_DISABLED': False,  # Ensure authentication is active in tests
+            'TESTING_DISABLE_AUTH': False  # Disable any test-specific auth bypass
+            # Don't disable login - we need to test permissions properly
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:77: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>
+k = 'max_users'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'max_users' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+------------------ Captured log setup -------------------
+INFO     app.blueprints_registry:blueprints_registry.py:123 Blueprint 'billing' registered successfully.
+INFO     app:unit_utils.py:28 BatchTrack startup
+_ ERROR at setup of TestSignupTierCharacterization.test_signup_endpoint_exists _
+
+    @pytest.fixture(scope='function')  # Changed to function scope for isolation
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+            'LOGIN_DISABLED': False,  # Ensure authentication is active in tests
+            'TESTING_DISABLE_AUTH': False  # Disable any test-specific auth bypass
+            # Don't disable login - we need to test permissions properly
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:77: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>
+k = 'max_users'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'max_users' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+------------------ Captured log setup -------------------
+INFO     app.blueprints_registry:blueprints_registry.py:123 Blueprint 'billing' registered successfully.
+INFO     app:unit_utils.py:28 BatchTrack startup
+_ ERROR at setup of TestSignupTierCharacterization.test_tier_bypass_behavior _
+
+    @pytest.fixture(scope='function')  # Changed to function scope for isolation
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+            'LOGIN_DISABLED': False,  # Ensure authentication is active in tests
+            'TESTING_DISABLE_AUTH': False  # Disable any test-specific auth bypass
+            # Don't disable login - we need to test permissions properly
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:77: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>
+k = 'max_users'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'max_users' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+------------------ Captured log setup -------------------
+INFO     app.blueprints_registry:blueprints_registry.py:123 Blueprint 'billing' registered successfully.
+INFO     app:unit_utils.py:28 BatchTrack startup
+_ ERROR at setup of TestSignupTierCharacterization.test_organization_tier_assignment _
+
+    @pytest.fixture(scope='function')  # Changed to function scope for isolation
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+            'LOGIN_DISABLED': False,  # Ensure authentication is active in tests
+            'TESTING_DISABLE_AUTH': False  # Disable any test-specific auth bypass
+            # Don't disable login - we need to test permissions properly
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:77: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>
+k = 'max_users'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'max_users' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+------------------ Captured log setup -------------------
+INFO     app.blueprints_registry:blueprints_registry.py:123 Blueprint 'billing' registered successfully.
+INFO     app:unit_utils.py:28 BatchTrack startup
+_ ERROR at setup of TestSignupTierCharacterization.test_permission_gating_exists _
+
+    @pytest.fixture(scope='function')  # Changed to function scope for isolation
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+            'LOGIN_DISABLED': False,  # Ensure authentication is active in tests
+            'TESTING_DISABLE_AUTH': False  # Disable any test-specific auth bypass
+            # Don't disable login - we need to test permissions properly
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:77: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>
+k = 'max_users'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'max_users' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+------------------ Captured log setup -------------------
+INFO     app.blueprints_registry:blueprints_registry.py:123 Blueprint 'billing' registered successfully.
+INFO     app:unit_utils.py:28 BatchTrack startup
+_ ERROR at setup of TestSignupTierCharacterization.test_signup_service_delegation _
+
+    @pytest.fixture(scope='function')  # Changed to function scope for isolation
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+            'LOGIN_DISABLED': False,  # Ensure authentication is active in tests
+            'TESTING_DISABLE_AUTH': False  # Disable any test-specific auth bypass
+            # Don't disable login - we need to test permissions properly
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:77: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>
+k = 'max_users'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'max_users' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+------------------ Captured log setup -------------------
+INFO     app.blueprints_registry:blueprints_registry.py:123 Blueprint 'billing' registered successfully.
+INFO     app:unit_utils.py:28 BatchTrack startup
+_ ERROR at setup of TestStripeWebhookCharacterization.test_stripe_service_exists _
+
+    @pytest.fixture(scope='function')  # Changed to function scope for isolation
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+            'LOGIN_DISABLED': False,  # Ensure authentication is active in tests
+            'TESTING_DISABLE_AUTH': False  # Disable any test-specific auth bypass
+            # Don't disable login - we need to test permissions properly
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:77: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>
+k = 'max_users'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'max_users' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+------------------ Captured log setup -------------------
+INFO     app.blueprints_registry:blueprints_registry.py:123 Blueprint 'billing' registered successfully.
+INFO     app:unit_utils.py:28 BatchTrack startup
+_ ERROR at setup of TestStripeWebhookCharacterization.test_webhook_signature_verification_path_exists _
+
+    @pytest.fixture(scope='function')  # Changed to function scope for isolation
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+            'LOGIN_DISABLED': False,  # Ensure authentication is active in tests
+            'TESTING_DISABLE_AUTH': False  # Disable any test-specific auth bypass
+            # Don't disable login - we need to test permissions properly
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:77: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>
+k = 'max_users'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'max_users' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+------------------ Captured log setup -------------------
+INFO     app.blueprints_registry:blueprints_registry.py:123 Blueprint 'billing' registered successfully.
+INFO     app:unit_utils.py:28 BatchTrack startup
+_ ERROR at setup of TestStripeWebhookCharacterization.test_webhook_idempotency_behavior _
+
+    @pytest.fixture(scope='function')  # Changed to function scope for isolation
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+            'LOGIN_DISABLED': False,  # Ensure authentication is active in tests
+            'TESTING_DISABLE_AUTH': False  # Disable any test-specific auth bypass
+            # Don't disable login - we need to test permissions properly
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:77: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>
+k = 'max_users'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'max_users' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+------------------ Captured log setup -------------------
+INFO     app.blueprints_registry:blueprints_registry.py:123 Blueprint 'billing' registered successfully.
+INFO     app:unit_utils.py:28 BatchTrack startup
+_ ERROR at setup of TestStripeWebhookCharacterization.test_stripe_service_methods_exist _
+
+    @pytest.fixture(scope='function')  # Changed to function scope for isolation
+    def app():
+        """Create and configure a new app instance for each test."""
+        # Create a temporary file to use as the database
+        db_fd, db_path = tempfile.mkstemp()
+    
+        app = create_app({
+            'TESTING': True,
+            'DATABASE_URL': f'sqlite:///{db_path}',
+            'WTF_CSRF_ENABLED': False,
+            'SECRET_KEY': 'test-secret-key',
+            'STRIPE_SECRET_KEY': 'sk_test_fake',
+            'STRIPE_WEBHOOK_SECRET': 'whsec_test_fake',
+            'LOGIN_DISABLED': False,  # Ensure authentication is active in tests
+            'TESTING_DISABLE_AUTH': False  # Disable any test-specific auth bypass
+            # Don't disable login - we need to test permissions properly
+        })
+    
+        with app.app_context():
+            db.create_all()
+    
+            # Create basic test data
+>           _create_test_data()
+
+tests/conftest.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/conftest.py:77: in _create_test_data
+    tier = SubscriptionTier(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:571: in _initialize_instance
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py:569: in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <SubscriptionTier Test Tier>
+kwargs = {'is_customer_facing': True, 'key': 'test', 'max_monthly_batches': 100, 'max_users': 5, ...}
+cls_ = <class 'app.models.subscription_tier.SubscriptionTier'>
+k = 'max_users'
+
+    def _declarative_constructor(self: Any, **kwargs: Any) -> None:
+        """A simple constructor that allows initialization from kwargs.
+    
+        Sets attributes on the constructed instance using the names and
+        values in ``kwargs``.
+    
+        Only keys that are present as
+        attributes of the instance's class are allowed. These could be,
+        for example, any mapped columns or relationships.
+        """
+        cls_ = type(self)
+        for k in kwargs:
+            if not hasattr(cls_, k):
+>               raise TypeError(
+                    "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+                )
+E               TypeError: 'max_users' is an invalid keyword argument for SubscriptionTier
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py:2175: TypeError
+------------------ Captured log setup -------------------
+INFO     app.blueprints_registry:blueprints_registry.py:123 Blueprint 'billing' registered successfully.
+INFO     app:unit_utils.py:28 BatchTrack startup
+======================= FAILURES ========================
+_ TestInventoryRoutesCanonicalService.test_adjust_inventory_initial_stock_calls_canonical_service _
+
+args = (<tests.test_inventory_routes_canonicalization.TestInventoryRoutesCanonicalService object at 0x7f78596ec190>,)
+keywargs = {'app': <Flask 'app'>, 'client': <FlaskClient <Flask 'app'>>}
+
+    @wraps(func)
+    def patched(*args, **keywargs):
+>       with self.decoration_helper(patched,
+                                    args,
+                                    keywargs) as (newargs, newkeywargs):
+
+/nix/store/7d088dip86hlzri9sk0h78b63yfmx0a0-python3-3.11.13/lib/python3.11/unittest/mock.py:1375: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+/nix/store/7d088dip86hlzri9sk0h78b63yfmx0a0-python3-3.11.13/lib/python3.11/contextlib.py:137: in __enter__
+    return next(self.gen)
+/nix/store/7d088dip86hlzri9sk0h78b63yfmx0a0-python3-3.11.13/lib/python3.11/unittest/mock.py:1357: in decoration_helper
+    arg = exit_stack.enter_context(patching)
+/nix/store/7d088dip86hlzri9sk0h78b63yfmx0a0-python3-3.11.13/lib/python3.11/contextlib.py:517: in enter_context
+    result = _enter(cm)
+/nix/store/7d088dip86hlzri9sk0h78b63yfmx0a0-python3-3.11.13/lib/python3.11/unittest/mock.py:1446: in __enter__
+    original, local = self.get_original()
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <unittest.mock._patch object at 0x7f78596e2d50>
+
+    def get_original(self):
+        target = self.getter()
+        name = self.attribute
+    
+        original = DEFAULT
+        local = False
+    
+        try:
+            original = target.__dict__[name]
+        except (AttributeError, KeyError):
+            original = getattr(target, name, DEFAULT)
+        else:
+            local = True
+    
+        if name in _builtins and isinstance(target, ModuleType):
+            self.create = True
+    
+        if not self.create and original is DEFAULT:
+>           raise AttributeError(
+                "%s does not have the attribute %r" % (target, name)
+            )
+E           AttributeError: <module 'app.authz' from '/home/runner/workspace/app/authz.py'> does not have the attribute 'load_user'
+
+/nix/store/7d088dip86hlzri9sk0h78b63yfmx0a0-python3-3.11.13/lib/python3.11/unittest/mock.py:1419: AttributeError
+------------------ Captured log setup -------------------
+INFO     app.blueprints_registry:blueprints_registry.py:123 Blueprint 'billing' registered successfully.
+INFO     app:unit_utils.py:28 BatchTrack startup
+=================== warnings summary ====================
+tests/test_audit_canonicalization.py: 2 warnings
+tests/test_auth_permissions.py: 8 warnings
+tests/test_billing_and_tier_enforcement.py: 7 warnings
+tests/test_expiration_canonicalization.py: 3 warnings
+tests/test_google_oauth.py: 7 warnings
+tests/test_inventory_fifo.py: 3 warnings
+tests/test_inventory_routes_canonicalization.py: 2 warnings
+tests/test_pos_integration_canonicalization.py: 1 warning
+tests/test_product_sku.py: 4 warnings
+tests/test_reservation_canonicalization.py: 2 warnings
+tests/test_signup_tiers.py: 5 warnings
+tests/test_stripe_webhooks.py: 4 warnings
+  /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_limiter/extension.py:333: UserWarning: Using the in-memory storage for tracking rate limits as no storage was explicitly specified. This is not recommended for production use. See: https://flask-limiter.readthedocs.io#configuring-a-storage-backend for documentation about configuring the storage backend.
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+================ short test summary info ================
+FAILED tests/test_inventory_routes_canonicalization.py::TestInventoryRoutesCanonicalService::test_adjust_inventory_initial_stock_calls_canonical_service - AttributeError: <module 'app.authz' from '/home/runn...
+ERROR tests/test_audit_canonicalization.py::test_api_reservation_routes_uses_canonical_audit - TypeError: 'max_users' is an invalid keyword argumen...
+ERROR tests/test_audit_canonicalization.py::test_products_routes_uses_canonical_audit - TypeError: 'max_users' is an invalid keyword argumen...
+ERROR tests/test_auth_permissions.py::TestAuthPermissions::test_permission_required_decorator_allows_with_permission - TypeError: 'max_users' is an invalid keyword argumen...
+ERROR tests/test_auth_permissions.py::TestAuthPermissions::test_permission_required_returns_json_for_api - TypeError: 'max_users' is an invalid keyword argumen...
+ERROR tests/test_auth_permissions.py::TestAuthPermissions::test_any_permission_required_decorator - TypeError: 'max_users' is an invalid keyword argumen...
+ERROR tests/test_auth_permissions.py::TestAuthPermissions::test_tier_required_decorator - TypeError: 'max_users' is an invalid keyword argumen...
+ERROR tests/test_auth_permissions.py::TestAuthPermissions::test_user_has_any_permission_method - TypeError: 'max_users' is an invalid keyword argumen...
+ERROR tests/test_auth_permissions.py::TestAuthPermissions::test_api_unauth_returns_json_401 - TypeError: 'max_users' is an invalid keyword argumen...
+ERROR tests/test_auth_permissions.py::TestAuthPermissions::test_web_unauth_redirects_to_login - TypeError: 'max_users' is an invalid keyword argumen...
+ERROR tests/test_auth_permissions.py::TestAuthPermissions::test_csrf_token_available_in_templates - TypeError: 'max_users' is an invalid keyword argumen...
+ERROR tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_tier_permission_is_the_hard_ceiling - TypeError: 'max_users' is an invalid keyword argumen...
+ERROR tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[active-200] - TypeError: 'max_users' is an invalid keyword argumen...
+ERROR tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[past_due-302] - TypeError: 'max_users' is an invalid keyword argumen...
+ERROR tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[suspended-302] - TypeError: 'max_users' is an invalid keyword argumen...
+ERROR tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[canceled-302] - TypeError: 'max_users' is an invalid keyword argumen...
+ERROR tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_developer_can_masquerade_regardless_of_billing - TypeError: 'max_users' is an invalid keyword argumen...
+ERROR tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_complete_security_cascade - TypeError: 'max_users' is an invalid keyword argumen...
+ERROR tests/test_expiration_canonicalization.py::test_expiration_service_uses_canonical_adjustment - TypeError: 'max_users' is an invalid keyword argumen...
+ERROR tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_oauth_service_exists - TypeError: 'max_users' is an invalid keyword argumen...
+ERROR tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_auth_login_endpoint_exists - TypeError: 'max_users' is an invalid keyword argumen...
+ERROR tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_auth_callback_endpoint_exists - TypeError: 'max_users' is an invalid keyword argumen...
+ERROR tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_oauth_state_validation_path - TypeError: 'max_users' is an invalid keyword argumen...
+ERROR tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_oauth_service_methods_exist - TypeError: 'max_users' is an invalid keyword argumen...
+ERROR tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_oauth_configuration_status - TypeError: 'max_users' is an invalid keyword argumen...
+ERROR tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_oauth_callback_invalid_state - TypeError: 'max_users' is an invalid keyword argumen...
+ERROR tests/test_inventory_fifo.py::TestInventoryFIFOCharacterization::test_single_entry_point_exists - TypeError: 'max_users' is an invalid keyword argumen...
+ERROR tests/test_inventory_fifo.py::TestInventoryFIFOCharacterization::test_fifo_deduction_order - TypeError: 'max_users' is an invalid keyword argumen...
+ERROR tests/test_inventory_fifo.py::TestInventoryFIFOCharacterization::test_inventory_adjustment_delegates_properly - TypeError: 'max_users' is an invalid keyword argumen...
+ERROR tests/test_inventory_routes_canonicalization.py::test_recount_adjustment_uses_canonical_service - TypeError: 'max_users' is an invalid keyword argumen...
+ERROR tests/test_pos_integration_canonicalization.py::test_pos_sale_uses_canonical_service - TypeError: 'max_users' is an invalid keyword argumen...
+ERROR tests/test_product_sku.py::TestProductSKUCharacterization::test_product_creation_flow - TypeError: 'max_users' is an invalid keyword argumen...
+ERROR tests/test_product_sku.py::TestProductSKUCharacterization::test_sku_generation_constraints - TypeError: 'max_users' is an invalid keyword argumen...
+ERROR tests/test_product_sku.py::TestProductSKUCharacterization::test_product_service_exists - TypeError: 'max_users' is an invalid keyword argumen...
+ERROR tests/test_product_sku.py::TestProductSKUCharacterization::test_sku_creation_validation - TypeError: 'max_users' is an invalid keyword argumen...
+ERROR tests/test_reservation_canonicalization.py::test_credit_specific_lot_called_on_reservation_release - TypeError: 'max_users' is an invalid keyword argumen...
+ERROR tests/test_reservation_canonicalization.py::test_record_audit_entry_called_for_unreserved_audit - TypeError: 'max_users' is an invalid keyword argumen...
+ERROR tests/test_signup_tiers.py::TestSignupTierCharacterization::test_signup_endpoint_exists - TypeError: 'max_users' is an invalid keyword argumen...
+ERROR tests/test_signup_tiers.py::TestSignupTierCharacterization::test_tier_bypass_behavior - TypeError: 'max_users' is an invalid keyword argumen...
+ERROR tests/test_signup_tiers.py::TestSignupTierCharacterization::test_organization_tier_assignment - TypeError: 'max_users' is an invalid keyword argumen...
+ERROR tests/test_signup_tiers.py::TestSignupTierCharacterization::test_permission_gating_exists - TypeError: 'max_users' is an invalid keyword argumen...
+ERROR tests/test_signup_tiers.py::TestSignupTierCharacterization::test_signup_service_delegation - TypeError: 'max_users' is an invalid keyword argumen...
+ERROR tests/test_stripe_webhooks.py::TestStripeWebhookCharacterization::test_stripe_service_exists - TypeError: 'max_users' is an invalid keyword argumen...
+ERROR tests/test_stripe_webhooks.py::TestStripeWebhookCharacterization::test_webhook_signature_verification_path_exists - TypeError: 'max_users' is an invalid keyword argumen...
+ERROR tests/test_stripe_webhooks.py::TestStripeWebhookCharacterization::test_webhook_idempotency_behavior - TypeError: 'max_users' is an invalid keyword argumen...
+ERROR tests/test_stripe_webhooks.py::TestStripeWebhookCharacterization::test_stripe_service_methods_exist - TypeError: 'max_users' is an invalid keyword argumen...
+= 1 failed, 3 passed, 48 warnings, 45 errors in 50.38s ==
