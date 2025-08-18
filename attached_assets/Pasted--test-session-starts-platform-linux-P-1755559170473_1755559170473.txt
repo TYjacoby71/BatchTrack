@@ -1,0 +1,171 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.13, pytest-8.3.5, pluggy-1.5.0 -- /home/runner/workspace/.pythonlibs/bin/python
+cachedir: .pytest_cache
+rootdir: /home/runner/workspace
+collected 1 item                                                               
+
+tests/test_inventory_routes_canonicalization.py::TestInventoryRoutesCanonicalService::test_adjust_inventory_initial_stock_calls_canonical_service FAILED [100%]
+
+======================================= FAILURES ========================================
+_ TestInventoryRoutesCanonicalService.test_adjust_inventory_initial_stock_calls_canonical_service _
+
+self = <tests.test_inventory_routes_canonicalization.TestInventoryRoutesCanonicalService object at 0x7fb50d5f5c90>
+app = <Flask 'app'>, client = <FlaskClient <Flask 'app'>>
+
+    def test_adjust_inventory_initial_stock_calls_canonical_service(self, app, client):
+        """Test that initial stock adjustment uses canonical inventory service"""
+    
+        with app.app_context():
+            # Create all tables
+            db.create_all()
+    
+            # Create subscription tier first (needed for middleware)
+            from app.models.subscription_tier import SubscriptionTier
+            test_tier = SubscriptionTier(
+                name='Test Tier',
+                key='test_tier',
+                is_billing_exempt=True,  # Bypass billing checks
+                billing_provider='exempt',
+                user_limit=10
+            )
+            db.session.add(test_tier)
+            db.session.flush()
+    
+            # Create a real test organization with subscription tier
+            test_org = Organization(
+                name='Test Organization',
+                subscription_tier_id=test_tier.id,
+                billing_status='active'  # Ensure billing is active
+            )
+            db.session.add(test_org)
+            db.session.flush()  # Get the ID
+    
+            # Create a real test user
+            test_user = User(
+                username='testuser_inventory',
+                email='test_inventory@example.com',
+                organization_id=test_org.id,
+                user_type='customer',
+                is_active=True,
+                password_hash='test_hash'
+            )
+            db.session.add(test_user)
+            db.session.flush()
+    
+            # Create a test ingredient category
+            test_category = IngredientCategory(
+                name='Test Category',
+                organization_id=test_org.id
+            )
+            db.session.add(test_category)
+            db.session.flush()
+    
+            # Create a real inventory item with no history
+            test_item = InventoryItem(
+                name='Test Ingredient',
+                type='ingredient',
+                unit='g',
+                cost_per_unit=2.5,
+                is_perishable=False,
+                organization_id=test_org.id,
+                category_id=test_category.id,
+                quantity=0.0  # Start with zero quantity
+            )
+            db.session.add(test_item)
+            db.session.commit()
+    
+            # Patch the canonical service to track calls
+            with patch('app.blueprints.inventory.routes.process_inventory_adjustment') as mock_process:
+                mock_process.return_value = (True, "Success")
+    
+                # Log in the test user properly
+                with client.session_transaction() as sess:
+                    sess['_user_id'] = str(test_user.id)
+                    sess['_fresh'] = True
+    
+                # Make POST request to adjust inventory
+>               response = client.post(f'/inventory/adjust/{test_item.id}', data={
+                    'adjustment_type': 'restock',
+                    'quantity': '100.0',
+                    'input_unit': 'g',
+                    'notes': 'Initial stock',
+                    'cost_entry_type': 'per_unit',
+                    'cost_per_unit': '3.0'
+                }, follow_redirects=False)
+
+tests/test_inventory_routes_canonicalization.py:85: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+.pythonlibs/lib/python3.11/site-packages/werkzeug/test.py:1167: in post
+    return self.open(*args, **kw)
+.pythonlibs/lib/python3.11/site-packages/flask/testing.py:235: in open
+    response = super().open(
+.pythonlibs/lib/python3.11/site-packages/werkzeug/test.py:1116: in open
+    response_parts = self.run_wsgi_app(request.environ, buffered=buffered)
+.pythonlibs/lib/python3.11/site-packages/werkzeug/test.py:988: in run_wsgi_app
+    rv = run_wsgi_app(self.application, environ, buffered=buffered)
+.pythonlibs/lib/python3.11/site-packages/werkzeug/test.py:1264: in run_wsgi_app
+    app_rv = app(environ, start_response)
+.pythonlibs/lib/python3.11/site-packages/flask/app.py:1536: in __call__
+    return self.wsgi_app(environ, start_response)
+.pythonlibs/lib/python3.11/site-packages/flask/app.py:1514: in wsgi_app
+    response = self.handle_exception(e)
+.pythonlibs/lib/python3.11/site-packages/flask/app.py:1511: in wsgi_app
+    response = self.full_dispatch_request()
+.pythonlibs/lib/python3.11/site-packages/flask/app.py:919: in full_dispatch_request
+    rv = self.handle_user_exception(e)
+.pythonlibs/lib/python3.11/site-packages/flask/app.py:917: in full_dispatch_request
+    rv = self.dispatch_request()
+.pythonlibs/lib/python3.11/site-packages/flask/app.py:902: in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+app/utils/permissions.py:73: in decorated_function
+    if has_permission(current_user, permission_name):
+app/utils/permissions.py:189: in has_permission
+    return AuthorizationHierarchy.check_user_authorization(user, permission_name)
+app/utils/permissions.py:360: in check_user_authorization
+    subscription_ok, reason = AuthorizationHierarchy.check_subscription_standing(organization)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+organization = <Organization 2>
+
+    @staticmethod
+    def check_subscription_standing(organization):
+        """
+        Step 1: Check if subscription is in good standing
+        """
+        if not organization:
+            return False, "No organization"
+    
+        # Exempt organizations have access
+        if organization.effective_subscription_tier == 'exempt':
+            return True, "Exempt status"
+    
+        # Check if organization has valid subscription tier
+        if not organization.tier:
+            return False, "No subscription tier assigned"
+    
+        # Check if tier is available
+>       if not organization.tier.is_available:
+E       AttributeError: 'SubscriptionTier' object has no attribute 'is_available'
+
+app/utils/permissions.py:305: AttributeError
+---------------------------------- Captured log setup -----------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+--------------------------------- Captured stdout call ----------------------------------
+--- EXECUTING CORRECT MIDDLEWARE ---
+=================================== warnings summary ====================================
+tests/test_inventory_routes_canonicalization.py::TestInventoryRoutesCanonicalService::test_adjust_inventory_initial_stock_calls_canonical_service
+  /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_limiter/extension.py:333: UserWarning: Using the in-memory storage for tracking rate limits as no storage was explicitly specified. This is not recommended for production use. See: https://flask-limiter.readthedocs.io#configuring-a-storage-backend for documentation about configuring the storage backend.
+    warnings.warn(
+
+tests/test_inventory_routes_canonicalization.py::TestInventoryRoutesCanonicalService::test_adjust_inventory_initial_stock_calls_canonical_service
+  /home/runner/workspace/app/utils/permissions.py:225: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    return Organization.query.get(org_id)
+
+tests/test_inventory_routes_canonicalization.py::TestInventoryRoutesCanonicalService::test_adjust_inventory_initial_stock_calls_canonical_service
+  /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_sqlalchemy/extension.py:881: SAWarning: Can't sort tables for DROP; an unresolvable foreign key dependency exists between tables: batch, product_sku; and backend does not support ALTER.  To restore at least a partial sort, apply use_alter=True to ForeignKey and ForeignKeyConstraint objects involved in the cycle to mark these as known cycles that will be ignored.
+    getattr(metadata, op_name)(bind=engine)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+================================ short test summary info ================================
+FAILED tests/test_inventory_routes_canonicalization.py::TestInventoryRoutesCanonicalService::test_adjust_inventory_initial_stock_calls_canonical_service - AttributeError: 'SubscriptionTier' object has no attribute 'is_available'
+============================= 1 failed, 3 warnings in 5.55s =============================
