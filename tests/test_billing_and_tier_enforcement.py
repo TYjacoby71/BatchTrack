@@ -102,23 +102,22 @@ class TestBillingAndTierEnforcement:
 
             # ACT
             # Log the user in and try to access the protected route
-            with client:
-                with client.session_transaction() as sess:
-                    sess['_user_id'] = str(test_user.id)
-                    sess['_fresh'] = True
+            with client.session_transaction() as sess:
+                sess['_user_id'] = str(test_user.id)
+                sess['_fresh'] = True
 
-                # Debug: Verify the org and tier are set up correctly
-                print(f"DEBUG: User {test_user.id}, Org billing_status={org.billing_status}")
-                print(f"DEBUG: Tier exempt={org.subscription_tier.is_billing_exempt if org.subscription_tier else 'None'}")
+            # Debug: Verify the org and tier are set up correctly
+            print(f"DEBUG: User {test_user.id}, Org billing_status={org.billing_status}")
+            print(f"DEBUG: Tier exempt={org.subscription_tier.is_billing_exempt if org.subscription_tier else 'None'}")
 
-                response = client.get('/_protected_dashboard')
+            response = client.get('/_protected_dashboard')
 
-                # ASSERT
-                assert response.status_code == expected_status_code
+            # ASSERT
+            assert response.status_code == expected_status_code
 
-                # If redirected, ensure it's to the correct billing page
-                if expected_status_code == 302:
-                    assert '/billing/upgrade' in response.location or '/billing' in response.location
+            # If redirected, ensure it's to the correct billing page
+            if expected_status_code == 302:
+                assert '/billing/upgrade' in response.location or '/billing' in response.location
 
     def test_developer_can_masquerade_regardless_of_billing(self, app, client):
         """

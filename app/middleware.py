@@ -27,10 +27,16 @@ def register_middleware(app):
 
         # Debug: Track middleware execution
         print(f"MIDDLEWARE DEBUG: Processing {request.method} {request.path}, endpoint={request.endpoint}")
-        print(f"MIDDLEWARE DEBUG: User authenticated={current_user.is_authenticated}")
+        
+        # Force reload current_user to ensure fresh session data
+        from flask_login import current_user as fresh_current_user
+
+        # Check if user is authenticated
+        user_authenticated = hasattr(fresh_current_user, 'is_authenticated') and fresh_current_user.is_authenticated
+        print(f"MIDDLEWARE DEBUG: User authenticated={user_authenticated}")
 
         # 2. Check for authentication. Everything from here on requires a logged-in user.
-        if not current_user.is_authenticated:
+        if not user_authenticated:
             print(f"MIDDLEWARE DEBUG: User not authenticated, checking if API request")
             # Check if this is an API request (inline to avoid circular imports)
             if (request.is_json or
@@ -41,7 +47,7 @@ def register_middleware(app):
             return redirect(url_for('auth.login', next=request.url))
 
         # 3. Handle developer "super admin" and masquerade logic.
-        if getattr(current_user, 'user_type', None) == 'developer':
+        if getattr(fresh_current_user, 'user_type', None) == 'developer':
             selected_org_id = session.get("dev_selected_org_id")
             masquerade_org_id = session.get("masquerade_org_id")  # Support both session keys
 
