@@ -51,7 +51,7 @@ def upgrade():
                type_=sa.Boolean(),
                nullable=False)
         batch_op.alter_column('billing_provider',
-               existing_type=sa.NullType(),
+               existing_type=sa.String(32),
                nullable=False)
         batch_op.alter_column('is_billing_exempt',
                existing_type=sa.NUMERIC(),
@@ -133,7 +133,7 @@ def downgrade():
                type_=sa.NUMERIC(),
                nullable=True)
         batch_op.alter_column('billing_provider',
-               existing_type=sa.NullType(),
+               existing_type=sa.String(32),
                nullable=True)
         batch_op.alter_column('is_customer_facing',
                existing_type=sa.Boolean(),
