@@ -23,6 +23,9 @@ class TestInventoryRoutesCanonicalService:
     @pytest.fixture
     def app(self):
         app = create_app({'TESTING': True, 'SQLALCHEMY_DATABASE_URI': 'sqlite:///:memory:'})
+        with app.app_context():
+            # Create all database tables
+            db.create_all()
         return app
 
     @pytest.fixture
