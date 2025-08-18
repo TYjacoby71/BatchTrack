@@ -2,8 +2,7 @@ import pytest
 from unittest.mock import patch, MagicMock
 from app import create_app
 from app.extensions import db
-from app.models.user import User
-from app.models.organization import Organization
+from app.models.models import User, Organization
 
 
 # Helper function to create a mock user with organization
