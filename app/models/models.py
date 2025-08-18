@@ -97,7 +97,7 @@ class Organization(db.Model):
     # Billing fields
     stripe_customer_id = db.Column(db.String(255), nullable=True)
     whop_license_key = db.Column(db.String(255), nullable=True)
-    billing_status = db.Column(db.String(50), default='active')  # active, suspended, cancelled
+    billing_status = db.Column(db.String(50), default='active', nullable=False)  # active, suspended, cancelled
 
     # Offline support
     last_online_sync = db.Column(db.DateTime, nullable=True)
