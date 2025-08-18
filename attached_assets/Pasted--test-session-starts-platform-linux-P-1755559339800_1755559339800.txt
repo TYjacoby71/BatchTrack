@@ -1,0 +1,655 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.13, pytest-8.3.5, pluggy-1.5.0 -- /home/runner/workspace/.pythonlibs/bin/python
+cachedir: .pytest_cache
+rootdir: /home/runner/workspace
+collected 49 items                                                                      
+
+tests/test_audit_canonicalization.py::test_api_reservation_routes_uses_canonical_audit PASSED [  2%]
+tests/test_audit_canonicalization.py::test_products_routes_uses_canonical_audit PASSED [  4%]
+tests/test_auth_permissions.py::TestAuthPermissions::test_permission_required_decorator_allows_with_permission PASSED [  6%]
+tests/test_auth_permissions.py::TestAuthPermissions::test_permission_required_returns_json_for_api FAILED [  8%]
+tests/test_auth_permissions.py::TestAuthPermissions::test_any_permission_required_decorator PASSED [ 10%]
+tests/test_auth_permissions.py::TestAuthPermissions::test_tier_required_decorator PASSED [ 12%]
+tests/test_auth_permissions.py::TestAuthPermissions::test_user_has_any_permission_method PASSED [ 14%]
+tests/test_auth_permissions.py::TestAuthPermissions::test_api_unauth_returns_json_401 FAILED [ 16%]
+tests/test_auth_permissions.py::TestAuthPermissions::test_web_unauth_redirects_to_login PASSED [ 18%]
+tests/test_auth_permissions.py::TestAuthPermissions::test_csrf_token_available_in_templates PASSED [ 20%]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_tier_permission_is_the_hard_ceiling PASSED [ 22%]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[active-200] PASSED [ 24%]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[past_due-302] FAILED [ 26%]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[suspended-302] FAILED [ 28%]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[canceled-302] FAILED [ 30%]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_developer_can_masquerade_regardless_of_billing PASSED [ 32%]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_complete_security_cascade PASSED [ 34%]
+tests/test_expiration_canonicalization.py::test_expiration_service_uses_canonical_adjustment PASSED [ 36%]
+tests/test_expiration_canonicalization.py::TestExpirationCanonicalService::test_mark_fifo_expired_calls_canonical_service PASSED [ 38%]
+tests/test_expiration_canonicalization.py::TestExpirationCanonicalService::test_mark_product_expired_calls_canonical_service PASSED [ 40%]
+tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_oauth_service_exists PASSED [ 42%]
+tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_auth_login_endpoint_exists PASSED [ 44%]
+tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_auth_callback_endpoint_exists FAILED [ 46%]
+tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_oauth_state_validation_path FAILED [ 48%]
+tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_oauth_service_methods_exist PASSED [ 51%]
+tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_oauth_configuration_status PASSED [ 53%]
+tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_oauth_callback_invalid_state PASSED [ 55%]
+tests/test_inventory_fifo.py::TestInventoryFIFOCharacterization::test_single_entry_point_exists PASSED [ 57%]
+tests/test_inventory_fifo.py::TestInventoryFIFOCharacterization::test_fifo_deduction_order PASSED [ 59%]
+tests/test_inventory_fifo.py::TestInventoryFIFOCharacterization::test_inventory_adjustment_delegates_properly PASSED [ 61%]
+tests/test_inventory_routes_canonicalization.py::TestInventoryRoutesCanonicalService::test_adjust_inventory_initial_stock_calls_canonical_service FAILED [ 63%]
+tests/test_inventory_routes_canonicalization.py::test_recount_adjustment_uses_canonical_service FAILED [ 65%]
+tests/test_pos_integration_canonicalization.py::test_pos_sale_uses_canonical_service PASSED [ 67%]
+tests/test_pos_integration_canonicalization.py::TestPOSIntegrationCanonicalService::test_reserve_inventory_calls_canonical_service PASSED [ 69%]
+tests/test_product_sku.py::TestProductSKUCharacterization::test_product_creation_flow PASSED [ 71%]
+tests/test_product_sku.py::TestProductSKUCharacterization::test_sku_generation_constraints PASSED [ 73%]
+tests/test_product_sku.py::TestProductSKUCharacterization::test_product_service_exists PASSED [ 75%]
+tests/test_product_sku.py::TestProductSKUCharacterization::test_sku_creation_validation PASSED [ 77%]
+tests/test_reservation_canonicalization.py::test_credit_specific_lot_called_on_reservation_release PASSED [ 79%]
+tests/test_reservation_canonicalization.py::test_record_audit_entry_called_for_unreserved_audit PASSED [ 81%]
+tests/test_signup_tiers.py::TestSignupTierCharacterization::test_signup_endpoint_exists PASSED [ 83%]
+tests/test_signup_tiers.py::TestSignupTierCharacterization::test_tier_bypass_behavior PASSED [ 85%]
+tests/test_signup_tiers.py::TestSignupTierCharacterization::test_organization_tier_assignment PASSED [ 87%]
+tests/test_signup_tiers.py::TestSignupTierCharacterization::test_permission_gating_exists PASSED [ 89%]
+tests/test_signup_tiers.py::TestSignupTierCharacterization::test_signup_service_delegation PASSED [ 91%]
+tests/test_stripe_webhooks.py::TestStripeWebhookCharacterization::test_stripe_service_exists PASSED [ 93%]
+tests/test_stripe_webhooks.py::TestStripeWebhookCharacterization::test_webhook_signature_verification_path_exists PASSED [ 95%]
+tests/test_stripe_webhooks.py::TestStripeWebhookCharacterization::test_webhook_idempotency_behavior PASSED [ 97%]
+tests/test_stripe_webhooks.py::TestStripeWebhookCharacterization::test_stripe_service_methods_exist PASSED [100%]
+
+======================================= FAILURES ========================================
+___________ TestAuthPermissions.test_permission_required_returns_json_for_api ___________
+
+self = <tests.test_auth_permissions.TestAuthPermissions object at 0x7f115f571090>
+app = <Flask 'app'>, client = <FlaskClient <Flask 'app'>>
+
+    def test_permission_required_returns_json_for_api(self, app, client):
+        """Test that API endpoints return JSON when permission denied"""
+        with app.app_context():
+            @app.route('/api/test-perm')
+            @permission_required('test.permission')
+            def api_test_route():
+                return {'status': 'success'}
+    
+            response = client.get('/api/test-perm')
+            # Should return JSON unauthorized response
+            assert response.status_code == 401
+            assert response.is_json
+            json_data = response.get_json()
+>           assert json_data['error'] == 'Authentication required'
+E           AssertionError: assert 'unauthorized' == 'Authentication required'
+E             
+E             - Authentication required
+E             + unauthorized
+
+tests/test_auth_permissions.py:36: AssertionError
+---------------------------------- Captured log setup -----------------------------------
+INFO     app.blueprints_registry:blueprints_registry.py:123 Blueprint 'billing' registered successfully.
+INFO     app:unit_utils.py:28 BatchTrack startup
+--------------------------------- Captured stdout call ----------------------------------
+--- EXECUTING CORRECT MIDDLEWARE ---
+_________________ TestAuthPermissions.test_api_unauth_returns_json_401 __________________
+
+self = <tests.test_auth_permissions.TestAuthPermissions object at 0x7f115f572cd0>
+app = <Flask 'app'>, client = <FlaskClient <Flask 'app'>>
+
+    def test_api_unauth_returns_json_401(self, app, client):
+        """Test that API endpoints return 401 JSON when unauthorized"""
+        with app.app_context():
+            @app.route("/api/_perm_test")
+            @permission_required("some.permission")
+            def _p():
+                return {"ok": True}
+    
+            resp = client.get("/api/_perm_test", headers={"Accept": "application/json"})
+            assert resp.status_code == 401
+            assert resp.is_json
+            json_data = resp.get_json()
+>           assert json_data.get("error") == "Authentication required"
+E           AssertionError: assert 'unauthorized' == 'Authentication required'
+E             
+E             - Authentication required
+E             + unauthorized
+
+tests/test_auth_permissions.py:80: AssertionError
+---------------------------------- Captured log setup -----------------------------------
+INFO     app.blueprints_registry:blueprints_registry.py:123 Blueprint 'billing' registered successfully.
+INFO     app:unit_utils.py:28 BatchTrack startup
+--------------------------------- Captured stdout call ----------------------------------
+--- EXECUTING CORRECT MIDDLEWARE ---
+______ TestBillingAndTierEnforcement.test_billing_status_enforcement[past_due-302] ______
+
+self = <tests.test_billing_and_tier_enforcement.TestBillingAndTierEnforcement object at 0x7f115f57a2d0>
+app = <Flask 'app'>, client = <FlaskClient <Flask 'app'>>
+test_user = <User testuser_1755559268365020>, billing_status = 'past_due'
+expected_status_code = 302
+
+    @pytest.mark.parametrize("billing_status, expected_status_code", [
+        ('active', 200),
+        ('past_due', 302),
+        ('suspended', 302),
+        ('canceled', 302),
+    ])
+    def test_billing_status_enforcement(self, app, client, test_user, billing_status, expected_status_code):
+        """
+        Tests that the billing middleware blocks access for non-active billing statuses.
+        """
+        with app.app_context():
+            # ARRANGE - Use fresh database queries to avoid session issues
+            from app.models import Organization
+            from app.models.subscription_tier import SubscriptionTier
+    
+            # Get fresh objects from the database
+            fresh_user = db.session.get(User, test_user.id)
+            fresh_org = db.session.get(Organization, fresh_user.organization_id)
+    
+            # Update the organization's billing status
+            fresh_org.billing_status = billing_status
+    
+            # THE FIX: This block ensures the user is on a tier that REQUIRES a billing check.
+            if not fresh_org.subscription_tier or fresh_org.subscription_tier.is_billing_exempt:
+                # Find a non-exempt tier in the DB or create one for the test
+                non_exempt_tier = SubscriptionTier.query.filter_by(is_billing_exempt=False).first()
+                if not non_exempt_tier:
+                    non_exempt_tier = SubscriptionTier(
+                        name="Paid Tier",
+                        key="paid",
+                        is_billing_exempt=False,
+                        billing_provider='stripe',
+                        user_limit=10
+                    )
+                    db.session.add(non_exempt_tier)
+                    db.session.flush()  # Get the ID
+    
+                fresh_org.subscription_tier_id = non_exempt_tier.id
+    
+            # CRITICAL: Force commit to ensure changes are persisted
+            db.session.commit()
+    
+            # Verify the billing status was actually set by querying fresh from DB
+            verification_org = db.session.get(Organization, fresh_org.id)
+            assert verification_org.billing_status == billing_status, f"Expected {billing_status}, got {verification_org.billing_status}"
+    
+            # Create a simple protected route to test against
+            @app.route('/_protected_dashboard')
+            def _protected_dashboard():
+                return "Welcome to the dashboard", 200
+    
+            # ACT
+            # Log the user in and try to access the protected route
+            with client.session_transaction() as sess:
+                sess['_user_id'] = str(fresh_user.id)
+                sess['_fresh'] = True
+    
+            # Debug: Verify the org and tier are set up correctly
+            print(f"DEBUG: User {fresh_user.id}, Org billing_status={verification_org.billing_status}")
+            print(f"DEBUG: Tier exempt={verification_org.subscription_tier.is_billing_exempt if verification_org.subscription_tier else 'None'}")
+    
+            response = client.get('/_protected_dashboard')
+    
+            # ASSERT
+>           assert response.status_code == expected_status_code
+E           assert 200 == 302
+E            +  where 200 = <WrapperTestResponse streamed [200 OK]>.status_code
+
+tests/test_billing_and_tier_enforcement.py:134: AssertionError
+---------------------------------- Captured log setup -----------------------------------
+INFO     app.blueprints_registry:blueprints_registry.py:123 Blueprint 'billing' registered successfully.
+INFO     app:unit_utils.py:28 BatchTrack startup
+--------------------------------- Captured stdout call ----------------------------------
+DEBUG: User 2, Org billing_status=past_due
+DEBUG: Tier exempt=False
+--- EXECUTING CORRECT MIDDLEWARE ---
+_____ TestBillingAndTierEnforcement.test_billing_status_enforcement[suspended-302] ______
+
+self = <tests.test_billing_and_tier_enforcement.TestBillingAndTierEnforcement object at 0x7f115f57a410>
+app = <Flask 'app'>, client = <FlaskClient <Flask 'app'>>
+test_user = <User testuser_1755559269780766>, billing_status = 'suspended'
+expected_status_code = 302
+
+    @pytest.mark.parametrize("billing_status, expected_status_code", [
+        ('active', 200),
+        ('past_due', 302),
+        ('suspended', 302),
+        ('canceled', 302),
+    ])
+    def test_billing_status_enforcement(self, app, client, test_user, billing_status, expected_status_code):
+        """
+        Tests that the billing middleware blocks access for non-active billing statuses.
+        """
+        with app.app_context():
+            # ARRANGE - Use fresh database queries to avoid session issues
+            from app.models import Organization
+            from app.models.subscription_tier import SubscriptionTier
+    
+            # Get fresh objects from the database
+            fresh_user = db.session.get(User, test_user.id)
+            fresh_org = db.session.get(Organization, fresh_user.organization_id)
+    
+            # Update the organization's billing status
+            fresh_org.billing_status = billing_status
+    
+            # THE FIX: This block ensures the user is on a tier that REQUIRES a billing check.
+            if not fresh_org.subscription_tier or fresh_org.subscription_tier.is_billing_exempt:
+                # Find a non-exempt tier in the DB or create one for the test
+                non_exempt_tier = SubscriptionTier.query.filter_by(is_billing_exempt=False).first()
+                if not non_exempt_tier:
+                    non_exempt_tier = SubscriptionTier(
+                        name="Paid Tier",
+                        key="paid",
+                        is_billing_exempt=False,
+                        billing_provider='stripe',
+                        user_limit=10
+                    )
+                    db.session.add(non_exempt_tier)
+                    db.session.flush()  # Get the ID
+    
+                fresh_org.subscription_tier_id = non_exempt_tier.id
+    
+            # CRITICAL: Force commit to ensure changes are persisted
+            db.session.commit()
+    
+            # Verify the billing status was actually set by querying fresh from DB
+            verification_org = db.session.get(Organization, fresh_org.id)
+            assert verification_org.billing_status == billing_status, f"Expected {billing_status}, got {verification_org.billing_status}"
+    
+            # Create a simple protected route to test against
+            @app.route('/_protected_dashboard')
+            def _protected_dashboard():
+                return "Welcome to the dashboard", 200
+    
+            # ACT
+            # Log the user in and try to access the protected route
+            with client.session_transaction() as sess:
+                sess['_user_id'] = str(fresh_user.id)
+                sess['_fresh'] = True
+    
+            # Debug: Verify the org and tier are set up correctly
+            print(f"DEBUG: User {fresh_user.id}, Org billing_status={verification_org.billing_status}")
+            print(f"DEBUG: Tier exempt={verification_org.subscription_tier.is_billing_exempt if verification_org.subscription_tier else 'None'}")
+    
+            response = client.get('/_protected_dashboard')
+    
+            # ASSERT
+>           assert response.status_code == expected_status_code
+E           assert 200 == 302
+E            +  where 200 = <WrapperTestResponse streamed [200 OK]>.status_code
+
+tests/test_billing_and_tier_enforcement.py:134: AssertionError
+---------------------------------- Captured log setup -----------------------------------
+INFO     app.blueprints_registry:blueprints_registry.py:123 Blueprint 'billing' registered successfully.
+INFO     app:unit_utils.py:28 BatchTrack startup
+--------------------------------- Captured stdout call ----------------------------------
+DEBUG: User 2, Org billing_status=suspended
+DEBUG: Tier exempt=False
+--- EXECUTING CORRECT MIDDLEWARE ---
+______ TestBillingAndTierEnforcement.test_billing_status_enforcement[canceled-302] ______
+
+self = <tests.test_billing_and_tier_enforcement.TestBillingAndTierEnforcement object at 0x7f115f57a550>
+app = <Flask 'app'>, client = <FlaskClient <Flask 'app'>>
+test_user = <User testuser_1755559271381866>, billing_status = 'canceled'
+expected_status_code = 302
+
+    @pytest.mark.parametrize("billing_status, expected_status_code", [
+        ('active', 200),
+        ('past_due', 302),
+        ('suspended', 302),
+        ('canceled', 302),
+    ])
+    def test_billing_status_enforcement(self, app, client, test_user, billing_status, expected_status_code):
+        """
+        Tests that the billing middleware blocks access for non-active billing statuses.
+        """
+        with app.app_context():
+            # ARRANGE - Use fresh database queries to avoid session issues
+            from app.models import Organization
+            from app.models.subscription_tier import SubscriptionTier
+    
+            # Get fresh objects from the database
+            fresh_user = db.session.get(User, test_user.id)
+            fresh_org = db.session.get(Organization, fresh_user.organization_id)
+    
+            # Update the organization's billing status
+            fresh_org.billing_status = billing_status
+    
+            # THE FIX: This block ensures the user is on a tier that REQUIRES a billing check.
+            if not fresh_org.subscription_tier or fresh_org.subscription_tier.is_billing_exempt:
+                # Find a non-exempt tier in the DB or create one for the test
+                non_exempt_tier = SubscriptionTier.query.filter_by(is_billing_exempt=False).first()
+                if not non_exempt_tier:
+                    non_exempt_tier = SubscriptionTier(
+                        name="Paid Tier",
+                        key="paid",
+                        is_billing_exempt=False,
+                        billing_provider='stripe',
+                        user_limit=10
+                    )
+                    db.session.add(non_exempt_tier)
+                    db.session.flush()  # Get the ID
+    
+                fresh_org.subscription_tier_id = non_exempt_tier.id
+    
+            # CRITICAL: Force commit to ensure changes are persisted
+            db.session.commit()
+    
+            # Verify the billing status was actually set by querying fresh from DB
+            verification_org = db.session.get(Organization, fresh_org.id)
+            assert verification_org.billing_status == billing_status, f"Expected {billing_status}, got {verification_org.billing_status}"
+    
+            # Create a simple protected route to test against
+            @app.route('/_protected_dashboard')
+            def _protected_dashboard():
+                return "Welcome to the dashboard", 200
+    
+            # ACT
+            # Log the user in and try to access the protected route
+            with client.session_transaction() as sess:
+                sess['_user_id'] = str(fresh_user.id)
+                sess['_fresh'] = True
+    
+            # Debug: Verify the org and tier are set up correctly
+            print(f"DEBUG: User {fresh_user.id}, Org billing_status={verification_org.billing_status}")
+            print(f"DEBUG: Tier exempt={verification_org.subscription_tier.is_billing_exempt if verification_org.subscription_tier else 'None'}")
+    
+            response = client.get('/_protected_dashboard')
+    
+            # ASSERT
+>           assert response.status_code == expected_status_code
+E           assert 200 == 302
+E            +  where 200 = <WrapperTestResponse streamed [200 OK]>.status_code
+
+tests/test_billing_and_tier_enforcement.py:134: AssertionError
+---------------------------------- Captured log setup -----------------------------------
+INFO     app.blueprints_registry:blueprints_registry.py:123 Blueprint 'billing' registered successfully.
+INFO     app:unit_utils.py:28 BatchTrack startup
+--------------------------------- Captured stdout call ----------------------------------
+DEBUG: User 2, Org billing_status=canceled
+DEBUG: Tier exempt=False
+--- EXECUTING CORRECT MIDDLEWARE ---
+__________ TestGoogleOAuthCharacterization.test_auth_callback_endpoint_exists ___________
+
+self = <tests.test_google_oauth.TestGoogleOAuthCharacterization object at 0x7f115ef8b7d0>
+app = <Flask 'app'>, client = <FlaskClient <Flask 'app'>>
+
+    def test_auth_callback_endpoint_exists(self, app, client):
+        """Test that OAuth callback endpoint exists."""
+        with app.app_context():
+            response = client.get('/auth/callback')
+    
+            # Characterize current behavior
+>           assert response.status_code in [200, 302, 400, 401, 403]
+E           assert 404 in [200, 302, 400, 401, 403]
+E            +  where 404 = <WrapperTestResponse streamed [404 NOT FOUND]>.status_code
+
+tests/test_google_oauth.py:34: AssertionError
+---------------------------------- Captured log setup -----------------------------------
+INFO     app.blueprints_registry:blueprints_registry.py:123 Blueprint 'billing' registered successfully.
+INFO     app:unit_utils.py:28 BatchTrack startup
+--------------------------------- Captured stdout call ----------------------------------
+--- EXECUTING CORRECT MIDDLEWARE ---
+___________ TestGoogleOAuthCharacterization.test_oauth_state_validation_path ____________
+
+self = <tests.test_google_oauth.TestGoogleOAuthCharacterization object at 0x7f115ef8be50>
+mock_get_user = <MagicMock name='get_user_info' id='139712546801168'>
+app = <Flask 'app'>, client = <FlaskClient <Flask 'app'>>
+
+    @patch('app.services.oauth_service.OAuthService.get_user_info')
+    def test_oauth_state_validation_path(self, mock_get_user, app, client):
+        """Test that OAuth state validation exists in current flow."""
+        with app.app_context():
+            # Mock successful OAuth response
+            mock_get_user.return_value = {
+                'email': 'test@example.com',
+                'given_name': 'Test',
+                'family_name': 'User'
+            }
+    
+            # Test callback with state parameter
+            response = client.get('/auth/callback?state=test_state&code=test_code')
+    
+            # Characterize current behavior
+>           assert response.status_code in [200, 302, 400, 401, 403]
+E           assert 404 in [200, 302, 400, 401, 403]
+E            +  where 404 = <WrapperTestResponse streamed [404 NOT FOUND]>.status_code
+
+tests/test_google_oauth.py:51: AssertionError
+---------------------------------- Captured log setup -----------------------------------
+INFO     app.blueprints_registry:blueprints_registry.py:123 Blueprint 'billing' registered successfully.
+INFO     app:unit_utils.py:28 BatchTrack startup
+--------------------------------- Captured stdout call ----------------------------------
+--- EXECUTING CORRECT MIDDLEWARE ---
+_ TestInventoryRoutesCanonicalService.test_adjust_inventory_initial_stock_calls_canonical_service _
+
+self = <tests.test_inventory_routes_canonicalization.TestInventoryRoutesCanonicalService object at 0x7f115ef79190>
+app = <Flask 'app'>, client = <FlaskClient <Flask 'app'>>
+
+    def test_adjust_inventory_initial_stock_calls_canonical_service(self, app, client):
+        """Test that initial stock adjustment uses canonical inventory service"""
+    
+        with app.app_context():
+            # Create all tables
+            db.create_all()
+    
+            # Create subscription tier first (needed for middleware)
+            from app.models.subscription_tier import SubscriptionTier
+            test_tier = SubscriptionTier(
+                name='Test Tier',
+                key='test_tier',
+                description='Test tier for testing',
+                is_billing_exempt=True,  # Bypass billing checks
+                billing_provider='exempt',
+                user_limit=10,
+                is_customer_facing=True,
+                max_users=10,
+                max_monthly_batches=100
+            )
+            db.session.add(test_tier)
+            db.session.flush()
+    
+            # Create a real test organization with subscription tier
+            test_org = Organization(
+                name='Test Organization',
+                subscription_tier_id=test_tier.id,
+                billing_status='active'  # Ensure billing is active
+            )
+            db.session.add(test_org)
+            db.session.flush()  # Get the ID
+    
+            # Create a real test user
+            test_user = User(
+                username='testuser_inventory',
+                email='test_inventory@example.com',
+                organization_id=test_org.id,
+                user_type='customer',
+                is_active=True,
+                password_hash='test_hash'
+            )
+            db.session.add(test_user)
+            db.session.flush()
+    
+            # Create a test ingredient category
+            test_category = IngredientCategory(
+                name='Test Category',
+                organization_id=test_org.id
+            )
+            db.session.add(test_category)
+            db.session.flush()
+    
+            # Create a real inventory item with no history
+            test_item = InventoryItem(
+                name='Test Ingredient',
+                type='ingredient',
+                unit='g',
+                cost_per_unit=2.5,
+                is_perishable=False,
+                organization_id=test_org.id,
+                category_id=test_category.id,
+                quantity=0.0  # Start with zero quantity
+            )
+            db.session.add(test_item)
+            db.session.commit()
+    
+            # Patch the canonical service to track calls
+            with patch('app.blueprints.inventory.routes.process_inventory_adjustment') as mock_process:
+                mock_process.return_value = (True, "Success")
+    
+                # Log in the test user properly
+                with client.session_transaction() as sess:
+                    sess['_user_id'] = str(test_user.id)
+                    sess['_fresh'] = True
+    
+                # Make POST request to adjust inventory
+                response = client.post(f'/inventory/adjust/{test_item.id}', data={
+                    'adjustment_type': 'restock',
+                    'quantity': '100.0',
+                    'input_unit': 'g',
+                    'notes': 'Initial stock',
+                    'cost_entry_type': 'per_unit',
+                    'cost_per_unit': '3.0'
+                }, follow_redirects=False)
+    
+                # Print response for debugging if needed
+                print(f"Response status: {response.status_code}")
+                if response.status_code != 302:  # Expected redirect after successful adjustment
+                    print(f"Response data: {response.get_data(as_text=True)}")
+    
+                # Verify canonical service was called
+>               mock_process.assert_called_once()
+
+tests/test_inventory_routes_canonicalization.py:104: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <MagicMock name='process_inventory_adjustment' id='139712457461456'>
+
+    def assert_called_once(self):
+        """assert that the mock was called only once.
+        """
+        if not self.call_count == 1:
+            msg = ("Expected '%s' to have been called once. Called %s times.%s"
+                   % (self._mock_name or 'mock',
+                      self.call_count,
+                      self._calls_repr()))
+>           raise AssertionError(msg)
+E           AssertionError: Expected 'process_inventory_adjustment' to have been called once. Called 0 times.
+
+/nix/store/7d088dip86hlzri9sk0h78b63yfmx0a0-python3-3.11.13/lib/python3.11/unittest/mock.py:918: AssertionError
+---------------------------------- Captured log setup -----------------------------------
+INFO     app.blueprints_registry:blueprints_registry.py:123 Blueprint 'billing' registered successfully.
+INFO     app:unit_utils.py:28 BatchTrack startup
+--------------------------------- Captured stdout call ----------------------------------
+--- EXECUTING CORRECT MIDDLEWARE ---
+Response status: 302
+____________________ test_recount_adjustment_uses_canonical_service _____________________
+
+client = <FlaskClient <Flask 'app'>>, app = <Flask 'app'>
+test_user = <User testuser_1755559301002926>
+
+    def test_recount_adjustment_uses_canonical_service(client, app, test_user):
+        """Test that inventory recount routes use the canonical adjustment service"""
+    
+        with app.app_context():
+            # Create test inventory item
+            item = InventoryItem(
+                name="Test Item",
+                quantity=100,
+                unit="count",
+                organization_id=test_user.organization_id
+            )
+            db.session.add(item)
+            db.session.commit()
+    
+            # Log in the user for the test
+            with client.session_transaction() as sess:
+                sess['_user_id'] = str(test_user.id)
+                sess['_fresh'] = True
+    
+            # Mock the canonical service at the route import path
+            with patch('app.blueprints.inventory.routes.process_inventory_adjustment') as mock_adjustment:
+                mock_adjustment.return_value = True
+    
+                # Make recount request
+                response = client.post(f'/inventory/adjust/{item.id}', data={
+                    'adjustment_type': 'recount',
+                    'quantity': '80',
+                    'notes': 'Physical count adjustment'
+                })
+    
+                # Verify canonical service was called
+>               mock_adjustment.assert_called_once()
+
+tests/test_inventory_routes_canonicalization.py:148: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <MagicMock name='process_inventory_adjustment' id='139712466212368'>
+
+    def assert_called_once(self):
+        """assert that the mock was called only once.
+        """
+        if not self.call_count == 1:
+            msg = ("Expected '%s' to have been called once. Called %s times.%s"
+                   % (self._mock_name or 'mock',
+                      self.call_count,
+                      self._calls_repr()))
+>           raise AssertionError(msg)
+E           AssertionError: Expected 'process_inventory_adjustment' to have been called once. Called 0 times.
+
+/nix/store/7d088dip86hlzri9sk0h78b63yfmx0a0-python3-3.11.13/lib/python3.11/unittest/mock.py:918: AssertionError
+---------------------------------- Captured log setup -----------------------------------
+INFO     app.blueprints_registry:blueprints_registry.py:123 Blueprint 'billing' registered successfully.
+INFO     app:unit_utils.py:28 BatchTrack startup
+--------------------------------- Captured stdout call ----------------------------------
+--- EXECUTING CORRECT MIDDLEWARE ---
+=================================== warnings summary ====================================
+tests/test_audit_canonicalization.py: 2 warnings
+tests/test_auth_permissions.py: 8 warnings
+tests/test_billing_and_tier_enforcement.py: 7 warnings
+tests/test_expiration_canonicalization.py: 3 warnings
+tests/test_google_oauth.py: 7 warnings
+tests/test_inventory_fifo.py: 3 warnings
+tests/test_inventory_routes_canonicalization.py: 2 warnings
+tests/test_pos_integration_canonicalization.py: 1 warning
+tests/test_product_sku.py: 4 warnings
+tests/test_reservation_canonicalization.py: 2 warnings
+tests/test_signup_tiers.py: 5 warnings
+tests/test_stripe_webhooks.py: 4 warnings
+  /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_limiter/extension.py:333: UserWarning: Using the in-memory storage for tracking rate limits as no storage was explicitly specified. This is not recommended for production use. See: https://flask-limiter.readthedocs.io#configuring-a-storage-backend for documentation about configuring the storage backend.
+    warnings.warn(
+
+tests/test_audit_canonicalization.py: 2 warnings
+tests/test_auth_permissions.py: 8 warnings
+tests/test_billing_and_tier_enforcement.py: 7 warnings
+tests/test_expiration_canonicalization.py: 1 warning
+tests/test_google_oauth.py: 7 warnings
+tests/test_inventory_fifo.py: 3 warnings
+tests/test_inventory_routes_canonicalization.py: 2 warnings
+tests/test_pos_integration_canonicalization.py: 1 warning
+tests/test_product_sku.py: 4 warnings
+tests/test_reservation_canonicalization.py: 2 warnings
+tests/test_signup_tiers.py: 5 warnings
+tests/test_stripe_webhooks.py: 4 warnings
+  /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_sqlalchemy/extension.py:881: SAWarning: Can't sort tables for DROP; an unresolvable foreign key dependency exists between tables: batch, product_sku; and backend does not support ALTER.  To restore at least a partial sort, apply use_alter=True to ForeignKey and ForeignKeyConstraint objects involved in the cycle to mark these as known cycles that will be ignored.
+    getattr(metadata, op_name)(bind=engine)
+
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_tier_permission_is_the_hard_ceiling
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_tier_permission_is_the_hard_ceiling
+  /home/runner/workspace/app/models/models.py:323: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    role = Role.query.get(assignment.role_id)
+
+tests/test_expiration_canonicalization.py::test_expiration_service_uses_canonical_adjustment
+  /home/runner/workspace/app/blueprints/expiration/services.py:545: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    entry = InventoryHistory.query.get(entry_id)
+
+tests/test_inventory_routes_canonicalization.py::TestInventoryRoutesCanonicalService::test_adjust_inventory_initial_stock_calls_canonical_service
+tests/test_inventory_routes_canonicalization.py::test_recount_adjustment_uses_canonical_service
+  /home/runner/workspace/app/utils/permissions.py:225: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    return Organization.query.get(org_id)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+================================ short test summary info ================================
+FAILED tests/test_auth_permissions.py::TestAuthPermissions::test_permission_required_returns_json_for_api - AssertionError: assert 'unauthorized' == 'Authentication required'
+FAILED tests/test_auth_permissions.py::TestAuthPermissions::test_api_unauth_returns_json_401 - AssertionError: assert 'unauthorized' == 'Authentication required'
+FAILED tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[past_due-302] - assert 200 == 302
+FAILED tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[suspended-302] - assert 200 == 302
+FAILED tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[canceled-302] - assert 200 == 302
+FAILED tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_auth_callback_endpoint_exists - assert 404 in [200, 302, 400, 401, 403]
+FAILED tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_oauth_state_validation_path - assert 404 in [200, 302, 400, 401, 403]
+FAILED tests/test_inventory_routes_canonicalization.py::TestInventoryRoutesCanonicalService::test_adjust_inventory_initial_stock_calls_canonical_service - AssertionError: Expected 'process_inventory_adjustment' to have been called once. Ca...
+FAILED tests/test_inventory_routes_canonicalization.py::test_recount_adjustment_uses_canonical_service - AssertionError: Expected 'process_inventory_adjustment' to have been called once. Ca...
+================= 9 failed, 40 passed, 99 warnings in 80.07s (0:01:20) 

@@ -22,9 +22,13 @@ class TestInventoryRoutesCanonicalService:
             test_tier = SubscriptionTier(
                 name='Test Tier',
                 key='test_tier',
+                description='Test tier for testing',
                 is_billing_exempt=True,  # Bypass billing checks
                 billing_provider='exempt',
-                user_limit=10
+                user_limit=10,
+                is_customer_facing=True,
+                max_users=10,
+                max_monthly_batches=100
             )
             db.session.add(test_tier)
             db.session.flush()
