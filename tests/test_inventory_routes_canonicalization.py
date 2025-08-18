@@ -36,10 +36,40 @@ class TestInventoryRoutesCanonicalService:
     @patch('app.blueprints.inventory.routes.current_user')
     def test_adjust_inventory_initial_stock_calls_canonical_service(self, mock_route_user, mock_middleware_user, mock_item, mock_process, mock_user_query, app, client):
         """Test that initial stock adjustment uses canonical inventory service"""
-        
+
         with app.app_context():
-            # THE FIX: Now it's safe to create the mock user inside the app context
-            mock_user_query.get.return_value = mock_user_with_org()
+            # Create a real user in the database for the middleware to fetch
+            from app.models import db, User, Organization, SubscriptionTier
+
+            # Create tier first
+            tier = SubscriptionTier(
+                key='test_tier',
+                name='Test Tier'
+            )
+            db.session.add(tier)
+            db.session.flush()
+
+            # Create organization
+            org = Organization(
+                name='Test Org',
+                subscription_tier_id=tier.id,
+                billing_status='active'
+            )
+            db.session.add(org)
+            db.session.flush()
+
+            # Create user
+            user = User(
+                id=2,
+                email='test@example.com',
+                organization_id=org.id,
+                user_type='standard'
+            )
+            db.session.add(user)
+            db.session.commit()
+
+            # Now mock the user query to return the real user
+            mock_user_query.get.return_value = user
             # Mock the inventory item with no history
             mock_inventory_item = MagicMock()
             mock_inventory_item.id = 1
@@ -55,10 +85,10 @@ class TestInventoryRoutesCanonicalService:
             mock_user_obj = mock_user_with_org()
 
             for mock_user in [mock_route_user, mock_middleware_user]:
-                mock_user.id = mock_user_obj.id
-                mock_user.organization_id = mock_user_obj.organization_id
-                mock_user.is_authenticated = mock_user_obj.is_authenticated
-                mock_user.user_type = mock_user_obj.user_type
+                mock_user.id = 2  # Use actual integer instead of mock
+                mock_user.organization_id = 1  # Use actual integer instead of mock
+                mock_user.is_authenticated = True  # Use actual boolean instead of mock
+                mock_user.user_type = 'standard'  # Use actual string instead of mock
                 mock_user.organization = mock_user_obj.organization
 
             # Mock the user loader to return our mock user
@@ -66,7 +96,7 @@ class TestInventoryRoutesCanonicalService:
 
             # Log in the mock user for the test
             with client.session_transaction() as sess:
-                sess['_user_id'] = str(mock_route_user.id)
+                sess['_user_id'] = '2'  # Use actual string ID instead of mock
                 sess['_fresh'] = True
 
             # Mock UnifiedInventoryHistory count to simulate no existing history
