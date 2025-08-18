@@ -207,7 +207,7 @@ def adjust_inventory(item_id):
     A thin controller that delegates ALL adjustment logic to the canonical service.
     This fixes the "initial stock" bug.
     """
-    item = db.session.get(InventoryItem, item_id)
+    item = db.session.get(InventoryItem, int(item_id))
     if not item:
         flash("Inventory item not found.", "error")
         return redirect(url_for('.list_inventory'))
