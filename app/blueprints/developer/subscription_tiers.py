@@ -51,7 +51,7 @@ def manage_tiers():
             'is_billing_exempt': tier.is_billing_exempt,
             'stripe_lookup_key': tier.stripe_lookup_key,
             'whop_product_key': tier.whop_product_key,
-            'stripe_price': tier.fallback_price,  # For template compatibility
+            'stripe_price': 'N/A',  # For template compatibility - no longer stored locally
             'last_synced': None,  # TODO: Add sync tracking
             'whop_last_synced': None,  # TODO: Add whop sync tracking
             'permissions': [p.name for p in tier.permissions],
