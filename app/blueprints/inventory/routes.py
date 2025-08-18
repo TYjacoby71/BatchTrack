@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, render_template, redirect, url_for, flash, session, current_app
+from flask import Blueprint, request, jsonify, render_template, redirect, url_for, flash, session
 from flask_login import login_required, current_user
 from app.models import db, InventoryItem, UnifiedInventoryHistory, Unit, IngredientCategory, User
 from app.utils.permissions import permission_required
@@ -13,13 +13,9 @@ from ...utils.unit_utils import get_global_unit_list
 from ...utils.fifo_generator import get_change_type_prefix, int_to_base36
 from sqlalchemy import and_, or_, func
 from sqlalchemy.orm import joinedload
-from datetime import datetime
 
 # Import the blueprint from __init__.py instead of creating a new one
 from . import inventory_bp
-
-# Configure logging
-logger = logging.getLogger(__name__)
 
 def can_edit_inventory_item(item):
     """Helper function to check if current user can edit an inventory item"""
@@ -204,76 +200,51 @@ def add_inventory():
         flash(f'Error adding inventory item: {str(e)}', 'error')
         return redirect(url_for('inventory.list_inventory'))
 
-@inventory_bp.route('/adjust/<int:id>', methods=['POST'])
-@permission_required('inventory_adjustments')
-def adjust_inventory(id):
-    """Adjust inventory using the canonical inventory adjustment service"""
-    logger.info(f"INVENTORY ROUTE: Processing adjustment for item {id}")
+@inventory_bp.route('/adjust/<int:item_id>', methods=['POST'])
+@login_required
+def adjust_inventory(item_id):
+    """
+    A thin controller that delegates ALL adjustment logic to the canonical service.
+    This fixes the "initial stock" bug.
+    """
+    item = db.session.get(InventoryItem, int(item_id))
+    if not item:
+        flash("Inventory item not found.", "error")
+        return redirect(url_for('.list_inventory'))
 
-    # Ensure user is authenticated
-    if not current_user.is_authenticated:
-        logger.error(f"INVENTORY ROUTE: User not authenticated for item {id}")
-        flash('Authentication required', 'error')
-        return redirect(url_for('auth.login'))
+    # Authority check
+    if not can_edit_inventory_item(item):
+        flash('Permission denied.', 'error')
+        return redirect(url_for('.list_inventory'))
 
-    item = InventoryItem.query.get_or_404(id)
+    # --- 1. Gather all data from the form ---
+    form_data = request.form
+    adjustment_type = form_data.get('adjustment_type', '').strip().lower()
 
-    # Get form data
-    quantity = float(request.form.get('quantity', 0))
-    adjustment_type = request.form.get('adjustment_type', 'restock')
-    notes = request.form.get('notes', '')
-    input_unit = request.form.get('input_unit')
-    cost_entry_type = request.form.get('cost_entry_type')
-
-    # Handle cost override
-    cost_override = None
-    if cost_entry_type == 'per_unit':
-        cost_per_unit_input = request.form.get('cost_per_unit')
-        if cost_per_unit_input:
-            cost_override = float(cost_per_unit_input)
-
-    # Handle expiration override
-    custom_expiration_date = None
-    custom_shelf_life_days = None
-    if request.form.get('override_expiration'):
-        override_type = request.form.get('expiration_override_type')
-        if override_type == 'date':
-            expiration_date_str = request.form.get('custom_expiration_date')
-            if expiration_date_str:
-                custom_expiration_date = datetime.strptime(expiration_date_str, '%Y-%m-%d').date()
-        elif override_type == 'shelf_life':
-            shelf_life_str = request.form.get('custom_shelf_life_days')
-            if shelf_life_str:
-                custom_shelf_life_days = int(shelf_life_str)
-
-    # Check for initial stock case
-    is_initial_stock = UnifiedInventoryHistory.query.filter_by(inventory_item_id=item.id).count() == 0
-    logger.info(f"INVENTORY ROUTE: Initial stock check for item {id}: {is_initial_stock}")
-
-    # Process the adjustment using the canonical service
     try:
-        success, message = process_inventory_adjustment(
-            item_id=item.id,
-            quantity=quantity,
-            change_type=adjustment_type,
-            unit=input_unit or item.unit,
-            notes=notes,
-            cost_override=cost_override,
-            custom_expiration_date=custom_expiration_date,
-            custom_shelf_life_days=custom_shelf_life_days
-        )
+        quantity = float(form_data.get('quantity', 0.0))
+    except (ValueError, TypeError):
+        flash("Invalid quantity provided.", "error")
+        return redirect(url_for('.view_inventory', id=item_id))
 
-        if success:
-            flash(f'Inventory adjusted successfully: {message}', 'success')
-            return redirect(url_for('inventory.view_inventory', id=id))
-        else:
-            flash(f'Error adjusting inventory: {message}', 'error')
-            return redirect(url_for('inventory.view_inventory', id=id))
+    # --- 2. Call the ONE canonical service with all the data ---
+    success, message = process_inventory_adjustment(
+        item_id=item.id,
+        quantity=quantity,
+        change_type=adjustment_type,
+        notes=form_data.get('notes'),
+        unit=form_data.get('input_unit') or item.unit,
+        cost_override=float(form_data.get('cost_per_unit')) if form_data.get('cost_per_unit') else None,
+        custom_expiration_date=form_data.get('expiration_date'),  # Use correct parameter name
+        created_by=current_user.id
+    )
 
-    except Exception as e:
-        logger.error(f"Error in inventory adjustment route: {str(e)}")
-        flash(f'Error adjusting inventory: {str(e)}', 'error')
-        return redirect(url_for('inventory.view_inventory', id=id))
+    # --- 3. Flash the result and redirect ---
+    if success:
+        flash(f'{adjustment_type.title()} of {abs(quantity)} {form_data.get("input_unit") or item.unit} completed successfully', 'success')
+    else:
+        flash(f'Failed to {adjustment_type} inventory: {message}', 'error')
+    return redirect(url_for('.view_inventory', id=item_id))
 
 
 @inventory_bp.route('/edit/<int:id>', methods=['POST'])

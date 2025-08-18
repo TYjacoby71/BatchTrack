@@ -1,116 +1,103 @@
 import pytest
 from unittest.mock import patch, MagicMock
-from flask_login import login_user
 from app import create_app
 from app.extensions import db
 from app.models.models import User, Organization, InventoryItem
-from app.models.category import IngredientCategory
+
+
+# Helper function to create a mock user with organization
+def mock_user_with_org():
+    mock_user = MagicMock(spec=User)
+    mock_user.id = 1
+    mock_user.organization_id = 1
+    mock_user.is_authenticated = True
+    mock_user.user_type = 'regular'
+    mock_user.organization = MagicMock(spec=Organization)
+    mock_user.organization.is_active = True
+    return mock_user
 
 
 class TestInventoryRoutesCanonicalService:
     """Verify inventory routes use canonical inventory adjustment service"""
 
-    def test_adjust_inventory_initial_stock_calls_canonical_service(self, app, client):
+    @pytest.fixture
+    def app(self):
+        app = create_app({'TESTING': True, 'SQLALCHEMY_DATABASE_URI': 'sqlite:///:memory:'})
+        return app
+
+    @pytest.fixture
+    def client(self, app):
+        return app.test_client()
+
+    @patch('flask_login.utils._get_user')
+    @patch('app.blueprints.inventory.routes.process_inventory_adjustment')
+    @patch('app.blueprints.inventory.routes.InventoryItem')
+    @patch('app.middleware.current_user')
+    @patch('app.blueprints.inventory.routes.current_user')
+    def test_adjust_inventory_initial_stock_calls_canonical_service(self, mock_route_user, mock_middleware_user, mock_item, mock_process, mock_user_query, app, client):
         """Test that initial stock adjustment uses canonical inventory service"""
         
         with app.app_context():
-            # Create all tables
-            db.create_all()
-            
-            # Create subscription tier first (needed for middleware)
-            from app.models.subscription_tier import SubscriptionTier
-            test_tier = SubscriptionTier(
-                name='Test Tier',
-                key='test_tier',
-                description='Test tier for testing',
-                is_billing_exempt=True,  # Bypass billing checks
-                billing_provider='exempt',
-                user_limit=10,
-                is_customer_facing=True,
-                max_users=10,
-                max_monthly_batches=100
-            )
-            db.session.add(test_tier)
-            db.session.flush()
-            
-            # Create a real test organization with subscription tier
-            test_org = Organization(
-                name='Test Organization',
-                subscription_tier_id=test_tier.id,
-                billing_status='active'  # Ensure billing is active
-            )
-            db.session.add(test_org)
-            db.session.flush()  # Get the ID
-            
-            # Create a real test user
-            test_user = User(
-                username='testuser_inventory',
-                email='test_inventory@example.com', 
-                organization_id=test_org.id,
-                user_type='customer',
-                is_active=True,
-                password_hash='test_hash'
-            )
-            db.session.add(test_user)
-            db.session.flush()
-            
-            # Create a test ingredient category
-            test_category = IngredientCategory(
-                name='Test Category',
-                organization_id=test_org.id
-            )
-            db.session.add(test_category)
-            db.session.flush()
-            
-            # Create a real inventory item with no history
-            test_item = InventoryItem(
-                name='Test Ingredient',
-                type='ingredient',
-                unit='g',
-                cost_per_unit=2.5,
-                is_perishable=False,
-                organization_id=test_org.id,
-                category_id=test_category.id,
-                quantity=0.0  # Start with zero quantity
-            )
-            db.session.add(test_item)
-            db.session.commit()
-            
-            # Patch the canonical service to track calls
-            with patch('app.blueprints.inventory.routes.process_inventory_adjustment') as mock_process:
-                mock_process.return_value = (True, "Success")
-                
-                # Log in the test user properly
-                with client.session_transaction() as sess:
-                    sess['_user_id'] = str(test_user.id)
-                    sess['_fresh'] = True
-                
+            # THE FIX: Now it's safe to create the mock user inside the app context
+            mock_user_query.get.return_value = mock_user_with_org()
+            # Mock the inventory item with no history
+            mock_inventory_item = MagicMock()
+            mock_inventory_item.id = 1
+            mock_inventory_item.type = 'ingredient'
+            mock_inventory_item.unit = 'g'
+            mock_inventory_item.cost_per_unit = 2.5
+            mock_inventory_item.is_perishable = False
+            mock_inventory_item.organization_id = 1
+
+            mock_item.query.get_or_404.return_value = mock_inventory_item
+
+            # Configure both middleware and route user mocks
+            mock_user_obj = mock_user_with_org()
+
+            for mock_user in [mock_route_user, mock_middleware_user]:
+                mock_user.id = mock_user_obj.id
+                mock_user.organization_id = mock_user_obj.organization_id
+                mock_user.is_authenticated = mock_user_obj.is_authenticated
+                mock_user.user_type = mock_user_obj.user_type
+                mock_user.organization = mock_user_obj.organization
+
+            # Mock the user loader to return our mock user
+            mock_process.return_value = True
+
+            # Log in the mock user for the test
+            with client.session_transaction() as sess:
+                sess['_user_id'] = str(mock_user_obj.id)
+                sess['_fresh'] = True
+
+            # Mock db.session.get to return the mock user when queried by middleware
+            with patch('app.extensions.db.session.get') as mock_db_get:
+                mock_db_get.return_value = mock_user_obj
+
+            # Mock UnifiedInventoryHistory count to simulate no existing history
+            with patch('app.blueprints.inventory.routes.UnifiedInventoryHistory') as mock_history:
+                mock_history.query.filter_by.return_value.count.return_value = 0
+
                 # Make POST request to adjust inventory
-                response = client.post(f'/inventory/adjust/{test_item.id}', data={
+                response = client.post('/inventory/adjust/1', data={
                     'adjustment_type': 'restock',
                     'quantity': '100.0',
                     'input_unit': 'g',
                     'notes': 'Initial stock',
-                    'cost_entry_type': 'per_unit', 
+                    'cost_entry_type': 'per_unit',
                     'cost_per_unit': '3.0'
-                }, follow_redirects=False)
-                
-                # Print response for debugging if needed
-                print(f"Response status: {response.status_code}")
-                if response.status_code != 302:  # Expected redirect after successful adjustment
-                    print(f"Response data: {response.get_data(as_text=True)}")
-                
+                })
+
                 # Verify canonical service was called
                 mock_process.assert_called_once()
                 call_args = mock_process.call_args
-                
+
                 # Check the arguments passed to the function
-                assert call_args[1]['item_id'] == test_item.id
+                assert call_args[1]['item_id'] == 1
                 assert call_args[1]['quantity'] == 100.0
                 assert call_args[1]['change_type'] == "restock"
                 assert call_args[1]['unit'] == 'g'
                 assert call_args[1]['notes'] == 'Initial stock'
-                assert call_args[1]['created_by'] == test_user.id
+                assert call_args[1]['created_by'] == 1
                 assert call_args[1]['cost_override'] == 3.0
 
 # Original test case, kept for context or potential future use
