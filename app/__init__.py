@@ -93,12 +93,14 @@ def _add_core_routes(app):
     """Add core application routes"""
     @app.route("/")
     def index():
+        """Main landing page with proper routing logic"""
         if current_user.is_authenticated:
-            if current_user.user_type == "developer":
-                return redirect(url_for("developer.dashboard"))
+            if current_user.user_type == 'developer':
+                return redirect(url_for('developer.dashboard'))  # Developers go to developer dashboard
             else:
-                return redirect(url_for("app_routes.dashboard"))
-        return redirect(url_for("homepage"))
+                return redirect(url_for('app_routes.dashboard'))  # Regular users go to dashboard
+        else:
+            return redirect(url_for('auth.login'))  # Unauthenticated users go to login
 
     @app.route("/homepage")
     def homepage():

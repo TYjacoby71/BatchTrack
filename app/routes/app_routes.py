@@ -258,3 +258,4 @@ def get_server_time():
         'user_time': user_time.isoformat() if user_time else server_utc.isoformat(),
         'timestamp': server_utc.timestamp()
     })
+

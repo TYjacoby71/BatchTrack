@@ -51,8 +51,7 @@ def manage_tiers():
             'is_billing_exempt': tier.is_billing_exempt,
             'stripe_lookup_key': tier.stripe_lookup_key,
             'whop_product_key': tier.whop_product_key,
-            'fallback_price': tier.fallback_price,
-            'stripe_price': tier.fallback_price,  # For template compatibility
+            'stripe_price': 'N/A',  # For template compatibility - no longer stored locally
             'last_synced': None,  # TODO: Add sync tracking
             'whop_last_synced': None,  # TODO: Add whop sync tracking
             'permissions': [p.name for p in tier.permissions],
@@ -223,7 +222,6 @@ def edit_tier(tier_id):
             tier.is_billing_exempt = is_billing_exempt
             tier.stripe_lookup_key = stripe_key or None
             tier.whop_product_key = whop_key or None
-            tier.fallback_price = request.form.get('fallback_price', tier.fallback_price) # Keep original if not provided
 
             # Update permissions
             permission_ids = request.form.getlist('permissions', type=int)
@@ -304,7 +302,7 @@ def sync_tier_with_stripe(tier_key):
             'tier': {
                 'key': tier.key,
                 'name': tier.name,
-                'stripe_price': tier.fallback_price
+                'stripe_price': 'N/A'  # No longer stored locally
             }
         })
     except Exception as e:
@@ -350,7 +348,6 @@ def api_get_tiers():
         'billing_provider': tier.billing_provider,
         'is_billing_exempt': tier.is_billing_exempt,
         'has_valid_integration': tier.has_valid_integration,
-        'fallback_price': tier.fallback_price,
         'permissions': tier.get_permission_names(),
         'max_users': tier.max_users,
         'max_recipes': tier.max_recipes,

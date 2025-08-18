@@ -28,16 +28,27 @@ developer_bp.register_blueprint(system_roles_bp)
 developer_bp.register_blueprint(subscription_tiers_bp)
 
 @developer_bp.before_request
-def require_developer_access():
+def check_developer_access():
     """Ensure only developers can access these routes"""
     if not current_user.is_authenticated:
-        flash('Developer access required', 'error')
         return redirect(url_for('auth.login'))
 
-    # Check if user is a developer
     if current_user.user_type != 'developer':
-        flash('Developer access required', 'error')
-        return redirect(url_for('auth.login'))
+        flash('Access denied. Developer privileges required.', 'error')
+        return redirect(url_for('app_routes.dashboard'))
+
+    # Only require organization context for routes that manage specific organization data
+    # Subscription tiers management is developer-only and doesn't need org context
+    org_context_required_routes = [
+        'developer.organization_detail'  # Only organization detail view needs org context
+    ]
+
+    if (request.endpoint and 
+        request.endpoint in org_context_required_routes and
+        not session.get('dev_selected_org_id')):
+
+        flash('Please select an organization first.', 'info')
+        return redirect(url_for('developer.organizations'))
 
 @developer_bp.route('/dashboard')
 @login_required
