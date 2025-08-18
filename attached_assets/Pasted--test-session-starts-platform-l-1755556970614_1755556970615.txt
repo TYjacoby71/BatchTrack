@@ -1,0 +1,197 @@
+================================== test session starts ==================================
+platform linux -- Python 3.11.13, pytest-8.3.5, pluggy-1.5.0 -- /home/runner/workspace/.pythonlibs/bin/python
+cachedir: .pytest_cache
+rootdir: /home/runner/workspace
+collected 5 items                                                                       
+
+tests/test_inventory_fifo.py::TestInventoryFIFOCharacterization::test_single_entry_point_exists PASSED [ 20%]
+tests/test_inventory_fifo.py::TestInventoryFIFOCharacterization::test_fifo_deduction_order PASSED [ 40%]
+tests/test_inventory_fifo.py::TestInventoryFIFOCharacterization::test_inventory_adjustment_delegates_properly PASSED [ 60%]
+tests/test_inventory_routes_canonicalization.py::TestInventoryRoutesCanonicalService::test_adjust_inventory_initial_stock_calls_canonical_service FAILED [ 80%]
+tests/test_inventory_routes_canonicalization.py::test_recount_adjustment_uses_canonical_service PASSED [100%]
+
+======================================= FAILURES ========================================
+_ TestInventoryRoutesCanonicalService.test_adjust_inventory_initial_stock_calls_canonical_service _
+
+self = <tests.test_inventory_routes_canonicalization.TestInventoryRoutesCanonicalService object at 0x7ff8c02b4550>
+mock_route_user = <AsyncMock name='current_user' id='140706297474064'>
+mock_middleware_user = <AsyncMock name='current_user' id='140706302215632'>
+mock_item = <MagicMock name='InventoryItem' id='140706335057040'>
+mock_process = <MagicMock name='process_inventory_adjustment' id='140706335591120'>
+mock_user_query = <MagicMock name='_get_user' id='140706335094992'>, app = <Flask 'app'>
+client = <FlaskClient <Flask 'app'>>
+
+    @patch('flask_login.utils._get_user')
+    @patch('app.blueprints.inventory.routes.process_inventory_adjustment')
+    @patch('app.blueprints.inventory.routes.InventoryItem')
+    @patch('app.middleware.current_user')
+    @patch('app.blueprints.inventory.routes.current_user')
+    def test_adjust_inventory_initial_stock_calls_canonical_service(self, mock_route_user, mock_middleware_user, mock_item, mock_process, mock_user_query, app, client):
+        """Test that initial stock adjustment uses canonical inventory service"""
+    
+        with app.app_context():
+            # THE FIX: Now it's safe to create the mock user inside the app context
+            mock_user_query.get.return_value = mock_user_with_org()
+            # Mock the inventory item with no history
+            mock_inventory_item = MagicMock()
+            mock_inventory_item.id = 1
+            mock_inventory_item.type = 'ingredient'
+            mock_inventory_item.unit = 'g'
+            mock_inventory_item.cost_per_unit = 2.5
+            mock_inventory_item.is_perishable = False
+            mock_inventory_item.organization_id = 1
+    
+            mock_item.query.get_or_404.return_value = mock_inventory_item
+    
+            # Configure both middleware and route user mocks
+            mock_user_obj = mock_user_with_org()
+    
+            for mock_user in [mock_route_user, mock_middleware_user]:
+                mock_user.id = mock_user_obj.id
+                mock_user.organization_id = mock_user_obj.organization_id
+                mock_user.is_authenticated = mock_user_obj.is_authenticated
+                mock_user.user_type = mock_user_obj.user_type
+                mock_user.organization = mock_user_obj.organization
+    
+            # Mock the user loader to return our mock user
+            mock_process.return_value = True
+    
+            # Log in the mock user for the test
+            with client.session_transaction() as sess:
+                sess['_user_id'] = str(mock_route_user.id)
+                sess['_fresh'] = True
+    
+            # Mock UnifiedInventoryHistory count to simulate no existing history
+            with patch('app.blueprints.inventory.routes.UnifiedInventoryHistory') as mock_history:
+                mock_history.query.filter_by.return_value.count.return_value = 0
+    
+                # Make POST request to adjust inventory
+>               response = client.post('/inventory/adjust/1', data={
+                    'adjustment_type': 'restock',
+                    'quantity': '100.0',
+                    'input_unit': 'g',
+                    'notes': 'Initial stock',
+                    'cost_entry_type': 'per_unit',
+                    'cost_per_unit': '3.0'
+                })
+
+tests/test_inventory_routes_canonicalization.py:77: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+.pythonlibs/lib/python3.11/site-packages/werkzeug/test.py:1167: in post
+    return self.open(*args, **kw)
+.pythonlibs/lib/python3.11/site-packages/flask/testing.py:235: in open
+    response = super().open(
+.pythonlibs/lib/python3.11/site-packages/werkzeug/test.py:1116: in open
+    response_parts = self.run_wsgi_app(request.environ, buffered=buffered)
+.pythonlibs/lib/python3.11/site-packages/werkzeug/test.py:988: in run_wsgi_app
+    rv = run_wsgi_app(self.application, environ, buffered=buffered)
+.pythonlibs/lib/python3.11/site-packages/werkzeug/test.py:1264: in run_wsgi_app
+    app_rv = app(environ, start_response)
+.pythonlibs/lib/python3.11/site-packages/flask/app.py:1536: in __call__
+    return self.wsgi_app(environ, start_response)
+.pythonlibs/lib/python3.11/site-packages/flask/app.py:1514: in wsgi_app
+    response = self.handle_exception(e)
+.pythonlibs/lib/python3.11/site-packages/flask/app.py:1511: in wsgi_app
+    response = self.full_dispatch_request()
+.pythonlibs/lib/python3.11/site-packages/flask/app.py:919: in full_dispatch_request
+    rv = self.handle_user_exception(e)
+.pythonlibs/lib/python3.11/site-packages/flask/app.py:915: in full_dispatch_request
+    rv = self.preprocess_request()
+.pythonlibs/lib/python3.11/site-packages/flask/app.py:1291: in preprocess_request
+    rv = self.ensure_sync(before_func)()
+app/middleware.py:77: in single_security_checkpoint
+    fresh_user = db.session.get(User, fresh_current_user.id)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/scoping.py:1058: in get
+    return self._proxied.get(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py:3694: in get
+    return self._get_impl(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <sqlalchemy.orm.session.Session object at 0x7ff8bd626390>
+entity = <class 'app.models.models.User'>, primary_key_identity = []
+db_load_fn = <function load_on_pk_identity at 0x7ff8c150d440>
+
+    def _get_impl(
+        self,
+        entity: _EntityBindKey[_O],
+        primary_key_identity: _PKIdentityArgument,
+        db_load_fn: Callable[..., _O],
+        *,
+        options: Optional[Sequence[ExecutableOption]] = None,
+        populate_existing: bool = False,
+        with_for_update: ForUpdateParameter = None,
+        identity_token: Optional[Any] = None,
+        execution_options: OrmExecuteOptionsParameter = util.EMPTY_DICT,
+        bind_arguments: Optional[_BindArguments] = None,
+    ) -> Optional[_O]:
+        # convert composite types to individual args
+        if (
+            is_composite_class(primary_key_identity)
+            and type(primary_key_identity)
+            in descriptor_props._composite_getters
+        ):
+            getter = descriptor_props._composite_getters[
+                type(primary_key_identity)
+            ]
+            primary_key_identity = getter(primary_key_identity)
+    
+        mapper: Optional[Mapper[_O]] = inspect(entity)
+    
+        if mapper is None or not mapper.is_mapper:
+            raise sa_exc.ArgumentError(
+                "Expected mapped class or mapper, got: %r" % entity
+            )
+    
+        is_dict = isinstance(primary_key_identity, dict)
+        if not is_dict:
+            primary_key_identity = util.to_list(
+                primary_key_identity, default=[None]
+            )
+    
+        if len(primary_key_identity) != len(mapper.primary_key):
+>           raise sa_exc.InvalidRequestError(
+                "Incorrect number of values in identifier to formulate "
+                "primary key for session.get(); primary key columns "
+                "are %s" % ",".join("'%s'" % c for c in mapper.primary_key)
+            )
+E           sqlalchemy.exc.InvalidRequestError: Incorrect number of values in identifier to formulate primary key for session.get(); primary key columns are 'user.id'
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py:3795: InvalidRequestError
+---------------------------------- Captured log setup -----------------------------------
+INFO     app.blueprints_registry:blueprints_registry.py:123 Blueprint 'billing' registered successfully.
+INFO     app:unit_utils.py:28 BatchTrack startup
+--------------------------------- Captured stdout call ----------------------------------
+--- EXECUTING CORRECT MIDDLEWARE ---
+MIDDLEWARE DEBUG: Processing POST /inventory/adjust/1, endpoint=inventory.adjust_inventory
+MIDDLEWARE DEBUG: User authenticated=<MagicMock name='_get_user().is_authenticated' id='140706333082064'>
+=================================== warnings summary ====================================
+tests/test_inventory_fifo.py::TestInventoryFIFOCharacterization::test_single_entry_point_exists
+tests/test_inventory_fifo.py::TestInventoryFIFOCharacterization::test_fifo_deduction_order
+tests/test_inventory_fifo.py::TestInventoryFIFOCharacterization::test_inventory_adjustment_delegates_properly
+tests/test_inventory_routes_canonicalization.py::TestInventoryRoutesCanonicalService::test_adjust_inventory_initial_stock_calls_canonical_service
+tests/test_inventory_routes_canonicalization.py::test_recount_adjustment_uses_canonical_service
+  /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_limiter/extension.py:333: UserWarning: Using the in-memory storage for tracking rate limits as no storage was explicitly specified. This is not recommended for production use. See: https://flask-limiter.readthedocs.io#configuring-a-storage-backend for documentation about configuring the storage backend.
+    warnings.warn(
+
+tests/test_inventory_fifo.py::TestInventoryFIFOCharacterization::test_single_entry_point_exists
+tests/test_inventory_fifo.py::TestInventoryFIFOCharacterization::test_fifo_deduction_order
+tests/test_inventory_fifo.py::TestInventoryFIFOCharacterization::test_inventory_adjustment_delegates_properly
+tests/test_inventory_routes_canonicalization.py::test_recount_adjustment_uses_canonical_service
+  /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_sqlalchemy/extension.py:881: SAWarning: Can't sort tables for DROP; an unresolvable foreign key dependency exists between tables: batch, product_sku; and backend does not support ALTER.  To restore at least a partial sort, apply use_alter=True to ForeignKey and ForeignKeyConstraint objects involved in the cycle to mark these as known cycles that will be ignored.
+    getattr(metadata, op_name)(bind=engine)
+
+tests/test_inventory_fifo.py::TestInventoryFIFOCharacterization::test_fifo_deduction_order
+tests/test_inventory_fifo.py::TestInventoryFIFOCharacterization::test_fifo_deduction_order
+tests/test_inventory_fifo.py::TestInventoryFIFOCharacterization::test_fifo_deduction_order
+tests/test_inventory_fifo.py::TestInventoryFIFOCharacterization::test_inventory_adjustment_delegates_properly
+  /home/runner/workspace/app/services/inventory_adjustment/_audit.py:77: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    item = InventoryItem.query.get(item_id)
+
+tests/test_inventory_fifo.py::TestInventoryFIFOCharacterization::test_fifo_deduction_order
+  /home/runner/workspace/app/services/stock_check.py:71: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    item = InventoryItem.query.get(inventory_item_id)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+================================ short test summary info ================================
+FAILED tests/test_inventory_routes_canonicalization.py::TestInventoryRoutesCanonicalService::test_adjust_inventory_initial_stock_calls_canonical_service - sqlalchemy.exc.InvalidRequestError: Incorrect number of values in identifier to form...
+======================= 1 failed, 4 passed, 14 warnings in 10.97s =======================
