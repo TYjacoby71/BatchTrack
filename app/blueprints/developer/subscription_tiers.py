@@ -51,7 +51,6 @@ def manage_tiers():
             'is_billing_exempt': tier.is_billing_exempt,
             'stripe_lookup_key': tier.stripe_lookup_key,
             'whop_product_key': tier.whop_product_key,
-            'fallback_price': tier.fallback_price,
             'stripe_price': tier.fallback_price,  # For template compatibility
             'last_synced': None,  # TODO: Add sync tracking
             'whop_last_synced': None,  # TODO: Add whop sync tracking
@@ -350,7 +349,6 @@ def api_get_tiers():
         'billing_provider': tier.billing_provider,
         'is_billing_exempt': tier.is_billing_exempt,
         'has_valid_integration': tier.has_valid_integration,
-        'fallback_price': tier.fallback_price,
         'permissions': tier.get_permission_names(),
         'max_users': tier.max_users,
         'max_recipes': tier.max_recipes,
