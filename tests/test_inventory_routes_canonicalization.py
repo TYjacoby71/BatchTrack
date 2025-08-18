@@ -36,10 +36,10 @@ class TestInventoryRoutesCanonicalService:
     @patch('app.blueprints.inventory.routes.current_user')
     def test_adjust_inventory_initial_stock_calls_canonical_service(self, mock_route_user, mock_middleware_user, mock_item, mock_process, mock_user_query, app, client):
         """Test that initial stock adjustment uses canonical inventory service"""
-        # Mock the user query to return our test user
-        mock_user_query.get.return_value = mock_user_with_org()
-
+        
         with app.app_context():
+            # THE FIX: Now it's safe to create the mock user inside the app context
+            mock_user_query.get.return_value = mock_user_with_org()
             # Mock the inventory item with no history
             mock_inventory_item = MagicMock()
             mock_inventory_item.id = 1
