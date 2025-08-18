@@ -18,6 +18,12 @@ class SubscriptionTier(db.Model):
 
     # Core tier limits
     user_limit = db.Column(db.Integer, default=1, nullable=False)
+    max_users = db.Column(db.Integer, nullable=True)  # Legacy field for compatibility
+    max_recipes = db.Column(db.Integer, nullable=True)
+    max_batches = db.Column(db.Integer, nullable=True)
+    max_products = db.Column(db.Integer, nullable=True)
+    max_batchbot_requests = db.Column(db.Integer, nullable=True)  # Future AI feature
+    max_monthly_batches = db.Column(db.Integer, nullable=True)  # Monthly batch limit
 
     # Visibility control
     is_customer_facing = db.Column(db.Boolean, default=True, nullable=False)
