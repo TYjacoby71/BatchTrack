@@ -16,35 +16,88 @@ def register_middleware(app):
         print("--- EXECUTING CORRECT MIDDLEWARE ---")
 
         # 1. Fast-path for completely public endpoints.
-        # This is the ONLY list of public routes needed.
+        # Check for public routes using patterns and specific endpoints
         public_endpoints = [
             'static', 'auth.login', 'auth.signup', 'auth.logout',
-            'homepage', 'legal.privacy_policy', 'legal.terms_of_service',
+            'homepage', 'index', 'legal.privacy_policy', 'legal.terms_of_service',
             'billing.webhook'  # Stripe webhook is a critical public endpoint
         ]
-        if request.endpoint in public_endpoints:
+
+        # Check for public route patterns
+        public_patterns = [
+            '/static/',     # All static files
+            '/legal/',      # All legal pages  
+            '/homepage',    # Homepage variants
+            '/'             # Root homepage
+        ]
+
+        # Check for blueprint patterns (if we want to make entire blueprints public)
+        public_blueprints = ['legal', 'public']  # Add blueprint names here
+
+        # Check all conditions
+        is_public_endpoint = request.endpoint in public_endpoints
+        is_public_path = any(request.path.startswith(pattern) for pattern in public_patterns)
+        is_public_blueprint = request.endpoint and any(
+            request.endpoint.startswith(f'{bp}.') for bp in public_blueprints
+        )
+
+        if is_public_endpoint or is_public_path or is_public_blueprint:
             return  # Stop processing, allow the request
 
-        # Debug: Track middleware execution
-        print(f"MIDDLEWARE DEBUG: Processing {request.method} {request.path}, endpoint={request.endpoint}")
+        # Debug: Track middleware execution  
+        print(f"MIDDLEWARE DEBUG: Processing request to {request.path}")
+        print(f"MIDDLEWARE DEBUG: Endpoint: {request.endpoint}")
+        print(f"MIDDLEWARE DEBUG: Method: {request.method}")
+        print(f"MIDDLEWARE DEBUG: User authenticated: {current_user.is_authenticated if hasattr(current_user, 'is_authenticated') else False}")
 
+        # 2. Skip middleware for non-browser requests (API, webhooks, etc.)
+        if request.content_type and 'application/json' in request.content_type:
+            return
+
+        # 3. Attempt to load the current user
+        user = None
+        if hasattr(current_user, 'id') and current_user.is_authenticated:
+            try:
+                user = db.session.get(User, current_user.id)
+                print(f"MIDDLEWARE DEBUG: Loaded user {user.id if user else None}")
+            except Exception as e:
+                print(f"MIDDLEWARE DEBUG: Error loading user: {e}")
+
+        # 4. Developer users can access anything
+        if user and user.user_type == 'developer':
+            print(f"MIDDLEWARE DEBUG: Developer user {user.id} accessing {request.path}")
+            return
+
+        # 5. Check for missing organization (orphaned users)
+        if user and not user.organization_id:
+            flash('Your account is not associated with an organization. Please contact support.', 'error')
+            return redirect(url_for('auth.login'))
+
+        # 6. Handle unauthenticated users
+        if not user:
+            print(f"MIDDLEWARE DEBUG: No user found, endpoint: {request.endpoint}")
+            # For protected pages, redirect to login
+            if request.endpoint and not request.endpoint.startswith(('static', 'auth.')):
+                return redirect(url_for('auth.login'))
+            return
+
+        # 7. Organization-level checks for authenticated users
+        org = user.organization
+        if not org:
+            flash('Organization not found. Please contact support.', 'error')
+            return redirect(url_for('auth.login'))
+
+        if not org.is_active:
+            flash('Your organization account is currently inactive. Please contact support.', 'warning')
+            return redirect(url_for('auth.login'))
+
+        # 2. Check if user is authenticated (this part is for non-public endpoints)
+        # This check is now redundant due to earlier checks but kept for clarity of the original flow
         # Force reload current_user to ensure fresh session data
         from flask_login import current_user as fresh_current_user
-
-        # Check if user is authenticated
         user_authenticated = hasattr(fresh_current_user, 'is_authenticated') and fresh_current_user.is_authenticated
         print(f"MIDDLEWARE DEBUG: User authenticated={user_authenticated}")
 
-        # 2. Check for authentication. Everything from here on requires a logged-in user.
-        if not user_authenticated:
-            print(f"MIDDLEWARE DEBUG: User not authenticated, checking if API request")
-            # Check if this is an API request (inline to avoid circular imports)
-            if (request.is_json or
-                request.path.startswith('/api/') or
-                'application/json' in request.headers.get('Accept', '') or
-                'application/json' in request.headers.get('Content-Type', '')):
-                return jsonify(error="Authentication required"), 401
-            return redirect(url_for('auth.login', next=request.url))
 
         # 3. Handle developer "super admin" and masquerade logic.
         if getattr(fresh_current_user, 'user_type', None) == 'developer':

@@ -1,4 +1,3 @@
-
 import inspect
 import logging
 from datetime import datetime
@@ -41,7 +40,7 @@ def process_inventory_adjustment(
 
         # Check if this is initial stock (no existing history)
         is_initial_stock = UnifiedInventoryHistory.query.filter_by(inventory_item_id=item.id).count() == 0
-        
+
         if is_initial_stock:
             logger.info(f"INITIAL STOCK: Detected item {item_id} has no FIFO history, delegating to creation logic")
             from ._creation_logic import handle_initial_stock
@@ -65,7 +64,7 @@ def process_inventory_adjustment(
                 item.cost_per_unit = cost_override
                 db.session.commit()
                 record_audit_entry(item_id, 'cost_override', notes or f'Cost updated to {cost_override}')
-                return True
+                return True, "Cost override successful"
             return False, f"Cost override failed for item {item_id}"
 
         # Handle additive changes (restock, manual_addition, etc.)
