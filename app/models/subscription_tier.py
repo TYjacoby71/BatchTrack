@@ -66,8 +66,13 @@ class SubscriptionTier(db.Model):
 
     @property
     def is_exempt_from_billing(self):
-        """Check if this tier is exempt from billing"""
-        return self.billing_provider == 'exempt' or self.is_billing_exempt
+        """Check if this tier is exempt from billing - ONLY true if explicitly bypassed"""
+        return self.is_billing_exempt
+
+    @property
+    def requires_billing_verification(self):
+        """Check if this tier requires billing verification"""
+        return not self.is_billing_exempt
 
     @property
     def requires_stripe_billing(self):
@@ -84,7 +89,12 @@ class SubscriptionTier(db.Model):
         """Check if tier has valid billing integration"""
         if self.is_billing_exempt:
             return True
-        return bool(self.stripe_lookup_key or self.whop_product_key)
+        # For non-exempt tiers, require proper integration
+        if self.billing_provider == 'stripe':
+            return bool(self.stripe_lookup_key)
+        elif self.billing_provider == 'whop':
+            return bool(self.whop_product_key)
+        return False
 
     @property
     def can_be_deleted(self):
