@@ -228,14 +228,14 @@ def adjust_inventory(item_id):
         return redirect(url_for('.view_inventory', id=item_id))
 
     # --- 2. Call the ONE canonical service with all the data ---
-    success = process_inventory_adjustment(
+    success, message = process_inventory_adjustment(
         item_id=item.id,
         quantity=quantity,
         change_type=adjustment_type,
         notes=form_data.get('notes'),
         unit=form_data.get('input_unit') or item.unit,
         cost_override=float(form_data.get('cost_per_unit')) if form_data.get('cost_per_unit') else None,
-        expiration_date_str=form_data.get('expiration_date'),  # Let the service handle parsing
+        custom_expiration_date=form_data.get('expiration_date'),  # Use correct parameter name
         created_by=current_user.id
     )
 
@@ -243,7 +243,7 @@ def adjust_inventory(item_id):
     if success:
         flash(f'{adjustment_type.title()} of {abs(quantity)} {form_data.get("input_unit") or item.unit} completed successfully', 'success')
     else:
-        flash(f'Failed to {adjustment_type} inventory', 'error')
+        flash(f'Failed to {adjustment_type} inventory: {message}', 'error')
     return redirect(url_for('.view_inventory', id=item_id))
 
 

@@ -66,8 +66,12 @@ class TestInventoryRoutesCanonicalService:
 
             # Log in the mock user for the test
             with client.session_transaction() as sess:
-                sess['_user_id'] = str(mock_route_user.id)
+                sess['_user_id'] = str(mock_user_obj.id)
                 sess['_fresh'] = True
+
+            # Mock db.session.get to return the mock user when queried by middleware
+            with patch('app.middleware.db.session.get') as mock_db_get:
+                mock_db_get.return_value = mock_user_obj
 
             # Mock UnifiedInventoryHistory count to simulate no existing history
             with patch('app.blueprints.inventory.routes.UnifiedInventoryHistory') as mock_history:

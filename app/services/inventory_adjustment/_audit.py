@@ -1,4 +1,3 @@
-
 """
 Audit Trail Management for Inventory Adjustments
 
@@ -29,7 +28,7 @@ def audit_event(
     Uses the same internal helpers so nothing writes outside this module.
     """
     try:
-        item = InventoryItem.query.get(item_id)
+        item = db.session.get(InventoryItem, item_id)
         if not item:
             return False
 
@@ -69,12 +68,12 @@ def record_audit_entry(
 ) -> bool:
     """
     Record an audit trail entry for inventory operations.
-    
+
     This is used for operations that need to log activity but don't affect FIFO lots,
     such as cost overrides, administrative changes, etc.
     """
     try:
-        item = InventoryItem.query.get(item_id)
+        item = db.session.get(InventoryItem, item_id)
         if not item:
             logger.error(f"Cannot record audit entry - item {item_id} not found")
             return False
@@ -95,13 +94,13 @@ def record_audit_entry(
             order_id=kwargs.get('order_id'),
             sale_price=kwargs.get('sale_price')
         )
-        
+
         db.session.add(audit_entry)
         db.session.commit()
-        
+
         logger.info(f"Recorded audit entry for item {item_id}: {change_type}")
         return True
-        
+
     except Exception as e:
         db.session.rollback()
         logger.error(f"Failed to record audit entry for item {item_id}: {str(e)}")
