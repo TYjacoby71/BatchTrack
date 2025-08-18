@@ -26,7 +26,7 @@ def register_middleware(app):
         # Check for public route patterns
         public_patterns = [
             '/static/',     # All static files
-            '/legal/',      # All legal pages  
+            '/legal/',      # All legal pages
             '/homepage',    # Homepage variants
             '/'             # Root homepage
         ]
@@ -44,7 +44,7 @@ def register_middleware(app):
         if is_public_endpoint or is_public_path or is_public_blueprint:
             return  # Stop processing, allow the request
 
-        # Debug: Track middleware execution  
+        # Debug: Track middleware execution
         print(f"MIDDLEWARE DEBUG: Processing request to {request.path}")
         print(f"MIDDLEWARE DEBUG: Endpoint: {request.endpoint}")
         print(f"MIDDLEWARE DEBUG: Method: {request.method}")
@@ -143,13 +143,13 @@ def register_middleware(app):
                 # SIMPLE BILLING LOGIC:
                 # If billing bypass is NOT enabled, require active billing status
                 if not tier.is_billing_exempt:
-                    if org.billing_status != 'active':
+                    if org.billing_status not in ['active']:
                         print(f"DEBUG: Billing status '{org.billing_status}' is not active, checking endpoint '{request.endpoint}'")
                         # Do not block access to the billing page itself!
                         if request.endpoint and not request.endpoint.startswith('billing.'):
                             print(f"DEBUG: Blocking access, redirecting to billing")
                             if request.path.startswith('/api/'):
-                                return jsonify({'error': 'Billing issue detected. Please update your payment method.'}), 402
+                                return jsonify({'error': 'Billing issue - please contact support'}), 402
                             else:
                                 flash('Your subscription requires attention to continue accessing these features.', 'warning')
                                 return redirect(url_for('billing.upgrade'))

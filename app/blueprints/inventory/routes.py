@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, render_template, redirect, url_for, flash, session
+from flask import Blueprint, request, jsonify, render_template, redirect, url_for, flash, session, current_app
 from flask_login import login_required, current_user
 from app.models import db, InventoryItem, UnifiedInventoryHistory, Unit, IngredientCategory, User
 from app.utils.permissions import permission_required
@@ -17,6 +17,9 @@ from datetime import datetime
 
 # Import the blueprint from __init__.py instead of creating a new one
 from . import inventory_bp
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 def can_edit_inventory_item(item):
     """Helper function to check if current user can edit an inventory item"""
@@ -247,15 +250,14 @@ def adjust_inventory(id):
     is_initial_stock = UnifiedInventoryHistory.query.filter_by(inventory_item_id=item.id).count() == 0
     logger.info(f"INVENTORY ROUTE: Initial stock check for item {id}: {is_initial_stock}")
 
+    # Process the adjustment using the canonical service
     try:
-        # Call canonical inventory adjustment service
         success, message = process_inventory_adjustment(
-            item_id=id,
+            item_id=item.id,
             quantity=quantity,
             change_type=adjustment_type,
             unit=input_unit or item.unit,
             notes=notes,
-            created_by=current_user.id,
             cost_override=cost_override,
             custom_expiration_date=custom_expiration_date,
             custom_shelf_life_days=custom_shelf_life_days
@@ -263,15 +265,15 @@ def adjust_inventory(id):
 
         if success:
             flash(f'Inventory adjusted successfully: {message}', 'success')
-            return redirect(url_for('inventory.view_inventory_item', id=id))
+            return redirect(url_for('inventory.view_inventory', id=id))
         else:
             flash(f'Error adjusting inventory: {message}', 'error')
-            return redirect(url_for('inventory.view_inventory_item', id=id))
+            return redirect(url_for('inventory.view_inventory', id=id))
 
     except Exception as e:
         logger.error(f"Error in inventory adjustment route: {str(e)}")
         flash(f'Error adjusting inventory: {str(e)}', 'error')
-        return redirect(url_for('inventory.view_inventory_item', id=id))
+        return redirect(url_for('inventory.view_inventory', id=id))
 
 
 @inventory_bp.route('/edit/<int:id>', methods=['POST'])
