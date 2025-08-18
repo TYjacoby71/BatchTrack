@@ -3,40 +3,17 @@ from datetime import datetime, timedelta
 from app.models import db, InventoryItem
 from ._core import process_inventory_adjustment
 from ._audit import record_audit_entry
+from ._fifo_ops import _internal_add_fifo_entry_enhanced
 
 
 def handle_initial_stock(item, quantity, change_type, unit=None, notes=None, created_by=None,
                         cost_override=None, custom_expiration_date=None, custom_shelf_life_days=None, **kwargs):
-    """
-    Handles initial stock entry for items with no FIFO history.
-    This delegates ALL FIFO operations to the FIFO service - no direct lot creation.
-    """
+    """Handles the special case for an item's very first stock entry."""
     try:
-        from ._fifo_ops import _internal_add_fifo_entry_enhanced
-
         final_unit = unit or getattr(item, 'unit', 'count')
         final_notes = notes or 'Initial stock entry'
 
         if quantity == 0:
-            # Create a "priming" entry with zero quantity to establish FIFO history
-            success, error = _internal_add_fifo_entry_enhanced(
-                item_id=item.id,
-                quantity=0.01,  # Minimal priming amount
-                change_type='initial_stock',
-                unit=final_unit,
-                notes='FIFO history priming entry',
-                cost_per_unit=cost_override or item.cost_per_unit,
-                created_by=created_by,
-                **kwargs
-            )
-
-            if success:
-                # Immediately deduct the priming amount to get back to zero
-                from ._fifo_ops import _calculate_deduction_plan_internal, _execute_deduction_plan_internal
-                plan, _ = _calculate_deduction_plan_internal(item.id, 0.01, 'initial_stock_adjustment')
-                if plan:
-                    _execute_deduction_plan_internal(plan, item.id)
-
             record_audit_entry(
                 item_id=item.id,
                 change_type='initial_stock',
@@ -45,9 +22,10 @@ def handle_initial_stock(item, quantity, change_type, unit=None, notes=None, cre
             )
             return True, "Item initialized with zero stock"
 
-        # For non-zero quantities, delegate to FIFO service
+        # Use cost override if provided, otherwise use item's cost
         cost_per_unit = cost_override if cost_override is not None else item.cost_per_unit
 
+        # For non-zero initial entries, create the first FIFO lot
         success, error = _internal_add_fifo_entry_enhanced(
             item_id=item.id,
             quantity=quantity,
@@ -157,14 +135,13 @@ def create_inventory_item(form_data: dict, organization_id: int, created_by: int
         db.session.add(item)
         db.session.flush()  # Get the ID without committing
 
-        # Always create initial stock entry to prime FIFO history
+        # Use canonical adjustment service for initial stock
         notes = form_data.get('notes', '') or 'Initial stock creation'
 
-        # Use handle_initial_stock for first-time setup (handles both zero and non-zero)
-        success, message = handle_initial_stock(
-            item=item,
+        success = process_inventory_adjustment(
+            item_id=item.id,
             quantity=quantity,
-            change_type='initial_stock',
+            change_type='restock',
             unit=history_unit,
             notes=notes,
             created_by=created_by,
@@ -175,7 +152,7 @@ def create_inventory_item(form_data: dict, organization_id: int, created_by: int
 
         if not success:
             db.session.rollback()
-            return False, f'Error creating inventory item: {message}', None
+            return False, 'Error creating inventory item - FIFO sync failed', None
 
         db.session.commit()
         record_audit_entry(item.id, 'item_created', f'Created item: {name}')

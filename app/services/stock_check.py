@@ -22,7 +22,7 @@ def _scoped(query, model):
 
 
 def _entries_for_item(inventory_item_id: int, include_expired: bool):
-    item = db.session.get(InventoryItem, inventory_item_id)
+    item = InventoryItem.query.get(inventory_item_id)
     if not item:
         return [], None
 
@@ -68,7 +68,7 @@ def check_stock_availability(inventory_requirements):
         quantity_needed = requirement['quantity_needed']
         unit_needed = requirement['unit']
 
-        item = db.session.get(InventoryItem, inventory_item_id)
+        item = InventoryItem.query.get(inventory_item_id)
         if not item:
             missing_items.append({
                 'item_id': inventory_item_id,

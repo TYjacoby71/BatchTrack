@@ -301,9 +301,9 @@ class AuthorizationHierarchy:
         if not organization.tier:
             return False, "No subscription tier assigned"
 
-        # Check if tier is available (backwards compatibility for missing is_available)
-        if hasattr(organization.tier, 'is_available') and not organization.tier.is_available:
-            return False, "Subscription tier not available"
+        # Check if tier is available
+        if not organization.tier.is_available:
+            return False, "Subscription tier unavailable"
 
         # For paid tiers, check billing status
         if organization.tier.requires_stripe_billing or organization.tier.requires_whop_billing:

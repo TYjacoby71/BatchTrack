@@ -1,0 +1,266 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.13, pytest-8.3.5, pluggy-1.5.0 -- /home/runner/workspace/.pythonlibs/bin/python
+cachedir: .pytest_cache
+rootdir: /home/runner/workspace
+collected 49 items                                      
+
+tests/test_audit_canonicalization.py::test_api_reservation_routes_uses_canonical_audit PASSED [  2%]
+tests/test_audit_canonicalization.py::test_products_routes_uses_canonical_audit PASSED [  4%]
+tests/test_auth_permissions.py::TestAuthPermissions::test_permission_required_decorator_allows_with_permission PASSED [  6%]
+tests/test_auth_permissions.py::TestAuthPermissions::test_permission_required_returns_json_for_api PASSED [  8%]
+tests/test_auth_permissions.py::TestAuthPermissions::test_any_permission_required_decorator PASSED [ 10%]
+tests/test_auth_permissions.py::TestAuthPermissions::test_tier_required_decorator PASSED [ 12%]
+tests/test_auth_permissions.py::TestAuthPermissions::test_user_has_any_permission_method PASSED [ 14%]
+tests/test_auth_permissions.py::TestAuthPermissions::test_api_unauth_returns_json_401 PASSED [ 16%]
+tests/test_auth_permissions.py::TestAuthPermissions::test_web_unauth_redirects_to_login PASSED [ 18%]
+tests/test_auth_permissions.py::TestAuthPermissions::test_csrf_token_available_in_templates PASSED [ 20%]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_tier_permission_is_the_hard_ceiling PASSED [ 22%]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[active-200] PASSED [ 24%]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[past_due-302] PASSED [ 26%]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[suspended-302] PASSED [ 28%]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[canceled-302] PASSED [ 30%]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_developer_can_masquerade_regardless_of_billing PASSED [ 32%]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_complete_security_cascade PASSED [ 34%]
+tests/test_expiration_canonicalization.py::test_expiration_service_uses_canonical_adjustment PASSED [ 36%]
+tests/test_expiration_canonicalization.py::TestExpirationCanonicalService::test_mark_fifo_expired_calls_canonical_service PASSED [ 38%]
+tests/test_expiration_canonicalization.py::TestExpirationCanonicalService::test_mark_product_expired_calls_canonical_service PASSED [ 40%]
+tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_oauth_service_exists PASSED [ 42%]
+tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_auth_login_endpoint_exists PASSED [ 44%]
+tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_auth_callback_endpoint_exists PASSED [ 46%]
+tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_oauth_state_validation_path PASSED [ 48%]
+tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_oauth_service_methods_exist PASSED [ 51%]
+tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_oauth_configuration_status PASSED [ 53%]
+tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_oauth_callback_invalid_state PASSED [ 55%]
+tests/test_inventory_fifo.py::TestInventoryFIFOCharacterization::test_single_entry_point_exists PASSED [ 57%]
+tests/test_inventory_fifo.py::TestInventoryFIFOCharacterization::test_fifo_deduction_order PASSED [ 59%]
+tests/test_inventory_fifo.py::TestInventoryFIFOCharacterization::test_inventory_adjustment_delegates_properly PASSED [ 61%]
+tests/test_inventory_routes_canonicalization.py::TestInventoryRoutesCanonicalService::test_adjust_inventory_initial_stock_calls_canonical_service FAILED [ 63%]
+tests/test_inventory_routes_canonicalization.py::test_recount_adjustment_uses_canonical_service PASSED [ 65%]
+tests/test_pos_integration_canonicalization.py::test_pos_sale_uses_canonical_service PASSED [ 67%]
+tests/test_pos_integration_canonicalization.py::TestPOSIntegrationCanonicalService::test_reserve_inventory_calls_canonical_service PASSED [ 69%]
+tests/test_product_sku.py::TestProductSKUCharacterization::test_product_creation_flow PASSED [ 71%]
+tests/test_product_sku.py::TestProductSKUCharacterization::test_sku_generation_constraints PASSED [ 73%]
+tests/test_product_sku.py::TestProductSKUCharacterization::test_product_service_exists PASSED [ 75%]
+tests/test_product_sku.py::TestProductSKUCharacterization::test_sku_creation_validation PASSED [ 77%]
+tests/test_reservation_canonicalization.py::test_credit_specific_lot_called_on_reservation_release PASSED [ 79%]
+tests/test_reservation_canonicalization.py::test_record_audit_entry_called_for_unreserved_audit PASSED [ 81%]
+tests/test_signup_tiers.py::TestSignupTierCharacterization::test_signup_endpoint_exists PASSED [ 83%]
+tests/test_signup_tiers.py::TestSignupTierCharacterization::test_tier_bypass_behavior PASSED [ 85%]
+tests/test_signup_tiers.py::TestSignupTierCharacterization::test_organization_tier_assignment PASSED [ 87%]
+tests/test_signup_tiers.py::TestSignupTierCharacterization::test_permission_gating_exists PASSED [ 89%]
+tests/test_signup_tiers.py::TestSignupTierCharacterization::test_signup_service_delegation PASSED [ 91%]
+tests/test_stripe_webhooks.py::TestStripeWebhookCharacterization::test_stripe_service_exists PASSED [ 93%]
+tests/test_stripe_webhooks.py::TestStripeWebhookCharacterization::test_webhook_signature_verification_path_exists PASSED [ 95%]
+tests/test_stripe_webhooks.py::TestStripeWebhookCharacterization::test_webhook_idempotency_behavior PASSED [ 97%]
+tests/test_stripe_webhooks.py::TestStripeWebhookCharacterization::test_stripe_service_methods_exist PASSED [100%]
+
+======================= FAILURES ========================
+_ TestInventoryRoutesCanonicalService.test_adjust_inventory_initial_stock_calls_canonical_service _
+
+self = <tests.test_inventory_routes_canonicalization.TestInventoryRoutesCanonicalService object at 0x7f852f1ac2d0>
+mock_route_user = <AsyncMock name='current_user' id='140209875219344'>
+mock_middleware_user = <AsyncMock name='current_user' id='140209948359824'>
+mock_item = <MagicMock name='InventoryItem' id='140209950242448'>
+mock_process = <MagicMock name='process_inventory_adjustment' id='140209868718544'>
+mock_user_query = <MagicMock name='_get_user' id='140209953289424'>
+app = <Flask 'app'>, client = <FlaskClient <Flask 'app'>>
+
+    @patch('flask_login.utils._get_user')
+    @patch('app.blueprints.inventory.routes.process_inventory_adjustment')
+    @patch('app.blueprints.inventory.routes.InventoryItem')
+    @patch('app.middleware.current_user')
+    @patch('app.blueprints.inventory.routes.current_user')
+    def test_adjust_inventory_initial_stock_calls_canonical_service(self, mock_route_user, mock_middleware_user, mock_item, mock_process, mock_user_query, app, client):
+        """Test that initial stock adjustment uses canonical inventory service"""
+    
+        with app.app_context():
+            # THE FIX: Now it's safe to create the mock user inside the app context
+            mock_user_query.get.return_value = mock_user_with_org()
+            # Mock the inventory item with no history
+            mock_inventory_item = MagicMock()
+            mock_inventory_item.id = 1
+            mock_inventory_item.type = 'ingredient'
+            mock_inventory_item.unit = 'g'
+            mock_inventory_item.cost_per_unit = 2.5
+            mock_inventory_item.is_perishable = False
+            mock_inventory_item.organization_id = 1
+    
+            mock_item.query.get_or_404.return_value = mock_inventory_item
+    
+            # Configure both middleware and route user mocks
+            mock_user_obj = mock_user_with_org()
+    
+            for mock_user in [mock_route_user, mock_middleware_user]:
+                mock_user.id = mock_user_obj.id
+                mock_user.organization_id = mock_user_obj.organization_id
+                mock_user.is_authenticated = mock_user_obj.is_authenticated
+                mock_user.user_type = mock_user_obj.user_type
+                mock_user.organization = mock_user_obj.organization
+    
+            # Mock the user loader to return our mock user
+            mock_process.return_value = True
+    
+            # Log in the mock user for the test
+            with client.session_transaction() as sess:
+                sess['_user_id'] = str(mock_route_user.id)
+                sess['_fresh'] = True
+    
+            # Mock UnifiedInventoryHistory count to simulate no existing history
+            with patch('app.blueprints.inventory.routes.UnifiedInventoryHistory') as mock_history:
+                mock_history.query.filter_by.return_value.count.return_value = 0
+    
+                # Make POST request to adjust inventory
+>               response = client.post('/inventory/adjust/1', data={
+                    'adjustment_type': 'restock',
+                    'quantity': '100.0',
+                    'input_unit': 'g',
+                    'notes': 'Initial stock',
+                    'cost_entry_type': 'per_unit',
+                    'cost_per_unit': '3.0'
+                })
+
+tests/test_inventory_routes_canonicalization.py:77: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+.pythonlibs/lib/python3.11/site-packages/werkzeug/test.py:1167: in post
+    return self.open(*args, **kw)
+.pythonlibs/lib/python3.11/site-packages/flask/testing.py:235: in open
+    response = super().open(
+.pythonlibs/lib/python3.11/site-packages/werkzeug/test.py:1116: in open
+    response_parts = self.run_wsgi_app(request.environ, buffered=buffered)
+.pythonlibs/lib/python3.11/site-packages/werkzeug/test.py:988: in run_wsgi_app
+    rv = run_wsgi_app(self.application, environ, buffered=buffered)
+.pythonlibs/lib/python3.11/site-packages/werkzeug/test.py:1264: in run_wsgi_app
+    app_rv = app(environ, start_response)
+.pythonlibs/lib/python3.11/site-packages/flask/app.py:1536: in __call__
+    return self.wsgi_app(environ, start_response)
+.pythonlibs/lib/python3.11/site-packages/flask/app.py:1514: in wsgi_app
+    response = self.handle_exception(e)
+.pythonlibs/lib/python3.11/site-packages/flask/app.py:1511: in wsgi_app
+    response = self.full_dispatch_request()
+.pythonlibs/lib/python3.11/site-packages/flask/app.py:919: in full_dispatch_request
+    rv = self.handle_user_exception(e)
+.pythonlibs/lib/python3.11/site-packages/flask/app.py:915: in full_dispatch_request
+    rv = self.preprocess_request()
+.pythonlibs/lib/python3.11/site-packages/flask/app.py:1291: in preprocess_request
+    rv = self.ensure_sync(before_func)()
+app/middleware.py:77: in single_security_checkpoint
+    fresh_user = db.session.get(User, fresh_current_user.id)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/scoping.py:1058: in get
+    return self._proxied.get(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py:3694: in get
+    return self._get_impl(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <sqlalchemy.orm.session.Session object at 0x7f8527f27e90>
+entity = <class 'app.models.models.User'>
+primary_key_identity = []
+db_load_fn = <function load_on_pk_identity at 0x7f8530a05440>
+
+    def _get_impl(
+        self,
+        entity: _EntityBindKey[_O],
+        primary_key_identity: _PKIdentityArgument,
+        db_load_fn: Callable[..., _O],
+        *,
+        options: Optional[Sequence[ExecutableOption]] = None,
+        populate_existing: bool = False,
+        with_for_update: ForUpdateParameter = None,
+        identity_token: Optional[Any] = None,
+        execution_options: OrmExecuteOptionsParameter = util.EMPTY_DICT,
+        bind_arguments: Optional[_BindArguments] = None,
+    ) -> Optional[_O]:
+        # convert composite types to individual args
+        if (
+            is_composite_class(primary_key_identity)
+            and type(primary_key_identity)
+            in descriptor_props._composite_getters
+        ):
+            getter = descriptor_props._composite_getters[
+                type(primary_key_identity)
+            ]
+            primary_key_identity = getter(primary_key_identity)
+    
+        mapper: Optional[Mapper[_O]] = inspect(entity)
+    
+        if mapper is None or not mapper.is_mapper:
+            raise sa_exc.ArgumentError(
+                "Expected mapped class or mapper, got: %r" % entity
+            )
+    
+        is_dict = isinstance(primary_key_identity, dict)
+        if not is_dict:
+            primary_key_identity = util.to_list(
+                primary_key_identity, default=[None]
+            )
+    
+        if len(primary_key_identity) != len(mapper.primary_key):
+>           raise sa_exc.InvalidRequestError(
+                "Incorrect number of values in identifier to formulate "
+                "primary key for session.get(); primary key columns "
+                "are %s" % ",".join("'%s'" % c for c in mapper.primary_key)
+            )
+E           sqlalchemy.exc.InvalidRequestError: Incorrect number of values in identifier to formulate primary key for session.get(); primary key columns are 'user.id'
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py:3795: InvalidRequestError
+------------------ Captured log setup -------------------
+INFO     app.blueprints_registry:blueprints_registry.py:123 Blueprint 'billing' registered successfully.
+INFO     app:unit_utils.py:28 BatchTrack startup
+----------------- Captured stdout call ------------------
+--- EXECUTING CORRECT MIDDLEWARE ---
+MIDDLEWARE DEBUG: Processing POST /inventory/adjust/1, endpoint=inventory.adjust_inventory
+MIDDLEWARE DEBUG: User authenticated=<MagicMock name='_get_user().is_authenticated' id='140209867301456'>
+=================== warnings summary ====================
+tests/test_audit_canonicalization.py: 2 warnings
+tests/test_auth_permissions.py: 8 warnings
+tests/test_billing_and_tier_enforcement.py: 7 warnings
+tests/test_expiration_canonicalization.py: 3 warnings
+tests/test_google_oauth.py: 7 warnings
+tests/test_inventory_fifo.py: 3 warnings
+tests/test_inventory_routes_canonicalization.py: 2 warnings
+tests/test_pos_integration_canonicalization.py: 1 warning
+tests/test_product_sku.py: 4 warnings
+tests/test_reservation_canonicalization.py: 2 warnings
+tests/test_signup_tiers.py: 5 warnings
+tests/test_stripe_webhooks.py: 4 warnings
+  /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_limiter/extension.py:333: UserWarning: Using the in-memory storage for tracking rate limits as no storage was explicitly specified. This is not recommended for production use. See: https://flask-limiter.readthedocs.io#configuring-a-storage-backend for documentation about configuring the storage backend.
+    warnings.warn(
+
+tests/test_audit_canonicalization.py: 2 warnings
+tests/test_auth_permissions.py: 8 warnings
+tests/test_billing_and_tier_enforcement.py: 7 warnings
+tests/test_expiration_canonicalization.py: 1 warning
+tests/test_google_oauth.py: 7 warnings
+tests/test_inventory_fifo.py: 3 warnings
+tests/test_inventory_routes_canonicalization.py: 1 warning
+tests/test_pos_integration_canonicalization.py: 1 warning
+tests/test_product_sku.py: 4 warnings
+tests/test_reservation_canonicalization.py: 2 warnings
+tests/test_signup_tiers.py: 5 warnings
+tests/test_stripe_webhooks.py: 4 warnings
+  /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_sqlalchemy/extension.py:881: SAWarning: Can't sort tables for DROP; an unresolvable foreign key dependency exists between tables: batch, product_sku; and backend does not support ALTER.  To restore at least a partial sort, apply use_alter=True to ForeignKey and ForeignKeyConstraint objects involved in the cycle to mark these as known cycles that will be ignored.
+    getattr(metadata, op_name)(bind=engine)
+
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_tier_permission_is_the_hard_ceiling
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_tier_permission_is_the_hard_ceiling
+  /home/runner/workspace/app/models/models.py:323: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    role = Role.query.get(assignment.role_id)
+
+tests/test_expiration_canonicalization.py::test_expiration_service_uses_canonical_adjustment
+  /home/runner/workspace/app/blueprints/expiration/services.py:545: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    entry = InventoryHistory.query.get(entry_id)
+
+tests/test_inventory_fifo.py::TestInventoryFIFOCharacterization::test_fifo_deduction_order
+tests/test_inventory_fifo.py::TestInventoryFIFOCharacterization::test_fifo_deduction_order
+tests/test_inventory_fifo.py::TestInventoryFIFOCharacterization::test_fifo_deduction_order
+tests/test_inventory_fifo.py::TestInventoryFIFOCharacterization::test_inventory_adjustment_delegates_properly
+  /home/runner/workspace/app/services/inventory_adjustment/_audit.py:77: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    item = InventoryItem.query.get(item_id)
+
+tests/test_inventory_fifo.py::TestInventoryFIFOCharacterization::test_fifo_deduction_order
+  /home/runner/workspace/app/services/stock_check.py:71: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    item = InventoryItem.query.get(inventory_item_id)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+================ short test summary info ================
+FAILED tests/test_inventory_routes_canonicalization.py::TestInventoryRoutesCanonicalService::test_adjust_inventory_initial_stock_calls_canonical_service - sqlalchemy.exc.InvalidRequestError: Incorrect number...
+= 1 failed, 48 passed, 101 warnings in 65.92s (0:01:05) =

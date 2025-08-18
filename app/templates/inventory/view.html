@@ -104,8 +104,8 @@
 {% include "inventory/components/edit_details_modal.html" %}
 {% include "inventory/components/modals.html" %}
 
-<!-- Initial Inventory Modal for Empty FIFO History -->
-{% if history|length == 0 %}
+<!-- Initial Inventory Modal for Empty FIFO -->
+{% if item.quantity == 0 and history|length == 0 %}
 <div class="modal fade" id="initialInventoryModal" tabindex="-1" aria-labelledby="initialInventoryModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
   <div class="modal-dialog modal-lg">
     <div class="modal-content">

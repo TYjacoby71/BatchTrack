@@ -17,8 +17,8 @@ class FIFOService:
     @staticmethod
     def calculate_deduction_plan(item_id, quantity, change_type='use'):
         """Legacy method - use process_inventory_adjustment instead"""
-        # Direct internal access should be avoided - use canonical service
-        return process_inventory_adjustment(item_id=item_id, quantity=quantity, change_type=change_type)
+        from app.services.inventory_adjustment import _calculate_deduction_plan_internal
+        return _calculate_deduction_plan_internal(item_id, quantity, change_type)
 
     @staticmethod
     def execute_deduction_plan(deduction_plan, item_id):
