@@ -36,7 +36,7 @@ def manage_tiers():
     """Main page to view all tiers directly from the database."""
     all_tiers_db = SubscriptionTier.query.order_by(SubscriptionTier.name).all()
     all_permissions = Permission.query.order_by(Permission.name).all()
-    
+
     # Convert to dictionary format expected by template
     tiers_dict = {}
     for tier in all_tiers_db:
@@ -59,9 +59,15 @@ def manage_tiers():
             'pricing_category': 'standard',  # Default value
             'billing_cycle': 'monthly',  # Default value
             'requires_stripe_billing': tier.requires_stripe_billing,
-            'supports_whop': bool(tier.whop_product_key)
+            'supports_whop': bool(tier.whop_product_key),
+            'max_users': tier.max_users,
+            'max_recipes': tier.max_recipes,
+            'max_batches': tier.max_batches,
+            'max_products': tier.max_products,
+            'max_batchbot_requests': tier.max_batchbot_requests,
+            'max_monthly_batches': tier.max_monthly_batches
         }
-    
+
     return render_template('developer/subscription_tiers.html',
                            tiers=tiers_dict,
                            tiers_dict=tiers_dict,
@@ -76,10 +82,27 @@ def create_tier():
         # Data Collection
         key = request.form.get('key', '').strip()
         name = request.form.get('name', '').strip()
+        description = request.form.get('description', '')
+        user_limit = int(request.form.get('user_limit', 1))
+        max_users = request.form.get('max_users', None)
+        max_recipes = request.form.get('max_recipes', None)
+        max_batches = request.form.get('max_batches', None)
+        max_products = request.form.get('max_products', None)
+        max_batchbot_requests = request.form.get('max_batchbot_requests', None)
+        max_monthly_batches = request.form.get('max_monthly_batches', None)
+
         billing_provider = request.form.get('billing_provider', 'exempt')
         is_billing_exempt = 'is_billing_exempt' in request.form
         stripe_key = request.form.get('stripe_lookup_key', '').strip()
         whop_key = request.form.get('whop_product_key', '').strip()
+
+        # Convert limit fields to integers or None if empty
+        max_users = int(max_users) if max_users and max_users.isdigit() else None
+        max_recipes = int(max_recipes) if max_recipes and max_recipes.isdigit() else None
+        max_batches = int(max_batches) if max_batches and max_batches.isdigit() else None
+        max_products = int(max_products) if max_products and max_products.isdigit() else None
+        max_batchbot_requests = int(max_batchbot_requests) if max_batchbot_requests and max_batchbot_requests.isdigit() else None
+        max_monthly_batches = int(max_monthly_batches) if max_monthly_batches and max_monthly_batches.isdigit() else None
 
         # Validation
         if not key or not name:
@@ -99,38 +122,35 @@ def create_tier():
                 flash('A Whop Product Key is required for Whop-billed tiers.', 'error')
                 return redirect(url_for('.create_tier'))
 
-        # Create and Save
-        try:
-            new_tier = SubscriptionTier(
-                key=key,
-                name=name,
-                description=request.form.get('description', ''),
-                user_limit=int(request.form.get('user_limit', 1)),
-                is_customer_facing='is_customer_facing' in request.form,
-                billing_provider=billing_provider,
-                is_billing_exempt=is_billing_exempt,
-                stripe_lookup_key=stripe_key or None,
-                whop_product_key=whop_key or None,
-                fallback_price=request.form.get('fallback_price', '$0')
-            )
+        # Database Insertion
+        tier = SubscriptionTier(
+            key=key,
+            name=name,
+            description=description,
+            user_limit=user_limit,
+            max_users=max_users,
+            max_recipes=max_recipes,
+            max_batches=max_batches,
+            max_products=max_products,
+            max_batchbot_requests=max_batchbot_requests,
+            max_monthly_batches=max_monthly_batches,
+            billing_provider=billing_provider,
+            is_billing_exempt=is_billing_exempt,
+            stripe_lookup_key=stripe_key if stripe_key else None,
+            whop_product_key=whop_key if whop_key else None
+        )
 
-            # Add permissions
-            permission_ids = request.form.getlist('permissions', type=int)
-            if permission_ids:
-                new_tier.permissions = Permission.query.filter(Permission.id.in_(permission_ids)).all()
+        # Add permissions
+        permission_ids = request.form.getlist('permissions', type=int)
+        if permission_ids:
+            tier.permissions = Permission.query.filter(Permission.id.in_(permission_ids)).all()
 
-            db.session.add(new_tier)
-            db.session.commit()
+        db.session.add(tier)
+        db.session.commit()
 
-            logger.info(f'Created subscription tier: {name} ({key})')
-            flash(f'Subscription tier "{name}" created successfully.', 'success')
-            return redirect(url_for('.manage_tiers'))
-
-        except Exception as e:
-            db.session.rollback()
-            logger.error(f'Error creating tier: {e}')
-            flash('Error creating tier. Please try again.', 'error')
-            return redirect(url_for('.create_tier'))
+        logger.info(f'Created subscription tier: {name} ({key})')
+        flash(f'Subscription tier "{name}" created successfully.', 'success')
+        return redirect(url_for('.manage_tiers'))
 
     # For GET request
     all_permissions = Permission.query.order_by(Permission.name).all()
@@ -166,13 +186,32 @@ def edit_tier(tier_id):
         try:
             tier.name = request.form.get('name', tier.name)
             tier.description = request.form.get('description', tier.description)
-            tier.user_limit = int(request.form.get('user_limit', 1))
-            tier.is_customer_facing = 'is_customer_facing' in request.form
+            tier.user_limit = int(request.form.get('user_limit', tier.user_limit)) # Keep original if not provided
+
+            # Update limit fields, converting to int or None
+            max_users = request.form.get('max_users', str(tier.max_users) if tier.max_users is not None else '')
+            tier.max_users = int(max_users) if max_users and max_users.isdigit() else None
+
+            max_recipes = request.form.get('max_recipes', str(tier.max_recipes) if tier.max_recipes is not None else '')
+            tier.max_recipes = int(max_recipes) if max_recipes and max_recipes.isdigit() else None
+
+            max_batches = request.form.get('max_batches', str(tier.max_batches) if tier.max_batches is not None else '')
+            tier.max_batches = int(max_batches) if max_batches and max_batches.isdigit() else None
+
+            max_products = request.form.get('max_products', str(tier.max_products) if tier.max_products is not None else '')
+            tier.max_products = int(max_products) if max_products and max_products.isdigit() else None
+
+            max_batchbot_requests = request.form.get('max_batchbot_requests', str(tier.max_batchbot_requests) if tier.max_batchbot_requests is not None else '')
+            tier.max_batchbot_requests = int(max_batchbot_requests) if max_batchbot_requests and max_batchbot_requests.isdigit() else None
+
+            max_monthly_batches = request.form.get('max_monthly_batches', str(tier.max_monthly_batches) if tier.max_monthly_batches is not None else '')
+            tier.max_monthly_batches = int(max_monthly_batches) if max_monthly_batches and max_monthly_batches.isdigit() else None
+
             tier.billing_provider = billing_provider
             tier.is_billing_exempt = is_billing_exempt
             tier.stripe_lookup_key = stripe_key or None
             tier.whop_product_key = whop_key or None
-            tier.fallback_price = request.form.get('fallback_price', '$0')
+            tier.fallback_price = request.form.get('fallback_price', tier.fallback_price) # Keep original if not provided
 
             # Update permissions
             permission_ids = request.form.getlist('permissions', type=int)
@@ -239,16 +278,16 @@ def sync_tier_with_stripe(tier_key):
     tier = SubscriptionTier.query.filter_by(key=tier_key).first()
     if not tier:
         return jsonify({'success': False, 'error': 'Tier not found'}), 404
-    
+
     if not tier.stripe_lookup_key:
         return jsonify({'success': False, 'error': 'No Stripe lookup key configured'}), 400
-    
+
     try:
         # Here you would implement actual Stripe sync logic
         # For now, return success
         logger.info(f'Synced tier {tier_key} with Stripe')
         return jsonify({
-            'success': True, 
+            'success': True,
             'message': f'Successfully synced {tier.name} with Stripe',
             'tier': {
                 'key': tier.key,
@@ -268,16 +307,16 @@ def sync_tier_with_whop(tier_key):
     tier = SubscriptionTier.query.filter_by(key=tier_key).first()
     if not tier:
         return jsonify({'success': False, 'error': 'Tier not found'}), 404
-    
+
     if not tier.whop_product_key:
         return jsonify({'success': False, 'error': 'No Whop product key configured'}), 400
-    
+
     try:
         # Here you would implement actual Whop sync logic
         # For now, return success
         logger.info(f'Synced tier {tier_key} with Whop')
         return jsonify({
-            'success': True, 
+            'success': True,
             'message': f'Successfully synced {tier.name} with Whop'
         })
     except Exception as e:
@@ -300,5 +339,11 @@ def api_get_tiers():
         'is_billing_exempt': tier.is_billing_exempt,
         'has_valid_integration': tier.has_valid_integration,
         'fallback_price': tier.fallback_price,
-        'permissions': tier.get_permission_names()
+        'permissions': tier.get_permission_names(),
+        'max_users': tier.max_users,
+        'max_recipes': tier.max_recipes,
+        'max_batches': tier.max_batches,
+        'max_products': tier.max_products,
+        'max_batchbot_requests': tier.max_batchbot_requests,
+        'max_monthly_batches': tier.max_monthly_batches
     } for tier in tiers])

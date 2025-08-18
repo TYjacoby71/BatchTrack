@@ -65,6 +65,21 @@ def upgrade():
             print("   Adding whop_product_key column...")
             op.add_column('subscription_tier', sa.Column('whop_product_key', sa.String(128), nullable=True))
         
+        # Add tier limit columns
+        tier_limit_columns = [
+            ('max_users', 'Legacy max users limit'),
+            ('max_recipes', 'Maximum recipes allowed'),
+            ('max_batches', 'Maximum batches allowed'),
+            ('max_products', 'Maximum products allowed'),
+            ('max_batchbot_requests', 'Maximum AI requests allowed'),
+            ('max_monthly_batches', 'Maximum monthly batches allowed')
+        ]
+        
+        for col_name, description in tier_limit_columns:
+            if not column_exists('subscription_tier', col_name):
+                print(f"   Adding {col_name} column...")
+                op.add_column('subscription_tier', sa.Column(col_name, sa.Integer, nullable=True))
+        
         # Ensure billing_provider exists and has proper type and default
         if column_exists('subscription_tier', 'billing_provider'):
             print("   Updating billing_provider defaults...")
