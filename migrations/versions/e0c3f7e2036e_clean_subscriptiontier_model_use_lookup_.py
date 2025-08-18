@@ -47,7 +47,7 @@ def upgrade():
                existing_type=sa.INTEGER(),
                nullable=False)
         batch_op.alter_column('is_customer_facing',
-               existing_type=sa.NUMERIC(),
+               existing_type=sa.Boolean(),
                type_=sa.Boolean(),
                nullable=False)
         batch_op.alter_column('billing_provider',
@@ -137,7 +137,7 @@ def downgrade():
                nullable=True)
         batch_op.alter_column('is_customer_facing',
                existing_type=sa.Boolean(),
-               type_=sa.NUMERIC(),
+               type_=sa.Boolean(),
                nullable=True)
         batch_op.alter_column('max_monthly_batches',
                existing_type=sa.INTEGER(),
