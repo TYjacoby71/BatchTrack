@@ -16,32 +16,13 @@ def register_middleware(app):
         print("--- EXECUTING CORRECT MIDDLEWARE ---")
 
         # 1. Fast-path for completely public endpoints.
-        # Check for public routes using patterns and specific endpoints
+        # This is the ONLY list of public routes needed.
         public_endpoints = [
             'static', 'auth.login', 'auth.signup', 'auth.logout',
-            'homepage', 'index', 'legal.privacy_policy', 'legal.terms_of_service',
+            'homepage', 'legal.privacy_policy', 'legal.terms_of_service',
             'billing.webhook'  # Stripe webhook is a critical public endpoint
         ]
-        
-        # Check for public route patterns
-        public_patterns = [
-            '/static/',     # All static files
-            '/legal/',      # All legal pages  
-            '/homepage',    # Homepage variants
-            '/'             # Root homepage
-        ]
-        
-        # Check for blueprint patterns (if we want to make entire blueprints public)
-        public_blueprints = ['legal', 'public']  # Add blueprint names here
-        
-        # Check all conditions
-        is_public_endpoint = request.endpoint in public_endpoints
-        is_public_path = any(request.path.startswith(pattern) for pattern in public_patterns)
-        is_public_blueprint = request.endpoint and any(
-            request.endpoint.startswith(f'{bp}.') for bp in public_blueprints
-        )
-        
-        if is_public_endpoint or is_public_path or is_public_blueprint:
+        if request.endpoint in public_endpoints:
             return  # Stop processing, allow the request
 
         # Debug: Track middleware execution
