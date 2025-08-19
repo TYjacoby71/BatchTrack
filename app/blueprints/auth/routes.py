@@ -80,7 +80,7 @@ def login():
             if user.user_type == 'developer':
                 return redirect(url_for('developer.dashboard'))
             else:
-                return redirect(url_for('app_routes.dashboard'))
+                return redirect(url_for('dashboard.dashboard'))
         else:
             flash('Invalid username or password')
             return render_template('auth/login.html', form=form)
@@ -186,7 +186,7 @@ def oauth_callback():
             if user.user_type == 'developer':
                 return redirect(url_for('developer.dashboard'))
             else:
-                return redirect(url_for('app_routes.dashboard'))
+                return redirect(url_for('dashboard.dashboard'))
 
         else:
             # New user - store info for signup flow
