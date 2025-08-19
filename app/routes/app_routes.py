@@ -1,6 +1,7 @@
+
 from flask import Blueprint, render_template, request, redirect, url_for, session, jsonify, flash
 from ..models import Recipe, InventoryItem, Batch
-from ..services.universal_stock_check_service import universal_stock_check
+from ..services.stock_check import UniversalStockCheckService
 from flask_login import login_required, current_user
 from ..utils.permissions import require_permission, get_effective_organization_id, permission_required, any_permission_required
 from ..services.combined_inventory_alerts import CombinedInventoryAlertService
@@ -13,8 +14,22 @@ app_routes_bp = Blueprint('app_routes', __name__)
 def check_stock_for_recipe(recipe, scale=1):
     """Check stock availability for a recipe"""
     try:
-        result = universal_stock_check(recipe, scale)
-        return result['stock_check'], result['all_ok']
+        service = UniversalStockCheckService()
+        result = service.check_recipe_stock(recipe, scale)
+        
+        # Format for legacy compatibility
+        stock_check = []
+        for item in result['stock_check']:
+            stock_check.append({
+                'name': item['name'],
+                'needed': item['needed'],
+                'available': item['available'],
+                'unit': item.get('needed_unit', item.get('unit', '')),
+                'status': item['status'],
+                'type': item.get('type', 'ingredient')
+            })
+        
+        return stock_check, result['all_ok']
     except Exception as e:
         return [], False
 
@@ -106,20 +121,21 @@ def check_stock():
 
         recipe = Recipe.query.get_or_404(recipe_id)
 
-        # Use universal stock check service
-        result = universal_stock_check(recipe, scale)
-        stock_check = result['stock_check']
-        all_ok = result['all_ok']
-
+        # Use Universal Stock Check Service
+        service = UniversalStockCheckService()
+        result = service.check_recipe_stock(recipe, scale)
+        
         # Handle container validation
         container_ids = data.get('container_ids', [])
         if container_ids and isinstance(container_ids, list):
             container_check, containers_ok = check_container_availability(container_ids, scale)
-            stock_check.extend(container_check)
-            all_ok = all_ok and containers_ok
+            # Add container results to stock check
+            for container in container_check:
+                result['stock_check'].append(container)
+            result['all_ok'] = result['all_ok'] and containers_ok
 
-        status = "ok" if all_ok else "bad"
-        for item in stock_check:
+        status = "ok" if result['all_ok'] else "bad"
+        for item in result['stock_check']:
             if item["status"] == "LOW" and status != "bad":
                 status = "low"
                 break
@@ -129,15 +145,15 @@ def check_stock():
             'name': item['name'],
             'needed': item['needed'],
             'available': item['available'],
-            'unit': item['unit'],
+            'unit': item.get('needed_unit', item.get('unit', '')),
             'status': item['status'],
             'type': item.get('type', 'ingredient')
-        } for item in stock_check]
+        } for item in result['stock_check']]
 
         return jsonify({
             "stock_check": results,
             "status": status,
-            "all_ok": all_ok,
+            "all_ok": result['all_ok'],
             "recipe_name": recipe.name
         }), 200
     except Exception as e:
@@ -184,8 +200,6 @@ def api_dashboard_alerts():
         return jsonify(alert_data)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-
-
 
 @app_routes_bp.route('/fault-log')
 @login_required
@@ -258,4 +272,3 @@ def get_server_time():
         'user_time': user_time.isoformat() if user_time else server_utc.isoformat(),
         'timestamp': server_utc.timestamp()
     })
-
