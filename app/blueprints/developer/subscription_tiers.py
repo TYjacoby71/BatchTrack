@@ -40,6 +40,27 @@ def manage_tiers():
     # Convert to dictionary format expected by template
     tiers_dict = {}
     for tier in all_tiers_db:
+        # Get live pricing from Stripe if available, otherwise use fallback
+        price_display = 'N/A'
+        fallback_price = getattr(tier, 'fallback_price', None)
+        
+        if tier.stripe_lookup_key:
+            try:
+                from ...services.stripe_service import StripeService
+                live_pricing = StripeService.get_live_pricing_for_tier(tier)
+                if live_pricing:
+                    price_display = live_pricing['formatted_price']
+                elif fallback_price:
+                    price_display = fallback_price
+            except Exception as e:
+                logger.warning(f"Could not fetch live pricing for tier {tier.key}: {e}")
+                if fallback_price:
+                    price_display = fallback_price
+        elif fallback_price:
+            price_display = fallback_price
+        elif tier.is_billing_exempt:
+            price_display = 'Free'
+        
         tiers_dict[tier.key] = {
             'id': tier.id,  # Include the tier ID
             'name': tier.name,
@@ -51,7 +72,8 @@ def manage_tiers():
             'is_billing_exempt': tier.is_billing_exempt,
             'stripe_lookup_key': tier.stripe_lookup_key,
             'whop_product_key': tier.whop_product_key,
-            'stripe_price': 'N/A',  # For template compatibility - no longer stored locally
+            'stripe_price': price_display,  # Now shows actual pricing
+            'fallback_price': fallback_price,  # Include fallback for reference
             'last_synced': None,  # TODO: Add sync tracking
             'whop_last_synced': None,  # TODO: Add whop sync tracking
             'permissions': [p.name for p in tier.permissions],

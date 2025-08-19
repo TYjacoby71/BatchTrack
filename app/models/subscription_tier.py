@@ -35,6 +35,9 @@ class SubscriptionTier(db.Model):
     # The ONLY external product links - stable lookup keys
     stripe_lookup_key = db.Column(db.String(128), nullable=True)
     whop_product_key = db.Column(db.String(128), nullable=True)
+    
+    # Fallback pricing for display purposes
+    fallback_price = db.Column(db.String(32), nullable=True)  # e.g., "$29/month"
 
     # Metadata
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
