@@ -72,7 +72,7 @@ def manage_tiers():
             'permissions': [p.name for p in tier.permissions],
             'pricing_category': 'standard',  # Default value
             'billing_cycle': 'monthly',  # Default value
-            'requires_stripe_billing': tier.requires_stripe_billing,
+            'requires_billing': not tier.is_billing_exempt,
             'supports_whop': bool(tier.whop_product_key),
             'max_users': tier.max_users,
             'max_recipes': tier.max_recipes,
