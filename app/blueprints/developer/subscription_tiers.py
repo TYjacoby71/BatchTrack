@@ -94,9 +94,9 @@ def create_tier():
     """Create a new SubscriptionTier record directly in the database."""
     if request.method == 'POST':
         # Data Collection
-        key = request.form.get('key', '').strip()
         name = request.form.get('name', '').strip()
         description = request.form.get('description', '')
+        tier_type = request.form.get('tier_type', 'monthly')
         user_limit = int(request.form.get('user_limit', 1))
         max_users = request.form.get('max_users', None)
         max_recipes = request.form.get('max_recipes', None)
@@ -106,7 +106,6 @@ def create_tier():
         max_monthly_batches = request.form.get('max_monthly_batches', None)
 
         billing_provider = request.form.get('billing_provider', 'exempt')
-        is_billing_exempt = 'is_billing_exempt' in request.form
         stripe_key = request.form.get('stripe_lookup_key', '').strip()
         whop_key = request.form.get('whop_product_key', '').strip()
 
@@ -119,34 +118,30 @@ def create_tier():
         max_monthly_batches = int(max_monthly_batches) if max_monthly_batches and max_monthly_batches.isdigit() else None
 
         # Validation
-        if not key or not name:
-            flash('Tier Key and Name are required.', 'error')
+        if not name:
+            flash('Tier Name is required.', 'error')
             return redirect(url_for('.create_tier'))
 
-        if SubscriptionTier.query.filter_by(key=key).first():
-            flash(f"A tier with the key '{key}' already exists.", 'error')
+        if SubscriptionTier.query.filter_by(name=name).first():
+            flash(f"A tier with the name '{name}' already exists.", 'error')
             return redirect(url_for('.create_tier'))
 
-        # STRICT BILLING REQUIREMENTS:
-        # Unless billing bypass is explicitly enabled, require proper billing integration
-        if not is_billing_exempt:
-            if billing_provider == 'stripe':
-                if not stripe_key:
-                    flash('A Stripe Lookup Key is required for Stripe-billed tiers. Enable billing bypass if you want to skip billing requirements.', 'error')
-                    return redirect(url_for('.create_tier'))
-            elif billing_provider == 'whop':
-                if not whop_key:
-                    flash('A Whop Product Key is required for Whop-billed tiers. Enable billing bypass if you want to skip billing requirements.', 'error')
-                    return redirect(url_for('.create_tier'))
-            else:
-                flash('You must select either Stripe or Whop as billing provider, or enable billing bypass.', 'error')
+        # BILLING REQUIREMENTS:
+        # For non-exempt tiers, require proper billing integration
+        if billing_provider == 'stripe':
+            if not stripe_key:
+                flash('A Stripe Lookup Key is required for Stripe-billed tiers.', 'error')
+                return redirect(url_for('.create_tier'))
+        elif billing_provider == 'whop':
+            if not whop_key:
+                flash('A Whop Product Key is required for Whop-billed tiers.', 'error')
                 return redirect(url_for('.create_tier'))
 
         # Database Insertion
         tier = SubscriptionTier(
-            key=key,
             name=name,
             description=description,
+            tier_type=tier_type,
             user_limit=user_limit,
             max_users=max_users,
             max_recipes=max_recipes,
@@ -155,7 +150,6 @@ def create_tier():
             max_batchbot_requests=max_batchbot_requests,
             max_monthly_batches=max_monthly_batches,
             billing_provider=billing_provider,
-            is_billing_exempt=is_billing_exempt,
             stripe_lookup_key=stripe_key if stripe_key else None,
             whop_product_key=whop_key if whop_key else None
         )

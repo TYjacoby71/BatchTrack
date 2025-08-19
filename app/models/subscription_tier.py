@@ -12,9 +12,11 @@ class SubscriptionTier(db.Model):
     __tablename__ = 'subscription_tier'
 
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(64), nullable=False)  # "Solo Plan", "Team Plan"
-    key = db.Column(db.String(32), nullable=False, unique=True)  # "solo", "team"
+    name = db.Column(db.String(64), nullable=False, unique=True)  # "Solo Plan", "Team Plan"
     description = db.Column(db.Text, nullable=True)
+
+    # Tier categorization for sorting/organization  
+    tier_type = db.Column(db.String(32), nullable=False, default='monthly')  # 'monthly', 'yearly', 'promotion'
 
     # Core tier limits
     user_limit = db.Column(db.Integer, default=1, nullable=False)
@@ -28,9 +30,8 @@ class SubscriptionTier(db.Model):
     # Visibility control
     is_customer_facing = db.Column(db.Boolean, default=True, nullable=False)
 
-    # Billing configuration - the RIGHT way
+    # Billing configuration - simplified
     billing_provider = db.Column(db.String(32), nullable=False, default='exempt')  # 'stripe', 'whop', 'exempt'
-    is_billing_exempt = db.Column(db.Boolean, default=False, nullable=False, index=True)
 
     # The ONLY external product links - stable lookup keys
     stripe_lookup_key = db.Column(db.String(128), nullable=True)
@@ -65,29 +66,34 @@ class SubscriptionTier(db.Model):
         return any(p.name == permission_name for p in self.permissions)
 
     @property
+    def key(self):
+        """Generate key from name for backwards compatibility"""
+        return self.name.lower().replace(' ', '_').replace('plan', '').strip('_')
+
+    @property
     def is_exempt_from_billing(self):
-        """Check if this tier is exempt from billing - ONLY true if explicitly bypassed"""
-        return self.is_billing_exempt
+        """Check if this tier is exempt from billing"""
+        return self.billing_provider == 'exempt'
 
     @property
     def requires_billing_verification(self):
         """Check if this tier requires billing verification"""
-        return not self.is_billing_exempt
+        return self.billing_provider != 'exempt'
 
     @property
     def requires_stripe_billing(self):
         """Check if this tier requires Stripe billing verification"""
-        return self.billing_provider == 'stripe' and not self.is_billing_exempt
+        return self.billing_provider == 'stripe'
 
     @property
     def requires_whop_billing(self):
         """Check if this tier requires Whop billing verification"""
-        return self.billing_provider == 'whop' and not self.is_billing_exempt
+        return self.billing_provider == 'whop'
 
     @property
     def has_valid_integration(self):
         """Check if tier has valid billing integration"""
-        if self.is_billing_exempt:
+        if self.billing_provider == 'exempt':
             return True
         # For non-exempt tiers, require proper integration
         if self.billing_provider == 'stripe':
@@ -99,7 +105,7 @@ class SubscriptionTier(db.Model):
     @property
     def can_be_deleted(self):
         """Check if this tier can be safely deleted"""
-        return self.key != 'exempt'  # Protect system exempt tier
+        return self.name.lower() not in ['exempt', 'free']  # Protect system tiers
 
     def __repr__(self):
         return f'<SubscriptionTier {self.name}>'
