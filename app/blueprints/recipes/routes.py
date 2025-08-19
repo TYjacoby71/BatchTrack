@@ -5,6 +5,7 @@ from . import recipes_bp
 from ...extensions import db
 from ...models import Recipe, InventoryItem
 from ...utils.permissions import require_permission
+from ...utils.authorization import check_organization_access
 from ...services.recipe_service import (
     create_recipe, update_recipe, delete_recipe, get_recipe_details,
     plan_production, scale_recipe, validate_recipe_data, duplicate_recipe

@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, session, jsonify, flash
 from ..models import Recipe, InventoryItem, Batch
-from app.services.stock_check import UniversalStockCheckService
+from ..services.universal_stock_check_service import universal_stock_check
 from flask_login import login_required, current_user
 from ..utils.permissions import require_permission, get_effective_organization_id, permission_required, any_permission_required
 from ..services.combined_inventory_alerts import CombinedInventoryAlertService
@@ -13,7 +13,7 @@ app_routes_bp = Blueprint('app_routes', __name__)
 def check_stock_for_recipe(recipe, scale=1):
     """Check stock availability for a recipe"""
     try:
-        result = UniversalStockCheckService.check_stock(recipe, scale)
+        result = universal_stock_check(recipe, scale)
         return result['stock_check'], result['all_ok']
     except Exception as e:
         return [], False
@@ -107,7 +107,7 @@ def check_stock():
         recipe = Recipe.query.get_or_404(recipe_id)
 
         # Use universal stock check service
-        result = UniversalStockCheckService.check_stock(recipe, scale)
+        result = universal_stock_check(recipe, scale)
         stock_check = result['stock_check']
         all_ok = result['all_ok']
 
@@ -258,3 +258,4 @@ def get_server_time():
         'user_time': user_time.isoformat() if user_time else server_utc.isoformat(),
         'timestamp': server_utc.timestamp()
     })
+

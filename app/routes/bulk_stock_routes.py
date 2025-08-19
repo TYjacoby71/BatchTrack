@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 from flask_login import login_required
 from ..models import db, Recipe, InventoryItem
-from ..services.stock_check.core import check_stock_availability
+from ..services.universal_stock_check_service import check_stock_availability
 from ..services.unit_conversion import ConversionEngine
 from sqlalchemy.exc import SQLAlchemyError
 import io
