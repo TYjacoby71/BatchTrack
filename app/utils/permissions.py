@@ -332,27 +332,45 @@ class AuthorizationHierarchy:
     @staticmethod
     def check_user_authorization(user, permission_name):
         """
-        Simplified authorization check - trusts middleware for billing/subscription
-        Only checks: Does user have this permission within their tier's allowed permissions?
+        Complete authorization check following the hierarchy:
+        1. Check subscription standing
+        2. Check if tier allows permission
+        3. Check if user role grants permission
         """
 
         # Developers have full access - they are super admins
         if user.user_type == 'developer':
-            return True  # Developers get all permissions
+            # For developer permissions, check if they have the specific developer permission
+            if permission_name.startswith('developer.'):
+                return True  # All developers get all developer permissions
+
+            # For organization permissions when in customer view mode
+            selected_org_id = session.get('dev_selected_org_id')
+            if not selected_org_id:
+                return True  # Developer mode - full access to all organization permissions too
+            # If viewing a specific organization, continue with organization checks
 
         # Get organization (handle developer customer view)
         organization = get_effective_organization()
+
         if not organization:
             return False
 
-        # Check if subscription tier allows this permission
+        # Step 1: Check subscription standing
+        subscription_ok, reason = AuthorizationHierarchy.check_subscription_standing(organization)
+        if not subscription_ok:
+            logger.warning(f"Subscription check failed for org {organization.id}: {reason}")
+            return False
+
+        # Step 2: Check if subscription tier allows this permission
         tier_permissions = AuthorizationHierarchy.get_tier_allowed_permissions(organization)
         if permission_name not in tier_permissions:
             logger.debug(f"Permission {permission_name} not allowed by tier {organization.effective_subscription_tier}")
             return False
 
+        # Step 3: Check user role permissions
         # Organization owners get all tier-allowed permissions
-        if is_organization_owner():
+        if user.user_type == 'organization_owner' or user.user_type == 'developer':
             return True
 
         # Other users need role-based permissions
@@ -502,22 +520,3 @@ def require_organization_owner(f):
             abort(403)
         return f(*args, **kwargs)
     return decorated_function
-
-def has_organization_access(user, organization_id):
-    """Check if user has access to specified organization"""
-    if not user or not user.is_authenticated:
-        return False
-
-    if user.user_type == 'developer':
-        return True  # Developers have access to all organizations
-
-    return user.organization_id == organization_id
-
-def check_organization_access(organization_id):
-    """Check if current user has access to specified organization. Raises PermissionError if not."""
-    from flask_login import current_user
-
-    if not has_organization_access(current_user, organization_id):
-        raise PermissionError(f"Access denied to organization {organization_id}")
-
-    return True
