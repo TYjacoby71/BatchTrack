@@ -19,11 +19,30 @@ def register_middleware(app):
         # This is the ONLY list of public routes needed.
         public_endpoints = [
             'static', 'auth.login', 'auth.signup', 'auth.logout',
-            'homepage', 'legal.privacy_policy', 'legal.terms_of_service',
+            'homepage', 'index', 'legal.privacy_policy', 'legal.terms_of_service',
             'billing.webhook'  # Stripe webhook is a critical public endpoint
         ]
+
+        # Pattern-based public paths for flexibility
+        public_paths = [
+            '/homepage',
+            '/legal/',
+            '/static/',
+            '/auth/login',
+            '/auth/signup',
+            '/auth/logout'
+        ]
+
+        # Check endpoint names first
         if request.endpoint in public_endpoints:
+            print(f"MIDDLEWARE DEBUG: Allowing public endpoint: {request.endpoint}")
             return  # Stop processing, allow the request
+
+        # Check path patterns for public access
+        for public_path in public_paths:
+            if request.path.startswith(public_path):
+                print(f"MIDDLEWARE DEBUG: Allowing public path: {request.path}")
+                return  # Stop processing, allow the request
 
         # Debug: Track middleware execution
         print(f"MIDDLEWARE DEBUG: Processing {request.method} {request.path}, endpoint={request.endpoint}")

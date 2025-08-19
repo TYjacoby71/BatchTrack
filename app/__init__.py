@@ -100,10 +100,16 @@ def _add_core_routes(app):
             else:
                 return redirect(url_for('app_routes.dashboard'))  # Regular users go to dashboard
         else:
-            return redirect(url_for('auth.login'))  # Unauthenticated users go to login
+            return render_template("homepage.html")  # Serve public homepage for unauthenticated users
 
     @app.route("/homepage")
     def homepage():
+        """Public homepage - accessible to all users"""
+        return render_template("homepage.html")
+    
+    @app.route("/public")
+    def public_page():
+        """Alternative public page"""
         return render_template("homepage.html")
 
 def _setup_logging(app):
