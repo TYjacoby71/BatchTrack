@@ -6,7 +6,7 @@ Product-specific stock checking handler
 import logging
 from typing import Optional
 
-from ...models import InventoryItem  
+from app.models import InventoryItem  
 from ..types import StockCheckRequest, StockCheckResult, StockStatus, InventoryCategory
 from .base_handler import BaseInventoryHandler
 
