@@ -8,7 +8,7 @@ from ..utils.timezone_utils import TimezoneUtils
 logger = logging.getLogger(__name__)
 
 class WhopService:
-    """Service for handling Whop license validation and integration"""
+    """Service for handling Whop license validation and integration - STUBBED FOR FUTURE USE"""
 
     @staticmethod
     def validate_license_key(license_key):
@@ -129,9 +129,24 @@ class WhopService:
 
     @staticmethod
     def get_whop_checkout_url(product_name):
-        """Get Whop checkout URL for a product"""
-        whop_store_id = current_app.config.get('WHOP_STORE_ID')
-        if not whop_store_id:
-            return None
-            
-        return f"https://whop.com/{whop_store_id}/{product_name.lower().replace(' ', '-')}"
+        """Get Whop checkout URL for a product - STUBBED"""
+        logger.warning("Whop integration is currently disabled")
+        return None
+
+    @staticmethod
+    def create_checkout_session(product_id, customer_email, success_url):
+        """Create Whop checkout session - STUBBED"""
+        logger.warning("Whop checkout is currently disabled")
+        return None
+
+    @staticmethod
+    def cancel_subscription(license_key):
+        """Cancel Whop subscription - STUBBED"""
+        logger.warning("Whop subscription management is currently disabled")
+        return False
+
+    @staticmethod
+    def get_all_available_pricing():
+        """Get Whop pricing - STUBBED"""
+        logger.warning("Whop pricing is currently disabled")
+        return {'tiers': {}, 'available': False, 'provider': 'whop'}

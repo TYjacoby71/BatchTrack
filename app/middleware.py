@@ -1,7 +1,10 @@
 import os
 from flask import request, redirect, url_for, jsonify, session, g, flash
-from flask_login import current_user
-# Import moved inline to avoid circular imports
+from flask_login import current_user, logout_user
+import logging
+
+# Configure logger
+logger = logging.getLogger(__name__)
 
 def register_middleware(app):
     """Register all middleware functions with the Flask app."""
@@ -91,36 +94,36 @@ def register_middleware(app):
             # CRITICAL FIX: Force completely fresh database query to avoid session isolation issues
             from .models import User, Organization
             from .extensions import db
+            from .services.billing_service import BillingService # Import BillingService
 
             # Get fresh user and organization data from current session
             fresh_user = db.session.get(User, fresh_current_user.id)
             if fresh_user and fresh_user.organization_id:
                 # Force fresh load of organization to get latest billing_status
-                org = db.session.get(Organization, fresh_user.organization_id)
+                organization = db.session.get(Organization, fresh_user.organization_id)
             else:
-                org = None
+                organization = None
 
-            print(f"DEBUG: User {fresh_current_user.id}, Org billing_status={org.billing_status if org else 'NO_ORG'}")
+            print(f"DEBUG: User {fresh_current_user.id}, Org billing_status={organization.billing_status if organization else 'NO_ORG'}")
 
-            if org and org.subscription_tier:
-                tier = org.subscription_tier
+            if organization and organization.subscription_tier:
+                tier = organization.subscription_tier
                 print(f"DEBUG: Tier exempt={tier.is_billing_exempt}")
 
                 # SIMPLE BILLING LOGIC:
                 # If billing bypass is NOT enabled, require active billing status
                 if not tier.is_billing_exempt:
-                    if org.billing_status != 'active':
-                        print(f"DEBUG: Billing status '{org.billing_status}' is not active, checking endpoint '{request.endpoint}'")
-                        # Do not block access to the billing page itself!
-                        if request.endpoint and not request.endpoint.startswith('billing.'):
-                            print(f"DEBUG: Blocking access, redirecting to billing")
-                            if request.path.startswith('/api/'):
-                                return jsonify({'error': 'Billing issue detected. Please update your payment method.'}), 402
-                            else:
-                                flash('Your subscription requires attention to continue accessing these features.', 'warning')
-                                return redirect(url_for('billing.upgrade'))
-                        else:
-                            print(f"DEBUG: Allowing access to billing endpoint")
+                    # Check tier access using unified billing service
+                    access_valid, access_reason = BillingService.validate_tier_access(organization)
+                    if not access_valid:
+                        logger.warning(f"Billing access denied for org {organization.id}: {access_reason}")
+
+                        if access_reason in ['payment_required', 'subscription_canceled']:
+                            return redirect(url_for('billing.upgrade'))
+                        elif access_reason == 'organization_suspended':
+                            flash('Your organization has been suspended. Please contact support.', 'error')
+                            logout_user()
+                            return redirect(url_for('auth.login'))
                 else:
                     print(f"DEBUG: Tier is billing exempt, allowing access")
             else:

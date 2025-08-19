@@ -356,27 +356,27 @@ class StripeService:
 
     @staticmethod
     def get_all_available_pricing():
-        """Get live pricing for all available tiers - for signup page"""
-        available_tiers = SubscriptionTier.query.filter_by(
+        """Get live pricing for Stripe tiers only"""
+        stripe_tiers = SubscriptionTier.query.filter_by(
             is_customer_facing=True,
-            is_available=True,
-            requires_stripe_billing=True
+            billing_provider='stripe'
         ).all()
 
-        pricing_data = {}
+        pricing_data = {'tiers': {}, 'available': True, 'provider': 'stripe'}
 
-        for tier in available_tiers:
+        for tier in stripe_tiers:
             pricing = StripeService.get_live_pricing_for_tier(tier)
 
-            pricing_data[tier.key] = {
+            pricing_data['tiers'][tier.key] = {
                 'name': tier.name,
-                'description': tier.description,
+                'description': getattr(tier, 'description', ''),
                 'user_limit': tier.user_limit,
-                'permissions': tier.get_permissions(),
-                'price': pricing['formatted_price'] if pricing else tier.fallback_price,
+                'permissions': [p.name for p in tier.permissions] if hasattr(tier, 'permissions') else [],
+                'price': pricing['formatted_price'] if pricing else 'N/A',
                 'billing_cycle': pricing['billing_cycle'] if pricing else 'monthly',
                 'available': pricing is not None,
-                'stripe_available': pricing is not None
+                'stripe_available': pricing is not None,
+                'provider': 'stripe'
             }
 
         return pricing_data
