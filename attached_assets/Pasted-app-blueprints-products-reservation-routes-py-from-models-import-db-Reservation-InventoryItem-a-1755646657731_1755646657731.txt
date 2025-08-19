@@ -1,0 +1,20 @@
+app/blueprints/products/reservation_routes.py:from ...models import db, Reservation, InventoryItem
+app/blueprints/products/reservation_routes.py:from ...services.pos_integration import POSIntegrationService
+app/blueprints/products/reservation_routes.py:from ...utils.permissions import has_permission
+app/blueprints/products/reservation_routes.py:                from ...models import InventoryHistory
+app/blueprints/products/reservation_routes.py:                from ...models.product import ProductSKUHistory
+app/blueprints/products/reservation_routes.py:        from ...models import Reservation
+app/blueprints/products/reservation_routes.py:                from ...models import InventoryHistory
+app/blueprints/products/reservation_routes.py:                from ...models.product import ProductSKUHistory
+app/blueprints/products/reservation_routes.py:        from ...services.reservation_service import ReservationService
+app/blueprints/products/product_variants.py:from ...models import db, ProductSKU, InventoryItem
+app/blueprints/products/product_variants.py:from ...models.product import Product, ProductVariant
+app/blueprints/products/product_variants.py:from ...services.product_service import ProductService
+app/blueprints/products/product_variants.py:from ...utils.unit_utils import get_global_unit_list
+app/blueprints/products/product_variants.py:    from ...models.product import Product, ProductVariant
+app/blueprints/products/product_variants.py:    from ...models.product import Product, ProductVariant
+app/blueprints/products/product_variants.py:    from ...models.product import Product, ProductVariant
+app/blueprints/products/product_alerts.py:from ...services.combined_inventory_alerts import CombinedInventoryAlertService
+app/blueprints/products/product_inventory_routes.py:from ...models import db, ProductSKU, Batch
+app/blueprints/products/product_inventory_routes.py:from ...models.product import ProductSKUHistory
+app/blueprints/products/product_inventory_routes.py:from ...services.product_service import ProductService

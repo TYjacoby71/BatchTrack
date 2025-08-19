@@ -44,7 +44,7 @@ def dismiss_alert():
 @login_required
 def get_dashboard_alerts():
     """Get dashboard alerts for the current user"""
-    from ...services.dashboard_alerts import DashboardAlertService
+    from app.services.dashboard_alerts import DashboardAlertService
     from flask import session
 
     dismissed_alerts = session.get('dismissed_alerts', [])
@@ -53,7 +53,7 @@ def get_dashboard_alerts():
     return jsonify(alert_data)
 def dashboard_alerts():
     """Get dashboard alerts with session-based dismissals"""
-    from ...services.dashboard_alerts import DashboardAlertService
+    from app.services.dashboard_alerts import DashboardAlertService
 
     # Get dismissed alerts from session
     dismissed_alerts = session.get('dismissed_alerts', [])

@@ -1,16 +1,16 @@
 from flask import render_template, request, redirect, url_for, flash, jsonify, current_app
 from flask_login import login_required, current_user
 from . import recipes_bp
-from ...extensions import db
-from ...models import Recipe, InventoryItem
-from ...utils.permissions import require_permission
+from app.extensions import db
+from app.models import Recipe, InventoryItem
+from app.utils.permissions import require_permission
 
-from ...services.recipe_service import (
+from app.services.recipe_service import (
     create_recipe, update_recipe, delete_recipe, get_recipe_details,
     plan_production, scale_recipe, validate_recipe_data, duplicate_recipe
 )
-from ...utils.unit_utils import get_global_unit_list
-from ...models.unit import Unit
+from app.utils.unit_utils import get_global_unit_list
+from app.models.unit import Unit
 import logging
 
 logger = logging.getLogger(__name__)
