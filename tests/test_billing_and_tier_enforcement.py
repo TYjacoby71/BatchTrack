@@ -23,8 +23,7 @@ class TestBillingAndTierEnforcement:
 
             # 2. Create a "Hobbyist" tier that can ONLY view products
             hobbyist_tier = SubscriptionTier(
-                name='hobbyist',
-                key='hobbyist'
+                name='hobbyist'
             )
             hobbyist_tier.permissions = [perm_view]  # Only view, no create
             db.session.add(hobbyist_tier)
@@ -81,11 +80,11 @@ class TestBillingAndTierEnforcement:
             # ARRANGE - Use fresh database queries to avoid session issues
             from app.models import Organization
             from app.models.subscription_tier import SubscriptionTier
-            
+
             # Get fresh objects from the database
             fresh_user = db.session.get(User, test_user.id)
             fresh_org = db.session.get(Organization, fresh_user.organization_id)
-            
+
             # Update the organization's billing status
             fresh_org.billing_status = billing_status
 
@@ -96,19 +95,18 @@ class TestBillingAndTierEnforcement:
                 if not non_exempt_tier:
                     non_exempt_tier = SubscriptionTier(
                         name="Paid Tier", 
-                        key="paid", 
                         is_billing_exempt=False, 
                         billing_provider='stripe',
                         user_limit=10
                     )
                     db.session.add(non_exempt_tier)
                     db.session.flush()  # Get the ID
-                
+
                 fresh_org.subscription_tier_id = non_exempt_tier.id
 
             # CRITICAL: Force commit to ensure changes are persisted
             db.session.commit()
-            
+
             # Verify the billing status was actually set by querying fresh from DB
             verification_org = db.session.get(Organization, fresh_org.id)
             assert verification_org.billing_status == billing_status, f"Expected {billing_status}, got {verification_org.billing_status}"
@@ -153,8 +151,7 @@ class TestBillingAndTierEnforcement:
 
             # Create a customer org with bad billing
             customer_tier = SubscriptionTier(
-                name='Pro',
-                key='pro'
+                name='Pro'
             )
             db.session.add(customer_tier)
             db.session.flush()  # Get the ID
@@ -207,8 +204,7 @@ class TestBillingAndTierEnforcement:
 
             # 2. Create a "Pro" tier with batch permissions but no admin
             pro_tier = SubscriptionTier(
-                name='Pro',
-                key='pro'
+                name='Pro'
             )
             pro_tier.permissions = [perm_batch_view, perm_batch_create]  # No admin
             db.session.add(pro_tier)

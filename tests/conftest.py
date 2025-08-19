@@ -128,7 +128,6 @@ def test_user(app):
         # Create a basic tier
         tier = SubscriptionTier(
             name='Basic',
-            key='basic',
             user_limit=5
         )
         db.session.add(tier)
