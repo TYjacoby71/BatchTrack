@@ -2,7 +2,7 @@
 """simplify tiers add tier_type
 
 Revision ID: simplify_tiers_add_tier_type
-Revises: 758a11548815
+Revises: fix_all_missing_tier_columns
 Create Date: 2025-08-19 19:45:00.000000
 
 """
@@ -12,7 +12,7 @@ from sqlalchemy import text
 
 # revision identifiers, used by Alembic.
 revision = 'simplify_tiers_add_tier_type'
-down_revision = '758a11548815'
+down_revision = 'fix_all_missing_tier_columns'
 branch_labels = None
 depends_on = None
 
