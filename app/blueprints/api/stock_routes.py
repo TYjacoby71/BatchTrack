@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
-from ...services.universal_stock_check_service import check_recipe_availability
+from ...services.stock_check.core import check_recipe_availability
 from ...models import Recipe
 
 stock_api_bp = Blueprint('stock_api', __name__)
