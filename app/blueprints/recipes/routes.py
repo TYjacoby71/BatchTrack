@@ -1,11 +1,10 @@
-
 from flask import render_template, request, redirect, url_for, flash, jsonify, current_app
 from flask_login import login_required, current_user
 from . import recipes_bp
 from ...extensions import db
 from ...models import Recipe, InventoryItem
 from ...utils.permissions import require_permission
-from ...utils.permissions import check_organization_access
+from app.utils.permissions import check_organization_access
 from ...services.recipe_service import (
     create_recipe, update_recipe, delete_recipe, get_recipe_details,
     plan_production, scale_recipe, validate_recipe_data, duplicate_recipe
@@ -56,7 +55,7 @@ def new_recipe():
                 recipe.allowed_containers = container_ids or []
                 recipe.label_prefix = request.form.get('label_prefix')
                 db.session.commit()
-                
+
                 flash('Recipe created successfully with ingredients.')
                 return redirect(url_for('recipes.view_recipe', recipe_id=recipe.id))
             else:
@@ -77,7 +76,7 @@ def new_recipe():
     all_ingredients = ingredients_query.all()
     units = Unit.query.filter_by(is_active=True).order_by(Unit.unit_type, Unit.name).all()
     inventory_units = get_global_unit_list()
-    
+
     return render_template('recipe_form.html', 
                          recipe=None, 
                          all_ingredients=all_ingredients, 
@@ -104,7 +103,7 @@ def view_recipe(recipe_id):
         if not recipe:
             flash('Recipe not found.', 'error')
             return redirect(url_for('recipes.list_recipes'))
-            
+
         # Check organization access
         if not check_organization_access(Recipe, recipe_id):
             flash('Recipe not found or access denied.', 'error')
@@ -112,7 +111,7 @@ def view_recipe(recipe_id):
 
         inventory_units = get_global_unit_list()
         return render_template('view_recipe.html', recipe=recipe, inventory_units=inventory_units)
-        
+
     except Exception as e:
         flash(f"Error loading recipe: {str(e)}", "error")
         logger.exception(f"Unexpected error viewing recipe: {str(e)}")
@@ -218,7 +217,7 @@ def create_variation(recipe_id):
                 container_ids = [int(id) for id in request.form.getlist('allowed_containers[]') if id]
                 variation.allowed_containers = container_ids or []
                 db.session.commit()
-                
+
                 flash('Recipe variation created successfully.')
                 return redirect(url_for('recipes.view_recipe', recipe_id=variation.id))
             else:
@@ -228,13 +227,13 @@ def create_variation(recipe_id):
         ingredients_query = InventoryItem.query.filter(
             ~InventoryItem.type.in_(['product', 'product-reserved'])
         ).order_by(InventoryItem.name)
-        
+
         if current_user.organization_id:
             ingredients_query = ingredients_query.filter_by(organization_id=current_user.organization_id)
-        
+
         all_ingredients = ingredients_query.all()
         units = Unit.query.filter_by(is_active=True).order_by(Unit.unit_type, Unit.name).all()
-        
+
         # Create variation object for template
         new_variation = Recipe(
             name=f"{parent.name} Variation",
@@ -252,7 +251,7 @@ def create_variation(recipe_id):
                              units=units,
                              is_variation=True,
                              parent_recipe=parent)
-                             
+
     except Exception as e:
         flash(f"Error creating variation: {str(e)}", "error")
         logger.exception(f"Unexpected error creating variation: {str(e)}")
@@ -265,7 +264,7 @@ def edit_recipe(recipe_id):
     if not recipe:
         flash('Recipe not found.', 'error')
         return redirect(url_for('recipes.list_recipes'))
-        
+
     if recipe.is_locked:
         flash('This recipe is locked and cannot be edited.', 'error')
         return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
@@ -308,7 +307,7 @@ def edit_recipe(recipe_id):
                 container_ids = [int(id) for id in request.form.getlist('allowed_containers[]') if id]
                 updated_recipe.allowed_containers = container_ids or []
                 db.session.commit()
-                
+
                 flash('Recipe updated successfully.')
                 return redirect(url_for('recipes.view_recipe', recipe_id=recipe.id))
             else:
@@ -322,13 +321,13 @@ def edit_recipe(recipe_id):
     ingredients_query = InventoryItem.query.filter(
         ~InventoryItem.type.in_(['product', 'product-reserved'])
     ).order_by(InventoryItem.name)
-    
+
     if current_user.organization_id:
         ingredients_query = ingredients_query.filter_by(organization_id=current_user.organization_id)
-    
+
     all_ingredients = ingredients_query.all()
     units = Unit.query.filter_by(is_active=True).order_by(Unit.unit_type, Unit.name).all()
-    
+
     from ...models import Batch
     existing_batches = Batch.query.filter_by(recipe_id=recipe.id).count()
 
@@ -346,7 +345,7 @@ def clone_recipe(recipe_id):
     try:
         # Use recipe service to duplicate
         success, result = duplicate_recipe(recipe_id)
-        
+
         if success:
             new_recipe = result
             # Prepare for editing
@@ -355,10 +354,10 @@ def clone_recipe(recipe_id):
             ingredients_query = InventoryItem.query.filter(
                 ~InventoryItem.type.in_(['product', 'product-reserved'])
             ).order_by(InventoryItem.name)
-            
+
             if current_user.organization_id:
                 ingredients_query = ingredients_query.filter_by(organization_id=current_user.organization_id)
-            
+
             all_ingredients = ingredients_query.all()
             units = Unit.query.filter_by(is_active=True).order_by(Unit.unit_type, Unit.name).all()
 
@@ -374,11 +373,11 @@ def clone_recipe(recipe_id):
                                 units=units)
         else:
             flash(f"Error cloning recipe: {result}", "error")
-            
+
     except Exception as e:
         flash(f"Error cloning recipe: {str(e)}", "error")
         logger.exception(f"Unexpected error cloning recipe: {str(e)}")
-        
+
     return redirect(url_for('recipes.view_recipe', recipe_id=recipe_id))
 
 @recipes_bp.route('/<int:recipe_id>/delete', methods=['POST'])

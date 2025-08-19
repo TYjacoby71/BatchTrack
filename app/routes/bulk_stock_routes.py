@@ -1,4 +1,3 @@
-
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 from flask_login import login_required
 from ..models import db, Recipe, InventoryItem
@@ -44,7 +43,7 @@ def bulk_stock_check():
                 recipe = Recipe.scoped().filter_by(id=int(rid)).first()
                 if not recipe:
                     continue
-                
+
                 result = service.check_recipe_stock(recipe, scale)
                 results = result['stock_check']
 
