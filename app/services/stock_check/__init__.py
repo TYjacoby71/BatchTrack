@@ -8,19 +8,14 @@ Supports ingredients, containers, products, and future categories like consumabl
 
 from .core import UniversalStockCheckService
 from .handlers import IngredientHandler, ContainerHandler, ProductHandler
-from .types import StockCheckRequest, StockCheckResult, InventoryCategory, StockStatus
-
-# Main service class - this is what everyone should import
-USCS = UniversalStockCheckService
+from .types import StockCheckRequest, StockCheckResult, InventoryCategory
 
 __all__ = [
     'UniversalStockCheckService',
-    'USCS',  # Short alias
     'IngredientHandler', 
     'ContainerHandler',
     'ProductHandler',
     'StockCheckRequest',
     'StockCheckResult', 
-    'InventoryCategory',
-    'StockStatus'
+    'InventoryCategory'
 ]

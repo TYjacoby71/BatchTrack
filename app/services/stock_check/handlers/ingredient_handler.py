@@ -6,7 +6,7 @@ Ingredient-specific stock checking handler
 import logging
 from typing import Optional
 
-from app.models import InventoryItem
+from ...models import InventoryItem
 from ...services.unit_conversion import ConversionEngine
 from ...blueprints.fifo.services import FIFOService
 from ..types import StockCheckRequest, StockCheckResult, StockStatus, InventoryCategory

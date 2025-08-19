@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
-from app.services.stock_check import UniversalStockCheckService
+from ...services.universal_stock_check_service import check_recipe_availability
 from ...models import Recipe
 
 stock_api_bp = Blueprint('stock_api', __name__)
@@ -12,6 +12,7 @@ def check_stock():
         data = request.get_json()
         recipe_id = data.get('recipe_id')
         scale = float(data.get('scale', 1.0))
+        flex_mode = data.get('flex_mode', False)
 
         print(f"Stock check request - recipe_id: {recipe_id}, scale: {scale}, user org: {current_user.organization_id}")
 
@@ -32,29 +33,16 @@ def check_stock():
             else:
                 print(f"  - WARNING: Ingredient is None for recipe ingredient ID {ri.id}")
 
-        # Use new Universal Stock Check Service
-        service = UniversalStockCheckService()
-        result = service.check_recipe_stock(recipe, scale)
+        result = check_recipe_availability(recipe, scale, flex_mode=flex_mode)
         print(f"Stock check result: {result}")
 
-        # Format response for frontend compatibility
-        stock_results = []
-        for item in result['stock_check']:
-            stock_results.append({
-                'name': item['name'],
-                'needed': item['needed'],
-                'available': item['available'],
-                'unit': item['needed_unit'],
-                'status': item['status'],
-                'type': item.get('type', 'ingredient')
-            })
+        if 'stock_check' not in result:
+            result = {
+                'stock_check': result.get('ingredients', []),
+                'all_ok': result.get('all_ok', False)
+            }
 
-        return jsonify({
-            "stock_check": stock_results,
-            "all_ok": result['all_ok'],
-            "status": "ok" if result['all_ok'] else "bad"
-        })
-
+        return jsonify(result)
     except Exception as e:
         print(f"Stock check API error: {str(e)}")
         import traceback
