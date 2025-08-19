@@ -208,3 +208,39 @@ class ProductService:
             'variant_count': product.variant_count,
             'low_stock_count': low_stock_count
         }
+
+    @staticmethod
+    def get_sku_by_id(sku_id):
+        """Get a single SKU by ID with organization scoping"""
+        return ProductSKU.query.filter_by(
+            id=sku_id,
+            organization_id=current_user.organization_id
+        ).first()
+
+    @staticmethod
+    def get_all_products():
+        """Get all active products for the current organization"""
+        return Product.query.filter_by(
+            is_active=True,
+            organization_id=current_user.organization_id
+        ).all()
+
+    @staticmethod
+    def get_product_variants(product_id):
+        """Get all active variants for a specific product"""
+        from ..models.product import Product, ProductVariant
+        
+        # First verify the product exists and belongs to the organization
+        product = Product.query.filter_by(
+            id=product_id,
+            organization_id=current_user.organization_id
+        ).first()
+
+        if not product:
+            return None
+
+        # Get active variants for this product
+        return ProductVariant.query.filter_by(
+            product_id=product.id,
+            is_active=True
+        ).all()

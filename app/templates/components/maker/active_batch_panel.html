@@ -1,0 +1,29 @@
+
+<!-- Active Batch Panel Component -->
+<div class="card">
+  <div class="card-header">
+    <h5><i class="fas fa-flask me-2"></i>Active Batches</h5>
+  </div>
+  <div class="card-body">
+    {% if active_batches %}
+      {% for batch in active_batches %}
+        <div class="d-flex justify-content-between align-items-center mb-2 p-2 border rounded">
+          <div>
+            <strong>{{ batch.recipe.name }}</strong>
+            <small class="text-muted d-block">Started: {{ batch.started_at.strftime('%Y-%m-%d %H:%M') if batch.started_at }}</small>
+          </div>
+          <a href="{{ url_for('batches.view_batch', batch_id=batch.id) }}" class="btn btn-sm btn-outline-primary">
+            View
+          </a>
+        </div>
+      {% endfor %}
+    {% else %}
+      <p class="text-muted text-center">No active batches</p>
+      <div class="text-center">
+        <a href="{{ url_for('batches.batches_list') }}" class="btn btn-sm btn-outline-secondary">
+          View All Batches
+        </a>
+      </div>
+    {% endif %}
+  </div>
+</div>

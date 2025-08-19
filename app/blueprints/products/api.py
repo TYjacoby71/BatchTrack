@@ -12,10 +12,8 @@ products_api_bp = Blueprint('products_api', __name__, url_prefix='/api/products'
 def get_product_from_sku(sku_id):
     """Get the Product ID from a SKU ID"""
     try:
-        sku = ProductSKU.query.filter_by(
-            id=sku_id,
-            organization_id=current_user.organization_id
-        ).first()
+        # Use ProductService to get SKU safely with organization scoping
+        sku = ProductService.get_sku_by_id(sku_id)
 
         if not sku:
             return jsonify({'error': 'SKU not found'}), 404
@@ -36,13 +34,8 @@ def get_product_from_sku(sku_id):
 def get_products():
     """Get all products for dropdowns and autocomplete"""
     try:
-        from ...models.product import Product
-
-        # Get products using the proper Product model
-        products = Product.query.filter_by(
-            is_active=True,
-            organization_id=current_user.organization_id
-        ).all()
+        # Use ProductService to get products safely with organization scoping
+        products = ProductService.get_all_products()
 
         product_list = []
         for product in products:
@@ -62,22 +55,11 @@ def get_products():
 def get_product_variants(product_id):
     """Get variants for a specific product by ID"""
     try:
-        from ...models.product import Product, ProductVariant
+        # Use ProductService to get variants safely with organization scoping
+        variants = ProductService.get_product_variants(product_id)
 
-        # Get the product with org scoping - no legacy support
-        product = Product.query.filter_by(
-            id=product_id,
-            organization_id=current_user.organization_id
-        ).first()
-
-        if not product:
+        if variants is None:
             return jsonify({'error': 'Product not found'}), 404
-
-        # Get active variants for this product
-        variants = ProductVariant.query.filter_by(
-            product_id=product.id,
-            is_active=True
-        ).all()
 
         variant_list = []
         for variant in variants:
