@@ -57,7 +57,50 @@ def create_app(config=None):
 
     # Register application components
     register_middleware(app)
-    register_blueprints(app)
+    # Register blueprints with error handling
+    try:
+        from .blueprints.api.public import public_api_bp
+        app.register_blueprint(public_api_bp, url_prefix='/api/public')
+        logger.info("✅ Public API registered successfully")
+    except Exception as e:
+        logger.error(f"Public API registration failed: {e}")
+
+    # Register recipes blueprint
+    try:
+        from .blueprints.recipes.routes import recipes_bp
+        app.register_blueprint(recipes_bp, url_prefix='/recipes')
+        logger.info("✅ Recipes blueprint registered successfully")
+    except Exception as e:
+        logger.error(f"Failed to register recipes_bp from app.blueprints.recipes.routes: {e}")
+        # Don't let this stop the app from starting
+
+    # Register main app routes
+    try:
+        from .routes.app_routes import app_routes_bp
+        app.register_blueprint(app_routes_bp)
+        logger.info("✅ App routes registered successfully")
+    except Exception as e:
+        logger.error(f"Failed to register app_routes_bp from app.routes.app_routes: {e}")
+        # Don't let this stop the app from starting
+
+    # Register API blueprint
+    try:
+        from .blueprints.api.routes import api_bp
+        app.register_blueprint(api_bp)
+        logger.info("✅ API blueprint registered successfully")
+    except Exception as e:
+        logger.error(f"Failed to register api_bp from app.blueprints.api.routes: {e}")
+        # Don't let this stop the app from starting
+
+    # Register bulk stock routes
+    try:
+        from .routes.bulk_stock_routes import bulk_stock_bp
+        app.register_blueprint(bulk_stock_bp)
+        logger.info("✅ Bulk stock routes registered successfully")
+    except Exception as e:
+        logger.error(f"Failed to register bulk_stock_bp from app.routes.bulk_stock_routes: {e}")
+        # Don't let this stop the app from starting
+
     register_template_context(app)
     register_template_filters(app)
 
@@ -106,7 +149,7 @@ def _add_core_routes(app):
     def homepage():
         """Public homepage - accessible to all users"""
         return render_template("homepage.html")
-    
+
     @app.route("/public")
     def public_page():
         """Alternative public page"""

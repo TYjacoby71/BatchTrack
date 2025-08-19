@@ -122,6 +122,11 @@ def view_recipe(recipe_id):
 @require_permission('plan_production')
 def plan_production_route(recipe_id):
     """Plan production for a recipe"""
+    recipe = get_recipe_details(recipe_id)
+    if not recipe:
+        flash('Recipe not found.', 'error')
+        return redirect(url_for('recipes.list_recipes'))
+        
     # Check organization access - ensure recipe belongs to user's org  
     if current_user.organization_id and recipe.organization_id != current_user.organization_id:
         flash('Recipe not found or access denied.', 'error')
