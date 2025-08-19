@@ -1,0 +1,149 @@
+=== CHECKING FOR BROKEN TEMPLATE REFERENCES ===
+=== app/templates/settings/index.html ===
+{% extends "layout.html" %}
+            {% include 'settings/components/profile_tab.html' %}
+            {% include 'settings/components/preferences_tab.html' %}
+            {% include 'settings/components/system_tab.html' %}
+            {% include 'settings/components/inventory_tab.html' %}
+            {% include 'settings/components/billing_tab.html' %}
+=== app/templates/conversion/logs.html ===
+{% extends "base.html" %}
+=== app/templates/conversion/units.html ===
+{% extends 'layout.html' %}
+=== app/templates/components/maker/maker_view.html ===
+    {% include "components/maker/plan_batch_card.html" %}
+    {% include "components/maker/active_batch_panel.html" %}
+=== app/templates/components/timezone_selector.html ===
+<!-- Usage: {% include 'components/timezone_selector.html' with context %} -->
+=== app/templates/batches/view_batch.html ===
+{% extends 'layout.html' %}
+{% include 'components/batch/fifo_insight_modal.html' %}
+=== app/templates/batches/batches_list.html ===
+{% extends 'layout.html' %}
+=== app/templates/batches/batch_in_progress.html ===
+{% extends 'layout.html' %}
+                {% include 'components/batch/timer_component.html' %}
+{% include 'components/batch/finish_batch_modal.html' %}
+{% include 'components/batch/fifo_insight_modal.html' %}
+=== app/templates/admin/reservations.html ===
+{% extends "layout.html" %}
+=== app/templates/admin/dev_organizations.html ===
+{% extends "layout.html" %}
+=== app/templates/auth/roles.html ===
+{% extends "layout.html" %}
+=== app/templates/auth/permissions.html ===
+{% extends "layout.html" %}
+=== app/templates/auth/whop_login.html ===
+{% extends "layout.html" %}
+=== app/templates/auth/resend_verification.html ===
+{% extends "layout.html" %}
+=== app/templates/auth/login.html ===
+{% extends 'layout.html' %}
+=== app/templates/auth/signup.html ===
+{% extends 'layout.html' %}
+=== app/templates/bulk_stock_check.html ===
+{% extends 'layout.html' %}
+=== app/templates/tag_manager.html ===
+{% extends 'layout.html' %}
+=== app/templates/inventory/view.html ===
+{% extends "layout.html" %}
+        {% include "inventory/components/item_summary_card.html" %}
+        {% include "inventory/components/adjustment_form.html" %}
+        {% include "inventory/components/history_table.html" %}
+{% include "inventory/components/edit_details_modal.html" %}
+{% include "inventory/components/modals.html" %}
+=== app/templates/edit_product.html ===
+{% extends 'layout.html' %}
+=== app/templates/products/new_product.html ===
+{% extends 'layout.html' %}
+=== app/templates/products/merge_configure.html ===
+{% extends "layout.html" %}
+=== app/templates/products/merge_select.html ===
+{% extends "layout.html" %}
+=== app/templates/products/view_product.html ===
+{% extends 'layout.html' %}
+=== app/templates/products/alerts.html ===
+{% extends 'layout.html' %}
+=== app/templates/products/view_sku.html ===
+{% extends "layout.html" %}
+{% include 'components/sku/styles.html' %}
+            {% include 'components/sku/sku_details_card.html' %}
+            {% include 'components/sku/inventory_actions_card.html' %}
+            {% include 'components/sku/history_table.html' %}
+            {% include 'components/sku/modals.html' %}
+=== app/templates/products/list_products.html ===
+{% extends 'layout.html' %}
+=== app/templates/products/view_variation.html ===
+{% extends 'layout.html' %}
+=== app/templates/recipe_list.html ===
+{% extends 'layout.html' %}
+=== app/templates/fault_log.html ===
+{% extends 'layout.html' %}
+=== app/templates/view_recipe.html ===
+{% extends 'layout.html' %}
+=== app/templates/expiration/alerts.html ===
+{% extends "layout.html" %}
+=== app/templates/plan_production.html ===
+{% extends 'layout.html' %}
+      {% include 'partials/plan_production_stock_check.html' %}
+=== app/templates/organization/dashboard.html ===
+{% extends "layout.html" %}
+    {% include 'organization/components/dashboard_metrics.html' %}
+                    {% include 'organization/components/user_management_tab.html' %}
+                    {% include 'organization/components/roles_permissions_tab.html' %}
+                    {% include 'organization/components/reports_logs_tab.html' %}
+                    {% include 'organization/components/organization_settings_tab.html' %}
+                    {% include 'organization/components/billing_tab.html' %}
+{% include 'organization/components/invite_user_modal.html' %}
+{% include 'organization/components/edit_user_modal.html' %}
+{% include 'organization/components/create_role_modal.html' %}
+=== app/templates/developer/system_settings.html ===
+{% extends 'layout.html' %}
+=== app/templates/developer/system_roles.html ===
+{% extends "layout.html" %}
+=== app/templates/developer/create_organization.html ===
+{% extends 'layout.html' %}
+=== app/templates/developer/organizations.html ===
+{% extends 'layout.html' %}
+=== app/templates/developer/organization_detail.html ===
+{% extends 'layout.html' %}
+{% include 'components/modals/user_management_modal.html' %}
+=== app/templates/developer/users.html ===
+{% extends 'layout.html' %}
+{% include 'components/modals/user_management_modal.html' %}
+=== app/templates/developer/waitlist_statistics.html ===
+{% extends 'layout.html' %}
+=== app/templates/developer/dashboard.html ===
+{% extends 'layout.html' %}
+=== app/templates/developer/create_tier.html ===
+{% extends 'layout.html' %}
+=== app/templates/developer/subscription_tiers.html ===
+{% extends 'layout.html' %}
+=== app/templates/developer/edit_tier.html ===
+{% extends 'layout.html' %}
+=== app/templates/login.html ===
+{% extends 'layout.html' %}
+=== app/templates/billing/reconciliation_needed.html ===
+{% extends "layout.html" %}
+=== app/templates/billing/upgrade.html ===
+{% extends "layout.html" %}
+=== app/templates/billing/debug.html ===
+{% extends "layout.html" %}
+=== app/templates/dashboard.html ===
+{% extends 'layout.html' %}
+{% include 'components/dashboard_alerts.html' %}
+=== app/templates/recipe_form.html ===
+{% extends 'layout.html' %}
+{% include 'components/modals/quick_add_ingredient_modal.html' %}
+{% include 'components/modals/quick_add_unit_modal.html' %}
+{% include 'components/modals/quick_add_container_modal.html' %}
+=== app/templates/legal/privacy_policy.html ===
+{% extends "layout.html" %}
+=== app/templates/legal/terms_of_service.html ===
+{% extends "layout.html" %}
+=== app/templates/legal/cookie_policy.html ===
+{% extends "layout.html" %}
+=== app/templates/inventory_list.html ===
+{% extends 'layout.html' %}
+=== app/templates/layout.html ===
+    {% include 'components/modals/unit_converter_modal.html' %}

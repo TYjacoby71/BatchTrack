@@ -1,0 +1,21 @@
+=== CHECKING FOR UNDEFINED ROUTES AND ENDPOINTS ===
+app/blueprints/products/product_variants.py:from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+app/blueprints/products/product_variants.py:        return redirect(url_for('products.product_list'))
+app/blueprints/products/product_variants.py:        return redirect(url_for('products.view_product', product_id=product_id))
+app/blueprints/products/product_variants.py:        return redirect(url_for('products.list_products'))
+app/blueprints/products/product_variants.py:        return redirect(url_for('products.product_list'))
+app/blueprints/products/product_variants.py:        return redirect(url_for('products.view_product', product_id=product_id))
+app/blueprints/products/product_variants.py:        return redirect(url_for('products.view_variant', 
+app/blueprints/products/product_variants.py:        return redirect(url_for('products.view_variant', 
+app/blueprints/products/product_variants.py:    return redirect(url_for('products.view_variant', 
+app/blueprints/products/product_variants.py:        return redirect(url_for('products.product_list'))
+app/blueprints/products/product_variants.py:        return redirect(url_for('products.view_product', product_id=product_id))
+app/blueprints/products/product_variants.py:        return redirect(url_for('products.view_product', product_id=product_id))
+app/blueprints/products/product_variants.py:        return redirect(url_for('products.view_variant', 
+app/blueprints/products/product_variants.py:    return redirect(url_for('products.view_product', product_id=product_id))
+app/blueprints/products/product_inventory_routes.py:from flask import Blueprint, request, jsonify, flash, redirect, url_for
+app/blueprints/products/product_inventory_routes.py:        return redirect(url_for('products.product_list'))
+app/blueprints/products/product_inventory_routes.py:            return redirect(url_for('sku.view_sku', sku_id=inventory_item_id))
+app/blueprints/products/product_inventory_routes.py:        return redirect(url_for('sku.view_sku', sku_id=inventory_item_id))
+app/blueprints/products/product_inventory_routes.py:        return redirect(url_for('sku.view_sku', inventory_item_id=inventory_item_id))
+app/blueprints/products/product_inventory_routes.py:        return redirect(url_for('dashboard.dashboard'))
