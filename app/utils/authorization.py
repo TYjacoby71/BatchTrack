@@ -1,1 +1,2 @@
-depricated and all handled in the app.utils.permissions module
+
+# This module is deprecated and all functionality has been moved to app.utils.permissions
