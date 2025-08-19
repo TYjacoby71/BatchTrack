@@ -1,4 +1,3 @@
-
 from flask import Blueprint, render_template, request, redirect, url_for, session, jsonify, flash
 from ..models import Recipe, InventoryItem, Batch
 from ..services.stock_check import UniversalStockCheckService
@@ -16,7 +15,7 @@ def check_stock_for_recipe(recipe, scale=1):
     try:
         service = UniversalStockCheckService()
         result = service.check_recipe_stock(recipe, scale)
-        
+
         # Format for legacy compatibility
         stock_check = []
         for item in result['stock_check']:
@@ -28,7 +27,7 @@ def check_stock_for_recipe(recipe, scale=1):
                 'status': item['status'],
                 'type': item.get('type', 'ingredient')
             })
-        
+
         return stock_check, result['all_ok']
     except Exception as e:
         return [], False
@@ -122,9 +121,9 @@ def check_stock():
         recipe = Recipe.query.get_or_404(recipe_id)
 
         # Use Universal Stock Check Service
-        service = UniversalStockCheckService()
-        result = service.check_recipe_stock(recipe, scale)
-        
+        uscs = UniversalStockCheckService()
+        result = uscs.check_recipe_stock(recipe, scale=scale)
+
         # Handle container validation
         container_ids = data.get('container_ids', [])
         if container_ids and isinstance(container_ids, list):
