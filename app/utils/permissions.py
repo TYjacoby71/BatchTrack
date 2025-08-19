@@ -78,7 +78,7 @@ def require_permission(permission_name: str):
                 return jsonify({"error": f"Permission denied: {permission_name}"}), 403
 
             flash(f"You don't have permission to access this feature. Required permission: {permission_name}", "error")
-            return redirect(url_for("app_routes.dashboard"))
+            return redirect(url_for("organization.dashboard"))
 
         return decorated_function
     return decorator
