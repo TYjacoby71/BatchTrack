@@ -122,8 +122,7 @@ def register_middleware(app):
                             return redirect(url_for('billing.upgrade'))
                         elif access_reason == 'organization_suspended':
                             flash('Your organization has been suspended. Please contact support.', 'error')
-                            logout_user()
-                            return redirect(url_for('auth.login'))
+                            return redirect(url_for('billing.upgrade'))
                 else:
                     print(f"DEBUG: Tier is billing exempt, allowing access")
             else:
