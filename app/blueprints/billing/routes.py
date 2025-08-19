@@ -77,21 +77,18 @@ def checkout(tier, billing_cycle='month'):
         return redirect(url_for('billing.upgrade'))
 
     try:
-        # For Stripe checkout
-        if billing_cycle in ['month', 'year']:
-            from ...models.subscription_tier import SubscriptionTier
-            tier_obj = SubscriptionTier.query.filter_by(key=tier).first()
-            if tier_obj:
-                checkout_session = StripeService.create_checkout_session_for_tier(
-                    tier_obj,
-                    current_user.email,
-                    f"{current_user.first_name} {current_user.last_name}",
-                    url_for('billing.complete_signup_from_stripe', _external=True),
-                    url_for('billing.upgrade', _external=True),
-                    metadata={'tier': tier, 'billing_cycle': billing_cycle}
-                )
-                if checkout_session:
-                    return redirect(checkout_session.url)
+        # Use unified billing service for checkout
+        checkout_session = BillingService.create_checkout_session(
+            tier,
+            current_user.email,
+            f"{current_user.first_name} {current_user.last_name}",
+            url_for('billing.complete_signup_from_stripe', _external=True),
+            url_for('billing.upgrade', _external=True),
+            metadata={'tier': tier, 'billing_cycle': billing_cycle}
+        )
+        
+        if checkout_session:
+            return redirect(checkout_session.url)
 
         flash('Checkout not available for this tier', 'error')
         return redirect(url_for('billing.upgrade'))
@@ -403,7 +400,7 @@ def stripe_webhook():
         event = StripeService.construct_event(payload, sig_header, webhook_secret)
         logger.info(f"Received Stripe webhook: {event['type']}")
 
-        status = StripeService.handle_webhook_event(event)
+        status = BillingService.handle_webhook_event('stripe', event)
         return '', status
 
     except ValueError as e:
