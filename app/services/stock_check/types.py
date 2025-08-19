@@ -1,4 +1,3 @@
-
 """
 Type definitions for the Universal Stock Check System
 """
@@ -11,14 +10,15 @@ from enum import Enum
 class InventoryCategory(Enum):
     """Supported inventory categories"""
     INGREDIENT = "ingredient"
-    CONTAINER = "container" 
+    CONTAINER = "container"
     PRODUCT = "product"
     CONSUMABLE = "consumable"  # Future category
 
 
 class StockStatus(Enum):
     """Stock availability status"""
-    OK = "OK"
+    AVAILABLE = "AVAILABLE"
+    OK = "OK"  # Alias for AVAILABLE
     LOW = "LOW"
     NEEDED = "NEEDED"
     ERROR = "ERROR"
@@ -33,9 +33,9 @@ class StockCheckRequest:
     unit: str
     category: InventoryCategory
     scale_factor: float = 1.0
-    
-    
-@dataclass 
+
+
+@dataclass
 class StockCheckResult:
     """Result of stock availability check"""
     item_id: int
@@ -52,7 +52,7 @@ class StockCheckResult:
     formatted_available: str = ""
     error_message: Optional[str] = None
     conversion_details: Optional[Dict[str, Any]] = None
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for API responses"""
         return {
