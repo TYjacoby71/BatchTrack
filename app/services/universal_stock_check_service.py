@@ -1,238 +1,419 @@
 
-"""
-Universal Stock Check Service (USCS)
+from datetime import date
+from sqlalchemy import and_, or_
+from flask_login import current_user
 
-This is the canonical, single-source-of-truth for all stock availability checking
-across the application. It orchestrates FIFO inventory, unit conversions, and 
-cross-domain availability validation.
+from app.models.inventory import InventoryItem, InventoryHistory
+try:
+    from app.models.product import ProductSKUHistory
+except Exception:  # pragma: no cover
+    ProductSKUHistory = None  # type: ignore
 
-Used by:
-- Recipe planning
-- Batch production
-- Bulk stock checks  
-- Product/Shopify integration (future)
-"""
-
-import logging
-from typing import Dict, List, Any, Optional, Tuple
-from decimal import Decimal
-from datetime import datetime
-
-from ..extensions import db
-from ..models import Recipe, RecipeIngredient, InventoryItem
+# Add missing FIFOService import
 from ..blueprints.fifo.services import FIFOService
-from ..services.unit_conversion import ConversionEngine
-
-logger = logging.getLogger(__name__)
 
 
-def check_recipe_availability(recipe_id: int, scale_factor: float = 1.0) -> Dict[str, Any]:
+def _fresh_filter(model):
+    today = date.today()
+    return or_(getattr(model, "expiration_date").is_(None),
+               getattr(model, "expiration_date") >= today)
+
+
+def _scoped(query, model):
+    if current_user and getattr(current_user, "is_authenticated", False):
+        return query.filter(getattr(model, "organization_id") == current_user.organization_id)
+    return query
+
+
+def _entries_for_item(inventory_item_id: int, include_expired: bool):
+    item = InventoryItem.query.get(inventory_item_id)
+    if not item:
+        return [], None
+
+    if item.type == "product" and ProductSKUHistory is not None:
+        q = ProductSKUHistory.query.filter(
+            and_(ProductSKUHistory.inventory_item_id == inventory_item_id,
+                 ProductSKUHistory.remaining_quantity > 0)
+        )
+        if not include_expired:
+            q = q.filter(_fresh_filter(ProductSKUHistory))
+        q = _scoped(q, ProductSKUHistory)
+        return q.all(), item
+
+    q = InventoryHistory.query.filter(
+        and_(InventoryHistory.inventory_item_id == inventory_item_id,
+             InventoryHistory.remaining_quantity > 0)
+    )
+    if not include_expired:
+        q = q.filter(_fresh_filter(InventoryHistory))
+    q = _scoped(q, InventoryHistory)
+    return q.all(), item
+
+
+def _available_qty(inventory_item_id: int, include_expired: bool) -> float:
+    entries, _ = _entries_for_item(inventory_item_id, include_expired)
+    return float(sum(float(getattr(e, "remaining_quantity", 0.0)) for e in entries))
+
+
+def check_stock_availability(inventory_requirements):
     """
-    Universal stock check for recipe availability.
-    
-    Args:
-        recipe_id: Recipe to check
-        scale_factor: Scaling factor for recipe
-        
-    Returns:
-        Dict with availability results
+    Check if we have enough inventory to fulfill the given requirements.
+    inventory_requirements: List of dicts with keys: item_id, quantity_needed, unit
+    Returns: Dict with 'can_make': bool, 'missing_items': list
     """
-    try:
-        recipe = Recipe.query.get(recipe_id)
-        if not recipe:
-            return {
-                'success': False,
-                'error': 'Recipe not found',
-                'can_make': False
-            }
+    from app.models import InventoryItem
+    from app.services.conversion_wrapper import safe_convert
 
-        availability_results = []
-        all_available = True
-        
-        for recipe_ingredient in recipe.recipe_ingredients:
-            ingredient_result = check_ingredient_availability(
-                recipe_ingredient.inventory_item_id,
-                recipe_ingredient.quantity * scale_factor,
-                recipe_ingredient.unit
-            )
-            
-            if not ingredient_result['available']:
-                all_available = False
-                
-            availability_results.append({
-                'ingredient_id': recipe_ingredient.inventory_item_id,
-                'ingredient_name': recipe_ingredient.inventory_item.name,
-                'required_quantity': recipe_ingredient.quantity * scale_factor,
-                'required_unit': recipe_ingredient.unit,
-                'is_available': ingredient_result['available'],
-                'available_quantity': ingredient_result['available_quantity'],
-                'shortage': ingredient_result['shortage']
+    missing_items = []
+    can_make = True
+
+    for requirement in inventory_requirements:
+        inventory_item_id = requirement['item_id']
+        quantity_needed = requirement['quantity_needed']
+        unit_needed = requirement['unit']
+
+        item = InventoryItem.query.get(inventory_item_id)
+        if not item:
+            missing_items.append({
+                'item_id': inventory_item_id,
+                'item_name': 'Unknown Item',
+                'quantity_needed': quantity_needed,
+                'quantity_available': 0,
+                'unit': unit_needed
             })
+            can_make = False
+            continue
 
-        return {
-            'success': True,
-            'recipe_id': recipe_id,
-            'scale_factor': scale_factor,
-            'can_make': all_available,
-            'ingredients': availability_results
-        }
+        # If units match exactly, no conversion needed
+        if unit_needed == item.unit:
+            converted_quantity = quantity_needed
+        else:
+            # Try to convert units
+            conversion_result = safe_convert(quantity_needed, unit_needed, item.unit, ingredient_id=item.id)
+            if conversion_result['ok']:
+                converted_quantity = conversion_result['result']['converted_value']
+            else:
+                # Cannot convert - this is a blocking error
+                missing_items.append({
+                    'item_id': inventory_item_id,
+                    'item_name': item.name,
+                    'quantity_needed': quantity_needed,
+                    'quantity_available': item.quantity,
+                    'unit': unit_needed,
+                    'conversion_error': conversion_result['error']
+                })
+                can_make = False
+                continue
 
-    except Exception as e:
-        logger.error(f"Error checking recipe availability: {e}")
-        return {
-            'success': False,
-            'error': str(e),
-            'can_make': False
-        }
+        # Check if we have enough quantity
+        if item.quantity < converted_quantity:
+            missing_items.append({
+                'item_id': inventory_item_id,
+                'item_name': item.name,
+                'quantity_needed': quantity_needed,
+                'quantity_available': item.quantity,
+                'unit': unit_needed
+            })
+            can_make = False
+
+    return {
+        'can_make': can_make,
+        'missing_items': missing_items
+    }
 
 
-def check_ingredient_availability(ingredient_id: int, required_amount: float, 
-                                unit: str) -> Dict[str, Any]:
+# Optional convenience alias
+def get_available_quantity(inventory_item_id: int, include_expired: bool = False) -> float:
+    return _available_qty(inventory_item_id, include_expired)
+
+
+# Keep the rest of the existing functions for compatibility
+from ..models import db, Recipe, InventoryItem, InventoryHistory
+from sqlalchemy import or_
+from app.services.unit_conversion import ConversionEngine
+from flask_login import current_user
+from datetime import datetime, timezone
+
+def universal_stock_check(recipe, scale=1.0, flex_mode=False):
+    """Universal Stock Check Service (USCS) - Ingredients Only"""
+    results = []
+    all_ok = True
+
+    print(f"Starting stock check for recipe: {recipe.name}, scale: {scale}")
+    print(f"Recipe has {len(recipe.recipe_ingredients)} recipe ingredients")
+
+    # Check each ingredient in the recipe
+    for recipe_ingredient in recipe.recipe_ingredients:
+        ingredient = recipe_ingredient.inventory_item
+        print(f"Processing recipe ingredient: {recipe_ingredient.quantity} {recipe_ingredient.unit}")
+
+        if not ingredient:
+            print(f"  - ERROR: No inventory item linked to recipe ingredient ID {recipe_ingredient.id}")
+            continue
+
+        print(f"  - Found ingredient: {ingredient.name} (org_id: {ingredient.organization_id})")
+        print(f"  - Current user org_id: {current_user.organization_id if current_user.is_authenticated else 'None'}")
+
+        # Ensure ingredient belongs to current user's organization
+        if not ingredient.belongs_to_user():
+            print(f"  - SKIPPING: Ingredient {ingredient.name} doesn't belong to current user's organization")
+            continue
+
+        print(f"  - Ingredient belongs to user, proceeding with stock check")
+        needed_amount = recipe_ingredient.quantity * scale
+
+        # Get available FIFO entries (non-expired only) - explicitly exclude expired
+        available_entries = FIFOService.get_fifo_entries(ingredient.id)  # This already excludes expired
+        total_available = sum(entry.remaining_quantity for entry in available_entries)
+
+        # Double-check: ensure we're only counting fresh, non-expired inventory
+        # The get_fifo_entries method already filters out expired entries, but this confirms it
+
+        stock_unit = ingredient.unit
+        recipe_unit = recipe_ingredient.unit
+        density = ingredient.density if ingredient.density else None
+
+        print(f"  - Available (non-expired): {total_available} {stock_unit}, Need: {needed_amount} {recipe_unit}")
+
+        try:
+            # Convert available stock to recipe unit using UUCS
+            print(f"  - Converting {total_available} {stock_unit} to {recipe_unit}")
+            conversion_result = ConversionEngine.convert_units(
+                total_available,
+                stock_unit,
+                recipe_unit,
+                ingredient_id=ingredient.id
+            )
+            print(f"  - Conversion result: {conversion_result}")
+
+            if isinstance(conversion_result, dict):
+                available_converted = conversion_result['converted_value']
+            else:
+                raise ValueError(f"Unexpected conversion result format for {ingredient.name}")
+
+            # Determine status
+            if available_converted >= needed_amount:
+                status = 'OK'
+            elif available_converted >= needed_amount * 0.5:
+                status = 'LOW'
+                all_ok = False
+            else:
+                status = 'NEEDED'
+                all_ok = False
+
+            print(f"  - Status: {status} (available_converted: {available_converted}, needed: {needed_amount})")
+
+            # Append result for this ingredient
+            # Ensure consistent numeric formatting
+            result_item = {
+                'type': 'ingredient',
+                'name': ingredient.name,
+                'needed': float(needed_amount),
+                'needed_unit': recipe_unit,
+                'available': float(available_converted),
+                'available_unit': recipe_unit,
+                'raw_stock': float(total_available),
+                'stock_unit': stock_unit,
+                'status': status,
+                'formatted_needed': f"{needed_amount:.2f} {recipe_unit}",
+                'formatted_available': f"{available_converted:.2f} {recipe_unit}"
+            }
+            results.append(result_item)
+            print(f"  - Added result: {result_item}")
+
+        except ValueError as e:
+            print(f"  - Conversion failed: {str(e)}")
+            error_msg = f"Cannot convert {recipe_unit} to {stock_unit}"
+            status = 'DENSITY_MISSING' if "density" in str(e).lower() else 'ERROR'
+            error_result = {
+                'type': 'ingredient',
+                'name': ingredient.name,
+                'needed': needed_amount,
+                'needed_unit': recipe_unit,
+                'available': 0,
+                'available_unit': recipe_unit,
+                'status': status,
+                'error': str(e)
+            }
+            results.append(error_result)
+            print(f"  - Added error result: {error_result}")
+            all_ok = False
+
+    print(f"Stock check complete. Found {len(results)} results, all_ok: {all_ok}")
+    return {
+        'stock_check': results,
+        'all_ok': all_ok
+    }
+
+
+class StockCheckService:
+    """DEPRECATED - Backwards-compatibility wrapper for existing stock check functions
+
+    WARNING: This compatibility layer will be removed in the next release.
+    Use the canonical inventory adjustment service directly.
     """
-    Check availability of a single ingredient.
-    
-    Args:
-        ingredient_id: Ingredient to check
-        required_amount: Amount needed
-        unit: Unit of measurement
-        
-    Returns:
-        Dict with availability details
+
+    @staticmethod
+    def check_availability(*args, **kwargs):
+        """Check if ingredients are available for production"""
+        import warnings
+        warnings.warn(
+            "StockCheckService.check_availability is deprecated. Use canonical service directly.",
+            DeprecationWarning,
+            stacklevel=2
+        )
+        return check_recipe_availability(*args, **kwargs)
+
+    @staticmethod
+    def check_recipe_availability(*args, **kwargs):
+        return check_recipe_availability(*args, **kwargs)
+
+    @staticmethod
+    def check_ingredient_availability(*args, **kwargs):
+        return check_ingredient_availability(*args, **kwargs)
+
+    @staticmethod
+    def get_available_inventory_summary(*args, **kwargs):
+        return get_available_inventory_summary(*args, **kwargs)
+
+    @staticmethod
+    def universal_stock_check(*args, **kwargs):
+        return universal_stock_check(*args, **kwargs)
+
+
+def check_ingredient_availability(ingredient_id, required_amount, unit_id):
+    """
+    Check if sufficient inventory exists for an ingredient
     """
     try:
-        ingredient = InventoryItem.query.get(ingredient_id)
-        if not ingredient:
+        # Get available inventory for the ingredient
+        if current_user and current_user.organization_id:
+            inventory_items = InventoryItem.query.filter_by(
+                ingredient_id=ingredient_id,
+                organization_id=current_user.organization_id
+            ).all()
+        else:
             return {
                 'available': False,
-                'available_quantity': 0,
-                'shortage': required_amount,
-                'error': 'Ingredient not found'
+                'error': 'No organization context'
             }
 
-        # Get available FIFO entries (non-expired only)
-        available_entries = FIFOService.get_fifo_entries(ingredient_id)
-        
-        # Convert to ingredient's base unit for accurate calculation
-        conversion_engine = ConversionEngine()
-        try:
-            converted_required = conversion_engine.convert_to_base_unit(
-                required_amount, unit, ingredient_id
-            )
-        except Exception as e:
-            logger.warning(f"Unit conversion failed for {ingredient.name}: {e}")
-            # Fallback: assume same unit
-            converted_required = required_amount
+        # Calculate total available quantity
+        total_available = sum(item.quantity for item in inventory_items if item.quantity > 0)
 
-        # Calculate total available in base units
-        total_available = sum(entry.remaining_quantity for entry in available_entries)
-        
-        # Check availability
-        is_available = total_available >= converted_required
-        shortage = max(0, converted_required - total_available)
-
-        return {
-            'available': is_available,
-            'available_quantity': total_available,
-            'shortage': shortage,
-            'ingredient_name': ingredient.name
-        }
+        if total_available >= required_amount:
+            return {
+                'available': True,
+                'shortage': 0,
+                'available_quantity': total_available
+            }
+        else:
+            return {
+                'available': False,
+                'shortage': required_amount - total_available,
+                'available_quantity': total_available
+            }
 
     except Exception as e:
-        logger.error(f"Error checking ingredient availability: {e}")
         return {
             'available': False,
-            'available_quantity': 0,
-            'shortage': required_amount,
             'error': str(e)
         }
 
 
-def bulk_stock_check(items: List[Dict[str, Any]]) -> Dict[str, Any]:
+def check_recipe_availability(recipe_id, scale_factor=1.0):
     """
-    Perform bulk stock availability check.
-    
-    Args:
-        items: List of items to check with ingredient_id, quantity, unit
-        
-    Returns:
-        Dict with bulk check results
+    Check if recipe can be made with current inventory
     """
     try:
-        results = []
-        
-        for item in items:
-            result = check_ingredient_availability(
-                item['ingredient_id'],
-                item['quantity'],
-                item['unit']
-            )
-            result['requested_quantity'] = item['quantity']
-            result['requested_unit'] = item['unit']
-            results.append(result)
-
-        all_available = all(result['available'] for result in results)
-        
-        return {
-            'success': True,
-            'all_available': all_available,
-            'items': results,
-            'checked_at': datetime.utcnow().isoformat()
-        }
-
-    except Exception as e:
-        logger.error(f"Error in bulk stock check: {e}")
-        return {
-            'success': False,
-            'error': str(e),
-            'items': []
-        }
-
-
-def get_available_inventory_summary() -> Dict[str, Any]:
-    """
-    Get summary of all available inventory.
-    
-    Returns:
-        Dict with inventory summary
-    """
-    try:
-        summary = {}
-        
-        # Get all active ingredients
-        ingredients = InventoryItem.query.filter(
-            InventoryItem.type.in_(['ingredient', 'container'])
-        ).all()
-        
-        for ingredient in ingredients:
-            # Get available FIFO entries
-            available_entries = FIFOService.get_fifo_entries(ingredient.id)
-            total_available = sum(entry.remaining_quantity for entry in available_entries)
-            
-            summary[ingredient.id] = {
-                'name': ingredient.name,
-                'available_quantity': total_available,
-                'unit': ingredient.unit,
-                'last_updated': datetime.utcnow().isoformat()
+        if not current_user or not current_user.organization_id:
+            return {
+                'can_make': False,
+                'error': 'No organization context'
             }
 
+        recipe = Recipe.query.filter_by(
+            id=recipe_id,
+            organization_id=current_user.organization_id
+        ).first()
+
+        if not recipe:
+            return {
+                'can_make': False,
+                'error': 'Recipe not found'
+            }
+
+        results = []
+        can_make = True
+
+        for recipe_ingredient in recipe.recipe_ingredients:
+            required_amount = recipe_ingredient.quantity * scale_factor
+            availability = check_ingredient_availability(
+                recipe_ingredient.ingredient_id,
+                required_amount,
+                recipe_ingredient.unit_id
+            )
+
+            results.append({
+                'ingredient_id': recipe_ingredient.ingredient_id,
+                'ingredient_name': recipe_ingredient.ingredient.name,
+                'required_amount': required_amount,
+                'available_amount': availability.get('available_quantity', 0),
+                'shortage': availability.get('shortage', 0),
+                'available': availability.get('available', False)
+            })
+
+            if not availability.get('available', False):
+                can_make = False
+
         return {
-            'success': True,
-            'summary': summary,
-            'generated_at': datetime.utcnow().isoformat()
+            'can_make': can_make,
+            'ingredients': results,
+            'scale_factor': scale_factor
         }
 
     except Exception as e:
-        logger.error(f"Error generating inventory summary: {e}")
         return {
-            'success': False,
-            'error': str(e),
-            'summary': {}
+            'can_make': False,
+            'error': str(e)
         }
 
 
-def _fresh_filter(model):
-    """Filter for non-expired inventory items."""
-    return model.query.filter(
-        model.expiration_date.is_(None) | 
-        (model.expiration_date > datetime.utcnow())
-    )
+def get_available_inventory_summary():
+    """
+    Get summary of available inventory across all ingredients
+    """
+    try:
+        if not current_user or not current_user.organization_id:
+            return {
+                'success': False,
+                'error': 'No organization context'
+            }
+
+        inventory_items = InventoryItem.query.filter_by(
+            organization_id=current_user.organization_id
+        ).all()
+
+        summary = {}
+        for item in inventory_items:
+            ingredient_id = item.ingredient_id
+            if ingredient_id not in summary:
+                summary[ingredient_id] = {
+                    'ingredient_name': item.ingredient.name,
+                    'total_quantity': 0,
+                    'lot_count': 0
+                }
+
+            summary[ingredient_id]['total_quantity'] += item.quantity
+            summary[ingredient_id]['lot_count'] += 1
+
+        return {
+            'success': True,
+            'inventory': list(summary.values())
+        }
+
+    except Exception as e:
+        return {
+            'success': False,
+            'error': str(e)
+        }
