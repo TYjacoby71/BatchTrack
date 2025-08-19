@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
-from ...services.stock_check.core import check_recipe_availability
+from ...services.stock_check import universal_stock_check
 from ...models import Recipe
 
 stock_api_bp = Blueprint('stock_api', __name__)
@@ -21,9 +21,9 @@ def check_stock():
         if not recipe:
             print(f"Recipe {recipe_id} not found for organization {current_user.organization_id}")
             return jsonify({"error": "Recipe not found"}), 404
-
+            
         print(f"Found recipe: {recipe.name} with {len(recipe.recipe_ingredients)} ingredients")
-
+        
         # Debug recipe ingredients
         for ri in recipe.recipe_ingredients:
             ingredient = ri.inventory_item
@@ -33,7 +33,7 @@ def check_stock():
             else:
                 print(f"  - WARNING: Ingredient is None for recipe ingredient ID {ri.id}")
 
-        result = check_recipe_availability(recipe, scale, flex_mode=flex_mode)
+        result = universal_stock_check(recipe, scale, flex_mode=flex_mode)
         print(f"Stock check result: {result}")
 
         if 'stock_check' not in result:
