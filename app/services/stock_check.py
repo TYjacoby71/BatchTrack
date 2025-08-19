@@ -8,6 +8,9 @@ try:
 except Exception:  # pragma: no cover
     ProductSKUHistory = None  # type: ignore
 
+# Add missing FIFOService import
+from ..blueprints.fifo.services import FIFOService
+
 
 def _fresh_filter(model):
     today = date.today()
@@ -159,7 +162,6 @@ def universal_stock_check(recipe, scale=1.0, flex_mode=False):
         needed_amount = recipe_ingredient.quantity * scale
 
         # Get available FIFO entries (non-expired only) - explicitly exclude expired
-        from ..services.inventory_adjustment import process_inventory_adjustment
         available_entries = FIFOService.get_fifo_entries(ingredient.id)  # This already excludes expired
         total_available = sum(entry.remaining_quantity for entry in available_entries)
 
