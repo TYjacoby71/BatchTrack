@@ -1,9 +1,21 @@
 from flask import render_template, request, redirect, url_for, flash, jsonify, current_app
 from flask_login import login_required, current_user
-from ...models import db, Recipe, RecipeIngredient, InventoryItem, Unit
-from ...utils.unit_utils import get_global_unit_list
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy import or_
+from sqlalchemy.orm import joinedload
 from . import recipes_bp
+from ...extensions import db
+from ...models import Recipe, RecipeIngredient, InventoryItem, Batch, UnifiedInventoryHistory, Category
+from ...utils.permissions import require_permission
+from ...utils.authorization import check_organization_access
+from ...models.models import Organization
+from ...services.recipe_service import (
+    create_recipe, update_recipe, delete_recipe, get_recipe_details,
+    plan_production, scale_recipe, validate_recipe_data, duplicate_recipe
+)
+from datetime import datetime
+import logging
+
+logger = logging.getLogger(__name__)
 
 @recipes_bp.route('/new', methods=['GET', 'POST'])
 @login_required
@@ -16,7 +28,7 @@ def new_recipe():
                 flash('Label prefix is required and cannot be empty.', 'error')
                 # Get all units for dropdowns
                 units = Unit.query.filter_by(is_active=True).order_by(Unit.unit_type, Unit.name).all()
-                return render_template('recipe_form.html', 
+                return render_template('recipe_form.html',
                                      recipe=None,
                                      all_ingredients=InventoryItem.query.all(),
                                      inventory_units=get_global_unit_list(),
@@ -28,7 +40,7 @@ def new_recipe():
                 flash(f'Label prefix "{label_prefix}" is already used by recipe "{existing_recipe.name}". Please choose a different prefix.', 'error')
                 # Get all units for dropdowns
                 units = Unit.query.filter_by(is_active=True).order_by(Unit.unit_type, Unit.name).all()
-                return render_template('recipe_form.html', 
+                return render_template('recipe_form.html',
                                      recipe=None,
                                      all_ingredients=InventoryItem.query.all(),
                                      inventory_units=get_global_unit_list(),
@@ -128,8 +140,8 @@ def view_recipe(recipe_id):
         if not inventory_units:
             flash("Warning: No units found in system", "warning")
             inventory_units = []
-        return render_template('view_recipe.html', 
-                             recipe=recipe, 
+        return render_template('view_recipe.html',
+                             recipe=recipe,
                              inventory_units=inventory_units)
     except Exception as e:
         flash(f"Error loading recipe: {str(e)}", "error")
@@ -138,31 +150,55 @@ def view_recipe(recipe_id):
 
 @recipes_bp.route('/<int:recipe_id>/plan', methods=['GET', 'POST'])
 @login_required
-def plan_production(recipe_id):
-    recipe = Recipe.query.get_or_404(recipe_id)
-    if recipe.parent_id:
-        base_recipe = recipe.parent
-    else:
-        base_recipe = recipe
+@require_permission('plan_production')
+def plan_production_route(recipe_id):
+    """Plan production for a recipe"""
+    if not check_organization_access(Recipe, recipe_id):
+        flash('Recipe not found or access denied.', 'error')
+        return redirect(url_for('recipes.list_recipes'))
 
-    allowed_containers = [
-        {
-            'id': c.id,
-            'name': c.name,
-            'storage_amount': c.storage_amount,
-            'storage_unit': c.storage_unit
-        }
-        for c in InventoryItem.query.filter_by(type='container').all()
-    ]
+    recipe = get_recipe_details(recipe_id)
+    if not recipe:
+        flash('Recipe not found.', 'error')
+        return redirect(url_for('recipes.list_recipes'))
 
-    inventory_units = get_global_unit_list()
+    if request.method == 'POST':
+        try:
+            data = request.get_json()
+            scale = float(data.get('scale', 1.0))
+            container_id = data.get('container_id')
 
-    return render_template('plan_production.html', 
-                         recipe=recipe,
-                         base_recipe=base_recipe,
-                         hide_variations=True,
-                         allowed_containers=allowed_containers,
-                         inventory_units=inventory_units)
+            # Use canonical recipe service for production planning
+            planning_result = plan_production(recipe_id, scale, container_id)
+
+            if planning_result['success']:
+                # Format response for frontend
+                stock_results = []
+                for ingredient in planning_result['availability']['ingredients']:
+                    stock_results.append({
+                        'ingredient_id': ingredient['ingredient_id'],
+                        'ingredient_name': ingredient['ingredient_name'],
+                        'needed_amount': ingredient['required_quantity'],
+                        'unit': ingredient['required_unit'],
+                        'available': ingredient['is_available'],
+                        'available_quantity': ingredient['available_quantity'],
+                        'shortage': ingredient['shortage']
+                    })
+
+                return jsonify({
+                    'success': True,
+                    'stock_results': stock_results,
+                    'all_available': planning_result['can_produce'],
+                    'scale': scale,
+                    'cost_info': planning_result['cost_info']
+                })
+            else:
+                return jsonify({'success': False, 'error': planning_result['error']}), 500
+
+        except Exception as e:
+            logger.error(f"Error in production planning: {str(e)}")
+            return jsonify({'success': False, 'error': 'Production planning failed'}), 500
+
 
 @recipes_bp.route('/<int:recipe_id>/variation', methods=['GET', 'POST'])
 @login_required
@@ -208,11 +244,10 @@ def create_variation(recipe_id):
                     ingredients_query = ingredients_query.filter_by(organization_id=current_user.organization_id)
                 all_ingredients = ingredients_query.all()
 
-                inventory_units = get_global_unit_list()
                 return render_template('recipe_form.html',
                                      recipe=new_variation,
                                      all_ingredients=all_ingredients,
-                                     inventory_units=inventory_units,
+                                     inventory_units=get_global_unit_list(),
                                      units=units,
                                      is_variation=True,
                                      parent_recipe=parent)
@@ -234,11 +269,10 @@ def create_variation(recipe_id):
                     ingredients_query = ingredients_query.filter_by(organization_id=current_user.organization_id)
                 all_ingredients = ingredients_query.all()
 
-                inventory_units = get_global_unit_list()
                 return render_template('recipe_form.html',
                                      recipe=new_variation,
                                      all_ingredients=all_ingredients,
-                                     inventory_units=inventory_units,
+                                     inventory_units=get_global_unit_list(),
                                      units=units,
                                      is_variation=True,
                                      parent_recipe=parent)
@@ -295,11 +329,10 @@ def create_variation(recipe_id):
 
         # Get all units for dropdowns
         units = Unit.query.filter_by(is_active=True).order_by(Unit.unit_type, Unit.name).all()
-        inventory_units = get_global_unit_list()
         return render_template('recipe_form.html',
             recipe=new_variation,
             all_ingredients=all_ingredients,
-            inventory_units=inventory_units,
+            inventory_units=get_global_unit_list(),
             units=units,
             is_variation=True,
             parent_recipe=parent)
@@ -474,7 +507,7 @@ def edit_recipe(recipe_id):
                     ingredients_query = ingredients_query.filter_by(organization_id=current_user.organization_id)
                 all_ingredients = ingredients_query.all()
 
-                return render_template('recipe_form.html', 
+                return render_template('recipe_form.html',
                                      recipe=recipe,
                                      all_ingredients=all_ingredients,
                                      inventory_units=inventory_units,
@@ -497,7 +530,7 @@ def edit_recipe(recipe_id):
                     ingredients_query = ingredients_query.filter_by(organization_id=current_user.organization_id)
                 all_ingredients = ingredients_query.all()
 
-                return render_template('recipe_form.html', 
+                return render_template('recipe_form.html',
                                      recipe=recipe,
                                      all_ingredients=all_ingredients,
                                      inventory_units=inventory_units,
@@ -550,7 +583,7 @@ def edit_recipe(recipe_id):
             flash('An unexpected error occurred', 'error')
             db.session.rollback() # Rollback transaction on unexpected error
 
-    return render_template('recipe_form.html', 
+    return render_template('recipe_form.html',
                          recipe=recipe,
                          all_ingredients=all_ingredients,
                          inventory_units=inventory_units,
