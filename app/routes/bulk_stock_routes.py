@@ -1,7 +1,8 @@
+
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 from flask_login import login_required
 from ..models import db, Recipe, InventoryItem
-from ..services.universal_stock_check_service import check_stock_availability
+from ..services.stock_check import UniversalStockCheckService
 from ..services.unit_conversion import ConversionEngine
 from sqlalchemy.exc import SQLAlchemyError
 import io
@@ -36,17 +37,21 @@ def bulk_stock_check():
             session['bulk_recipe_ids'] = selected_ids
             session['bulk_scale'] = scale
 
+            # Use new Universal Stock Check Service
+            service = UniversalStockCheckService()
+
             for rid in selected_ids:
                 recipe = Recipe.scoped().filter_by(id=int(rid)).first()
                 if not recipe:
                     continue
-                result = check_stock_availability(recipe, scale)
+                
+                result = service.check_recipe_stock(recipe, scale)
                 results = result['stock_check']
 
                 for row in results:
                     name = row['name']
                     needed = row['needed']
-                    from_unit = row.get('unit') or 'ml'
+                    from_unit = row.get('needed_unit') or 'ml'
                     ingredient = InventoryItem.scoped().filter_by(name=name).first()
 
                     if not ingredient:
@@ -57,7 +62,7 @@ def bulk_stock_check():
                         needed_converted = ConversionEngine.convert_units(needed, from_unit, to_unit)
                     except (KeyError, ValueError) as e:
                         flash(f"Invalid stock check input: {e}", "warning")
-                        return redirect(request.referrer or url_for('stock.bulk_check'))
+                        return redirect(request.referrer or url_for('bulk_stock.bulk_stock_check'))
 
                     key = (name, to_unit)
                     if key not in summary:
@@ -111,7 +116,7 @@ def export_shopping_list_csv():
         return output
     except ValueError as e:
         flash(f"Bulk stock processing failed: {e}", "warning")
-        return redirect(request.referrer or url_for('stock.bulk_check'))
+        return redirect(request.referrer or url_for('bulk_stock.bulk_stock_check'))
     except SQLAlchemyError as e:
         flash("Database error exporting CSV.", "danger")
         return redirect(url_for('bulk_stock.bulk_stock_check'))
