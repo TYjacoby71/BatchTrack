@@ -202,9 +202,7 @@ class BillingService:
             elif organization.billing_status == 'canceled':
                 return False, "subscription_canceled"
 
-        return True, "tier_valid"
-                return False, "payment_required"
-            elif organization.billing_status == 'canceled':
+        elif organization.billing_status == 'canceled':
                 return False, "subscription_canceled"
 
         return True, "tier_valid"

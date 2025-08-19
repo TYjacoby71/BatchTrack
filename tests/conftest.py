@@ -76,14 +76,10 @@ def _create_test_data():
     # Create a test subscription tier
     tier = SubscriptionTier(
         name='Test Tier',
-        key='test',
         description='Test tier for testing',
         user_limit=5,
-        max_users=5,
-        max_monthly_batches=100,
         is_customer_facing=True,
-        billing_provider='exempt',
-        is_billing_exempt=True
+        billing_provider='exempt'
     )
     db.session.add(tier)
     db.session.commit()
