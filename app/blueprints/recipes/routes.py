@@ -76,10 +76,10 @@ def new_recipe():
     units = Unit.query.filter_by(is_active=True).order_by(Unit.unit_type, Unit.name).all()
     inventory_units = get_global_unit_list()
 
-    return render_template('recipe_form.html', 
-                         recipe=None, 
-                         all_ingredients=all_ingredients, 
-                         inventory_units=inventory_units, 
+    return render_template('recipe_form.html',
+                         recipe=None,
+                         all_ingredients=all_ingredients,
+                         inventory_units=inventory_units,
                          units=units)
 
 @recipes_bp.route('/')
@@ -104,7 +104,7 @@ def view_recipe(recipe_id):
             return redirect(url_for('recipes.list_recipes'))
 
         # Organization access is handled by middleware
-        
+
         inventory_units = get_global_unit_list()
         return render_template('view_recipe.html', recipe=recipe, inventory_units=inventory_units)
 
@@ -119,7 +119,7 @@ def view_recipe(recipe_id):
 def plan_production_route(recipe_id):
     """Plan production for a recipe"""
     # Organization access is handled by middleware
-    
+
     recipe = get_recipe_details(recipe_id)
     if not recipe:
         flash('Recipe not found.', 'error')
