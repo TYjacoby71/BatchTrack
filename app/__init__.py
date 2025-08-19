@@ -104,6 +104,12 @@ def _add_core_routes(app):
 
     @app.route("/homepage")
     def homepage():
+        """Public homepage - accessible to all users"""
+        return render_template("homepage.html")
+    
+    @app.route("/public")
+    def public_page():
+        """Alternative public page"""
         return render_template("homepage.html")
 
 def _setup_logging(app):
