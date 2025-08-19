@@ -514,7 +514,7 @@ function planProduction() {
 
     checkStock() {
       const csrfToken = document.querySelector('input[name="csrf_token"]').value;
-      fetch('/api/check-stock', {
+      fetch('/api/stock/check-stock', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',

@@ -106,21 +106,16 @@ def check_stock():
 
         recipe = Recipe.query.get_or_404(recipe_id)
 
-        # Use universal stock check service
-        result = universal_stock_check(recipe, scale)
+        # Use new UniversalStockCheckService
+        from app.services.stock_check.core import UniversalStockCheckService
+        service = UniversalStockCheckService()
+        result = service.check_recipe_stock(recipe, scale)
         stock_check = result['stock_check']
         all_ok = result['all_ok']
 
-        # Handle container validation
-        container_ids = data.get('container_ids', [])
-        if container_ids and isinstance(container_ids, list):
-            container_check, containers_ok = check_container_availability(container_ids, scale)
-            stock_check.extend(container_check)
-            all_ok = all_ok and containers_ok
-
         status = "ok" if all_ok else "bad"
         for item in stock_check:
-            if item["status"] == "LOW" and status != "bad":
+            if item.get("status") == "LOW" and status != "bad":
                 status = "low"
                 break
 

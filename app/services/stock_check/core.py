@@ -9,7 +9,7 @@ import logging
 from typing import List, Dict, Any
 from flask_login import current_user
 
-from .types import StockCheckRequest, StockCheckResult, InventoryCategory
+from .types import StockCheckRequest, StockCheckResult, InventoryCategory, StockStatus
 from .handlers import IngredientHandler, ContainerHandler, ProductHandler
 
 logger = logging.getLogger(__name__)

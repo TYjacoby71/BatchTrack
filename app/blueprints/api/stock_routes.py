@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
-from ...services.universal_stock_check_service import check_recipe_availability
+from ...services.stock_check.core import UniversalStockCheckService
 from ...models import Recipe
 
 stock_api_bp = Blueprint('stock_api', __name__)
@@ -12,7 +12,6 @@ def check_stock():
         data = request.get_json()
         recipe_id = data.get('recipe_id')
         scale = float(data.get('scale', 1.0))
-        flex_mode = data.get('flex_mode', False)
 
         print(f"Stock check request - recipe_id: {recipe_id}, scale: {scale}, user org: {current_user.organization_id}")
 
@@ -22,27 +21,15 @@ def check_stock():
             print(f"Recipe {recipe_id} not found for organization {current_user.organization_id}")
             return jsonify({"error": "Recipe not found"}), 404
 
-        print(f"Found recipe: {recipe.name} with {len(recipe.recipe_ingredients)} ingredients")
+        print(f"Found recipe: {recipe.name} with {len(recipe.ingredients)} ingredients")
 
-        # Debug recipe ingredients
-        for ri in recipe.recipe_ingredients:
-            ingredient = ri.inventory_item
-            print(f"Recipe ingredient: {ri.quantity} {ri.unit} of {ingredient.name if ingredient else 'MISSING'}")
-            if ingredient:
-                print(f"  - Ingredient org_id: {ingredient.organization_id}, current qty: {ingredient.quantity} {ingredient.unit}")
-            else:
-                print(f"  - WARNING: Ingredient is None for recipe ingredient ID {ri.id}")
-
-        result = check_recipe_availability(recipe, scale, flex_mode=flex_mode)
+        # Use new UniversalStockCheckService
+        service = UniversalStockCheckService()
+        result = service.check_recipe_stock(recipe, scale)
         print(f"Stock check result: {result}")
 
-        if 'stock_check' not in result:
-            result = {
-                'stock_check': result.get('ingredients', []),
-                'all_ok': result.get('all_ok', False)
-            }
-
         return jsonify(result)
+
     except Exception as e:
         print(f"Stock check API error: {str(e)}")
         import traceback

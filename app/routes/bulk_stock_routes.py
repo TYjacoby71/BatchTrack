@@ -40,7 +40,9 @@ def bulk_stock_check():
                 recipe = Recipe.scoped().filter_by(id=int(rid)).first()
                 if not recipe:
                     continue
-                result = check_stock_availability(recipe, scale)
+                from app.services.stock_check.core import UniversalStockCheckService
+                service = UniversalStockCheckService()
+                result = service.check_recipe_stock(recipe, scale)
                 results = result['stock_check']
 
                 for row in results:
