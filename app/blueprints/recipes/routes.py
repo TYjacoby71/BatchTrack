@@ -4,7 +4,7 @@ from . import recipes_bp
 from ...extensions import db
 from ...models import Recipe, InventoryItem
 from ...utils.permissions import require_permission
-from app.utils.permissions import check_organization_access
+# Remove import - using direct model access instead
 from ...services.recipe_service import (
     create_recipe, update_recipe, delete_recipe, get_recipe_details,
     plan_production, scale_recipe, validate_recipe_data, duplicate_recipe
@@ -104,8 +104,8 @@ def view_recipe(recipe_id):
             flash('Recipe not found.', 'error')
             return redirect(url_for('recipes.list_recipes'))
 
-        # Check organization access
-        if not check_organization_access(Recipe, recipe_id):
+        # Check organization access - ensure recipe belongs to user's org
+        if current_user.organization_id and recipe.organization_id != current_user.organization_id:
             flash('Recipe not found or access denied.', 'error')
             return redirect(url_for('recipes.list_recipes'))
 
@@ -122,7 +122,8 @@ def view_recipe(recipe_id):
 @require_permission('plan_production')
 def plan_production_route(recipe_id):
     """Plan production for a recipe"""
-    if not check_organization_access(Recipe, recipe_id):
+    # Check organization access - ensure recipe belongs to user's org  
+    if current_user.organization_id and recipe.organization_id != current_user.organization_id:
         flash('Recipe not found or access denied.', 'error')
         return redirect(url_for('recipes.list_recipes'))
 

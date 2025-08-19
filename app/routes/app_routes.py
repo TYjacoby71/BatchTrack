@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, session, jsonify, flash
 from ..models import Recipe, InventoryItem, Batch
-from ..services.stock_check import UniversalStockCheckService
+from ..services.stock_check.core import UniversalStockCheckService
 from flask_login import login_required, current_user
 from ..utils.permissions import require_permission, get_effective_organization_id, permission_required, any_permission_required
 from ..services.combined_inventory_alerts import CombinedInventoryAlertService

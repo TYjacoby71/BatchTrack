@@ -80,7 +80,15 @@ def login():
             if user.user_type == 'developer':
                 return redirect(url_for('developer.dashboard'))
             else:
-                return redirect(url_for('app_routes.dashboard'))
+                # Try organization dashboard first, then app_routes as fallback
+                try:
+                    return redirect(url_for('organization.dashboard'))
+                except:
+                    try:
+                        return redirect(url_for('app_routes.dashboard'))
+                    except:
+                        # Ultimate fallback - go to root
+                        return redirect(url_for('index'))
         else:
             flash('Invalid username or password')
             return render_template('auth/login.html', form=form)
@@ -186,7 +194,15 @@ def oauth_callback():
             if user.user_type == 'developer':
                 return redirect(url_for('developer.dashboard'))
             else:
-                return redirect(url_for('app_routes.dashboard'))
+                # Try organization dashboard first, then app_routes as fallback
+                try:
+                    return redirect(url_for('organization.dashboard'))
+                except:
+                    try:
+                        return redirect(url_for('app_routes.dashboard'))
+                    except:
+                        # Ultimate fallback - go to root
+                        return redirect(url_for('index'))
 
         else:
             # New user - store info for signup flow
