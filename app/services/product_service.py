@@ -244,3 +244,55 @@ class ProductService:
             product_id=product.id,
             is_active=True
         ).all()
+
+    @staticmethod
+    def get_product_from_sku(sku_id):
+        """Get Product ID from SKU ID with proper validation"""
+        sku = ProductService.get_sku_by_id(sku_id)
+        
+        if not sku:
+            return None
+            
+        if not sku.product_id:
+            return None
+            
+        return {
+            'product_id': sku.product_id,
+            'sku_id': sku.id
+        }
+
+    @staticmethod
+    def quick_add_product(product_name: str, variant_name: str = 'Base', product_base_unit: str = 'oz'):
+        """Quick add product and variant, return structured response"""
+        # Get or create the SKU with organization scoping
+        sku = ProductService.get_or_create_sku(
+            product_name=product_name,
+            variant_name=variant_name,
+            size_label='Bulk',
+            unit=product_base_unit
+        )
+
+        # Ensure the SKU belongs to the current user's organization
+        if not sku.organization_id:
+            sku.organization_id = current_user.organization_id
+
+        db.session.commit()
+
+        # Find the base product ID (first SKU for this product)
+        base_sku = db.session.query(func.min(ProductSKU.id)).filter_by(
+            product_name=sku.product.name,
+            organization_id=current_user.organization_id
+        ).scalar()
+
+        return {
+            'success': True,
+            'product': {
+                'id': base_sku,
+                'name': sku.product.name,
+                'product_base_unit': sku.unit
+            },
+            'variant': {
+                'id': sku.id,
+                'name': sku.variant.name
+            }
+        }
