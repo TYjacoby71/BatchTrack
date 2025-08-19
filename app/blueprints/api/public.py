@@ -1,4 +1,3 @@
-
 from flask import Blueprint, jsonify, make_response
 from datetime import datetime, timezone
 from app.extensions import limiter
