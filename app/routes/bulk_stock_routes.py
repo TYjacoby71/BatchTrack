@@ -16,7 +16,7 @@ def bulk_stock_check():
     try:
         recipes = Recipe.scoped().all()
         summary = {}
-        selected_ids = []]
+        selected_ids = []
 
         if request.method == 'POST':
             selected_ids = request.form.getlist('recipe_ids')
