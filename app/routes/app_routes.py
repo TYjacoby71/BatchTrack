@@ -1,11 +1,11 @@
 from flask import Blueprint, render_template, request, redirect, url_for, session, jsonify, flash
-from ..models import Recipe, InventoryItem, Batch
-from ..services.stock_check.core import UniversalStockCheckService
+from app.models import Recipe, InventoryItem, Batch
+from app.services.stock_check.core import UniversalStockCheckService
 from flask_login import login_required, current_user
-from ..utils.permissions import require_permission, get_effective_organization_id, permission_required, any_permission_required
-from ..services.combined_inventory_alerts import CombinedInventoryAlertService
-from ..blueprints.expiration.services import ExpirationService
-from ..services.dashboard_alerts import DashboardAlertService
+from app.utils.permissions import require_permission, get_effective_organization_id, permission_required, any_permission_required
+from app.services.combined_inventory_alerts import CombinedInventoryAlertService
+from app.blueprints.expiration.services import ExpirationService
+from app.services.dashboard_alerts import DashboardAlertService
 
 app_routes_bp = Blueprint('app_routes', __name__)
 
@@ -227,8 +227,8 @@ def view_fault_log():
 def get_server_time():
     """Get current server time in UTC and user's timezone, also auto-complete expired timers"""
     from flask_login import current_user
-    from ..utils.timezone_utils import TimezoneUtils
-    from ..services.timer_service import TimerService
+    from app.utils.timezone_utils import TimezoneUtils
+    from app.services.timer_service import TimerService
 
     # Auto-complete expired timers on each server time request
     # This provides a lightweight way to keep timers updated
@@ -254,4 +254,3 @@ def get_server_time():
         'user_time': user_time.isoformat() if user_time else server_utc.isoformat(),
         'timestamp': server_utc.timestamp()
     })
-
