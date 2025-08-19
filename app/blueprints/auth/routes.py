@@ -80,12 +80,7 @@ def login():
             if user.user_type == 'developer':
                 return redirect(url_for('developer.dashboard'))
             else:
-                # Check if organization dashboard exists, otherwise use fallback
-                try:
-                    return redirect(url_for('organization.dashboard'))
-                except:
-                    # Fallback to root page since app_routes.dashboard may not be registered
-                    return redirect('/')
+                return redirect(url_for('app_routes.dashboard'))
         else:
             flash('Invalid username or password')
             return render_template('auth/login.html', form=form)
@@ -191,12 +186,7 @@ def oauth_callback():
             if user.user_type == 'developer':
                 return redirect(url_for('developer.dashboard'))
             else:
-                # Check if organization dashboard exists, otherwise use fallback
-                try:
-                    return redirect(url_for('organization.dashboard'))
-                except:
-                    # Fallback to root page since app_routes.dashboard may not be registered
-                    return redirect('/')
+                return redirect(url_for('app_routes.dashboard'))
 
         else:
             # New user - store info for signup flow

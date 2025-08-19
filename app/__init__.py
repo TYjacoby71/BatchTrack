@@ -96,17 +96,17 @@ def _add_core_routes(app):
         """Main landing page with proper routing logic"""
         if current_user.is_authenticated:
             if current_user.user_type == 'developer':
-                return redirect(url_for('developer.dashboard'))
+                return redirect(url_for('developer.dashboard'))  # Developers go to developer dashboard
             else:
-                return redirect(url_for('organization.dashboard'))
+                return redirect(url_for('app_routes.dashboard'))  # Regular users go to dashboard
         else:
-            return render_template("homepage.html")
+            return render_template("homepage.html")  # Serve public homepage for unauthenticated users
 
     @app.route("/homepage")
     def homepage():
         """Public homepage - accessible to all users"""
         return render_template("homepage.html")
-
+    
     @app.route("/public")
     def public_page():
         """Alternative public page"""

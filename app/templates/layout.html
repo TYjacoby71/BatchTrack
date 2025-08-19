@@ -51,7 +51,7 @@
     <div class="app-container">
     <nav class="navbar navbar-expand-lg navbar-light bg-light">
         <div class="container-fluid">
-            <a class="navbar-brand" href="{% if current_user.is_authenticated %}{% if current_user.user_type == 'developer' %}{{ url_for('developer.dashboard') }}{% else %}{{ url_for('organization.dashboard') }}{% endif %}{% else %}{{ url_for('index') }}{% endif %}">
+            <a class="navbar-brand" href="{% if current_user.is_authenticated %}{% if current_user.user_type == 'developer' %}{{ url_for('developer.dashboard') }}{% else %}{{ url_for('app_routes.dashboard') }}{% endif %}{% else %}{{ url_for('index') }}{% endif %}">
                 BatchTrack <small class="text-muted">elite refactor</small>
             </a>
             {% if current_user.is_authenticated %}
@@ -90,7 +90,7 @@
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="customerDropdown">
                     <!-- User Dashboard -->
-                    <li><a class="dropdown-item" href="{{ url_for('organization.dashboard') }}">User Dashboard</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('app_routes.dashboard') }}">User Dashboard</a></li>
 
                     <!-- Organization Dashboard (for developers in customer support mode) -->
                     <li><a class="dropdown-item" href="{{ url_for('organization.dashboard') }}"><i class="fas fa-crown"></i> Organization Dashboard</a></li>
@@ -206,7 +206,7 @@
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="directoryDropdown">
                     <!-- User Dashboard -->
-                    <li><a class="dropdown-item" href="{{ url_for('organization.dashboard') }}">User Dashboard</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('app_routes.dashboard') }}">User Dashboard</a></li>
 
                     {% if current_user.is_authenticated and has_permission(current_user, 'organization.view') %}
                     <li><a class="dropdown-item" href="{{ url_for('organization.dashboard') }}"><i class="fas fa-users-cog"></i> Organization Dashboard</a></li>
