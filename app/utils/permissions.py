@@ -520,3 +520,22 @@ def require_organization_owner(f):
             abort(403)
         return f(*args, **kwargs)
     return decorated_function
+
+def has_organization_access(user, organization_id):
+    """Check if user has access to specified organization"""
+    if not user or not user.is_authenticated:
+        return False
+
+    if user.user_type == 'developer':
+        return True  # Developers have access to all organizations
+
+    return user.organization_id == organization_id
+
+def check_organization_access(organization_id):
+    """Check if current user has access to specified organization. Raises PermissionError if not."""
+    from flask_login import current_user
+
+    if not has_organization_access(current_user, organization_id):
+        raise PermissionError(f"Access denied to organization {organization_id}")
+
+    return True
