@@ -17,16 +17,10 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label for="key" class="form-label">Tier Key</label>
-                                    <input type="text" class="form-control" id="key" name="key" 
-                                           value="{{ tier.key }}" readonly>
-                                    <div class="form-text">Key cannot be changed after creation</div>
-                                </div>
-
-                                <div class="mb-3">
-                                    <label for="name" class="form-label">Display Name</label>
+                                    <label for="name" class="form-label">Tier Name *</label>
                                     <input type="text" class="form-control" id="name" name="name" 
                                            value="{{ tier.name }}" required>
+                                    <div class="form-text">This is both the display name and identifier</div>
                                 </div>
 
                                 <div class="mb-3">
@@ -42,9 +36,13 @@
                                 </div>
 
                                 <div class="mb-3">
-                                    <label for="fallback_price" class="form-label">Display Price</label>
-                                    <input type="text" class="form-control" id="fallback_price" name="fallback_price" 
-                                           value="{{ tier.fallback_price }}" placeholder="$0">
+                                    <label for="tier_type" class="form-label">Tier Type</label>
+                                    <select class="form-select" id="tier_type" name="tier_type">
+                                        <option value="monthly" {{ 'selected' if tier.tier_type == 'monthly' else '' }}>Monthly</option>
+                                        <option value="yearly" {{ 'selected' if tier.tier_type == 'yearly' else '' }}>Yearly</option>
+                                        <option value="promotion" {{ 'selected' if tier.tier_type == 'promotion' else '' }}>Promotion</option>
+                                    </select>
+                                    <div class="form-text">Used for organizing and sorting tiers</div>
                                 </div>
                             </div>
 
@@ -68,18 +66,7 @@
                                         <option value="stripe" {{ 'selected' if tier.billing_provider == 'stripe' else '' }}>Stripe</option>
                                         <option value="whop" {{ 'selected' if tier.billing_provider == 'whop' else '' }}>Whop</option>
                                     </select>
-                                </div>
-
-                                <div class="mb-3">
-                                    <div class="form-check">
-                                        <input type="checkbox" class="form-check-input" id="is_billing_exempt" 
-                                               name="is_billing_exempt" {{ 'checked' if tier.is_billing_exempt else '' }}
-                                               onchange="toggleBillingFields()">
-                                        <label class="form-check-label" for="is_billing_exempt">
-                                            <strong>Billing Exempt Override</strong>
-                                        </label>
-                                        <div class="form-text">Check to bypass all billing requirements</div>
-                                    </div>
+                                    <div class="form-text">Use Stripe for discounts and promotions</div>
                                 </div>
 
                                 <div id="stripe_fields" class="mb-3" style="display: none;">
@@ -130,7 +117,6 @@
 <script>
 function toggleBillingFields() {
     const provider = document.getElementById('billing_provider').value;
-    const isExempt = document.getElementById('is_billing_exempt').checked;
     
     const stripeFields = document.getElementById('stripe_fields');
     const whopFields = document.getElementById('whop_fields');
@@ -139,13 +125,11 @@ function toggleBillingFields() {
     stripeFields.style.display = 'none';
     whopFields.style.display = 'none';
     
-    // Show relevant fields if not exempt
-    if (!isExempt) {
-        if (provider === 'stripe') {
-            stripeFields.style.display = 'block';
-        } else if (provider === 'whop') {
-            whopFields.style.display = 'block';
-        }
+    // Show relevant fields based on provider
+    if (provider === 'stripe') {
+        stripeFields.style.display = 'block';
+    } else if (provider === 'whop') {
+        whopFields.style.display = 'block';
     }
 }
 
