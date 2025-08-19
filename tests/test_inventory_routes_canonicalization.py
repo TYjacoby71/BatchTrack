@@ -39,7 +39,7 @@ class TestInventoryRoutesCanonicalService:
             # This is more robust than complex mocking.
             from app.models import db, InventoryItem, User, Organization, SubscriptionTier
             
-            tier = SubscriptionTier(name="Test Tier", key="test", is_billing_exempt=True)
+            tier = SubscriptionTier(name="Test Tier", tier_type="monthly", user_limit=5)
             db.session.add(tier)
             db.session.flush()
             
