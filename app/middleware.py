@@ -15,32 +15,15 @@ def register_middleware(app):
         # --- DEBUG: Confirm this middleware is executing ---
         print("--- EXECUTING CORRECT MIDDLEWARE ---")
 
-        # 1. Fast-path for completely public endpoints and routes.
-        # This includes both exact endpoint matches and pattern-based matches
+        # 1. Fast-path for completely public endpoints.
+        # This is the ONLY list of public routes needed.
         public_endpoints = [
             'static', 'auth.login', 'auth.signup', 'auth.logout',
             'homepage', 'legal.privacy_policy', 'legal.terms_of_service',
-            'billing.webhook',  # Stripe webhook is a critical public endpoint
-            'index'  # Add index route for homepage
+            'billing.webhook'  # Stripe webhook is a critical public endpoint
         ]
-        
-        # Pattern-based public routes
-        public_patterns = [
-            '/static/',  # All static files
-            '/auth/',    # All auth routes
-            '/legal/',   # All legal routes
-            '/',         # Homepage root
-            '/api/server-time',  # Public server time endpoint
-        ]
-        
-        # Check exact endpoint matches
         if request.endpoint in public_endpoints:
             return  # Stop processing, allow the request
-        
-        # Check pattern-based matches
-        for pattern in public_patterns:
-            if request.path.startswith(pattern):
-                return  # Stop processing, allow the request
 
         # Debug: Track middleware execution
         print(f"MIDDLEWARE DEBUG: Processing {request.method} {request.path}, endpoint={request.endpoint}")
