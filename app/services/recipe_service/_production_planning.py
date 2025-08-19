@@ -10,7 +10,7 @@ from typing import Dict, List, Any, Optional, Tuple
 from decimal import Decimal
 
 from ...models import Recipe, RecipeIngredient, InventoryItem
-from ...services.universal_stock_check_service import check_stock_availability
+from ...services.stock_check import UniversalStockCheckService
 from ...services.unit_conversion import convert_units
 
 logger = logging.getLogger(__name__)
@@ -109,7 +109,7 @@ def calculate_recipe_requirements(recipe_id: int, scale: float = 1.0) -> Dict[st
 
 def check_ingredient_availability(recipe_id: int, scale: float = 1.0) -> Dict[str, Any]:
     """
-    Check if all ingredients are available for production.
+    Check if all ingredients are available for production using new stock check system.
 
     Args:
         recipe_id: Recipe to check
@@ -123,41 +123,35 @@ def check_ingredient_availability(recipe_id: int, scale: float = 1.0) -> Dict[st
         if not recipe:
             return {'success': False, 'error': 'Recipe not found'}
 
+        # Use new universal stock check service
+        stock_service = UniversalStockCheckService()
+        result = stock_service.check_recipe_stock(recipe, scale)
+
+        # Transform results to match expected format
         availability_results = []
         missing_ingredients = []
-        all_available = True
 
-        for recipe_ingredient in recipe.ingredients:
-            required_quantity = recipe_ingredient.quantity * scale
-
-            # Check stock using the canonical stock check service
-            stock_result = check_stock_availability(
-                recipe_ingredient.inventory_item_id,
-                required_quantity,
-                recipe_ingredient.unit
-            )
-
+        for item in result['stock_check']:
             ingredient_result = {
-                'ingredient_id': recipe_ingredient.inventory_item_id,
-                'ingredient_name': recipe_ingredient.inventory_item.name,
-                'required_quantity': required_quantity,
-                'required_unit': recipe_ingredient.unit,
-                'available_quantity': stock_result.get('available_quantity', 0),
-                'is_available': stock_result.get('available', False),
-                'shortage': max(0, required_quantity - stock_result.get('available_quantity', 0))
+                'ingredient_id': item['item_id'],
+                'ingredient_name': item['name'],
+                'required_quantity': item['needed'],
+                'required_unit': item['needed_unit'],
+                'available_quantity': item['available'],
+                'is_available': item['status'] in ['OK', 'LOW'],
+                'shortage': max(0, item['needed'] - item['available'])
             }
 
             availability_results.append(ingredient_result)
 
             if not ingredient_result['is_available']:
-                all_available = False
                 missing_ingredients.append(ingredient_result)
 
         return {
             'success': True,
             'recipe_id': recipe_id,
             'scale': scale,
-            'all_available': all_available,
+            'all_available': result['all_ok'],
             'ingredients': availability_results,
             'missing': missing_ingredients,
             'total_missing': len(missing_ingredients)
