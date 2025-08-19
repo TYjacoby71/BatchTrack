@@ -35,11 +35,13 @@ def register_middleware(app):
 
         # Check endpoint names first
         if request.endpoint in public_endpoints:
+            print(f"MIDDLEWARE DEBUG: Allowing public endpoint: {request.endpoint}")
             return  # Stop processing, allow the request
 
         # Check path patterns for public access
         for public_path in public_paths:
             if request.path.startswith(public_path):
+                print(f"MIDDLEWARE DEBUG: Allowing public path: {request.path}")
                 return  # Stop processing, allow the request
 
         # Debug: Track middleware execution
