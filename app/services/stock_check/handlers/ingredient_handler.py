@@ -7,7 +7,7 @@ import logging
 from typing import Optional
 
 from app.models import InventoryItem
-from ...services.unit_conversion import ConversionEngine
+from ...unit_conversion import ConversionEngine
 from ...blueprints.fifo.services import FIFOService
 from ..types import StockCheckRequest, StockCheckResult, StockStatus, InventoryCategory
 from .base_handler import BaseInventoryHandler

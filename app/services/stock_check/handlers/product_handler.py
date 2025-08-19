@@ -1,4 +1,3 @@
-
 """
 Product-specific stock checking handler
 """
@@ -15,14 +14,14 @@ logger = logging.getLogger(__name__)
 
 class ProductHandler(BaseInventoryHandler):
     """Handler for product stock checking"""
-    
+
     def check_availability(self, request: StockCheckRequest) -> StockCheckResult:
         """
         Check product availability.
-        
+
         Args:
             request: Stock check request
-            
+
         Returns:
             Stock check result
         """
@@ -30,16 +29,16 @@ class ProductHandler(BaseInventoryHandler):
             id=request.item_id,
             type='product'
         ).first()
-        
+
         if not product:
             return self._create_not_found_result(request)
-            
+
         if not self._check_organization_access(product):
             return self._create_access_denied_result(request)
-        
+
         available_quantity = product.quantity
         status = self._determine_status(available_quantity, request.quantity_needed)
-        
+
         return StockCheckResult(
             item_id=product.id,
             item_name=product.name,
@@ -54,17 +53,17 @@ class ProductHandler(BaseInventoryHandler):
             formatted_needed=self._format_quantity_display(request.quantity_needed, request.unit),
             formatted_available=self._format_quantity_display(available_quantity, product.unit)
         )
-    
+
     def get_item_details(self, item_id: int) -> Optional[dict]:
         """Get product details"""
         product = InventoryItem.query.filter_by(
             id=item_id,
             type='product'
         ).first()
-        
+
         if not product or not self._check_organization_access(product):
             return None
-            
+
         return {
             'id': product.id,
             'name': product.name,
@@ -73,7 +72,7 @@ class ProductHandler(BaseInventoryHandler):
             'cost_per_unit': product.cost_per_unit,
             'type': product.type
         }
-    
+
     def _create_not_found_result(self, request: StockCheckRequest) -> StockCheckResult:
         """Create result for product not found"""
         return StockCheckResult(
@@ -89,7 +88,7 @@ class ProductHandler(BaseInventoryHandler):
             formatted_needed=self._format_quantity_display(request.quantity_needed, request.unit),
             formatted_available="0"
         )
-    
+
     def _create_access_denied_result(self, request: StockCheckRequest) -> StockCheckResult:
         """Create result for access denied"""
         return StockCheckResult(
