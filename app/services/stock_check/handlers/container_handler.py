@@ -1,4 +1,3 @@
-
 """
 Container-specific stock checking handler
 """
@@ -16,31 +15,31 @@ logger = logging.getLogger(__name__)
 
 class ContainerHandler(BaseInventoryHandler):
     """Handler for container stock checking with storage capacity logic"""
-    
+
     def check_availability(self, request: StockCheckRequest) -> StockCheckResult:
         """
         Check container availability considering storage capacity.
-        
+
         Args:
             request: Stock check request
-            
+
         Returns:
             Stock check result
         """
         container = InventoryItem.query.get(request.item_id)
         if not container:
             return self._create_not_found_result(request)
-            
+
         if not self._check_organization_access(container):
             return self._create_access_denied_result(request)
-        
+
         # Containers have storage_amount and storage_unit fields
         storage_capacity = getattr(container, 'storage_amount', 0)
         storage_unit = getattr(container, 'storage_unit', 'ml')
         available_containers = container.quantity
-        
+
         logger.debug(f"Container {container.name}: {available_containers} units, capacity {storage_capacity} {storage_unit}")
-        
+
         try:
             # Calculate how many containers are needed
             # Convert product yield to container storage unit first
@@ -51,7 +50,7 @@ class ContainerHandler(BaseInventoryHandler):
                     storage_unit,
                     ingredient_id=request.item_id
                 )
-                
+
                 if isinstance(conversion_result, dict):
                     yield_in_container_units = conversion_result['converted_value']
                     conversion_details = conversion_result
@@ -61,14 +60,14 @@ class ContainerHandler(BaseInventoryHandler):
             else:
                 yield_in_container_units = request.quantity_needed
                 conversion_details = None
-            
+
             # Calculate containers needed
             containers_needed = yield_in_container_units / storage_capacity if storage_capacity > 0 else 1
             containers_needed = max(1, int(containers_needed))  # At least 1 container
-            
+
             # Check availability
             status = self._determine_status(available_containers, containers_needed)
-            
+
             return StockCheckResult(
                 item_id=container.id,
                 item_name=container.name,
@@ -89,7 +88,7 @@ class ContainerHandler(BaseInventoryHandler):
                     'yield_in_storage_units': yield_in_container_units
                 }
             )
-            
+
         except (ValueError, ZeroDivisionError) as e:
             return StockCheckResult(
                 item_id=container.id,
@@ -106,13 +105,13 @@ class ContainerHandler(BaseInventoryHandler):
                 formatted_needed="1 count",
                 formatted_available=self._format_quantity_display(available_containers, "count")
             )
-    
+
     def get_item_details(self, item_id: int) -> Optional[dict]:
         """Get container details"""
         container = InventoryItem.query.get(item_id)
         if not container or not self._check_organization_access(container):
             return None
-            
+
         return {
             'id': container.id,
             'name': container.name,
@@ -123,7 +122,7 @@ class ContainerHandler(BaseInventoryHandler):
             'cost_per_unit': container.cost_per_unit,
             'type': container.type
         }
-    
+
     def _create_not_found_result(self, request: StockCheckRequest) -> StockCheckResult:
         """Create result for container not found"""
         return StockCheckResult(
@@ -139,7 +138,7 @@ class ContainerHandler(BaseInventoryHandler):
             formatted_needed="1 count",
             formatted_available="0 count"
         )
-    
+
     def _create_access_denied_result(self, request: StockCheckRequest) -> StockCheckResult:
         """Create result for access denied"""
         return StockCheckResult(

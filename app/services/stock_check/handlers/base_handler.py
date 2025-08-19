@@ -7,6 +7,7 @@ import logging
 from typing import Optional
 from flask_login import current_user
 
+from app.models import InventoryItem
 from ..types import StockCheckRequest, StockCheckResult, StockStatus
 
 logger = logging.getLogger(__name__)
