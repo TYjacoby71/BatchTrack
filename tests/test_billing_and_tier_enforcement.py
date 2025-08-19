@@ -91,12 +91,11 @@ class TestBillingAndTierEnforcement:
             # THE FIX: This block ensures the user is on a tier that REQUIRES a billing check.
             if not fresh_org.subscription_tier or fresh_org.subscription_tier.is_billing_exempt:
                 # Find a non-exempt tier in the DB or create one for the test
-                non_exempt_tier = SubscriptionTier.query.filter_by(is_billing_exempt=False).first()
+                non_exempt_tier = SubscriptionTier.query.filter_by(billing_provider='stripe').first()
                 if not non_exempt_tier:
                     non_exempt_tier = SubscriptionTier(
                         name="Paid Tier", 
-                        is_billing_exempt=False, 
-                        billing_provider='stripe',
+                        billing_provider='stripe',  # This sets is_billing_exempt=False automatically
                         user_limit=10
                     )
                     db.session.add(non_exempt_tier)
