@@ -12,19 +12,11 @@ products_api_bp = Blueprint('products_api', __name__, url_prefix='/api/products'
 def get_product_from_sku(sku_id):
     """Get the Product ID from a SKU ID"""
     try:
-        # Use ProductService to get SKU safely with organization scoping
-        sku = ProductService.get_sku_by_id(sku_id)
-
-        if not sku:
-            return jsonify({'error': 'SKU not found'}), 404
-
-        if not sku.product_id:
-            return jsonify({'error': 'SKU has no associated product'}), 404
-
-        return jsonify({
-            'product_id': sku.product_id,
-            'sku_id': sku.id
-        })
+        result = ProductService.get_product_from_sku(sku_id)
+        if not result:
+            return jsonify({'error': 'SKU not found or no associated product'}), 404
+        
+        return jsonify(result)
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -133,34 +125,7 @@ def get_product_inventory_summary_api(product_id):
         return jsonify(summary)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-def search_products():
-    """Search products by name"""
-    query = request.args.get('q', '').strip()
 
-    if len(query) < 2:
-        return jsonify({'products': []})
-
-    # Search for unique product names with their base SKU ID
-    products = db.session.query(
-        func.min(ProductSKU.id).label('product_id'),
-        ProductSKU.product_name,
-        ProductSKU.unit.label('product_base_unit')
-    ).filter(
-        ProductSKU.product_name.ilike(f'%{query}%'),
-        ProductSKU.is_product_active == True,
-        ProductSKU.is_active == True,
-        ProductSKU.organization_id == current_user.organization_id
-    ).group_by(ProductSKU.product_name, ProductSKU.unit).limit(10).all()
-
-    result = []
-    for product_id, product_name, product_base_unit in products:
-        result.append({
-            'id': product_id,
-            'name': product_name,
-            'default_unit': product_base_unit
-        })
-
-    return jsonify({'products': result})
 
 @products_api_bp.route('/quick-add', methods=['POST'])
 @login_required
@@ -176,41 +141,15 @@ def quick_add_product():
         return jsonify({'error': 'Product name is required'}), 400
 
     try:
-        # Get or create the SKU with organization scoping
-        sku = ProductService.get_or_create_sku(
+        result = ProductService.quick_add_product(
             product_name=product_name,
             variant_name=variant_name or 'Base',
-            size_label='Bulk',
-            unit=product_base_unit
+            product_base_unit=product_base_unit
         )
-
-        # Ensure the SKU belongs to the current user's organization
-        if not sku.organization_id:
-            sku.organization_id = current_user.organization_id
-
-        db.session.commit()
-
-        # Find the base product ID (first SKU for this product)
-        base_sku = db.session.query(func.min(ProductSKU.id)).filter_by(
-            product_name=sku.product_name,
-            organization_id=current_user.organization_id
-        ).scalar()
-
-        return jsonify({
-            'success': True,
-            'product': {
-                'id': base_sku,
-                'name': sku.product_name,
-                'product_base_unit': sku.unit
-            },
-            'variant': {
-                'id': sku.id,
-                'name': sku.variant_name
-            }
-        })
+        
+        return jsonify(result)
 
     except Exception as e:
-        db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
 # INVENTORY APIs
@@ -218,49 +157,4 @@ def quick_add_product():
 
 # Inventory adjustments are handled by product_inventory_routes.py
 # This API file only provides data retrieval and simple operations
-from flask import Blueprint, request, jsonify
-from flask_login import login_required, current_user
-from ...models.product import Product, ProductVariant
 
-products_api_bp = Blueprint('products_api', __name__)
-
-@products_api_bp.route('/api/products/<int:product_id>/variants', methods=['GET'])
-@login_required
-def get_product_variants(product_id):
-    """Get variants for a specific product"""
-    try:
-        # Get the product and verify it belongs to the user's organization
-        product = Product.query.filter_by(
-            id=product_id,
-            organization_id=current_user.organization_id,
-            is_active=True
-        ).first()
-        
-        if not product:
-            return jsonify({'error': 'Product not found'}), 404
-        
-        # Get active variants for this product
-        variants = ProductVariant.query.filter_by(
-            product_id=product_id,
-            organization_id=current_user.organization_id,
-            is_active=True
-        ).all()
-        
-        variants_data = []
-        for variant in variants:
-            variants_data.append({
-                'id': variant.id,
-                'name': variant.name,
-                'description': variant.description,
-                'color': variant.color,
-                'material': variant.material,
-                'scent': variant.scent
-            })
-        
-        return jsonify({
-            'success': True,
-            'variants': variants_data
-        })
-        
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
