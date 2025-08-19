@@ -71,29 +71,14 @@ class SubscriptionTier(db.Model):
         return self.name.lower().replace(' ', '_').replace('plan', '').strip('_')
 
     @property
-    def is_exempt_from_billing(self):
-        """Check if this tier is exempt from billing"""
+    def is_billing_exempt(self):
+        """Check if this tier is exempt from billing - single source of truth"""
         return self.billing_provider == 'exempt'
-
-    @property
-    def requires_billing_verification(self):
-        """Check if this tier requires billing verification"""
-        return self.billing_provider != 'exempt'
-
-    @property
-    def requires_stripe_billing(self):
-        """Check if this tier requires Stripe billing verification"""
-        return self.billing_provider == 'stripe'
-
-    @property
-    def requires_whop_billing(self):
-        """Check if this tier requires Whop billing verification"""
-        return self.billing_provider == 'whop'
 
     @property
     def has_valid_integration(self):
         """Check if tier has valid billing integration"""
-        if self.billing_provider == 'exempt':
+        if self.is_billing_exempt:
             return True
         # For non-exempt tiers, require proper integration
         if self.billing_provider == 'stripe':

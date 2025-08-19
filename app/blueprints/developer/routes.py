@@ -46,9 +46,9 @@ def dashboard():
     # Subscription tier breakdown - get from organization's subscription tiers
     from app.models.subscription_tier import SubscriptionTier
     subscription_stats = db.session.query(
-        SubscriptionTier.key,
+        SubscriptionTier.name,
         func.count(Organization.id).label('count')
-    ).join(Organization, Organization.subscription_tier_id == SubscriptionTier.id).group_by(SubscriptionTier.key).all()
+    ).join(Organization, Organization.subscription_tier_id == SubscriptionTier.id).group_by(SubscriptionTier.name).all()
 
     # Recent organizations (last 30 days)
     thirty_days_ago = datetime.utcnow() - timedelta(days=30)

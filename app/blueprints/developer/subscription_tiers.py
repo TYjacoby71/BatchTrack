@@ -42,7 +42,7 @@ def manage_tiers():
     for tier in all_tiers_db:
         # Get live pricing from Stripe if available
         price_display = 'N/A'
-        
+
         if tier.stripe_lookup_key:
             try:
                 from ...services.stripe_service import StripeService
@@ -51,10 +51,10 @@ def manage_tiers():
                     price_display = live_pricing['formatted_price']
             except Exception as e:
                 logger.warning(f"Could not fetch live pricing for tier {tier.key}: {e}")
-        
-        if tier.is_billing_exempt:
+
+        if tier.billing_provider == 'exempt':
             price_display = 'Free'
-        
+
         tiers_dict[tier.key] = {
             'id': tier.id,  # Include the tier ID
             'name': tier.name,
@@ -72,7 +72,7 @@ def manage_tiers():
             'permissions': [p.name for p in tier.permissions],
             'pricing_category': 'standard',  # Default value
             'billing_cycle': 'monthly',  # Default value
-            'requires_stripe_billing': tier.requires_stripe_billing,
+            'requires_billing': not tier.is_billing_exempt,
             'supports_whop': bool(tier.whop_product_key),
             'max_users': tier.max_users,
             'max_recipes': tier.max_recipes,
@@ -183,23 +183,24 @@ def edit_tier(tier_id):
     if request.method == 'POST':
         # Data Collection & Validation
         billing_provider = request.form.get('billing_provider', 'exempt')
-        is_billing_exempt = 'is_billing_exempt' in request.form
+        # The following line is removed as is_billing_exempt is no longer used directly for logic
+        # is_billing_exempt = 'is_billing_exempt' in request.form
         stripe_key = request.form.get('stripe_lookup_key', '').strip()
         whop_key = request.form.get('whop_product_key', '').strip()
 
         # STRICT BILLING REQUIREMENTS:
-        # Unless billing bypass is explicitly enabled, require proper billing integration
-        if not is_billing_exempt:
+        # Unless billing bypass is explicitly enabled (billing_provider == 'exempt'), require proper billing integration
+        if billing_provider != 'exempt':
             if billing_provider == 'stripe':
                 if not stripe_key:
-                    flash('A Stripe Lookup Key is required for Stripe-billed tiers. Enable billing bypass if you want to skip billing requirements.', 'error')
+                    flash('A Stripe Lookup Key is required for Stripe-billed tiers.', 'error')
                     return redirect(url_for('.edit_tier', tier_id=tier_id))
             elif billing_provider == 'whop':
                 if not whop_key:
-                    flash('A Whop Product Key is required for Whop-billed tiers. Enable billing bypass if you want to skip billing requirements.', 'error')
+                    flash('A Whop Product Key is required for Whop-billed tiers.', 'error')
                     return redirect(url_for('.edit_tier', tier_id=tier_id))
             else:
-                flash('You must select either Stripe or Whop as billing provider, or enable billing bypass.', 'error')
+                flash('You must select either Stripe or Whop as billing provider, or choose "Exempt".', 'error')
                 return redirect(url_for('.edit_tier', tier_id=tier_id))
 
         # Update and Save
@@ -228,7 +229,7 @@ def edit_tier(tier_id):
             tier.max_monthly_batches = int(max_monthly_batches) if max_monthly_batches and max_monthly_batches.isdigit() else None
 
             tier.billing_provider = billing_provider
-            tier.is_billing_exempt = is_billing_exempt
+            # tier.is_billing_exempt is removed from updates as it's derived from billing_provider
             tier.stripe_lookup_key = stripe_key or None
             tier.whop_product_key = whop_key or None
 
