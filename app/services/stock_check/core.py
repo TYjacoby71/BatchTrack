@@ -9,7 +9,7 @@ import logging
 from typing import List, Dict, Any
 from flask_login import current_user
 
-from .types import StockCheckRequest, StockCheckResult, InventoryCategory
+from .types import StockCheckRequest, StockCheckResult, InventoryCategory, StockStatus
 from .handlers import IngredientHandler, ContainerHandler, ProductHandler
 
 logger = logging.getLogger(__name__)
@@ -158,16 +158,3 @@ class UniversalStockCheckService:
                 ))
         
         return requests
-
-
-# Compatibility functions for existing code
-def universal_stock_check(recipe, scale=1.0, flex_mode=False):
-    """Legacy compatibility function"""
-    service = UniversalStockCheckService()
-    return service.check_recipe_stock(recipe, scale)
-
-
-def check_stock_availability(inventory_requirements):
-    """Legacy compatibility function for basic stock checking"""
-    from ..universal_stock_check_service import check_stock_availability as legacy_check
-    return legacy_check(inventory_requirements)
