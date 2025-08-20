@@ -28,9 +28,9 @@ function toggleIngredientForm() {
   if (form) {
     if (form.style.display === 'none') {
       form.style.display = 'block';
-      if (typeof form.reset === 'function') {
-        form.reset();
-      }
+      if (form && typeof form.reset === 'function') {
+            form.reset();
+        }
     } else {
       form.style.display = 'none';
     }
@@ -45,9 +45,9 @@ function toggleUpdateForm() {
   if (form) {
     if (form.style.display === 'none') {
       form.style.display = 'block';
-      if (typeof form.reset === 'function') {
-        form.reset();
-      }
+      if (form && typeof form.reset === 'function') {
+            form.reset();
+        }
     } else {
       form.style.display = 'none';
     }
@@ -111,10 +111,10 @@ document.addEventListener('DOMContentLoaded', function() {
   // Initialize clock
   updateClock();
   setInterval(updateClock, 30000);
-  
+
   // Debug navigation clicks
   console.log('Page loaded:', window.location.pathname);
-  
+
   // Track permissions navigation attempts
   document.addEventListener('click', function(e) {
     const link = e.target.closest('a[href*="permissions"]');
