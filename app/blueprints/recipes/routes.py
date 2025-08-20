@@ -117,7 +117,7 @@ def plan_production_route(recipe_id):
             return jsonify({'success': False, 'error': 'Production planning failed'}), 500
 
     # GET request - show planning form
-    return render_template('recipes/plan_production.html', recipe=recipe)
+    return render_template('pages/recipes/plan_production.html', recipe=recipe)
 
 @recipes_bp.route('/<int:recipe_id>/variation', methods=['GET', 'POST'])
 @login_required

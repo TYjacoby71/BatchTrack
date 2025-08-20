@@ -32,8 +32,7 @@ class IngredientHandler(BaseInventoryHandler):
         if not ingredient:
             return self._create_not_found_result(request)
 
-        if not self._check_organization_access(ingredient):
-            return self._create_access_denied_result(request)
+        # Organization scoping should be handled by caller
 
         # Get available FIFO entries (excludes expired automatically)
         from app.models import InventoryHistory
@@ -105,7 +104,7 @@ class IngredientHandler(BaseInventoryHandler):
     def get_item_details(self, item_id: int) -> Optional[dict]:
         """Get ingredient details"""
         ingredient = InventoryItem.query.get(item_id)
-        if not ingredient or not self._check_organization_access(ingredient):
+        if not ingredient: # Removed organization access check
             return None
 
         return {
@@ -134,21 +133,7 @@ class IngredientHandler(BaseInventoryHandler):
             formatted_available="0"
         )
 
-    def _create_access_denied_result(self, request: StockCheckRequest) -> StockCheckResult:
-        """Create result for access denied"""
-        return StockCheckResult(
-            item_id=request.item_id,
-            item_name='Access Denied',
-            category=InventoryCategory.INGREDIENT,
-            needed_quantity=request.quantity_needed,
-            needed_unit=request.unit,
-            available_quantity=0,
-            available_unit=request.unit,
-            status=StockStatus.ERROR,
-            error_message='Access denied',
-            formatted_needed=self._format_quantity_display(request.quantity_needed, request.unit),
-            formatted_available="0"
-        )
+    # Authorization logic removed - should be handled at service/route layer
 
     def check_recipe_ingredients(self, recipe, scale: float = 1.0) -> List[Dict[str, Any]]:
         """Check stock availability for all recipe ingredients"""

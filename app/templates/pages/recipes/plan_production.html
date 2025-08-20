@@ -1,2 +1,71 @@
 
-{# This template has been removed - using root template at app/templates/plan_production.html instead #}
+{% extends "layout.html" %}
+
+{% block title %}Plan Production - {{ recipe.name }}{% endblock %}
+
+{% block content %}
+<div x-data="planProductionData()" class="container-fluid">
+  
+  <!-- Page Header -->
+  {% include 'components/plan_production/page_header.html' %}
+
+  <div class="row">
+    <!-- Left Column - Recipe Info & Stock Check -->
+    <div class="col-lg-8">
+      <div class="card mb-4">
+        <div class="card-header">
+          <h5 class="mb-0">
+            <i class="fas fa-utensils"></i> Recipe: {{ recipe.name }}
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-6">
+              <p><strong>Description:</strong> {{ recipe.description or 'No description' }}</p>
+              <p><strong>Yield:</strong> {{ recipe.predicted_yield or 'Not specified' }} {{ recipe.predicted_yield_unit or '' }}</p>
+            </div>
+            <div class="col-md-6">
+              <div class="form-group">
+                <label for="scale">Production Scale:</label>
+                <input type="number" id="scale" class="form-control" 
+                       x-model="scale" min="0.1" step="0.1" value="1.0">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stock Check Component -->
+      {% include 'components/plan_production/stock_check.html' %}
+    </div>
+
+    <!-- Right Column - Batch Configuration -->
+    <div class="col-lg-4">
+      <!-- Batch Configuration -->
+      {% include 'components/plan_production/batch_configuration.html' %}
+
+      <!-- Container Management -->
+      {% include 'components/plan_production/container_management.html' %}
+
+      <!-- Action Buttons -->
+      {% include 'components/plan_production/action_buttons.html' %}
+    </div>
+  </div>
+</div>
+
+<!-- Load the main JavaScript -->
+<script src="{{ url_for('static', filename='js/recipes/plan_production.js') }}"></script>
+
+<script>
+// Initialize with recipe data
+document.addEventListener('DOMContentLoaded', function() {
+    // Pass recipe data to Alpine.js component
+    window.recipeData = {
+        id: {{ recipe.id }},
+        name: "{{ recipe.name }}",
+        ingredients: {{ recipe.ingredients | tojson if recipe.ingredients else '[]' | safe }}
+    };
+});
+</script>
+
+{% endblock %}

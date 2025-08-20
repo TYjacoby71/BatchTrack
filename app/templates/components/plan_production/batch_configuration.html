@@ -48,3 +48,37 @@
     </div>
   </div>
 </div>
+<div class="card mb-4">
+  <div class="card-header">
+    <h5 class="mb-0">
+      <i class="fas fa-cogs"></i> Batch Configuration
+    </h5>
+  </div>
+  <div class="card-body">
+    <div class="form-group mb-3">
+      <label class="form-label">Batch Name:</label>
+      <input type="text" class="form-control" x-model="batchName" 
+             :placeholder="'Batch of ' + scale + 'x ' + (window.recipeData ? window.recipeData.name : 'Recipe')">
+    </div>
+    
+    <div class="form-group mb-3">
+      <label class="form-label">Production Notes:</label>
+      <textarea class="form-control" rows="3" x-model="batchNotes" 
+                placeholder="Optional notes about this production run..."></textarea>
+    </div>
+
+    <div class="form-group mb-3">
+      <div class="form-check">
+        <input class="form-check-input" type="checkbox" x-model="scheduleProduction" id="scheduleProduction">
+        <label class="form-check-label" for="scheduleProduction">
+          Schedule for later production
+        </label>
+      </div>
+    </div>
+
+    <div x-show="scheduleProduction" class="form-group">
+      <label class="form-label">Scheduled Date:</label>
+      <input type="datetime-local" class="form-control" x-model="scheduledDate">
+    </div>
+  </div>
+</div>
