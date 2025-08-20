@@ -1,510 +1,123 @@
 
-{% extends "layout.html" %}
-
-{% block title %}Plan Production - {{ recipe.name }}{% endblock %}
+{% extends 'layout.html' %}
 
 {% block content %}
-<div x-data="planProductionData()" class="container-fluid">
-  
+<div x-data="planProductionData()" x-init="init()">
   <!-- Page Header -->
   {% include 'components/plan_production/page_header.html' %}
 
-  <div class="row">
-    <!-- Left Column - Recipe Info & Stock Check -->
-    <div class="col-lg-8">
-      <!-- Recipe Information Card -->
-      <div class="card mb-4">
-        <div class="card-header">
-          <h5 class="mb-0">
-            <i class="fas fa-utensils"></i> Recipe: {{ recipe.name }}
-          </h5>
-        </div>
-        <div class="card-body">
-          <div class="row">
-            <div class="col-md-6">
-              <p><strong>Description:</strong> {{ recipe.description or 'No description' }}</p>
-              <p><strong>Yield:</strong> {{ recipe.predicted_yield or 'Not specified' }} {{ recipe.predicted_yield_unit or '' }}</p>
-            </div>
-            <div class="col-md-6">
-              <div class="form-group">
-                <label for="scale">Production Scale:</label>
-                <input type="number" id="scale" class="form-control" 
-                       x-model="scale" min="0.1" step="0.1" value="1.0">
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Stock Check Component -->
-      <div class="card mb-4">
-        <div class="card-header">
-          <h5 class="mb-0">
-            <i class="fas fa-clipboard-check"></i> Ingredient Stock Check
-          </h5>
-        </div>
-        <div class="card-body">
-          <div class="d-flex gap-2 mb-3">
-            <button type="button" class="btn btn-warning" @click="checkStock()">
-              <i class="fas fa-search"></i> Check Stock
-            </button>
-            <div class="ms-auto" x-show="stockChecked">
-              <span class="badge" :class="stockCheckPassed ? 'bg-success' : 'bg-danger'">
-                <i class="fas" :class="stockCheckPassed ? 'fa-check' : 'fa-times'"></i>
-                <span x-text="stockCheckPassed ? 'Stock OK' : 'Stock Issues'"></span>
-              </span>
-            </div>
-          </div>
-
-          <!-- Stock Check Results -->
-          <div x-show="stockChecked && stockResults.length > 0">
-            <div class="table-responsive">
-              <table class="table table-sm">
-                <thead>
-                  <tr>
-                    <th>Ingredient</th>
-                    <th>Needed</th>
-                    <th>Available</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <template x-for="result in stockResults" :key="result.item_id">
-                    <tr :class="result.status === 'OK' ? 'table-success' : result.status === 'LOW' ? 'table-warning' : 'table-danger'">
-                      <td x-text="result.item_name"></td>
-                      <td>
-                        <span x-text="result.needed_quantity"></span>
-                        <span class="text-muted" x-text="result.needed_unit"></span>
-                      </td>
-                      <td>
-                        <span x-text="result.available_quantity"></span>
-                        <span class="text-muted" x-text="result.available_unit"></span>
-                      </td>
-                      <td>
-                        <span class="badge" 
-                              :class="result.status === 'OK' ? 'bg-success' : result.status === 'LOW' ? 'bg-warning' : 'bg-danger'"
-                              x-text="result.status">
-                        </span>
-                      </td>
-                    </tr>
-                  </template>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <div x-show="stockChecked && stockResults.length === 0" class="alert alert-info">
-            <i class="fas fa-info-circle"></i> No ingredients to check for this recipe.
-          </div>
-
-          <div x-show="!stockChecked" class="text-muted">
-            <i class="fas fa-info-circle"></i> Click "Check Stock" to verify ingredient availability.
-          </div>
-
-          <!-- Cost Information -->
-          <div x-show="stockChecked && totalCost > 0" class="mt-3">
-            <div class="alert alert-info">
-              <strong>Estimated Cost:</strong> $<span x-text="totalCost.toFixed(2)"></span>
-            </div>
-          </div>
-        </div>
-      </div>
+  <!-- Recipe Information Card -->
+  <div class="card mb-4">
+    <div class="card-header">
+      <h5 class="mb-0">
+        <i class="fas fa-utensils"></i> Recipe Information
+      </h5>
     </div>
-
-    <!-- Right Column - Container & Batch Management -->
-    <div class="col-lg-4">
-      <!-- Container Management -->
-      <div class="card mb-4">
-        <div class="card-header">
-          <h5 class="mb-0">
-            <i class="fas fa-box"></i> Container Management
-          </h5>
+    <div class="card-body">
+      <div class="row">
+        <div class="col-md-6">
+          <p><strong>Description:</strong> {{ recipe.description or 'No description available' }}</p>
+          <p><strong>Yield:</strong> {{ recipe.yield_amount }} {{ recipe.yield_unit }}</p>
+          <p><strong>Prep Time:</strong> {{ recipe.prep_time_minutes or 'Not specified' }} minutes</p>
         </div>
-        <div class="card-body">
-          <div class="form-check mb-3">
-            <input class="form-check-input" type="checkbox" id="autoFill" x-model="autoFill" @change="handleAutoFillChange()">
-            <label class="form-check-label" for="autoFill">
-              Auto-Fill Containers
-            </label>
-          </div>
-          
-          <!-- Available Containers from Stock Check -->
-          <div x-show="availableContainers.length > 0" class="mb-3">
-            <h6>Available Containers:</h6>
-            <div class="list-group">
-              <template x-for="container in availableContainers" :key="container.item_id">
-                <div class="list-group-item d-flex justify-content-between align-items-center">
-                  <div>
-                    <strong x-text="container.item_name"></strong><br>
-                    <small class="text-muted">
-                      <span x-text="container.storage_amount"></span> <span x-text="container.storage_unit"></span>
-                      (Available: <span x-text="container.available_quantity"></span>)
-                    </small>
-                  </div>
-                  <button class="btn btn-sm btn-primary" @click="selectContainer(container)" :disabled="autoFill">
-                    <i class="fas fa-plus"></i>
-                  </button>
-                </div>
-              </template>
-            </div>
-          </div>
-
-          <!-- Auto-Fill Results -->
-          <div x-show="autoFill && autoFillResults.length > 0" class="mb-3">
-            <h6>Auto-Fill Results:</h6>
-            <div class="list-group">
-              <template x-for="result in autoFillResults" :key="result.container_id">
-                <div class="list-group-item" :class="result.can_fulfill ? 'list-group-item-success' : 'list-group-item-danger'">
-                  <div class="d-flex justify-content-between">
-                    <span x-text="result.container_name"></span>
-                    <span class="badge" :class="result.can_fulfill ? 'bg-success' : 'bg-danger'">
-                      <span x-text="result.quantity_needed"></span> needed
-                    </span>
-                  </div>
-                  <small class="text-muted">
-                    Capacity: <span x-text="result.storage_capacity"></span> <span x-text="result.storage_unit"></span>
-                    | Available: <span x-text="result.available_quantity"></span>
-                  </small>
-                </div>
-              </template>
-            </div>
-          </div>
-
-          <!-- Manual Container Selection -->
-          <div x-show="!autoFill">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-              <h6>Selected Containers:</h6>
-              <button type="button" class="btn btn-sm btn-success" @click="addContainer()">
-                <i class="fas fa-plus"></i> Add Container
-              </button>
-            </div>
-
-            <template x-for="(container, index) in containersSelected" :key="index">
-              <div class="card mb-2">
-                <div class="card-body p-2">
-                  <div class="row g-2">
-                    <div class="col-md-5">
-                      <label class="form-label small">Container Name</label>
-                      <input type="text" class="form-control form-control-sm" x-model="container.name" placeholder="Container name">
-                    </div>
-                    <div class="col-md-3">
-                      <label class="form-label small">Size</label>
-                      <input type="number" class="form-control form-control-sm" x-model="container.size" min="0" step="0.1" @input="updateContainment()">
-                    </div>
-                    <div class="col-md-2">
-                      <label class="form-label small">Qty</label>
-                      <input type="number" class="form-control form-control-sm" x-model="container.quantity" min="1" @input="updateContainment()">
-                    </div>
-                    <div class="col-md-2">
-                      <label class="form-label small">&nbsp;</label>
-                      <button type="button" class="btn btn-danger btn-sm d-block" @click="removeContainer(index)">
-                        <i class="fas fa-times"></i>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </template>
-          </div>
-
-          <!-- Containment Progress -->
-          <div class="mt-4">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-              <label class="form-label mb-0">Containment Progress:</label>
-              <span class="badge bg-primary" x-text="containmentPercent + '%'"></span>
-            </div>
-            <div class="progress" style="height: 25px;">
-              <div class="progress-bar" role="progressbar" 
-                :style="'width: ' + containmentPercent + '%'" 
-                :class="containmentPercent >= 100 ? 'bg-success' : 'bg-warning'"
-                x-text="containmentPercent + '%'"></div>
-            </div>
-            <small class="form-text text-muted mt-1" x-text="containmentMessage"></small>
-          </div>
-
-          <!-- Warnings -->
-          <div class="alert alert-warning mt-3" x-show="containmentPercent < 100 && containmentPercent > 0">
-            <i class="fas fa-exclamation-triangle"></i>
-            Partial containment - some product may not fit in selected containers.
-          </div>
-
-          <div class="alert alert-danger mt-3" x-show="containersSelected.length === 0 && !autoFill">
-            <i class="fas fa-exclamation-circle"></i>
-            No containers selected. Please add containers or enable Auto-Fill.
-          </div>
-        </div>
-      </div>
-
-      <!-- Batch Configuration -->
-      {% include 'components/plan_production/batch_configuration.html' %}
-
-      <!-- Action Buttons -->
-      <div class="card">
-        <div class="card-body">
-          <div class="d-grid gap-2">
-            <button type="button" class="btn btn-primary" 
-                    @click="startBatch()" 
-                    :disabled="!canStartBatch"
-                    x-show="!scheduleProduction">
-              <i class="fas fa-play"></i> Start Production Now
-            </button>
-
-            <button type="button" class="btn btn-success" 
-                    @click="startBatch()" 
-                    :disabled="!canStartBatch"
-                    x-show="scheduleProduction">
-              <i class="fas fa-calendar-plus"></i> Schedule Production
-            </button>
-
-            <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-secondary">
-              <i class="fas fa-arrow-left"></i> Cancel
-            </a>
-          </div>
-
-          <!-- Production Summary -->
-          <div class="mt-3" x-show="stockChecked">
-            <h6>Production Summary:</h6>
-            <ul class="list-unstyled small">
-              <li><strong>Scale:</strong> <span x-text="scale"></span>x</li>
-              <li><strong>Expected Yield:</strong> <span x-text="(predictedYield * scale).toFixed(1)"></span> <span x-text="predictedYieldUnit"></span></li>
-              <li x-show="totalCost > 0"><strong>Estimated Cost:</strong> $<span x-text="totalCost.toFixed(2)"></span></li>
-              <li><strong>Stock Status:</strong> 
-                <span class="badge" :class="stockCheckPassed ? 'bg-success' : 'bg-danger'">
-                  <span x-text="stockCheckPassed ? 'Ready' : 'Issues'"></span>
-                </span>
-              </li>
-              <li><strong>Containment:</strong> <span x-text="containmentPercent"></span>%</li>
-            </ul>
+        <div class="col-md-6">
+          <p><strong>Instructions:</strong></p>
+          <div class="instruction-text">
+            {{ recipe.instructions | safe if recipe.instructions else 'No instructions provided' }}
           </div>
         </div>
       </div>
     </div>
   </div>
+
+  <!-- Batch Configuration -->
+  {% include 'components/plan_production/batch_configuration.html' %}
+
+  <!-- Stock Check Section -->
+  {% include 'components/plan_production/stock_check.html' %}
+
+  <!-- Container Management -->
+  {% include 'components/plan_production/container_management.html' %}
+
+  <!-- Containment Progress -->
+  {% include 'components/plan_production/containment_progress.html' %}
+
+  <!-- Action Buttons -->
+  {% include 'components/plan_production/action_buttons.html' %}
 </div>
 
 <script>
 function planProductionData() {
-    return {
-        // Recipe data
-        recipeId: {{ recipe.id }},
-        recipeName: "{{ recipe.name }}",
-        scale: 1.0,
-        predictedYield: {{ recipe.predicted_yield or 0 }},
-        predictedYieldUnit: "{{ recipe.predicted_yield_unit or 'count' }}",
+  return {
+    recipe: {{ recipe | tojson }},
+    scale: 1,
+    stockChecked: false,
+    stockCheckPassed: false,
+    stockCheckResults: [],
+    
+    containers: [],
+    selectedContainers: [],
+    containmentPercent: 0,
+    liveContainmentMessage: 'No containers selected',
+    
+    async init() {
+      console.log('Plan Production initialized for recipe:', this.recipe.name);
+    },
+    
+    async checkStock() {
+      try {
+        this.stockChecked = false;
         
-        // Stock check state
-        stockChecked: false,
-        stockCheckPassed: false,
-        stockResults: [],
-        availableContainers: [],
+        const response = await fetch(`/recipes/${this.recipe.id}/check-stock`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('meta[name=csrf-token]')?.getAttribute('content') || ''
+          },
+          body: JSON.stringify({ scale: this.scale })
+        });
         
-        // Container state
-        containersSelected: [],
-        autoFill: false,
-        autoFillResults: [],
-        containmentPercent: 0,
-        containmentMessage: 'No containers selected',
-        allowPartialContainment: false,
-        
-        // Batch configuration
-        batchName: '',
-        scheduleProduction: false,
-        canStartBatch: false,
-        totalCost: 0,
-        
-        // Computed property for live containment message
-        get liveContainmentMessage() {
-            return this.containmentMessage;
-        },
-        
-        // Methods
-        async checkStock() {
-            try {
-                const response = await fetch(`/recipes/${this.recipeId}/plan`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        scale: this.scale,
-                        check_containers: true
-                    })
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    this.stockChecked = true;
-                    this.stockCheckPassed = data.all_available;
-                    
-                    // Separate ingredients and containers from stock results
-                    this.stockResults = data.stock_results?.filter(r => r.category === 'ingredient') || [];
-                    this.availableContainers = data.stock_results?.filter(r => r.category === 'container') || [];
-                    
-                    this.totalCost = data.cost_info?.total_cost || 0;
-                    this.updateBatchReadiness();
-                } else {
-                    alert('Stock check failed: ' + (data.error || 'Unknown error'));
-                }
-            } catch (error) {
-                console.error('Stock check error:', error);
-                alert('Failed to check stock. Please try again.');
-            }
-        },
-
-        selectContainer(container) {
-            // Add container to selection
-            this.containersSelected.push({
-                id: container.item_id,
-                name: container.item_name,
-                type: container.item_name.toLowerCase(),
-                size: container.storage_amount || 0,
-                unit: container.storage_unit || 'ml',
-                quantity: 1,
-                available: container.available_quantity
-            });
-            this.updateContainment();
-        },
-
-        addContainer() {
-            this.containersSelected.push({
-                id: null,
-                name: '',
-                type: '',
-                size: 0,
-                unit: 'ml',
-                quantity: 1,
-                available: 0
-            });
-        },
-
-        removeContainer(index) {
-            this.containersSelected.splice(index, 1);
-            this.updateContainment();
-        },
-
-        handleAutoFillChange() {
-            if (this.autoFill) {
-                this.performAutoFill();
-            } else {
-                this.autoFillResults = [];
-                this.updateContainment();
-            }
-        },
-
-        performAutoFill() {
-            if (!this.availableContainers.length) {
-                this.autoFillResults = [];
-                return;
-            }
-
-            const totalYield = this.predictedYield * this.scale;
-            const results = [];
-
-            // Calculate container needs based on available containers
-            for (const container of this.availableContainers) {
-                const storageCapacity = container.storage_amount || 0;
-                const containersNeeded = Math.ceil(totalYield / storageCapacity);
-                
-                results.push({
-                    container_id: container.item_id,
-                    container_name: container.item_name,
-                    storage_capacity: storageCapacity,
-                    storage_unit: container.storage_unit,
-                    quantity_needed: containersNeeded,
-                    available_quantity: container.available_quantity,
-                    can_fulfill: container.available_quantity >= containersNeeded
-                });
-            }
-
-            this.autoFillResults = results;
-            this.updateContainment();
-        },
-
-        updateContainment() {
-            if (this.autoFill) {
-                this.calculateAutoFillContainment();
-            } else {
-                this.calculateManualContainment();
-            }
-            this.updateBatchReadiness();
-        },
-
-        calculateAutoFillContainment() {
-            const totalYield = this.predictedYield * this.scale;
-            let totalCapacity = 0;
-
-            for (const result of this.autoFillResults) {
-                if (result.can_fulfill) {
-                    totalCapacity += result.storage_capacity * result.quantity_needed;
-                }
-            }
-
-            if (totalCapacity === 0) {
-                this.containmentPercent = 0;
-                this.containmentMessage = 'No suitable containers available';
-            } else {
-                this.containmentPercent = Math.min(100, Math.round((totalCapacity / totalYield) * 100));
-                this.containmentMessage = totalCapacity >= totalYield ? 
-                    'Full containment possible with auto-fill' : 
-                    `Partial containment: ${totalCapacity}${this.predictedYieldUnit} of ${totalYield}${this.predictedYieldUnit}`;
-            }
-        },
-
-        calculateManualContainment() {
-            if (!this.containersSelected.length) {
-                this.containmentPercent = 0;
-                this.containmentMessage = 'No containers selected';
-                return;
-            }
-
-            const totalYield = this.predictedYield * this.scale;
-            let totalCapacity = 0;
-
-            for (const container of this.containersSelected) {
-                if (container.size && container.quantity) {
-                    totalCapacity += container.size * container.quantity;
-                }
-            }
-
-            if (totalCapacity === 0) {
-                this.containmentPercent = 0;
-                this.containmentMessage = 'Containers have no capacity defined';
-            } else {
-                this.containmentPercent = Math.min(100, Math.round((totalCapacity / totalYield) * 100));
-                this.containmentMessage = totalCapacity >= totalYield ? 
-                    'Full containment achieved' : 
-                    `Partial containment: ${totalCapacity}${this.predictedYieldUnit} of ${totalYield}${this.predictedYieldUnit}`;
-            }
-        },
-
-        updateBatchReadiness() {
-            const hasContainers = this.containersSelected.length > 0 || 
-                                (this.autoFill && this.autoFillResults.some(r => r.can_fulfill));
-            const hasGoodContainment = this.containmentPercent >= 100 || this.allowPartialContainment;
-            
-            this.canStartBatch = this.stockCheckPassed && hasContainers && hasGoodContainment;
-        },
-        
-        startBatch() {
-            if (this.canStartBatch) {
-                const containers = this.autoFill ? 
-                    this.autoFillResults.filter(r => r.can_fulfill) : 
-                    this.containersSelected;
-                
-                // Navigate to batch start with container selection
-                const params = new URLSearchParams({
-                    recipe_id: this.recipeId,
-                    scale: this.scale,
-                    containers: JSON.stringify(containers),
-                    auto_fill: this.autoFill
-                });
-                
-                window.location.href = `/batches/start?${params.toString()}`;
-            }
+        if (response.ok) {
+          const data = await response.json();
+          this.stockCheckResults = data.stock_check || [];
+          this.stockCheckPassed = data.all_ok || false;
+          this.stockChecked = true;
+        } else {
+          console.error('Stock check failed:', response.statusText);
         }
-    };
+      } catch (error) {
+        console.error('Error checking stock:', error);
+      }
+    },
+    
+    async startBatch() {
+      if (!this.stockChecked || !this.stockCheckPassed) {
+        alert('Please run a successful stock check before starting a batch.');
+        return;
+      }
+      
+      const formData = new FormData();
+      formData.append('recipe_id', this.recipe.id);
+      formData.append('scale', this.scale);
+      formData.append('csrf_token', document.querySelector('meta[name=csrf-token]')?.getAttribute('content') || '');
+      
+      try {
+        const response = await fetch('/batches/start', {
+          method: 'POST',
+          body: formData
+        });
+        
+        if (response.ok) {
+          window.location.href = await response.text();
+        } else {
+          alert('Failed to start batch. Please try again.');
+        }
+      } catch (error) {
+        console.error('Error starting batch:', error);
+        alert('Error starting batch. Please try again.');
+      }
+    }
+  }
 }
 </script>
-
 {% endblock %}
