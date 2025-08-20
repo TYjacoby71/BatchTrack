@@ -316,7 +316,7 @@ def _extract_ingredients_from_form(form):
                     'quantity': float(amt.strip()),
                     'unit': unit.strip()
                 })
-            except ValueError as e:
+            except (ValueError, TypeError) as e:
                 logger.error(f"Invalid ingredient data: {e}")
                 continue
 
