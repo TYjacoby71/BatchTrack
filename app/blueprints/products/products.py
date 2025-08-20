@@ -50,6 +50,7 @@ from ...services.inventory_adjustment import process_inventory_adjustment, recor
 products_bp = Blueprint('products', __name__, url_prefix='/products')
 
 @products_bp.route('/')
+@products_bp.route('/list')
 @login_required
 def list_products():
     """List all products for the organization"""
@@ -107,7 +108,7 @@ def create_product_from_data(data):
 @products_bp.route('/')
 @products_bp.route('/list')
 @login_required
-def product_list():
+def list_products():
     """List all products with inventory summary and sorting"""
     from ...services.product_service import ProductService
 
@@ -209,9 +210,6 @@ def product_list():
         products.sort(key=lambda p: p.name.lower())
 
     return render_template('pages/products/list_products.html', products=products, current_sort=sort_type)
-
-# Add alias for backward compatibility
-list_products = product_list
 
 @products_bp.route('/new', methods=['GET', 'POST'])
 @login_required
