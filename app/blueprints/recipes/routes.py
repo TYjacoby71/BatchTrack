@@ -104,10 +104,11 @@ def plan_production_route(recipe_id):
             if planning_result['success']:
                 return jsonify({
                     'success': True,
-                    'stock_results': _format_stock_results(planning_result['availability']['ingredients']),
-                    'all_available': planning_result['can_produce'],
+                    'stock_results': planning_result['stock_results'],
+                    'all_available': planning_result['all_available'],
                     'scale': scale,
-                    'cost_info': planning_result['cost_info']
+                    'cost_info': planning_result.get('cost_info', {}),
+                    'all_ok': planning_result['all_available']  # For backwards compatibility
                 })
             else:
                 return jsonify({'success': False, 'error': planning_result['error']}), 500
