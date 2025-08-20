@@ -6,7 +6,7 @@ import logging
 from typing import Optional
 
 from app.models import InventoryItem
-from ...services.unit_conversion import ConversionEngine
+from app.services.unit_conversion import ConversionEngine
 from ..types import StockCheckRequest, StockCheckResult, StockStatus, InventoryCategory
 from .base_handler import BaseInventoryHandler
 
