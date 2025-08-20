@@ -89,7 +89,12 @@ def plan_production_route(recipe_id):
 
     if request.method == 'POST':
         try:
-            data = request.get_json()
+            # Handle both JSON and form data
+            if request.is_json:
+                data = request.get_json()
+            else:
+                data = request.form.to_dict()
+            
             scale = float(data.get('scale', 1.0))
             container_id = data.get('container_id')
 
@@ -217,7 +222,7 @@ def clone_recipe(recipe_id):
 
         if success:
             new_recipe = result
-            ingredients = [(ri.inventory_item_id, ri.quantity, ri.unit) for ri in new_recipe.ingredients]
+            ingredients = [(ri.inventory_item_id, ri.quantity, ri.unit) for ri in new_recipe.recipe_ingredients]
             form_data = _get_recipe_form_data()
 
             # Don't save to DB yet - let user edit first
