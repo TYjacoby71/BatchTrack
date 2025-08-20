@@ -1,9 +1,8 @@
 from flask import Blueprint
 
-products_bp = Blueprint('products', __name__, url_prefix='/products')
-
-from . import products, product_variants, sku, api, product_inventory_routes, reservation_routes
-from .sku import sku_bp
+# Import the main products blueprint
+from .products import products_bp
+from .sku import sku_bp  
 from .reservation_routes import reservation_bp
 
 def register_product_blueprints(app):

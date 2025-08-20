@@ -41,7 +41,15 @@ def register_blueprints(app):
     safe_register_blueprint('app.blueprints.conversion.conversion_bp', 'conversion_bp', '/conversion', 'Conversion')
 
     # Product blueprints - these might have issues
-    safe_register_blueprint('app.blueprints.products.products_bp', 'products_bp', '/products', 'Products Main')
+    # Products Main
+    try:
+        from app.blueprints.products.products import products_bp
+        # Register with name 'products' to match template expectations
+        app.register_blueprint(products_bp, name='products')
+        successful_registrations.append("Products Main")
+    except Exception as e:
+        failed_registrations.append(f"Products Main: {e}")
+
     safe_register_blueprint('app.blueprints.products.product_inventory_routes.product_inventory_bp', 'product_inventory_bp', '/product-inventory', 'Product Inventory')
     safe_register_blueprint('app.blueprints.products.reservation_routes.reservations_bp', 'reservations_bp', '/reservations', 'Reservations')
     safe_register_blueprint('app.blueprints.products.sku.sku_bp', 'sku_bp', '/sku', 'SKU Management')
