@@ -1,3 +1,4 @@
+
 """
 Production Planning Operations
 
@@ -11,6 +12,7 @@ from decimal import Decimal
 
 from ...models import Recipe, RecipeIngredient, InventoryItem
 from ...services.stock_check import UniversalStockCheckService
+from ...services.stock_check.types import StockCheckRequest, InventoryCategory
 
 logger = logging.getLogger(__name__)
 
@@ -33,34 +35,35 @@ def plan_production(recipe_id: int, scale: float = 1.0,
         if not recipe:
             return {'success': False, 'error': 'Recipe not found'}
 
-        # Use UniversalStockCheckService for comprehensive checking
+        # Build stock check requests from recipe
+        requests = _build_recipe_requests(recipe, scale)
+        
+        # Use UniversalStockCheckService for individual item checks
         stock_service = UniversalStockCheckService()
-        stock_results = stock_service.check_recipe_stock(recipe, scale)
+        stock_results = stock_service.check_bulk_items(requests)
+
+        # Process results into recipe-specific format
+        processed_results = _process_stock_results(stock_results)
+        all_available = all(result['status'] in ['OK', 'LOW'] for result in processed_results)
 
         # Calculate requirements and costs
         requirements = calculate_recipe_requirements(recipe_id, scale)
         cost_info = calculate_production_cost(recipe_id, scale)
 
-        # Format availability data for frontend
-        availability = _format_availability_results(stock_results['stock_check'])
-
         return {
             'success': True,
             'recipe_id': recipe_id,
             'scale': scale,
-            'stock_check': stock_results['stock_check'],
-            'all_ok': stock_results['all_ok'],
+            'stock_check': processed_results,
+            'all_ok': all_available,
+            'all_available': all_available,  # For backwards compatibility
             'requirements': requirements,
             'cost_info': cost_info,
-            'availability': availability
+            'stock_results': processed_results  # For backwards compatibility
         }
 
     except Exception as e:
         logger.error(f"Error in production planning: {e}")
-        return {'success': False, 'error': str(e)}
-
-    except Exception as e:
-        logger.error(f"Error planning production for recipe {recipe_id}: {e}")
         return {'success': False, 'error': str(e)}
 
 
@@ -107,7 +110,7 @@ def calculate_recipe_requirements(recipe_id: int, scale: float = 1.0) -> Dict[st
 
 def check_ingredient_availability(recipe_id: int, scale: float = 1.0) -> Dict[str, Any]:
     """
-    Check availability of all ingredients for a recipe using UniversalStockCheckService.
+    Check availability of all ingredients for a recipe.
 
     Args:
         recipe_id: Recipe to check
@@ -121,11 +124,32 @@ def check_ingredient_availability(recipe_id: int, scale: float = 1.0) -> Dict[st
         if not recipe:
             return {'success': False, 'error': 'Recipe not found'}
 
-        # Use the UniversalStockCheckService
-        stock_service = UniversalStockCheckService()
-        results = stock_service.check_recipe_stock(recipe, scale)
+        # Build requests for ingredients only
+        requests = []
+        for recipe_ingredient in recipe.recipe_ingredients:
+            requests.append(StockCheckRequest(
+                item_id=recipe_ingredient.inventory_item_id,
+                quantity_needed=recipe_ingredient.quantity * scale,
+                unit=recipe_ingredient.unit,
+                category=InventoryCategory.INGREDIENT,
+                scale_factor=scale
+            ))
 
-        return _format_availability_results(results['stock_check'], results['all_ok'])
+        # Use stock service
+        stock_service = UniversalStockCheckService()
+        results = stock_service.check_bulk_items(requests)
+
+        # Format results
+        processed_results = _process_stock_results(results)
+        all_available = all(result['status'] in ['OK', 'LOW'] for result in processed_results)
+
+        return {
+            'success': True,
+            'all_available': all_available,
+            'ingredients': processed_results,
+            'recipe_id': recipe_id,
+            'scale': scale
+        }
 
     except Exception as e:
         logger.error(f"Error checking ingredient availability for recipe {recipe_id}: {e}")
@@ -185,53 +209,62 @@ def calculate_production_cost(recipe_id: int, scale: float = 1.0) -> Dict[str, A
         return {'error': str(e)}
 
 
-def _format_availability_results(stock_check_results: List[Dict], all_available: bool = None) -> Dict[str, Any]:
-    """
-    Format stock check results for the frontend.
+def _build_recipe_requests(recipe, scale: float) -> List[StockCheckRequest]:
+    """Build stock check requests from recipe ingredients"""
+    requests = []
 
-    Args:
-        stock_check_results: Results from UniversalStockCheckService
-        all_available: Overall availability status
+    # Add ingredient requests
+    for recipe_ingredient in recipe.recipe_ingredients:
+        requests.append(StockCheckRequest(
+            item_id=recipe_ingredient.inventory_item_id,
+            quantity_needed=recipe_ingredient.quantity * scale,
+            unit=recipe_ingredient.unit,
+            category=InventoryCategory.INGREDIENT,
+            scale_factor=scale
+        ))
 
-    Returns:
-        Formatted availability data
-    """
-    ingredients = []
-    missing = []
+    # Add container requests if recipe has allowed containers
+    if hasattr(recipe, 'allowed_containers') and recipe.allowed_containers:
+        # Calculate how many containers needed based on yield
+        yield_amount = recipe.predicted_yield * scale if recipe.predicted_yield else 1.0
 
-    for result in stock_check_results:
-        # Skip non-ingredient items (containers, etc.)
-        if result.get('category') != 'ingredient':
-            continue
+        for container_id in recipe.allowed_containers:
+            requests.append(StockCheckRequest(
+                item_id=container_id,
+                quantity_needed=yield_amount,  # Will be converted by handler
+                unit=recipe.predicted_yield_unit or "count",
+                category=InventoryCategory.CONTAINER,
+                scale_factor=scale
+            ))
 
-        ingredient_data = {
-            'ingredient_id': result['item_id'],
-            'ingredient_name': result['item_name'],
-            'required_quantity': result['needed_quantity'],
-            'required_unit': result['needed_unit'],
-            'available_quantity': result['available_quantity'],
-            'available_unit': result['available_unit'],
-            'is_available': result['status'] in ['OK', 'LOW'],
-            'status': result['status'],
-            'shortage': max(0, result['needed_quantity'] - result['available_quantity'])
-        }
+    return requests
 
-        ingredients.append(ingredient_data)
 
-        # Track missing ingredients
-        if not ingredient_data['is_available']:
-            missing.append({
-                'name': ingredient_data['ingredient_name'],
-                'needed': ingredient_data['required_quantity'],
-                'available': ingredient_data['available_quantity'],
-                'unit': ingredient_data['required_unit'],
-                'shortage': ingredient_data['shortage']
-            })
+def _process_stock_results(stock_results: List) -> List[Dict[str, Any]]:
+    """Process stock check results into consistent format"""
+    processed = []
+    
+    for result in stock_results:
+        # Handle both StockCheckResult objects and dicts
+        if hasattr(result, 'to_dict'):
+            result_dict = result.to_dict()
+        else:
+            result_dict = result
 
-    return {
-        'ingredients': ingredients,
-        'missing': missing,
-        'all_available': all_available if all_available is not None else len(missing) == 0,
-        'total_ingredients': len(ingredients),
-        'available_ingredients': len(ingredients) - len(missing)
-    }
+        processed.append({
+            'item_id': result_dict.get('item_id'),
+            'item_name': result_dict.get('item_name', 'Unknown'),
+            'name': result_dict.get('item_name', 'Unknown'),  # Backwards compatibility
+            'needed_quantity': result_dict.get('needed_quantity', 0),
+            'needed': result_dict.get('needed_quantity', 0),  # Backwards compatibility
+            'needed_unit': result_dict.get('needed_unit', ''),
+            'available_quantity': result_dict.get('available_quantity', 0),
+            'available': result_dict.get('available_quantity', 0),  # Backwards compatibility
+            'available_unit': result_dict.get('available_unit', ''),
+            'unit': result_dict.get('needed_unit', ''),  # Backwards compatibility
+            'status': result_dict.get('status', 'UNKNOWN'),
+            'category': result_dict.get('category', 'ingredient'),
+            'type': result_dict.get('category', 'ingredient')  # Backwards compatibility
+        })
+    
+    return processed

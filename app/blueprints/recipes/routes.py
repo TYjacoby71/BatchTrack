@@ -94,7 +94,7 @@ def plan_production_route(recipe_id):
                 data = request.get_json()
             else:
                 data = request.form.to_dict()
-            
+
             scale = float(data.get('scale', 1.0))
             container_id = data.get('container_id')
 
