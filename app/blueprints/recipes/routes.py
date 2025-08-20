@@ -94,7 +94,7 @@ def plan_production_route(recipe_id):
                 data = request.get_json()
             else:
                 data = request.form.to_dict()
-            
+
             scale = float(data.get('scale', 1.0))
             container_id = data.get('container_id')
 
@@ -117,7 +117,7 @@ def plan_production_route(recipe_id):
             return jsonify({'success': False, 'error': 'Production planning failed'}), 500
 
     # GET request - show planning form
-    return render_template('recipes/plan_production.html', recipe=recipe)
+    return render_template('pages/recipes/plan_production.html', recipe=recipe)
 
 @recipes_bp.route('/<int:recipe_id>/variation', methods=['GET', 'POST'])
 @login_required
@@ -365,3 +365,24 @@ def _create_variation_template(parent):
         predicted_yield=parent.predicted_yield,
         predicted_yield_unit=parent.predicted_yield_unit
     )
+
+# This is the API endpoint for production planning which has been updated
+@recipes_bp.route('/<int:recipe_id>/plan', methods=['POST'])
+@login_required
+@require_permission('batch_production.create')
+def plan_production_api(recipe_id):
+    """API endpoint for production planning"""
+    try:
+        data = request.get_json() or {}
+        scale = float(data.get('scale', 1.0))
+        container_id = data.get('container_id')
+        check_containers = data.get('check_containers', False)
+
+        from app.services.recipe_service import plan_production
+        result = plan_production(recipe_id, scale, container_id, check_containers)
+
+        return jsonify(result)
+
+    except Exception as e:
+        logger.error(f"Error in plan production API: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
