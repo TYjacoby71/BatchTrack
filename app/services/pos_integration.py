@@ -26,133 +26,97 @@ class POSIntegrationService:
     """Service for integrating with POS systems like Shopify, Etsy, etc."""
 
     @staticmethod
-    def reserve_inventory(item_id: int, quantity: float, order_id: str, source: str = "shopify",
-                         notes: str = None, sale_price: float = None, expires_in_hours: int = None) -> tuple[bool, str]:
-        """
-        Reserve inventory using new reservation model - acts like regular deduction
-        Args:
-            item_id: Inventory item ID (product type)
-            quantity: Quantity to reserve
-            order_id: Order identifier (required)
-            source: Source system ("shopify", "manual", etc.)
-            notes: Optional notes
-            sale_price: Expected sale price
-            expires_in_hours: Hours until reservation expires
-
-        Returns:
-            (success, message)
-        """
+    def reserve_inventory(item_id, quantity, order_id=None, source=None, notes=None):
+        """Reserve inventory for POS orders"""
         try:
-            # Get the original inventory item
+            from flask_login import current_user
+            from app.models.inventory import InventoryItem
+            from app.models.reservation import Reservation
+            from app.extensions import db
+            from app.services.inventory_adjustment import process_inventory_adjustment
+
+            # Get the original item
             original_item = InventoryItem.query.get(item_id)
-            if not original_item or original_item.type != 'product':
-                return False, "Product item not found"
+            if not original_item:
+                return False, "Item not found"
 
-            # Check if we have enough available inventory (ignoring expired lots)
-            available = original_item.available_quantity  # This should exclude expired
-            if available < quantity:
-                return False, f"Insufficient inventory. Available: {available}, Requested: {quantity}"
+            # Check availability
+            if original_item.available_quantity < quantity:
+                return False, f"Insufficient inventory. Available: {original_item.available_quantity}"
 
-            # Get or create the reserved inventory item
-            reserved_item_name = f"{original_item.name} (Reserved)"
+            # Create or update the reserved item
             reserved_item = InventoryItem.query.filter_by(
-                name=reserved_item_name,
-                type='product-reserved',
-                organization_id=original_item.organization_id
+                name=f"{original_item.name} (Reserved)",
+                type='reserved',
+                organization_id=current_user.organization_id
             ).first()
 
             if not reserved_item:
-                # Create new reserved inventory item
                 reserved_item = InventoryItem(
-                    name=reserved_item_name,
-                    type='product-reserved',
+                    name=f"{original_item.name} (Reserved)",
+                    type='reserved',
                     unit=original_item.unit,
-                    cost_per_unit=original_item.cost_per_unit,
                     quantity=0.0,
-                    organization_id=original_item.organization_id,
-                    category_id=original_item.category_id,
-                    is_perishable=original_item.is_perishable,
-                    shelf_life_days=original_item.shelf_life_days
+                    cost_per_unit=original_item.cost_per_unit,
+                    organization_id=current_user.organization_id,
+                    created_by=current_user.id
                 )
-                _db_session().add(reserved_item)
-                _db_session().flush()
+                db.session.add(reserved_item)
+                db.session.flush()  # Get the ID
 
-            # Get the source FIFO entry for tracking
-            from ..models import InventoryHistory
-            fifo_entries = InventoryHistory.query.filter_by(
-                inventory_item_id=item_id,
-                remaining_quantity__gt=0
-            ).order_by(InventoryHistory.timestamp.asc()).all()
-            source_fifo_id = None
-            source_batch_id = None
-
-            if fifo_entries:
-                # Use the oldest available entry for reference
-                oldest_entry = fifo_entries[0]
-                source_fifo_id = oldest_entry.id
-                source_batch_id = getattr(oldest_entry, 'batch_id', None)
-
-            # 1. DEDUCT from original item using canonical service
-            deduction_success = process_inventory_adjustment(
-                item_id=item_id,
+            # Create reservation record
+            reservation = Reservation(
+                inventory_item_id=original_item.id,
+                reserved_item_id=reserved_item.id,
                 quantity=quantity,
-                change_type='reserved',
-                notes=f"Reserved for order {order_id} ({source}). {notes or ''}",
                 order_id=order_id,
-                created_by=current_user.id if current_user.is_authenticated else None
+                source=source,
+                notes=notes,
+                created_by=current_user.id,
+                organization_id=current_user.organization_id
+            )
+            db.session.add(reservation)
+
+            # Use canonical inventory adjustment service for deduction
+            deduction_notes = f"Reserved for order {order_id} ({source}). {notes}" if order_id else notes
+            deduction_success = process_inventory_adjustment(
+                item_id=original_item.id,
+                quantity=-quantity,  # Negative for deduction
+                change_type='reserved',
+                notes=deduction_notes,
+                order_id=order_id,
+                created_by=current_user.id
             )
 
             if not deduction_success:
-                return False, "Failed to deduct from available inventory"
+                db.session.rollback()
+                return False, "Failed to deduct from original inventory"
 
-            # 2. CREATE reservation line item (this is now the source of truth)
-            expires_at = None
-            if expires_in_hours:
-                expires_at = datetime.utcnow() + timedelta(hours=expires_in_hours)
-
-            reservation = Reservation(
-                order_id=order_id,
-                product_item_id=item_id,
-                reserved_item_id=reserved_item.id,
-                quantity=quantity,
-                unit=original_item.unit,
-                unit_cost=original_item.cost_per_unit,
-                sale_price=sale_price,
-                source_fifo_id=source_fifo_id,
-                source_batch_id=source_batch_id,
-                source=source,
-                expires_at=expires_at,
-                notes=notes,
-                created_by=current_user.id if current_user.is_authenticated else None,
-                organization_id=current_user.organization_id if current_user.is_authenticated else original_item.organization_id
-            )
-            _db_session().add(reservation)
-
-            # 3. UPDATE reserved item quantity (for display purposes)
-            reserved_item.quantity += quantity
-
-            # 4. LOG the reservation using canonical inventory adjustment
+            # Use canonical inventory adjustment service for allocation
+            allocation_notes = f"Reserved for order {order_id}. {notes}" if order_id else notes
             allocation_success = process_inventory_adjustment(
                 item_id=reserved_item.id,
                 quantity=quantity,
                 change_type='reserved_allocation',
                 unit=original_item.unit,
-                notes=f"Reserved for order {order_id}. {notes or ''}",
-                created_by=current_user.id if current_user.is_authenticated else None,
+                notes=allocation_notes,
+                created_by=current_user.id,
                 cost_override=original_item.cost_per_unit
             )
 
             if not allocation_success:
-                return False, "Failed to log reservation allocation"
+                db.session.rollback()
+                return False, "Failed to allocate to reserved inventory"
 
-            _db_session().commit()
-            return True, f"Reserved {quantity} units for order {order_id}"
+            db.session.commit()
+
+            return True, "Inventory reserved successfully"
 
         except Exception as e:
-            from flask import has_app_context
-            if has_app_context():
-                _db_session().rollback()
+            db.session.rollback()
+            logger.error(f"Error reserving inventory: {str(e)}")
             return False, f"Error reserving inventory: {str(e)}"
+
 
     @staticmethod
     def release_reservation(order_id: str):
