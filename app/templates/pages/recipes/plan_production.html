@@ -1,16 +1,17 @@
 
-{% extends "layout.html" %}
-
-{% block title %}Plan Production - {{ recipe.name }}{% endblock %}
-
+{% extends 'layout.html' %}
 {% block content %}
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 <div x-data="planProduction()" x-init="init()" class="container">
-  
-  <!-- Page Header Component -->
-  {% include 'components/plan_production/page_header.html' %}
+  <!-- Page Header -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Plan Production: {{ recipe.name }}</h2>
+    <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-secondary">
+      <i class="fas fa-arrow-left"></i> Back to Recipes
+    </a>
+  </div>
 
-  <!-- Batch Configuration Component -->
+  <!-- Batch Configuration Card -->
   <div class="card mb-4">
     <div class="card-header">
       <h5 class="mb-0">
@@ -61,7 +62,7 @@
     </div>
   </div>
 
-  <!-- Container Management Component -->
+  <!-- Container Management Card -->
   <div class="card mb-4" x-show="requiresContainers">
     <div class="card-header d-flex justify-content-between align-items-center">
       <h5 class="mb-0">
@@ -119,8 +120,20 @@
         </div>
       </template>
 
-      <!-- Containment Progress Component -->
-      {% include 'components/plan_production/containment_progress.html' %}
+      <!-- Containment Progress -->
+      <div class="mt-4">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <label class="form-label mb-0">Containment Progress:</label>
+          <span class="badge bg-primary" x-text="containmentPercent + '%'"></span>
+        </div>
+        <div class="progress" style="height: 25px;">
+          <div class="progress-bar" role="progressbar" 
+            :style="'width: ' + containmentPercent + '%'" 
+            :class="containmentPercent >= 100 ? 'bg-success' : 'bg-warning'"
+            x-text="containmentPercent + '%'"></div>
+        </div>
+        <small class="form-text text-muted mt-1" x-text="liveContainmentMessage"></small>
+      </div>
 
       <!-- Warnings -->
       <div class="alert alert-warning mt-3" x-show="containmentIssue">
@@ -135,10 +148,76 @@
     </div>
   </div>
 
-  <!-- Stock Check Component -->
-  {% include 'components/plan_production/stock_check.html' %}
+  <!-- Stock Check Card -->
+  <div class="card mb-4">
+    <div class="card-header">
+      <h5 class="mb-0">
+        <i class="fas fa-clipboard-check"></i> Ingredient Stock Check
+      </h5>
+    </div>
+    <div class="card-body">
+      <div class="d-flex gap-2 mb-3">
+        <button type="button" class="btn btn-warning" @click="checkStockOrWarn()">
+          <i class="fas fa-search"></i> Check Stock
+        </button>
+        <div class="ms-auto" x-show="stockChecked">
+          <span class="badge" :class="stockCheckPassed ? 'bg-success' : 'bg-danger'">
+            <i class="fas" :class="stockCheckPassed ? 'fa-check' : 'fa-times'"></i>
+            <span x-text="stockCheckPassed ? 'Stock OK' : 'Stock Issues'"></span>
+          </span>
+        </div>
+      </div>
 
-  <!-- Action Buttons Component -->
+      <!-- Stock Results Table -->
+      <div x-show="stockChecked && stockResults.length > 0">
+        <div class="table-responsive">
+          <table class="table table-sm table-striped">
+            <thead>
+              <tr>
+                <th>Ingredient</th>
+                <th>Required</th>
+                <th>Available</th>
+                <th>Unit</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="result in stockResults" :key="result.ingredient">
+                <tr>
+                  <td x-text="result.ingredient"></td>
+                  <td x-text="result.needed.toFixed(2)"></td>
+                  <td x-text="result.available.toFixed(2)"></td>
+                  <td x-text="result.unit"></td>
+                  <td>
+                    <span class="badge" 
+                      :class="result.status === 'OK' ? 'bg-success' : 'bg-danger'" 
+                      x-text="result.status">
+                    </span>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="d-flex gap-2 mt-3">
+          <button type="button" class="btn btn-outline-secondary btn-sm" @click="downloadCSV">
+            <i class="fas fa-download"></i> Download CSV
+          </button>
+          <button type="button" class="btn btn-outline-primary btn-sm" @click="downloadShoppingList">
+            <i class="fas fa-shopping-cart"></i> Shopping List
+          </button>
+        </div>
+      </div>
+
+      <div x-show="stockChecked && stockResults.length === 0" class="alert alert-info">
+        <i class="fas fa-info-circle"></i>
+        No stock check data available.
+      </div>
+    </div>
+  </div>
+
+  <!-- Action Buttons -->
   <div class="card">
     <div class="card-body">
       <div class="d-flex justify-content-between align-items-center">
