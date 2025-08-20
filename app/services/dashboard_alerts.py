@@ -44,6 +44,10 @@ class DashboardAlertService:
         expiration_data = CombinedInventoryAlertService.get_expiration_alerts(
             days_ahead=expiration_days
         )
+        
+        # Debug logging
+        logging.info(f"Expiration data: expired_total={expiration_data.get('expired_total', 'MISSING')}, expiring_soon_total={expiration_data.get('expiring_soon_total', 'MISSING')}")
+        logging.info(f"User preferences: show_expiration={show_expiration if user_prefs else 'NO_PREFS'}")
 
         # CRITICAL: Expired items with remaining quantity - only if enabled (default to True if no prefs)
         show_expiration = (user_prefs.show_expiration_alerts if user_prefs else True)
@@ -62,6 +66,7 @@ class DashboardAlertService:
         show_batch_alerts = (user_prefs.show_batch_alerts if user_prefs else True)
         if show_batch_alerts:
             stuck_batches = DashboardAlertService._get_stuck_batches()
+            logging.info(f"Stuck batches found: {len(stuck_batches)}")
             if stuck_batches:
                 alerts.append({
                     'priority': 'CRITICAL',
@@ -104,6 +109,7 @@ class DashboardAlertService:
         show_low_stock = (user_prefs.show_low_stock_alerts if user_prefs else True)
         if show_low_stock:
             stock_summary = CombinedInventoryAlertService.get_unified_stock_summary()
+            logging.info(f"Stock summary: low_stock_ingredients_count={stock_summary.get('low_stock_ingredients_count', 'MISSING')}, low_stock_count={stock_summary.get('low_stock_count', 'MISSING')}, out_of_stock_count={stock_summary.get('out_of_stock_count', 'MISSING')}")
 
             if stock_summary['low_stock_ingredients_count'] > 0:
                 alerts.append({
@@ -194,12 +200,18 @@ class DashboardAlertService:
                 'dismissible': True
             })
 
+        # Debug total alerts before filtering
+        logging.info(f"Total alerts before filtering: {len(alerts)}")
+        
         # Filter out dismissed alerts from this session
         if dismissed_alerts:
+            logging.info(f"Dismissed alerts: {dismissed_alerts}")
             alerts = [alert for alert in alerts if alert['type'] not in dismissed_alerts]
+            logging.info(f"Alerts after dismissal filtering: {len(alerts)}")
 
         # Sort by priority and limit
         alerts.sort(key=lambda x: DashboardAlertService.PRIORITY_LEVELS[x['priority']])
+        logging.info(f"Final alerts to return: {len(alerts[:max_alerts])}")
         return {
             'alerts': alerts[:max_alerts],
             'total_alerts': len(alerts),

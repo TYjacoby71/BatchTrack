@@ -8,23 +8,79 @@ class CombinedInventoryAlertService:
 
     @staticmethod
     def get_expiration_alerts(days_ahead: int = 7) -> Dict:
-        """Get comprehensive expiration alerts for both raw materials and products"""
-        from flask_login import current_user
-        # Import moved to avoid circular dependency
-        from ..blueprints.expiration.services import ExpirationService
+        """Get comprehensive expiration alerts for both FIFO and product inventory"""
+        import logging
+        try:
+            from ..models import InventoryItem, FIFOEntry
+            from ..utils.timezone_utils import TimezoneUtils
+            from flask_login import current_user
 
-        # Get expired and expiring items
-        expired_items = ExpirationService.get_expired_inventory_items()
-        expiring_items = ExpirationService.get_expiring_soon_items(days_ahead)
+            current_time = TimezoneUtils.get_current_time()
+            expiration_cutoff = current_time + timedelta(days=days_ahead)
 
-        return {
-            'expired_fifo_entries': expired_items.get('fifo_entries', []),
-            'expired_products': expired_items.get('product_inventory', []),
-            'expiring_fifo_entries': expiring_items.get('fifo_entries', []),
-            'expiring_products': expiring_items.get('product_inventory', []),
-            'expired_total': len(expired_items.get('fifo_entries', [])) + len(expired_items.get('product_inventory', [])),
-            'expiring_soon_total': len(expiring_items.get('fifo_entries', [])) + len(expiring_items.get('product_inventory', [])),
-        }
+            # Get expired FIFO entries
+            expired_fifo_entries = db.session.query(FIFOEntry).filter(
+                FIFOEntry.expiration_date < current_time,
+                FIFOEntry.organization_id == current_user.organization_id if current_user.organization_id else True
+            ).all()
+
+            # Get expiring soon FIFO entries
+            expiring_fifo_entries = db.session.query(FIFOEntry).filter(
+                and_(
+                    FIFOEntry.expiration_date >= current_time,
+                    FIFOEntry.expiration_date <= expiration_cutoff
+                ),
+                FIFOEntry.organization_id == current_user.organization_id if current_user.organization_id else True
+            ).all()
+
+            # Get expired product inventory items
+            expired_products = db.session.query(InventoryItem).filter(
+                and_(
+                    InventoryItem.expiration_date < current_time,
+                    InventoryItem.type.in_(['product', 'product-reserved'])
+                ),
+                InventoryItem.organization_id == current_user.organization_id if current_user.organization_id else True
+            ).all()
+
+            # Get expiring soon product inventory items
+            expiring_products = db.session.query(InventoryItem).filter(
+                and_(
+                    InventoryItem.expiration_date >= current_time,
+                    InventoryItem.expiration_date <= expiration_cutoff,
+                    InventoryItem.type.in_(['product', 'product-reserved'])
+                ),
+                InventoryItem.organization_id == current_user.organization_id if current_user.organization_id else True
+            ).all()
+
+            # Calculate totals
+            expired_total = len(expired_fifo_entries) + len(expired_products)
+            expiring_soon_total = len(expiring_fifo_entries) + len(expiring_products)
+
+            # Debug logging
+            logging.info(f"Expiration alerts debug: expired_fifo={len(expired_fifo_entries)}, expired_products={len(expired_products)}, expiring_fifo={len(expiring_fifo_entries)}, expiring_products={len(expiring_products)}")
+            logging.info(f"Current time: {current_time}, cutoff: {expiration_cutoff}")
+
+            return {
+                'expired_fifo_entries': expired_fifo_entries,
+                'expired_products': expired_products,
+                'expiring_fifo_entries': expiring_fifo_entries,
+                'expiring_products': expiring_products,
+                'expired_total': expired_total,
+                'expiring_soon_total': expiring_soon_total,
+                'has_any_expiration_issues': expired_total > 0 or expiring_soon_total > 0
+            }
+        except Exception as e:
+            logging.error(f"Error getting expiration alerts: {e}")
+            # Return empty dict on error to prevent dashboard crashing
+            return {
+                'expired_fifo_entries': [],
+                'expired_products': [],
+                'expiring_fifo_entries': [],
+                'expiring_products': [],
+                'expired_total': 0,
+                'expiring_soon_total': 0,
+                'has_any_expiration_issues': False
+            }
 
     @staticmethod
     def get_low_stock_ingredients():
