@@ -1,7 +1,5 @@
 from flask import Blueprint, request, jsonify, render_template
 from flask_login import login_required, current_user
-
-reservations_bp = Blueprint('reservations', __name__)
 from sqlalchemy import and_, func, desc
 from datetime import datetime, timedelta
 
@@ -9,9 +7,9 @@ from ...models import db, Reservation, InventoryItem
 from ...services.pos_integration import POSIntegrationService
 from ...utils.permissions import has_permission
 
-reservation_bp = Blueprint('reservations', __name__, url_prefix='/reservations')
+reservations_bp = Blueprint('reservations', __name__, url_prefix='/reservations')
 
-@reservation_bp.route('/')
+@reservations_bp.route('/')
 @login_required
 def list_reservations():
     """List all reservations with filtering options"""
@@ -108,7 +106,7 @@ def list_reservations():
                          status_filter=status_filter,
                          order_id_filter=order_id_filter)
 
-@reservation_bp.route('/api/reservations/create', methods=['POST'])
+@reservations_bp.route('/api/reservations/create', methods=['POST'])
 @login_required
 def create_reservation():
     """Create a new reservation via API"""
@@ -140,7 +138,7 @@ def create_reservation():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@reservation_bp.route('/api/reservations/<order_id>/release', methods=['POST'])
+@reservations_bp.route('/api/reservations/<order_id>/release', methods=['POST'])
 @login_required
 def release_reservation(order_id):
     """Release a reservation by order ID"""
@@ -195,7 +193,7 @@ def release_reservation(order_id):
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
-@reservation_bp.route('/api/reservations/<order_id>/confirm_sale', methods=['POST'])
+@reservations_bp.route('/api/reservations/<order_id>/confirm_sale', methods=['POST'])
 @login_required
 def confirm_sale(order_id):
     """Convert reservation to sale"""
@@ -213,7 +211,7 @@ def confirm_sale(order_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@reservation_bp.route('/api/reservations/<order_id>/details')
+@reservations_bp.route('/api/reservations/<order_id>/details')
 @login_required
 def get_reservation_details(order_id):
     """Get detailed information about a reservation"""
@@ -225,7 +223,7 @@ def get_reservation_details(order_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@reservation_bp.route('/api/reservations/cleanup_expired', methods=['POST'])
+@reservations_bp.route('/api/reservations/cleanup_expired', methods=['POST'])
 @login_required
 def cleanup_expired():
     """Clean up expired reservations"""
@@ -236,7 +234,7 @@ def cleanup_expired():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@reservation_bp.route('/api/inventory/<int:item_id>/reservations')
+@reservations_bp.route('/api/inventory/<int:item_id>/reservations')
 @login_required
 def get_item_reservations(item_id):
     """Get all reservations for a specific inventory item"""
