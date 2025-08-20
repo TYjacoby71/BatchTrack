@@ -60,18 +60,22 @@ function planProductionData() {
         recipeId: {{ recipe.id }},
         recipeName: "{{ recipe.name }}",
         scale: 1.0,
+        predictedYield: {{ recipe.predicted_yield or 0 }},
+        predictedYieldUnit: "{{ recipe.predicted_yield_unit or 'count' }}",
         
         // Stock check state
         stockChecked: false,
         stockCheckPassed: false,
         stockResults: [],
+        availableContainers: [],
         
         // Container state
         containersSelected: [],
         autoFill: false,
+        autoFillResults: [],
         containmentPercent: 0,
-        containmentIssue: '',
-        liveContainmentMessage: 'No containers selected',
+        containmentMessage: 'No containers selected',
+        allowPartialContainment: false,
         
         // Batch configuration
         batchName: '',
@@ -89,7 +93,7 @@ function planProductionData() {
                     },
                     body: JSON.stringify({
                         scale: this.scale,
-                        container_id: this.containersSelected[0]?.id
+                        check_containers: true
                     })
                 });
                 
@@ -98,7 +102,11 @@ function planProductionData() {
                 if (data.success) {
                     this.stockChecked = true;
                     this.stockCheckPassed = data.all_available;
-                    this.stockResults = data.stock_results || [];
+                    
+                    // Separate ingredients and containers from stock results
+                    this.stockResults = data.stock_results?.filter(r => r.category === 'ingredient') || [];
+                    this.availableContainers = data.stock_results?.filter(r => r.category === 'container') || [];
+                    
                     this.totalCost = data.cost_info?.total_cost || 0;
                     this.updateBatchReadiness();
                 } else {
@@ -109,15 +117,162 @@ function planProductionData() {
                 alert('Failed to check stock. Please try again.');
             }
         },
+
+        selectContainer(container) {
+            // Add container to selection
+            this.containersSelected.push({
+                id: container.item_id,
+                name: container.item_name,
+                type: container.item_name.toLowerCase(),
+                size: container.storage_amount || 0,
+                unit: container.storage_unit || 'ml',
+                quantity: 1,
+                available: container.available_quantity
+            });
+            this.updateContainment();
+        },
+
+        addContainer() {
+            this.containersSelected.push({
+                id: null,
+                name: '',
+                type: '',
+                size: 0,
+                unit: 'ml',
+                quantity: 1,
+                available: 0
+            });
+        },
+
+        removeContainer(index) {
+            this.containersSelected.splice(index, 1);
+            this.updateContainment();
+        },
+
+        handleAutoFillChange() {
+            if (this.autoFill) {
+                this.performAutoFill();
+            } else {
+                this.autoFillResults = [];
+                this.updateContainment();
+            }
+        },
+
+        performAutoFill() {
+            if (!this.availableContainers.length) {
+                this.autoFillResults = [];
+                return;
+            }
+
+            const totalYield = this.predictedYield * this.scale;
+            const results = [];
+
+            // Calculate container needs based on available containers
+            for (const container of this.availableContainers) {
+                const storageCapacity = container.storage_amount || 0;
+                const containersNeeded = Math.ceil(totalYield / storageCapacity);
+                
+                results.push({
+                    container_id: container.item_id,
+                    container_name: container.item_name,
+                    storage_capacity: storageCapacity,
+                    storage_unit: container.storage_unit,
+                    quantity_needed: containersNeeded,
+                    available_quantity: container.available_quantity,
+                    can_fulfill: container.available_quantity >= containersNeeded
+                });
+            }
+
+            this.autoFillResults = results;
+            this.updateContainment();
+        },
+
+        updateContainment() {
+            if (this.autoFill) {
+                this.calculateAutoFillContainment();
+            } else {
+                this.calculateManualContainment();
+            }
+            this.updateBatchReadiness();
+        },
+
+        calculateAutoFillContainment() {
+            const totalYield = this.predictedYield * this.scale;
+            let totalCapacity = 0;
+
+            for (const result of this.autoFillResults) {
+                if (result.can_fulfill) {
+                    totalCapacity += result.storage_capacity * result.quantity_needed;
+                }
+            }
+
+            if (totalCapacity === 0) {
+                this.containmentPercent = 0;
+                this.containmentMessage = 'No suitable containers available';
+            } else {
+                this.containmentPercent = Math.min(100, Math.round((totalCapacity / totalYield) * 100));
+                this.containmentMessage = totalCapacity >= totalYield ? 
+                    'Full containment possible with auto-fill' : 
+                    `Partial containment: ${totalCapacity}${this.predictedYieldUnit} of ${totalYield}${this.predictedYieldUnit}`;
+            }
+        },
+
+        calculateManualContainment() {
+            if (!this.containersSelected.length) {
+                this.containmentPercent = 0;
+                this.containmentMessage = 'No containers selected';
+                return;
+            }
+
+            const totalYield = this.predictedYield * this.scale;
+            let totalCapacity = 0;
+
+            for (const container of this.containersSelected) {
+                if (container.size && container.quantity) {
+                    totalCapacity += container.size * container.quantity;
+                }
+            }
+
+            if (totalCapacity === 0) {
+                this.containmentPercent = 0;
+                this.containmentMessage = 'Containers have no capacity defined';
+            } else {
+                this.containmentPercent = Math.min(100, Math.round((totalCapacity / totalYield) * 100));
+                this.containmentMessage = totalCapacity >= totalYield ? 
+                    'Full containment achieved' : 
+                    `Partial containment: ${totalCapacity}${this.predictedYieldUnit} of ${totalYield}${this.predictedYieldUnit}`;
+            }
+        },
+
+        getContainmentAlertClass() {
+            if (this.containmentPercent >= 100) return 'alert-success';
+            if (this.containmentPercent >= 75) return 'alert-warning';
+            return 'alert-danger';
+        },
         
         updateBatchReadiness() {
-            this.canStartBatch = this.stockCheckPassed && this.containersSelected.length > 0;
+            const hasContainers = this.containersSelected.length > 0 || 
+                                (this.autoFill && this.autoFillResults.some(r => r.can_fulfill));
+            const hasGoodContainment = this.containmentPercent >= 100 || this.allowPartialContainment;
+            
+            this.canStartBatch = this.stockCheckPassed && hasContainers && hasGoodContainment;
         },
         
         startBatch() {
             if (this.canStartBatch) {
-                // Navigate to batch start or show success message
-                window.location.href = `/batches/start?recipe_id=${this.recipeId}&scale=${this.scale}`;
+                const containers = this.autoFill ? 
+                    this.autoFillResults.filter(r => r.can_fulfill) : 
+                    this.containersSelected;
+                
+                // Navigate to batch start with container selection
+                const params = new URLSearchParams({
+                    recipe_id: this.recipeId,
+                    scale: this.scale,
+                    containers: JSON.stringify(containers),
+                    auto_fill: this.autoFill
+                });
+                
+                window.location.href = `/batches/start?${params.toString()}`;
             }
         }
     };

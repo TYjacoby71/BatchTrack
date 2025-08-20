@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 def plan_production(recipe_id: int, scale: float = 1.0,
-                   container_id: int = None) -> Dict[str, Any]:
+                   container_id: int = None, check_containers: bool = False) -> Dict[str, Any]:
     """
     Plan production for a recipe with comprehensive stock checking.
 
@@ -26,6 +26,7 @@ def plan_production(recipe_id: int, scale: float = 1.0,
         recipe_id: Recipe to plan
         scale: Scaling factor for recipe
         container_id: Optional container for batch
+        check_containers: Whether to check available containers
 
     Returns:
         Dict with planning results including stock status and requirements
@@ -36,7 +37,7 @@ def plan_production(recipe_id: int, scale: float = 1.0,
             return {'success': False, 'error': 'Recipe not found'}
 
         # Build stock check requests from recipe
-        requests = _build_recipe_requests(recipe, scale)
+        requests = _build_recipe_requests(recipe, scale, check_containers=check_containers)
         
         # Use UniversalStockCheckService for individual item checks
         stock_service = UniversalStockCheckService()
@@ -44,7 +45,10 @@ def plan_production(recipe_id: int, scale: float = 1.0,
 
         # Process results into recipe-specific format
         processed_results = _process_stock_results(stock_results)
-        all_available = all(result['status'] in ['OK', 'LOW'] for result in processed_results)
+        
+        # Only check ingredient availability for overall success
+        ingredient_results = [r for r in processed_results if r.get('category') == 'ingredient']
+        all_available = all(result['status'] in ['OK', 'AVAILABLE', 'LOW'] for result in ingredient_results)
 
         # Calculate requirements and costs
         requirements = calculate_recipe_requirements(recipe_id, scale)
@@ -209,8 +213,8 @@ def calculate_production_cost(recipe_id: int, scale: float = 1.0) -> Dict[str, A
         return {'error': str(e)}
 
 
-def _build_recipe_requests(recipe, scale: float) -> List[StockCheckRequest]:
-    """Build stock check requests from recipe ingredients"""
+def _build_recipe_requests(recipe, scale: float, check_containers: bool = False) -> List[StockCheckRequest]:
+    """Build stock check requests from recipe ingredients and optionally containers"""
     requests = []
 
     # Add ingredient requests
@@ -223,14 +227,23 @@ def _build_recipe_requests(recipe, scale: float) -> List[StockCheckRequest]:
             scale_factor=scale
         ))
 
-    # Add container requests if recipe has allowed containers
-    if hasattr(recipe, 'allowed_containers') and recipe.allowed_containers:
-        # Calculate how many containers needed based on yield
+    # Add container requests if requested
+    if check_containers:
+        # Get all available containers for this organization
+        from ...models import InventoryItem
+        from flask_login import current_user
+        
+        containers = InventoryItem.query.filter_by(
+            type='container',
+            organization_id=current_user.organization_id if current_user.is_authenticated else None
+        ).all()
+
         yield_amount = recipe.predicted_yield * scale if recipe.predicted_yield else 1.0
 
-        for container_id in recipe.allowed_containers:
+        for container in containers:
+            # Check each available container type
             requests.append(StockCheckRequest(
-                item_id=container_id,
+                item_id=container.id,
                 quantity_needed=yield_amount,  # Will be converted by handler
                 unit=recipe.predicted_yield_unit or "count",
                 category=InventoryCategory.CONTAINER,

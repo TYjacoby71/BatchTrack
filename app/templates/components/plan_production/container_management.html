@@ -79,12 +79,37 @@
   </div>
   <div class="card-body">
     <div class="form-check mb-3">
-      <input class="form-check-input" type="checkbox" id="autoFill" x-model="autoFill">
+      <input class="form-check-input" type="checkbox" id="autoFill" x-model="autoFill" @change="handleAutoFillChange()">
       <label class="form-check-label" for="autoFill">
         Auto-Fill Containers
       </label>
     </div>
     
+    <!-- Available Containers from Stock Check -->
+    <div class="mb-3" x-show="availableContainers.length > 0">
+      <label class="form-label">Available Containers:</label>
+      <div class="row">
+        <template x-for="container in availableContainers" :key="container.item_id">
+          <div class="col-md-6 mb-2">
+            <div class="card card-body p-2">
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <strong x-text="container.item_name"></strong><br>
+                  <small class="text-muted">
+                    Available: <span x-text="container.available_quantity"></span> <span x-text="container.available_unit"></span>
+                  </small>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-primary" 
+                        @click="selectContainer(container)">
+                  <i class="fas fa-plus"></i> Use
+                </button>
+              </div>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+
     <div x-show="!autoFill">
       <div class="d-grid gap-2 mb-3">
         <button type="button" class="btn btn-outline-primary btn-sm" @click="addContainer()">
@@ -94,26 +119,27 @@
       
       <template x-for="(container, index) in containersSelected" :key="index">
         <div class="row mb-2 align-items-end">
-          <div class="col-md-6">
+          <div class="col-md-4">
             <label class="form-label small">Container Type</label>
-            <select class="form-select form-select-sm" x-model="container.type">
+            <select class="form-select form-select-sm" x-model="container.type" @change="updateContainment()">
               <option value="">Select container...</option>
               <option value="jar">Jar</option>
               <option value="bottle">Bottle</option>
               <option value="bag">Bag</option>
             </select>
           </div>
-          <div class="col-md-3">
+          <div class="col-md-2">
             <label class="form-label small">Size</label>
             <input type="number" class="form-control form-control-sm" 
                    x-model="container.size" 
                    placeholder="Size" 
                    min="0" 
-                   step="0.1">
+                   step="0.1"
+                   @input="updateContainment()">
           </div>
           <div class="col-md-2">
             <label class="form-label small">Unit</label>
-            <select class="form-select form-select-sm" x-model="container.unit">
+            <select class="form-select form-select-sm" x-model="container.unit" @change="updateContainment()">
               <option value="oz">oz</option>
               <option value="ml">ml</option>
               <option value="l">l</option>
@@ -121,4 +147,53 @@
               <option value="kg">kg</option>
             </select>
           </div>
+          <div class="col-md-2">
+            <label class="form-label small">Quantity</label>
+            <input type="number" class="form-control form-control-sm" 
+                   x-model="container.quantity" 
+                   placeholder="Qty" 
+                   min="1" 
+                   @input="updateContainment()">
+          </div>
+          <div class="col-md-2">
+            <button type="button" class="btn btn-outline-danger btn-sm" @click="removeContainer(index)">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+        </div>
+      </template>
+    </div>
+
+    <!-- Auto-Fill Results -->
+    <div x-show="autoFill && autoFillResults.length > 0">
+      <h6>Auto-Fill Results:</h6>
+      <template x-for="result in autoFillResults" :key="result.container_id">
+        <div class="alert alert-info">
+          <strong x-text="result.container_name"></strong>: 
+          <span x-text="result.quantity_needed"></span> containers needed
+          (Available: <span x-text="result.available_quantity"></span>)
+        </div>
+      </template>
+    </div>
+
+    <!-- Containment Status -->
+    <div class="mt-3" x-show="containersSelected.length > 0 || autoFill">
+      <div class="alert" :class="getContainmentAlertClass()">
+        <div class="d-flex justify-content-between align-items-center">
+          <span x-text="containmentMessage"></span>
+          <span class="badge" :class="containmentPercent >= 100 ? 'bg-success' : 'bg-warning'" 
+                x-text="containmentPercent + '%'"></span>
+        </div>
+      </div>
+      
+      <!-- Override option for insufficient containers -->
+      <div x-show="containmentPercent < 100" class="form-check mt-2">
+        <input class="form-check-input" type="checkbox" id="allowPartialContainment" x-model="allowPartialContainment">
+        <label class="form-check-label" for="allowPartialContainment">
+          Allow batch start with insufficient containers (excess will be bulk/uncontained)
+        </label>
+      </div>
+    </div>
+  </div>
+</div>
 </div>
