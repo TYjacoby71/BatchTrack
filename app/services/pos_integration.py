@@ -92,7 +92,7 @@ class POSIntegrationService:
                 source_fifo_id = oldest_entry.id
                 source_batch_id = getattr(oldest_entry, 'batch_id', None)
 
-            # 1. DEDUCT from original item using regular FIFO (no remaining_quantity tracking)
+            # 1. DEDUCT from original item using canonical service
             deduction_success = process_inventory_adjustment(
                 item_id=item_id,
                 quantity=quantity,
@@ -201,6 +201,7 @@ class POSIntegrationService:
             for reservation in active_reservations:
                 reserved_item = reservation.reserved_item
                 if not reserved_item:
+                    logger.error(f"Reserved item not found for reservation {reservation.id}")
                     continue
 
                 # Update reserved inventory quantity
@@ -259,10 +260,7 @@ class POSIntegrationService:
 
             total_returned = 0
             for reservation in completed_reservations:
-                sku = reservation # Assuming reservation object has related item details
-
                 # Update reserved inventory quantity (or revert the deduction if needed)
-                # Here we assume return means inventory goes back to the original item or a 'returned' category
                 # For simplicity, let's assume it goes back to the reserved_item, then process_inventory_adjustment handles the rest.
                 if reservation.reserved_item:
                     reservation.reserved_item.quantity += reservation.quantity
@@ -412,6 +410,7 @@ class InventoryItem:
     query = None # Dummy
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
+        self.available_quantity = 100 # Dummy value for testing
 
 class InventoryHistory:
     pass # Dummy
