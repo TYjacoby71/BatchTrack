@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 def validate_recipe_data(name: str, ingredients: List[Dict] = None, 
-                        yield_amount: float = None, **kwargs) -> Tuple[bool, str]:
+                        yield_amount: float = None, **kwargs) -> Dict[str, Any]:
     """
     Validate recipe data before creation or update.
     
@@ -25,29 +25,29 @@ def validate_recipe_data(name: str, ingredients: List[Dict] = None,
         **kwargs: Additional recipe fields
         
     Returns:
-        Tuple of (is_valid: bool, error_message: str)
+        Dict with 'valid' (bool) and 'error' (str) keys
     """
     try:
         # Validate name
         is_valid, error = validate_recipe_name(name)
         if not is_valid:
-            return False, error
+            return {'valid': False, 'error': error}
 
         # Validate yield amount
         if yield_amount is not None and yield_amount <= 0:
-            return False, "Yield amount must be positive"
+            return {'valid': False, 'error': "Yield amount must be positive"}
 
         # Validate ingredients if provided
         if ingredients:
             is_valid, error = validate_ingredient_quantities(ingredients)
             if not is_valid:
-                return False, error
+                return {'valid': False, 'error': error}
 
-        return True, ""
+        return {'valid': True, 'error': ''}
 
     except Exception as e:
         logger.error(f"Error validating recipe data: {e}")
-        return False, "Validation error occurred"
+        return {'valid': False, 'error': "Validation error occurred"}
 
 
 def validate_recipe_name(name: str, recipe_id: int = None) -> Tuple[bool, str]:
