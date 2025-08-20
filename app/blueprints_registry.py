@@ -46,7 +46,7 @@ def register_blueprints(app):
     safe_register_blueprint('app.blueprints.products.reservation_routes.reservations_bp', 'reservations_bp', '/reservations', 'Reservations')
     safe_register_blueprint('app.blueprints.products.sku.sku_bp', 'sku_bp', '/sku', 'SKU Management')
     safe_register_blueprint('app.blueprints.products.product_variants.product_variants_bp', 'product_variants_bp', '/product-variants', 'Product Variants')
-    safe_register_blueprint('app.blueprints.products.product_alerts_bp', 'product_alerts_bp', '/product-alerts', 'Product Alerts')
+    safe_register_blueprint('app.blueprints.products.product_alerts_bp.product_alerts_bp', 'product_alerts_bp', '/product-alerts', 'Product Alerts')
 
     # API blueprints - these are often problematic
     safe_register_blueprint('app.blueprints.api.public.public_api_bp', 'public_api_bp', '/api/public', 'Public API')
