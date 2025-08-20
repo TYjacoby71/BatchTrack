@@ -1,11 +1,6 @@
 from flask import Blueprint, request, flash, jsonify
 from flask_login import login_required, current_user
-from ...models import db, Batch, Recipe, InventoryItem, BatchContainer, BatchIngredient
-from datetime import datetime
-from sqlalchemy import extract
-from ...services.unit_conversion import ConversionEngine
-from ...services.inventory_adjustment import process_inventory_adjustment
-from ...utils.timezone_utils import TimezoneUtils
+from ...services.batch_service import BatchOperationsService
 from app.utils.permissions import role_required
 
 start_batch_bp = Blueprint('start_batch', __name__)
@@ -13,149 +8,51 @@ start_batch_bp = Blueprint('start_batch', __name__)
 @start_batch_bp.route('/start_batch', methods=['POST'])
 @login_required
 def start_batch():
-    # Get request data
-    data = request.get_json()
-    recipe_id = data.get('recipe_id')
-    scale = float(data.get('scale', 1.0))
-    batch_type = data.get('batch_type', 'ingredient')
-    notes = data.get('notes', '')
-    containers_data = data.get('containers', [])
-    recipe = Recipe.query.get_or_404(recipe_id)
-    scale = float(scale)
+    """Start a new batch - thin controller delegating to service"""
+    try:
+        # Get request data
+        data = request.get_json()
+        recipe_id = data.get('recipe_id')
+        scale = float(data.get('scale', 1.0))
+        batch_type = data.get('batch_type', 'ingredient')
+        notes = data.get('notes', '')
+        containers_data = data.get('containers', [])
+        requires_containers = data.get('requires_containers', False)
 
-    # Get current year and count of batches for this recipe this year
-    current_year = datetime.now().year
-    year_batches = Batch.query.filter(
-        Batch.recipe_id == recipe.id,
-        extract('year', Batch.started_at) == current_year
-    ).count()
+        # Delegate to service
+        batch, errors = BatchOperationsService.start_batch(
+            recipe_id=recipe_id,
+            scale=scale,
+            batch_type=batch_type,
+            notes=notes,
+            containers_data=containers_data,
+            requires_containers=requires_containers
+        )
 
-    label_code = f"{recipe.label_prefix or 'BTH'}-{current_year}-{year_batches + 1:03d}"
-    projected_yield = scale * recipe.predicted_yield
+        if not batch:
+            # If batch is None, errors contains the error message
+            flash(f"Failed to start batch: {', '.join(errors)}", "error")
+            return jsonify({'error': 'Failed to start batch'}), 400
 
-    # Create the batch
-    batch = Batch(
-        recipe_id=recipe_id,
-        label_code=label_code,
-        batch_type=batch_type,
-        projected_yield=projected_yield,
-        projected_yield_unit=recipe.predicted_yield_unit,
-        scale=scale,
-        status='in_progress',
-        notes=notes,
-        created_by=current_user.id,
-        organization_id=current_user.organization_id,
-        started_at=TimezoneUtils.utc_now()  # Explicitly set the started time
-    )
+        if errors:
+            # Batch was created but with warnings
+            flash(f"Batch started with warnings: {', '.join(errors)}", "warning")
+        else:
+            # Build success message
+            deduction_summary = []
+            for ing in batch.batch_ingredients:
+                deduction_summary.append(f"{ing.quantity_used} {ing.unit} of {ing.inventory_item.name}")
+            for cont in batch.containers:
+                deduction_summary.append(f"{cont.quantity_used} units of {cont.container.name}")
 
-    db.session.add(batch)
-    db.session.commit()
+            if deduction_summary:
+                deducted_items = ", ".join(deduction_summary)
+                flash(f"Batch started successfully. Deducted items: {deducted_items}", "success")
+            else:
+                flash("Batch started successfully", "success")
 
-    # Get container requirement from request (now dynamic)
-    requires_containers = data.get('requires_containers', False)
+        return jsonify({'batch_id': batch.id})
 
-    # Validate containers if batch requires them
-    if requires_containers:
-        # Handle container deduction first
-        container_errors = []
-        for container in containers_data:
-            container_id = container.get('id')
-            quantity = container.get('quantity', 0)
-
-            if container_id and quantity:
-                container_item = InventoryItem.query.get(container_id)
-                if container_item:
-                    # Use the inventory adjustment route
-                    try:
-                        # Containers always use 'count' as unit since they don't have a proper unit
-                        # Handle both empty string and None cases
-                        container_unit = 'count' if not container_item.unit or container_item.unit == '' else container_item.unit
-                        result = process_inventory_adjustment(
-                            item_id=container_id,
-                            quantity=-quantity,  # Negative for deduction
-                            change_type='batch',
-                            unit=container_unit,
-                            notes=f"Used in batch {label_code}",
-                            batch_id=batch.id,
-                            created_by=current_user.id
-                        )
-
-                        if result:
-                            # Create single BatchContainer record
-                            bc = BatchContainer(
-                                batch_id=batch.id,
-                                container_id=container_id,
-                                container_quantity=quantity,
-                                quantity_used=quantity,
-                                cost_each=container_item.cost_per_unit or 0.0,
-                                organization_id=current_user.organization_id
-                            )
-                            db.session.add(bc)
-                        else:
-                            container_errors.append(f"Not enough {container_item.name} in stock.")
-                    except Exception as e:
-                        container_errors.append(f"Error adjusting inventory for {container_item.name}: {str(e)}")
-
-    # Deduct ingredient inventory at start of batch
-    ingredient_errors = []
-
-    for assoc in recipe.recipe_ingredients:
-        ingredient = assoc.inventory_item
-        if not ingredient:
-            continue
-
-        required_amount = assoc.quantity * scale
-
-        try:
-            conversion_result = ConversionEngine.convert_units(
-                required_amount,
-                assoc.unit,
-                ingredient.unit,
-                ingredient_id=ingredient.id,
-                density=ingredient.density or (ingredient.category.default_density if ingredient.category else None)
-            )
-            required_converted = conversion_result['converted_value']
-
-            # Use centralized inventory adjustment 
-            result = process_inventory_adjustment(
-                item_id=ingredient.id,
-                quantity=-required_converted,  # Negative for deduction
-                change_type='batch',
-                unit=ingredient.unit,
-                notes=f"Used in batch {label_code}",
-                batch_id=batch.id,
-                created_by=current_user.id
-            )
-
-            if not result:
-                ingredient_errors.append(f"Not enough {ingredient.name} in stock.")
-                continue
-
-            # Create single BatchIngredient record
-            batch_ingredient = BatchIngredient(
-                batch_id=batch.id,
-                inventory_item_id=ingredient.id,
-                quantity_used=required_converted,
-                unit=ingredient.unit,
-                cost_per_unit=ingredient.cost_per_unit,
-                organization_id=current_user.organization_id
-            )
-            db.session.add(batch_ingredient)
-        except ValueError as e:
-            ingredient_errors.append(f"Error converting units for {ingredient.name}: {str(e)}")
-
-    if ingredient_errors:
-        flash("Some ingredients were not deducted due to errors: " + ", ".join(ingredient_errors), "warning")
-    else:
-        # Build ingredients summary using the new_batch
-        deduction_summary = []
-        for ing in batch.batch_ingredients:
-            deduction_summary.append(f"{ing.quantity_used} {ing.unit} of {ing.inventory_item.name}")
-        for cont in batch.containers:
-            deduction_summary.append(f"{cont.quantity_used} units of {cont.container.name}")
-
-        deducted_items = ", ".join(deduction_summary)
-        flash(f"Batch started successfully. Deducted items: {deducted_items}", "success")
-
-    db.session.commit()
-    return jsonify({'batch_id': batch.id})
+    except Exception as e:
+        flash(f"Error starting batch: {str(e)}", "error")
+        return jsonify({'error': str(e)}), 500

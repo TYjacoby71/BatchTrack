@@ -14,7 +14,32 @@ logger = logging.getLogger(__name__)
 @finish_batch_bp.route('/batches/<int:batch_id>/complete', methods=['POST'])
 @login_required
 def complete_batch(batch_id):
-    """Complete a batch and create final products/ingredients"""
+    """Complete a batch and create final products/ingredients - thin controller"""
+    try:
+        from ...services.batch_service import BatchOperationsService
+        
+        # Delegate to service
+        success, message = BatchOperationsService.complete_batch(batch_id, request.form)
+        
+        if success:
+            flash(message, 'success')
+            return redirect(url_for('batches.list_batches'))
+        else:
+            flash(message, 'error')
+            return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch_id))
+
+        # The actual completion logic has been moved to BatchOperationsService.complete_batch()
+        # This delegates to the existing _complete_batch_internal function below
+
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error completing batch {batch_id}: {str(e)}")
+        flash(f'Error completing batch: {str(e)}', 'error')
+        return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch_id))
+
+
+def _complete_batch_internal(batch_id, form_data):
+    """Internal batch completion logic - called by service"""
     try:
         # Get the batch
         batch = Batch.query.filter_by(
@@ -24,14 +49,13 @@ def complete_batch(batch_id):
         ).first()
 
         if not batch:
-            flash('Batch not found or already completed', 'error')
-            return redirect(url_for('batches.list_batches'))
+            return False, 'Batch not found or already completed'
 
         # Pre-validate FIFO sync for any product SKUs that will be created
-        output_type = request.form.get('output_type')
+        output_type = form_data.get('output_type')
         if output_type == 'product':
-            product_id = request.form.get('product_id')
-            variant_id = request.form.get('variant_id')
+            product_id = form_data.get('product_id')
+            variant_id = form_data.get('variant_id')
 
             if product_id and variant_id:
                 # Check existing SKUs that might be updated
@@ -49,22 +73,21 @@ def complete_batch(batch_id):
                 for sku in existing_skus:
                     is_valid, error_msg, inv_qty, fifo_total = validate_inventory_fifo_sync(sku.inventory_item_id, 'product')
                     if not is_valid:
-                        flash(f'Cannot complete batch - inventory sync error for existing SKU {sku.sku_code}: {error_msg}', 'error')
-                        return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch_id))
+                        return False, f'Cannot complete batch - inventory sync error for existing SKU {sku.sku_code}: {error_msg}'
 
         # Get form data
-        output_type = request.form.get('output_type')
-        final_quantity = float(request.form.get('final_quantity', 0))
-        output_unit = request.form.get('output_unit')
+        output_type = form_data.get('output_type')
+        final_quantity = float(form_data.get('final_quantity', 0))
+        output_unit = form_data.get('output_unit')
 
         # Perishable settings
-        is_perishable = request.form.get('is_perishable') == 'on'
+        is_perishable = form_data.get('is_perishable') == 'on'
         shelf_life_days = None
         expiration_date = None
 
         if is_perishable:
-            shelf_life_days = int(request.form.get('shelf_life_days', 0))
-            exp_date_str = request.form.get('expiration_date')
+            shelf_life_days = int(form_data.get('shelf_life_days', 0))
+            exp_date_str = form_data.get('expiration_date')
             if exp_date_str:
                 expiration_date = datetime.strptime(exp_date_str, '%Y-%m-%d')
 
@@ -82,29 +105,25 @@ def complete_batch(batch_id):
             _create_intermediate_ingredient(batch, final_quantity, output_unit, expiration_date)
         else:
             # Handle product creation
-            product_id = request.form.get('product_id')
-            variant_id = request.form.get('variant_id')
+            product_id = form_data.get('product_id')
+            variant_id = form_data.get('variant_id')
 
             if not product_id or not variant_id:
-                flash('Product and variant selection required', 'error')
-                return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch_id))
+                return False, 'Product and variant selection required'
 
-            _create_product_output(batch, product_id, variant_id, final_quantity, output_unit, expiration_date, request.form)
+            _create_product_output(batch, product_id, variant_id, final_quantity, output_unit, expiration_date, form_data)
 
         try:
             db.session.commit()
-            flash(f'Batch {batch.label_code} completed successfully!', 'success')
-            return redirect(url_for('batches.list_batches'))
+            return True, f'Batch {batch.label_code} completed successfully!'
         except Exception as commit_error:
             db.session.rollback()
-            flash(f'Failed to complete batch due to database error: {str(commit_error)}', 'error')
-            return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch_id))
+            return False, f'Failed to complete batch due to database error: {str(commit_error)}'
 
     except Exception as e:
         db.session.rollback()
         logger.error(f"Error completing batch {batch_id}: {str(e)}")
-        flash(f'Error completing batch: {str(e)}', 'error')
-        return redirect(url_for('batches.view_batch_in_progress', batch_identifier=batch_id))
+        return False, f'Error completing batch: {str(e)}'
 
 
 def _create_intermediate_ingredient(batch, final_quantity, output_unit, expiration_date):
