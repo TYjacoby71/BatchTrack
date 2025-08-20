@@ -51,19 +51,7 @@ def get_dashboard_alerts():
     alert_data = DashboardAlertService.get_dashboard_alerts(dismissed_alerts=dismissed_alerts)
 
     return jsonify(alert_data)
-def dashboard_alerts():
-    """Get dashboard alerts with session-based dismissals"""
-    from app.services.dashboard_alerts import DashboardAlertService
 
-    # Get dismissed alerts from session
-    dismissed_alerts = session.get('dismissed_alerts', [])
-
-    # Get alerts with dismissed ones filtered out
-    alert_data = DashboardAlertService.get_dashboard_alerts(
-        dismissed_alerts=dismissed_alerts
-    )
-
-    return jsonify(alert_data)
 
 # Import sub-blueprints to register their routes
 from .stock_routes import stock_api_bp

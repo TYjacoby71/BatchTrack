@@ -2,9 +2,10 @@ from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
 from ...extensions import db
 from ...models import InventoryItem, UnifiedInventoryHistory
-from ...utils.permissions import require_permission
-from ...services.stock_check.core import StockCheckService
+from ...utils.permissions import permission_required
+from ...services.stock_check.core import UniversalStockCheckService
 import logging
+from flask import current_app
 
 logger = logging.getLogger(__name__)
 
@@ -27,11 +28,15 @@ def check_stock():
         if not recipe_id:
             return jsonify({'error': 'Recipe ID is required'}), 400
 
-        # Use the Universal Stock Check Service
-        from app.services.stock_check import UniversalStockCheckService
+        # Get the recipe object
+        from app.models import Recipe
+        recipe = Recipe.query.get(recipe_id)
+        if not recipe:
+            return jsonify({'error': 'Recipe not found'}), 404
 
+        # Use the Universal Stock Check Service
         uscs = UniversalStockCheckService()
-        result = uscs.check_recipe_stock(recipe_id, scale)
+        result = uscs.check_recipe_stock(recipe, scale)
 
         return jsonify(result)
 
@@ -56,11 +61,16 @@ def check_containers():
         if not recipe_id:
             return jsonify({'error': 'Recipe ID is required'}), 400
 
-        # Use the Universal Stock Check Service for containers
-        from app.services.stock_check import UniversalStockCheckService
+        # Get the recipe object
+        from app.models import Recipe
+        recipe = Recipe.query.get(recipe_id)
+        if not recipe:
+            return jsonify({'error': 'Recipe not found'}), 404
 
+        # Use the Universal Stock Check Service for containers
         uscs = UniversalStockCheckService()
-        result = uscs.check_container_availability(recipe_id, scale)
+        # For now, just return the regular stock check - container checking is part of it
+        result = uscs.check_recipe_stock(recipe, scale)
 
         return jsonify(result)
 
