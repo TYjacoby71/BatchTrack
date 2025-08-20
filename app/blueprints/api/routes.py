@@ -68,15 +68,6 @@ def get_dashboard_alerts():
     except Exception as e:
         logging.error(f"Error getting dashboard alerts: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
-def get_dashboard_alerts():
-    """Get dashboard alerts for the current user"""
-    from app.services.dashboard_alerts import DashboardAlertService
-    from flask import session
-
-    dismissed_alerts = session.get('dismissed_alerts', [])
-    alert_data = DashboardAlertService.get_dashboard_alerts(dismissed_alerts=dismissed_alerts)
-
-    return jsonify(alert_data)
 
 
 # Import sub-blueprints to register their routes
