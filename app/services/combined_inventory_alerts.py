@@ -1,6 +1,7 @@
 from ..models import db, InventoryItem, ProductSKU
 from sqlalchemy import and_
 from typing import List, Dict
+from datetime import timedelta
 from flask_login import current_user
 
 class CombinedInventoryAlertService:

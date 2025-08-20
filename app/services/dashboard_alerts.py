@@ -45,12 +45,12 @@ class DashboardAlertService:
             days_ahead=expiration_days
         )
         
+        # CRITICAL: Expired items with remaining quantity - only if enabled (default to True if no prefs)
+        show_expiration = (user_prefs.show_expiration_alerts if user_prefs else True)
+        
         # Debug logging
         logging.info(f"Expiration data: expired_total={expiration_data.get('expired_total', 'MISSING')}, expiring_soon_total={expiration_data.get('expiring_soon_total', 'MISSING')}")
         logging.info(f"User preferences: show_expiration={show_expiration if user_prefs else 'NO_PREFS'}")
-
-        # CRITICAL: Expired items with remaining quantity - only if enabled (default to True if no prefs)
-        show_expiration = (user_prefs.show_expiration_alerts if user_prefs else True)
         if show_expiration and expiration_data['expired_total'] > 0:
             alerts.append({
                 'priority': 'CRITICAL',
