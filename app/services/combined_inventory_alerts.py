@@ -12,26 +12,28 @@ class CombinedInventoryAlertService:
         """Get comprehensive expiration alerts for both FIFO and product inventory"""
         import logging
         try:
-            from ..models import InventoryItem, FIFOEntry
+            from ..models import InventoryItem, InventoryHistory
             from ..utils.timezone_utils import TimezoneUtils
             from flask_login import current_user
 
             current_time = TimezoneUtils.get_current_time()
             expiration_cutoff = current_time + timedelta(days=days_ahead)
 
-            # Get expired FIFO entries
-            expired_fifo_entries = db.session.query(FIFOEntry).filter(
-                FIFOEntry.expiration_date < current_time,
-                FIFOEntry.organization_id == current_user.organization_id if current_user.organization_id else True
+            # Get expired FIFO entries (using InventoryHistory)
+            expired_fifo_entries = db.session.query(InventoryHistory).filter(
+                InventoryHistory.expiration_date < current_time,
+                InventoryHistory.remaining_quantity > 0,
+                InventoryHistory.organization_id == current_user.organization_id if current_user.organization_id else True
             ).all()
 
-            # Get expiring soon FIFO entries
-            expiring_fifo_entries = db.session.query(FIFOEntry).filter(
+            # Get expiring soon FIFO entries (using InventoryHistory)
+            expiring_fifo_entries = db.session.query(InventoryHistory).filter(
                 and_(
-                    FIFOEntry.expiration_date >= current_time,
-                    FIFOEntry.expiration_date <= expiration_cutoff
+                    InventoryHistory.expiration_date >= current_time,
+                    InventoryHistory.expiration_date <= expiration_cutoff,
+                    InventoryHistory.remaining_quantity > 0
                 ),
-                FIFOEntry.organization_id == current_user.organization_id if current_user.organization_id else True
+                InventoryHistory.organization_id == current_user.organization_id if current_user.organization_id else True
             ).all()
 
             # Get expired product inventory items
