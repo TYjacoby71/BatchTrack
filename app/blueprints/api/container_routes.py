@@ -1,14 +1,15 @@
 from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
 from ...models import Recipe, InventoryItem, db, Batch, BatchContainer, ExtraBatchContainer
-from app.services.unit_conversion import ConversionEngine
-from app.services.recipe_service import get_recipe_details
+from app.services.stock_check.core import UniversalStockCheckService
+from app.services.recipe_service._production_planning import plan_production
 
 container_api_bp = Blueprint('container_api', __name__)
 
 @container_api_bp.route('/debug-containers')
 @login_required
 def debug_containers():
+    """Debug endpoint for container inspection"""
     try:
         all_containers = InventoryItem.query.filter_by(
             organization_id=current_user.organization_id
@@ -36,65 +37,35 @@ def debug_containers():
 @container_api_bp.route('/available-containers/<int:recipe_id>')
 @login_required
 def available_containers(recipe_id):
-    print(f"Container API route called with recipe_id: {recipe_id}")
+    """Get available containers for recipe - delegates to production planning service"""
     try:
         scale = float(request.args.get('scale', '1.0'))
-
-        # Scoped query to current user's organization
-        recipe = Recipe.query.filter_by(
-            id=recipe_id,
-            organization_id=current_user.organization_id
-        ).first()
-        if not recipe:
-            return jsonify({"error": "Recipe not found"}), 404
-
-        # Get allowed containers for this recipe
-        allowed_container_ids = recipe.allowed_containers or []
-        predicted_unit = recipe.predicted_yield_unit
-        if not predicted_unit:
-            return jsonify({"error": "Recipe missing predicted yield unit"}), 400
-
-        in_stock = []
-
-        # Filter containers for this organization only
-        containers_query = InventoryItem.query.filter_by(
-            type='container',
-            organization_id=current_user.organization_id
-        )
-
-        print(f"Found {containers_query.count()} containers for organization {current_user.organization_id}")
-        print(f"Recipe allowed containers: {allowed_container_ids}")
-
-        for container in containers_query.all():
-            print(f"Processing container: {container.name}, storage_amount: {container.storage_amount}, storage_unit: {container.storage_unit}")
-
-            # Only show containers that are in the allowed list if the recipe has allowed containers specified
-            if allowed_container_ids and container.id not in allowed_container_ids:
-                print(f"Container {container.name} not in allowed list: {allowed_container_ids}")
-                continue
-
-            try:
-                conversion = ConversionEngine.convert_units(
-                    container.storage_amount,
-                    container.storage_unit,
-                    predicted_unit
-                )
-                print(f"Conversion result for {container.name}: {conversion}")
-
-                if conversion and 'converted_value' in conversion:
-                    in_stock.append({
-                        "id": container.id,
-                        "name": container.name,
-                        "storage_amount": conversion['converted_value'],
-                        "storage_unit": predicted_unit,
-                        "stock_qty": container.quantity
-                    })
-            except Exception as e:
-                print(f"Conversion failed for {container.name}: {e}")
-                continue  # silently skip conversion failures
-
-        sorted_containers = sorted(in_stock, key=lambda c: c['storage_amount'], reverse=True)
-
+        
+        # Use production planning service which leverages stock check system
+        planning_result = plan_production(recipe_id, scale)
+        
+        if not planning_result.get('success', True):
+            return jsonify({"error": planning_result.get('error', 'Planning failed')}), 400
+            
+        # Extract container availability from stock check results
+        stock_results = planning_result.get('stock_check', [])
+        available_containers = []
+        
+        for result in stock_results:
+            if result.get('type') == 'container' and result.get('status') in ['AVAILABLE', 'OK']:
+                # Get container details from conversion_details
+                conversion_details = result.get('conversion_details', {})
+                available_containers.append({
+                    "id": result['item_id'],
+                    "name": result['name'],
+                    "storage_amount": conversion_details.get('storage_capacity', 0),
+                    "storage_unit": conversion_details.get('storage_unit', 'ml'),
+                    "stock_qty": result['available']
+                })
+        
+        # Sort by storage capacity descending
+        sorted_containers = sorted(available_containers, key=lambda c: c['storage_amount'], reverse=True)
+        
         return jsonify({"available": sorted_containers})
 
     except Exception as e:
@@ -103,23 +74,29 @@ def available_containers(recipe_id):
 @container_api_bp.route('/containers/available')
 @login_required
 def get_available_containers():
-    """Get all available containers with stock information"""
+    """Get all available containers with stock information - delegates to stock check service"""
     try:
+        from app.services.stock_check.handlers.container_handler import ContainerHandler
+        
         containers = InventoryItem.query.filter_by(
             type='container',
             organization_id=current_user.organization_id
         ).all()
 
+        container_handler = ContainerHandler()
         container_data = []
+        
         for container in containers:
-            container_data.append({
-                'id': container.id,
-                'name': container.name,
-                'size': getattr(container, 'storage_amount', None),
-                'unit': getattr(container, 'storage_unit', None),
-                'cost_per_unit': float(container.cost_per_unit or 0),
-                'stock_amount': float(container.quantity or 0)
-            })
+            details = container_handler.get_item_details(container.id)
+            if details:
+                container_data.append({
+                    'id': details['id'],
+                    'name': details['name'],
+                    'size': details['storage_amount'],
+                    'unit': details['storage_unit'],
+                    'cost_per_unit': float(details['cost_per_unit'] or 0),
+                    'stock_amount': float(details['quantity'] or 0)
+                })
 
         return jsonify(container_data)
 
@@ -129,58 +106,18 @@ def get_available_containers():
 @container_api_bp.route('/batches/<int:batch_id>/containers', methods=['GET'])
 @login_required
 def get_batch_containers(batch_id):
-    """Get all containers for a batch with summary"""
+    """Get all containers for a batch with summary - delegates to batch service"""
     try:
-        # Use scoped query to ensure batch belongs to current user's organization
-        batch = Batch.scoped().filter_by(id=batch_id).first_or_404()
-        containers = BatchContainer.query.filter_by(
-            batch_id=batch_id,
-            organization_id=current_user.organization_id
-        ).all()
-
-        container_data = []
-        total_capacity = 0
-        product_capacity = 0
-
-        # Calculate total container capacity (inline instead of service)
-        def calculate_container_capacity(batch_id):
-            regular_containers = BatchContainer.query.filter_by(batch_id=batch_id).all()
-            extra_containers = ExtraBatchContainer.query.filter_by(batch_id=batch_id).all()
-            total = 0
-            for container in regular_containers:
-                total += (container.container.storage_amount or 0) * container.quantity_used
-            for extra_container in extra_containers:
-                total += (extra_container.container.storage_amount or 0) * extra_container.quantity_used
-            return total
-
-        for container in containers:
-            container_info = {
-                'id': container.id,
-                'name': container.container_name,
-                'quantity': container.quantity_used,
-                'reason': getattr(container, 'reason', 'primary_packaging'),
-                'one_time_use': getattr(container, 'one_time_use', False),
-                'exclude_from_product': getattr(container, 'exclude_from_product', False),
-                'capacity': getattr(container, 'total_capacity', 0)
-            }
-            container_data.append(container_info)
-            total_capacity += container_info['capacity']
-
-            if container.is_valid_for_product:
-                product_capacity += container_info['capacity']
-
-        summary = {
-            'total_containers': len(containers),
-            'total_capacity': total_capacity,
-            'product_containers': len([c for c in containers if c.is_valid_for_product]),
-            'product_capacity': product_capacity,
-            'capacity_unit': getattr(batch, 'projected_yield_unit', 'fl oz')
-        }
-
-        return jsonify({
-            'containers': container_data,
-            'summary': summary
-        })
+        from app.services.batch_integration_service import BatchIntegrationService
+        
+        # Use batch service to get container summary
+        batch_service = BatchIntegrationService()
+        result = batch_service.get_batch_containers_summary(batch_id)
+        
+        if not result.get('success'):
+            return jsonify({'error': result.get('error', 'Failed to get containers')}), 400
+            
+        return jsonify(result['data'])
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -188,168 +125,42 @@ def get_batch_containers(batch_id):
 @container_api_bp.route('/batches/<int:batch_id>/containers/<int:container_id>', methods=['DELETE'])
 @login_required
 def remove_batch_container(batch_id, container_id):
-    """Remove a container from a batch"""
+    """Remove a container from a batch - delegates to batch service"""
     try:
-        container = BatchContainer.query.filter_by(
-            id=container_id,
-            batch_id=batch_id,
-            organization_id=current_user.organization_id
-        ).first_or_404()
-
-        # Restore inventory if not one-time use
-        if not getattr(container, 'one_time_use', False) and container.container_item_id:
-            from ...services.inventory_adjustment import process_inventory_adjustment
-            process_inventory_adjustment(
-                item_id=container.container_item_id,
-                quantity=container.quantity_used,  # Positive to restore
-                change_type='batch_correction',
-                unit='units',
-                notes=f"Restored container from batch {batch_id}",
-                batch_id=batch_id,
-                created_by=current_user.id
-            )
-
-        db.session.delete(container)
-        db.session.commit()
-
-        return jsonify({'success': True, 'message': 'Container removed successfully'})
+        from app.services.batch_integration_service import BatchIntegrationService
+        
+        batch_service = BatchIntegrationService()
+        result = batch_service.remove_container_from_batch(batch_id, container_id)
+        
+        if result.get('success'):
+            return jsonify({'success': True, 'message': 'Container removed successfully'})
+        else:
+            return jsonify({'success': False, 'message': result.get('error', 'Failed to remove container')}), 400
 
     except Exception as e:
-        db.session.rollback()
         return jsonify({'success': False, 'message': str(e)}), 500
 
 @container_api_bp.route('/batches/<int:batch_id>/containers/<int:container_id>/adjust', methods=['POST'])
 @login_required
 def adjust_batch_container(batch_id, container_id):
-    """Adjust container quantity, replace container type, or mark as damaged"""
+    """Adjust container quantity, replace container type, or mark as damaged - delegates to batch service"""
     try:
+        from app.services.batch_integration_service import BatchIntegrationService
+        
         data = request.get_json()
-        adjustment_type = data.get('adjustment_type')
-        notes = data.get('notes', '')
-
-        batch = Batch.scoped().filter_by(id=batch_id).first_or_404()
-
-        # Check if it's a regular container or extra container
-        container_record = BatchContainer.query.filter_by(
-            id=container_id,
+        batch_service = BatchIntegrationService()
+        
+        result = batch_service.adjust_batch_container(
             batch_id=batch_id,
-            organization_id=current_user.organization_id
-        ).first()
-        if not container_record:
-            from ...models import ExtraBatchContainer
-            container_record = ExtraBatchContainer.query.filter_by(
-                id=container_id,
-                batch_id=batch_id,
-                organization_id=current_user.organization_id
-            ).first_or_404()
-            is_extra_container = True
+            container_id=container_id,
+            adjustment_type=data.get('adjustment_type'),
+            adjustment_data=data
+        )
+        
+        if result.get('success'):
+            return jsonify({'success': True, 'message': result.get('message', 'Container adjusted successfully')})
         else:
-            is_extra_container = False
-
-        if adjustment_type == 'quantity':
-            new_total = data.get('new_total_quantity', 0)
-            if new_total < 0:
-                return jsonify({'success': False, 'message': 'Total quantity cannot be negative'})
-
-            current_qty = container_record.quantity_used
-            quantity_difference = new_total - current_qty
-
-            if quantity_difference != 0:
-                # Adjust inventory - positive for returns, negative for additional deductions
-                from ...services.inventory_adjustment import process_inventory_adjustment
-                change_type = 'refunded' if quantity_difference > 0 else 'batch_adjustment'
-
-                process_inventory_adjustment(
-                    item_id=container_record.container_id,
-                    quantity=quantity_difference,  # Positive for return, negative for deduction
-                    change_type=change_type,
-                    unit='count',
-                    notes=f"Container quantity adjustment for batch {batch.label_code}: {notes}",
-                    batch_id=batch_id,
-                    created_by=current_user.id
-                )
-
-            container_record.quantity_used = new_total
-
-        elif adjustment_type == 'replace':
-            new_container_id = data.get('new_container_id')
-            new_quantity = data.get('new_quantity', 1)
-
-            if not new_container_id:
-                return jsonify({'success': False, 'message': 'New container must be selected'})
-
-            # Return old containers to inventory
-            from ...services.inventory_adjustment import process_inventory_adjustment
-            process_inventory_adjustment(
-                item_id=container_record.container_id,
-                quantity=container_record.quantity_used,  # Positive to return
-                change_type='refunded',
-                unit='count',
-                notes=f"Container replacement return for batch {batch.label_code}: {notes}",
-                batch_id=batch_id,
-                created_by=current_user.id
-            )
-
-            # Deduct new containers
-            new_container = InventoryItem.query.get_or_404(new_container_id)
-            process_inventory_adjustment(
-                item_id=new_container_id,
-                quantity=-new_quantity,  # Negative for deduction
-                change_type='batch',
-                unit='count',
-                notes=f"Container replacement for batch {batch.label_code}: {notes}",
-                batch_id=batch_id,
-                created_by=current_user.id
-            )
-
-            # Update container record
-            container_record.container_id = new_container_id
-            container_record.quantity_used = new_quantity
-            container_record.cost_each = new_container.cost_per_unit or 0.0
-
-        elif adjustment_type == 'damage':
-            damage_quantity = data.get('damage_quantity', 0)
-            if damage_quantity <= 0 or damage_quantity > container_record.quantity_used:
-                return jsonify({'success': False, 'message': 'Invalid damage quantity'})
-
-            # Check if we have stock to replace damaged containers
-            container_item = InventoryItem.query.get(container_record.container_id)
-            if container_item.quantity < damage_quantity:
-                return jsonify({
-                    'success': False,
-                    'message': f'Not enough {container_item.name} in stock to replace damaged containers. Available: {container_item.quantity}, Need: {damage_quantity}'
-                })
-
-            # Create extra container record to track the damaged containers
-            from ...models import ExtraBatchContainer
-            damaged_record = ExtraBatchContainer(
-                batch_id=batch_id,
-                container_id=container_record.container_id,
-                container_quantity=damage_quantity,
-                quantity_used=damage_quantity,
-                cost_each=container_record.cost_each,
-                reason='damaged',
-                organization_id=current_user.organization_id
-            )
-            db.session.add(damaged_record)
-
-            # Deduct replacement containers from inventory
-            from ...services.inventory_adjustment import process_inventory_adjustment
-            process_inventory_adjustment(
-                item_id=container_record.container_id,
-                quantity=-damage_quantity,  # Negative for deduction
-                change_type='damaged',
-                unit='count',
-                notes=f"Replacement containers for damaged units in batch {batch.label_code}: {notes}",
-                batch_id=batch_id,
-                created_by=current_user.id
-            )
-
-            # The original container count stays the same - we're adding extra containers to replace damaged ones
-
-        db.session.commit()
-        return jsonify({'success': True, 'message': 'Container adjusted successfully'})
+            return jsonify({'success': False, 'message': result.get('error', 'Failed to adjust container')}), 400
 
     except Exception as e:
-        db.session.rollback()
         return jsonify({'success': False, 'message': str(e)}), 500

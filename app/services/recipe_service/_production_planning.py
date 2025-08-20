@@ -47,6 +47,21 @@ def plan_production(recipe_id: int, scale: float = 1.0,
 
         return {
             'success': True,
+            'recipe_id': recipe_id,
+            'scale': scale,
+            'stock_check': stock_results['stock_check'],
+            'all_ok': stock_results['all_ok'],
+            'requirements': requirements,
+            'cost_info': cost_info,
+            'availability': availability
+        }
+
+    except Exception as e:
+        logger.error(f"Error in production planning: {e}")
+        return {'success': False, 'error': str(e)}
+
+        return {
+            'success': True,
             'recipe': recipe,
             'scale': scale,
             'requirements': requirements['ingredients'] if requirements['success'] else [],
