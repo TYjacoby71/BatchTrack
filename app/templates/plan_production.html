@@ -1,241 +1,62 @@
-
 {% extends 'layout.html' %}
+
 {% block content %}
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 <div x-data="planProduction()" x-init="init()" class="container">
   <!-- Page Header -->
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2>Plan Production: {{ recipe.name }}</h2>
-    <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-secondary">
-      <i class="fas fa-arrow-left"></i> Back to Recipes
-    </a>
-  </div>
+  {% include 'components/plan_production/page_header.html' %}
 
   <!-- Batch Configuration Card -->
-  <div class="card mb-4">
-    <div class="card-header">
-      <h5 class="mb-0">
-        <i class="fas fa-cogs"></i> Batch Configuration
-      </h5>
-    </div>
-    <div class="card-body">
-      <div class="row g-3">
-        <div class="col-md-3">
-          <div class="form-group">
-            <label class="form-label fw-semibold">Batch Scale</label>
-            <input type="number" min="0.1" step="0.1" class="form-control" x-model.number="scale" @input="fetchContainerPlan" placeholder="1.0">
-          </div>
-        </div>
-        <div class="col-md-3">
-          <div class="form-group">
-            <label class="form-label fw-semibold">Projected Yield</label>
-            <div class="form-control bg-light border-0 fw-bold text-primary d-flex align-items-center" style="height: 38px;" x-text="(baseYield * scale).toFixed(2) + ' ' + unit"></div>
-          </div>
-        </div>
-        <div class="col-md-3">
-          <div class="form-group">
-            <label class="form-label fw-semibold">Batch Type <span class="text-danger">*</span></label>
-            <select class="form-select" x-model="batchType" :class="batchType === '' ? 'is-invalid' : ''">
-              <option value="">Select Type</option>
-              <option value="ingredient">Intermediate Ingredient</option>
-              <option value="product">Final Product</option>
-            </select>
-            <div class="invalid-feedback" x-show="batchType === ''">
-              Please select a batch type
-            </div>
-          </div>
-        </div>
-        <div class="col-md-3">
-          <div class="form-group">
-            <label class="form-label fw-semibold">Container Options</label>
-            <div class="form-control bg-light border-0 d-flex align-items-center" style="height: 38px;">
-              <div class="form-check form-switch mb-0">
-                <input type="checkbox" class="form-check-input" id="requireContainers" x-model="requiresContainers" @change="onContainerRequirementChange">
-                <label class="form-check-label fw-normal" for="requireContainers">
-                  <i class="fas fa-box me-1"></i> Require Containers
-                </label>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+  {% include 'components/plan_production/batch_configuration.html' %}
 
   <!-- Container Management Card -->
-  <div class="card mb-4" x-show="requiresContainers">
-    <div class="card-header d-flex justify-content-between align-items-center">
-      <h5 class="mb-0">
-        <i class="fas fa-box"></i> Container Management
-      </h5>
-      <div class="d-flex align-items-center gap-3">
-        <button type="button" class="btn btn-outline-primary btn-sm" @click="manualAddContainer">
-          <i class="fas fa-plus"></i> Add Container
-        </button>
-      </div>
-    </div>
-    <div class="card-body">
-      <!-- Auto-Fill Toggle -->
-      <div class="form-check mb-3">
-        <input type="checkbox" class="form-check-input" id="autoFill" x-model="autoFill" @change="fetchContainerPlan">
-        <label class="form-check-label" for="autoFill">
-          <i class="fas fa-magic"></i> Auto-Fill Containers
-        </label>
-      </div>
-
-      <!-- Container Selection -->
-      <template x-for="(container, index) in containersSelected" :key="index">
-        <div class="row align-items-center mb-3 p-3 border rounded bg-light">
-          <div class="col-md-5">
-            <label class="form-label small">Container Type</label>
-            <select class="form-select form-select-sm" x-model="container.id" :disabled="autoFill" 
-              @change="updateContainer(index)"
-              @click="autoFill && alert('Please uncheck Auto-Fill to modify containers.')">
-              <option value="">Select Container</option>
-              <template x-for="allowed in allowedContainers.filter(c => c.stock_qty > 0)" :key="allowed.id">
-                <option :value="allowed.id" x-text="allowed.name + ' (' + allowed.storage_amount + ' ' + allowed.storage_unit + ')'"></option>
-              </template>
-            </select>
-          </div>
-          <div class="col-md-3">
-            <label class="form-label small">Quantity</label>
-            <input type="number" min="1" class="form-control form-control-sm" 
-              x-model.number="container.quantity" 
-              :disabled="autoFill || getRemainingStock(container.id, index) <= 0" 
-              @input="updateProgress"
-              @click="autoFill && alert('Please uncheck Auto-Fill to modify containers.')">
-          </div>
-          <div class="col-md-3">
-            <label class="form-label small">Available Stock</label>
-            <div class="badge bg-info fs-6" x-text="getRemainingStock(container.id, index)"></div>
-          </div>
-          <div class="col-md-1">
-            <label class="form-label small">&nbsp;</label>
-            <button type="button" class="btn btn-danger btn-sm d-block" 
-              @click="autoFill ? alert('Please uncheck Auto-Fill to modify containers.') : removeContainer(index)" 
-              :disabled="autoFill">
-              <i class="fas fa-times"></i>
-            </button>
-          </div>
-        </div>
-      </template>
-
-      <!-- Containment Progress -->
-      <div class="mt-4">
-        <div class="d-flex justify-content-between align-items-center mb-2">
-          <label class="form-label mb-0">Containment Progress:</label>
-          <span class="badge bg-primary" x-text="containmentPercent + '%'"></span>
-        </div>
-        <div class="progress" style="height: 25px;">
-          <div class="progress-bar" role="progressbar" 
-            :style="'width: ' + containmentPercent + '%'" 
-            :class="containmentPercent >= 100 ? 'bg-success' : 'bg-warning'"
-            x-text="containmentPercent + '%'"></div>
-        </div>
-        <small class="form-text text-muted mt-1" x-text="liveContainmentMessage"></small>
-      </div>
-
-      <!-- Warnings -->
-      <div class="alert alert-warning mt-3" x-show="containmentIssue">
-        <i class="fas fa-exclamation-triangle"></i>
-        <span x-text="containmentIssue"></span>
-      </div>
-
-      <div class="alert alert-danger mt-3" x-show="containersSelected.length === 0">
-        <i class="fas fa-exclamation-circle"></i>
-        No containers selected. Please add containers or enable Auto-Fill.
-      </div>
-    </div>
-  </div>
+  {% include 'components/plan_production/container_management.html' %}
 
   <!-- Stock Check Card -->
-  <div class="card mb-4">
-    <div class="card-header">
-      <h5 class="mb-0">
-        <i class="fas fa-clipboard-check"></i> Ingredient Stock Check
-      </h5>
-    </div>
-    <div class="card-body">
-      <div class="d-flex gap-2 mb-3">
-        <button type="button" class="btn btn-warning" @click="checkStockOrWarn()">
-          <i class="fas fa-search"></i> Check Stock
-        </button>
-        <div class="ms-auto" x-show="stockChecked">
-          <span class="badge" :class="stockCheckPassed ? 'bg-success' : 'bg-danger'">
-            <i class="fas" :class="stockCheckPassed ? 'fa-check' : 'fa-times'"></i>
-            <span x-text="stockCheckPassed ? 'Stock OK' : 'Stock Issues'"></span>
-          </span>
-        </div>
-      </div>
-      {% include 'partials/plan_production_stock_check.html' %}
-    </div>
-  </div>
+  {% include 'components/plan_production/stock_check.html' %}
 
   <!-- Action Buttons Card -->
-  <div class="card">
-    <div class="card-body">
-      <div class="d-flex justify-content-between align-items-center">
-        <div>
-          <p class="mb-0 text-muted">
-            <i class="fas fa-info-circle"></i>
-            Ready to start batch when all requirements are met
-          </p>
-        </div>
-        <div class="d-flex gap-2">
-          <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-secondary">
-            <i class="fas fa-times"></i> Cancel
-          </a>
-          <button type="button" class="btn btn-success" x-show="canStartBatch" @click="startBatch">
-            <i class="fas fa-play"></i> Start Batch
-          </button>
-          <button type="button" class="btn btn-outline-success" x-show="!canStartBatch" disabled>
-            <i class="fas fa-clock"></i> Requirements Not Met
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
+  {% include 'components/plan_production/action_buttons.html' %}
 </div>
 
 <script>
 function planProduction() {
   return {
-      recipeId: {{ recipe.id }},
-      baseYield: {{ '%.2f'|format(recipe.predicted_yield) }},
-      unit: '{{ recipe.predicted_yield_unit }}',
-      allowedContainers: [],
-      containersSelected: [],
-      autoFill: true,
-      scale: 1.0,
-      batchType: '',
-      requiresContainers: false,
-      stockChecked: false,
-      stockCheckPassed: false,
-      stockResults: [],
-      containmentPercent: 0,
-      remainingToContain: 0,
-      containmentIssue: '',
-      scaleTimeout: null,
+    recipeId: {{ recipe.id }},
+    baseYield: {{ '%.2f'|format(recipe.predicted_yield) }},
+    unit: '{{ recipe.predicted_yield_unit }}',
+    allowedContainers: [],
+    containersSelected: [],
+    autoFill: true,
+    scale: 1.0,
+    batchType: '',
+    requiresContainers: false,
+    stockChecked: false,
+    stockCheckPassed: false,
+    stockResults: [],
+    containmentPercent: 0,
+    remainingToContain: 0,
+    containmentIssue: '',
+    scaleTimeout: null,
 
     init() {
       this.fetchContainerPlan();
-      
-      // Watch for autoFill changes
+      this.setupWatchers();
+    },
+
+    setupWatchers() {
       this.$watch('autoFill', (newValue) => {
         if (this.requiresContainers && this.allowedContainers.length > 0) {
           if (newValue) {
             this.performAutoFill();
           } else {
-            // When turning off auto-fill, keep current selections but validate them
             this.validateExistingSelections();
           }
         }
       });
-      
-      // Watch for scale changes
+
       this.$watch('scale', (newValue, oldValue) => {
         if (newValue !== oldValue && newValue > 0) {
-          // Debounce the container plan fetch
           clearTimeout(this.scaleTimeout);
           this.scaleTimeout = setTimeout(() => {
             this.fetchContainerPlan();
@@ -286,7 +107,6 @@ function planProduction() {
         this.containmentIssue = '';
         this.allowedContainers = [];
       } else {
-        // Small delay to ensure the DOM has updated
         this.$nextTick(() => {
           this.fetchContainerPlan();
         });
@@ -312,7 +132,6 @@ function planProduction() {
           if (this.autoFill && this.requiresContainers && this.allowedContainers.length > 0) {
             this.performAutoFill();
           } else if (!this.autoFill) {
-            // Keep existing selections but validate them
             this.validateExistingSelections();
           }
 
@@ -330,14 +149,12 @@ function planProduction() {
       const projected = this.baseYield * this.scale;
       let remainingVolume = projected;
 
-      // Sort containers by capacity (largest first) - these are already filtered by the API
       const availableContainers = [...this.allowedContainers]
         .filter(c => c.stock_qty > 0)
         .sort((a, b) => b.storage_amount - a.storage_amount);
 
       let selectedContainers = [];
       
-      // First pass: Try to fill with largest containers that fit perfectly or don't exceed target
       for (const container of availableContainers) {
         if (remainingVolume <= 0) break;
         
@@ -357,7 +174,6 @@ function planProduction() {
         }
       }
 
-      // Second pass: If there's still remaining volume, add one more container for partial fill
       if (remainingVolume > 0) {
         for (const container of availableContainers) {
           const alreadyUsed = selectedContainers.find(s => s.id === container.id);
@@ -386,17 +202,14 @@ function planProduction() {
     },
 
     validateExistingSelections() {
-      // Remove any selections that are no longer valid
       this.containersSelected = this.containersSelected.filter(selected => {
         const container = this.allowedContainers.find(c => c.id === selected.id);
         if (!container) return false;
         
-        // Update container details in case they changed
         selected.name = container.name;
         selected.capacity = container.storage_amount;
         selected.unit = container.storage_unit;
         
-        // Ensure quantity doesn't exceed available stock
         const remainingStock = this.getRemainingStock(selected.id, -1);
         if (selected.quantity > remainingStock) {
           selected.quantity = Math.max(0, remainingStock);
@@ -437,9 +250,8 @@ function planProduction() {
 
       const totalContained = this.totalContained;
       
-      // Check if containment is exactly 100% (within a small tolerance for floating point precision)
       const containmentRatio = totalContained / projected;
-      const isExactMatch = Math.abs(containmentRatio - 1) < 0.001; // 0.1% tolerance
+      const isExactMatch = Math.abs(containmentRatio - 1) < 0.001; 
       
       if (totalContained < projected) {
         this.containmentIssue = 'Warning: Need one more container for partial fill';
@@ -452,7 +264,6 @@ function planProduction() {
           }
         }
       }
-      // If containment is exactly 100%, no warning is needed
     },
 
     updateContainer(index) {
@@ -627,5 +438,5 @@ function planProduction() {
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/recipes/plan_production.js') }}"></script>
+<script src="{{ url_for('static', filename='js/recipes/plan_production_methods.js') }}"></script>
 {% endblock %}

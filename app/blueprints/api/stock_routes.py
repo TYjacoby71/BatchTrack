@@ -1,37 +1,64 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, current_app
 from flask_login import login_required, current_user
-from ...services.stock_check.core import UniversalStockCheckService
-from ...models import Recipe
+from app.services.stock_check import UniversalStockCheckService
+from app.models import Recipe
+from app.utils.permissions import permission_required
 
-stock_api_bp = Blueprint('stock_api', __name__)
+stock_bp = Blueprint('stock_api', __name__)
 
-@stock_api_bp.route('/check-stock', methods=['POST'])
+@stock_bp.route('/check-stock', methods=['POST'])
 @login_required
+@permission_required('batch_production.create')
 def check_stock():
+    """Check ingredient stock availability for a recipe at given scale."""
     try:
         data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No JSON data provided'}), 400
+
         recipe_id = data.get('recipe_id')
-        scale = float(data.get('scale', 1.0))
+        scale = data.get('scale', 1.0)
 
-        print(f"Stock check request - recipe_id: {recipe_id}, scale: {scale}, user org: {current_user.organization_id}")
+        if not recipe_id:
+            return jsonify({'error': 'Recipe ID is required'}), 400
 
-        # Use scoped query to ensure recipe belongs to current user's organization
-        recipe = Recipe.scoped().filter_by(id=recipe_id).first()
-        if not recipe:
-            print(f"Recipe {recipe_id} not found for organization {current_user.organization_id}")
-            return jsonify({"error": "Recipe not found"}), 404
+        # Use the Universal Stock Check Service
+        from app.services.stock_check import UniversalStockCheckService
 
-        print(f"Found recipe: {recipe.name} with {len(recipe.ingredients)} ingredients")
-
-        # Use new UniversalStockCheckService
-        service = UniversalStockCheckService()
-        result = service.check_recipe_stock(recipe, scale)
-        print(f"Stock check result: {result}")
+        uscs = UniversalStockCheckService()
+        result = uscs.check_recipe_stock(recipe_id, scale)
 
         return jsonify(result)
 
     except Exception as e:
-        print(f"Stock check API error: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({"error": str(e)}), 400
+        current_app.logger.error(f"Stock check error: {e}")
+        return jsonify({'error': 'Failed to check stock'}), 500
+
+
+@stock_bp.route('/check-containers', methods=['POST'])
+@login_required
+@permission_required('batch_production.create')
+def check_containers():
+    """Check container availability for a recipe at given scale."""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No JSON data provided'}), 400
+
+        recipe_id = data.get('recipe_id')
+        scale = data.get('scale', 1.0)
+
+        if not recipe_id:
+            return jsonify({'error': 'Recipe ID is required'}), 400
+
+        # Use the Universal Stock Check Service for containers
+        from app.services.stock_check import UniversalStockCheckService
+
+        uscs = UniversalStockCheckService()
+        result = uscs.check_container_availability(recipe_id, scale)
+
+        return jsonify(result)
+
+    except Exception as e:
+        current_app.logger.error(f"Container stock check error: {e}")
+        return jsonify({'error': 'Failed to check container availability'}), 500

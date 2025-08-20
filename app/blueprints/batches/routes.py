@@ -238,6 +238,30 @@ def get_available_ingredients_for_batch(recipe_id):
         logger.error(f"Error getting available ingredients: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
+@batches_bp.route('/api/start-batch', methods=['POST'])
+@login_required
+def api_start_batch():
+    """API endpoint to start a new batch from plan production page"""
+    try:
+        data = request.get_json()
+        recipe_id = data.get('recipe_id')
+        product_quantity = data.get('product_quantity')
+        user_id = current_user.id
+
+        if not recipe_id or not product_quantity:
+            return jsonify({'success': False, 'message': 'Recipe ID and product quantity are required.'}), 400
+
+        batch_id, success, message = BatchOperationsService.start_batch(recipe_id, product_quantity, user_id)
+
+        if success:
+            return jsonify({'success': True, 'message': message, 'batch_id': batch_id})
+        else:
+            return jsonify({'success': False, 'message': message}), 500
+
+    except Exception as e:
+        logger.error(f"Error starting batch via API: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
 # Register sub-blueprints
 batches_bp.register_blueprint(start_batch_bp, url_prefix='/batches')
 batches_bp.register_blueprint(cancel_batch_bp, url_prefix='/batches')
