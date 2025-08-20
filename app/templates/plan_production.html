@@ -586,7 +586,7 @@ function planProduction() {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'X-CSRFToken': getCSRFToken()
+            'X-CSRFToken': csrfToken
           },
           body: JSON.stringify({
             recipe_id: this.recipeId,
@@ -615,6 +615,11 @@ function planProduction() {
       } catch (error) {
         alert('Error starting batch: ' + error.message);
       }
+    },
+
+    getCSRFToken() {
+      const csrfToken = document.querySelector('input[name="csrf_token"]');
+      return csrfToken ? csrfToken.value : '';
     }
   };
 }
