@@ -7,7 +7,7 @@ import logging
 from typing import Optional
 
 from app.models import InventoryItem
-from ...unit_conversion import ConversionEngine
+from app.services.unit_conversion import ConversionEngine
 # Import moved to avoid circular dependency - use direct model access
 # from ...blueprints.fifo.services import FIFOService
 from ..types import StockCheckRequest, StockCheckResult, StockStatus, InventoryCategory
