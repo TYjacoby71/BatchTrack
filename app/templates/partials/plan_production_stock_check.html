@@ -73,3 +73,46 @@
     </div>
   </div>
 </div>
+<div x-show="stockChecked && stockResults.length > 0">
+  <div class="table-responsive">
+    <table class="table table-sm">
+      <thead>
+        <tr>
+          <th>Ingredient</th>
+          <th>Needed</th>
+          <th>Available</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <template x-for="result in stockResults" :key="result.item_id">
+          <tr :class="result.status === 'OK' ? 'table-success' : result.status === 'LOW' ? 'table-warning' : 'table-danger'">
+            <td x-text="result.item_name"></td>
+            <td>
+              <span x-text="result.needed_quantity"></span>
+              <span class="text-muted" x-text="result.needed_unit"></span>
+            </td>
+            <td>
+              <span x-text="result.available_quantity"></span>
+              <span class="text-muted" x-text="result.available_unit"></span>
+            </td>
+            <td>
+              <span class="badge" 
+                    :class="result.status === 'OK' ? 'bg-success' : result.status === 'LOW' ? 'bg-warning' : 'bg-danger'"
+                    x-text="result.status">
+              </span>
+            </td>
+          </tr>
+        </template>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div x-show="stockChecked && stockResults.length === 0" class="alert alert-info">
+  <i class="fas fa-info-circle"></i> No ingredients to check for this recipe.
+</div>
+
+<div x-show="!stockChecked" class="text-muted">
+  <i class="fas fa-info-circle"></i> Click "Check Stock" to verify ingredient availability.
+</div>
