@@ -10,7 +10,7 @@ def product_alerts():
     """Product alerts dashboard for low stock and out of stock items"""
     stock_summary = CombinedInventoryAlertService.get_product_stock_summary()
     
-    return render_template('products/alerts.html', 
+    return render_template('pages/products/alerts.html', 
                          stock_summary=stock_summary)
 
 @products_bp.route('/api/stock-summary')

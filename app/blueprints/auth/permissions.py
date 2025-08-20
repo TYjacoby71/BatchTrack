@@ -70,7 +70,7 @@ def manage_permissions():
     for category in permission_categories:
         permission_categories[category].sort(key=lambda x: x['name'])
 
-    return render_template('auth/permissions.html', 
+    return render_template('pages/auth/permissions.html', 
                          permission_categories=permission_categories)
 
 @auth_bp.route('/permissions/toggle-status', methods=['POST'])
@@ -121,7 +121,7 @@ def manage_roles():
         # Only show permissions available to their subscription tier
         available_permissions = get_tier_permissions(current_user.organization.effective_subscription_tier)
 
-    return render_template('auth/roles.html', roles=roles, available_permissions=available_permissions)
+    return render_template('pages/auth/roles.html', roles=roles, available_permissions=available_permissions)
 
 @require_permission('organization.manage_roles')
 @login_required

@@ -202,7 +202,7 @@ def product_list():
     else:  # default to name
         products.sort(key=lambda p: p.name.lower())
 
-    return render_template('products/list_products.html', products=products, current_sort=sort_type)
+    return render_template('pages/products/list_products.html', products=products, current_sort=sort_type)
 
 # Add alias for backward compatibility
 list_products = product_list
@@ -308,7 +308,7 @@ def new_product():
             return redirect(url_for('products.new_product'))
 
     units = get_global_unit_list()
-    return render_template('products/new_product.html', units=units)
+    return render_template('pages/products/new_product.html', units=units)
 
 @products_bp.route('/<int:product_id>')
 @login_required
@@ -377,7 +377,7 @@ def view_product(product_id):
     # Also add skus to product for template compatibility
     product.skus = skus
 
-    return render_template('products/view_product.html',
+    return render_template('pages/products/view_product.html',
                          product=product,
                          variants=variants,
                          available_containers=available_containers,

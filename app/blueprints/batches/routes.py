@@ -82,7 +82,7 @@ def list_batches():
         # Get all batch data using service
         batch_data = BatchManagementService.prepare_batch_list_data(filters, pagination_config)
 
-        return render_template('batches/batches_list.html',
+        return render_template('pages/batches/batches_list.html',
             InventoryItem=InventoryItem,
             TimezoneUtils=TimezoneUtils,
             visible_columns=visible_columns,
@@ -133,7 +133,7 @@ def view_batch(batch_identifier):
         nav_data = BatchManagementService.get_batch_navigation_data(batch)
 
         print(f"DEBUG: Rendering view_batch.html template for {batch.status} batch")
-        return render_template('batches/view_batch.html',
+        return render_template('pages/batches/view_batch.html',
             batch=batch,
             current_time=datetime.now(),
             **nav_data)
@@ -207,7 +207,7 @@ def view_batch_in_progress(batch_identifier):
         # Get timers with proper organization scoping
         timers, has_active_timers = BatchService.get_batch_timers(batch.id)
 
-        return render_template('batches/batch_in_progress.html',
+        return render_template('pages/batches/batch_in_progress.html',
             batch=batch,
             timers=timers,
             now=TimezoneUtils.utc_now(),

@@ -33,7 +33,7 @@ def view_sku(inventory_item_id):
     # Calculate total quantity from inventory_item
     total_quantity = sku.inventory_item.quantity if sku.inventory_item else 0
 
-    return render_template('products/view_sku.html',
+    return render_template('pages/products/view_sku.html',
                          sku=sku,
                          history=history,
                          total_quantity=total_quantity,
@@ -142,7 +142,7 @@ def select_skus_to_merge():
         ProductSKU.is_active == True
     ).order_by(ProductSKU.product_id, ProductSKU.variant_id, ProductSKU.size_label).all()
 
-    return render_template('products/merge_select.html', skus=skus)
+    return render_template('pages/products/merge_select.html', skus=skus)
 
 @sku_bp.route('/merge/configure', methods=['POST'])
 @login_required
@@ -190,7 +190,7 @@ def configure_merge():
         ]
     }
 
-    return render_template('products/merge_configure.html', **merge_config)
+    return render_template('pages/products/merge_configure.html', **merge_config)
 
 @sku_bp.route('/merge/execute', methods=['POST'])
 @login_required

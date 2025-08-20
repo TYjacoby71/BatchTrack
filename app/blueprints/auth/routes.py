@@ -59,7 +59,7 @@ def login():
 
         if not username or not password:
             flash('Please provide both username and password')
-            return render_template('auth/login.html', form=form)
+            return render_template('pages/auth/login.html', form=form)
 
         user = User.query.filter_by(username=username).first()
 
@@ -67,7 +67,7 @@ def login():
             # Ensure user is active
             if not user.is_active:
                 flash('Account is inactive. Please contact administrator.')
-                return render_template('auth/login.html', form=form)
+                return render_template('pages/auth/login.html', form=form)
 
             # Log the user in
             login_user(user)
