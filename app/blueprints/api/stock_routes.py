@@ -1,9 +1,14 @@
-from flask import Blueprint, jsonify, request, current_app
+from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
-from app.services.stock_check import UniversalStockCheckService
-from app.models import Recipe
-from app.utils.permissions import permission_required
+from ...extensions import db
+from ...models import InventoryItem, UnifiedInventoryHistory
+from ...utils.permissions import require_permission
+from ...services.stock_check.core import StockCheckService
+import logging
 
+logger = logging.getLogger(__name__)
+
+# Create the blueprint
 stock_bp = Blueprint('stock_api', __name__)
 
 @stock_bp.route('/check-stock', methods=['POST'])

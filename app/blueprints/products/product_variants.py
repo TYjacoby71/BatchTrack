@@ -212,7 +212,7 @@ def view_variant(product_id, variant_name):
         size_groups[list(size_groups.keys())[0]]['skus'][0].inventory_item_id if size_groups else None
     )
 
-    return render_template('products/view_variation.html',
+    return render_template('pages/products/view_variation.html',
                          product=product,
                          product_name=product.name,
                          variant_name=variant.name,

@@ -11,7 +11,7 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     {% block head %}{% endblock %}
     <style>
         input[name="csrf_token"],
@@ -101,7 +101,7 @@
                     <li><a class="dropdown-item" href="{{ url_for('inventory.list_inventory') }}">Inventory</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('recipes.list_recipes') }}">Recipes</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('batches.list_batches') }}">Batches</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('products.product_list') }}">Products</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('products.list_products') }}">Products</a></li>
 
                     <li><hr class="dropdown-divider"></li>
 
@@ -225,7 +225,7 @@
                     <li><a class="dropdown-item" href="{{ url_for('batches.list_batches') }}">Batches</a></li>
                     {% endif %}
                     {% if current_user.is_authenticated and has_permission(current_user, 'products.view') %}
-                    <li><a class="dropdown-item" href="{{ url_for('products.product_list') }}">Products</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('products.list_products') }}">Products</a></li>
                     {% endif %}
 
                     <li><hr class="dropdown-divider"></li>
@@ -301,7 +301,7 @@
         </div>
     </main>
 
-    {% include 'components/modals/unit_converter_modal.html' %}
+    {% include 'components/shared/unit_converter_modal.html' %}
     </div>
 
     <footer class="bg-light text-center text-muted py-3 mt-5">

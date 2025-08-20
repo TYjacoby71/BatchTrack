@@ -2,131 +2,85 @@ import logging
 logger = logging.getLogger(__name__)
 
 def register_blueprints(app):
-    """Register all application blueprints"""
+    """Register all blueprints with the Flask app."""
 
-    # Public API that must be before auth
-    try:
-        from app.blueprints.api.public import public_api
-        app.register_blueprint(public_api)
-    except Exception as e:
-        logger.warning(f"Public API registration failed: {e}")
+    # Track successful registrations
+    successful_registrations = []
+    failed_registrations = []
 
-    # Core blueprints
-    _core_registrations = [
-        ("app.blueprints.auth.routes", "auth_bp", "/auth"),
-        ("app.blueprints.recipes.routes", "recipes_bp", "/recipes"),
-        ("app.blueprints.inventory.routes", "inventory_bp", "/inventory"),
-        ("app.blueprints.batches.routes", "batches_bp", "/batches"),
-        ("app.blueprints.batches.finish_batch", "finish_batch_bp", "/batches"),
-        ("app.blueprints.batches.cancel_batch", "cancel_batch_bp", "/batches"),
-        ("app.blueprints.batches.start_batch", "start_batch_bp", "/start-batch"),
-        ("app.blueprints.conversion.routes", "conversion_bp", "/conversion"),
-        ("app.blueprints.expiration.routes", "expiration_bp", "/expiration"),
-        ("app.blueprints.settings.routes", "settings_bp", "/settings"),
-        ("app.blueprints.timers.routes", "timers_bp", "/timers"),
-        ("app.blueprints.organization.routes", "organization_bp", "/organization"),
+    def safe_register_blueprint(import_path, blueprint_name, url_prefix=None, description=None):
+        """Safely register a blueprint with error handling"""
+        try:
+            module_path, bp_name = import_path.rsplit('.', 1)
+            module = __import__(module_path, fromlist=[bp_name])
+            blueprint = getattr(module, bp_name)
+
+            if url_prefix:
+                app.register_blueprint(blueprint, url_prefix=url_prefix)
+            else:
+                app.register_blueprint(blueprint)
+
+            successful_registrations.append(description or blueprint_name)
+            return True
+        except Exception as e:
+            failed_registrations.append(f"{description or blueprint_name}: {e}")
+            return False
+
+    # Core blueprints - these should always work
+    safe_register_blueprint('app.blueprints.auth.auth_bp', 'auth_bp', '/auth', 'Authentication')
+    safe_register_blueprint('app.blueprints.admin.admin_bp', 'admin_bp', '/admin', 'Admin')
+    safe_register_blueprint('app.blueprints.developer.developer_bp', 'developer_bp', '/developer', 'Developer')
+    safe_register_blueprint('app.blueprints.inventory.inventory_bp', 'inventory_bp', '/inventory', 'Inventory')
+    safe_register_blueprint('app.blueprints.recipes.recipes_bp', 'recipes_bp', '/recipes', 'Recipes')
+    safe_register_blueprint('app.blueprints.batches.batches_bp', 'batches_bp', '/batches', 'Batches')
+    safe_register_blueprint('app.blueprints.organization.organization_bp', 'organization_bp', '/organization', 'Organization')
+    safe_register_blueprint('app.blueprints.billing.billing_bp', 'billing_bp', '/billing', 'Billing')
+    safe_register_blueprint('app.blueprints.settings.settings_bp', 'settings_bp', '/settings', 'Settings')
+    safe_register_blueprint('app.blueprints.timers.timers_bp', 'timers_bp', '/timers', 'Timers')
+    safe_register_blueprint('app.blueprints.expiration.expiration_bp', 'expiration_bp', '/expiration', 'Expiration')
+    safe_register_blueprint('app.blueprints.conversion.conversion_bp', 'conversion_bp', '/conversion', 'Conversion')
+
+    # Product blueprints - these might have issues
+    safe_register_blueprint('app.blueprints.products.products_bp', 'products_bp', '/products', 'Products Main')
+    safe_register_blueprint('app.blueprints.products.product_inventory_routes.product_inventory_bp', 'product_inventory_bp', '/product-inventory', 'Product Inventory')
+    safe_register_blueprint('app.blueprints.products.reservation_routes.reservations_bp', 'reservations_bp', '/reservations', 'Reservations')
+    safe_register_blueprint('app.blueprints.products.sku.sku_bp', 'sku_bp', '/sku', 'SKU Management')
+    safe_register_blueprint('app.blueprints.products.product_variants.product_variants_bp', 'product_variants_bp', '/product-variants', 'Product Variants')
+    safe_register_blueprint('app.blueprints.products.product_alerts.product_alerts_bp', 'product_alerts_bp', '/product-alerts', 'Product Alerts')
+
+    # API blueprints - these are often problematic
+    safe_register_blueprint('app.blueprints.api.public.public_api_bp', 'public_api_bp', '/api/public', 'Public API')
+    safe_register_blueprint('app.blueprints.api.routes.api_bp', 'api_bp', '/api', 'Main API')
+
+    # This is the problematic one - stock_bp
+    safe_register_blueprint('app.blueprints.api.stock_routes.stock_bp', 'stock_bp', '/api/stock', 'Stock API')
+
+    # Register standalone route modules
+    route_modules = [
+        ('app.routes.app_routes.app_routes_bp', 'app_routes_bp', None, 'App Routes'),
+        ('app.routes.legal_routes.legal_bp', 'legal_bp', '/legal', 'Legal Routes'),
+        ('app.routes.bulk_stock_routes.bulk_stock_bp', 'bulk_stock_bp', '/bulk-stock', 'Bulk Stock'),
+        ('app.routes.fault_log_routes.faults_bp', 'faults_bp', '/faults', 'Fault Log'),
+        ('app.routes.tag_manager_routes.tag_manager_bp', 'tag_manager_bp', '/tag-manager', 'Tag Manager'),
+        ('app.routes.waitlist_routes.waitlist_bp', 'waitlist_bp', '/waitlist', 'Waitlist')
     ]
 
-    for module_path, bp_name, prefix in _core_registrations:
-        try:
-            module = __import__(module_path, fromlist=[bp_name])
-            bp = getattr(module, bp_name)
-            app.register_blueprint(bp, url_prefix=prefix)
-        except Exception as e:
-            logger.warning(f"Failed to register {bp_name} from {module_path}: {e}")
+    for import_path, bp_name, url_prefix, description in route_modules:
+        safe_register_blueprint(import_path, bp_name, url_prefix, description)
 
-    # Standalone blueprints
-    _standalone_blueprints = [
-        ("app.blueprints.developer.routes", "developer_bp"),
-        ("app.routes.app_routes", "app_routes_bp"),
-        ("app.blueprints.fifo", "fifo_bp"),
-        ("app.blueprints.api.routes", "api_bp"),
-        ("app.blueprints.admin.admin_routes", "admin_bp"),
-        ("app.routes.waitlist_routes", "waitlist_bp"),
-        ("app.routes.legal_routes", "legal_bp"),
-    ]
+    # Print summary
+    print(f"\n=== Blueprint Registration Summary ===")
+    print(f"✅ Successful: {len(successful_registrations)}")
+    for success in successful_registrations:
+        print(f"   - {success}")
 
-    for module_path, bp_name in _standalone_blueprints:
-        try:
-            module = __import__(module_path, fromlist=[bp_name])
-            bp = getattr(module, bp_name)
-            app.register_blueprint(bp)
-        except Exception as e:
-            logger.warning(f"Failed to register {bp_name} from {module_path}: {e}")
-
-    # Prefixed blueprints
-    _prefixed_blueprints = [
-        ("app.blueprints.batches.add_extra", "add_extra_bp", "/add-extra"),
-        ("app.routes.bulk_stock_routes", "bulk_stock_bp", "/bulk_stock"),
-        ("app.routes.fault_log_routes", "fault_log_bp", "/fault_log"),
-        ("app.routes.tag_manager_routes", "tag_manager_bp", "/tag_manager"),
-    ]
-
-    for module_path, bp_name, prefix in _prefixed_blueprints:
-        try:
-            module = __import__(module_path, fromlist=[bp_name])
-            bp = getattr(module, bp_name)
-            app.register_blueprint(bp, url_prefix=prefix)
-        except Exception as e:
-            logger.warning(f"Failed to register {bp_name} from {module_path}: {e}")
-
-    # Product blueprints
-    try:
-        from .blueprints.products.products import products_bp
-        from .blueprints.products.api import products_api_bp
-        from .blueprints.products.product_inventory_routes import product_inventory_bp
-        from .blueprints.products.product_variants import product_variants_bp
-        from .blueprints.products.sku import sku_bp
-        from .blueprints.products.reservation_routes import reservation_bp
-        from .blueprints.api.reservation_routes import reservation_api_bp
-
-        app.register_blueprint(products_bp, url_prefix="/products")
-        app.register_blueprint(products_api_bp)
-        app.register_blueprint(product_inventory_bp, url_prefix="/products")
-        app.register_blueprint(product_variants_bp, url_prefix="/products")
-        app.register_blueprint(sku_bp, url_prefix="/products")
-        app.register_blueprint(reservation_bp, url_prefix="/reservations")
-        app.register_blueprint(reservation_api_bp)
-    except Exception as e:
-        logger.warning(f"Product blueprints failed: {e}")
-
-    # API blueprints
-    try:
-        from .blueprints.api.stock_routes import stock_api_bp
-        from .blueprints.api.ingredient_routes import ingredient_api_bp
-        from .blueprints.api.container_routes import container_api_bp
-        from .blueprints.api.dashboard_routes import dashboard_api_bp
-        from .blueprints.api.unit_routes import unit_api_bp
-
-        api_blueprints = [
-            stock_api_bp, ingredient_api_bp, container_api_bp, 
-            dashboard_api_bp, unit_api_bp
-        ]
-
-        for bp in api_blueprints:
-            app.register_blueprint(bp)
-
-        # Initialize API routes
-        try:
-            from .blueprints.api import init_api
-            init_api(app)
-        except ImportError:
-            pass
-
-    except Exception as e:
-        logger.warning(f"API blueprints failed: {e}")
-
-    # Billing blueprint
-    try:
-        from .blueprints.billing.routes import billing_bp
-        app.register_blueprint(billing_bp)
-        logger.info("Blueprint 'billing' registered successfully.")
-    except ImportError as e:
-        logger.error(f"Failed to import billing blueprint: {e}")
-        # Continue without billing blueprint in case of import issues
-    except Exception as e:
-        logger.error(f"Failed to register billing blueprint: {e}")
-        # Continue without billing blueprint in case of registration issues
+    if failed_registrations:
+        print(f"\n❌ Failed: {len(failed_registrations)}")
+        for failure in failed_registrations:
+            print(f"   - {failure}")
+        print("\n⚠️  App will continue running with available blueprints")
+    else:
+        print("\n🎉 All blueprints registered successfully!")
 
     # CSRF exemptions
     try:
