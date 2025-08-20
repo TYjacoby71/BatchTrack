@@ -2,6 +2,7 @@ from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
 from ...models import Recipe, InventoryItem, db, Batch, BatchContainer, ExtraBatchContainer
 from app.services.unit_conversion import ConversionEngine
+from app.services.recipe_service import get_recipe_details
 
 container_api_bp = Blueprint('container_api', __name__)
 
@@ -190,7 +191,7 @@ def remove_batch_container(batch_id, container_id):
     """Remove a container from a batch"""
     try:
         container = BatchContainer.query.filter_by(
-            id=container_id, 
+            id=container_id,
             batch_id=batch_id,
             organization_id=current_user.organization_id
         ).first_or_404()
@@ -230,14 +231,14 @@ def adjust_batch_container(batch_id, container_id):
 
         # Check if it's a regular container or extra container
         container_record = BatchContainer.query.filter_by(
-            id=container_id, 
+            id=container_id,
             batch_id=batch_id,
             organization_id=current_user.organization_id
         ).first()
         if not container_record:
             from ...models import ExtraBatchContainer
             container_record = ExtraBatchContainer.query.filter_by(
-                id=container_id, 
+                id=container_id,
                 batch_id=batch_id,
                 organization_id=current_user.organization_id
             ).first_or_404()
@@ -315,11 +316,11 @@ def adjust_batch_container(batch_id, container_id):
             container_item = InventoryItem.query.get(container_record.container_id)
             if container_item.quantity < damage_quantity:
                 return jsonify({
-                    'success': False, 
+                    'success': False,
                     'message': f'Not enough {container_item.name} in stock to replace damaged containers. Available: {container_item.quantity}, Need: {damage_quantity}'
                 })
 
-            # Create extra container record to track the damaged containers  
+            # Create extra container record to track the damaged containers
             from ...models import ExtraBatchContainer
             damaged_record = ExtraBatchContainer(
                 batch_id=batch_id,
@@ -352,4 +353,3 @@ def adjust_batch_container(batch_id, container_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'message': str(e)}), 500
-

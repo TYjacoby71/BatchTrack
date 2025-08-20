@@ -3,9 +3,7 @@ from flask_login import current_user
 from flask_wtf.csrf import generate_csrf
 from .utils.permissions import has_permission
 from .utils.timezone_utils import TimezoneUtils
-from app.utils.unit_utils import convert_units, get_global_unit_list
-from app.utils.timezone_utils import convert_to_user_timezone
-from app.utils.permissions import current_user_can
+from app.utils.unit_utils import get_global_unit_list
 
 
 def register_template_context(app):
@@ -119,8 +117,5 @@ def register_template_context(app):
         )
 
     app.jinja_env.globals.update({
-        'convert_units': convert_units,
-        'convert_to_user_timezone': convert_to_user_timezone,
-        'current_user_can': current_user_can,
         'get_global_unit_list': get_global_unit_list
     })
