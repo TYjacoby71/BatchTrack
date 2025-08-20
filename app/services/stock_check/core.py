@@ -1,4 +1,3 @@
-
 """
 Core Universal Stock Check Service
 
@@ -133,7 +132,7 @@ class UniversalStockCheckService:
         requests = []
 
         # Add ingredient requests
-        for recipe_ingredient in recipe.ingredients:
+        for recipe_ingredient in recipe.recipe_ingredients:
             requests.append(StockCheckRequest(
                 item_id=recipe_ingredient.inventory_item_id,
                 quantity_needed=recipe_ingredient.quantity * scale,
