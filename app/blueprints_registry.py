@@ -33,7 +33,7 @@ def register_blueprints(app):
     safe_register_blueprint('app.blueprints.inventory.inventory_bp', 'inventory_bp', '/inventory', 'Inventory')
     safe_register_blueprint('app.blueprints.recipes.recipes_bp', 'recipes_bp', '/recipes', 'Recipes')
     safe_register_blueprint('app.blueprints.batches.batches_bp', 'batches_bp', '/batches', 'Batches')
-    safe_register_blueprint('app.blueprints.organization.organization_bp', 'organization_bp', '/organization', 'Organization')
+    safe_register_blueprint('app.blueprints.organization.routes.organization_bp', 'organization_bp', '/organization', 'Organization')
     safe_register_blueprint('app.blueprints.billing.billing_bp', 'billing_bp', '/billing', 'Billing')
     safe_register_blueprint('app.blueprints.settings.settings_bp', 'settings_bp', '/settings', 'Settings')
     safe_register_blueprint('app.blueprints.timers.timers_bp', 'timers_bp', '/timers', 'Timers')
@@ -46,14 +46,14 @@ def register_blueprints(app):
     safe_register_blueprint('app.blueprints.products.reservation_routes.reservations_bp', 'reservations_bp', '/reservations', 'Reservations')
     safe_register_blueprint('app.blueprints.products.sku.sku_bp', 'sku_bp', '/sku', 'SKU Management')
     safe_register_blueprint('app.blueprints.products.product_variants.product_variants_bp', 'product_variants_bp', '/product-variants', 'Product Variants')
-    safe_register_blueprint('app.blueprints.products.product_alerts.product_alerts_bp', 'product_alerts_bp', '/product-alerts', 'Product Alerts')
+    safe_register_blueprint('app.blueprints.products.product_alerts_bp', 'product_alerts_bp', '/product-alerts', 'Product Alerts')
 
     # API blueprints - these are often problematic
     safe_register_blueprint('app.blueprints.api.public.public_api_bp', 'public_api_bp', '/api/public', 'Public API')
     safe_register_blueprint('app.blueprints.api.routes.api_bp', 'api_bp', '/api', 'Main API')
 
-    # This is the problematic one - stock_bp
-    safe_register_blueprint('app.blueprints.api.stock_routes.stock_bp', 'stock_bp', '/api/stock', 'Stock API')
+    # Fixed stock API blueprint reference
+    safe_register_blueprint('app.blueprints.api.stock_routes.stock_api_bp', 'stock_api_bp', '/api/stock', 'Stock API')
 
     # Register standalone route modules
     route_modules = [

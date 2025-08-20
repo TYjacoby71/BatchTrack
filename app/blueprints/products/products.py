@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, request, render_template, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
 from ...models import db, InventoryItem
 from ...models.product import Product, ProductVariant, ProductSKU, ProductSKUHistory

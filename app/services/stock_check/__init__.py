@@ -1,4 +1,3 @@
-
 """
 Universal Stock Check System (USCS)
 
@@ -10,8 +9,16 @@ from .core import UniversalStockCheckService
 from .handlers import IngredientHandler, ContainerHandler, ProductHandler
 from .types import StockCheckRequest, StockCheckResult, InventoryCategory
 
+# Stock check service package
+from .core import UniversalStockCheckService
+
+# Backward compatibility alias
+StockCheckService = UniversalStockCheckService
+
+
 __all__ = [
     'UniversalStockCheckService',
+    'StockCheckService', # Added this for backward compatibility
     'IngredientHandler', 
     'ContainerHandler',
     'ProductHandler',
