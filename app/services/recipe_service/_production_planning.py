@@ -11,7 +11,6 @@ from decimal import Decimal
 
 from ...models import Recipe, RecipeIngredient, InventoryItem
 from ...services.stock_check import UniversalStockCheckService
-from ...services.unit_conversion import convert_units
 
 logger = logging.getLogger(__name__)
 
