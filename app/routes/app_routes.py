@@ -35,7 +35,7 @@ def dashboard():
         if not selected_org_id:
             flash('Developers must select an organization to view customer dashboard', 'warning')
             return redirect(url_for('developer.dashboard'))
-        
+
         # Verify the organization still exists
         from app.models import Organization
         selected_org = Organization.query.get(selected_org_id)
@@ -86,17 +86,19 @@ def dashboard():
         except ValueError as e:
             flash("Invalid scale value")
 
-    return render_template("dashboard.html",
-                         recipes=recipes,
-                         stock_check=stock_check,
-                         selected_recipe=selected_recipe,
-                         scale=scale,
-                         status=status,
-                         active_batch=active_batch,
-                         current_user=current_user,
-                         alert_data=alert_data,
-                         low_stock_ingredients=low_stock_ingredients,
-                         expiration_summary=expiration_summary)
+    return render_template(
+        "dashboard.html",
+        recipes=recipes,
+        stock_check=stock_check,
+        selected_recipe=selected_recipe,
+        scale=scale,
+        status=status,
+        active_batch=active_batch,
+        current_user=current_user,
+        alert_data=alert_data,
+        low_stock_ingredients=low_stock_ingredients,
+        expiration_summary=expiration_summary
+    )
 
 @app_routes_bp.route('/stock/check', methods=['POST'])
 @login_required

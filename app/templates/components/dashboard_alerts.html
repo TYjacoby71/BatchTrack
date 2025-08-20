@@ -1,6 +1,6 @@
 
 <!-- Unified Alert System -->
-{% if alert_data.alerts %}
+{% if alert_data and alert_data.alerts %}
 <div class="alert-container mb-4" id="alertContainer">
   {% for alert in alert_data.alerts %}
     <div class="alert alert-{{ 'danger' if alert.priority == 'CRITICAL' else 'warning' if alert.priority == 'HIGH' else 'info' }} 
@@ -42,6 +42,7 @@
   </div>
   {% endif %}
 </div>
+{% endif %}
 
 <script>
 let dismissedAlertsForSession = [];
@@ -91,27 +92,35 @@ async function refreshDashboardAlerts() {
             console.error('Failed to refresh alerts - response not ok');
         }
     } catch (error) {
-        console.error('Error refreshing alerts:', error);
+        console.error('Failed to refresh alerts:', error);
     }
 }
 
 function updateAlertContainer(alertData) {
     const container = document.getElementById('alertContainer');
     if (!container) return;
-
-    // Only update if there are new alerts to show
-    if (alertData.alerts && alertData.alerts.length > 0) {
-        // Check if any alerts are already shown
-        const currentAlerts = container.querySelectorAll('.alert[data-alert-type]');
-        const currentTypes = Array.from(currentAlerts).map(el => el.dataset.alertType);
-        const newTypes = alertData.alerts.map(alert => alert.type);
-
-        // Add new alerts that aren't currently displayed
-        alertData.alerts.forEach(alert => {
-            if (!currentTypes.includes(alert.type)) {
-                addAlertToContainer(alert, container);
-            }
-        });
+    
+    // Clear existing alerts
+    container.innerHTML = '';
+    
+    // Add new alerts
+    alertData.alerts.forEach(alert => {
+        addAlertToContainer(alert, container);
+    });
+    
+    // Add hidden count notice if needed
+    if (alertData.hidden_count > 0) {
+        const hiddenNotice = `
+            <div class="alert alert-light text-center">
+                <small class="text-muted">
+                    ${alertData.hidden_count} more alerts available. 
+                    <a href="/settings" class="btn btn-sm btn-outline-secondary ms-2 text-decoration-none">
+                        Adjust alert settings
+                    </a>
+                </small>
+            </div>
+        `;
+        container.insertAdjacentHTML('beforeend', hiddenNotice);
     }
 }
 
@@ -143,4 +152,3 @@ function addAlertToContainer(alert, container) {
 // Auto-refresh alerts every 5 minutes
 setInterval(refreshDashboardAlerts, 300000);
 </script>
-{% endif %}
