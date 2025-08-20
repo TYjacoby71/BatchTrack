@@ -115,7 +115,7 @@ def view_recipe(recipe_id):
 
 @recipes_bp.route('/<int:recipe_id>/plan', methods=['GET', 'POST'])
 @login_required
-@require_permission('plan_production')
+@require_permission('recipes.plan_production')
 def plan_production_route(recipe_id):
     """Plan production for a recipe"""
     # Organization access is handled by middleware
