@@ -84,6 +84,7 @@ def update_inventory_item(item_id, form_data):
                 item.expiration_date = datetime.utcnow().date() + timedelta(days=shelf_life_days)
 
                 if not was_perishable or old_shelf_life != shelf_life_days:
+                    # Import moved to avoid circular dependency
                     from app.blueprints.expiration.services import ExpirationService
                     ExpirationService.update_fifo_expiration_data(item.id, shelf_life_days)
         else:

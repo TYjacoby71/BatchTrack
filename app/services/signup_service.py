@@ -3,7 +3,8 @@ import logging
 from flask import session, flash, current_app, redirect, url_for
 from flask_login import login_user
 from ..models import db, User, Organization, Role, SubscriptionTier
-from ..blueprints.developer.subscription_tiers import load_tiers_config
+# Import moved to avoid circular dependency
+# from ..blueprints.developer.subscription_tiers import load_tiers_config
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +42,7 @@ class SignupService:
 
         # Double-check tier configuration before proceeding - but don't fail if pricing is unavailable
         try:
+            from ..blueprints.developer.subscription_tiers import load_tiers_config
             tiers_config = load_tiers_config()
             tier_data = tiers_config.get(tier, {})
             logger.info(f"Final tier check - tier '{tier}' being processed")

@@ -8,7 +8,8 @@ from typing import Optional
 
 from app.models import InventoryItem
 from ...unit_conversion import ConversionEngine
-from ...blueprints.fifo.services import FIFOService
+# Import moved to avoid circular dependency - use direct model access
+# from ...blueprints.fifo.services import FIFOService
 from ..types import StockCheckRequest, StockCheckResult, StockStatus, InventoryCategory
 from .base_handler import BaseInventoryHandler
 
@@ -36,7 +37,11 @@ class IngredientHandler(BaseInventoryHandler):
             return self._create_access_denied_result(request)
         
         # Get available FIFO entries (excludes expired automatically)
-        available_entries = FIFOService.get_fifo_entries(ingredient.id)
+        from app.models import InventoryHistory
+        available_entries = InventoryHistory.query.filter_by(
+            inventory_item_id=ingredient.id,
+            remaining_quantity__gt=0
+        ).order_by(InventoryHistory.timestamp.asc()).all()
         total_available = sum(entry.remaining_quantity for entry in available_entries)
         
         stock_unit = ingredient.unit
