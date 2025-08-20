@@ -13,9 +13,6 @@ from app.utils.unit_utils import get_global_unit_list
 from app.models.unit import Unit
 import logging
 
-# Fix StockCheckService import
-from app.services.stock_check import UniversalStockCheckService as StockCheckService
-
 
 logger = logging.getLogger(__name__)
 
