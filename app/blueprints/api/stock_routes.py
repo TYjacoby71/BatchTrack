@@ -1,12 +1,13 @@
-from flask import Blueprint, jsonify, request, current_app
+from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 from app.services.stock_check import UniversalStockCheckService
 from app.models import Recipe
 from app.utils.permissions import permission_required
 
-stock_bp = Blueprint('stock_api', __name__)
+# Create the blueprint
+stock_api_bp = Blueprint('stock_api', __name__, url_prefix='/api/stock')
 
-@stock_bp.route('/check-stock', methods=['POST'])
+@stock_api_bp.route('/check-stock', methods=['POST'])
 @login_required
 @permission_required('batch_production.create')
 def check_stock():
