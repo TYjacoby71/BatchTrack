@@ -209,21 +209,22 @@ def get_effective_organization_id():
     return current_user.organization_id if current_user.organization_id else None
 
 def get_effective_organization():
-    """Get the effective organization for the current user"""
-    from app.models import Organization
-
-    if not current_user.is_authenticated:
-        return None
-
-    # Simple organization lookup without complex effective logic
+    """Get the effective organization for the current user context"""
     if current_user.user_type == 'developer':
+        # Developers can view organizations via session
         org_id = session.get('dev_selected_org_id')
+        if org_id:
+            org = Organization.query.get(org_id)
+            if not org:
+                # Organization was deleted - clear masquerade
+                session.pop('dev_selected_org_id', None)
+                session.pop('dev_masquerade_context', None)
+                return None
+            return org
+        return None
     else:
-        org_id = current_user.organization_id
-
-    if org_id:
-        return Organization.query.get(org_id)
-    return None
+        # Regular users use their organization
+        return current_user.organization
 
 def is_organization_owner():
     """Check if current user is organization owner"""

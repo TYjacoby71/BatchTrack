@@ -14,7 +14,7 @@ from .subscription_tiers import subscription_tiers_bp
 # For demonstration, if require_developer_permission is not defined, you can temporarily remove it
 # or define a placeholder. Let's assume it's correctly imported or defined.
 try:
-    from .decorators import require_developer_permission
+    from .decorators import require_developer_permission, permission_required
 except ImportError:
     # Define a placeholder if not found, to allow the rest of the code to be processed
     # In a real scenario, ensure this decorator is correctly imported.
@@ -22,6 +22,20 @@ except ImportError:
         def decorator(func):
             return func
         return decorator
+    def permission_required(permission_name):
+        def decorator(func):
+            return func
+        return decorator
+
+# Assuming TimezoneUtils is available and correctly imported
+try:
+    from app.utils.timezone_utils import TimezoneUtils
+except ImportError:
+    # Define a placeholder if not found
+    class TimezoneUtils:
+        @staticmethod
+        def utc_now():
+            return datetime.utcnow()
 
 developer_bp = Blueprint('developer', __name__, url_prefix='/developer')
 developer_bp.register_blueprint(system_roles_bp)
@@ -424,12 +438,6 @@ def delete_organization(org_id):
         # Commit all deletions
         db.session.commit()
 
-        # The following block seems to be a duplicate of the deletion logic above.
-        # It should be removed or integrated into the first block.
-        # Assuming the first block is the correct and complete one.
-        # If this second block contains unique logic, it needs to be merged carefully.
-        # For now, let's assume the first block is sufficient.
-
         # Log successful deletion
         logging.warning(f"ORGANIZATION DELETED: '{org_name}' (ID: {org_id}) successfully deleted by developer {current_user.username}. {users_count} users removed.")
 
@@ -563,6 +571,55 @@ def clear_organization_filter():
     session.pop('dev_selected_org_id', None)
     flash('Organization filter cleared - viewing all data', 'info')
     return redirect(url_for('app_routes.dashboard'))
+
+# Modified routes for developer masquerading
+@developer_bp.route('/view-as-organization/<int:org_id>')
+@login_required
+@permission_required('dev.system_admin')
+def view_as_organization(org_id):
+    """Set session to view as a specific organization (customer support)"""
+    organization = Organization.query.get_or_404(org_id)
+
+    # Clear any existing masquerade data first
+    session.pop('dev_selected_org_id', None)
+    session.pop('dev_masquerade_context', None)
+
+    # Store in session for middleware to use
+    session['dev_selected_org_id'] = org_id
+    session['dev_masquerade_context'] = {
+        'org_name': organization.name,
+        'started_at': TimezoneUtils.utc_now().isoformat()
+    }
+    session.permanent = True
+
+    flash(f'Now viewing as organization: {organization.name}. Landing on user dashboard.', 'info')
+    return redirect(url_for('app_routes.dashboard'))  # Land on user dashboard, not org dashboard
+
+@developer_bp.route('/clear-organization-filter')
+@login_required
+@permission_required('dev.system_admin')
+def clear_organization_filter():
+    """Clear the organization filter and return to developer view"""
+    org_name = None
+    if 'dev_selected_org_id' in session:
+        org_id = session['dev_selected_org_id']
+        org = Organization.query.get(org_id)
+        org_name = org.name if org else 'Unknown'
+
+    # Clear all masquerade-related session data
+    session.pop('dev_selected_org_id', None)
+    session.pop('dev_masquerade_context', None)
+
+    # Also clear any organization-scoped data that might be cached
+    session.pop('dismissed_alerts', None)  # Clear dismissed alerts from customer view
+
+    message = f'Cleared organization filter and session data'
+    if org_name:
+        message += f' (was viewing: {org_name})'
+
+    flash(message, 'info')
+    return redirect(url_for('developer.dashboard'))
+
 
 # API endpoints for dashboard
 @developer_bp.route('/api/stats')

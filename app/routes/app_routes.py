@@ -30,8 +30,20 @@ def check_container_availability(container_ids, scale=1):
 def dashboard():
     """Main dashboard view with stock checking and alerts"""
     # Developer users should only access this dashboard when viewing an organization
-    if current_user.user_type == 'developer' and not session.get('dev_selected_org_id'):
-        return redirect(url_for('developer.dashboard'))
+    if current_user.user_type == 'developer':
+        selected_org_id = session.get('dev_selected_org_id')
+        if not selected_org_id:
+            flash('Developers must select an organization to view customer dashboard', 'warning')
+            return redirect(url_for('developer.dashboard'))
+        
+        # Verify the organization still exists
+        from app.models import Organization
+        selected_org = Organization.query.get(selected_org_id)
+        if not selected_org:
+            session.pop('dev_selected_org_id', None)
+            session.pop('dev_masquerade_context', None)
+            flash('Selected organization no longer exists. Masquerade cleared.', 'error')
+            return redirect(url_for('developer.dashboard'))
 
     recipes_query = Recipe.query
     if current_user.organization_id:
