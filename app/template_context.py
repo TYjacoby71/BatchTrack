@@ -3,6 +3,8 @@ from flask_login import current_user
 from flask_wtf.csrf import generate_csrf
 from .utils.permissions import has_permission
 from .utils.timezone_utils import TimezoneUtils
+from app.utils.unit_utils import get_global_unit_list
+
 
 def register_template_context(app):
     """Register all template context processors"""
@@ -113,3 +115,7 @@ def register_template_context(app):
             TimezoneUtils_global=TimezoneUtils,
             current_time=TimezoneUtils.utc_now,
         )
+
+    app.jinja_env.globals.update({
+        'get_global_unit_list': get_global_unit_list
+    })
