@@ -46,7 +46,7 @@ def new_recipe():
 
     # GET request - show form
     form_data = _get_recipe_form_data()
-    return render_template('pages/recipes/recipe_form.html', recipe=None, **form_data)
+    return render_template('recipe_form.html', recipe=None, **form_data)
 
 @recipes_bp.route('/')
 @login_required
@@ -58,7 +58,7 @@ def list_recipes():
 
     recipes = query.all()
     inventory_units = get_global_unit_list()
-    return render_template('pages/recipes/recipe_list.html', recipes=recipes, inventory_units=inventory_units)
+    return render_template('recipe_list.html', recipes=recipes, inventory_units=inventory_units)
 
 @recipes_bp.route('/<int:recipe_id>/view')
 @login_required
@@ -70,7 +70,7 @@ def view_recipe(recipe_id):
             return redirect(url_for('recipes.list_recipes'))
 
         inventory_units = get_global_unit_list()
-        return render_template('pages/recipes/view_recipe.html', recipe=recipe, inventory_units=inventory_units)
+        return render_template('view_recipe.html', recipe=recipe, inventory_units=inventory_units)
 
     except Exception as e:
         flash(f"Error loading recipe: {str(e)}", "error")
@@ -155,7 +155,7 @@ def create_variation(recipe_id):
         form_data = _get_recipe_form_data()
         new_variation = _create_variation_template(parent)
 
-        return render_template('pages/recipes/recipe_form.html',
+        return render_template('recipe_form.html',
                              recipe=new_variation,
                              is_variation=True,
                              parent_recipe=parent,
@@ -209,7 +209,7 @@ def edit_recipe(recipe_id):
     from ...models import Batch
     existing_batches = Batch.query.filter_by(recipe_id=recipe.id).count()
 
-    return render_template('pages/recipes/recipe_form.html',
+    return render_template('recipe_form.html',
                          recipe=recipe,
                          edit_mode=True,
                          existing_batches=existing_batches,
@@ -229,7 +229,7 @@ def clone_recipe(recipe_id):
             # Don't save to DB yet - let user edit first
             db.session.rollback()
 
-            return render_template('pages/recipes/recipe_form.html',
+            return render_template('recipe_form.html',
                                 recipe=new_recipe,
                                 is_clone=True,
                                 ingredient_prefill=ingredients,

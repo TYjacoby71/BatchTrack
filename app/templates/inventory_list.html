@@ -640,11 +640,11 @@ document.addEventListener('DOMContentLoaded', function() {
   // Initialize pagination for both tables
   initTablePagination('ingredients');
   initTablePagination('containers');
-
+  
   // Add form submission handlers for better UX
   const ingredientForm = document.getElementById('addIngredientForm');
   const containerForm = document.getElementById('addContainerForm');
-
+  
   if (ingredientForm) {
     ingredientForm.addEventListener('submit', function() {
       const btn = document.getElementById('saveIngredientBtn');
@@ -653,7 +653,7 @@ document.addEventListener('DOMContentLoaded', function() {
       spinner.classList.remove('d-none');
     });
   }
-
+  
   if (containerForm) {
     containerForm.addEventListener('submit', function() {
       const btn = document.getElementById('saveContainerBtn');
@@ -781,8 +781,7 @@ function initTablePagination(tableType) {
 
   // Event listeners
   document.getElementById(nameFilterId).addEventListener('input', filterAndSort);
-  document.getElementById(sortFilterId).addEventListener('change', filterAndSort);
-  document.getElementById(perPageId).addEventListener('change', function() {
+  document.getElementById(sortFilterId).addEventListener('change', filterAndSort);document.getElementById(perPageId).addEventListener('change', function() {
     itemsPerPage = parseInt(this.value);
     currentPage = 1;
     updateTable();

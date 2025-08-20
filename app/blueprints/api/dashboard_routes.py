@@ -53,3 +53,36 @@ def dismiss_alert():
             
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
+from flask import jsonify, session
+from flask_login import login_required
+from ...services.dashboard_alerts import DashboardAlertService
+from . import api_bp
+
+@api_bp.route('/dashboard-alerts')
+@login_required
+def get_dashboard_alerts():
+    """API endpoint for dashboard alerts"""
+    dismissed_alerts = session.get('dismissed_alerts', [])
+    alert_data = DashboardAlertService.get_dashboard_alerts(
+        max_alerts=3,
+        dismissed_alerts=dismissed_alerts
+    )
+    return jsonify(alert_data)
+
+@api_bp.route('/dismiss-alert', methods=['POST'])
+@login_required 
+def dismiss_alert():
+    """API endpoint to dismiss an alert"""
+    from flask import request
+    
+    data = request.get_json()
+    alert_type = data.get('alert_type')
+    
+    if alert_type:
+        dismissed_alerts = session.get('dismissed_alerts', [])
+        if alert_type not in dismissed_alerts:
+            dismissed_alerts.append(alert_type)
+        session['dismissed_alerts'] = dismissed_alerts
+        session.permanent = True
+    
+    return jsonify({'success': True})

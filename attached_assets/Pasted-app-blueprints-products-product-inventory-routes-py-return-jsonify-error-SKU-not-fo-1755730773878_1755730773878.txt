@@ -1,0 +1,21 @@
+app/blueprints/products/product_inventory_routes.py:            return jsonify({'error': 'SKU not found'}), 404
+app/blueprints/products/product_inventory_routes.py:        return jsonify({'error': 'SKU not found'}), 404
+app/blueprints/products/product_inventory_routes.py:        return jsonify({'error': 'SKU not found'}), 404
+app/blueprints/products/product_inventory_routes.py:        return jsonify({'error': 'SKU not found or inactive'}), 404
+app/blueprints/products/product_inventory_routes.py:        return jsonify({'error': 'SKU not found or inactive'}), 404
+app/blueprints/products/product_inventory_routes.py:                return jsonify({'error': 'Product not found'}), 404
+app/blueprints/products/api.py:            return jsonify({'error': 'SKU not found or no associated product'}), 404
+app/blueprints/products/api.py:            return jsonify({'error': 'Product not found'}), 404
+app/blueprints/products/api.py:            return jsonify({'error': 'Product not found'}), 404
+app/blueprints/products/product_variants.py:                return jsonify({'error': 'Product not found'}), 404
+app/blueprints/products/product_variants.py:                return jsonify({'error': 'Product record not found'}), 404
+app/blueprints/api/reservation_routes.py:        return jsonify({'error': 'SKU not found or inactive'}), 404
+app/blueprints/api/reservation_routes.py:        return jsonify({'error': 'Reservation not found or not active'}), 404
+app/blueprints/api/stock_routes.py:            return jsonify({'error': 'Recipe not found'}), 404
+app/blueprints/api/stock_routes.py:            return jsonify({'error': 'Recipe not found'}), 404
+app/blueprints/timers/routes.py:            return jsonify({'error': 'Batch not found'}), 404
+app/blueprints/timers/routes.py:            return jsonify(status), 404
+app/blueprints/developer/subscription_tiers.py:        return jsonify({'success': False, 'error': 'Tier not found'}), 404
+app/blueprints/developer/subscription_tiers.py:        return jsonify({'success': False, 'error': 'Tier not found'}), 404
+app/blueprints/billing/routes.py:            return jsonify({'error': 'Organization not found'}), 404
+app/blueprints/billing/routes.py:            return jsonify({'error': 'Organization not found'}), 404
