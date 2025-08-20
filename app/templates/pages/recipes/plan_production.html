@@ -12,6 +12,7 @@
   <div class="row">
     <!-- Left Column - Recipe Info & Stock Check -->
     <div class="col-lg-8">
+      <!-- Recipe Information Card -->
       <div class="card mb-4">
         <div class="card-header">
           <h5 class="mb-0">
@@ -36,19 +37,247 @@
       </div>
 
       <!-- Stock Check Component -->
-      {% include 'components/plan_production/stock_check.html' %}
+      <div class="card mb-4">
+        <div class="card-header">
+          <h5 class="mb-0">
+            <i class="fas fa-clipboard-check"></i> Ingredient Stock Check
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="d-flex gap-2 mb-3">
+            <button type="button" class="btn btn-warning" @click="checkStock()">
+              <i class="fas fa-search"></i> Check Stock
+            </button>
+            <div class="ms-auto" x-show="stockChecked">
+              <span class="badge" :class="stockCheckPassed ? 'bg-success' : 'bg-danger'">
+                <i class="fas" :class="stockCheckPassed ? 'fa-check' : 'fa-times'"></i>
+                <span x-text="stockCheckPassed ? 'Stock OK' : 'Stock Issues'"></span>
+              </span>
+            </div>
+          </div>
+
+          <!-- Stock Check Results -->
+          <div x-show="stockChecked && stockResults.length > 0">
+            <div class="table-responsive">
+              <table class="table table-sm">
+                <thead>
+                  <tr>
+                    <th>Ingredient</th>
+                    <th>Needed</th>
+                    <th>Available</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <template x-for="result in stockResults" :key="result.item_id">
+                    <tr :class="result.status === 'OK' ? 'table-success' : result.status === 'LOW' ? 'table-warning' : 'table-danger'">
+                      <td x-text="result.item_name"></td>
+                      <td>
+                        <span x-text="result.needed_quantity"></span>
+                        <span class="text-muted" x-text="result.needed_unit"></span>
+                      </td>
+                      <td>
+                        <span x-text="result.available_quantity"></span>
+                        <span class="text-muted" x-text="result.available_unit"></span>
+                      </td>
+                      <td>
+                        <span class="badge" 
+                              :class="result.status === 'OK' ? 'bg-success' : result.status === 'LOW' ? 'bg-warning' : 'bg-danger'"
+                              x-text="result.status">
+                        </span>
+                      </td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div x-show="stockChecked && stockResults.length === 0" class="alert alert-info">
+            <i class="fas fa-info-circle"></i> No ingredients to check for this recipe.
+          </div>
+
+          <div x-show="!stockChecked" class="text-muted">
+            <i class="fas fa-info-circle"></i> Click "Check Stock" to verify ingredient availability.
+          </div>
+
+          <!-- Cost Information -->
+          <div x-show="stockChecked && totalCost > 0" class="mt-3">
+            <div class="alert alert-info">
+              <strong>Estimated Cost:</strong> $<span x-text="totalCost.toFixed(2)"></span>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <!-- Right Column - Batch Configuration -->
+    <!-- Right Column - Container & Batch Management -->
     <div class="col-lg-4">
+      <!-- Container Management -->
+      <div class="card mb-4">
+        <div class="card-header">
+          <h5 class="mb-0">
+            <i class="fas fa-box"></i> Container Management
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" id="autoFill" x-model="autoFill" @change="handleAutoFillChange()">
+            <label class="form-check-label" for="autoFill">
+              Auto-Fill Containers
+            </label>
+          </div>
+          
+          <!-- Available Containers from Stock Check -->
+          <div x-show="availableContainers.length > 0" class="mb-3">
+            <h6>Available Containers:</h6>
+            <div class="list-group">
+              <template x-for="container in availableContainers" :key="container.item_id">
+                <div class="list-group-item d-flex justify-content-between align-items-center">
+                  <div>
+                    <strong x-text="container.item_name"></strong><br>
+                    <small class="text-muted">
+                      <span x-text="container.storage_amount"></span> <span x-text="container.storage_unit"></span>
+                      (Available: <span x-text="container.available_quantity"></span>)
+                    </small>
+                  </div>
+                  <button class="btn btn-sm btn-primary" @click="selectContainer(container)" :disabled="autoFill">
+                    <i class="fas fa-plus"></i>
+                  </button>
+                </div>
+              </template>
+            </div>
+          </div>
+
+          <!-- Auto-Fill Results -->
+          <div x-show="autoFill && autoFillResults.length > 0" class="mb-3">
+            <h6>Auto-Fill Results:</h6>
+            <div class="list-group">
+              <template x-for="result in autoFillResults" :key="result.container_id">
+                <div class="list-group-item" :class="result.can_fulfill ? 'list-group-item-success' : 'list-group-item-danger'">
+                  <div class="d-flex justify-content-between">
+                    <span x-text="result.container_name"></span>
+                    <span class="badge" :class="result.can_fulfill ? 'bg-success' : 'bg-danger'">
+                      <span x-text="result.quantity_needed"></span> needed
+                    </span>
+                  </div>
+                  <small class="text-muted">
+                    Capacity: <span x-text="result.storage_capacity"></span> <span x-text="result.storage_unit"></span>
+                    | Available: <span x-text="result.available_quantity"></span>
+                  </small>
+                </div>
+              </template>
+            </div>
+          </div>
+
+          <!-- Manual Container Selection -->
+          <div x-show="!autoFill">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <h6>Selected Containers:</h6>
+              <button type="button" class="btn btn-sm btn-success" @click="addContainer()">
+                <i class="fas fa-plus"></i> Add Container
+              </button>
+            </div>
+
+            <template x-for="(container, index) in containersSelected" :key="index">
+              <div class="card mb-2">
+                <div class="card-body p-2">
+                  <div class="row g-2">
+                    <div class="col-md-5">
+                      <label class="form-label small">Container Name</label>
+                      <input type="text" class="form-control form-control-sm" x-model="container.name" placeholder="Container name">
+                    </div>
+                    <div class="col-md-3">
+                      <label class="form-label small">Size</label>
+                      <input type="number" class="form-control form-control-sm" x-model="container.size" min="0" step="0.1" @input="updateContainment()">
+                    </div>
+                    <div class="col-md-2">
+                      <label class="form-label small">Qty</label>
+                      <input type="number" class="form-control form-control-sm" x-model="container.quantity" min="1" @input="updateContainment()">
+                    </div>
+                    <div class="col-md-2">
+                      <label class="form-label small">&nbsp;</label>
+                      <button type="button" class="btn btn-danger btn-sm d-block" @click="removeContainer(index)">
+                        <i class="fas fa-times"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </template>
+          </div>
+
+          <!-- Containment Progress -->
+          <div class="mt-4">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <label class="form-label mb-0">Containment Progress:</label>
+              <span class="badge bg-primary" x-text="containmentPercent + '%'"></span>
+            </div>
+            <div class="progress" style="height: 25px;">
+              <div class="progress-bar" role="progressbar" 
+                :style="'width: ' + containmentPercent + '%'" 
+                :class="containmentPercent >= 100 ? 'bg-success' : 'bg-warning'"
+                x-text="containmentPercent + '%'"></div>
+            </div>
+            <small class="form-text text-muted mt-1" x-text="containmentMessage"></small>
+          </div>
+
+          <!-- Warnings -->
+          <div class="alert alert-warning mt-3" x-show="containmentPercent < 100 && containmentPercent > 0">
+            <i class="fas fa-exclamation-triangle"></i>
+            Partial containment - some product may not fit in selected containers.
+          </div>
+
+          <div class="alert alert-danger mt-3" x-show="containersSelected.length === 0 && !autoFill">
+            <i class="fas fa-exclamation-circle"></i>
+            No containers selected. Please add containers or enable Auto-Fill.
+          </div>
+        </div>
+      </div>
+
       <!-- Batch Configuration -->
       {% include 'components/plan_production/batch_configuration.html' %}
 
-      <!-- Container Management -->
-      {% include 'components/plan_production/container_management.html' %}
-
       <!-- Action Buttons -->
-      {% include 'components/plan_production/action_buttons.html' %}
+      <div class="card">
+        <div class="card-body">
+          <div class="d-grid gap-2">
+            <button type="button" class="btn btn-primary" 
+                    @click="startBatch()" 
+                    :disabled="!canStartBatch"
+                    x-show="!scheduleProduction">
+              <i class="fas fa-play"></i> Start Production Now
+            </button>
+
+            <button type="button" class="btn btn-success" 
+                    @click="startBatch()" 
+                    :disabled="!canStartBatch"
+                    x-show="scheduleProduction">
+              <i class="fas fa-calendar-plus"></i> Schedule Production
+            </button>
+
+            <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-secondary">
+              <i class="fas fa-arrow-left"></i> Cancel
+            </a>
+          </div>
+
+          <!-- Production Summary -->
+          <div class="mt-3" x-show="stockChecked">
+            <h6>Production Summary:</h6>
+            <ul class="list-unstyled small">
+              <li><strong>Scale:</strong> <span x-text="scale"></span>x</li>
+              <li><strong>Expected Yield:</strong> <span x-text="(predictedYield * scale).toFixed(1)"></span> <span x-text="predictedYieldUnit"></span></li>
+              <li x-show="totalCost > 0"><strong>Estimated Cost:</strong> $<span x-text="totalCost.toFixed(2)"></span></li>
+              <li><strong>Stock Status:</strong> 
+                <span class="badge" :class="stockCheckPassed ? 'bg-success' : 'bg-danger'">
+                  <span x-text="stockCheckPassed ? 'Ready' : 'Issues'"></span>
+                </span>
+              </li>
+              <li><strong>Containment:</strong> <span x-text="containmentPercent"></span>%</li>
+            </ul>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -82,6 +311,11 @@ function planProductionData() {
         scheduleProduction: false,
         canStartBatch: false,
         totalCost: 0,
+        
+        // Computed property for live containment message
+        get liveContainmentMessage() {
+            return this.containmentMessage;
+        },
         
         // Methods
         async checkStock() {
@@ -244,12 +478,6 @@ function planProductionData() {
             }
         },
 
-        getContainmentAlertClass() {
-            if (this.containmentPercent >= 100) return 'alert-success';
-            if (this.containmentPercent >= 75) return 'alert-warning';
-            return 'alert-danger';
-        },
-        
         updateBatchReadiness() {
             const hasContainers = this.containersSelected.length > 0 || 
                                 (this.autoFill && this.autoFillResults.some(r => r.can_fulfill));
