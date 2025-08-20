@@ -71,3 +71,54 @@
     </div>
   </div>
 </div>
+<div class="card mb-4">
+  <div class="card-header">
+    <h5 class="mb-0">
+      <i class="fas fa-box"></i> Container Management
+    </h5>
+  </div>
+  <div class="card-body">
+    <div class="form-check mb-3">
+      <input class="form-check-input" type="checkbox" id="autoFill" x-model="autoFill">
+      <label class="form-check-label" for="autoFill">
+        Auto-Fill Containers
+      </label>
+    </div>
+    
+    <div x-show="!autoFill">
+      <div class="d-grid gap-2 mb-3">
+        <button type="button" class="btn btn-outline-primary btn-sm" @click="addContainer()">
+          <i class="fas fa-plus"></i> Add Container
+        </button>
+      </div>
+      
+      <template x-for="(container, index) in containersSelected" :key="index">
+        <div class="row mb-2 align-items-end">
+          <div class="col-md-6">
+            <label class="form-label small">Container Type</label>
+            <select class="form-select form-select-sm" x-model="container.type">
+              <option value="">Select container...</option>
+              <option value="jar">Jar</option>
+              <option value="bottle">Bottle</option>
+              <option value="bag">Bag</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small">Size</label>
+            <input type="number" class="form-control form-control-sm" 
+                   x-model="container.size" 
+                   placeholder="Size" 
+                   min="0" 
+                   step="0.1">
+          </div>
+          <div class="col-md-2">
+            <label class="form-label small">Unit</label>
+            <select class="form-select form-select-sm" x-model="container.unit">
+              <option value="oz">oz</option>
+              <option value="ml">ml</option>
+              <option value="l">l</option>
+              <option value="g">g</option>
+              <option value="kg">kg</option>
+            </select>
+          </div>
+</div>

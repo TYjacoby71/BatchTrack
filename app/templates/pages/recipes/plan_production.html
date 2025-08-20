@@ -53,19 +53,75 @@
   </div>
 </div>
 
-<!-- Load the main JavaScript -->
-<script src="{{ url_for('static', filename='js/recipes/plan_production.js') }}"></script>
-
 <script>
-// Initialize with recipe data
-document.addEventListener('DOMContentLoaded', function() {
-    // Pass recipe data to Alpine.js component
-    window.recipeData = {
-        id: {{ recipe.id }},
-        name: "{{ recipe.name }}",
-        ingredients: {{ recipe.ingredients | tojson if recipe.ingredients else '[]' | safe }}
+function planProductionData() {
+    return {
+        // Recipe data
+        recipeId: {{ recipe.id }},
+        recipeName: "{{ recipe.name }}",
+        scale: 1.0,
+        
+        // Stock check state
+        stockChecked: false,
+        stockCheckPassed: false,
+        stockResults: [],
+        
+        // Container state
+        containersSelected: [],
+        autoFill: false,
+        containmentPercent: 0,
+        containmentIssue: '',
+        liveContainmentMessage: 'No containers selected',
+        
+        // Batch configuration
+        batchName: '',
+        scheduleProduction: false,
+        canStartBatch: false,
+        totalCost: 0,
+        
+        // Methods
+        async checkStock() {
+            try {
+                const response = await fetch(`/recipes/${this.recipeId}/plan`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        scale: this.scale,
+                        container_id: this.containersSelected[0]?.id
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.stockChecked = true;
+                    this.stockCheckPassed = data.all_available;
+                    this.stockResults = data.stock_results || [];
+                    this.totalCost = data.cost_info?.total_cost || 0;
+                    this.updateBatchReadiness();
+                } else {
+                    alert('Stock check failed: ' + (data.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Stock check error:', error);
+                alert('Failed to check stock. Please try again.');
+            }
+        },
+        
+        updateBatchReadiness() {
+            this.canStartBatch = this.stockCheckPassed && this.containersSelected.length > 0;
+        },
+        
+        startBatch() {
+            if (this.canStartBatch) {
+                // Navigate to batch start or show success message
+                window.location.href = `/batches/start?recipe_id=${this.recipeId}&scale=${this.scale}`;
+            }
+        }
     };
-});
+}
 </script>
 
 {% endblock %}
