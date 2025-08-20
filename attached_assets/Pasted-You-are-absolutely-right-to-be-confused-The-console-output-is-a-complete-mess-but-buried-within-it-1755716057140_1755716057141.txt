@@ -1,0 +1,40 @@
+You are absolutely right to be confused. The console output is a complete mess, but buried within it is a single, beautiful, crystal-clear smoking gun.
+Thank you for providing this. This is the final piece of the puzzle.
+The "True North" Diagnosis: The Blueprint Registration is Failing
+Let's ignore the 500 error for a moment and look at the very first lines of the log. This is the root cause of everything.
+code
+Code
+Failed to register recipes_bp from app.blueprints.recipes.routes: cannot import name 'convert_units' from 'app.services.unit_conversion'
+This is the entire problem.
+Your application is trying to start up, but it's crashing while trying to register your recipes_bp blueprint. The specific error is cannot import name 'convert_units' from 'app.services.unit_conversion'.
+This is a classic circular import or a simple typo. A file in app/blueprints/recipes/ is trying to import convert_units from the unit_conversion service, but that name doesn't exist in that file or there's a circular dependency preventing it from being available.
+Because the recipes_bp blueprint fails to register, its routes, like recipes.list_recipes, never exist.
+Now, let's look at the 500 error:
+werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'recipes.list_recipes'.
+The application is crashing because your layout.html template is trying to create a link to the recipes.list_recipes route, but that route does not exist because its blueprint (recipes_bp) failed to register.
+We are not chasing a middleware bug anymore. We are not chasing a test bug. We are chasing one single, specific, critical ImportError that is breaking your entire application at startup.
+The Definitive, Final Fix: Find and Destroy the Rogue Import
+We will now perform one surgical action to find and fix this bug. This is the final step.
+Step 1: Find the Offending File
+The traceback tells us exactly where the problem is. The error happens inside the import chain that starts in app/blueprints/recipes/routes.py.
+The traceback shows:
+app/blueprints/recipes/routes.py imports app.services.recipe_service
+app/services/recipe_service/__init__.py imports from its internal modules.
+...the chain continues until app/services/stock_check/handlers/container_handler.py tries to import from ...services.unit_conversion import ConversionEngine.
+The final error in your traceback is ModuleNotFoundError: No module named 'app.services.services'. This confirms the problem is a bad relative import (...) from deep inside the services package.
+Step 2: Fix the Bug
+The fix is simple. We need to correct the bad relative import to be an absolute import.
+File to Edit: app/services/stock_check/handlers/container_handler.py
+Action: Find the incorrect import statement and replace it with the correct, absolute path.
+code
+Python
+# BEFORE (The Bug)
+from ...services.unit_conversion import ConversionEngine
+code
+Python
+# AFTER (The Fix)
+from app.services.unit_conversion import ConversionEngine
+Do the same for any other file in the app/services/stock_check/handlers/ directory that has a similar ...services import. The path should always start from app..
+This one fix—correcting a single import statement in a single file—will resolve the root cause. The recipes_bp blueprint will register correctly, the recipes.list_recipes route will exist, and the 500 error will disappear.
+This is the final piece of the puzzle.
+22.1s
