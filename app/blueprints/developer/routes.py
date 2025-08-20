@@ -564,13 +564,7 @@ def select_organization(org_id):
     flash(f'Now viewing data for: {org.name} (Customer Support Mode)', 'info')
     return redirect(url_for('app_routes.dashboard'))
 
-@developer_bp.route('/clear-org-filter')
-@login_required
-def clear_organization_filter():
-    """Clear organization filter and view all data"""
-    session.pop('dev_selected_org_id', None)
-    flash('Organization filter cleared - viewing all data', 'info')
-    return redirect(url_for('app_routes.dashboard'))
+
 
 # Modified routes for developer masquerading
 @developer_bp.route('/view-as-organization/<int:org_id>')
