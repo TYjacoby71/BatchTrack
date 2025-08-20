@@ -83,9 +83,9 @@ def login():
                 return redirect(url_for('app_routes.dashboard'))
         else:
             flash('Invalid username or password')
-            return render_template('auth/login.html', form=form)
+            return render_template('pages/auth/login.html', form=form)
 
-    return render_template('auth/login.html', form=form, oauth_available=OAuthService.is_oauth_configured())
+    return render_template('pages/auth/login.html', form=form, oauth_available=OAuthService.is_oauth_configured())
 
 @auth_bp.route('/oauth/google')
 @limiter.limit("20/minute")
@@ -265,7 +265,7 @@ def resend_verification():
 
         return redirect(url_for('auth.login'))
 
-    return render_template('auth/resend_verification.html')
+    return render_template('pages/auth/resend_verification.html')
 
 @auth_bp.route('/logout')
 def logout():
@@ -416,7 +416,7 @@ def signup():
 
         if not selected_tier:
             flash('Please select a subscription plan', 'error')
-            return render_template('auth/signup.html',
+            return render_template('pages/auth/signup.html',
                          signup_source=signup_source,
                          referral_code=referral_code,
                          promo_code=promo_code,
@@ -425,7 +425,7 @@ def signup():
 
         if selected_tier not in available_tiers:
             flash('Invalid subscription plan selected', 'error')
-            return render_template('auth/signup.html',
+            return render_template('pages/auth/signup.html',
                          signup_source=signup_source,
                          referral_code=referral_code,
                          promo_code=promo_code,
@@ -439,7 +439,7 @@ def signup():
         tier_obj = SubscriptionTier.query.filter_by(key=selected_tier).first()
         if not tier_obj:
             flash('Invalid subscription plan', 'error')
-            return render_template('auth/signup.html',
+            return render_template('pages/auth/signup.html',
                          signup_source=signup_source,
                          referral_code=referral_code,
                          promo_code=promo_code,
@@ -496,7 +496,7 @@ def signup():
         else:
             flash('Payment system temporarily unavailable. Please try again later.', 'error')
 
-    return render_template('auth/signup.html',
+    return render_template('pages/auth/signup.html',
                          signup_source=signup_source,
                          referral_code=referral_code,
                          promo_code=promo_code,
