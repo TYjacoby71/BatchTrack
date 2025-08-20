@@ -15,7 +15,12 @@
 </div>
 
 <!-- Unified Dashboard Alerts -->
-{% include 'components/dashboard_alerts.html' %}
+    {% include 'components/dashboard_alerts.html' %}
+
+    <!-- If no alerts component exists, create inline -->
+    <div id="fallback-dashboard-alerts">
+        <!-- This will be populated by JavaScript if the component above doesn't work -->
+    </div>
 
 <!-- Recipe Selection Modal -->
 <div id="startFlowModal" class="position-fixed top-50 start-50 translate-middle" style="display:none; z-index: 1050; width: 90%; max-width: 500px;">
