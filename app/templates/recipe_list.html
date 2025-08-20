@@ -1,4 +1,3 @@
-
 {% extends 'layout.html' %}
 {% block content %}
 
@@ -90,7 +89,7 @@
                     <p class="card-text">{{ recipe.instructions[:100] }}{% if recipe.instructions|length > 100 %}...{% endif %}</p>
                     {% endif %}
                 </div>
-                
+
                 <!-- Recipe Stats -->
                 <div class="recipe-stats mb-3">
                     <div class="row text-center">
@@ -124,7 +123,7 @@
                         <a href="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}" class="btn btn-outline-secondary btn-sm">
                             <i class="fas fa-edit"></i> Edit
                         </a>
-                        <a href="{{ url_for('recipes.plan_production', recipe_id=recipe.id) }}" class="btn btn-primary btn-sm">
+                        <a href="{{ url_for('recipes.plan_production_route', recipe_id=recipe.id) }}" class="btn btn-primary btn-sm">
                             <i class="fas fa-play"></i> Plan
                         </a>
                     </div>
@@ -156,7 +155,7 @@
                             <div class="btn-group" role="group">
                                 <a href="{{ url_for('recipes.view_recipe', recipe_id=variation.id) }}" class="btn btn-outline-primary btn-xs">View</a>
                                 <a href="{{ url_for('recipes.edit_recipe', recipe_id=variation.id) }}" class="btn btn-outline-secondary btn-xs">Edit</a>
-                                <a href="{{ url_for('recipes.plan_production', recipe_id=variation.id) }}" class="btn btn-primary btn-xs">Plan</a>
+                                <a href="{{ url_for('recipes.plan_production_route', recipe_id=variation.id) }}" class="btn btn-primary btn-xs">Plan</a>
                             </div>
                         </div>
                         {% endfor %}
@@ -222,7 +221,7 @@
                         </td>
                         <td>
                             <div class="btn-group" role="group">
-                                <a href="{{ url_for('recipes.plan_production', recipe_id=recipe.id) }}" class="btn btn-primary btn-sm">
+                                <a href="{{ url_for('recipes.plan_production_route', recipe_id=recipe.id) }}" class="btn btn-primary btn-sm">
                                     <i class="fas fa-play"></i> Plan
                                 </a>
                                 <div class="btn-group" role="group">
@@ -263,7 +262,7 @@
                                         <div class="btn-group" role="group">
                                             <a href="{{ url_for('recipes.view_recipe', recipe_id=variation.id) }}" class="btn btn-outline-primary btn-xs">View</a>
                                             <a href="{{ url_for('recipes.edit_recipe', recipe_id=variation.id) }}" class="btn btn-outline-secondary btn-xs">Edit</a>
-                                            <a href="{{ url_for('recipes.plan_production', recipe_id=variation.id) }}" class="btn btn-primary btn-xs">Plan</a>
+                                            <a href="{{ url_for('recipes.plan_production_route', recipe_id=variation.id) }}" class="btn btn-primary btn-xs">Plan</a>
                                         </div>
                                     </div>
                                     {% endfor %}
@@ -366,7 +365,7 @@ document.addEventListener('DOMContentLoaded', function() {
         let visibleCount = 0;
 
         const isCardView = recipesContainer.style.display !== 'none';
-        
+
         if (isCardView) {
             const cards = recipesContainer.querySelectorAll('.recipe-card');
             cards.forEach(card => {
@@ -393,7 +392,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const sortBy = sortFilter.value;
 
         const isCardView = recipesContainer.style.display !== 'none';
-        
+
         if (isCardView) {
             const cards = Array.from(recipesContainer.querySelectorAll('.recipe-card'));
             cards.sort((a, b) => {
@@ -455,7 +454,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.addEventListener('click', function(e) {
         const filterSection = document.getElementById('filterSection');
         const filterToggle = document.querySelector('[data-bs-target="#filterSection"]');
-        
+
         if (!filterSection.contains(e.target) && !filterToggle.contains(e.target)) {
             const bsCollapse = new bootstrap.Collapse(filterSection, { toggle: false });
             bsCollapse.hide();
