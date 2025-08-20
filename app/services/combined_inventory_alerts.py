@@ -10,6 +10,7 @@ class CombinedInventoryAlertService:
     def get_expiration_alerts(days_ahead: int = 7) -> Dict:
         """Get comprehensive expiration alerts for both raw materials and products"""
         from flask_login import current_user
+        # Import moved to avoid circular dependency
         from ..blueprints.expiration.services import ExpirationService
 
         # Get expired and expiring items

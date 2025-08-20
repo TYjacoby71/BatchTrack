@@ -8,7 +8,8 @@ from sqlalchemy import and_, func
 from ..utils import generate_fifo_code
 
 # Import necessary canonical functions
-from app.blueprints.fifo.services import FIFOService
+# Import moved to avoid circular dependency - use canonical service instead
+# from app.blueprints.fifo.services import FIFOService
 from app.services.inventory_adjustment import record_audit_entry, process_inventory_adjustment
 
 def _db():
@@ -77,7 +78,11 @@ class POSIntegrationService:
                 _db_session().flush()
 
             # Get the source FIFO entry for tracking
-            fifo_entries = FIFOService.get_fifo_entries(item_id)
+            from ..models import InventoryHistory
+            fifo_entries = InventoryHistory.query.filter_by(
+                inventory_item_id=item_id,
+                remaining_quantity__gt=0
+            ).order_by(InventoryHistory.timestamp.asc()).all()
             source_fifo_id = None
             source_batch_id = None
 
