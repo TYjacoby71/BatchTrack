@@ -77,9 +77,9 @@
     </div>
 
     <!-- Multi-Adjust Inventory Form -->
-    <form id="updateInventoryForm" style="display: none;" 
+    <div id="updateInventoryForm" style="display: none;" 
       x-data="{ 
-        rows: [{unit: '{{ get_global_unit_list()[0].name if get_global_unit_list() else "gram" }}', change_type: 'restock', cost_entry_type: 'no_change', cost: 0, costHelp: ''}],
+        rows: [{id: '', quantity: '', unit: '{{ get_global_unit_list()[0].name if get_global_unit_list() else "gram" }}', change_type: 'restock', cost_entry_type: 'no_change', cost: 0, costHelp: 'Cost will remain unchanged'}],
         submitForm(e) {
           e.preventDefault();
           const promises = this.rows.map(row => {
@@ -103,12 +103,12 @@
             });
           });
 
-          Promise.all(promises)
+          Promise.all(promises.filter(p => p !== null))
             .then(() => window.location.reload())
             .catch(err => alert('Error updating inventory'));
         },
         resetRows() {
-          this.rows = [{unit: '{{ get_global_unit_list()[0].name if get_global_unit_list() else "gram" }}', change_type: 'restock', cost_entry_type: 'no_change', cost: 0, costHelp: ''}];
+          this.rows = [{id: '', quantity: '', unit: '{{ get_global_unit_list()[0].name if get_global_unit_list() else "gram" }}', change_type: 'restock', cost_entry_type: 'no_change', cost: 0, costHelp: 'Cost will remain unchanged'}];
         },
         updateCostHelp(event, index) {
           const costType = event.target.value;
@@ -121,6 +121,8 @@
           }
         }
       }">
+
+      <form @submit="submitForm"
 
       <template x-for="(row, index) in rows" :key="index">
         <div class="row g-3 align-items-end mb-2">
@@ -168,11 +170,12 @@
       </template>
 
       <div class="mt-3">
-        <button type="button" class="btn btn-outline-primary me-2" @click="rows.push({unit: '{{ get_global_unit_list()[0].name if get_global_unit_list() else "gram" }}', change_type: 'restock', cost_entry_type: 'no_change', cost: 0, costHelp: ''})">Add Another Item</button>
-        <button type="submit" class="btn btn-success" @click="submitForm">Save Updates</button>
+        <button type="button" class="btn btn-outline-primary me-2" @click="rows.push({id: '', quantity: '', unit: '{{ get_global_unit_list()[0].name if get_global_unit_list() else "gram" }}', change_type: 'restock', cost_entry_type: 'no_change', cost: 0, costHelp: 'Cost will remain unchanged'})">Add Another Item</button>
+        <button type="submit" class="btn btn-success">Save Updates</button>
         <button type="button" class="btn btn-secondary" @click="resetRows(); toggleUpdateForm()">Cancel</button>
       </div>
-    </form>
+      </form>
+    </div>
 
     <!-- Add New Ingredient Form -->
     <form method="post" action="{{ url_for('inventory.add_inventory') }}" class="mb-4" id="addIngredientForm" style="display: none;" x-data="{ showShelfLife: false }">
@@ -452,9 +455,9 @@
     </form>
 
     <!-- Multi-Adjust Container Form -->
-    <form id="updateContainerForm" style="display: none;" 
+    <div id="updateContainerForm" style="display: none;" 
       x-data="{ 
-        rows: [{change_type: 'restock', cost_entry_type: 'no_change', cost: 0, costHelp: ''}],
+        rows: [{id: '', quantity: '', change_type: 'restock', cost_entry_type: 'no_change', cost: 0, costHelp: 'Cost will remain unchanged'}],
         submitForm(e) {
           e.preventDefault();
           const promises = this.rows.map(row => {
@@ -477,12 +480,12 @@
             });
           });
 
-          Promise.all(promises)
+          Promise.all(promises.filter(p => p !== null))
             .then(() => window.location.reload())
             .catch(err => alert('Error updating inventory'));
         },
         resetContainerRows() {
-          this.rows = [{change_type: 'restock', cost_entry_type: 'no_change', cost: 0, costHelp: ''}];
+          this.rows = [{id: '', quantity: '', change_type: 'restock', cost_entry_type: 'no_change', cost: 0, costHelp: 'Cost will remain unchanged'}];
         },
         updateContainerCostHelp(event, index) {
           const costType = event.target.value;
@@ -495,6 +498,8 @@
           }
         }
       }">
+
+      <form @submit="submitForm"
 
       <template x-for="(row, index) in rows" :key="index">
         <div class="row g-3 align-items-end mb-2">
@@ -534,11 +539,12 @@
       </template>
 
       <div class="mt-3">
-        <button type="button" class="btn btn-outline-primary me-2" @click="rows.push({change_type: 'restock', cost_entry_type: 'no_change', cost: 0, costHelp: ''})">Add Another Item</button>
-        <button type="submit" class="btn btn-success" @click="submitForm">Save Updates</button>
+        <button type="button" class="btn btn-outline-primary me-2" @click="rows.push({id: '', quantity: '', change_type: 'restock', cost_entry_type: 'no_change', cost: 0, costHelp: 'Cost will remain unchanged'})">Add Another Item</button>
+        <button type="submit" class="btn btn-success">Save Updates</button>
         <button type="button" class="btn btn-secondary" @click="resetContainerRows(); toggleContainerUpdateForm()">Cancel</button>
       </div>
-    </form>
+      </form>
+    </div>
 
     <!-- Containers Table -->
     <div class="card">
@@ -640,11 +646,11 @@ document.addEventListener('DOMContentLoaded', function() {
   // Initialize pagination for both tables
   initTablePagination('ingredients');
   initTablePagination('containers');
-  
+
   // Add form submission handlers for better UX
   const ingredientForm = document.getElementById('addIngredientForm');
   const containerForm = document.getElementById('addContainerForm');
-  
+
   if (ingredientForm) {
     ingredientForm.addEventListener('submit', function() {
       const btn = document.getElementById('saveIngredientBtn');
@@ -653,7 +659,7 @@ document.addEventListener('DOMContentLoaded', function() {
       spinner.classList.remove('d-none');
     });
   }
-  
+
   if (containerForm) {
     containerForm.addEventListener('submit', function() {
       const btn = document.getElementById('saveContainerBtn');
@@ -781,7 +787,8 @@ function initTablePagination(tableType) {
 
   // Event listeners
   document.getElementById(nameFilterId).addEventListener('input', filterAndSort);
-  document.getElementById(sortFilterId).addEventListener('change', filterAndSort);document.getElementById(perPageId).addEventListener('change', function() {
+  document.getElementById(sortFilterId).addEventListener('change', filterAndSort);
+  document.getElementById(perPageId).addEventListener('change', function() {
     itemsPerPage = parseInt(this.value);
     currentPage = 1;
     updateTable();

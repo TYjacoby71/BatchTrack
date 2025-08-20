@@ -23,34 +23,26 @@ function handleModalTransition(fromModalId, toModalId, focusElementId) {
 function toggleIngredientForm() {
   const form = document.getElementById('addIngredientForm');
   const updateForm = document.getElementById('updateInventoryForm');
-  if (updateForm) updateForm.style.display = 'none';
+  updateForm.style.display = 'none';
 
-  if (form) {
-    if (form.style.display === 'none') {
-      form.style.display = 'block';
-      if (form && typeof form.reset === 'function') {
-            form.reset();
-        }
-    } else {
-      form.style.display = 'none';
-    }
+  if (form.style.display === 'none') {
+    form.style.display = 'block';
+    form.reset();
+  } else {
+    form.style.display = 'none';
   }
 }
 
 function toggleUpdateForm() {
   const form = document.getElementById('updateInventoryForm');
   const addForm = document.getElementById('addIngredientForm');
-  if (addForm) addForm.style.display = 'none';
+  addForm.style.display = 'none';
 
-  if (form) {
-    if (form.style.display === 'none') {
-      form.style.display = 'block';
-      if (form && typeof form.reset === 'function') {
-            form.reset();
-        }
-    } else {
-      form.style.display = 'none';
-    }
+  if (form.style.display === 'none') {
+    form.style.display = 'block';
+    form.reset();
+  } else {
+    form.style.display = 'none';
   }
 }
 
@@ -111,10 +103,10 @@ document.addEventListener('DOMContentLoaded', function() {
   // Initialize clock
   updateClock();
   setInterval(updateClock, 30000);
-
+  
   // Debug navigation clicks
   console.log('Page loaded:', window.location.pathname);
-
+  
   // Track permissions navigation attempts
   document.addEventListener('click', function(e) {
     const link = e.target.closest('a[href*="permissions"]');

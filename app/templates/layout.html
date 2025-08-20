@@ -96,7 +96,7 @@
 
                     <!-- Core Features -->
                     <li><a class="dropdown-item" href="{{ url_for('inventory.list_inventory') }}">Inventory</a></li>
-                    <!-- <li><a class="dropdown-item" href="/recipes/">Recipes</a></li> -->
+                    <li><a class="dropdown-item" href="{{ url_for('recipes.list_recipes') }}">Recipes</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('batches.list_batches') }}">Batches</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('products.list_products') }}">Products</a></li>
 
@@ -218,7 +218,7 @@
                     <li><a class="dropdown-item" href="{{ url_for('inventory.list_inventory') }}">Inventory</a></li>
                     {% endif %}
                     {% if current_user.is_authenticated and has_permission(current_user, 'recipes.view') %}
-                    <!-- <li><a class="dropdown-item" href="/recipes/">Recipes</a></li> -->
+                    <li><a class="dropdown-item" href="{{ url_for('recipes.list_recipes') }}">Recipes</a></li>
                     {% endif %}
                     {% if current_user.is_authenticated and has_permission(current_user, 'batches.view') %}
                     <li><a class="dropdown-item" href="{{ url_for('batches.list_batches') }}">Batches</a></li>

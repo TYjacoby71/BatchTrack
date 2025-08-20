@@ -1,3 +1,4 @@
+
 """
 Production Planning Operations
 
@@ -37,14 +38,14 @@ def plan_production(recipe_id: int, scale: float = 1.0,
 
         # Build stock check requests from recipe
         requests = _build_recipe_requests(recipe, scale, check_containers=check_containers)
-
+        
         # Use UniversalStockCheckService for individual item checks
         stock_service = UniversalStockCheckService()
         stock_results = stock_service.check_bulk_items(requests)
 
         # Process results into recipe-specific format
         processed_results = _process_stock_results(stock_results)
-
+        
         # Only check ingredient availability for overall success
         ingredient_results = [r for r in processed_results if r.get('category') == 'ingredient']
         all_available = all(result['status'] in ['OK', 'AVAILABLE', 'LOW'] for result in ingredient_results)
@@ -231,7 +232,7 @@ def _build_recipe_requests(recipe, scale: float, check_containers: bool = False)
         # Get all available containers for this organization
         from ...models import InventoryItem
         from flask_login import current_user
-
+        
         containers = InventoryItem.query.filter_by(
             type='container',
             organization_id=current_user.organization_id if current_user.is_authenticated else None
@@ -255,7 +256,7 @@ def _build_recipe_requests(recipe, scale: float, check_containers: bool = False)
 def _process_stock_results(stock_results: List) -> List[Dict[str, Any]]:
     """Process stock check results into consistent format"""
     processed = []
-
+    
     for result in stock_results:
         # Handle both StockCheckResult objects and dicts
         if hasattr(result, 'to_dict'):
@@ -278,5 +279,5 @@ def _process_stock_results(stock_results: List) -> List[Dict[str, Any]]:
             'category': result_dict.get('category', 'ingredient'),
             'type': result_dict.get('category', 'ingredient')  # Backwards compatibility
         })
-
+    
     return processed
