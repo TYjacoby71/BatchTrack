@@ -1,8 +1,9 @@
+
 """
 Production Planning Operations
 
 Handles planning production batches from recipes, checking stock availability,
-and calculating requirements.
+and calculating requirements using the UniversalStockCheckService.
 """
 
 import logging
@@ -18,7 +19,7 @@ logger = logging.getLogger(__name__)
 def plan_production(recipe_id: int, scale: float = 1.0,
                    container_id: int = None) -> Dict[str, Any]:
     """
-    Plan production for a recipe with stock checking.
+    Plan production for a recipe with comprehensive stock checking.
 
     Args:
         recipe_id: Recipe to plan
@@ -33,29 +34,29 @@ def plan_production(recipe_id: int, scale: float = 1.0,
         if not recipe:
             return {'success': False, 'error': 'Recipe not found'}
 
-        # Calculate requirements
+        # Use UniversalStockCheckService for comprehensive checking
+        stock_service = UniversalStockCheckService()
+        stock_results = stock_service.check_recipe_stock(recipe, scale)
+
+        # Calculate requirements and costs
         requirements = calculate_recipe_requirements(recipe_id, scale)
-        if not requirements['success']:
-            return requirements
-
-        # Check ingredient availability
-        availability = check_ingredient_availability(recipe_id, scale)
-
-        # Calculate costs
         cost_info = calculate_production_cost(recipe_id, scale)
+
+        # Format availability data for frontend
+        availability = _format_availability_results(stock_results['stock_check'])
 
         return {
             'success': True,
             'recipe': recipe,
             'scale': scale,
-            'requirements': requirements['ingredients'],
+            'requirements': requirements['ingredients'] if requirements['success'] else [],
             'availability': availability,
             'cost_info': cost_info,
             'container_id': container_id,
-            'can_produce': availability['all_available'],
+            'can_produce': stock_results['all_ok'],
             'missing_ingredients': availability.get('missing', []),
-            'yield_amount': recipe.yield_amount * scale,
-            'yield_unit': recipe.yield_unit
+            'yield_amount': (recipe.predicted_yield or 0) * scale,
+            'yield_unit': recipe.predicted_yield_unit or 'count'
         }
 
     except Exception as e:
@@ -65,12 +66,12 @@ def plan_production(recipe_id: int, scale: float = 1.0,
 
 def calculate_recipe_requirements(recipe_id: int, scale: float = 1.0) -> Dict[str, Any]:
     """
-    Calculate scaled ingredient requirements for a recipe.
-
+    Calculate ingredient requirements for a recipe at given scale.
+    
     Args:
         recipe_id: Recipe to calculate for
         scale: Scaling factor
-
+        
     Returns:
         Dict with success status and ingredient requirements
     """
@@ -80,25 +81,23 @@ def calculate_recipe_requirements(recipe_id: int, scale: float = 1.0) -> Dict[st
             return {'success': False, 'error': 'Recipe not found'}
 
         ingredients = []
-        for recipe_ingredient in recipe.ingredients:
+        for recipe_ingredient in recipe.recipe_ingredients:
             scaled_quantity = recipe_ingredient.quantity * scale
-
+            
             ingredients.append({
-                'id': recipe_ingredient.inventory_item_id,
-                'name': recipe_ingredient.inventory_item.name,
-                'required_quantity': scaled_quantity,
-                'required_unit': recipe_ingredient.unit,
-                'original_quantity': recipe_ingredient.quantity,
-                'scale_factor': scale,
-                'item_type': recipe_ingredient.inventory_item.type
+                'ingredient_id': recipe_ingredient.inventory_item_id,
+                'ingredient_name': recipe_ingredient.inventory_item.name,
+                'base_quantity': recipe_ingredient.quantity,
+                'scaled_quantity': scaled_quantity,
+                'unit': recipe_ingredient.unit,
+                'cost_per_unit': getattr(recipe_ingredient.inventory_item, 'cost_per_unit', 0) or 0
             })
 
         return {
             'success': True,
-            'recipe_id': recipe_id,
-            'scale': scale,
             'ingredients': ingredients,
-            'total_ingredients': len(ingredients)
+            'recipe_id': recipe_id,
+            'scale': scale
         }
 
     except Exception as e:
@@ -108,135 +107,131 @@ def calculate_recipe_requirements(recipe_id: int, scale: float = 1.0) -> Dict[st
 
 def check_ingredient_availability(recipe_id: int, scale: float = 1.0) -> Dict[str, Any]:
     """
-    Check if all ingredients are available for production using new stock check system.
-
+    Check availability of all ingredients for a recipe using UniversalStockCheckService.
+    
     Args:
         recipe_id: Recipe to check
         scale: Scaling factor
-
+        
     Returns:
-        Dict with availability status and details
+        Dict with availability results
     """
     try:
         recipe = Recipe.query.get(recipe_id)
         if not recipe:
             return {'success': False, 'error': 'Recipe not found'}
 
-        # Use new universal stock check service
+        # Use the UniversalStockCheckService
         stock_service = UniversalStockCheckService()
-        result = stock_service.check_recipe_stock(recipe, scale)
+        results = stock_service.check_recipe_stock(recipe, scale)
 
-        # Transform results to match expected format
-        availability_results = []
-        missing_ingredients = []
-
-        for item in result['stock_check']:
-            ingredient_result = {
-                'ingredient_id': item['item_id'],
-                'ingredient_name': item['name'],
-                'required_quantity': item['needed'],
-                'required_unit': item['needed_unit'],
-                'available_quantity': item['available'],
-                'is_available': item['status'] in ['OK', 'LOW'],
-                'shortage': max(0, item['needed'] - item['available'])
-            }
-
-            availability_results.append(ingredient_result)
-
-            if not ingredient_result['is_available']:
-                missing_ingredients.append(ingredient_result)
-
-        return {
-            'success': True,
-            'recipe_id': recipe_id,
-            'scale': scale,
-            'all_available': result['all_ok'],
-            'ingredients': availability_results,
-            'missing': missing_ingredients,
-            'total_missing': len(missing_ingredients)
-        }
+        return _format_availability_results(results['stock_check'], results['all_ok'])
 
     except Exception as e:
-        logger.error(f"Error checking availability for recipe {recipe_id}: {e}")
+        logger.error(f"Error checking ingredient availability for recipe {recipe_id}: {e}")
         return {'success': False, 'error': str(e)}
 
 
 def calculate_production_cost(recipe_id: int, scale: float = 1.0) -> Dict[str, Any]:
     """
-    Calculate the cost to produce a scaled recipe.
-
+    Calculate the cost of producing a recipe at given scale.
+    
     Args:
         recipe_id: Recipe to calculate cost for
         scale: Scaling factor
-
+        
     Returns:
-        Dict with cost breakdown
+        Dict with cost information
     """
     try:
         recipe = Recipe.query.get(recipe_id)
         if not recipe:
-            return {'success': False, 'error': 'Recipe not found'}
+            return {'error': 'Recipe not found'}
 
         total_cost = Decimal('0.00')
         ingredient_costs = []
 
-        for recipe_ingredient in recipe.ingredients:
-            required_quantity = recipe_ingredient.quantity * scale
-            item = recipe_ingredient.inventory_item
+        for recipe_ingredient in recipe.recipe_ingredients:
+            cost_per_unit = getattr(recipe_ingredient.inventory_item, 'cost_per_unit', 0) or 0
+            scaled_quantity = recipe_ingredient.quantity * scale
+            ingredient_cost = Decimal(str(cost_per_unit)) * Decimal(str(scaled_quantity))
+            
+            total_cost += ingredient_cost
+            
+            ingredient_costs.append({
+                'ingredient_name': recipe_ingredient.inventory_item.name,
+                'quantity': scaled_quantity,
+                'unit': recipe_ingredient.unit,
+                'cost_per_unit': float(cost_per_unit),
+                'total_cost': float(ingredient_cost)
+            })
 
-            # Calculate cost for this ingredient
-            if item.cost_per_unit:
-                ingredient_cost = Decimal(str(item.cost_per_unit)) * Decimal(str(required_quantity))
-                total_cost += ingredient_cost
-
-                ingredient_costs.append({
-                    'ingredient_id': item.id,
-                    'ingredient_name': item.name,
-                    'quantity': required_quantity,
-                    'unit': recipe_ingredient.unit,
-                    'unit_cost': float(item.cost_per_unit),
-                    'total_cost': float(ingredient_cost)
-                })
-            else:
-                ingredient_costs.append({
-                    'ingredient_id': item.id,
-                    'ingredient_name': item.name,
-                    'quantity': required_quantity,
-                    'unit': recipe_ingredient.unit,
-                    'unit_cost': 0.0,
-                    'total_cost': 0.0
-                })
+        # Calculate cost per unit if yield is known
+        cost_per_unit = 0
+        if recipe.predicted_yield and recipe.predicted_yield > 0:
+            yield_amount = recipe.predicted_yield * scale
+            cost_per_unit = float(total_cost) / yield_amount
 
         return {
-            'success': True,
-            'recipe_id': recipe_id,
-            'scale': scale,
             'total_cost': float(total_cost),
-            'ingredient_costs': ingredient_costs,
-            'cost_per_unit': float(total_cost / Decimal(str(recipe.yield_amount * scale))) if recipe.yield_amount > 0 else 0.0
+            'cost_per_unit': cost_per_unit,
+            'yield_amount': (recipe.predicted_yield or 0) * scale,
+            'yield_unit': recipe.predicted_yield_unit or 'count',
+            'ingredient_costs': ingredient_costs
         }
 
     except Exception as e:
-        logger.error(f"Error calculating cost for recipe {recipe_id}: {e}")
-        return {'success': False, 'error': str(e)}
+        logger.error(f"Error calculating production cost for recipe {recipe_id}: {e}")
+        return {'error': str(e)}
 
 
-def get_missing_ingredients(recipe_id: int, scale: float = 1.0) -> List[Dict[str, Any]]:
+def _format_availability_results(stock_check_results: List[Dict], all_available: bool = None) -> Dict[str, Any]:
     """
-    Get list of missing ingredients for production.
-
+    Format stock check results for the frontend.
+    
     Args:
-        recipe_id: Recipe to check
-        scale: Scaling factor
-
+        stock_check_results: Results from UniversalStockCheckService
+        all_available: Overall availability status
+        
     Returns:
-        List of missing ingredient details
+        Formatted availability data
     """
-    try:
-        availability = check_ingredient_availability(recipe_id, scale)
-        if availability['success']:
-            return availability.get('missing', [])
-        return []
-    except Exception as e:
-        logger.error(f"Error getting missing ingredients: {e}")
-        return []
+    ingredients = []
+    missing = []
+    
+    for result in stock_check_results:
+        # Skip non-ingredient items (containers, etc.)
+        if result.get('category') != 'ingredient':
+            continue
+            
+        ingredient_data = {
+            'ingredient_id': result['item_id'],
+            'ingredient_name': result['item_name'],
+            'required_quantity': result['needed_quantity'],
+            'required_unit': result['needed_unit'],
+            'available_quantity': result['available_quantity'],
+            'available_unit': result['available_unit'],
+            'is_available': result['status'] in ['OK', 'LOW'],
+            'status': result['status'],
+            'shortage': max(0, result['needed_quantity'] - result['available_quantity'])
+        }
+        
+        ingredients.append(ingredient_data)
+        
+        # Track missing ingredients
+        if not ingredient_data['is_available']:
+            missing.append({
+                'name': ingredient_data['ingredient_name'],
+                'needed': ingredient_data['required_quantity'],
+                'available': ingredient_data['available_quantity'],
+                'unit': ingredient_data['required_unit'],
+                'shortage': ingredient_data['shortage']
+            })
+
+    return {
+        'ingredients': ingredients,
+        'missing': missing,
+        'all_available': all_available if all_available is not None else len(missing) == 0,
+        'total_ingredients': len(ingredients),
+        'available_ingredients': len(ingredients) - len(missing)
+    }

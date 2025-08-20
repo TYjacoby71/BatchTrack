@@ -1,7 +1,9 @@
+
 """
 Core Universal Stock Check Service
 
 Orchestrates stock checking across different inventory categories.
+No backwards compatibility - clean, modern implementation.
 """
 
 import logging
@@ -27,7 +29,6 @@ class UniversalStockCheckService:
             InventoryCategory.INGREDIENT: IngredientHandler(),
             InventoryCategory.CONTAINER: ContainerHandler(),
             InventoryCategory.PRODUCT: ProductHandler(),
-            # Future: InventoryCategory.CONSUMABLE: ConsumableHandler()
         }
 
     def check_recipe_stock(self, recipe, scale: float = 1.0) -> Dict[str, Any]:
@@ -57,7 +58,6 @@ class UniversalStockCheckService:
 
             except Exception as e:
                 logger.error(f"Error checking {request.category.value} {request.item_id}: {e}")
-                # Add error result
                 error_result = StockCheckResult(
                     item_id=request.item_id,
                     item_name=f"Unknown {request.category.value}",
@@ -157,16 +157,3 @@ class UniversalStockCheckService:
                 ))
 
         return requests
-
-
-# Compatibility functions for existing code
-def universal_stock_check(recipe, scale=1.0, flex_mode=False):
-    """Legacy compatibility function"""
-    service = UniversalStockCheckService()
-    return service.check_recipe_stock(recipe, scale)
-
-
-def check_stock_availability(inventory_requirements):
-    """Legacy compatibility function for basic stock checking"""
-    from ..universal_stock_check_service import check_stock_availability as legacy_check
-    return legacy_check(inventory_requirements)
