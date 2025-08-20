@@ -10,9 +10,9 @@ from flask import current_app
 logger = logging.getLogger(__name__)
 
 # Create the blueprint
-stock_bp = Blueprint('stock_api', __name__)
+stock_api_bp = Blueprint('stock_api', __name__)
 
-@stock_bp.route('/check-stock', methods=['POST'])
+@stock_api_bp.route('/check-stock', methods=['POST'])
 @login_required
 @permission_required('batch_production.create')
 def check_stock():
@@ -45,7 +45,7 @@ def check_stock():
         return jsonify({'error': 'Failed to check stock'}), 500
 
 
-@stock_bp.route('/check-containers', methods=['POST'])
+@stock_api_bp.route('/check-containers', methods=['POST'])
 @login_required
 @permission_required('batch_production.create')
 def check_containers():

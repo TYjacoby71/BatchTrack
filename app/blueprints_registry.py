@@ -52,8 +52,8 @@ def register_blueprints(app):
     safe_register_blueprint('app.blueprints.api.public.public_api_bp', 'public_api_bp', '/api/public', 'Public API')
     safe_register_blueprint('app.blueprints.api.routes.api_bp', 'api_bp', '/api', 'Main API')
 
-    # This is the problematic one - stock_bp
-    safe_register_blueprint('app.blueprints.api.stock_routes.stock_bp', 'stock_bp', '/api/stock', 'Stock API')
+    # Fixed stock API blueprint reference
+    safe_register_blueprint('app.blueprints.api.stock_routes.stock_api_bp', 'stock_api_bp', '/api/stock', 'Stock API')
 
     # Register standalone route modules
     route_modules = [

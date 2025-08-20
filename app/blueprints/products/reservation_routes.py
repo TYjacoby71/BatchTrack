@@ -1,7 +1,7 @@
-from flask import Blueprint
-
-reservations_bp = Blueprint('reservations', __name__), request, jsonify, render_template
+from flask import Blueprint, request, jsonify, render_template
 from flask_login import login_required, current_user
+
+reservations_bp = Blueprint('reservations', __name__)
 from sqlalchemy import and_, func, desc
 from datetime import datetime, timedelta
 
