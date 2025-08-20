@@ -23,13 +23,20 @@
           <div class="row">
             <div class="col-md-6">
               <p><strong>Description:</strong> {{ recipe.description or 'No description' }}</p>
-              <p><strong>Yield:</strong> {{ recipe.predicted_yield or 'Not specified' }} {{ recipe.predicted_yield_unit or '' }}</p>
+              <p><strong>Base Yield:</strong> {{ recipe.predicted_yield or 'Not specified' }} {{ recipe.predicted_yield_unit or '' }}</p>
+              <p><strong>Scaled Yield:</strong> <span x-text="(predictedYield * scale).toFixed(1)"></span> <span x-text="predictedYieldUnit"></span></p>
             </div>
             <div class="col-md-6">
               <div class="form-group">
-                <label for="scale">Production Scale:</label>
+                <label for="scale" class="form-label">Production Scale:</label>
                 <input type="number" id="scale" class="form-control" 
-                       x-model="scale" min="0.1" step="0.1" value="1.0">
+                       x-model="scale" min="0.1" step="0.1" @input="updateContainment()">
+              </div>
+              <div class="form-group mt-3">
+                <label for="batchName" class="form-label">Batch Name:</label>
+                <input type="text" id="batchName" class="form-control" 
+                       x-model="batchName" 
+                       :placeholder="'Batch of ' + scale + 'x ' + recipeName">
               </div>
             </div>
           </div>
@@ -37,78 +44,7 @@
       </div>
 
       <!-- Stock Check Component -->
-      <div class="card mb-4">
-        <div class="card-header">
-          <h5 class="mb-0">
-            <i class="fas fa-clipboard-check"></i> Ingredient Stock Check
-          </h5>
-        </div>
-        <div class="card-body">
-          <div class="d-flex gap-2 mb-3">
-            <button type="button" class="btn btn-warning" @click="checkStock()">
-              <i class="fas fa-search"></i> Check Stock
-            </button>
-            <div class="ms-auto" x-show="stockChecked">
-              <span class="badge" :class="stockCheckPassed ? 'bg-success' : 'bg-danger'">
-                <i class="fas" :class="stockCheckPassed ? 'fa-check' : 'fa-times'"></i>
-                <span x-text="stockCheckPassed ? 'Stock OK' : 'Stock Issues'"></span>
-              </span>
-            </div>
-          </div>
-
-          <!-- Stock Check Results -->
-          <div x-show="stockChecked && stockResults.length > 0">
-            <div class="table-responsive">
-              <table class="table table-sm">
-                <thead>
-                  <tr>
-                    <th>Ingredient</th>
-                    <th>Needed</th>
-                    <th>Available</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <template x-for="result in stockResults" :key="result.item_id">
-                    <tr :class="result.status === 'OK' ? 'table-success' : result.status === 'LOW' ? 'table-warning' : 'table-danger'">
-                      <td x-text="result.item_name"></td>
-                      <td>
-                        <span x-text="result.needed_quantity"></span>
-                        <span class="text-muted" x-text="result.needed_unit"></span>
-                      </td>
-                      <td>
-                        <span x-text="result.available_quantity"></span>
-                        <span class="text-muted" x-text="result.available_unit"></span>
-                      </td>
-                      <td>
-                        <span class="badge" 
-                              :class="result.status === 'OK' ? 'bg-success' : result.status === 'LOW' ? 'bg-warning' : 'bg-danger'"
-                              x-text="result.status">
-                        </span>
-                      </td>
-                    </tr>
-                  </template>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <div x-show="stockChecked && stockResults.length === 0" class="alert alert-info">
-            <i class="fas fa-info-circle"></i> No ingredients to check for this recipe.
-          </div>
-
-          <div x-show="!stockChecked" class="text-muted">
-            <i class="fas fa-info-circle"></i> Click "Check Stock" to verify ingredient availability.
-          </div>
-
-          <!-- Cost Information -->
-          <div x-show="stockChecked && totalCost > 0" class="mt-3">
-            <div class="alert alert-info">
-              <strong>Estimated Cost:</strong> $<span x-text="totalCost.toFixed(2)"></span>
-            </div>
-          </div>
-        </div>
-      </div>
+      {% include 'components/plan_production/stock_check.html' %}
     </div>
 
     <!-- Right Column - Container & Batch Management -->
@@ -208,19 +144,7 @@
           </div>
 
           <!-- Containment Progress -->
-          <div class="mt-4">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-              <label class="form-label mb-0">Containment Progress:</label>
-              <span class="badge bg-primary" x-text="containmentPercent + '%'"></span>
-            </div>
-            <div class="progress" style="height: 25px;">
-              <div class="progress-bar" role="progressbar" 
-                :style="'width: ' + containmentPercent + '%'" 
-                :class="containmentPercent >= 100 ? 'bg-success' : 'bg-warning'"
-                x-text="containmentPercent + '%'"></div>
-            </div>
-            <small class="form-text text-muted mt-1" x-text="containmentMessage"></small>
-          </div>
+          {% include 'components/plan_production/containment_progress.html' %}
 
           <!-- Warnings -->
           <div class="alert alert-warning mt-3" x-show="containmentPercent < 100 && containmentPercent > 0">
@@ -235,8 +159,35 @@
         </div>
       </div>
 
-      <!-- Batch Configuration -->
-      {% include 'components/plan_production/batch_configuration.html' %}
+      <!-- Batch Configuration Options -->
+      <div class="card mb-4">
+        <div class="card-header">
+          <h5 class="mb-0">
+            <i class="fas fa-cogs"></i> Batch Options
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="form-group mb-3">
+            <label class="form-label">Production Notes:</label>
+            <textarea class="form-control" rows="3" x-model="batchNotes" 
+                      placeholder="Optional notes about this production run..."></textarea>
+          </div>
+
+          <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" id="scheduleProduction" x-model="scheduleProduction">
+            <label class="form-check-label" for="scheduleProduction">
+              Schedule for Later
+            </label>
+          </div>
+
+          <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" id="allowPartialContainment" x-model="allowPartialContainment" @change="updateBatchReadiness()">
+            <label class="form-check-label" for="allowPartialContainment">
+              Allow Partial Containment
+            </label>
+          </div>
+        </div>
+      </div>
 
       <!-- Action Buttons -->
       <div class="card">
@@ -308,6 +259,7 @@ function planProductionData() {
         
         // Batch configuration
         batchName: '',
+        batchNotes: '',
         scheduleProduction: false,
         canStartBatch: false,
         totalCost: 0,
@@ -497,7 +449,9 @@ function planProductionData() {
                     recipe_id: this.recipeId,
                     scale: this.scale,
                     containers: JSON.stringify(containers),
-                    auto_fill: this.autoFill
+                    auto_fill: this.autoFill,
+                    batch_name: this.batchName || `Batch of ${this.scale}x ${this.recipeName}`,
+                    batch_notes: this.batchNotes || ''
                 });
                 
                 window.location.href = `/batches/start?${params.toString()}`;
