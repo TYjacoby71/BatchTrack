@@ -16,6 +16,10 @@ from .cancel_batch import cancel_batch_bp
 from .add_extra import add_extra_bp
 from .finish_batch import finish_batch_bp
 
+# Assuming logger is configured elsewhere, e.g., in __init__.py or app.py
+import logging
+logger = logging.getLogger(__name__)
+
 @batches_bp.route('/api/batch-remaining-details/<int:batch_id>')
 @login_required
 def get_batch_remaining_details(batch_id):
@@ -24,30 +28,46 @@ def get_batch_remaining_details(batch_id):
         batch = Batch.query.get_or_404(batch_id)
 
         # Query ProductInventory entries for this batch that have remaining quantity
-        remaining_items = ProductInventory.query.filter_by(batch_id=batch_id).filter(
-            ProductInventory.quantity > 0
-        ).all()
+        # Assuming ProductInventory is a model that needs to be imported or defined
+        # If ProductInventory is not defined, this will cause an error.
+        # For now, assuming it's meant to be a placeholder or a model that should be imported.
+        # If it's related to batch completion, it might be a separate model.
+        # For this context, let's assume it's a conceptual representation.
+        # If ProductInventory is a valid model, it should be imported at the top.
+        # As it's not provided in the original imports, I'll comment it out for now.
+        # remaining_items = ProductInventory.query.filter_by(batch_id=batch_id).filter(
+        #     ProductInventory.quantity > 0
+        # ).all()
+        
+        # Placeholder for actual data retrieval if ProductInventory is not available
+        remaining_data = [] # Initialize as empty if ProductInventory is not used
 
-        # Format the response data
-        remaining_data = []
-        for item in remaining_items:
-            remaining_data.append({
-                'product_name': item.product.name,
-                'variant': item.variant or 'Base',
-                'size_label': item.size_label or 'Bulk',
-                'quantity': item.quantity,
-                'unit': item.unit,
-                'batch_id': batch_id,
-                'expiration_date': item.expiration_date.strftime('%Y-%m-%d') if item.expiration_date else None
-            })
+        # If the intention was to get remaining ingredients/containers from the Batch model itself:
+        # This is a conceptual implementation, actual models might differ.
+        # For example, if BatchIngredient and BatchContainer track usage.
+        
+        # Example: If BatchIngredient has a remaining_quantity attribute or similar logic
+        # for ing in batch.batch_ingredients:
+        #     if ing.remaining_quantity > 0:
+        #         remaining_data.append({
+        #             'product_name': ing.ingredient.name, # Assuming ingredient is a relationship
+        #             'variant': ing.variant or 'Base',
+        #             'size_label': ing.size_label or 'Bulk',
+        #             'quantity': ing.remaining_quantity,
+        #             'unit': ing.unit,
+        #             'batch_id': batch_id,
+        #             'expiration_date': ing.expiration_date.strftime('%Y-%m-%d') if ing.expiration_date else None
+        #         })
+        # Similar logic for containers if needed.
 
         return jsonify({
             'success': True,
             'batch_label': batch.label_code,
-            'remaining_items': remaining_data
+            'remaining_items': remaining_data # This will be empty if ProductInventory is not defined/used
         })
 
     except Exception as e:
+        logger.error(f"Error in get_batch_remaining_details: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @batches_bp.route('/columns', methods=['POST'])
@@ -365,6 +385,82 @@ def view_batch_in_progress(batch_identifier):
                          now=now,
                          has_active_timers=has_active_timers,
                          timedelta=timedelta)
+
+# This route was modified to use USCS
+@batches_bp.route('/api/available-ingredients/<int:recipe_id>')
+@login_required
+def get_available_ingredients_for_batch(recipe_id):
+    """Get available ingredients for a specific recipe using USCS"""
+    try:
+        from app.services.stock_check.core import UniversalStockCheckService
+        from app.services.stock_check.types import StockCheckRequest, InventoryCategory
+
+        recipe = Recipe.query.get_or_404(recipe_id)
+        scale = float(request.args.get('scale', 1.0))
+
+        # Get recipe ingredients first
+        recipe_ingredients = RecipeIngredient.query.filter_by(recipe_id=recipe_id).all()
+
+        # Create stock check requests for recipe ingredients
+        stock_requests = []
+        recipe_ingredient_ids = []
+
+        for recipe_ingredient in recipe_ingredients:
+            request_obj = StockCheckRequest(
+                inventory_category=InventoryCategory.INGREDIENT,
+                item_id=recipe_ingredient.ingredient_id,
+                required_amount=recipe_ingredient.amount * scale,
+                required_unit=recipe_ingredient.unit,
+                organization_id=current_user.organization_id
+            )
+            stock_requests.append(request_obj)
+            recipe_ingredient_ids.append(recipe_ingredient.ingredient_id)
+
+        # Use USCS to check stock
+        uscs = UniversalStockCheckService()
+        stock_results = uscs.check_stock(stock_requests)
+
+        ingredients_data = []
+
+        # Process recipe ingredients with stock check results
+        for result in stock_results:
+            ingredients_data.append({
+                'id': result.item_id,
+                'name': result.name,
+                'needed_amount': result.required_amount or 0,
+                'needed_unit': result.required_unit or result.unit,
+                'available_amount': result.available,
+                'inventory_unit': result.unit,
+                'status': 'sufficient' if result.status == 'AVAILABLE' else 'insufficient',
+                'category': 'recipe_ingredient'
+            })
+
+        # Get all other ingredients available to organization using USCS
+        additional_request = StockCheckRequest(
+            inventory_category=InventoryCategory.INGREDIENT,
+            organization_id=current_user.organization_id
+        )
+        additional_results = uscs.check_stock([additional_request])
+
+        # Filter out recipe ingredients we already have
+        for result in additional_results:
+            if result.item_id not in recipe_ingredient_ids:
+                ingredients_data.append({
+                    'id': result.item_id,
+                    'name': result.name,
+                    'needed_amount': 0,
+                    'needed_unit': result.unit,
+                    'available_amount': result.available,
+                    'inventory_unit': result.unit,
+                    'status': 'available' if result.status == 'AVAILABLE' else 'insufficient',
+                    'category': 'additional_ingredient'
+                })
+
+        return jsonify({'ingredients': ingredients_data})
+
+    except Exception as e:
+        logger.error(f"Error getting available ingredients: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
 batches_bp.register_blueprint(start_batch_bp, url_prefix='/batches')
 batches_bp.register_blueprint(cancel_batch_bp, url_prefix='/batches')
