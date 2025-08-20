@@ -224,7 +224,7 @@ def get_recipe_details(recipe_id: int) -> Optional[Recipe]:
     """
     try:
         recipe = Recipe.query.options(
-            db.joinedload(Recipe.ingredients).joinedload(RecipeIngredient.inventory_item)
+            db.joinedload(Recipe.recipe_ingredients).joinedload(RecipeIngredient.inventory_item)
         ).get(recipe_id)
         
         # Organization access is handled by middleware
@@ -257,7 +257,7 @@ def duplicate_recipe(recipe_id: int) -> Tuple[bool, Any]:
                 'quantity': ri.quantity,
                 'unit': ri.unit
             }
-            for ri in original.ingredients
+            for ri in original.recipe_ingredients
         ]
 
         # Create new recipe

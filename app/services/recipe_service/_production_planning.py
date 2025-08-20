@@ -81,7 +81,7 @@ def calculate_recipe_requirements(recipe_id: int, scale: float = 1.0) -> Dict[st
             return {'success': False, 'error': 'Recipe not found'}
 
         ingredients = []
-        for recipe_ingredient in recipe.ingredients:
+        for recipe_ingredient in recipe.recipe_ingredients:
             scaled_quantity = recipe_ingredient.quantity * scale
             
             ingredients.append({
@@ -151,7 +151,7 @@ def calculate_production_cost(recipe_id: int, scale: float = 1.0) -> Dict[str, A
         total_cost = Decimal('0.00')
         ingredient_costs = []
 
-        for recipe_ingredient in recipe.ingredients:
+        for recipe_ingredient in recipe.recipe_ingredients:
             cost_per_unit = getattr(recipe_ingredient.inventory_item, 'cost_per_unit', 0) or 0
             scaled_quantity = recipe_ingredient.quantity * scale
             ingredient_cost = Decimal(str(cost_per_unit)) * Decimal(str(scaled_quantity))
