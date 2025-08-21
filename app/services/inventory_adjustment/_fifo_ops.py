@@ -76,6 +76,46 @@ def _internal_add_fifo_entry_enhanced(
 
         db.session.add(fifo_entry)
 
+        # Create corresponding lot object for additive operations
+        if quantity > 0:  # Only create lots for additive operations
+            from datetime import timedelta
+            from app.models.inventory_lot import InventoryLot
+            from app.utils.timezone_utils import TimezoneUtils
+            from app.utils.fifo_generator import get_fifo_prefix
+            
+            try:
+                # Handle expiration
+                final_expiration = expiration_date
+                if not final_expiration and shelf_life_days and shelf_life_days > 0:
+                    final_expiration = TimezoneUtils.utc_now() + timedelta(days=shelf_life_days)
+
+                # Generate FIFO code
+                fifo_code = get_fifo_prefix(change_type, True)  # True for additive
+
+                # Create the lot
+                lot = InventoryLot(
+                    inventory_item_id=item_id,
+                    remaining_quantity=quantity,
+                    original_quantity=quantity,
+                    unit=unit,
+                    unit_cost=cost_per_unit,
+                    source_type=change_type,
+                    source_notes=notes,
+                    created_by=created_by,
+                    expiration_date=final_expiration,
+                    shelf_life_days=shelf_life_days,
+                    fifo_code=fifo_code,
+                    organization_id=item.organization_id
+                )
+
+                db.session.add(lot)
+                db.session.flush()  # Get ID
+                logger.info(f"FIFO: Created lot {lot.id} with {quantity} {unit} for item {item_id}")
+                
+            except Exception as e:
+                logger.warning(f"FIFO: History entry created but lot creation failed: {str(e)}")
+                # Continue anyway since FIFO history entry was successful
+
         # Update item quantity
         item.quantity += quantity
 
