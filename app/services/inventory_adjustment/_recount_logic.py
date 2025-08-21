@@ -1,7 +1,9 @@
 
 import logging
 from app.models import db, InventoryItem
-from ._fifo_ops import handle_restock, _handle_deductive_operation, calculate_current_fifo_total
+from ._fifo_ops import calculate_current_fifo_total
+from ._additive_ops import handle_additive_operation
+from ._deductive_ops import _handle_deductive_operation_internal
 
 logger = logging.getLogger(__name__)
 
@@ -32,17 +34,18 @@ def handle_recount_adjustment_clean(item, quantity, notes=None, created_by=None,
 
         # Apply the delta directly using specialist functions
         if delta > 0:
-            # Need to add inventory - call restock specialist directly
-            success, message = handle_restock(
+            # Need to add inventory - call additive operation directly
+            success, message = handle_additive_operation(
                 item=item,
                 quantity=delta,
+                change_type='recount_increase',
                 notes=f"{notes or 'Recount increase'} - Added {delta}",
                 created_by=created_by
             )
             return success, message
         else:
             # Need to deduct inventory - call deductive operation directly
-            success = _handle_deductive_operation(
+            success = _handle_deductive_operation_internal(
                 item=item, 
                 quantity=abs(delta), 
                 change_type='recount_deduction', 
