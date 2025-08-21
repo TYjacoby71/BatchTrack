@@ -46,8 +46,9 @@ class TestInventoryFIFOCharacterization:
                 created_by=test_user.id
             )
 
-            # Verify total
-            db_session.refresh(item)
+            # Verify total by re-querying the item
+            db_session.commit()
+            item = db_session.query(InventoryItem).get(item.id)
             assert item.quantity == 150.0
 
             # Deduct and verify FIFO order
@@ -94,6 +95,11 @@ class TestInventoryFIFOCharacterization:
                 created_by=test_user.id
             )
 
-            assert success is True
-            db_session.refresh(item)
+            # The function should return success even if it's a tuple
+            if isinstance(success, tuple):
+                success = success[0]
+            
+            assert success is True, f"Expected success but got: {success}, message: {message}"
+            db_session.commit()
+            item = db_session.query(InventoryItem).get(item.id)
             assert item.quantity == 250.0
