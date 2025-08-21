@@ -35,8 +35,8 @@ def handle_deductive_operation(item, quantity, change_type, notes=None, created_
     try:
         # Handle deduction using FIFO - this will check inventory internally
         success, error_msg = _handle_deductive_operation_internal(
-            item=item,
-            quantity=quantity,
+            item_id=item.id,
+            quantity_to_deduct=quantity,
             change_type=change_type,
             notes=notes,
             created_by=created_by,

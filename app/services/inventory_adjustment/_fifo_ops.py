@@ -98,7 +98,7 @@ def _internal_add_fifo_entry_enhanced(item_id, quantity, change_type, notes="", 
         return False, f"Error creating inventory lot: {str(e)}"
 
 
-def _handle_deductive_operation_internal(inventory_item_id, quantity_to_deduct, change_type, notes="", created_by=None, batch_id=None):
+def _handle_deductive_operation_internal(item_id, quantity_to_deduct, change_type, notes="", created_by=None, batch_id=None):
     """
     Handle deductive operations using FIFO (First In, First Out) logic with lots
     """
@@ -109,13 +109,13 @@ def _handle_deductive_operation_internal(inventory_item_id, quantity_to_deduct, 
         # Get all available lots for this item (oldest first - FIFO)
         available_lots = InventoryLot.query.filter(
             and_(
-                InventoryLot.inventory_item_id == inventory_item_id,
+                InventoryLot.inventory_item_id == item_id,
                 InventoryLot.remaining_quantity > 0
             )
         ).order_by(InventoryLot.received_date.asc()).all()
 
         if not available_lots:
-            logger.warning(f"FIFO: No available lots for deduction from item {inventory_item_id}")
+            logger.warning(f"FIFO: No available lots for deduction from item {item_id}")
             return True, "No inventory to deduct from"
 
         remaining_to_deduct = abs(float(quantity_to_deduct))
@@ -134,7 +134,7 @@ def _handle_deductive_operation_internal(inventory_item_id, quantity_to_deduct, 
 
             # Create deduction record in unified history
             deduction_entry = UnifiedInventoryHistory(
-                inventory_item_id=inventory_item_id,
+                inventory_item_id=item_id,
                 change_type=change_type,
                 quantity_change=-deduct_from_lot,
                 remaining_quantity=0,  # Deductions don't have remaining quantity
@@ -168,7 +168,7 @@ def _handle_deductive_operation_internal(inventory_item_id, quantity_to_deduct, 
         return True, f"Deducted from {len(deductions)} lots"
 
     except Exception as e:
-        logger.error(f"FIFO: Error in deductive operation for item {inventory_item_id}: {str(e)}")
+        logger.error(f"FIFO: Error in deductive operation for item {item_id}: {str(e)}")
         db.session.rollback()
         return False, f"Error processing deduction: {str(e)}"
 

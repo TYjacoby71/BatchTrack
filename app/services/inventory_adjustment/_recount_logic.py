@@ -35,7 +35,7 @@ def handle_recount(item, quantity, notes=None, created_by=None, **kwargs):
             # Need to deduct inventory - use standard deductive logic
             from ._fifo_ops import _handle_deductive_operation_internal
             success = _handle_deductive_operation_internal(
-                inventory_item_id=item.id,
+                item_id=item.id,
                 quantity_to_deduct=abs(delta),
                 change_type='recount',
                 notes=notes or f'Recount adjustment: -{abs(delta)}',
