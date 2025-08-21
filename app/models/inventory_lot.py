@@ -38,6 +38,9 @@ class InventoryLot(ScopedModelMixin, db.Model):
     # FIFO identification
     fifo_code = db.Column(db.String(32), nullable=True, unique=True)
     
+    # Batch relationship (for lots created from finished batches)
+    batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'), nullable=True)
+    
     # Organization relationship
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)
     
@@ -71,6 +74,7 @@ class InventoryLot(ScopedModelMixin, db.Model):
     inventory_item = db.relationship('InventoryItem', backref='lots')
     user = db.relationship('User')
     organization = db.relationship('Organization')
+    batch = db.relationship('Batch', backref='created_lots')
     
     # Constraints
     __table_args__ = (

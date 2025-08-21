@@ -49,6 +49,11 @@ def _internal_add_fifo_entry_enhanced(item_id, quantity, change_type, unit, note
         if item.is_perishable:
             final_shelf_life_days = final_shelf_life_days or item.shelf_life_days or custom_shelf_life_days
 
+        # Get batch_id from kwargs if provided
+        batch_id = kwargs.get('batch_id')
+        fifo_code = generate_fifo_code(change_type, item_id, batch_id=batch_id)
+
+
         # Create new lot - ALWAYS inherit perishable status from item
         lot = InventoryLot(
             inventory_item_id=item_id,
@@ -62,7 +67,8 @@ def _internal_add_fifo_entry_enhanced(item_id, quantity, change_type, unit, note
             source_type=change_type,
             source_notes=notes,
             created_by=created_by,
-            fifo_code=generate_fifo_code(change_type, item_id),
+            fifo_code=fifo_code,
+            batch_id=batch_id, # Store batch_id in lot
             organization_id=item.organization_id
         )
 
@@ -76,9 +82,10 @@ def _internal_add_fifo_entry_enhanced(item_id, quantity, change_type, unit, note
             remaining_quantity=float(quantity),
             unit=unit,
             unit_cost=float(cost_per_unit),
-            fifo_code=lot.fifo_code,
+            fifo_code=fifo_code,  # Use the same FIFO code as the lot
             notes=notes,
             created_by=created_by,
+            batch_id=batch_id,  # Store batch_id in history too
             is_perishable=is_perishable,  # Always inherit from item
             shelf_life_days=final_shelf_life_days,
             expiration_date=final_expiration_date,
