@@ -83,7 +83,7 @@ def handle_recount(item, quantity, change_type, notes=None, created_by=None, tar
                     # Create deduction record
                     deduction_entry = UnifiedInventoryHistory(
                         inventory_item_id=item.id,
-                        change_type='recount_adjustment',
+                        change_type=change_type,  # Use original change_type (recount)
                         quantity_change=-deducted,
                         remaining_quantity=0,
                         unit=lot.unit,
@@ -104,7 +104,7 @@ def handle_recount(item, quantity, change_type, notes=None, created_by=None, tar
                     # Create deduction record
                     deduction_entry = UnifiedInventoryHistory(
                         inventory_item_id=item.id,
-                        change_type='recount_adjustment',
+                        change_type=change_type,  # Use original change_type (recount)
                         quantity_change=-remaining_to_deduct,
                         remaining_quantity=0,
                         unit=lot.unit,
@@ -150,7 +150,7 @@ def handle_recount(item, quantity, change_type, notes=None, created_by=None, tar
                     # Create addition record
                     addition_entry = UnifiedInventoryHistory(
                         inventory_item_id=item.id,
-                        change_type='recount_adjustment',
+                        change_type=change_type,  # Use original change_type (recount)
                         quantity_change=fill_amount,
                         remaining_quantity=0,
                         unit=lot.unit,
@@ -171,7 +171,7 @@ def handle_recount(item, quantity, change_type, notes=None, created_by=None, tar
                 add_success, add_message = _internal_add_fifo_entry_enhanced(
                     item_id=item.id,
                     quantity=remaining_to_add,
-                    change_type='recount_adjustment',
+                    change_type=change_type,  # Use original change_type (recount)
                     unit=item.unit or 'count',
                     notes=f"Recount overflow: +{remaining_to_add}",
                     cost_per_unit=item.cost_per_unit or 0.0,
@@ -181,7 +181,7 @@ def handle_recount(item, quantity, change_type, notes=None, created_by=None, tar
                 if not add_success:
                     return False, f"Failed to create recount overflow lot: {add_message}"
 
-        # Return success - core will set the absolute quantity
+        # Return success - core will set the absolute quantity using target_quantity
         logger.info(f"RECOUNT SUCCESS: Item {item.id} FIFO reconciled for target {target_qty}")
         return True, f"Inventory recounted to {target_qty}"
 
