@@ -97,6 +97,7 @@ def handle_initial_stock(item, quantity, change_type, notes=None, created_by=Non
     """
     Handle the initial stock entry for a newly created item.
     This is called when an item gets its very first inventory.
+    Works just like any other lot creation - can be 0 or any positive value.
     Returns (success, message, quantity_delta) - does NOT modify item.quantity
     """
     try:
@@ -105,7 +106,7 @@ def handle_initial_stock(item, quantity, change_type, notes=None, created_by=Non
         unit = kwargs.get('unit') or item.unit or 'count'
         final_cost = cost_override if cost_override is not None else item.cost_per_unit
 
-        # Create the initial FIFO entry
+        # Create the initial FIFO entry - works for any quantity including 0
         success, message = _internal_add_fifo_entry_enhanced(
             item_id=item.id,
             quantity=quantity,
@@ -121,10 +122,14 @@ def handle_initial_stock(item, quantity, change_type, notes=None, created_by=Non
         if not success:
             return False, f"Failed to create initial stock entry: {message}", 0
 
-        # Return delta for core to apply
+        # Return delta for core to apply - works for 0 quantity too
         quantity_delta = float(quantity)
         logger.info(f"INITIAL_STOCK SUCCESS: Will set item {item.id} quantity to {quantity}")
-        return True, f"Initial stock of {quantity} {unit} added", quantity_delta
+        
+        if quantity == 0:
+            return True, f"Initial stock entry created with 0 {unit}", quantity_delta
+        else:
+            return True, f"Initial stock of {quantity} {unit} added", quantity_delta
 
     except Exception as e:
         logger.error(f"Error in initial stock operation: {str(e)}")

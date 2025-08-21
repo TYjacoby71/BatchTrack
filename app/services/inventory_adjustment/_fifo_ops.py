@@ -79,7 +79,7 @@ def _internal_add_fifo_entry_enhanced(item_id, quantity, change_type, unit, note
             inventory_item_id=item_id,
             change_type=change_type,
             quantity_change=float(quantity),
-            remaining_quantity=float(quantity),
+            remaining_quantity=float(quantity),  # History entries for lot creation track the quantity change
             unit=unit,
             unit_cost=float(cost_per_unit),
             fifo_code=fifo_code,  # Use the same FIFO code as the lot
