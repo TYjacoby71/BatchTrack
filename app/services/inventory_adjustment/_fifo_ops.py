@@ -15,9 +15,20 @@ def get_item_lots(item_id: int, active_only: bool = False, order: str = 'desc'):
     - order: 'asc' by received_date or 'desc'
     """
     from app.models.inventory_lot import InventoryLot
+    from app.models import InventoryItem
     from sqlalchemy import and_
 
-    query = InventoryLot.query.filter(InventoryLot.inventory_item_id == item_id)
+    # Ensure organization scoping via parent item
+    item = db.session.get(InventoryItem, item_id)
+    if not item:
+        return []
+
+    query = InventoryLot.query.filter(
+        and_(
+            InventoryLot.inventory_item_id == item_id,
+            InventoryLot.organization_id == item.organization_id
+        )
+    )
     if active_only:
         query = query.filter(InventoryLot.remaining_quantity > 0)
 
@@ -120,9 +131,11 @@ def _handle_deductive_operation_internal(item_id, quantity_to_deduct, change_typ
         from app.models.inventory_lot import InventoryLot
 
         # Get all available lots for this item (oldest first - FIFO)
+        item = db.session.get(InventoryItem, item_id)
         available_lots = InventoryLot.query.filter(
             and_(
                 InventoryLot.inventory_item_id == item_id,
+                InventoryLot.organization_id == item.organization_id,
                 InventoryLot.remaining_quantity > 0
             )
         ).order_by(InventoryLot.received_date.asc()).all()
@@ -192,9 +205,12 @@ def _calculate_deduction_plan_internal(item_id, quantity, change_type):
         from app.models.inventory_lot import InventoryLot
 
         # Use proper InventoryLot table for FIFO calculations
+        from app.models import InventoryItem
+        item = db.session.get(InventoryItem, item_id)
         available_lots = InventoryLot.query.filter(
             and_(
                 InventoryLot.inventory_item_id == item_id,
+                InventoryLot.organization_id == item.organization_id,
                 InventoryLot.remaining_quantity > 0
             )
         ).order_by(InventoryLot.received_date.asc()).all()
