@@ -5,19 +5,9 @@ from datetime import datetime
 from app.models import db, InventoryItem, UnifiedInventoryHistory
 from ._validation import validate_inventory_fifo_sync
 from ._audit import record_audit_entry
-from ._creation_logic import handle_initial_stock
-from ._recount_logic import handle_recount_adjustment_clean
-from ._fifo_ops import get_operation_handler
+from ._handlers import get_operation_handler
 
 logger = logging.getLogger(__name__)
-
-
-# ========== THE STRATEGY MAP (SIMPLIFIED) ==========
-# Instead of 20+ individual functions, we use 3 operation type handlers
-SPECIAL_HANDLERS = {
-    'recount': handle_recount_adjustment_clean,
-    'initial_stock': handle_initial_stock,
-}
 
 
 def process_inventory_adjustment(
@@ -60,16 +50,11 @@ def process_inventory_adjustment(
             logger.info(f"INITIAL STOCK: Detected item {item_id} has no FIFO history, using initial_stock handler")
             change_type = 'initial_stock'
 
-        # ========== THE SIMPLIFIED DISPATCHER LOGIC ==========
+        # ========== THE REGISTRY DISPATCHER LOGIC ==========
         
-        # 1. Check for special handlers first
-        if change_type in SPECIAL_HANDLERS:
-            handler = SPECIAL_HANDLERS[change_type]
-        else:
-            # 2. Use operation type dispatcher for standard operations
-            handler = get_operation_handler(change_type)
+        # Get handler from the centralized registry
+        handler = get_operation_handler(change_type)
         
-        # 3. If no handler found, operation is unknown
         if not handler:
             logger.error(f"Unknown inventory change type: '{change_type}'")
             return False, f"Unknown inventory change type: '{change_type}'"
