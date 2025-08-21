@@ -1,166 +1,103 @@
 import logging
-from datetime import datetime, timedelta
 from app.models import db, InventoryItem
-# Removed audit import - FIFO should be the only thing creating history
 from ._fifo_ops import _internal_add_fifo_entry_enhanced
-
-
-def handle_initial_stock(item, quantity, unit=None, notes=None, created_by=None,
-                        cost_override=None, custom_expiration_date=None, custom_shelf_life_days=None,
-                        change_type=None, **kwargs):
-    """Handles the special case for an item's very first stock entry."""
-    try:
-        final_unit = unit or getattr(item, 'unit', 'count')
-        final_notes = notes or 'Initial stock entry'
-
-        if quantity == 0:
-            # No FIFO entry needed for zero stock
-            return True, "Item initialized with zero stock"
-
-        # Use cost override if provided, otherwise use item's cost
-        cost_per_unit = cost_override if cost_override is not None else getattr(item, 'cost_per_unit', 0.0)
-
-        # Update the item's quantity first
-        item.quantity = quantity
-        
-        # For non-zero initial entries, create the first FIFO lot
-        success, error = _internal_add_fifo_entry_enhanced(
-            item_id=item.id,
-            quantity=quantity,
-            change_type='initial_stock',
-            unit=final_unit,
-            notes=final_notes,
-            cost_per_unit=cost_per_unit,
-            created_by=created_by,
-            expiration_date=custom_expiration_date,
-            shelf_life_days=custom_shelf_life_days
-        )
-
-        if not success:
-            return False, f"Failed to create initial stock: {error}"
-
-        # Commit the changes
-        db.session.commit()
-        
-        return True, f"Initial stock added: {quantity} {final_unit}"
-
-    except Exception as e:
-        db.session.rollback()
-        logging.error(f"Error in initial stock creation: {str(e)}")
-        return False, f"Error in initial stock creation: {str(e)}"
-
 
 logger = logging.getLogger(__name__)
 
-def create_inventory_item(form_data: dict, organization_id: int, created_by: int) -> tuple[bool, str, int]:
+def handle_initial_stock(item, quantity, change_type, **kwargs):
     """
-    Canonical service for creating new inventory items.
+    Handles the special case for an item's very first stock entry.
+    This is called by the dispatcher when it detects a new item.
+    """
+    logger.info(f"INITIAL_STOCK: Adding {quantity} to new item {item.id}")
 
-    Returns:
-        tuple: (success: bool, message: str, item_id: int)
+    # For initial stock, we always use additive FIFO logic
+    success, error = _internal_add_fifo_entry_enhanced(
+        item_id=item.id,
+        quantity=quantity,
+        change_type='initial_stock',  # Always log as initial_stock for tracking
+        unit=getattr(item, 'unit', 'count'),
+        notes=kwargs.get('notes', f'Initial stock entry: {quantity}'),
+        cost_per_unit=item.cost_per_unit,
+        created_by=kwargs.get('created_by'),
+        **kwargs
+    )
+
+    if success:
+        # Update item quantity
+        item.quantity = quantity
+        return True, f"Initial stock of {quantity} {getattr(item, 'unit', 'units')} added"
+    else:
+        return False, f"Failed to add initial stock: {error}"
+
+def create_inventory_item(form_data, organization_id, created_by):
+    """
+    Creates a new inventory item and optionally adds initial stock.
+    This function should NOT call process_inventory_adjustment to avoid circular dependencies.
     """
     try:
-        # Extract and validate form data
+        # Extract form data
         name = form_data.get('name', '').strip()
         if not name:
-            return False, "Item name is required", None
+            return False, "Item name is required.", None
 
-        # Check for duplicate name
-        existing_item = InventoryItem.query.filter_by(
-            name=name,
-            organization_id=organization_id
-        ).first()
-        if existing_item:
-            return False, f'An item with the name "{name}" already exists. Please choose a different name.', None
-
-        # Parse form data
-        quantity = float(form_data.get('quantity', 0))
-        unit = form_data.get('unit', '')
+        category_id = form_data.get('category_id')
+        unit = form_data.get('unit', 'count')
+        cost_per_unit = float(form_data.get('cost_per_unit', 0.0))
+        low_stock_threshold = float(form_data.get('low_stock_threshold', 0.0))
         item_type = form_data.get('type', 'ingredient')
 
-        # Handle cost calculation
-        cost_entry_type = form_data.get('cost_entry_type', 'per_unit')
-        cost_input = float(form_data.get('cost_per_unit', 0))
-
-        if cost_entry_type == 'total' and quantity > 0:
-            cost_per_unit = cost_input / quantity
-        else:
-            cost_per_unit = cost_input
-
-        low_stock_threshold = float(form_data.get('low_stock_threshold', 0))
-        is_perishable = form_data.get('is_perishable') == 'on'
-
-        # Handle expiration
-        expiration_date = None
+        # Perishable fields
+        is_perishable = form_data.get('is_perishable', False)
         shelf_life_days = None
         if is_perishable:
-            shelf_life_days = int(form_data.get('shelf_life_days', 0))
-            if shelf_life_days > 0:
-                expiration_date = datetime.utcnow().date() + timedelta(days=shelf_life_days)
+            shelf_life_days = form_data.get('shelf_life_days')
+            if shelf_life_days:
+                shelf_life_days = int(shelf_life_days)
 
-        # Handle container-specific fields
-        storage_amount = None
-        storage_unit = None
-        history_unit = unit
-
-        if item_type == 'container':
-            storage_amount = float(form_data.get('storage_amount', 0))
-            storage_unit = form_data.get('storage_unit', '')
-            unit = ''  # Containers don't have a unit on the item itself
-            history_unit = 'count'  # But history entries use 'count'
-        elif item_type == 'product':
-            history_unit = unit if unit else 'count'
-
-        # Create the inventory item
+        # Create the item (without initial quantity)
         item = InventoryItem(
             name=name,
-            quantity=0,  # Start at 0, will be updated by adjustment service
+            category_id=category_id if category_id else None,
+            quantity=0.0,  # Start with 0, we'll add stock separately
             unit=unit,
-            type=item_type,
             cost_per_unit=cost_per_unit,
             low_stock_threshold=low_stock_threshold,
+            type=item_type,
             is_perishable=is_perishable,
             shelf_life_days=shelf_life_days,
-            expiration_date=expiration_date,
-            storage_amount=storage_amount,
-            storage_unit=storage_unit,
-            organization_id=organization_id
+            organization_id=organization_id,
+            created_by=created_by
         )
 
         db.session.add(item)
         db.session.flush()  # Get the ID without committing
 
-        # Use initial stock handler directly to avoid circular import
-        from ._handlers import get_operation_handler
+        # Add initial stock if provided
+        initial_quantity = form_data.get('quantity')
+        if initial_quantity and float(initial_quantity) > 0:
+            quantity = float(initial_quantity)
 
-        notes = form_data.get('notes', '') or 'Initial stock creation'
+            # Call the initial stock handler directly (not through dispatcher)
+            success, message = handle_initial_stock(
+                item=item,
+                quantity=quantity,
+                change_type='initial_stock',
+                notes=f'Initial stock entry: {quantity}',
+                created_by=created_by,
+                cost_per_unit=cost_per_unit
+            )
 
-        success, message = handle_initial_stock(
-            item=item,
-            quantity=quantity,
-            unit=history_unit,
-            notes=notes,
-            created_by=created_by,
-            cost_override=cost_per_unit,
-            expiration_date=expiration_date,
-            shelf_life_days=shelf_life_days,
-            change_type='initial_stock'
-        )
-
-        if not success:
-            db.session.rollback()
-            return False, 'Error creating inventory item - FIFO sync failed', None
+            if not success:
+                db.session.rollback()
+                return False, f"Failed to add initial stock: {message}", None
 
         db.session.commit()
+        logger.info(f"Created inventory item {item.id} with initial stock {initial_quantity or 0}")
 
-        return True, 'Inventory item added successfully', item.id
-
-    except ValueError as e:
-        logger.error(f"ValueError in create_inventory_item: {str(e)}")
-        db.session.rollback()
-        return False, f'Invalid input values: {str(e)}', None
+        return True, "Item created successfully.", item.id
 
     except Exception as e:
-        logger.error(f"Unexpected error in create_inventory_item: {str(e)}")
         db.session.rollback()
-        return False, f'Error adding inventory item: {str(e)}', None
+        logger.error(f"Error creating inventory item: {e}", exc_info=True)
+        return False, f"Failed to create item: {str(e)}", None

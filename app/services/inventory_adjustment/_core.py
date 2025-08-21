@@ -1,91 +1,67 @@
-import inspect
+
 import logging
-from datetime import datetime
 from app.models import db, InventoryItem, UnifiedInventoryHistory
-from ._validation import validate_inventory_fifo_sync
-# Removed audit import - FIFO handles all history entries
 from ._handlers import get_operation_handler
+from ._validation import validate_inventory_fifo_sync
 
 logger = logging.getLogger(__name__)
 
-
-def process_inventory_adjustment(
-    item_id: int,
-    quantity: float,
-    change_type: str,
-    unit: str = None,
-    notes: str = None,
-    created_by: int = None,
-    cost_override: float = None,
-    custom_expiration_date=None,
-    custom_shelf_life_days: int = None,
-    **kwargs
-) -> tuple[bool, str]:
+def process_inventory_adjustment(item_id, change_type, quantity, **kwargs):
     """
-    THE CANONICAL DISPATCHER for all inventory adjustments.
-
-    Uses the Strategy Pattern to delegate work to specialist functions.
-    Each change_type maps to exactly one specialist function.
-
-    Returns: (success: bool, message: str)
+    Canonical entry point for all inventory adjustments.
+    This is the ONLY function that should be called by external code.
     """
-    caller_info = inspect.stack()[1]
-    caller_path = caller_info.filename.replace('/home/runner/workspace/', '')
-    caller_function = caller_info.function
+    logger.info(f"CANONICAL: item_id={item_id}, qty={quantity}, type={change_type}")
+    
+    item = db.session.get(InventoryItem, item_id)
+    if not item:
+        return False, "Inventory item not found."
 
-    logger.info(f"CANONICAL DISPATCHER: item_id={item_id}, quantity={quantity}, change_type={change_type}, caller={caller_path}:{caller_function}")
-
+    # Check if this is the first entry for this item
+    is_initial_stock = UnifiedInventoryHistory.query.filter_by(inventory_item_id=item.id).count() == 0
+    
+    # CRITICAL FIX: We check for initial stock but DO NOT mutate the change_type
+    # We route to initial_stock handler ONLY if it's the first entry, otherwise use original change_type
+    handler_type = 'initial_stock' if is_initial_stock else change_type
+    
+    handler = get_operation_handler(handler_type)
+    
+    if not handler:
+        return False, f"Unknown inventory change type: '{change_type}'"
+    
     try:
-        # Get the inventory item
-        item = db.session.get(InventoryItem, item_id)
-        if not item:
-            logger.error(f"Inventory item not found: {item_id}")
-            return False, "Inventory item not found"
-
-        # Check if this is initial stock (no existing history)
-        is_initial_stock = UnifiedInventoryHistory.query.filter_by(inventory_item_id=item.id).count() == 0
-
-        if is_initial_stock:
-            logger.info(f"INITIAL STOCK: Detected item {item_id} has no FIFO history, using initial_stock handler")
-            change_type = 'initial_stock'
-
-        # ========== THE REGISTRY DISPATCHER LOGIC ==========
-
-        # Get handler from the centralized registry
-        handler = get_operation_handler(change_type)
-
-        if not handler:
-            logger.error(f"Unknown inventory change type: '{change_type}'")
-            return False, f"Unknown inventory change type: '{change_type}'"
-
-        # 4. Dispatch the call
-        try:
-            success, message = handler(
-                item=item,
-                quantity=quantity,
-                notes=notes,
-                created_by=created_by,
-                cost_override=cost_override,
-                expiration_date=custom_expiration_date,
-                shelf_life_days=custom_shelf_life_days,
-                **kwargs
-            )
-
-            if success:
-                db.session.commit()
-                # Each handler is responsible for creating exactly one history record
-                # Core dispatcher should NOT create additional audit entries
-                return True, message
-            else:
-                db.session.rollback()
-                return False, message
-
-        except Exception as e:
+        # Pass the ORIGINAL change_type to the handler, not the mutated one
+        success, message = handler(
+            item=item, 
+            quantity=quantity, 
+            change_type=change_type,  # Original intent preserved
+            **kwargs
+        )
+        
+        if success:
+            db.session.commit()
+            logger.info(f"SUCCESS: {change_type} operation completed for item {item.id}")
+            return True, message
+        else:
             db.session.rollback()
-            logger.error(f"Error executing handler for {change_type} on item {item.id}: {e}")
-            return False, "A critical internal error occurred"
-
+            logger.error(f"FAILED: {change_type} operation failed for item {item.id}: {message}")
+            return False, message
+            
     except Exception as e:
-        logger.error(f"Error in process_inventory_adjustment: {str(e)}")
         db.session.rollback()
-        return False, str(e)
+        logger.error(f"Handler error for {change_type} on item {item.id}: {e}", exc_info=True)
+        return False, "A critical internal error occurred."
+
+# Backwards compatibility shims
+def InventoryAdjustmentService():
+    """Legacy compatibility shim"""
+    class Shim:
+        @staticmethod
+        def process_inventory_adjustment(*args, **kwargs):
+            return process_inventory_adjustment(*args, **kwargs)
+        
+        @staticmethod
+        def validate_inventory_fifo_sync(*args, **kwargs):
+            return validate_inventory_fifo_sync(*args, **kwargs)
+    
+    return Shim()
