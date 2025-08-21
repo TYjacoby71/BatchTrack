@@ -22,7 +22,7 @@ class DashboardAlertService:
     def get_dashboard_alerts(max_alerts: int = None, dismissed_alerts: list = None) -> Dict:
         """Get prioritized alerts for dashboard with cognitive load management"""
         import logging
-        
+
         # Get user preferences
         user_prefs = None
         if current_user and current_user.is_authenticated:
@@ -33,7 +33,7 @@ class DashboardAlertService:
 
         if max_alerts is None:
             max_alerts = 3  # Default fallback
-            
+
         logging.info(f"Getting dashboard alerts with max_alerts={max_alerts}")
 
         alerts = []
@@ -44,10 +44,10 @@ class DashboardAlertService:
         expiration_data = CombinedInventoryAlertService.get_expiration_alerts(
             days_ahead=expiration_days
         )
-        
+
         # CRITICAL: Expired items with remaining quantity - only if enabled (default to True if no prefs)
         show_expiration = (user_prefs.show_expiration_alerts if user_prefs else True)
-        
+
         # Debug logging
         logging.info(f"Expiration data: expired_total={expiration_data.get('expired_total', 'MISSING')}, expiring_soon_total={expiration_data.get('expiring_soon_total', 'MISSING')}")
         logging.info(f"User preferences: show_expiration={show_expiration if user_prefs else 'NO_PREFS'}")
@@ -202,7 +202,7 @@ class DashboardAlertService:
 
         # Debug total alerts before filtering
         logging.info(f"Total alerts before filtering: {len(alerts)}")
-        
+
         # Filter out dismissed alerts from this session
         if dismissed_alerts:
             logging.info(f"Dismissed alerts: {dismissed_alerts}")
@@ -250,7 +250,8 @@ class DashboardAlertService:
     @staticmethod
     def _get_stuck_batches() -> List:
         """Get batches that have been in progress for more than 24 hours"""
-        cutoff_time = datetime.utcnow() - timedelta(hours=24)
+        from ..utils.timezone_utils import TimezoneUtils
+        cutoff_time = TimezoneUtils.utc_now() - timedelta(hours=24)
         query = Batch.query.filter(
             Batch.status == 'in_progress',
             Batch.started_at < cutoff_time
@@ -273,7 +274,8 @@ class DashboardAlertService:
             with open(fault_file, 'r') as f:
                 faults = json.load(f)
 
-            cutoff_time = datetime.utcnow() - timedelta(hours=24)
+            from ..utils.timezone_utils import TimezoneUtils
+            cutoff_time = TimezoneUtils.utc_now() - timedelta(hours=24)
             recent_critical = 0
 
             for fault in faults:
