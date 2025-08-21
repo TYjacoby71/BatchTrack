@@ -80,7 +80,7 @@ def _handle_deductive_operation_internal(item, quantity, change_type, notes, cre
 
     This is the canonical deduction path that:
     1. Plans FIFO deduction from history entries
-    2. Executes the plan on FIFO entries  
+    2. Executes the plan on FIFO entries
     3. Consumes from lot objects in FIFO order
     4. Records audit trail
     5. Updates item quantity
