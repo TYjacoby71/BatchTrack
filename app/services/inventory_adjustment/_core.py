@@ -21,7 +21,7 @@ def process_inventory_adjustment(
     custom_expiration_date=None,
     custom_shelf_life_days: int = None,
     **kwargs
-) -> tuple:
+) -> tuple[bool, str]:
     """
     THE CANONICAL DISPATCHER for all inventory adjustments.
     
@@ -74,7 +74,9 @@ def process_inventory_adjustment(
             
             if success:
                 db.session.commit()
-                record_audit_entry(item_id, change_type, notes or f'{change_type}: {quantity}')
+                audit_success = record_audit_entry(item_id, change_type, notes or f'{change_type}: {quantity}')
+                if not audit_success:
+                    logger.warning(f"Audit entry failed for {change_type} on item {item_id}")
                 return True, message
             else:
                 db.session.rollback()

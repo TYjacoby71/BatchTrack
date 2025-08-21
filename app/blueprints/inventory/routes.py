@@ -183,73 +183,106 @@ def view_inventory(id):
 @inventory_bp.route('/add', methods=['POST'])
 @login_required
 def add_inventory():
-    """Thin controller - delegates to inventory creation service"""
+    """
+    INVENTORY CREATION Route - creates entirely new inventory items.
+    This is for adding new ingredients/containers (mangoes, oranges), NOT adjusting existing ones.
+    """
     try:
-        from app.services.inventory_adjustment import create_inventory_item
+        logger.info(f"CREATE NEW INVENTORY ITEM - User: {current_user.id}, Org: {current_user.organization_id}")
+        logger.info(f"Form data: {dict(request.form)}")
 
+        from app.services.inventory_adjustment import create_inventory_item
+        
         success, message, item_id = create_inventory_item(
             form_data=request.form.to_dict(),
             organization_id=current_user.organization_id,
             created_by=current_user.id
         )
 
-        flash(message, 'success' if success else 'error')
+        if success:
+            flash(f'New inventory item created: {message}', 'success')
+            if item_id:
+                return redirect(url_for('inventory.view_inventory', id=item_id))
+        else:
+            flash(f'Failed to create inventory item: {message}', 'error')
+            
         return redirect(url_for('inventory.list_inventory'))
 
     except Exception as e:
-        flash(f'Error adding inventory item: {str(e)}', 'error')
+        logger.error(f"Error in add_inventory route: {str(e)}")
+        flash(f'System error creating inventory: {str(e)}', 'error')
         return redirect(url_for('inventory.list_inventory'))
 
 @inventory_bp.route('/adjust/<int:item_id>', methods=['POST'])
 @login_required
 def adjust_inventory(item_id):
     """
-    A thin controller that delegates ALL adjustment logic to the canonical service.
-    This fixes the "initial stock" bug.
+    INVENTORY ADJUSTMENT Route - handles updates to existing inventory.
+    This is for adding/removing/spoiling existing items, NOT creating new items.
     """
-    item = db.session.get(InventoryItem, int(item_id))
-    if not item:
-        flash("Inventory item not found.", "error")
-        return redirect(url_for('.list_inventory'))
-
-    # Authority check
-    if not can_edit_inventory_item(item):
-        flash('Permission denied.', 'error')
-        return redirect(url_for('.list_inventory'))
-
-    # --- 1. Gather all data from the form ---
-    form_data = request.form
-    
-    # Debug: Log what we received
-    logger.info(f"Form data received: {dict(form_data)}")
-    
-    adjustment_type = form_data.get('change_type', '').strip().lower()
-    logger.info(f"Extracted change_type: '{adjustment_type}'")
-
     try:
-        quantity = float(form_data.get('quantity', 0.0))
-    except (ValueError, TypeError):
-        flash("Invalid quantity provided.", "error")
+        item = db.session.get(InventoryItem, int(item_id))
+        if not item:
+            flash("Inventory item not found.", "error")
+            return redirect(url_for('.list_inventory'))
+
+        # Authority check
+        if not can_edit_inventory_item(item):
+            flash('Permission denied.', 'error')
+            return redirect(url_for('.list_inventory'))
+
+        # Extract and validate form data
+        form_data = request.form
+        logger.info(f"ADJUST INVENTORY - Item: {item.name} (ID: {item_id})")
+        logger.info(f"Form data received: {dict(form_data)}")
+        
+        # Validate required fields
+        change_type = form_data.get('change_type', '').strip().lower()
+        if not change_type:
+            flash("Adjustment type is required.", "error")
+            return redirect(url_for('.view_inventory', id=item_id))
+
+        try:
+            quantity = float(form_data.get('quantity', 0.0))
+            if quantity <= 0:
+                flash("Quantity must be greater than 0.", "error")
+                return redirect(url_for('.view_inventory', id=item_id))
+        except (ValueError, TypeError):
+            flash("Invalid quantity provided.", "error")
+            return redirect(url_for('.view_inventory', id=item_id))
+
+        # Extract optional cost override
+        cost_override = None
+        if form_data.get('cost_per_unit'):
+            try:
+                cost_override = float(form_data.get('cost_per_unit'))
+            except (ValueError, TypeError):
+                flash("Invalid cost per unit provided.", "error")
+                return redirect(url_for('.view_inventory', id=item_id))
+
+        # Call the canonical inventory adjustment service
+        success, message = process_inventory_adjustment(
+            item_id=item.id,
+            quantity=quantity,
+            change_type=change_type,
+            notes=form_data.get('notes', ''),
+            unit=form_data.get('input_unit') or item.unit or 'count',
+            cost_override=cost_override,
+            created_by=current_user.id
+        )
+
+        # Flash result and redirect
+        if success:
+            flash(f'{change_type.title()} completed: {message}', 'success')
+        else:
+            flash(f'Adjustment failed: {message}', 'error')
+            
         return redirect(url_for('.view_inventory', id=item_id))
 
-    # --- 2. Call the ONE canonical service with all the data ---
-    success = process_inventory_adjustment(
-        item_id=item.id,
-        quantity=quantity,
-        change_type=adjustment_type,
-        notes=form_data.get('notes'),
-        unit=form_data.get('input_unit') or item.unit,
-        cost_override=float(form_data.get('cost_per_unit')) if form_data.get('cost_per_unit') else None,
-        expiration_date_str=form_data.get('expiration_date'),  # Let the service handle parsing
-        created_by=current_user.id
-    )
-
-    # --- 3. Flash the result and redirect ---
-    if success:
-        flash(f'{adjustment_type.title()} of {abs(quantity)} {form_data.get("input_unit") or item.unit} completed successfully', 'success')
-    else:
-        flash(f'Failed to {adjustment_type} inventory', 'error')
-    return redirect(url_for('.view_inventory', id=item_id))
+    except Exception as e:
+        logger.error(f"Error in adjust_inventory route: {str(e)}")
+        flash(f'System error during adjustment: {str(e)}', 'error')
+        return redirect(url_for('.view_inventory', id=item_id))
 
 
 @inventory_bp.route('/edit/<int:id>', methods=['POST'])
