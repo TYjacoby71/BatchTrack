@@ -11,7 +11,7 @@ from app.models import db
 
 logger = logging.getLogger(__name__)
 
-def handle_cost_override(item, quantity, change_type, notes=None, created_by=None, cost_override=None, custom_expiration_date=None, custom_shelf_life_days=None, customer=None, sale_price=None, order_id=None, target_quantity=None):
+def handle_cost_override(item, quantity, change_type, notes=None, created_by=None, cost_override=None, custom_expiration_date=None, custom_shelf_life_days=None, customer=None, sale_price=None, order_id=None, target_quantity=None, unit=None, **kwargs):
     """
     Handle cost override operations.
 
@@ -47,7 +47,7 @@ def handle_cost_override(item, quantity, change_type, notes=None, created_by=Non
         logger.error(f"COST OVERRIDE ERROR: {str(e)}")
         return False, str(e)
 
-def handle_unit_conversion(item, quantity, change_type, notes=None, created_by=None, cost_override=None, custom_expiration_date=None, custom_shelf_life_days=None, customer=None, sale_price=None, order_id=None, target_quantity=None):
+def handle_unit_conversion(item, quantity, change_type, notes=None, created_by=None, cost_override=None, custom_expiration_date=None, custom_shelf_life_days=None, customer=None, sale_price=None, order_id=None, target_quantity=None, unit=None, **kwargs):
     """
     Handle unit conversion operations.
 

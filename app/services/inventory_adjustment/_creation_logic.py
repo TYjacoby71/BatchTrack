@@ -4,7 +4,7 @@ from ._fifo_ops import _internal_add_fifo_entry_enhanced
 
 logger = logging.getLogger(__name__)
 
-def handle_initial_stock(item, quantity, change_type, notes=None, created_by=None, cost_override=None, custom_expiration_date=None, custom_shelf_life_days=None, customer=None, sale_price=None, order_id=None, target_quantity=None):
+def handle_initial_stock(item, quantity, change_type, notes=None, created_by=None, cost_override=None, custom_expiration_date=None, custom_shelf_life_days=None, customer=None, sale_price=None, order_id=None, target_quantity=None, unit=None, **kwargs):
     """
     Handle initial stock creation for new inventory items.
 
@@ -22,7 +22,7 @@ def handle_initial_stock(item, quantity, change_type, notes=None, created_by=Non
             item_id=item.id,
             quantity=quantity,
             change_type=change_type,  # Use the original change_type for history
-            unit=item.unit or 'count',
+            unit=unit or item.unit or 'count',
             notes=notes or f"Initial stock entry: {change_type}",
             cost_per_unit=cost_per_unit,
             created_by=created_by,
@@ -36,7 +36,7 @@ def handle_initial_stock(item, quantity, change_type, notes=None, created_by=Non
             item.quantity = float(quantity)
             db.session.add(item)
 
-            message = f"Initial stock: {quantity} {item.unit or 'units'} added"
+            message = f"Initial stock: {quantity} {unit or item.unit or 'units'} added"
             logger.info(f"INITIAL STOCK SUCCESS: {message} for item {item.id}")
             return True, message
         else:
@@ -102,7 +102,8 @@ def create_inventory_item(form_data, organization_id, created_by):
                 change_type='initial_stock',
                 notes=f'Initial stock entry: {quantity}',
                 created_by=created_by,
-                cost_override=cost_per_unit # Pass cost_per_unit as cost_override
+                cost_override=cost_per_unit, # Pass cost_per_unit as cost_override
+                unit=unit # Pass unit to the handler
             )
 
             if not success:
