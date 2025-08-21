@@ -9,7 +9,7 @@ def test_pos_sale_uses_canonical_service(app, db_session):
 
     # Create test data
     from app.models import Organization, User, SubscriptionTier
-    
+
     # Create required dependencies
     tier = SubscriptionTier(name="Test Tier", tier_type="monthly", user_limit=5)
     db_session.add(tier)
@@ -69,7 +69,7 @@ class TestPOSIntegrationCanonicalService:
     @patch('app.services.pos_integration.ReservationService')
     @patch('app.services.pos_integration.current_user')
     def test_reserve_inventory_calls_canonical_service(self, mock_user, mock_reservation_service, mock_item, mock_process):
-        """Test that inventory reservation calls process_inventory_adjustment"""
+        """Test that reserve_inventory calls process_inventory_adjustment"""
         # Mock the original inventory item
         mock_original_item = MagicMock()
         mock_original_item.id = 1

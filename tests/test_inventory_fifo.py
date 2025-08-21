@@ -48,7 +48,8 @@ class TestInventoryFIFOCharacterization:
 
             # Verify total by re-querying the item
             db_session.commit()
-            db_session.refresh(item)  # Refresh the existing item instead of re-querying
+            # Re-query to get fresh data instead of refreshing
+            item = db_session.get(InventoryItem, item.id)
             assert item.quantity == 150.0
 
             # Deduct and verify FIFO order
