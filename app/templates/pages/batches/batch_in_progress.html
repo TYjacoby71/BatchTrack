@@ -72,12 +72,18 @@
         showTimers: false, 
         showExtraItems: false,
         hasActiveTimers: {{ 'true' if timers and timers|selectattr('status', 'equalto', 'active')|list else 'false' }},
-        hasExtraItems: false
+        hasExtraItems: false,
+        toggleTimers() {
+            this.showTimers = !this.showTimers;
+        },
+        toggleExtraItems() {
+            this.showExtraItems = !this.showExtraItems;
+        }
     }">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h3>Batch Tools</h3>
             <div class="d-flex gap-2">
-                <button type="button" @click="showTimers = !showTimers" 
+                <button type="button" @click="toggleTimers()" 
                         class="btn btn-outline-primary btn-sm" 
                         :class="{ 'btn-primary text-white': showTimers }">
                     <i class="fas fa-clock"></i> Timers
@@ -85,7 +91,7 @@
                         {{ timers|selectattr('status', 'equalto', 'active')|list|length if timers else 0 }}
                     </span>
                 </button>
-                <button type="button" @click="showExtraItems = !showExtraItems" 
+                <button type="button" @click="toggleExtraItems()" 
                         class="btn btn-outline-secondary btn-sm"
                         :class="{ 'btn-secondary text-white': showExtraItems }">
                     <i class="fas fa-plus-circle"></i> Extra Items

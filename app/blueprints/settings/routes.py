@@ -19,20 +19,34 @@ def index():
     # Get or create user preferences
     user_prefs_obj = UserPreferences.get_for_user(current_user.id)
 
-    # Convert to dictionary for JSON serialization
-    user_prefs = {
-        'max_dashboard_alerts': user_prefs_obj.max_dashboard_alerts,
-        'show_expiration_alerts': user_prefs_obj.show_expiration_alerts,
-        'show_timer_alerts': user_prefs_obj.show_timer_alerts,
-        'show_timer_alerts': user_prefs_obj.show_timer_alerts,
-        'show_low_stock_alerts': user_prefs_obj.show_low_stock_alerts,
-        'show_batch_alerts': user_prefs_obj.show_batch_alerts,
-        'show_fault_alerts': user_prefs_obj.show_fault_alerts,
-        'show_alert_badges': user_prefs_obj.show_alert_badges,
-        'dashboard_layout': user_prefs_obj.dashboard_layout,
-        'compact_view': user_prefs_obj.compact_view,
-        'show_quick_actions': user_prefs_obj.show_quick_actions
-    }
+    # Convert to dictionary for JSON serialization - handle None for developers
+    if user_prefs_obj:
+        user_prefs = {
+            'max_dashboard_alerts': user_prefs_obj.max_dashboard_alerts,
+            'show_expiration_alerts': user_prefs_obj.show_expiration_alerts,
+            'show_timer_alerts': user_prefs_obj.show_timer_alerts,
+            'show_low_stock_alerts': user_prefs_obj.show_low_stock_alerts,
+            'show_batch_alerts': user_prefs_obj.show_batch_alerts,
+            'show_fault_alerts': user_prefs_obj.show_fault_alerts,
+            'show_alert_badges': user_prefs_obj.show_alert_badges,
+            'dashboard_layout': user_prefs_obj.dashboard_layout,
+            'compact_view': user_prefs_obj.compact_view,
+            'show_quick_actions': user_prefs_obj.show_quick_actions
+        }
+    else:
+        # Default preferences for developers or users without preferences
+        user_prefs = {
+            'max_dashboard_alerts': 3,
+            'show_expiration_alerts': True,
+            'show_timer_alerts': True,
+            'show_low_stock_alerts': True,
+            'show_batch_alerts': True,
+            'show_fault_alerts': True,
+            'show_alert_badges': True,
+            'dashboard_layout': 'standard',
+            'compact_view': False,
+            'show_quick_actions': True
+        }
 
     # Get organization info for org owners
     is_org_owner = current_user.organization and current_user.organization.owner and current_user.organization.owner.id == current_user.id
@@ -119,18 +133,34 @@ def get_user_preferences():
     """Get user preferences for current user"""
     try:
         user_prefs = UserPreferences.get_for_user(current_user.id)
-        return jsonify({
-            'max_dashboard_alerts': user_prefs.max_dashboard_alerts,
-            'show_expiration_alerts': user_prefs.show_expiration_alerts,
-            'show_timer_alerts': user_prefs.show_timer_alerts,
-            'show_low_stock_alerts': user_prefs.show_low_stock_alerts,
-            'show_batch_alerts': user_prefs.show_batch_alerts,
-            'show_fault_alerts': user_prefs.show_fault_alerts,
-            'show_alert_badges': user_prefs.show_alert_badges,
-            'dashboard_layout': user_prefs.dashboard_layout,
-            'compact_view': user_prefs.compact_view,
-            'show_quick_actions': user_prefs.show_quick_actions
-        })
+        
+        if user_prefs:
+            return jsonify({
+                'max_dashboard_alerts': user_prefs.max_dashboard_alerts,
+                'show_expiration_alerts': user_prefs.show_expiration_alerts,
+                'show_timer_alerts': user_prefs.show_timer_alerts,
+                'show_low_stock_alerts': user_prefs.show_low_stock_alerts,
+                'show_batch_alerts': user_prefs.show_batch_alerts,
+                'show_fault_alerts': user_prefs.show_fault_alerts,
+                'show_alert_badges': user_prefs.show_alert_badges,
+                'dashboard_layout': user_prefs.dashboard_layout,
+                'compact_view': user_prefs.compact_view,
+                'show_quick_actions': user_prefs.show_quick_actions
+            })
+        else:
+            # Return defaults for developers or users without preferences
+            return jsonify({
+                'max_dashboard_alerts': 3,
+                'show_expiration_alerts': True,
+                'show_timer_alerts': True,
+                'show_low_stock_alerts': True,
+                'show_batch_alerts': True,
+                'show_fault_alerts': True,
+                'show_alert_badges': True,
+                'dashboard_layout': 'standard',
+                'compact_view': False,
+                'show_quick_actions': True
+            })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -141,6 +171,10 @@ def update_user_preferences():
     try:
         data = request.get_json()
         user_prefs = UserPreferences.get_for_user(current_user.id)
+
+        # If no preferences exist (like for developers), don't try to update
+        if not user_prefs:
+            return jsonify({'success': False, 'message': 'User preferences not available for this user type'})
 
         # Update fields that are provided
         for key, value in data.items():
