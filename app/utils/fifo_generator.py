@@ -4,6 +4,9 @@
 import secrets
 import base64
 from datetime import datetime
+import time
+import random
+from typing import Dict
 
 BASE36_CHARS = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
@@ -190,7 +193,7 @@ def get_fifo_prefix(change_type, has_remaining_quantity):
             return 'LOT'  # Recount overflow creates a new lot
         else:
             return 'RCN'  # Recount deduction consumes existing lots
-    
+
     # For all other change types, use the standard mapping
     return get_change_type_prefix(change_type)
 
@@ -198,3 +201,13 @@ def get_fifo_prefix(change_type, has_remaining_quantity):
 def generate_fifo_id(change_type):
     """Legacy function - use generate_fifo_code instead"""
     return generate_fifo_code(change_type)
+
+def generate_fifo_code(change_type: str, item_id: int) -> str:
+    """Generate unique FIFO tracking code"""
+    prefix = get_change_type_prefix(change_type)
+    # Use higher precision timestamp + random component for uniqueness
+    timestamp_ms = int(time.time() * 1000000)  # microseconds for better uniqueness
+    timestamp_component = int_to_base36(timestamp_ms % 100000000)  # larger range
+    item_component = int_to_base36(item_id % 10000)  # larger item range
+    random_component = int_to_base36(random.randint(100, 999))  # add randomness
+    return f"{prefix}{timestamp_component}{item_component}{random_component}"

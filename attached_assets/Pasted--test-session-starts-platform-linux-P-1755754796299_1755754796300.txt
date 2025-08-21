@@ -1,0 +1,124 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.13, pytest-8.3.5, pluggy-1.5.0 -- /home/runner/workspace/.pythonlibs/bin/python
+cachedir: .pytest_cache
+rootdir: /home/runner/workspace
+collected 2 items                                                              
+
+tests/test_inventory_routes_canonicalization.py::TestInventoryRoutesCanonicalService::test_adjust_inventory_initial_stock_calls_canonical_service PASSED [ 50%]
+tests/test_inventory_routes_canonicalization.py::test_recount_adjustment_uses_canonical_service FAILED [100%]
+
+=================================== FAILURES ===================================
+________________ test_recount_adjustment_uses_canonical_service ________________
+
+client = <FlaskClient <Flask 'app'>>, app = <Flask 'app'>
+test_user = <User testuser_1755754775890808>
+
+    def test_recount_adjustment_uses_canonical_service(client, app, test_user):
+        """Test that inventory recount routes use the canonical adjustment service"""
+    
+        with app.app_context():
+            # Create test inventory item
+            item = InventoryItem(
+                name="Test Item",
+                quantity=100,
+                unit="count",
+                organization_id=test_user.organization_id
+            )
+            db.session.add(item)
+            db.session.commit()
+    
+            # Log in the user for the test
+            with client.session_transaction() as sess:
+                sess['_user_id'] = str(test_user.id)
+                sess['_fresh'] = True
+    
+            # Mock the canonical service at the route import path
+            with patch('app.blueprints.inventory.routes.process_inventory_adjustment') as mock_adjustment:
+                mock_adjustment.return_value = True
+    
+                # Make recount request
+                response = client.post(f'/inventory/adjust/{item.id}', data={
+                    'adjustment_type': 'recount',
+                    'quantity': '80',
+                    'notes': 'Physical count adjustment'
+                })
+    
+                # Verify canonical service was called
+>               mock_adjustment.assert_called_once()
+
+tests/test_inventory_routes_canonicalization.py:116: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <MagicMock name='process_inventory_adjustment' id='140500504952656'>
+
+    def assert_called_once(self):
+        """assert that the mock was called only once.
+        """
+        if not self.call_count == 1:
+            msg = ("Expected '%s' to have been called once. Called %s times.%s"
+                   % (self._mock_name or 'mock',
+                      self.call_count,
+                      self._calls_repr()))
+>           raise AssertionError(msg)
+E           AssertionError: Expected 'process_inventory_adjustment' to have been called once. Called 0 times.
+
+/nix/store/7d088dip86hlzri9sk0h78b63yfmx0a0-python3-3.11.13/lib/python3.11/unittest/mock.py:918: AssertionError
+---------------------------- Captured stdout setup -----------------------------
+
+=== Blueprint Registration Summary ===
+✅ Successful: 27
+   - Authentication
+   - Admin
+   - Developer
+   - Inventory
+   - Recipes
+   - Batches
+   - Organization
+   - Billing
+   - Settings
+   - Timers
+   - Expiration
+   - Conversion
+   - Products Main
+   - Product Inventory
+   - Reservations
+   - SKU Management
+   - Product Variants
+   - Product Alerts
+   - Public API
+   - Main API
+   - Stock API
+   - App Routes
+   - Legal Routes
+   - Bulk Stock
+   - Fault Log
+   - Tag Manager
+   - Waitlist
+
+🎉 All blueprints registered successfully!
+------------------------------ Captured log setup ------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+----------------------------- Captured stdout call -----------------------------
+--- EXECUTING CORRECT MIDDLEWARE ---
+MIDDLEWARE DEBUG: Processing POST /inventory/adjust/1, endpoint=inventory.adjust_inventory
+MIDDLEWARE DEBUG: User authenticated=True
+DEBUG: User 2, Org billing_status=active
+DEBUG: Tier exempt=True
+DEBUG: Tier is billing exempt, allowing access
+------------------------------ Captured log call -------------------------------
+INFO     app.blueprints.inventory.routes:routes.py:238 ADJUST INVENTORY - Item: Test Item (ID: 1)
+INFO     app.blueprints.inventory.routes:routes.py:239 Form data received: {'adjustment_type': 'recount', 'quantity': '80', 'notes': 'Physical count adjustment'}
+=============================== warnings summary ===============================
+tests/test_inventory_routes_canonicalization.py::TestInventoryRoutesCanonicalService::test_adjust_inventory_initial_stock_calls_canonical_service
+tests/test_inventory_routes_canonicalization.py::test_recount_adjustment_uses_canonical_service
+  /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_limiter/extension.py:333: UserWarning: Using the in-memory storage for tracking rate limits as no storage was explicitly specified. This is not recommended for production use. See: https://flask-limiter.readthedocs.io#configuring-a-storage-backend for documentation about configuring the storage backend.
+    warnings.warn(
+
+tests/test_inventory_routes_canonicalization.py::test_recount_adjustment_uses_canonical_service
+  /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_sqlalchemy/extension.py:881: SAWarning: Can't sort tables for DROP; an unresolvable foreign key dependency exists between tables: batch, product_sku; and backend does not support ALTER.  To restore at least a partial sort, apply use_alter=True to ForeignKey and ForeignKeyConstraint objects involved in the cycle to mark these as known cycles that will be ignored.
+    getattr(metadata, op_name)(bind=engine)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/test_inventory_routes_canonicalization.py::test_recount_adjustment_uses_canonical_service - AssertionError: Expected 'process_inventory_adjustment' to have been called...
+=================== 1 failed, 1 passed, 3 warnings in 7.60s ====================

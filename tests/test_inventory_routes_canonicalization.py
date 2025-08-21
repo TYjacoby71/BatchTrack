@@ -66,8 +66,10 @@ class TestInventoryRoutesCanonicalService:
 
                 # ACT
                 response = client.post(f'/inventory/adjust/{item.id}', data={
-                    'adjustment_type': 'restock',
+                    'change_type': 'restock',
                     'quantity': '100.0',
+                    'input_unit': 'g',
+                    'cost_entry_type': 'no_change',
                     'notes': 'Initial stock'
                 })
 
