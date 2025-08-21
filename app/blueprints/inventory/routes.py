@@ -362,6 +362,8 @@ def edit_inventory(id):
 
         # Check if this is a quantity recount (quantity field changed)
         new_quantity = form_data.get('quantity')
+        recount_performed = False
+        
         if new_quantity is not None and new_quantity != '':
             try:
                 target_quantity = float(new_quantity)
@@ -381,13 +383,19 @@ def edit_inventory(id):
                     return redirect(url_for('inventory.view_inventory', id=id))
                     
                 logger.info(f"RECOUNT SUCCESS: {message}")
+                recount_performed = True
                 
             except (ValueError, TypeError):
                 flash("Invalid quantity provided for recount.", "error")
                 return redirect(url_for('inventory.view_inventory', id=id))
 
         # Handle other field updates (name, cost, etc.) using the existing service
-        success, message = update_inventory_item(id, form_data)
+        # Remove quantity from form_data if recount was performed to avoid conflicts
+        update_form_data = form_data.copy()
+        if recount_performed:
+            update_form_data.pop('quantity', None)
+            
+        success, message = update_inventory_item(id, update_form_data)
         flash(message, 'success' if success else 'error')
         return redirect(url_for('inventory.view_inventory', id=id))
 
