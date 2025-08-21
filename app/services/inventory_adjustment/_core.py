@@ -1,4 +1,3 @@
-
 import inspect
 import logging
 from datetime import datetime
@@ -24,10 +23,10 @@ def process_inventory_adjustment(
 ) -> tuple[bool, str]:
     """
     THE CANONICAL DISPATCHER for all inventory adjustments.
-    
+
     Uses the Strategy Pattern to delegate work to specialist functions.
     Each change_type maps to exactly one specialist function.
-    
+
     Returns: (success: bool, message: str)
     """
     caller_info = inspect.stack()[1]
@@ -45,20 +44,20 @@ def process_inventory_adjustment(
 
         # Check if this is initial stock (no existing history)
         is_initial_stock = UnifiedInventoryHistory.query.filter_by(inventory_item_id=item.id).count() == 0
-        
+
         if is_initial_stock:
             logger.info(f"INITIAL STOCK: Detected item {item_id} has no FIFO history, using initial_stock handler")
             change_type = 'initial_stock'
 
         # ========== THE REGISTRY DISPATCHER LOGIC ==========
-        
+
         # Get handler from the centralized registry
         handler = get_operation_handler(change_type)
-        
+
         if not handler:
             logger.error(f"Unknown inventory change type: '{change_type}'")
             return False, f"Unknown inventory change type: '{change_type}'"
-            
+
         # 4. Dispatch the call
         try:
             success, message = handler(
@@ -67,11 +66,11 @@ def process_inventory_adjustment(
                 notes=notes,
                 created_by=created_by,
                 cost_override=cost_override,
-                custom_expiration_date=custom_expiration_date,
-                custom_shelf_life_days=custom_shelf_life_days,
+                expiration_date=custom_expiration_date,
+                shelf_life_days=custom_shelf_life_days,
                 **kwargs
             )
-            
+
             if success:
                 db.session.commit()
                 audit_success = record_audit_entry(item_id, change_type, notes or f'{change_type}: {quantity}')
@@ -81,7 +80,7 @@ def process_inventory_adjustment(
             else:
                 db.session.rollback()
                 return False, message
-                
+
         except Exception as e:
             db.session.rollback()
             logger.error(f"Error executing handler for {change_type} on item {item.id}: {e}")
