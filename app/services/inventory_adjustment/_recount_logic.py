@@ -111,7 +111,7 @@ def _handle_recount_increase(item, delta_needed, notes, created_by, **kwargs):
                         fifo_reference_id=lot.id,  # Reference the lot being refilled
                         notes=f'Recount refill to existing lot #{lot.id}: +{fill_amount}',
                         created_by=created_by
-                    )</refill_entry>
+                    )
                     
                     # Generate RCN code for recount operations that don't create lots
                     from app.utils.fifo_generator import generate_fifo_code
