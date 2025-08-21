@@ -23,7 +23,7 @@
 
       {% if item.quantity > 0 or history|length > 0 %}
         {% include "inventory/components/item_summary_card.html" %}
-        
+
         <!-- Expired Inventory Section -->
         {% if expired_entries and expired_entries|length > 0 %}
         <div class="card mb-3 border-warning">
@@ -72,9 +72,9 @@
           </div>
         </div>
         {% endif %}
-        
+
         {% include "inventory/components/adjustment_form.html" %}
-        
+
         <!-- FIFO Filter Toggle -->
         <div class="card mb-3">
           <div class="card-body">
@@ -89,7 +89,7 @@
             </div>
           </div>
         </div>
-        
+
         {% include "inventory/components/history_table.html" %}
       {% else %}
         <div class="alert alert-warning text-center">
@@ -117,11 +117,11 @@
           <h6>This item has no current inventory.</h6>
           <p>Please make the initial stock entry to begin tracking this item. This will create your first FIFO entry and allow you to manage inventory properly.</p>
         </div>
-        
+
         <form id="initialInventoryForm" method="POST" action="{{ url_for('inventory.adjust_inventory', id=item.id) }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <input type="hidden" name="change_type" value="restock">
-          
+
           <div class="row">
             <div class="col-md-6">
               <div class="form-group mb-3">
@@ -153,7 +153,7 @@
             <input type="hidden" name="input_unit" value="count">
             {% endif %}
           </div>
-          
+
           {% if item.type != 'container' %}
           <div class="row">
             <div class="col-md-6">
@@ -179,7 +179,7 @@
             </div>
           </div>
           {% endif %}
-          
+
           <div class="form-group mb-3">
             <label for="initial_notes" class="form-label">Notes</label>
             <textarea class="form-control" 
@@ -266,13 +266,13 @@ function getCSRFToken() {
     if (tokenMeta) {
         return tokenMeta.getAttribute('content');
     }
-    
+
     // Fallback: try to find it in forms
     const csrfInput = document.querySelector('input[name=csrf_token]');
     if (csrfInput) {
         return csrfInput.value;
     }
-    
+
     return '';
 }
 </script>
