@@ -38,19 +38,19 @@ class TestInventoryRoutesCanonicalService:
             # ARRANGE: Create a real, valid user and item for this test.
             # This is more robust than complex mocking.
             from app.models import db, InventoryItem, User, Organization, SubscriptionTier
-            
+
             tier = SubscriptionTier(name="Test Tier", tier_type="monthly", user_limit=5)
             db.session.add(tier)
             db.session.flush()
-            
+
             org = Organization(name="Test Org", billing_status='active', subscription_tier_id=tier.id)
             db.session.add(org)
             db.session.flush()
-            
+
             user = User(username="inventory_tester", email="inv@test.com", organization_id=org.id)
             db.session.add(user)
             db.session.flush()
-            
+
             item = InventoryItem(name="New Item", unit="g", organization_id=org.id)
             db.session.add(item)
             db.session.commit()
@@ -59,7 +59,7 @@ class TestInventoryRoutesCanonicalService:
             with client.session_transaction() as sess:
                 sess['_user_id'] = str(user.id)
                 sess['_fresh'] = True
-            
+
             # Patch only the canonical service, which is what we want to test.
             with patch('app.blueprints.inventory.routes.process_inventory_adjustment') as mock_process:
                 mock_process.return_value = (True, "Success")  # Return a tuple
@@ -76,7 +76,7 @@ class TestInventoryRoutesCanonicalService:
                 # ASSERT
                 # 1. The service was called exactly once.
                 mock_process.assert_called_once()
-                
+
                 # 2. The user was redirected back to the item page, indicating success.
                 assert response.status_code == 302
                 assert f'/inventory/view/{item.id}' in response.location
@@ -103,11 +103,11 @@ def test_recount_adjustment_uses_canonical_service(client, app, test_user):
 
         # Mock the canonical service at the route import path
         with patch('app.blueprints.inventory.routes.process_inventory_adjustment') as mock_adjustment:
-            mock_adjustment.return_value = True
+            mock_adjustment.return_value = (True, "Recount successful")
 
             # Make recount request
             response = client.post(f'/inventory/adjust/{item.id}', data={
-                'adjustment_type': 'recount',
+                'change_type': 'recount',
                 'quantity': '80',
                 'notes': 'Physical count adjustment'
             })
