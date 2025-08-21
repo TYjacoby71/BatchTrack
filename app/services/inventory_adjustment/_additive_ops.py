@@ -20,66 +20,74 @@ ADDITIVE_CONFIGS = {
 }
 
 def handle_additive_operation(item, quantity, change_type, notes=None, created_by=None, cost_override=None, **kwargs):
-    """Universal handler for all additive operations"""
+    """
+    Universal handler for all additive operations.
+    
+    Standardized pattern:
+    1. Validate operation type
+    2. Determine cost per unit based on config
+    3. Add FIFO entry
+    4. Return standardized message
+    """
     try:
         if change_type not in ADDITIVE_CONFIGS:
             return False, f"Unknown additive operation: {change_type}"
 
         config = ADDITIVE_CONFIGS[change_type]
 
-        # Determine cost per unit
+        # Standardized cost determination
         if config.get('use_cost_override') and cost_override is not None:
             cost_per_unit = cost_override
         else:
-            cost_per_unit = item.cost_per_unit
+            cost_per_unit = item.cost_per_unit or 0.0
 
+        # Standard FIFO entry creation
         success, error = _internal_add_fifo_entry_enhanced(
             item_id=item.id,
             quantity=quantity,
             change_type=change_type,
-            unit=getattr(item, 'unit', 'count'),
-            notes=notes,
+            unit=item.unit or 'count',
+            notes=notes or f"{config['message']} inventory",
             cost_per_unit=cost_per_unit,
             created_by=created_by,
             **kwargs
         )
 
         if success:
-            message = f"{config['message']} {quantity} {getattr(item, 'unit', 'units')}"
+            message = f"{config['message']} {quantity} {item.unit or 'units'}"
+            logger.info(f"ADDITIVE: {message} for item {item.id}")
             return True, message
-        return False, error
+        else:
+            logger.error(f"ADDITIVE: Failed {change_type} for item {item.id}: {error}")
+            return False, error
 
     except Exception as e:
-        logger.error(f"Error in additive operation {change_type}: {str(e)}")
+        logger.error(f"ADDITIVE: Error in {change_type} for item {item.id}: {str(e)}")
         return False, str(e)
 
 
 # Individual handler functions for each additive operation type
 def handle_restock(item, quantity, notes=None, created_by=None, cost_override=None, expiration_date=None, shelf_life_days=None, **kwargs):
     """Handle restock operations - creates both FIFO entry and lot object"""
-    from ._fifo_ops import _internal_add_fifo_entry_enhanced
-    from ._lot_ops import create_inventory_lot
-
     try:
-        # Create FIFO entry first
-        success, message = _internal_add_fifo_entry_enhanced(
-            item_id=item.id,
+        # Use standard additive operation first
+        success, message = handle_additive_operation(
+            item=item,
             quantity=quantity,
             change_type='restock',
-            unit=item.unit or 'count',
             notes=notes or 'Restocked inventory',
-            cost_per_unit=cost_override or item.cost_per_unit or 0.0,
             created_by=created_by,
+            cost_override=cost_override,
             expiration_date=expiration_date,
             shelf_life_days=shelf_life_days,
             **kwargs
         )
 
         if not success:
-            logger.error(f"RESTOCK: Failed to add FIFO entry: {message}")
             return False, message
 
-        # Create corresponding lot object
+        # Create corresponding lot object if restock succeeded
+        from ._lot_ops import create_inventory_lot
         lot_success, lot_message, lot = create_inventory_lot(
             item_id=item.id,
             quantity=quantity,
@@ -97,7 +105,6 @@ def handle_restock(item, quantity, notes=None, created_by=None, cost_override=No
             logger.warning(f"RESTOCK: FIFO entry created but lot creation failed: {lot_message}")
             # Continue anyway since FIFO entry was successful
 
-        logger.info(f"RESTOCK: Successfully added {quantity} {item.unit or 'units'} to item {item.id}")
         return True, message
 
     except Exception as e:
