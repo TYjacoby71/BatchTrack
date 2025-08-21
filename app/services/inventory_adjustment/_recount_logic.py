@@ -64,16 +64,4 @@ def handle_recount_adjustment_clean(item, quantity, notes=None, created_by=None,
         return False, str(e)
 
 
-# Keep the old function for backward compatibility during transition
-def handle_recount_adjustment(item_id, target_quantity, notes=None, created_by=None, item_type='ingredient'):
-    """Legacy function - redirects to new clean handler"""
-    item = InventoryItem.query.get(item_id)
-    if not item:
-        return False, "Item not found"
-        
-    return handle_recount_adjustment_clean(
-        item=item,
-        quantity=target_quantity,
-        notes=notes,
-        created_by=created_by
-    )
+
