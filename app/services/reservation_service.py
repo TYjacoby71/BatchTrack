@@ -36,7 +36,7 @@ class ReservationService:
         # NOTE: Audit entries are now automatically created by FIFO operations
         # The _release_reservation_inventory method above creates the history entry
         # No separate audit entry needed
-        return Trueue
+        return True
 
     @staticmethod
     def create_reservation(inventory_item_id, quantity, order_id, source_fifo_id, unit_cost, customer=None, sale_price=None, notes="", source="manual"):
