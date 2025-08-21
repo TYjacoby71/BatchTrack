@@ -17,9 +17,9 @@ class PerformanceMonitor:
         """Log queries that exceed threshold"""
         def decorator(func):
             @functools.wraps(func)
-            def wrapper(*args, **kwargs):
+            def wrapper(*args, **named_args):
                 start_time = time.time()
-                result = func(*args, **kwargs)
+                result = func(*args, **named_args)
                 duration = time.time() - start_time
                 
                 if duration > duration_threshold:
@@ -34,10 +34,10 @@ class PerformanceMonitor:
 def profile_route(func):
     """Profile route performance"""
     @functools.wraps(func)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args, **named_args):
         start_time = time.time()
         
-        result = func(*args, **kwargs)
+        result = func(*args, **named_args)
         
         duration = time.time() - start_time
         if duration > 1.0:  # Log routes taking > 1 second

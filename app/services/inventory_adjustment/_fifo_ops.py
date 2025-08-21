@@ -239,17 +239,15 @@ def _execute_deduction_plan_internal(deduction_plan, item_id):
         return False, str(e)
 
 
-def _record_deduction_plan_internal(item_id, deduction_plan, change_type, notes, created_by=None, **kwargs):
+def _record_deduction_plan_internal(item_id, deduction_plan, change_type, notes, created_by=None, fifo_reference_id=None):
     """Record individual deduction records for each lot consumed"""
     try:
         item = db.session.get(InventoryItem, item_id)
 
-        # Filter out invalid kwargs for UnifiedInventoryHistory
-        valid_kwargs = {}
-        valid_fields = {'fifo_reference_id'}
-        for key, value in kwargs.items():
-            if key in valid_fields:
-                valid_kwargs[key] = value
+        # Handle fifo_reference_id explicitly
+        reference_kwargs = {}
+        if fifo_reference_id is not None:
+            reference_kwargs['fifo_reference_id'] = fifo_reference_id
 
         # Create individual history record for each lot consumed
         for step in deduction_plan:
@@ -272,7 +270,7 @@ def _record_deduction_plan_internal(item_id, deduction_plan, change_type, notes,
                 unit_cost=consumed_lot.unit_cost if consumed_lot else (item.cost_per_unit or 0.0),
                 affected_lot_id=lot_id,  # This is the "credited/debited to" field
                 fifo_reference_id=lot_id,  # Reference to the lot being consumed
-                **valid_kwargs
+                **reference_kwargs
             )
 
             db.session.add(history_entry)

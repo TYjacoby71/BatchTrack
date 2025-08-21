@@ -75,7 +75,7 @@ def list_inventory():
                     UnifiedInventoryHistory.expiration_date < today
                 )
             ).all()
-            
+
             from app.models.inventory_lot import InventoryLot
             expired_lots = InventoryLot.query.filter(
                 and_(
@@ -85,7 +85,7 @@ def list_inventory():
                     InventoryLot.expiration_date < today
                 )
             ).all()
-            
+
             unified_expired_qty = sum(float(entry.remaining_quantity) for entry in expired_unified)
             lot_expired_qty = sum(float(entry.remaining_quantity) for entry in expired_lots)
             item.temp_expired_quantity = unified_expired_qty + lot_expired_qty
@@ -141,7 +141,7 @@ def view_inventory(id):
                 UnifiedInventoryHistory.expiration_date < today
             )
         ).all()
-        
+
         from app.models.inventory_lot import InventoryLot
         expired_lots_for_calc = InventoryLot.query.filter(
             and_(
@@ -151,7 +151,7 @@ def view_inventory(id):
                 InventoryLot.expiration_date < today
             )
         ).all()
-        
+
         unified_expired_qty = sum(float(entry.remaining_quantity) for entry in expired_unified_for_calc)
         lot_expired_qty = sum(float(entry.remaining_quantity) for entry in expired_lots_for_calc)
         item.temp_expired_quantity = unified_expired_qty + lot_expired_qty
@@ -191,7 +191,7 @@ def view_inventory(id):
                 UnifiedInventoryHistory.expiration_date < today
             )
         ).order_by(UnifiedInventoryHistory.expiration_date.asc()).all()
-        
+
         expired_lots = InventoryLot.query.filter(
             and_(
                 InventoryLot.inventory_item_id == id,
@@ -200,7 +200,7 @@ def view_inventory(id):
                 InventoryLot.expiration_date < today
             )
         ).order_by(InventoryLot.expiration_date.asc()).all()
-        
+
         # Combine both types of expired entries
         expired_entries = expired_unified + expired_lots
         expired_total = sum(float(entry.remaining_quantity) for entry in expired_entries)
@@ -304,16 +304,29 @@ def adjust_inventory(item_id):
                 flash("Invalid cost per unit provided.", "error")
                 return redirect(url_for('.view_inventory', id=item_id))
 
+        # Extract optional expiration date and shelf life
+        custom_expiration_date = form_data.get('custom_expiration_date')
+        custom_shelf_life_days = form_data.get('custom_shelf_life_days')
+
         # Call the canonical inventory adjustment service
         try:
+            # NOTE: The original 'unit' parameter was removed as it's not supported by process_inventory_adjustment.
+            # If a unit is needed for the adjustment, it should be handled within the services layer or passed differently.
+            notes = form_data.get('notes', '')
+            input_unit = form_data.get('input_unit') or item.unit or 'count' # Keep for logging context if needed, but not passed to service
+            logger.info(f"Attempting to adjust inventory for item {item.name} with quantity {quantity}, change type {change_type}, unit {input_unit}")
+
+
             success, message = process_inventory_adjustment(
                 item_id=item.id,
                 quantity=quantity,
                 change_type=change_type,
-                notes=form_data.get('notes', ''),
-                unit=form_data.get('input_unit') or item.unit or 'count',
+                notes=notes,
+                created_by=current_user.id,
                 cost_override=cost_override,
-                created_by=current_user.id
+                custom_expiration_date=custom_expiration_date,
+                custom_shelf_life_days=custom_shelf_life_days,
+                unit=input_unit
             )
 
             # Flash result and redirect
@@ -363,12 +376,12 @@ def edit_inventory(id):
         # Check if this is a quantity recount (quantity field changed)
         new_quantity = form_data.get('quantity')
         recount_performed = False
-        
+
         if new_quantity is not None and new_quantity != '':
             try:
                 target_quantity = float(new_quantity)
                 logger.info(f"QUANTITY RECOUNT: Target quantity {target_quantity} for item {item.name}")
-                
+
                 # Use canonical inventory adjustment service for recount
                 success, message = process_inventory_adjustment(
                     item_id=item.id,
@@ -377,14 +390,14 @@ def edit_inventory(id):
                     notes=f'Inventory recount via edit form - target: {target_quantity}',
                     created_by=current_user.id
                 )
-                
+
                 if not success:
                     flash(f'Recount failed: {message}', 'error')
                     return redirect(url_for('inventory.view_inventory', id=id))
-                    
+
                 logger.info(f"RECOUNT SUCCESS: {message}")
                 recount_performed = True
-                
+
             except (ValueError, TypeError):
                 flash("Invalid quantity provided for recount.", "error")
                 return redirect(url_for('inventory.view_inventory', id=id))
@@ -394,7 +407,7 @@ def edit_inventory(id):
         update_form_data = form_data.copy()
         if recount_performed:
             update_form_data.pop('quantity', None)
-            
+
         success, message = update_inventory_item(id, update_form_data)
         flash(message, 'success' if success else 'error')
         return redirect(url_for('inventory.view_inventory', id=id))

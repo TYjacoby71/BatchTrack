@@ -51,10 +51,10 @@ def require_permission(permission_name: str):
     """
     def decorator(f):
         @wraps(f)
-        def decorated_function(*args, **kwargs):
+        def decorated_function(*args, **named_args):
             # Skip permissions only if explicitly disabled
             if current_app.config.get('SKIP_PERMISSIONS'):
-                return f(*args, **kwargs)
+                return f(*args, **named_args)
 
             # Basic auth check - check authentication first
             if not current_user.is_authenticated:
@@ -67,11 +67,11 @@ def require_permission(permission_name: str):
             if current_user.user_type == 'developer':
                 # For developer permissions, just check if they're a developer
                 if permission_name.startswith('developer.'):
-                    return f(*args, **kwargs)
+                    return f(*args, **named_args)
 
             # Check if user has the permission using authorization hierarchy
             if has_permission(current_user, permission_name):
-                return f(*args, **kwargs)
+                return f(*args, **named_args)
 
             # Permission denied - return appropriate response
             if wants_json():
@@ -90,7 +90,7 @@ def any_permission_required(*permission_names):
     """Decorator that requires any one of the specified permissions"""
     def decorator(f):
         @wraps(f)
-        def decorated_function(*args, **kwargs):
+        def decorated_function(*args, **named_args):
             if not current_user or not current_user.is_authenticated:
                 if wants_json():
                     return jsonify({"error": "unauthorized"}), 401
@@ -106,7 +106,7 @@ def any_permission_required(*permission_names):
                     }), 403
                 raise Forbidden("You do not have any of the required permissions.")
 
-            return f(*args, **kwargs)
+            return f(*args, **named_args)
         return decorated_function
     return decorator
 
@@ -118,7 +118,7 @@ def tier_required(min_tier: str):
 
     def decorator(f):
         @wraps(f)
-        def decorated_function(*args, **kwargs):
+        def decorated_function(*args, **named_args):
             # Check if this should return JSON (API endpoints)
             wants_json_response = wants_json()
 
@@ -151,7 +151,7 @@ def tier_required(min_tier: str):
                     return jsonify(error="unknown_tier"), 403
                 raise Forbidden("Unknown subscription tier.")
 
-            return f(*args, **kwargs)
+            return f(*args, **named_args)
         return decorated_function
     return decorator
 
@@ -162,10 +162,10 @@ def role_required(*roles):
     """
     def decorator(f):
         @wraps(f)
-        def decorated_function(*args, **kwargs):
+        def decorated_function(*args, **named_args):
             # Allow everything during tests
             if current_app.config.get('TESTING', False):
-                return f(*args, **kwargs)
+                return f(*args, **named_args)
 
             # Basic auth check for non-test environments
             if not current_user.is_authenticated:
@@ -173,7 +173,7 @@ def role_required(*roles):
 
             # TODO: Implement proper role checking
             # For now, just check if user is authenticated
-            return f(*args, **kwargs)
+            return f(*args, **named_args)
         return decorated_function
     return decorator
 
@@ -516,8 +516,8 @@ def require_system_admin(f):
 def require_organization_owner(f):
     """Legacy compatibility - check in the function itself"""
     @wraps(f)
-    def decorated_function(*args, **kwargs):
+    def decorated_function(*args, **named_args):
         if not is_organization_owner():
             abort(403)
-        return f(*args, **kwargs)
+        return f(*args, **named_args)
     return decorated_function

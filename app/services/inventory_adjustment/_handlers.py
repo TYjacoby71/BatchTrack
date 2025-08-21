@@ -47,7 +47,7 @@ def get_operation_handler(change_type: str):
     Get the appropriate handler function for a given change_type.
 
     This registry maps change types to their specialist handler functions.
-    Each handler must accept (item, quantity, notes, created_by, **kwargs).
+    Each handler must accept explicit parameters: (item, quantity, change_type, notes, created_by, cost_override, custom_expiration_date, custom_shelf_life_days, customer, sale_price, order_id, target_quantity).
 
     Returns the handler function or None if not found.
     """

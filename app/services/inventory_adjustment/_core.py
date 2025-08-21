@@ -1,4 +1,3 @@
-
 import logging
 from app.models import db, InventoryItem, UnifiedInventoryHistory
 from ._handlers import get_operation_handler
@@ -6,34 +5,34 @@ from ._validation import validate_inventory_fifo_sync
 
 logger = logging.getLogger(__name__)
 
-def process_inventory_adjustment(item_id, change_type, quantity, notes=None, created_by=None, cost_override=None, custom_expiration_date=None, custom_shelf_life_days=None, customer=None, sale_price=None, order_id=None, target_quantity=None):
+def process_inventory_adjustment(item_id, change_type, quantity, notes=None, created_by=None, cost_override=None, custom_expiration_date=None, custom_shelf_life_days=None, customer=None, sale_price=None, order_id=None, target_quantity=None, unit=None):
     """
     Canonical entry point for all inventory adjustments.
     This is the ONLY function that should be called by external code.
     """
     logger.info(f"CANONICAL: item_id={item_id}, qty={quantity}, type={change_type}")
-    
+
     item = db.session.get(InventoryItem, item_id)
     if not item:
         return False, "Inventory item not found."
 
     # Check if this is the first entry for this item
     is_initial_stock = UnifiedInventoryHistory.query.filter_by(inventory_item_id=item.id).count() == 0
-    
+
     # CRITICAL FIX: We check for initial stock but DO NOT mutate the change_type
     # We route to initial_stock handler ONLY if it's the first entry, otherwise use original change_type
     handler_type = 'initial_stock' if is_initial_stock else change_type
-    
+
     handler = get_operation_handler(handler_type)
-    
+
     if not handler:
         return False, f"Unknown inventory change type: '{change_type}'"
-    
+
     try:
         # Pass explicit arguments to the handler
         success, message = handler(
-            item=item, 
-            quantity=quantity, 
+            item=item,
+            quantity=quantity,
             change_type=change_type,  # Original intent preserved
             notes=notes,
             created_by=created_by,
@@ -43,9 +42,10 @@ def process_inventory_adjustment(item_id, change_type, quantity, notes=None, cre
             customer=customer,
             sale_price=sale_price,
             order_id=order_id,
-            target_quantity=target_quantity
+            target_quantity=target_quantity,
+            unit=unit # Pass the unit parameter
         )
-        
+
         if success:
             db.session.commit()
             logger.info(f"SUCCESS: {change_type} operation completed for item {item.id}")
@@ -54,7 +54,7 @@ def process_inventory_adjustment(item_id, change_type, quantity, notes=None, cre
             db.session.rollback()
             logger.error(f"FAILED: {change_type} operation failed for item {item.id}: {message}")
             return False, message
-            
+
     except Exception as e:
         db.session.rollback()
         logger.error(f"Handler error for {change_type} on item {item.id}: {e}", exc_info=True)
@@ -65,11 +65,11 @@ def InventoryAdjustmentService():
     """Legacy compatibility shim"""
     class Shim:
         @staticmethod
-        def process_inventory_adjustment(*args, **kwargs):
-            return process_inventory_adjustment(*args, **kwargs)
-        
+        def process_inventory_adjustment(item_id, change_type, quantity, notes=None, created_by=None, cost_override=None, custom_expiration_date=None, custom_shelf_life_days=None, customer=None, sale_price=None, order_id=None, target_quantity=None, unit=None):
+            return process_inventory_adjustment(item_id, change_type, quantity, notes, created_by, cost_override, custom_expiration_date, custom_shelf_life_days, customer, sale_price, order_id, target_quantity, unit)
+
         @staticmethod
-        def validate_inventory_fifo_sync(*args, **kwargs):
-            return validate_inventory_fifo_sync(*args, **kwargs)
-    
+        def validate_inventory_fifo_sync(item_id, expected_quantity=None):
+            return validate_inventory_fifo_sync(item_id, expected_quantity)
+
     return Shim()
