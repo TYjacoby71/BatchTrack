@@ -1,147 +1,60 @@
+
 """
 Special Operations Handler
 
-Handles special operations that don't fit additive/deductive patterns, including recount.
+Handles special operations that don't fit the additive/deductive pattern
 """
 
 import logging
-from app.models import db, UnifiedInventoryHistory
-from ._operation_registry import get_operation_config, is_special_operation
-from ._fifo_ops import calculate_current_fifo_total
-from ._additive_ops import handle_additive_operation
-from ._deductive_ops import handle_deductive_operation
+from app.models import db
 
 logger = logging.getLogger(__name__)
 
-
 def handle_special_operation(item, quantity, change_type, notes=None, created_by=None, cost_override=None, **kwargs):
     """
-    Universal handler for all special operations using centralized registry.
+    Main handler for special operations that don't follow additive/deductive patterns
+    Routes to specific special operation handlers based on change_type
     """
     try:
-        if not is_special_operation(change_type):
-            return False, f"Not a special operation: {change_type}"
-
-        if change_type == 'recount':
-            return _handle_recount(item, quantity, notes, created_by, **kwargs)
-        elif change_type == 'cost_override':
-            return _handle_cost_override(item, cost_override)
+        if change_type == 'cost_override':
+            return handle_cost_override_special(item, quantity, notes, created_by, cost_override, **kwargs)
         elif change_type == 'unit_conversion':
-            return _handle_unit_conversion(item, **kwargs)
+            # Unit conversion is handled elsewhere, just return success
+            return True, f"Unit conversion handled"
         else:
+            logger.error(f"Unknown special operation type: {change_type}")
             return False, f"Unknown special operation: {change_type}"
-
+            
     except Exception as e:
-        logger.error(f"Error in special operation {change_type}: {str(e)}")
+        logger.error(f"Error in special operation handler: {str(e)}")
         return False, str(e)
 
 
-def _handle_recount(item, quantity, notes=None, created_by=None, **kwargs):
-    """
-    THE DEFINITIVE RECOUNT HANDLER implementing "True North" rules:
-
-    1. Input is absolute target quantity (not delta)
-    2. Calculate delta = target - current_fifo_total  
-    3. Positive delta = delegate to additive operations
-    4. Negative delta = delegate to deductive operations
-    5. Zero delta = log no-change event
-    6. Final item.quantity MUST match target exactly
-    """
+def handle_cost_override_special(item, quantity, notes=None, created_by=None, cost_override=None, **kwargs):
+    """Special handler for cost override (no quantity change)"""
     try:
-        # Rule #1: Input is absolute target quantity
-        target_quantity = float(quantity)
-
-        # Rule #2: Calculate delta from current FIFO total
-        current_fifo_total = calculate_current_fifo_total(item.id)
-        delta = target_quantity - current_fifo_total
-
-        logger.info(f"RECOUNT: {item.name} - Current FIFO: {current_fifo_total}, Target: {target_quantity}, Delta: {delta}")
-
-        # Rule #7: Handle no-change case gracefully
-        if abs(delta) < 0.001:
-            # Create audit trail for zero-change recount
-            history_entry = UnifiedInventoryHistory(
-                inventory_item_id=item.id,
-                organization_id=item.organization_id,
-                change_type='recount',
-                quantity_change=0.0,
-                remaining_quantity=0.0,
-                unit=getattr(item, 'unit', 'count'),
-                unit_cost=getattr(item, 'cost_per_unit', 0.0),
-                notes=f"{notes or 'Recount'} - No change needed (target matches current)",
-                created_by=created_by
-            )
-            db.session.add(history_entry)
-
-            # Rule #6: For no-change case, item.quantity should already match FIFO total
-            # Just verify they're in sync
-            if abs(current_fifo_total - item.quantity) > 0.001:
-                logger.warning(f"RECOUNT NO-CHANGE: Sync issue detected - FIFO: {current_fifo_total}, Item: {item.quantity}")
-                item.quantity = current_fifo_total  # Sync to FIFO as source of truth
-
-            return True, f"Inventory already at target quantity: {target_quantity}"
-
-        # Rule #3: Positive delta = delegate to additive operations
-        if delta > 0:
-            logger.info(f"RECOUNT INCREASE: Adding {delta} {getattr(item, 'unit', 'units')} to reach target")
-
-            success, message = handle_additive_operation(
-                item=item,
-                quantity=abs(delta),
-                change_type='recount',  # This will create proper audit trail
-                notes=f"{notes or 'Recount adjustment'} - target: {target_quantity} (+{delta})",
-                created_by=created_by,
-                **kwargs
-            )
-
-            if not success:
-                return False, f"Recount increase failed: {message}"
-
-            # Rule #6: FIFO operations should have synced the quantity automatically
-            # Verify the sync worked correctly
-            from ._fifo_ops import calculate_current_fifo_total
-            final_fifo_total = calculate_current_fifo_total(item.id)
-            
-            if abs(final_fifo_total - target_quantity) > 0.001:
-                logger.error(f"RECOUNT SYNC ERROR: FIFO total {final_fifo_total} != target {target_quantity}")
-                return False, f"FIFO sync failed after recount: expected {target_quantity}, got {final_fifo_total}"
-
-            return True, f"Recount added {delta} {getattr(item, 'unit', 'units')} to reach target {target_quantity}"
-
-        # Rule #4: Negative delta = delegate to deductive operations  
-        else:  # delta < 0
-            logger.info(f"RECOUNT DECREASE: Removing {abs(delta)} {getattr(item, 'unit', 'units')} to reach target")
-
-            success, message = handle_deductive_operation(
-                item=item,
-                quantity=abs(delta),
-                change_type='recount',  # This will create proper audit trail
-                notes=f"{notes or 'Recount adjustment'} - target: {target_quantity} ({delta})",
-                created_by=created_by,
-                **kwargs
-            )
-
-            if not success:
-                return False, f"Recount decrease failed: {message}"
-
-            # Rule #6: FIFO operations should have synced the quantity automatically
-            # Verify the sync worked correctly
-            from ._fifo_ops import calculate_current_fifo_total
-            final_fifo_total = calculate_current_fifo_total(item.id)
-            
-            if abs(final_fifo_total - target_quantity) > 0.001:
-                logger.error(f"RECOUNT SYNC ERROR: FIFO total {final_fifo_total} != target {target_quantity}")
-                return False, f"FIFO sync failed after recount: expected {target_quantity}, got {final_fifo_total}"
-
-            return True, f"Recount removed {abs(delta)} {getattr(item, 'unit', 'units')} to reach target {target_quantity}"
-
+        if cost_override is not None:
+            item.cost_per_unit = cost_override
+            db.session.commit()
+            return True, f"Updated cost to {cost_override}"
+        return False, "No cost override provided"
+        
     except Exception as e:
-        logger.error(f"RECOUNT ERROR: {str(e)}")
+        logger.error(f"Error in cost override: {str(e)}")
         return False, str(e)
+"""
+Special Operations Handler
 
+Handles special operations like cost_override and unit_conversion
+"""
 
-def _handle_cost_override(item, cost_override):
-    """Handle cost override (no quantity change)"""
+import logging
+from app.models import db
+
+logger = logging.getLogger(__name__)
+
+def handle_cost_override(item, quantity, notes=None, created_by=None, cost_override=None, **kwargs):
+    """Special handler for cost override (no quantity change)"""
     try:
         if cost_override is not None:
             item.cost_per_unit = cost_override
@@ -152,11 +65,11 @@ def _handle_cost_override(item, cost_override):
         logger.error(f"Error in cost override: {str(e)}")
         return False, str(e)
 
-
-def _handle_unit_conversion(item, **kwargs):
-    """Handle unit conversion"""
+def handle_unit_conversion(item, quantity, notes=None, created_by=None, **kwargs):
+    """Special handler for unit conversion"""
     try:
         # Unit conversion logic would go here
+        # For now, just return success
         return True, "Unit conversion completed"
     except Exception as e:
         logger.error(f"Error in unit conversion: {str(e)}")

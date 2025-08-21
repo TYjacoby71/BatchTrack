@@ -1,16 +1,10 @@
-"""
-Core Inventory Adjustment Service
-
-This is the CANONICAL entry point for all inventory changes.
-All inventory adjustments MUST go through process_inventory_adjustment().
-"""
-
-import logging
 import inspect
-from sqlalchemy.exc import SQLAlchemyError
+import logging
+from datetime import datetime
 from app.models import db, InventoryItem, UnifiedInventoryHistory
+from ._validation import validate_inventory_fifo_sync
+# Removed audit import - FIFO handles all history entries
 from ._handlers import get_operation_handler
-from ._operation_registry import validate_operation_type
 
 logger = logging.getLogger(__name__)
 
@@ -29,11 +23,15 @@ def process_inventory_adjustment(
 ) -> tuple[bool, str]:
     """
     THE CANONICAL DISPATCHER for all inventory adjustments.
-    Uses simplified handler system with centralized operation registry.
+
+    Uses the Strategy Pattern to delegate work to specialist functions.
+    Each change_type maps to exactly one specialist function.
+
+    Returns: (success: bool, message: str)
     """
     caller_info = inspect.stack()[1]
     caller_path = caller_info.filename.replace('/home/runner/workspace/', '')
-    caller_function = caller_info.function.replace('call_with_inventory_operation', 'inventory_operation') # Added to fix the name of the calling function
+    caller_function = caller_info.function
 
     logger.info(f"CANONICAL DISPATCHER: item_id={item_id}, quantity={quantity}, change_type={change_type}, caller={caller_path}:{caller_function}")
 
@@ -46,29 +44,25 @@ def process_inventory_adjustment(
 
         # Check if this is initial stock (no existing history)
         is_initial_stock = UnifiedInventoryHistory.query.filter_by(inventory_item_id=item.id).count() == 0
-        
-        # CRITICAL FIX: We determine the handler type but DO NOT mutate change_type when calling handler
-        handler_type = 'initial_stock' if is_initial_stock else change_type
 
-        # Validate operation type using centralized registry
-        if not validate_operation_type(handler_type): # Validate the determined handler type
-            logger.error(f"Unknown inventory change type: '{handler_type}' (original: '{change_type}')")
+        if is_initial_stock:
+            logger.info(f"INITIAL STOCK: Detected item {item_id} has no FIFO history, using initial_stock handler")
+            change_type = 'initial_stock'
+
+        # ========== THE REGISTRY DISPATCHER LOGIC ==========
+
+        # Get handler from the centralized registry
+        handler = get_operation_handler(change_type)
+
+        if not handler:
+            logger.error(f"Unknown inventory change type: '{change_type}'")
             return False, f"Unknown inventory change type: '{change_type}'"
 
-        # Get handler from simplified system
-        handler = get_operation_handler(handler_type)
-        if not handler:
-            logger.error(f"No handler found for change type: '{handler_type}'")
-            return False, f"No handler found for change type: '{change_type}'"
-
-        # Dispatch the call
+        # 4. Dispatch the call
         try:
-            # Pass the ORIGINAL change_type to the handler, not the mutated one
             success, message = handler(
                 item=item,
                 quantity=quantity,
-                change_type=change_type,  # Original change_type preserved
-                unit=unit,
                 notes=notes,
                 created_by=created_by,
                 cost_override=cost_override,
@@ -79,16 +73,16 @@ def process_inventory_adjustment(
 
             if success:
                 db.session.commit()
-                logger.info(f"Successfully processed {change_type} for item {item_id}")
+                # Each handler is responsible for creating exactly one history record
+                # Core dispatcher should NOT create additional audit entries
                 return True, message
             else:
                 db.session.rollback()
-                logger.warning(f"Handler failed for {change_type} on item {item_id}: {message}")
                 return False, message
 
         except Exception as e:
             db.session.rollback()
-            logger.error(f"Error executing handler for {change_type} on item {item.id}: {e}", exc_info=True)
+            logger.error(f"Error executing handler for {change_type} on item {item.id}: {e}")
             return False, "A critical internal error occurred"
 
     except Exception as e:
