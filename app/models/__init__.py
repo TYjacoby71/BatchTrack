@@ -66,5 +66,8 @@ except ImportError:
 # Import unified inventory history model
 from .unified_inventory_history import UnifiedInventoryHistory
 
+# Import inventory lot model 
+from .inventory_lot import InventoryLot
+
 # Make sure all exported symbols are available
 __all__ = list([k for k in globals().keys() if not k.startswith('_')])

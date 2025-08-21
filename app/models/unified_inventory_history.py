@@ -13,7 +13,7 @@ class UnifiedInventoryHistory(ScopedModelMixin, db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     inventory_item_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'), nullable=False, index=True)
-    timestamp = db.datetime(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
     change_type = db.Column(db.String(50), nullable=False, index=True)
     quantity_change = db.Column(db.Float, nullable=False)
     unit = db.Column(db.String(50), nullable=False)
@@ -61,6 +61,9 @@ class UnifiedInventoryHistory(ScopedModelMixin, db.Model):
     lot_number = db.Column(db.String(128), nullable=True)
     container_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'), nullable=True)
     fifo_source = db.Column(db.String(128), nullable=True)
+    
+    # Organization scoping
+    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=False)
 
     # Relationships
     inventory_item = db.relationship('InventoryItem', foreign_keys=[inventory_item_id], backref='unified_history')
