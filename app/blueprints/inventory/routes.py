@@ -13,6 +13,8 @@ from ...utils.unit_utils import get_global_unit_list
 from ...utils.fifo_generator import get_change_type_prefix, int_to_base36
 from sqlalchemy import and_, or_, func
 from sqlalchemy.orm import joinedload
+from app.models.inventory_lot import InventoryLot # Import InventoryLot
+from app.blueprints.fifo.services import FIFOService
 
 # Import the blueprint from __init__.py instead of creating a new one
 from . import inventory_bp
@@ -63,20 +65,10 @@ def list_inventory():
     for item in inventory_items:
         item.freshness_percent = ExpirationService.get_weighted_average_freshness(item.id)
 
-        # Calculate expired quantity using temporary attributes instead of properties
+        # Calculate expired quantity using only InventoryLot (lots handle FIFO tracking now)
         if item.is_perishable:
             today = datetime.now().date()
-            # Check both UnifiedInventoryHistory and InventoryLot for expired quantities
-            expired_unified = UnifiedInventoryHistory.query.filter(
-                and_(
-                    UnifiedInventoryHistory.inventory_item_id == item.id,
-                    UnifiedInventoryHistory.remaining_quantity > 0,
-                    UnifiedInventoryHistory.expiration_date != None,
-                    UnifiedInventoryHistory.expiration_date < today
-                )
-            ).all()
-
-            from app.models.inventory_lot import InventoryLot
+            # Only check InventoryLot for expired quantities
             expired_lots = InventoryLot.query.filter(
                 and_(
                     InventoryLot.inventory_item_id == item.id,
@@ -86,9 +78,7 @@ def list_inventory():
                 )
             ).all()
 
-            unified_expired_qty = sum(float(entry.remaining_quantity) for entry in expired_unified)
-            lot_expired_qty = sum(float(entry.remaining_quantity) for entry in expired_lots)
-            item.temp_expired_quantity = unified_expired_qty + lot_expired_qty
+            item.temp_expired_quantity = sum(float(lot.remaining_quantity) for lot in expired_lots)
             item.temp_available_quantity = float(item.quantity) - item.temp_expired_quantity
         else:
             item.temp_expired_quantity = 0
@@ -129,20 +119,10 @@ def view_inventory(id):
 
     item.freshness_percent = ExpirationService.get_weighted_average_freshness(item.id)
 
-    # Calculate expired quantity using temporary attributes
+    # Calculate expired quantity using only InventoryLot (lots handle FIFO tracking now)
     if item.is_perishable:
         today = datetime.now().date()
-        # Check both UnifiedInventoryHistory and InventoryLot for expired quantities
-        expired_unified_for_calc = UnifiedInventoryHistory.query.filter(
-            and_(
-                UnifiedInventoryHistory.inventory_item_id == item.id,
-                UnifiedInventoryHistory.remaining_quantity > 0,
-                UnifiedInventoryHistory.expiration_date != None,
-                UnifiedInventoryHistory.expiration_date < today
-            )
-        ).all()
-
-        from app.models.inventory_lot import InventoryLot
+        # Only check InventoryLot for expired quantities
         expired_lots_for_calc = InventoryLot.query.filter(
             and_(
                 InventoryLot.inventory_item_id == item.id,
@@ -152,9 +132,7 @@ def view_inventory(id):
             )
         ).all()
 
-        unified_expired_qty = sum(float(entry.remaining_quantity) for entry in expired_unified_for_calc)
-        lot_expired_qty = sum(float(entry.remaining_quantity) for entry in expired_lots_for_calc)
-        item.temp_expired_quantity = unified_expired_qty + lot_expired_qty
+        item.temp_expired_quantity = sum(float(lot.remaining_quantity) for lot in expired_lots_for_calc)
         item.temp_available_quantity = float(item.quantity) - item.temp_expired_quantity
     else:
         item.temp_expired_quantity = 0
@@ -171,34 +149,24 @@ def view_inventory(id):
         joinedload(UnifiedInventoryHistory.used_for_batch)
     )
 
-    # Apply FIFO filter at database level if requested
-    if fifo_filter:
-        history_query = history_query.filter(UnifiedInventoryHistory.remaining_quantity > 0)
-
+    # Lots: retrieve via FIFO service to preserve service authority
     history_query = history_query.order_by(UnifiedInventoryHistory.timestamp.desc())
+
     pagination = history_query.paginate(page=page, per_page=per_page, error_out=False)
     history = pagination.items
+    lots = FIFOService.get_active_lots(item_id=id, active_only=fifo_filter)
 
     from datetime import datetime
 
-    # Get expired FIFO entries for display
+    # Get expired FIFO entries for display (only from InventoryLot since lots handle FIFO tracking)
     from sqlalchemy import and_
-    from app.models.inventory_lot import InventoryLot
+    
     expired_entries = []
     expired_total = 0
     if item.is_perishable:
         today = datetime.now().date()
-        # Check both UnifiedInventoryHistory and InventoryLot for expired entries
-        expired_unified = UnifiedInventoryHistory.query.filter(
-            and_(
-                UnifiedInventoryHistory.inventory_item_id == id,
-                UnifiedInventoryHistory.remaining_quantity > 0,
-                UnifiedInventoryHistory.expiration_date != None,
-                UnifiedInventoryHistory.expiration_date < today
-            )
-        ).order_by(UnifiedInventoryHistory.expiration_date.asc()).all()
-
-        expired_lots = InventoryLot.query.filter(
+        # Only check InventoryLot for expired entries
+        expired_entries = InventoryLot.query.filter(
             and_(
                 InventoryLot.inventory_item_id == id,
                 InventoryLot.remaining_quantity > 0,
@@ -207,15 +175,14 @@ def view_inventory(id):
             )
         ).order_by(InventoryLot.expiration_date.asc()).all()
 
-        # Combine both types of expired entries
-        expired_entries = expired_unified + expired_lots
-        expired_total = sum(float(entry.remaining_quantity) for entry in expired_entries)
+        expired_total = sum(float(lot.remaining_quantity) for lot in expired_entries)
 
     from ...utils.timezone_utils import TimezoneUtils
     return render_template('pages/inventory/view.html',
                          abs=abs,
                          item=item,
                          history=history,
+                         lots=lots,
                          pagination=pagination,
                          expired_entries=expired_entries,
                          expired_total=expired_total,

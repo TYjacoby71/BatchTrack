@@ -4,6 +4,7 @@ This file now redirects all calls to the canonical inventory adjustment service.
 """
 
 from app.services.inventory_adjustment import process_inventory_adjustment
+from app.services.inventory_adjustment._fifo_ops import get_item_lots as _get_item_lots
 
 
 class FIFOService:
@@ -36,7 +37,23 @@ class FIFOService:
     def _internal_add_fifo_entry(inventory_item_id, quantity, change_type, notes="", unit=None, cost_per_unit=None, created_by=None, batch_id=None, expiration_date=None, shelf_life_days=None):
         """Legacy method - use process_inventory_adjustment instead"""
         from app.services.inventory_adjustment import _internal_add_fifo_entry_enhanced
-        return _internal_add_fifo_entry_enhanced(inventory_item_id, quantity, change_type, notes, unit, cost_per_unit, created_by, batch_id, expiration_date, shelf_life_days)
+        return _internal_add_fifo_entry_enhanced(
+            item_id=inventory_item_id,
+            quantity=quantity,
+            change_type=change_type,
+            unit=unit,
+            notes=notes,
+            cost_per_unit=cost_per_unit,
+            created_by=created_by,
+            custom_expiration_date=expiration_date,
+            custom_shelf_life_days=shelf_life_days,
+            batch_id=batch_id
+        )
+
+    @staticmethod
+    def get_active_lots(item_id: int, active_only: bool = True):
+        """Return lots for an item via FIFO service (authoritative source)."""
+        return _get_item_lots(item_id=item_id, active_only=active_only, order='desc')
 
 
 # Legacy function for backwards compatibility

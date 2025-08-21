@@ -4,7 +4,7 @@ This handler should work with the centralized quantity update system.
 """
 
 import logging
-from app.models import db, InventoryItem, IngredientCategory, Unit
+from app.models import db, InventoryItem, IngredientCategory, Unit, UnifiedInventoryHistory
 from ._fifo_ops import _internal_add_fifo_entry_enhanced
 
 logger = logging.getLogger(__name__)
@@ -95,71 +95,55 @@ def create_inventory_item(form_data, organization_id, created_by):
 def handle_initial_stock(item, quantity, change_type, notes=None, created_by=None, cost_override=None, custom_expiration_date=None, custom_shelf_life_days=None, **kwargs):
     """
     Handle the initial stock entry for a newly created item.
-    This creates ONLY an InventoryLot - no duplicate history entry.
-    The lot IS the inventory record.
+    This is called when an item gets its very first inventory.
+    Works just like any other lot creation - can be 0 or any positive value.
     Returns (success, message, quantity_delta) - does NOT modify item.quantity
     """
     try:
-        from app.models.inventory_lot import InventoryLot
-        from app.utils.fifo_generator import generate_fifo_code
-        from app.utils.timezone_utils import TimezoneUtils
-        from datetime import timedelta
-
-        logger.info(f"INITIAL_STOCK: Creating InventoryLot with {quantity} for item {item.id}")
+        logger.info(f"INITIAL_STOCK: Adding {quantity} to new item {item.id}")
 
         unit = kwargs.get('unit') or item.unit or 'count'
         final_cost = cost_override if cost_override is not None else item.cost_per_unit
 
-        # Calculate expiration if needed
-        final_expiration_date = None
-        final_shelf_life_days = None
-
-        if custom_expiration_date:
-            final_expiration_date = custom_expiration_date
-        elif item.is_perishable and item.shelf_life_days:
-            final_expiration_date = TimezoneUtils.utc_now() + timedelta(days=item.shelf_life_days)
-            final_shelf_life_days = item.shelf_life_days
-        elif custom_shelf_life_days and item.is_perishable:
-            final_expiration_date = TimezoneUtils.utc_now() + timedelta(days=custom_shelf_life_days)
-            final_shelf_life_days = custom_shelf_life_days
-
-        # Set shelf_life_days if item is perishable
-        if item.is_perishable:
-            final_shelf_life_days = final_shelf_life_days or item.shelf_life_days or custom_shelf_life_days
-
-        fifo_code = generate_fifo_code('initial_stock', item.id)
-
-        # Create ONLY the InventoryLot - this IS the inventory record
-        lot = InventoryLot(
-            inventory_item_id=item.id,
-            remaining_quantity=float(quantity),  # This is the actual available inventory
-            original_quantity=float(quantity),   # This is the lot's full capacity
+        # Create the initial FIFO entry - works for any quantity including 0
+        success, message, lot_id = _internal_add_fifo_entry_enhanced(
+            item_id=item.id,
+            quantity=quantity,
+            change_type='initial_stock',
             unit=unit,
-            unit_cost=float(final_cost),
-            received_date=TimezoneUtils.utc_now(),
-            expiration_date=final_expiration_date,
-            shelf_life_days=final_shelf_life_days,
-            source_type='initial_stock',
-            source_notes=notes or "Initial stock entry",
+            notes=notes or "Initial stock entry",
+            cost_per_unit=final_cost,
             created_by=created_by,
-            fifo_code=fifo_code,
-            batch_id=kwargs.get('batch_id'),
-            organization_id=item.organization_id
+            custom_expiration_date=custom_expiration_date,
+            custom_shelf_life_days=custom_shelf_life_days
         )
 
-        db.session.add(lot)
+        if not success:
+            return False, f"Failed to create initial stock entry: {message}", 0
 
-        logger.info(f"INITIAL_STOCK SUCCESS: Created InventoryLot {fifo_code} with capacity {quantity} {unit}")
+        # Create history event linked to created lot
+        history_event = UnifiedInventoryHistory(
+            inventory_item_id=item.id,
+            change_type='initial_stock',
+            quantity_change=float(quantity),
+            unit=unit,
+            unit_cost=float(final_cost) if final_cost is not None else 0.0,
+            notes=notes or "Initial stock entry",
+            created_by=created_by,
+            organization_id=item.organization_id,
+            affected_lot_id=lot_id
+        )
+        db.session.add(history_event)
 
-        # Return delta for core to apply
+        # Return delta for core to apply - works for 0 quantity too
         quantity_delta = float(quantity)
+        logger.info(f"INITIAL_STOCK SUCCESS: Will set item {item.id} quantity to {quantity}")
 
         if quantity == 0:
-            return True, f"Initial stock lot created with 0 {unit} capacity", quantity_delta
+            return True, f"Initial stock entry created with 0 {unit}", quantity_delta
         else:
-            return True, f"Initial stock lot created with {quantity} {unit} capacity", quantity_delta
+            return True, f"Initial stock of {quantity} {unit} added", quantity_delta
 
     except Exception as e:
         logger.error(f"Error in initial stock operation: {str(e)}")
-        db.session.rollback()
         return False, f"Initial stock failed: {str(e)}", 0

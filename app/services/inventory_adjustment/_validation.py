@@ -18,6 +18,7 @@ def validate_inventory_fifo_sync(item_id, item_type=None):
     lots = InventoryLot.query.filter(
         and_(
             InventoryLot.inventory_item_id == item_id,
+            InventoryLot.organization_id == item.organization_id,
             InventoryLot.remaining_quantity > 0
         )
     ).all()

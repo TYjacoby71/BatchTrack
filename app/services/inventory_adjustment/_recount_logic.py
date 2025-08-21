@@ -55,6 +55,39 @@ def handle_recount(item, quantity, change_type, notes=None, created_by=None, tar
 
         db.session.add(history_entry)
 
+        # Special-case: recount to zero must drain ALL lots regardless of desync
+        if target_qty == 0:
+            logger.info(f"RECOUNT: Target is zero; draining all lots for item {item.id}")
+            existing_lots = InventoryLot.query.filter(
+                and_(
+                    InventoryLot.inventory_item_id == item.id,
+                    InventoryLot.remaining_quantity > 0
+                )
+            ).order_by(InventoryLot.received_date.asc()).all()
+
+            for lot in existing_lots:
+                deducted = lot.remaining_quantity
+                lot.remaining_quantity = 0.0
+
+                deduction_entry = UnifiedInventoryHistory(
+                    inventory_item_id=item.id,
+                    change_type=change_type,
+                    quantity_change=-deducted,
+                    remaining_quantity=0,
+                    unit=lot.unit,
+                    unit_cost=lot.unit_cost,
+                    fifo_code=lot.fifo_code,
+                    notes=f"Recount to zero: drained lot {lot.fifo_code}",
+                    created_by=created_by,
+                    affected_lot_id=lot.id,
+                    organization_id=item.organization_id
+                )
+                db.session.add(deduction_entry)
+
+            # Core will set item.quantity = target_qty (0) afterwards
+            logger.info(f"RECOUNT: All lots drained for item {item.id}")
+            return True, f"Inventory recounted to {target_qty} and all lots drained"
+
         if delta < 0:
             # Need to remove inventory - deduct from existing lots or zero them
             abs_delta = abs(delta)
@@ -164,11 +197,11 @@ def handle_recount(item, quantity, change_type, notes=None, created_by=None, tar
                     db.session.add(addition_entry)
                     logger.info(f"RECOUNT: Refilled {fill_amount} to lot {lot.fifo_code}")
             
-            # If we still have quantity to add, create a new lot
+            # If we still have quantity to add, create a new lot for the overflow
             if remaining_to_add > 0:
                 logger.info(f"RECOUNT: Creating new lot for overflow: {remaining_to_add}")
                 
-                add_success, add_message = _internal_add_fifo_entry_enhanced(
+                add_success, add_message, new_lot_id = _internal_add_fifo_entry_enhanced(
                     item_id=item.id,
                     quantity=remaining_to_add,
                     change_type=change_type,  # Use original change_type (recount)
@@ -180,6 +213,22 @@ def handle_recount(item, quantity, change_type, notes=None, created_by=None, tar
                 
                 if not add_success:
                     return False, f"Failed to create recount overflow lot: {add_message}"
+
+                # Record the lot creation as an event linked to the lot
+                overflow_event = UnifiedInventoryHistory(
+                    inventory_item_id=item.id,
+                    change_type=change_type,
+                    quantity_change=remaining_to_add,
+                    remaining_quantity=0,
+                    unit=item.unit or 'count',
+                    unit_cost=item.cost_per_unit or 0.0,
+                    fifo_code=None,
+                    notes=f"Recount overflow lot created: +{remaining_to_add}",
+                    created_by=created_by,
+                    affected_lot_id=new_lot_id,
+                    organization_id=item.organization_id
+                )
+                db.session.add(overflow_event)
 
         # Return success - core will set the absolute quantity using target_quantity
         logger.info(f"RECOUNT SUCCESS: Item {item.id} FIFO reconciled for target {target_qty}")
