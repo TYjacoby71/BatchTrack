@@ -155,7 +155,9 @@ def view_inventory(id):
 
     pagination = history_query.paginate(page=page, per_page=per_page, error_out=False)
     history = pagination.items
-    lots = FIFOService.get_active_lots(item_id=id, active_only=fifo_filter)
+    # When FIFO toggle is ON, show ALL lots (including depleted ones)
+    # When FIFO toggle is OFF, show only active lots
+    lots = FIFOService.get_active_lots(item_id=id, active_only=not fifo_filter)
 
     from datetime import datetime
 
