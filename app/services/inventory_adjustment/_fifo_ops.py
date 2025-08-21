@@ -176,13 +176,14 @@ def _handle_deductive_operation_internal(item_id, quantity_to_deduct, change_typ
 
         # Handle remaining deduction for recount operations (force negative inventory)
         if remaining_to_deduct > 0 and is_recount:
-            logger.warning(f"RECOUNT FORCE: Creating phantom deduction for remaining {remaining_to_deduct} units")
+            phantom_amount = remaining_to_deduct
+            logger.warning(f"RECOUNT FORCE: Creating phantom deduction for remaining {phantom_amount} units")
             
             # Create a phantom deduction entry for the remaining amount
             phantom_entry = UnifiedInventoryHistory(
                 inventory_item_id=item_id,
                 change_type=change_type,
-                quantity_change=-remaining_to_deduct,
+                quantity_change=-phantom_amount,
                 remaining_quantity=0,
                 unit=item.unit if item.unit else 'count',
                 unit_cost=item.cost_per_unit or 0.0,
@@ -198,10 +199,10 @@ def _handle_deductive_operation_internal(item_id, quantity_to_deduct, change_typ
             )
             
             db.session.add(phantom_entry)
-            total_deducted += remaining_to_deduct
+            total_deducted += phantom_amount
             remaining_to_deduct = 0
             
-            logger.info(f"RECOUNT FORCE: Created phantom deduction for {remaining_to_deduct} units")
+            logger.info(f"RECOUNT FORCE: Created phantom deduction for {phantom_amount} units")
 
         # Check for insufficient inventory for non-recount operations
         if remaining_to_deduct > 0 and not is_recount:
