@@ -225,17 +225,13 @@ def get_sku_fifo_status(sku_id):
     ).order_by(UnifiedInventoryHistory.timestamp.asc()).all()
 
     # Get expired FIFO entries (frozen, with remaining quantity)
-    # NOTE: This query should likely use UnifiedInventoryHistory, not InventoryHistory as it currently does.
-    # If InventoryHistory is intended, it needs to be imported or aliased correctly.
-    # For now, assuming UnifiedInventoryHistory is intended for consistency.
-    expired_entries = UnifiedInventoryHistory.query.filter(
-        UnifiedInventoryHistory.inventory_item_id == inventory_item_id,
-        UnifiedInventoryHistory.remaining_quantity > 0,
-        UnifiedInventoryHistory.organization_id == current_user.organization_id,
-        UnifiedInventoryHistory.expiration_date.isnot(None),
-        UnifiedInventoryHistory.expiration_date < today
-    ).order_by(UnifiedInventoryHistory.timestamp.asc()).all()
-
+    expired_entries = InventoryHistory.query.filter(
+        InventoryHistory.inventory_item_id == inventory_item_id,
+        InventoryHistory.remaining_quantity > 0,
+        InventoryHistory.organization_id == current_user.organization_id,
+        InventoryHistory.expiration_date.isnot(None),
+        InventoryHistory.expiration_date < today
+    ).order_by(InventoryHistory.timestamp.asc()).all()
 
     fresh_total = sum(entry.remaining_quantity for entry in fresh_entries)
     expired_total = sum(entry.remaining_quantity for entry in expired_entries)
@@ -280,22 +276,19 @@ def dispose_expired_sku(sku_id):
     disposal_type = data.get('disposal_type', 'expired_disposal')
     notes = data.get('notes', 'Expired inventory disposal')
 
-    from ...models import InventoryHistory # Assuming InventoryHistory is still needed for this specific function
+    from ...models import InventoryHistory
     from datetime import datetime
 
     today = datetime.now().date()
     inventory_item_id = sku.inventory_item_id
 
     # Get all expired entries with remaining quantity
-    # NOTE: This query should likely use UnifiedInventoryHistory, not InventoryHistory as it currently does.
-    # If InventoryHistory is intended, it needs to be imported or aliased correctly.
-    # For now, assuming UnifiedInventoryHistory is intended for consistency.
-    expired_entries = UnifiedInventoryHistory.query.filter(
-        UnifiedInventoryHistory.inventory_item_id == inventory_item_id,
-        UnifiedInventoryHistory.remaining_quantity > 0,
-        UnifiedInventoryHistory.organization_id == current_user.organization_id,
-        UnifiedInventoryHistory.expiration_date.isnot(None),
-        UnifiedInventoryHistory.expiration_date < today
+    expired_entries = InventoryHistory.query.filter(
+        InventoryHistory.inventory_item_id == inventory_item_id,
+        InventoryHistory.remaining_quantity > 0,
+        InventoryHistory.organization_id == current_user.organization_id,
+        InventoryHistory.expiration_date.isnot(None),
+        InventoryHistory.expiration_date < today
     ).all()
 
     if not expired_entries:

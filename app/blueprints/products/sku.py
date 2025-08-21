@@ -3,6 +3,7 @@ from flask_login import login_required, current_user
 from sqlalchemy import and_, or_
 from datetime import datetime, timedelta
 from ...models import db, ProductSKU, UnifiedInventoryHistory, InventoryItem, Reservation
+from ...services.inventory_adjustment._audit import record_non_inventory_audit_entry
 from ...utils.unit_utils import get_global_unit_list
 from ...utils.timezone_utils import TimezoneUtils
 import logging
@@ -131,7 +132,7 @@ def edit_sku(inventory_item_id):
 # Legacy adjustment route removed - all adjustments must go through centralized service
 
 @sku_bp.route('/merge/select')
-@login_required
+@login_required  
 def select_skus_to_merge():
     """Select SKUs to merge - show all active SKUs"""
     skus = ProductSKU.query.join(
@@ -217,8 +218,8 @@ def execute_merge():
             return redirect(url_for('sku.select_skus_to_merge'))
 
         # Update target SKU attributes based on form selections
-        for attr in ['size_label', 'sku_code', 'sku_name', 'retail_price', 'wholesale_price',
-                     'low_stock_threshold', 'category', 'subcategory', 'description',
+        for attr in ['size_label', 'sku_code', 'sku_name', 'retail_price', 'wholesale_price', 
+                     'low_stock_threshold', 'category', 'subcategory', 'description', 
                      'location_name', 'barcode', 'shelf_life_days']:
             selected_sku_id = request.form.get(f'attr_{attr}')
             if selected_sku_id:
@@ -260,8 +261,6 @@ def execute_merge():
         merge_note = f"Merged SKUs: {', '.join(sku.sku_code for sku in source_skus)} into {target_sku.sku_code}"
 
         # Add adjustment record for the merge
-        # Assuming process_inventory_adjustment is available and handles UnifiedInventoryHistory updates
-        from ...services.inventory_adjustment import process_inventory_adjustment
         process_inventory_adjustment(
             item_id=target_sku.inventory_item_id,
             quantity=0,  # No quantity change, just record the merge
