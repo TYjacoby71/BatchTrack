@@ -21,7 +21,7 @@ def process_inventory_adjustment(
     custom_expiration_date=None,
     custom_shelf_life_days: int = None,
     **kwargs
-) -> tuple:
+) -> tuple[bool, str]:
     """
     THE CANONICAL DISPATCHER for all inventory adjustments.
     
