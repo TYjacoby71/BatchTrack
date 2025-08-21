@@ -257,11 +257,11 @@ def calculate_fifo_deduction_plan(item_id, quantity, change_type):
                     'deduct_quantity': deduct_from_lot,
                     'lot_remaining_before': lot.remaining_quantity,
                     'lot_remaining_after': lot.remaining_quantity - deduct_from_lot,
-                    'lot_change_type': lot.change_type,
-                    'lot_timestamp': lot.timestamp
+                    'lot_change_type': lot.source_type,
+                    'lot_timestamp': lot.received_date
                 })
                 remaining_to_deduct -= deduct_from_lot
-                logger.info(f"DEDUCTION PLAN: Will consume {deduct_from_lot} from lot {lot.id} ({lot.change_type}, {lot.timestamp})")
+                logger.info(f"DEDUCTION PLAN: Will consume {deduct_from_lot} from lot {lot.id} ({lot.source_type}, {lot.received_date})")
 
         logger.info(f"DEDUCTION PLAN: Created plan consuming from {len(deduction_plan)} lots")
         return deduction_plan, None
@@ -281,7 +281,7 @@ def execute_fifo_deduction_plan(deduction_plan, item_id):
             lot_id = step['lot_id']
             deduct_quantity = step['deduct_quantity']
 
-            lot = db.session.get(InventoryLot, lot_id) # Changed to InventoryLot
+            lot = db.session.get(InventoryLot, lot_id)
             if lot:
                 old_remaining = lot.remaining_quantity
                 lot.remaining_quantity -= deduct_quantity
@@ -297,14 +297,14 @@ def execute_fifo_deduction_plan(deduction_plan, item_id):
         return False, str(e)
 
 
-def record_fifo_deduction_audit_trail(item_id, deduction_plan, change_type, notes, created_by=None, fifo_reference_id=None):
+def create_fifo_deduction_audit_trail(item_id, deduction_plan, change_type, notes, created_by=None, fifo_reference_id=None):
     """
     Create audit trail records for each lot consumed in a FIFO deduction.
     This provides detailed tracking of exactly which lots were affected.
     """
     try:
         item = db.session.get(InventoryItem, item_id)
-        organization_id = item.organization_id # Get organization_id from item
+        organization_id = item.organization_id
 
         # Handle fifo_reference_id explicitly
         reference_kwargs = {}
@@ -317,7 +317,7 @@ def record_fifo_deduction_audit_trail(item_id, deduction_plan, change_type, note
             deduct_quantity = step['deduct_quantity']
 
             # Get the lot being consumed to get its details
-            consumed_lot = db.session.get(InventoryLot, lot_id) # Changed to InventoryLot
+            consumed_lot = db.session.get(InventoryLot, lot_id)
 
             history_record = UnifiedInventoryHistory(
                 inventory_item_id=item_id,
@@ -328,7 +328,7 @@ def record_fifo_deduction_audit_trail(item_id, deduction_plan, change_type, note
                 notes=notes,
                 created_by=created_by,
                 organization_id=organization_id,
-                is_perishable=consumed_lot.is_perishable,
+                is_perishable=consumed_lot.expiration_date is not None,
                 expiration_date=consumed_lot.expiration_date,
                 shelf_life_days=consumed_lot.shelf_life_days,
                 affected_lot_id=lot_id,  # Link to the lot being consumed
@@ -352,7 +352,6 @@ def calculate_total_available_inventory(item_id):
     """
     from app.models.inventory_lot import InventoryLot
 
-    # Use InventoryLot instead of deprecated UnifiedInventoryHistory remaining_quantity
     lots = InventoryLot.query.filter(
         and_(
             InventoryLot.inventory_item_id == item_id,
@@ -369,15 +368,17 @@ def credit_back_to_specific_lot(lot_id, quantity, notes=None, created_by=None):
     Used for reservation releases, returns, and corrections.
     """
     try:
-        entry = db.session.get(InventoryLot, lot_id) # Changed to InventoryLot
-        if not entry:
+        from app.models.inventory_lot import InventoryLot
+        
+        lot = db.session.get(InventoryLot, lot_id)
+        if not lot:
             return False, "FIFO lot not found"
 
         # Add back to the specific lot
-        entry.remaining_quantity = float(entry.remaining_quantity) + float(quantity)
+        lot.remaining_quantity = float(lot.remaining_quantity) + float(quantity)
 
         # Update item quantity
-        item = InventoryItem.query.get(entry.inventory_item_id)
+        item = InventoryItem.query.get(lot.inventory_item_id)
         if item:
             item.quantity = float(item.quantity) + float(quantity)
 
@@ -387,33 +388,3 @@ def credit_back_to_specific_lot(lot_id, quantity, notes=None, created_by=None):
     except Exception as e:
         db.session.rollback()
         return False, f"Error crediting lot: {str(e)}"
-
-
-# Legacy compatibility - maintain old function names but delegate to new ones
-def _internal_add_fifo_entry_enhanced(*args, **kwargs):
-    """Legacy function name - use create_new_fifo_lot instead"""
-    return create_new_fifo_lot(*args, **kwargs)
-
-def _handle_deductive_operation_internal(*args, **kwargs):
-    """Legacy function name - use process_fifo_deduction instead"""
-    return process_fifo_deduction(*args, **kwargs)
-
-def _calculate_deduction_plan_internal(*args, **kwargs):
-    """Legacy function name - use calculate_fifo_deduction_plan instead"""
-    return calculate_fifo_deduction_plan(*args, **kwargs)
-
-def _execute_deduction_plan_internal(*args, **kwargs):
-    """Legacy function name - use execute_fifo_deduction_plan instead"""
-    return execute_fifo_deduction_plan(*args, **kwargs)
-
-def _record_deduction_plan_internal(*args, **kwargs):
-    """Legacy function name - use record_fifo_deduction_audit_trail instead"""
-    return record_fifo_deduction_audit_trail(*args, **kwargs)
-
-def calculate_current_fifo_total(*args, **kwargs):
-    """Legacy function name - use calculate_total_available_inventory instead"""
-    return calculate_total_available_inventory(*args, **kwargs)
-
-def credit_specific_lot(*args, **kwargs):
-    """Legacy function name - use credit_back_to_specific_lot instead"""
-    return credit_back_to_specific_lot(*args, **kwargs)

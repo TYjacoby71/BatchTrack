@@ -105,7 +105,7 @@ def _handle_lot_creation_operation(item, quantity, change_type, unit, notes, fin
     kwargs.pop('unit', None)
     
     # Create FIFO entry (lot) with proper source tracking
-    success, message, lot_id = _internal_add_fifo_entry_enhanced(
+    success, message, lot_id = create_new_fifo_lot(
         item_id=item.id,
         quantity=quantity,
         change_type=change_type,
