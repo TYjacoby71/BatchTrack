@@ -55,6 +55,39 @@ def handle_recount(item, quantity, change_type, notes=None, created_by=None, tar
 
         db.session.add(history_entry)
 
+        # Special-case: recount to zero must drain ALL lots regardless of desync
+        if target_qty == 0:
+            logger.info(f"RECOUNT: Target is zero; draining all lots for item {item.id}")
+            existing_lots = InventoryLot.query.filter(
+                and_(
+                    InventoryLot.inventory_item_id == item.id,
+                    InventoryLot.remaining_quantity > 0
+                )
+            ).order_by(InventoryLot.received_date.asc()).all()
+
+            for lot in existing_lots:
+                deducted = lot.remaining_quantity
+                lot.remaining_quantity = 0.0
+
+                deduction_entry = UnifiedInventoryHistory(
+                    inventory_item_id=item.id,
+                    change_type=change_type,
+                    quantity_change=-deducted,
+                    remaining_quantity=0,
+                    unit=lot.unit,
+                    unit_cost=lot.unit_cost,
+                    fifo_code=lot.fifo_code,
+                    notes=f"Recount to zero: drained lot {lot.fifo_code}",
+                    created_by=created_by,
+                    affected_lot_id=lot.id,
+                    organization_id=item.organization_id
+                )
+                db.session.add(deduction_entry)
+
+            # Core will set item.quantity = target_qty (0) afterwards
+            logger.info(f"RECOUNT: All lots drained for item {item.id}")
+            return True, f"Inventory recounted to {target_qty} and all lots drained"
+
         if delta < 0:
             # Need to remove inventory - deduct from existing lots or zero them
             abs_delta = abs(delta)

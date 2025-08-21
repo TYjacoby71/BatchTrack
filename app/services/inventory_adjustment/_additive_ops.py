@@ -76,7 +76,7 @@ def handle_manual_addition(item, quantity, change_type, notes=None, created_by=N
         unit = kwargs.get('unit') or item.unit or 'count'
         final_cost = cost_override if cost_override is not None else item.cost_per_unit
 
-        success, message = _internal_add_fifo_entry_enhanced(
+        success, message, lot_id = _internal_add_fifo_entry_enhanced(
             item_id=item.id,
             quantity=quantity,
             change_type=change_type,
@@ -90,6 +90,21 @@ def handle_manual_addition(item, quantity, change_type, notes=None, created_by=N
 
         if not success:
             return False, f"Failed to create FIFO entry: {message}", 0
+
+        # Record event linked to created lot
+        history_event = UnifiedInventoryHistory(
+            inventory_item_id=item.id,
+            change_type=change_type,
+            quantity_change=float(quantity),
+            unit=unit,
+            unit_cost=float(final_cost) if final_cost is not None else 0.0,
+            notes=notes,
+            created_by=created_by,
+            organization_id=item.organization_id,
+            affected_lot_id=lot_id,
+            fifo_code=None
+        )
+        db.session.add(history_event)
 
         quantity_delta = float(quantity)
         return True, f"Manual addition of {quantity} {unit}", quantity_delta
@@ -109,7 +124,7 @@ def handle_returned(item, quantity, change_type, notes=None, created_by=None, co
         unit = kwargs.get('unit') or item.unit or 'count'
         final_cost = cost_override if cost_override is not None else item.cost_per_unit
 
-        success, message = _internal_add_fifo_entry_enhanced(
+        success, message, lot_id = _internal_add_fifo_entry_enhanced(
             item_id=item.id,
             quantity=quantity,
             change_type=change_type,
@@ -123,6 +138,21 @@ def handle_returned(item, quantity, change_type, notes=None, created_by=None, co
 
         if not success:
             return False, f"Failed to create FIFO entry: {message}", 0
+
+        # Event
+        history_event = UnifiedInventoryHistory(
+            inventory_item_id=item.id,
+            change_type=change_type,
+            quantity_change=float(quantity),
+            unit=unit,
+            unit_cost=float(final_cost) if final_cost is not None else 0.0,
+            notes=notes,
+            created_by=created_by,
+            organization_id=item.organization_id,
+            affected_lot_id=lot_id,
+            fifo_code=None
+        )
+        db.session.add(history_event)
 
         quantity_delta = float(quantity)
         return True, f"Returned {quantity} {unit} to inventory", quantity_delta
@@ -142,7 +172,7 @@ def handle_refunded(item, quantity, change_type, notes=None, created_by=None, co
         unit = kwargs.get('unit') or item.unit or 'count'
         final_cost = cost_override if cost_override is not None else item.cost_per_unit
 
-        success, message = _internal_add_fifo_entry_enhanced(
+        success, message, lot_id = _internal_add_fifo_entry_enhanced(
             item_id=item.id,
             quantity=quantity,
             change_type=change_type,
@@ -156,6 +186,21 @@ def handle_refunded(item, quantity, change_type, notes=None, created_by=None, co
 
         if not success:
             return False, f"Failed to create FIFO entry: {message}", 0
+
+        # Event
+        history_event = UnifiedInventoryHistory(
+            inventory_item_id=item.id,
+            change_type=change_type,
+            quantity_change=float(quantity),
+            unit=unit,
+            unit_cost=float(final_cost) if final_cost is not None else 0.0,
+            notes=notes,
+            created_by=created_by,
+            organization_id=item.organization_id,
+            affected_lot_id=lot_id,
+            fifo_code=None
+        )
+        db.session.add(history_event)
 
         quantity_delta = float(quantity)
         return True, f"Refunded {quantity} {unit} added to inventory", quantity_delta
@@ -175,7 +220,7 @@ def handle_finished_batch(item, quantity, change_type, notes=None, created_by=No
         unit = kwargs.get('unit') or item.unit or 'count'
         final_cost = cost_override if cost_override is not None else item.cost_per_unit
 
-        success, message = _internal_add_fifo_entry_enhanced(
+        success, message, lot_id = _internal_add_fifo_entry_enhanced(
             item_id=item.id,
             quantity=quantity,
             change_type=change_type,
@@ -189,6 +234,21 @@ def handle_finished_batch(item, quantity, change_type, notes=None, created_by=No
 
         if not success:
             return False, f"Failed to create FIFO entry: {message}", 0
+
+        # Event
+        history_event = UnifiedInventoryHistory(
+            inventory_item_id=item.id,
+            change_type=change_type,
+            quantity_change=float(quantity),
+            unit=unit,
+            unit_cost=float(final_cost) if final_cost is not None else 0.0,
+            notes=notes,
+            created_by=created_by,
+            organization_id=item.organization_id,
+            affected_lot_id=lot_id,
+            fifo_code=None
+        )
+        db.session.add(history_event)
 
         quantity_delta = float(quantity)
         return True, f"Finished batch added {quantity} {unit}", quantity_delta

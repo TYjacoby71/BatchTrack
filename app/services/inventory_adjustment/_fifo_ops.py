@@ -8,7 +8,7 @@ from sqlalchemy import and_
 logger = logging.getLogger(__name__)
 
 
-def _internal_add_fifo_entry_enhanced(item_id, quantity, change_type, unit, notes=None, cost_per_unit=None, created_by=None, custom_expiration_date=None, custom_shelf_life_days=None, **kwargs):
+def _internal_add_fifo_entry_enhanced(item_id, quantity, change_type, unit=None, notes=None, cost_per_unit=None, created_by=None, custom_expiration_date=None, custom_shelf_life_days=None, **kwargs):
     """
     Enhanced FIFO entry creation with proper lot tracking
     """

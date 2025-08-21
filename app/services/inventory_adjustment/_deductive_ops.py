@@ -4,7 +4,7 @@ Simplified to use single handler with operation-specific notes.
 """
 
 import logging
-from app.models import db, UnifiedInventoryHistory
+from app.models import db
 from ._fifo_ops import _handle_deductive_operation_internal
 
 logger = logging.getLogger(__name__)
@@ -56,19 +56,6 @@ def _handle_deductive_operation(item, quantity, change_type, notes=None, created
 
         if not success:
             return False, message, 0
-
-        # Write a unified history event for the deduction
-        history_event = UnifiedInventoryHistory(
-            inventory_item_id=item.id,
-            change_type=change_type,
-            quantity_change=-float(quantity),
-            unit=item.unit or 'count',
-            unit_cost=item.cost_per_unit or 0.0,
-            notes=enhanced_notes,
-            created_by=created_by,
-            organization_id=item.organization_id
-        )
-        db.session.add(history_event)
 
         # Return negative delta for core to apply
         quantity_delta = -float(quantity)
