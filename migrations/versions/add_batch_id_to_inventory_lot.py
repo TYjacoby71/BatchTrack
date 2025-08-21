@@ -2,7 +2,7 @@
 """Add batch_id to inventory_lot table
 
 Revision ID: add_batch_id_to_inventory_lot
-Revises: create_inventory_lot
+Revises: add_affected_lot_id_simple
 Create Date: 2025-08-21 10:00:00.000000
 
 """
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers
 revision = 'add_batch_id_to_inventory_lot'
-down_revision = 'create_inventory_lot'
+down_revision = 'add_affected_lot_id_simple'
 branch_labels = None
 depends_on = None
 
