@@ -6,7 +6,7 @@ from ._validation import validate_inventory_fifo_sync
 
 # Import operation modules directly
 from ._additive_ops import _universal_additive_handler, ADDITIVE_OPERATION_GROUPS
-from ._deductive_ops import _handle_deductive_operation, DEDUCTION_DESCRIPTIONS
+from ._deductive_ops import _handle_deductive_operation, DEDUCTIVE_OPERATION_GROUPS
 from ._special_ops import handle_cost_override, handle_unit_conversion
 from ._recount_logic import handle_recount
 
@@ -155,18 +155,19 @@ def _delegate_to_operation_module(effective_change_type, original_change_type, i
             )
     
     # Check if it's a deductive operation
-    if effective_change_type in DEDUCTION_DESCRIPTIONS:
-        logger.info(f"ROUTING: {effective_change_type} -> DEDUCTIVE")
-        return _handle_deductive_operation(
-            item=item,
-            quantity=quantity,
-            change_type=original_change_type,
-            notes=notes,
-            created_by=created_by,
-            customer=customer,
-            sale_price=sale_price,
-            order_id=order_id
-        )
+    for group_name, group_config in DEDUCTIVE_OPERATION_GROUPS.items():
+        if effective_change_type in group_config['operations']:
+            logger.info(f"ROUTING: {effective_change_type} -> DEDUCTIVE ({group_name})")
+            return _handle_deductive_operation(
+                item=item,
+                quantity=quantity,
+                change_type=original_change_type,
+                notes=notes,
+                created_by=created_by,
+                customer=customer,
+                sale_price=sale_price,
+                order_id=order_id
+            )
     
     # Check for special operations
     if effective_change_type == 'recount':
