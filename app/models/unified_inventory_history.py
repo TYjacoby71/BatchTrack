@@ -13,7 +13,7 @@ class UnifiedInventoryHistory(ScopedModelMixin, db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     inventory_item_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'), nullable=False, index=True)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+    timestamp = db.datetime(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
     change_type = db.Column(db.String(50), nullable=False, index=True)
     quantity_change = db.Column(db.Float, nullable=False)
     unit = db.Column(db.String(50), nullable=False)
@@ -63,12 +63,12 @@ class UnifiedInventoryHistory(ScopedModelMixin, db.Model):
     fifo_source = db.Column(db.String(128), nullable=True)
 
     # Relationships
-    inventory_item = db.relationship('InventoryItem', backref='unified_history')
-    affected_lot = db.relationship('InventoryLot', backref='events')
+    inventory_item = db.relationship('InventoryItem', foreign_keys=[inventory_item_id], backref='unified_history')
+    affected_lot = db.relationship('InventoryLot', foreign_keys=[affected_lot_id], backref='events')
     batch = db.relationship('Batch', foreign_keys=[batch_id])
     used_for_batch = db.relationship('Batch', foreign_keys=[used_for_batch_id])
-    user = db.relationship('User')
-    organization = db.relationship('Organization')
+    user = db.relationship('User', foreign_keys=[created_by])
+    organization = db.relationship('Organization', foreign_keys=[organization_id])
     quality_checker = db.relationship('User', foreign_keys=[quality_checked_by])
     fifo_reference = db.relationship('UnifiedInventoryHistory', remote_side=[id])
 
