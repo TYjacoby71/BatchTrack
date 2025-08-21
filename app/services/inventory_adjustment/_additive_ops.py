@@ -54,8 +54,12 @@ def handle_additive_operation(item, quantity, change_type, notes=None, created_b
         )
 
         if success:
+            # Update the main item quantity
+            from app.models import db
+            item.quantity = float(item.quantity or 0) + float(quantity)
+            db.session.add(item)  # Ensure the item is tracked in this session
             message = f"{config['message']} {quantity} {item.unit or 'units'}"
-            logger.info(f"ADDITIVE: {message} for item {item.id}")
+            logger.info(f"ADDITIVE: {message} for item {item.id}, new total: {item.quantity}")
             return True, message
         else:
             logger.error(f"ADDITIVE: Failed {change_type} for item {item.id}: {error}")
