@@ -8,7 +8,39 @@ from sqlalchemy import and_
 logger = logging.getLogger(__name__)
 
 
-def _internal_add_fifo_entry_enhanced(item_id, quantity, change_type, unit, notes=None, cost_per_unit=None, created_by=None, custom_expiration_date=None, custom_shelf_life_days=None, **kwargs):
+def get_item_lots(item_id: int, active_only: bool = False, order: str = 'desc'):
+    """
+    Retrieve lots for an inventory item.
+    - active_only=True filters to remaining_quantity > 0
+    - order: 'asc' by received_date or 'desc'
+    """
+    from app.models.inventory_lot import InventoryLot
+    from app.models import InventoryItem
+    from sqlalchemy import and_
+
+    # Ensure organization scoping via parent item
+    item = db.session.get(InventoryItem, item_id)
+    if not item:
+        return []
+
+    query = InventoryLot.query.filter(
+        and_(
+            InventoryLot.inventory_item_id == item_id,
+            InventoryLot.organization_id == item.organization_id
+        )
+    )
+    if active_only:
+        query = query.filter(InventoryLot.remaining_quantity > 0)
+
+    if order == 'asc':
+        query = query.order_by(InventoryLot.received_date.asc())
+    else:
+        query = query.order_by(InventoryLot.created_at.desc())
+
+    return query.all()
+
+
+def _internal_add_fifo_entry_enhanced(item_id, quantity, change_type, unit=None, notes=None, cost_per_unit=None, created_by=None, custom_expiration_date=None, custom_shelf_life_days=None, **kwargs):
     """
     Enhanced FIFO entry creation with proper lot tracking
     """
@@ -81,12 +113,13 @@ def _internal_add_fifo_entry_enhanced(item_id, quantity, change_type, unit, note
         # record and the historical event record
 
         logger.info(f"FIFO: Created lot {lot.fifo_code} with {quantity} {unit} for item {item_id} (perishable: {is_perishable})")
-        return True, f"Added {quantity} {unit} to inventory"
+        # Return lot id for callers that want to create a corresponding history event
+        return True, f"Added {quantity} {unit} to inventory", lot.id
 
     except Exception as e:
         logger.error(f"FIFO: Error creating lot for item {item_id}: {str(e)}")
         db.session.rollback()
-        return False, f"Error creating inventory lot: {str(e)}"
+        return False, f"Error creating inventory lot: {str(e)}", None
 
 
 def _handle_deductive_operation_internal(item_id, quantity_to_deduct, change_type, notes=None, created_by=None, batch_id=None):
@@ -98,9 +131,11 @@ def _handle_deductive_operation_internal(item_id, quantity_to_deduct, change_typ
         from app.models.inventory_lot import InventoryLot
 
         # Get all available lots for this item (oldest first - FIFO)
+        item = db.session.get(InventoryItem, item_id)
         available_lots = InventoryLot.query.filter(
             and_(
                 InventoryLot.inventory_item_id == item_id,
+                InventoryLot.organization_id == item.organization_id,
                 InventoryLot.remaining_quantity > 0
             )
         ).order_by(InventoryLot.received_date.asc()).all()
@@ -170,9 +205,12 @@ def _calculate_deduction_plan_internal(item_id, quantity, change_type):
         from app.models.inventory_lot import InventoryLot
 
         # Use proper InventoryLot table for FIFO calculations
+        from app.models import InventoryItem
+        item = db.session.get(InventoryItem, item_id)
         available_lots = InventoryLot.query.filter(
             and_(
                 InventoryLot.inventory_item_id == item_id,
+                InventoryLot.organization_id == item.organization_id,
                 InventoryLot.remaining_quantity > 0
             )
         ).order_by(InventoryLot.received_date.asc()).all()
@@ -222,7 +260,7 @@ def _execute_deduction_plan_internal(deduction_plan, item_id):
             lot = db.session.get(InventoryLot, lot_id) # Changed to InventoryLot
             if lot:
                 old_remaining = lot.remaining_quantity
-                lot.remaining_quantity -= deduct_from_quantity
+                lot.remaining_quantity -= deduct_quantity
                 logger.info(f"DEDUCTION EXECUTE: Lot {lot_id} remaining: {old_remaining} -> {lot.remaining_quantity}")
             else:
                 logger.error(f"DEDUCTION EXECUTE: Lot {lot_id} not found!")
@@ -257,7 +295,7 @@ def _record_deduction_plan_internal(item_id, deduction_plan, change_type, notes,
                 inventory_item_id=item_id,
                 organization_id=item.organization_id,
                 change_type=change_type,
-                quantity_change=-deduct_from_quantity,  # Individual lot deduction amount
+                quantity_change=-deduct_quantity,  # Individual lot deduction amount
                 remaining_quantity=0,  # This is a deduction record, not a lot
                 notes=f"{notes} (from lot {lot_id}: -{deduct_quantity})",
                 created_by=created_by,

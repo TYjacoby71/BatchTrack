@@ -4,7 +4,7 @@ This handler should work with the centralized quantity update system.
 """
 
 import logging
-from app.models import db, InventoryItem, IngredientCategory, Unit
+from app.models import db, InventoryItem, IngredientCategory, Unit, UnifiedInventoryHistory
 from ._fifo_ops import _internal_add_fifo_entry_enhanced
 
 logger = logging.getLogger(__name__)
@@ -106,7 +106,7 @@ def handle_initial_stock(item, quantity, change_type, notes=None, created_by=Non
         final_cost = cost_override if cost_override is not None else item.cost_per_unit
 
         # Create the initial FIFO entry - works for any quantity including 0
-        success, message = _internal_add_fifo_entry_enhanced(
+        success, message, lot_id = _internal_add_fifo_entry_enhanced(
             item_id=item.id,
             quantity=quantity,
             change_type='initial_stock',
@@ -120,6 +120,20 @@ def handle_initial_stock(item, quantity, change_type, notes=None, created_by=Non
 
         if not success:
             return False, f"Failed to create initial stock entry: {message}", 0
+
+        # Create history event linked to created lot
+        history_event = UnifiedInventoryHistory(
+            inventory_item_id=item.id,
+            change_type='initial_stock',
+            quantity_change=float(quantity),
+            unit=unit,
+            unit_cost=float(final_cost) if final_cost is not None else 0.0,
+            notes=notes or "Initial stock entry",
+            created_by=created_by,
+            organization_id=item.organization_id,
+            affected_lot_id=lot_id
+        )
+        db.session.add(history_event)
 
         # Return delta for core to apply - works for 0 quantity too
         quantity_delta = float(quantity)
