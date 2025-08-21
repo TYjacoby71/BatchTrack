@@ -76,6 +76,26 @@ def _internal_add_fifo_entry_enhanced(
 
         db.session.add(fifo_entry)
 
+        # Create corresponding lot object for additive operations
+        if quantity > 0:  # Only create lots for additive operations
+            from ._lot_ops import create_inventory_lot
+            lot_success, lot_message, lot = create_inventory_lot(
+                item_id=item_id,
+                quantity=quantity,
+                unit=unit,
+                unit_cost=cost_per_unit,
+                source_type=change_type,
+                source_notes=notes,
+                created_by=created_by,
+                expiration_date=expiration_date,
+                shelf_life_days=shelf_life_days,
+                **kwargs
+            )
+            
+            if not lot_success:
+                logger.warning(f"FIFO: History entry created but lot creation failed: {lot_message}")
+                # Continue anyway since FIFO history entry was successful
+
         # Update item quantity
         item.quantity += quantity
 
