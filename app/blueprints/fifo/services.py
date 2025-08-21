@@ -4,6 +4,7 @@ This file now redirects all calls to the canonical inventory adjustment service.
 """
 
 from app.services.inventory_adjustment import process_inventory_adjustment
+from app.services.inventory_adjustment._fifo_ops import get_item_lots as _get_item_lots
 
 
 class FIFOService:
@@ -48,6 +49,11 @@ class FIFOService:
             custom_shelf_life_days=shelf_life_days,
             batch_id=batch_id
         )
+
+    @staticmethod
+    def get_active_lots(item_id: int, active_only: bool = True):
+        """Return lots for an item via FIFO service (authoritative source)."""
+        return _get_item_lots(item_id=item_id, active_only=active_only, order='desc')
 
 
 # Legacy function for backwards compatibility

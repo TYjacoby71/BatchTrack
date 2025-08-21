@@ -8,6 +8,27 @@ from sqlalchemy import and_
 logger = logging.getLogger(__name__)
 
 
+def get_item_lots(item_id: int, active_only: bool = False, order: str = 'desc'):
+    """
+    Retrieve lots for an inventory item.
+    - active_only=True filters to remaining_quantity > 0
+    - order: 'asc' by received_date or 'desc'
+    """
+    from app.models.inventory_lot import InventoryLot
+    from sqlalchemy import and_
+
+    query = InventoryLot.query.filter(InventoryLot.inventory_item_id == item_id)
+    if active_only:
+        query = query.filter(InventoryLot.remaining_quantity > 0)
+
+    if order == 'asc':
+        query = query.order_by(InventoryLot.received_date.asc())
+    else:
+        query = query.order_by(InventoryLot.created_at.desc())
+
+    return query.all()
+
+
 def _internal_add_fifo_entry_enhanced(item_id, quantity, change_type, unit=None, notes=None, cost_per_unit=None, created_by=None, custom_expiration_date=None, custom_shelf_life_days=None, **kwargs):
     """
     Enhanced FIFO entry creation with proper lot tracking
