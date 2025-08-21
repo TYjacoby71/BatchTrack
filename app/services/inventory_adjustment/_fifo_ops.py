@@ -41,8 +41,8 @@ def _internal_add_fifo_entry_enhanced(
         remaining_qty = quantity
         
         # Generate FIFO code with enhanced logic for recount operations
-        from app.utils.fifo_generator import get_fifo_prefix
-        fifo_prefix = get_fifo_prefix(change_type, remaining_qty > 0)
+        from app.utils.fifo_generator import generate_fifo_code
+        fifo_code = generate_fifo_code(change_type, item_id)
         
         # Filter out invalid kwargs for UnifiedInventoryHistory
         valid_kwargs = {}
@@ -89,8 +89,8 @@ def _internal_add_fifo_entry_enhanced(
                 if not final_expiration and shelf_life_days and shelf_life_days > 0:
                     final_expiration = TimezoneUtils.utc_now() + timedelta(days=shelf_life_days)
 
-                # Generate FIFO code
-                fifo_code = get_fifo_prefix(change_type, True)  # True for additive
+                # Use the already generated FIFO code
+                # fifo_code is already generated above
 
                 # Create the lot
                 lot = InventoryLot(
