@@ -81,6 +81,7 @@ class ProductService:
                 variant_id=variant.id,
                 size_label=size_label,
                 sku_code=sku_code,
+                sku=sku_code,  # Set the sku field which is the unique identifier
                 sku_name=sku_name,  # Always set the sku_name
                 inventory_item_id=inventory_item.id,
                 unit=unit,
