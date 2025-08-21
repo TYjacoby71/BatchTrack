@@ -21,9 +21,13 @@ import app.services.inventory_adjustment as inv_adj
 # The provided change targets the second definition.
 # The first definition is kept here to accurately reflect the original code's structure before the change.
 def _write_product_created_audit(variant):
-    # Product creation audit is now handled by FIFO operations automatically
-    # No separate audit entry needed
-    return True
+    # lazy import so the patched symbol is used
+    from app.services.inventory_adjustment import record_audit_entry
+    inv.record_audit_entry(
+        item_id=variant.id,
+        change_type="product_created",
+        notes=f"Product variant created: {variant.name}",
+    )
 
 
 from ...services.product_service import ProductService

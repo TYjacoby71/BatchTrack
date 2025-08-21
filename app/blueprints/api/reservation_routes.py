@@ -128,13 +128,12 @@ def convert_reservation_to_sale(reservation_id):
         reservation.mark_converted_to_sale()
 
         # Create sale audit entry using canonical service (reservation already deducted inventory)
-        # Audit entries now handled by FIFO operations
-        # record_audit_entry(
-        #     item_id=reservation.product_item_id,
-        #     change_type='sale_from_reservation',
-        #     notes=f"Sale from reservation {reservation.order_id}",
-        #     unit=reservation.unit
-        # )
+        record_audit_entry(
+            item_id=reservation.product_item_id,
+            change_type='sale_from_reservation',
+            notes=f"Sale from reservation {reservation.order_id}",
+            unit=reservation.unit
+        )
 
         db.session.commit()
         return jsonify({
