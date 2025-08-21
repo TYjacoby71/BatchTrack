@@ -8,7 +8,7 @@ from sqlalchemy import and_
 logger = logging.getLogger(__name__)
 
 
-def _internal_add_fifo_entry_enhanced(inventory_item_id, quantity, change_type, notes="", unit=None, cost_per_unit=None, created_by=None, batch_id=None, expiration_date=None, shelf_life_days=None):
+def _internal_add_fifo_entry_enhanced(item_id, quantity, change_type, unit, notes=None, cost_per_unit=None, created_by=None, custom_expiration_date=None, custom_shelf_life_days=None):
     """
     Enhanced FIFO entry creation with proper lot tracking
     """
@@ -18,9 +18,9 @@ def _internal_add_fifo_entry_enhanced(inventory_item_id, quantity, change_type, 
         from app.utils.fifo_generator import generate_fifo_code
 
         # Get the inventory item
-        item = db.session.get(InventoryItem, inventory_item_id)
+        item = db.session.get(InventoryItem, item_id)
         if not item:
-            logger.error(f"Inventory item {inventory_item_id} not found")
+            logger.error(f"Inventory item {item_id} not found")
             return False, "Inventory item not found"
 
         # Use item's unit if not specified
@@ -35,23 +35,23 @@ def _internal_add_fifo_entry_enhanced(inventory_item_id, quantity, change_type, 
         final_shelf_life_days = None
         is_perishable = item.is_perishable  # Always inherit from item
 
-        if expiration_date:
-            final_expiration_date = expiration_date
+        if custom_expiration_date:
+            final_expiration_date = custom_expiration_date
             is_perishable = True  # If expiration is set, it's perishable
         elif item.is_perishable and item.shelf_life_days:
             final_expiration_date = TimezoneUtils.utc_now() + timedelta(days=item.shelf_life_days)
             final_shelf_life_days = item.shelf_life_days
-        elif shelf_life_days and item.is_perishable:
-            final_expiration_date = TimezoneUtils.utc_now() + timedelta(days=shelf_life_days)
-            final_shelf_life_days = shelf_life_days
+        elif custom_shelf_life_days and item.is_perishable:
+            final_expiration_date = TimezoneUtils.utc_now() + timedelta(days=custom_shelf_life_days)
+            final_shelf_life_days = custom_shelf_life_days
 
         # If item is perishable, shelf_life_days should be set
         if item.is_perishable:
-            final_shelf_life_days = final_shelf_life_days or item.shelf_life_days or shelf_life_days
+            final_shelf_life_days = final_shelf_life_days or item.shelf_life_days or custom_shelf_life_days
 
         # Create new lot - ALWAYS inherit perishable status from item
         lot = InventoryLot(
-            inventory_item_id=inventory_item_id,
+            inventory_item_id=item_id,
             remaining_quantity=float(quantity),
             original_quantity=float(quantity),
             unit=unit,
@@ -62,7 +62,7 @@ def _internal_add_fifo_entry_enhanced(inventory_item_id, quantity, change_type, 
             source_type=change_type,
             source_notes=notes,
             created_by=created_by,
-            fifo_code=generate_fifo_code(),
+            fifo_code=generate_fifo_code(change_type, item_id),
             organization_id=item.organization_id
         )
 
@@ -70,7 +70,7 @@ def _internal_add_fifo_entry_enhanced(inventory_item_id, quantity, change_type, 
 
         # Create unified history entry - ALWAYS inherit perishable status
         history_entry = UnifiedInventoryHistory(
-            inventory_item_id=inventory_item_id,
+            inventory_item_id=item_id,
             change_type=change_type,
             quantity_change=float(quantity),
             remaining_quantity=float(quantity),
@@ -89,16 +89,16 @@ def _internal_add_fifo_entry_enhanced(inventory_item_id, quantity, change_type, 
 
         db.session.add(history_entry)
 
-        logger.info(f"FIFO: Created lot {lot.fifo_code} with {quantity} {unit} for item {inventory_item_id} (perishable: {is_perishable})")
+        logger.info(f"FIFO: Created lot {lot.fifo_code} with {quantity} {unit} for item {item_id} (perishable: {is_perishable})")
         return True, f"Added {quantity} {unit} to inventory"
 
     except Exception as e:
-        logger.error(f"FIFO: Error creating lot for item {inventory_item_id}: {str(e)}")
+        logger.error(f"FIFO: Error creating lot for item {item_id}: {str(e)}")
         db.session.rollback()
         return False, f"Error creating inventory lot: {str(e)}"
 
 
-def _handle_deductive_operation_internal(inventory_item_id, quantity_to_deduct, change_type, notes="", created_by=None, batch_id=None):
+def _handle_deductive_operation_internal(item_id, quantity_to_deduct, change_type, notes=None, created_by=None, batch_id=None):
     """
     Handle deductive operations using FIFO (First In, First Out) logic with lots
     """
@@ -109,13 +109,13 @@ def _handle_deductive_operation_internal(inventory_item_id, quantity_to_deduct, 
         # Get all available lots for this item (oldest first - FIFO)
         available_lots = InventoryLot.query.filter(
             and_(
-                InventoryLot.inventory_item_id == inventory_item_id,
+                InventoryLot.inventory_item_id == item_id,
                 InventoryLot.remaining_quantity > 0
             )
         ).order_by(InventoryLot.received_date.asc()).all()
 
         if not available_lots:
-            logger.warning(f"FIFO: No available lots for deduction from item {inventory_item_id}")
+            logger.warning(f"FIFO: No available lots for deduction from item {item_id}")
             return True, "No inventory to deduct from"
 
         remaining_to_deduct = abs(float(quantity_to_deduct))
@@ -134,7 +134,7 @@ def _handle_deductive_operation_internal(inventory_item_id, quantity_to_deduct, 
 
             # Create deduction record in unified history
             deduction_entry = UnifiedInventoryHistory(
-                inventory_item_id=inventory_item_id,
+                inventory_item_id=item_id,
                 change_type=change_type,
                 quantity_change=-deduct_from_lot,
                 remaining_quantity=0,  # Deductions don't have remaining quantity
@@ -168,7 +168,7 @@ def _handle_deductive_operation_internal(inventory_item_id, quantity_to_deduct, 
         return True, f"Deducted from {len(deductions)} lots"
 
     except Exception as e:
-        logger.error(f"FIFO: Error in deductive operation for item {inventory_item_id}: {str(e)}")
+        logger.error(f"FIFO: Error in deductive operation for item {item_id}: {str(e)}")
         db.session.rollback()
         return False, f"Error processing deduction: {str(e)}"
 
