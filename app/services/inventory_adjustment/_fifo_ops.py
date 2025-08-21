@@ -39,11 +39,11 @@ def _internal_add_fifo_entry_enhanced(
 
         # For additive operations, remaining_quantity = quantity_change
         remaining_qty = quantity
-        
+
         # Generate FIFO code with enhanced logic for recount operations
         from app.utils.fifo_generator import generate_fifo_code
         fifo_code = generate_fifo_code(change_type, item_id)
-        
+
         # Filter out invalid kwargs for UnifiedInventoryHistory
         valid_kwargs = {}
         valid_fields = {'expiration_date', 'shelf_life_days', 'fifo_reference_id'}
@@ -82,7 +82,7 @@ def _internal_add_fifo_entry_enhanced(
             from app.models.inventory_lot import InventoryLot
             from app.utils.timezone_utils import TimezoneUtils
             from app.utils.fifo_generator import get_fifo_prefix
-            
+
             try:
                 # Handle expiration
                 final_expiration = expiration_date
@@ -111,7 +111,7 @@ def _internal_add_fifo_entry_enhanced(
                 db.session.add(lot)
                 db.session.flush()  # Get ID
                 logger.info(f"FIFO: Created lot {lot.id} with {quantity} {unit} for item {item_id}")
-                
+
             except Exception as e:
                 logger.warning(f"FIFO: History entry created but lot creation failed: {str(e)}")
                 # Continue anyway since FIFO history entry was successful
@@ -131,7 +131,7 @@ def _internal_add_fifo_entry_enhanced(
 def _handle_deductive_operation_internal(item, quantity, change_type, notes, created_by, **kwargs):
     """
     Standard FIFO deduction handler - consumes from both FIFO entries and lots.
-    
+
     This is the canonical deduction path that:
     1. Plans FIFO deduction from history entries
     2. Executes the plan on FIFO entries  
@@ -142,7 +142,7 @@ def _handle_deductive_operation_internal(item, quantity, change_type, notes, cre
     try:
         item_id = item.id
         abs_quantity = abs(quantity)
-        
+
         # Step 1: Plan the deduction
         deduction_plan, error = _calculate_deduction_plan_internal(item_id, abs_quantity, change_type)
         if error:

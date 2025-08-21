@@ -48,7 +48,7 @@ class TestInventoryFIFOCharacterization:
 
             # Verify total by re-querying the item
             db_session.commit()
-            item = db_session.query(InventoryItem).get(item.id)
+            db_session.refresh(item)  # Refresh the existing item instead of re-querying
             assert item.quantity == 150.0
 
             # Deduct and verify FIFO order
@@ -84,7 +84,7 @@ class TestInventoryFIFOCharacterization:
                 created_by=test_user.id
             )
             db_session.add(item)
-            db_session.flush()
+            db_session.commit()  # Commit instead of flush
 
             # Test product addition (should use ProductSKUHistory)
             success, message = process_inventory_adjustment(
@@ -101,5 +101,5 @@ class TestInventoryFIFOCharacterization:
             
             assert success is True, f"Expected success but got: {success}, message: {message}"
             db_session.commit()
-            item = db_session.query(InventoryItem).get(item.id)
+            db_session.refresh(item)
             assert item.quantity == 250.0
