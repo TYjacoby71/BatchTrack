@@ -13,6 +13,7 @@ from ...utils.unit_utils import get_global_unit_list
 from ...utils.fifo_generator import get_change_type_prefix, int_to_base36
 from sqlalchemy import and_, or_, func
 from sqlalchemy.orm import joinedload
+from app.models.inventory_lot import InventoryLot # Import InventoryLot
 
 # Import the blueprint from __init__.py instead of creating a new one
 from . import inventory_bp
@@ -76,7 +77,7 @@ def list_inventory():
                 )
             ).all()
 
-            from app.models.inventory_lot import InventoryLot
+            
             expired_lots = InventoryLot.query.filter(
                 and_(
                     InventoryLot.inventory_item_id == item.id,
@@ -142,7 +143,7 @@ def view_inventory(id):
             )
         ).all()
 
-        from app.models.inventory_lot import InventoryLot
+        
         expired_lots_for_calc = InventoryLot.query.filter(
             and_(
                 InventoryLot.inventory_item_id == item.id,
@@ -171,19 +172,49 @@ def view_inventory(id):
         joinedload(UnifiedInventoryHistory.used_for_batch)
     )
 
+    # Query for InventoryLots
+    lots_query = InventoryLot.query.filter_by(inventory_item_id=id)
+
     # Apply FIFO filter at database level if requested
     if fifo_filter:
         history_query = history_query.filter(UnifiedInventoryHistory.remaining_quantity > 0)
+        lots_query = lots_query.filter(InventoryLot.remaining_quantity > 0) # Apply filter to lots too
 
     history_query = history_query.order_by(UnifiedInventoryHistory.timestamp.desc())
+    lots_query = lots_query.order_by(InventoryLot.created_at.desc()) # Order lots by creation date
+
     pagination = history_query.paginate(page=page, per_page=per_page, error_out=False)
     history = pagination.items
+    lots = lots_query.all()
+
+    # Combine lots and history into a unified timeline
+    # Each lot represents a restock event and should be displayed as such
+    combined_history = []
+
+    # Add regular history entries
+    for entry in history:
+        combined_history.append({
+            'type': 'history',
+            'data': entry,
+            'timestamp': entry.timestamp
+        })
+
+    # Add lots as restock history entries
+    for lot in lots:
+        combined_history.append({
+            'type': 'lot',
+            'data': lot,
+            'timestamp': lot.created_at
+        })
+
+    # Sort by timestamp descending
+    combined_history.sort(key=lambda x: x['timestamp'], reverse=True)
 
     from datetime import datetime
 
     # Get expired FIFO entries for display
     from sqlalchemy import and_
-    from app.models.inventory_lot import InventoryLot
+    
     expired_entries = []
     expired_total = 0
     if item.is_perishable:
@@ -215,7 +246,7 @@ def view_inventory(id):
     return render_template('pages/inventory/view.html',
                          abs=abs,
                          item=item,
-                         history=history,
+                         history=combined_history, # Use combined_history here
                          pagination=pagination,
                          expired_entries=expired_entries,
                          expired_total=expired_total,

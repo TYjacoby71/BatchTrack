@@ -74,6 +74,11 @@ def _internal_add_fifo_entry_enhanced(item_id, quantity, change_type, unit, note
         )
 
         db.session.add(lot)
+        db.session.flush()  # Get the lot ID
+
+        # For restock operations, the InventoryLot IS the history record
+        # We don't create a duplicate history entry - the lot serves as both the inventory 
+        # record and the historical event record
 
         logger.info(f"FIFO: Created lot {lot.fifo_code} with {quantity} {unit} for item {item_id} (perishable: {is_perishable})")
         return True, f"Added {quantity} {unit} to inventory"
@@ -163,7 +168,7 @@ def _calculate_deduction_plan_internal(item_id, quantity, change_type):
     """Calculate FIFO deduction plan with detailed lot tracking - item-scoped only"""
     try:
         from app.models.inventory_lot import InventoryLot
-        
+
         # Use proper InventoryLot table for FIFO calculations
         available_lots = InventoryLot.query.filter(
             and_(
@@ -214,10 +219,10 @@ def _execute_deduction_plan_internal(deduction_plan, item_id):
             lot_id = step['lot_id']
             deduct_quantity = step['deduct_quantity']
 
-            lot = db.session.get(UnifiedInventoryHistory, lot_id)
+            lot = db.session.get(InventoryLot, lot_id) # Changed to InventoryLot
             if lot:
                 old_remaining = lot.remaining_quantity
-                lot.remaining_quantity -= deduct_quantity
+                lot.remaining_quantity -= deduct_from_quantity
                 logger.info(f"DEDUCTION EXECUTE: Lot {lot_id} remaining: {old_remaining} -> {lot.remaining_quantity}")
             else:
                 logger.error(f"DEDUCTION EXECUTE: Lot {lot_id} not found!")
@@ -246,13 +251,13 @@ def _record_deduction_plan_internal(item_id, deduction_plan, change_type, notes,
             deduct_quantity = step['deduct_quantity']
 
             # Get the lot being consumed to get its details
-            consumed_lot = db.session.get(UnifiedInventoryHistory, lot_id)
+            consumed_lot = db.session.get(InventoryLot, lot_id) # Changed to InventoryLot
 
             history_entry = UnifiedInventoryHistory(
                 inventory_item_id=item_id,
                 organization_id=item.organization_id,
                 change_type=change_type,
-                quantity_change=-deduct_quantity,  # Individual lot deduction amount
+                quantity_change=-deduct_from_quantity,  # Individual lot deduction amount
                 remaining_quantity=0,  # This is a deduction record, not a lot
                 notes=f"{notes} (from lot {lot_id}: -{deduct_quantity})",
                 created_by=created_by,
@@ -277,7 +282,7 @@ def _record_deduction_plan_internal(item_id, deduction_plan, change_type, notes,
 def calculate_current_fifo_total(item_id):
     """Calculate current FIFO total for validation - item-scoped only"""
     from app.models.inventory_lot import InventoryLot
-    
+
     # Use InventoryLot instead of deprecated UnifiedInventoryHistory remaining_quantity
     lots = InventoryLot.query.filter(
         and_(
@@ -292,7 +297,7 @@ def calculate_current_fifo_total(item_id):
 def credit_specific_lot(lot_id, quantity, notes=None, created_by=None):
     """Credit back to a specific FIFO lot (used for reservation releases)"""
     try:
-        entry = UnifiedInventoryHistory.query.get(lot_id)
+        entry = db.session.get(InventoryLot, lot_id) # Changed to InventoryLot
         if not entry:
             return False, "FIFO lot not found"
 
