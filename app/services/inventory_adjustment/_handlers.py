@@ -10,7 +10,8 @@ from ._operation_registry import (
     is_additive_operation,
     is_deductive_operation,
     is_special_operation,
-    validate_operation_type
+    validate_operation_type,
+    get_all_operation_types
 )
 from ._additive_ops import handle_additive_operation
 from ._deductive_ops import handle_deductive_operation
