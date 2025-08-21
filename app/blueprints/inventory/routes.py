@@ -325,7 +325,8 @@ def adjust_inventory(item_id):
                 created_by=current_user.id,
                 cost_override=cost_override,
                 custom_expiration_date=custom_expiration_date,
-                custom_shelf_life_days=custom_shelf_life_days
+                custom_shelf_life_days=custom_shelf_life_days,
+                unit=input_unit
             )
 
             # Flash result and redirect
