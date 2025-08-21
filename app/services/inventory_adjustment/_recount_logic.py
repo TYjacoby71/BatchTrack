@@ -59,14 +59,14 @@ def _handle_recount_increase(item, delta_needed, notes, created_by, **kwargs):
     2. Then creating new lots for overflow
     """
     try:
-        # Find existing lots with remaining capacity
+        # Find existing lots with remaining capacity - fill newest first (front to back)
         existing_lots = UnifiedInventoryHistory.query.filter(
             and_(
                 UnifiedInventoryHistory.inventory_item_id == item.id,
                 UnifiedInventoryHistory.remaining_quantity > 0,
                 UnifiedInventoryHistory.change_type.in_(['restock', 'initial_stock', 'manual_addition', 'finished_batch', 'recount'])
             )
-        ).order_by(UnifiedInventoryHistory.timestamp.asc()).all()
+        ).order_by(UnifiedInventoryHistory.timestamp.desc()).all()
 
         # Calculate total remaining capacity in existing lots
         total_capacity = sum(
