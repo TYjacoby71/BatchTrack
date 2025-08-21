@@ -388,3 +388,11 @@ def credit_back_to_specific_lot(lot_id, quantity, notes=None, created_by=None):
     except Exception as e:
         db.session.rollback()
         return False, f"Error crediting lot: {str(e)}"
+
+
+def credit_specific_lot(lot_id, quantity, notes=None, created_by=None):
+    """
+    Credit inventory back to a specific FIFO lot.
+    This is the canonical function used by all inventory adjustment operations.
+    """
+    return credit_back_to_specific_lot(lot_id, quantity, notes, created_by)
