@@ -6,7 +6,6 @@ from sqlalchemy import and_
 
 logger = logging.getLogger(__name__)
 
-
 def handle_recount(item, quantity, notes=None, created_by=None, **kwargs):
     """
     SOPHISTICATED recount handler that:
@@ -50,7 +49,6 @@ def handle_recount(item, quantity, notes=None, created_by=None, **kwargs):
     except Exception as e:
         logger.error(f"RECOUNT ERROR: {str(e)}")
         return False, str(e)
-
 
 def _handle_recount_increase(item, delta_needed, notes, created_by, **kwargs):
     """
