@@ -25,7 +25,7 @@ OPERATION_HANDLERS = {
     'use': handle_use,
     'sale': handle_sale,
     'spoil': handle_spoil,
-    'trash': handle_trash,  # Alias for spoil but records as spoil
+    'trash': handle_trash,  # Records as spoil with different notes
     'expired': handle_expired,
     'damaged': handle_damaged,
     'quality_fail': handle_quality_fail,

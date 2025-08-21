@@ -89,51 +89,59 @@ def _internal_add_fifo_entry_enhanced(
 
 
 def _handle_deductive_operation_internal(item, quantity, change_type, notes, created_by, **kwargs):
-    """Handle deductive operations using FIFO logic - consumes from both FIFO entries and lots"""
+    """
+    Standard FIFO deduction handler - consumes from both FIFO entries and lots.
+    
+    This is the canonical deduction path that:
+    1. Plans FIFO deduction from history entries
+    2. Executes the plan on FIFO entries  
+    3. Consumes from lot objects in FIFO order
+    4. Records audit trail
+    5. Updates item quantity
+    """
     try:
-        # Get deduction plan from FIFO service
-        deduction_plan, error = _calculate_deduction_plan_internal(
-            item.id, abs(quantity), change_type
-        )
-
+        item_id = item.id
+        abs_quantity = abs(quantity)
+        
+        # Step 1: Plan the deduction
+        deduction_plan, error = _calculate_deduction_plan_internal(item_id, abs_quantity, change_type)
         if error:
-            logger.error(f"Deduction planning failed: {error}")
+            logger.error(f"FIFO DEDUCTION: Planning failed for item {item_id}: {error}")
             return False, error
 
         if not deduction_plan:
-            logger.warning(f"No deduction plan generated for {item.id}")
+            logger.warning(f"FIFO DEDUCTION: No plan generated for item {item_id}")
             return False, "Insufficient inventory"
 
-        # Execute deduction plan on FIFO entries
-        success, error = _execute_deduction_plan_internal(deduction_plan, item.id)
+        # Step 2: Execute on FIFO entries
+        success, error = _execute_deduction_plan_internal(deduction_plan, item_id)
         if not success:
-            logger.error(f"Deduction execution failed: {error}")
+            logger.error(f"FIFO DEDUCTION: Execution failed for item {item_id}: {error}")
             return False, error
 
-        # Also consume from lot objects using FIFO order
+        # Step 3: Consume from lot objects
         from ._lot_ops import consume_from_lots
-        lot_success, lot_message, consumption_plan = consume_from_lots(item.id, abs(quantity))
+        lot_success, lot_message, consumption_plan = consume_from_lots(item_id, abs_quantity)
         if not lot_success:
-            logger.warning(f"FIFO entries updated but lot consumption failed: {lot_message}")
-            # Continue anyway since FIFO entries were successful
+            logger.warning(f"FIFO DEDUCTION: Lot consumption failed but continuing: {lot_message}")
 
-        # Record audit trail
-        success = _record_deduction_plan_internal(
-            item.id, deduction_plan, change_type, notes, 
-            created_by=created_by, **kwargs
+        # Step 4: Record audit trail
+        audit_success = _record_deduction_plan_internal(
+            item_id, deduction_plan, change_type, notes, created_by=created_by, **kwargs
         )
-        if not success:
-            logger.error(f"Deduction recording failed")
+        if not audit_success:
+            logger.error(f"FIFO DEDUCTION: Audit recording failed for item {item_id}")
             return False, "Failed to record deduction"
 
-        # Sync item quantity to FIFO total
-        current_fifo_total = calculate_current_fifo_total(item.id)
+        # Step 5: Sync item quantity to FIFO total
+        current_fifo_total = calculate_current_fifo_total(item_id)
         item.quantity = current_fifo_total
 
-        return True, f"Deducted {quantity} {getattr(item, 'unit', 'units')}"
+        logger.info(f"FIFO DEDUCTION: Successfully deducted {abs_quantity} from item {item_id}")
+        return True, f"Deducted {abs_quantity} {getattr(item, 'unit', 'units')}"
 
     except Exception as e:
-        logger.error(f"Error in deductive operation: {str(e)}")
+        logger.error(f"FIFO DEDUCTION: Error for item {item.id}: {str(e)}")
         return False, str(e)
 
 

@@ -15,7 +15,7 @@ DEDUCTIVE_CONFIGS = {
     'batch': {'message': 'Used in batch'},
     'sale': {'message': 'Sold'},
     'spoil': {'message': 'Marked as spoiled'},
-    'trash': {'message': 'Marked as spoiled'},  # Alias for spoil - records as spoil
+    'trash': {'message': 'Trashed (recorded as spoiled)'},  # Records as spoil
     'expired': {'message': 'Removed (expired)'},
     'damaged': {'message': 'Removed (damaged)'},
     'quality_fail': {'message': 'Removed (quality fail)'},
@@ -67,12 +67,12 @@ def handle_sale(item, quantity, notes=None, created_by=None, **kwargs):
     return handle_deductive_operation(item, quantity, 'sale', notes, created_by, **kwargs)
 
 def handle_spoil(item, quantity, notes=None, created_by=None, **kwargs):
-    """Handle spoil operations"""
-    return handle_deductive_operation(item, quantity, 'spoil', notes, created_by, **kwargs)
+    """Handle spoil operations - uses FIFO deduction and consumes from lots"""
+    return handle_deductive_operation(item, quantity, 'spoil', notes or 'Spoiled inventory', created_by, **kwargs)
 
 def handle_trash(item, quantity, notes=None, created_by=None, **kwargs):
-    """Handle trash operations - records as spoil"""
-    return handle_deductive_operation(item, quantity, 'spoil', notes, created_by, **kwargs)
+    """Handle trash operations - records as spoil but with different notes"""
+    return handle_deductive_operation(item, quantity, 'spoil', notes or 'Trashed inventory', created_by, **kwargs)
 
 def handle_expired(item, quantity, notes=None, created_by=None, **kwargs):
     """Handle expired operations"""
