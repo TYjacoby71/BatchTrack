@@ -1,10 +1,16 @@
-import inspect
+
+"""
+Core Inventory Adjustment Service
+
+Canonical entry point using centralized operation registry and simplified handlers.
+"""
+
 import logging
-from datetime import datetime
+import inspect
+from sqlalchemy.exc import SQLAlchemyError
 from app.models import db, InventoryItem, UnifiedInventoryHistory
-from ._validation import validate_inventory_fifo_sync
-# Removed audit import - FIFO handles all history entries
 from ._handlers import get_operation_handler
+from ._operation_registry import validate_operation_type
 
 logger = logging.getLogger(__name__)
 
@@ -23,11 +29,7 @@ def process_inventory_adjustment(
 ) -> tuple[bool, str]:
     """
     THE CANONICAL DISPATCHER for all inventory adjustments.
-
-    Uses the Strategy Pattern to delegate work to specialist functions.
-    Each change_type maps to exactly one specialist function.
-
-    Returns: (success: bool, message: str)
+    Uses simplified handler system with centralized operation registry.
     """
     caller_info = inspect.stack()[1]
     caller_path = caller_info.filename.replace('/home/runner/workspace/', '')
@@ -44,25 +46,27 @@ def process_inventory_adjustment(
 
         # Check if this is initial stock (no existing history)
         is_initial_stock = UnifiedInventoryHistory.query.filter_by(inventory_item_id=item.id).count() == 0
-
         if is_initial_stock:
             logger.info(f"INITIAL STOCK: Detected item {item_id} has no FIFO history, using initial_stock handler")
             change_type = 'initial_stock'
 
-        # ========== THE REGISTRY DISPATCHER LOGIC ==========
-
-        # Get handler from the centralized registry
-        handler = get_operation_handler(change_type)
-
-        if not handler:
+        # Validate operation type using centralized registry
+        if not validate_operation_type(change_type):
             logger.error(f"Unknown inventory change type: '{change_type}'")
             return False, f"Unknown inventory change type: '{change_type}'"
 
-        # 4. Dispatch the call
+        # Get handler from simplified system
+        handler = get_operation_handler(change_type)
+        if not handler:
+            logger.error(f"No handler found for change type: '{change_type}'")
+            return False, f"No handler found for change type: '{change_type}'"
+
+        # Dispatch the call
         try:
             success, message = handler(
                 item=item,
                 quantity=quantity,
+                change_type=change_type,
                 notes=notes,
                 created_by=created_by,
                 cost_override=cost_override,
@@ -73,8 +77,6 @@ def process_inventory_adjustment(
 
             if success:
                 db.session.commit()
-                # Each handler is responsible for creating exactly one history record
-                # Core dispatcher should NOT create additional audit entries
                 return True, message
             else:
                 db.session.rollback()
