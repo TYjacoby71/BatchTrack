@@ -150,8 +150,8 @@ def create_inventory_item(form_data: dict, organization_id: int, created_by: int
             notes=notes,
             created_by=created_by,
             cost_override=cost_per_unit,
-            custom_expiration_date=expiration_date,
-            custom_shelf_life_days=shelf_life_days,
+            expiration_date=expiration_date,
+            shelf_life_days=shelf_life_days,
             change_type='initial_stock'
         )
 

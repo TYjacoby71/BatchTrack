@@ -17,6 +17,8 @@ from sqlalchemy.orm import joinedload
 # Import the blueprint from __init__.py instead of creating a new one
 from . import inventory_bp
 
+logger = logging.getLogger(__name__)
+
 def can_edit_inventory_item(item):
     """Helper function to check if current user can edit an inventory item"""
     if not current_user.is_authenticated:
@@ -192,7 +194,7 @@ def add_inventory():
         logger.info(f"Form data: {dict(request.form)}")
 
         from app.services.inventory_adjustment import create_inventory_item
-        
+
         success, message, item_id = create_inventory_item(
             form_data=request.form.to_dict(),
             organization_id=current_user.organization_id,
@@ -205,7 +207,7 @@ def add_inventory():
                 return redirect(url_for('inventory.view_inventory', id=item_id))
         else:
             flash(f'Failed to create inventory item: {message}', 'error')
-            
+
         return redirect(url_for('inventory.list_inventory'))
 
     except Exception as e:
@@ -235,7 +237,7 @@ def adjust_inventory(item_id):
         form_data = request.form
         logger.info(f"ADJUST INVENTORY - Item: {item.name} (ID: {item_id})")
         logger.info(f"Form data received: {dict(form_data)}")
-        
+
         # Validate required fields
         change_type = form_data.get('change_type', '').strip().lower()
         if not change_type:
@@ -276,7 +278,7 @@ def adjust_inventory(item_id):
             flash(f'{change_type.title()} completed: {message}', 'success')
         else:
             flash(f'Adjustment failed: {message}', 'error')
-            
+
         return redirect(url_for('.view_inventory', id=item_id))
 
     except Exception as e:
