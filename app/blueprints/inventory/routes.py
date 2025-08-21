@@ -146,7 +146,8 @@ def view_inventory(id):
 
     history_query = UnifiedInventoryHistory.query.filter_by(inventory_item_id=id).options(
         joinedload(UnifiedInventoryHistory.batch),
-        joinedload(UnifiedInventoryHistory.used_for_batch)
+        joinedload(UnifiedInventoryHistory.used_for_batch),
+        joinedload(UnifiedInventoryHistory.affected_lot)
     )
 
     # Lots: retrieve via FIFO service to preserve service authority
