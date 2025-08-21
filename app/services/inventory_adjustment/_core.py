@@ -73,6 +73,15 @@ def process_inventory_adjustment(
 
             if success:
                 db.session.commit()
+                
+                # Validate FIFO sync after successful operation
+                is_valid, error_msg, inv_qty, fifo_total = validate_inventory_fifo_sync(item.id)
+                if not is_valid:
+                    logger.error(f"FIFO SYNC ERROR after {change_type} on item {item.id}: {error_msg}")
+                    logger.error(f"Item quantity: {inv_qty}, FIFO total: {fifo_total}")
+                    # Don't rollback the operation, but log the issue for investigation
+                    return True, f"{message} (Warning: FIFO sync issue detected - {error_msg})"
+                
                 # Each handler is responsible for creating exactly one history record
                 # Core dispatcher should NOT create additional audit entries
                 return True, message
