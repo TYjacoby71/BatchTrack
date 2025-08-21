@@ -3,7 +3,7 @@ from flask_login import login_required, current_user
 from sqlalchemy import and_, or_
 from datetime import datetime, timedelta
 from ...models import db, ProductSKU, UnifiedInventoryHistory, InventoryItem, Reservation
-from ...services.inventory_adjustment import process_inventory_adjustment
+from ...services.inventory_adjustment._audit import record_non_inventory_audit_entry
 from ...utils.unit_utils import get_global_unit_list
 from ...utils.timezone_utils import TimezoneUtils
 import logging
