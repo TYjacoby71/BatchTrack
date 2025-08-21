@@ -44,6 +44,13 @@ def _internal_add_fifo_entry_enhanced(
         from app.utils.fifo_generator import get_fifo_prefix
         fifo_prefix = get_fifo_prefix(change_type, remaining_qty > 0)
         
+        # Filter out invalid kwargs for UnifiedInventoryHistory
+        valid_kwargs = {}
+        valid_fields = {'expiration_date', 'shelf_life_days', 'fifo_reference_id'}
+        for key, value in kwargs.items():
+            if key in valid_fields:
+                valid_kwargs[key] = value
+
         # Create the FIFO history entry
         fifo_entry = UnifiedInventoryHistory(
             inventory_item_id=item_id,
@@ -57,7 +64,7 @@ def _internal_add_fifo_entry_enhanced(
             created_by=created_by,
             quantity_used=0.0,
             organization_id=item.organization_id,
-            **kwargs
+            **valid_kwargs
         )
 
         # Handle expiration if applicable
@@ -180,6 +187,13 @@ def _record_deduction_plan_internal(item_id, deduction_plan, change_type, notes,
         item = db.session.get(InventoryItem, item_id)
         total_deducted = sum(step['deduct_quantity'] for step in deduction_plan)
 
+        # Filter out invalid kwargs for UnifiedInventoryHistory
+        valid_kwargs = {}
+        valid_fields = {'unit', 'unit_cost', 'expiration_date', 'shelf_life_days', 'fifo_reference_id'}
+        for key, value in kwargs.items():
+            if key in valid_fields:
+                valid_kwargs[key] = value
+
         history_entry = UnifiedInventoryHistory(
             inventory_item_id=item_id,
             organization_id=item.organization_id,
@@ -189,7 +203,9 @@ def _record_deduction_plan_internal(item_id, deduction_plan, change_type, notes,
             notes=notes,
             created_by=created_by,
             timestamp=TimezoneUtils.utc_now(),
-            **kwargs
+            unit=item.unit if item.unit else 'count',
+            unit_cost=item.cost_per_unit or 0.0,
+            **valid_kwargs
         )
 
         db.session.add(history_entry)
