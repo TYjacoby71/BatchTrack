@@ -16,7 +16,7 @@ class CombinedInventoryAlertService:
             from ..utils.timezone_utils import TimezoneUtils
             from flask_login import current_user
 
-            current_time = TimezoneUtils.get_current_time()
+            current_time = TimezoneUtils.utc_now()
             expiration_cutoff = current_time + timedelta(days=days_ahead)
 
             # Get expired FIFO entries (using InventoryHistory)
