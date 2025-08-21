@@ -181,7 +181,7 @@ function saveExtras() {
         return;
     }
 
-    fetch(`/add-extra/${batchId}`, {
+    fetch(`/batches/add-extra/${batchId}`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
