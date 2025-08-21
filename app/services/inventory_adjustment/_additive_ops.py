@@ -97,35 +97,7 @@ def _universal_additive_handler(item, quantity, change_type, notes=None, created
         logger.error(f"Error in {change_type} operation: {str(e)}")
         return False, f"{change_type.replace('_', ' ').title()} failed: {str(e)}", 0
 
-def _handle_lot_creation_operation(item, quantity, change_type, unit, notes, final_cost, created_by, custom_expiration_date, custom_shelf_life_days, **kwargs):
-    """Handle operations that create new lots"""
-    logger.info(f"LOT_CREATION: Creating new lot for {change_type}")
-    
-    # Remove unit from kwargs if it exists to avoid conflict
-    kwargs.pop('unit', None)
-    
-    # Create FIFO entry (lot) with proper source tracking
-    success, message, lot_id = create_new_fifo_lot(
-        item_id=item.id,
-        quantity=quantity,
-        change_type=change_type,
-        unit=unit,
-        notes=notes,
-        cost_per_unit=final_cost,
-        created_by=created_by,
-        custom_expiration_date=custom_expiration_date,
-        custom_shelf_life_days=custom_shelf_life_days,
-        **kwargs
-    )
 
-    if not success:
-        return False, f"Failed to create lot: {message}", None
-
-    # Note: create_new_fifo_lot already creates the history record
-    # No additional history record needed for lot creation operations
-    
-    logger.info(f"LOT_CREATION: Successfully created lot {lot_id} for {change_type}")
-    return True, message, lot_id
 
 def _handle_lot_crediting_operation(item, quantity, change_type, unit, notes, final_cost, created_by, **kwargs):
     """Handle operations that credit back to existing FIFO lots"""

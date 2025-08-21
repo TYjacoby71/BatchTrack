@@ -14,7 +14,6 @@ from ...utils.fifo_generator import get_change_type_prefix, int_to_base36
 from sqlalchemy import and_, or_, func
 from sqlalchemy.orm import joinedload
 from app.models.inventory_lot import InventoryLot # Import InventoryLot
-from app.blueprints.fifo.services import FIFOService
 
 # Import the blueprint from __init__.py instead of creating a new one
 from . import inventory_bp
@@ -157,13 +156,16 @@ def view_inventory(id):
     history = pagination.items
     # When FIFO toggle is ON, show ALL lots (including depleted ones)
     # When FIFO toggle is OFF, show only active lots
-    lots = FIFOService.get_active_lots(item_id=id, active_only=not fifo_filter)
+    lots_query = InventoryLot.query.filter_by(inventory_item_id=id)
+    if not fifo_filter:  # fifo_filter=False means show only active lots
+        lots_query = lots_query.filter(InventoryLot.remaining_quantity > 0)
+    lots = lots_query.order_by(InventoryLot.created_at.asc()).all()
 
     from datetime import datetime
 
     # Get expired FIFO entries for display (only from InventoryLot since lots handle FIFO tracking)
     from sqlalchemy import and_
-    
+
     expired_entries = []
     expired_total = 0
     if item.is_perishable:
