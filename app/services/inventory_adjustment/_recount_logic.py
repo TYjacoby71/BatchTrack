@@ -1,4 +1,3 @@
-
 import logging
 from app.models import db
 from ._fifo_ops import calculate_current_fifo_total, _internal_add_fifo_entry_enhanced, _handle_deductive_operation_internal
@@ -9,7 +8,7 @@ logger = logging.getLogger(__name__)
 def handle_recount(item, quantity, notes=None, created_by=None, **kwargs):
     """
     CLEAN recount handler that works ONLY through FIFO operations.
-    
+
     This ensures FIFO is the single source of truth for history entries.
     """
     try:
@@ -26,36 +25,40 @@ def handle_recount(item, quantity, notes=None, created_by=None, **kwargs):
             item.quantity = current_fifo_total
             return True, f"Inventory already at target quantity: {target_quantity}"
 
-        # Apply the delta using ONLY FIFO operations
+        # Apply the delta using ONLY FIFO operations 
+        # Key principle: ALL recount operations should record as 'recount' change type in audit trail
+        # But overflow inventory should still create LOT entries with remaining_quantity > 0
         if delta > 0:
-            # Need to add inventory - call FIFO additive operation
+            # Need to add inventory - create a LOT entry but record as recount
+            # We use 'restock' internally to get LOT prefix, but override change_type in the entry
             success, error = _internal_add_fifo_entry_enhanced(
                 item_id=item.id,
                 quantity=delta,
-                change_type='recount_addition',
+                change_type='recount',  # Always use 'recount' for audit trail
                 unit=getattr(item, 'unit', 'count'),
-                notes=notes or f'Recount increase: +{delta}',
+                notes=notes or f'Recount adjustment: +{delta}',
                 cost_per_unit=item.cost_per_unit,
                 created_by=created_by,
                 **kwargs
             )
-            
+
             if success:
                 return True, f"Recount added {delta} {getattr(item, 'unit', 'units')}"
             else:
                 return False, error
-                
+
         else:
-            # Need to deduct inventory - call FIFO deductive operation
+            # Need to deduct inventory - use 'recount' change type
+            # This creates RCN prefix with remaining_quantity = 0
             success = _handle_deductive_operation_internal(
                 item=item,
                 quantity=abs(delta),
-                change_type='recount_deduction',
-                notes=notes or f'Recount decrease: -{abs(delta)}',
+                change_type='recount',  # Creates RCN prefix for consumed inventory
+                notes=notes or f'Recount adjustment: -{abs(delta)}',
                 created_by=created_by,
                 **kwargs
             )
-            
+
             if success:
                 return True, f"Recount removed {abs(delta)} {getattr(item, 'unit', 'units')}"
             else:

@@ -168,11 +168,27 @@ def get_change_type_prefix(change_type):
         'batch': 'BCH',
 
         # Special operations
-        'recount': 'RCN',
+        'recount': 'RCN',  # Default for recount (deductive)
         'cost_override': 'CST',
         'unit_conversion': 'CNV',
     }
     return prefix_map.get(change_type, 'UNK')
+
+def get_fifo_prefix(change_type, has_remaining_quantity):
+    """
+    Enhanced FIFO prefix logic that considers remaining quantity.
+    For recount operations:
+    - If has_remaining_quantity > 0: Use LOT prefix (overflow case)
+    - If has_remaining_quantity = 0: Use RCN prefix (deductive case)
+    """
+    if change_type == 'recount':
+        if has_remaining_quantity:
+            return 'LOT'  # Recount overflow creates a new lot
+        else:
+            return 'RCN'  # Recount deduction consumes existing lots
+    
+    # For all other change types, use the standard mapping
+    return get_change_type_prefix(change_type)
 
 # Legacy function for backward compatibility
 def generate_fifo_id(change_type):
