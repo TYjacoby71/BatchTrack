@@ -31,13 +31,13 @@ class FIFOService:
     def record_deduction_plan(item_id, deduction_plan, change_type, notes, created_by=None):
         """Legacy method - use process_inventory_adjustment instead"""
         from app.services.inventory_adjustment._fifo_ops import create_fifo_deduction_audit_trail
-        return create_fifo_deduction_audit_trail(item_id, deduction_plan, change_type, notes, created_by) _record_deduction_plan_internal(item_id, deduction_plan, change_type, notes, created_by)
+        return create_fifo_deduction_audit_trail(item_id, deduction_plan, change_type, notes, created_by)
 
     @staticmethod
     def _internal_add_fifo_entry(inventory_item_id, quantity, change_type, notes="", unit=None, cost_per_unit=None, created_by=None, batch_id=None, expiration_date=None, shelf_life_days=None):
         """Legacy method - use process_inventory_adjustment instead"""
-        from app.services.inventory_adjustment import _internal_add_fifo_entry_enhanced
-        return _internal_add_fifo_entry_enhanced(
+        from app.services.inventory_adjustment._fifo_ops import create_new_fifo_lot
+        return create_new_fifo_lot(
             item_id=inventory_item_id,
             quantity=quantity,
             change_type=change_type,

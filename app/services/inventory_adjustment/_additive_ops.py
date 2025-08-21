@@ -121,7 +121,7 @@ def _handle_lot_creation_operation(item, quantity, change_type, unit, notes, fin
     if not success:
         return False, f"Failed to create lot: {message}", None
 
-    # Note: _internal_add_fifo_entry_enhanced already creates the history record
+    # Note: create_new_fifo_lot already creates the history record
     # No additional history record needed for lot creation operations
     
     logger.info(f"LOT_CREATION: Successfully created lot {lot_id} for {change_type}")
