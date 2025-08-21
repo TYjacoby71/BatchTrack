@@ -290,15 +290,62 @@ def adjust_inventory(item_id):
 @inventory_bp.route('/edit/<int:id>', methods=['POST'])
 @login_required
 def edit_inventory(id):
-    # Get scoped inventory item first to ensure access
-    query = InventoryItem.query
-    if current_user.organization_id:
-        query = query.filter_by(organization_id=current_user.organization_id)
-    item = query.filter_by(id=id).first_or_404()
+    """
+    INVENTORY EDIT Route - handles updates to inventory item details and quantity recounts.
+    Uses the canonical process_inventory_adjustment for quantity changes.
+    """
+    try:
+        # Get scoped inventory item first to ensure access
+        query = InventoryItem.query
+        if current_user.organization_id:
+            query = query.filter_by(organization_id=current_user.organization_id)
+        item = query.filter_by(id=id).first_or_404()
 
-    success, message = update_inventory_item(id, request.form.to_dict())
-    flash(message, 'success' if success else 'error')
-    return redirect(url_for('inventory.view_inventory', id=id))
+        # Authority check
+        if not can_edit_inventory_item(item):
+            flash('Permission denied.', 'error')
+            return redirect(url_for('inventory.view_inventory', id=id))
+
+        # Extract form data
+        form_data = request.form.to_dict()
+        logger.info(f"EDIT INVENTORY - Item: {item.name} (ID: {id})")
+        logger.info(f"Form data received: {dict(form_data)}")
+
+        # Check if this is a quantity recount (quantity field changed)
+        new_quantity = form_data.get('quantity')
+        if new_quantity is not None and new_quantity != '':
+            try:
+                target_quantity = float(new_quantity)
+                logger.info(f"QUANTITY RECOUNT: Target quantity {target_quantity} for item {item.name}")
+                
+                # Use canonical inventory adjustment service for recount
+                success, message = process_inventory_adjustment(
+                    item_id=item.id,
+                    quantity=target_quantity,
+                    change_type='recount',
+                    notes=f'Inventory recount via edit form - target: {target_quantity}',
+                    created_by=current_user.id
+                )
+                
+                if not success:
+                    flash(f'Recount failed: {message}', 'error')
+                    return redirect(url_for('inventory.view_inventory', id=id))
+                    
+                logger.info(f"RECOUNT SUCCESS: {message}")
+                
+            except (ValueError, TypeError):
+                flash("Invalid quantity provided for recount.", "error")
+                return redirect(url_for('inventory.view_inventory', id=id))
+
+        # Handle other field updates (name, cost, etc.) using the existing service
+        success, message = update_inventory_item(id, form_data)
+        flash(message, 'success' if success else 'error')
+        return redirect(url_for('inventory.view_inventory', id=id))
+
+    except Exception as e:
+        logger.error(f"Error in edit_inventory route: {str(e)}")
+        flash(f'System error during edit: {str(e)}', 'error')
+        return redirect(url_for('inventory.view_inventory', id=id))
 
 
 

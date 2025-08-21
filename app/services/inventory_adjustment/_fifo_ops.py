@@ -159,13 +159,7 @@ def _handle_deductive_operation_internal(item, quantity, change_type, notes, cre
             logger.error(f"FIFO DEDUCTION: Execution failed for item {item_id}: {error}")
             return False, error
 
-        # Step 3: Consume from lot objects
-        from ._lot_ops import consume_from_lots
-        lot_success, lot_message, consumption_plan = consume_from_lots(item_id, abs_quantity)
-        if not lot_success:
-            logger.warning(f"FIFO DEDUCTION: Lot consumption failed but continuing: {lot_message}")
-
-        # Step 4: Record audit trail
+        # Step 3: Record audit trail
         audit_success = _record_deduction_plan_internal(
             item_id, deduction_plan, change_type, notes, created_by=created_by, **kwargs
         )

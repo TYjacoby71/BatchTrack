@@ -1,0 +1,126 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.13, pytest-8.3.5, pluggy-1.5.0 -- /home/runner/workspace/.pythonlibs/bin/python
+cachedir: .pytest_cache
+rootdir: /home/runner/workspace
+collected 1 item                                                               
+
+tests/test_inventory_routes_canonicalization.py::TestInventoryRoutesCanonicalService::test_adjust_inventory_initial_stock_calls_canonical_service 
+=== Blueprint Registration Summary ===
+✅ Successful: 27
+   - Authentication
+   - Admin
+   - Developer
+   - Inventory
+   - Recipes
+   - Batches
+   - Organization
+   - Billing
+   - Settings
+   - Timers
+   - Expiration
+   - Conversion
+   - Products Main
+   - Product Inventory
+   - Reservations
+   - SKU Management
+   - Product Variants
+   - Product Alerts
+   - Public API
+   - Main API
+   - Stock API
+   - App Routes
+   - Legal Routes
+   - Bulk Stock
+   - Fault Log
+   - Tag Manager
+   - Waitlist
+
+🎉 All blueprints registered successfully!
+--- EXECUTING CORRECT MIDDLEWARE ---
+MIDDLEWARE DEBUG: Processing POST /inventory/adjust/1, endpoint=inventory.adjust_inventory
+MIDDLEWARE DEBUG: User authenticated=True
+DEBUG: User 1, Org billing_status=active
+DEBUG: Tier exempt=True
+DEBUG: Tier is billing exempt, allowing access
+FAILED
+
+======================================= FAILURES =======================================
+_ TestInventoryRoutesCanonicalService.test_adjust_inventory_initial_stock_calls_canonical_service _
+
+self = <tests.test_inventory_routes_canonicalization.TestInventoryRoutesCanonicalService object at 0x7f17c43bf790>
+client = <FlaskClient <Flask 'app'>>, app = <Flask 'app'>
+
+    def test_adjust_inventory_initial_stock_calls_canonical_service(self, client, app):
+        """Test that initial stock adjustment for a new item uses the canonical service."""
+        with app.app_context():
+            # ARRANGE: Create a real, valid user and item for this test.
+            # This is more robust than complex mocking.
+            from app.models import db, InventoryItem, User, Organization, SubscriptionTier
+    
+            tier = SubscriptionTier(name="Test Tier", tier_type="monthly", user_limit=5)
+            db.session.add(tier)
+            db.session.flush()
+    
+            org = Organization(name="Test Org", billing_status='active', subscription_tier_id=tier.id)
+            db.session.add(org)
+            db.session.flush()
+    
+            user = User(username="inventory_tester", email="inv@test.com", organization_id=org.id)
+            db.session.add(user)
+            db.session.flush()
+    
+            item = InventoryItem(name="New Item", unit="g", organization_id=org.id)
+            db.session.add(item)
+            db.session.commit()
+    
+            # Log in our real test user
+            with client.session_transaction() as sess:
+                sess['_user_id'] = str(user.id)
+                sess['_fresh'] = True
+    
+            # Patch only the canonical service, which is what we want to test.
+            with patch('app.blueprints.inventory.routes.process_inventory_adjustment') as mock_process:
+                mock_process.return_value = (True, "Success")  # Return a tuple
+    
+                # ACT
+                response = client.post(f'/inventory/adjust/{item.id}', data={
+                    'adjustment_type': 'restock',
+                    'quantity': '100.0',
+                    'notes': 'Initial stock'
+                })
+    
+                # ASSERT
+                # 1. The service was called exactly once.
+>               mock_process.assert_called_once()
+
+tests/test_inventory_routes_canonicalization.py:76: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <MagicMock name='process_inventory_adjustment' id='139740006879568'>
+
+    def assert_called_once(self):
+        """assert that the mock was called only once.
+        """
+        if not self.call_count == 1:
+            msg = ("Expected '%s' to have been called once. Called %s times.%s"
+                   % (self._mock_name or 'mock',
+                      self.call_count,
+                      self._calls_repr()))
+>           raise AssertionError(msg)
+E           AssertionError: Expected 'process_inventory_adjustment' to have been called once. Called 0 times.
+
+/nix/store/7d088dip86hlzri9sk0h78b63yfmx0a0-python3-3.11.13/lib/python3.11/unittest/mock.py:918: AssertionError
+---------------------------------- Captured log setup ----------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+---------------------------------- Captured log call -----------------------------------
+INFO     app.blueprints.inventory.routes:routes.py:238 ADJUST INVENTORY - Item: New Item (ID: 1)
+INFO     app.blueprints.inventory.routes:routes.py:239 Form data received: {'adjustment_type': 'restock', 'quantity': '100.0', 'notes': 'Initial stock'}
+=================================== warnings summary ===================================
+tests/test_inventory_routes_canonicalization.py::TestInventoryRoutesCanonicalService::test_adjust_inventory_initial_stock_calls_canonical_service
+  /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_limiter/extension.py:333: UserWarning: Using the in-memory storage for tracking rate limits as no storage was explicitly specified. This is not recommended for production use. See: https://flask-limiter.readthedocs.io#configuring-a-storage-backend for documentation about configuring the storage backend.
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=============================== short test summary info ================================
+FAILED tests/test_inventory_routes_canonicalization.py::TestInventoryRoutesCanonicalService::test_adjust_inventory_initial_stock_calls_canonical_service - AssertionError: Expected 'process_inventory_adjustment' to have been called once. C...
+============================= 1 failed, 1 warning in 5.65s =============================
