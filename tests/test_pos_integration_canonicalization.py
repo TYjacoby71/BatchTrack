@@ -10,8 +10,10 @@ def test_pos_sale_uses_canonical_service(app, db_session):
     # Create test data
     from app.models import Organization, User, SubscriptionTier
 
-    # Create required dependencies
-    tier = SubscriptionTier(name="Test Tier", tier_type="monthly", user_limit=5)
+    # Create required dependencies with unique names
+    import time
+    unique_suffix = str(int(time.time() * 1000))[-6:]
+    tier = SubscriptionTier(name=f"Test Tier {unique_suffix}", tier_type="monthly", user_limit=5)
     db_session.add(tier)
     db_session.flush()
 
@@ -64,57 +66,59 @@ def test_pos_sale_uses_canonical_service(app, db_session):
 class TestPOSIntegrationCanonicalService:
     """Verify POS integration uses canonical inventory adjustment service"""
 
-    @patch('app.services.pos_integration.process_inventory_adjustment')
-    @patch('app.services.pos_integration.InventoryItem')
-    @patch('app.services.pos_integration.ReservationService')
-    @patch('app.services.pos_integration.current_user')
-    def test_reserve_inventory_calls_canonical_service(self, mock_user, mock_reservation_service, mock_item, mock_process):
+    def test_reserve_inventory_calls_canonical_service(self):
         """Test that reserve_inventory calls process_inventory_adjustment"""
-        # Mock the original inventory item
-        mock_original_item = MagicMock()
-        mock_original_item.id = 1
-        mock_original_item.name = "Test Product"
-        mock_original_item.type = 'product'
-        mock_original_item.unit = 'piece'
-        mock_original_item.cost_per_unit = 10.0
-        mock_original_item.available_quantity = 50.0
-        mock_original_item.organization_id = 1
-
-        # Mock reserved item
-        mock_reserved_item = MagicMock()
-        mock_reserved_item.id = 2
-        mock_reserved_item.quantity = 0.0
-
-        mock_item.query.get.return_value = mock_original_item
-        mock_item.query.filter_by.return_value.first.return_value = mock_reserved_item
-
-        mock_user.id = 1
-        mock_user.is_authenticated = True
-        mock_user.organization_id = 1
-
-        # Mock ReservationService.create_reservation
-        mock_create_reservation = MagicMock()
-        mock_reservation_service.create_reservation.return_value = (MagicMock(), None)
-
-        # Mock process_inventory_adjustment to succeed
-        mock_process.return_value = (True, "Success")
-
-        # Mock reservation creation to succeed
-        mock_create_reservation.return_value = (MagicMock(), None)
-
-        # Call the service method if it exists
-        if hasattr(POSIntegrationService, 'reserve_inventory'):
-            success, message = POSIntegrationService.reserve_inventory(
-                item_id=1,
-                quantity=5.0,
-                order_id="ORD-123",
-                source="shopify",
-                notes="Test reservation"
-            )
-
-            # Verify canonical service was called at least once
-            # The exact number depends on the implementation details
-            assert mock_process.called, "process_inventory_adjustment should be called"
+        # Create test data using real database objects
+        from app.models import Organization, User, InventoryItem, SubscriptionTier
+        from app.services.pos_integration import POSIntegrationService
+        
+        import time
+        unique_suffix = str(int(time.time() * 1000))[-6:]
+        
+        # Create test objects
+        tier = SubscriptionTier(name=f"Test Tier POS {unique_suffix}", tier_type="monthly", user_limit=5)
+        db_session.add(tier)
+        db_session.flush()
+        
+        org = Organization(name=f"Test Org POS {unique_suffix}", billing_status="active", subscription_tier_id=tier.id)
+        db_session.add(org)
+        db_session.flush()
+        
+        user = User(username=f"testuser_pos_{unique_suffix}", email=f"pos{unique_suffix}@test.com", organization_id=org.id)
+        db_session.add(user)
+        db_session.flush()
+        
+        item = InventoryItem(
+            name=f"Test Product POS {unique_suffix}",
+            type="product",
+            unit="piece",
+            quantity=50.0,
+            cost_per_unit=10.0,
+            organization_id=org.id
+        )
+        db_session.add(item)
+        db_session.commit()
+        
+        # Mock only the canonical service call to verify it's called
+        with patch('app.services.pos_integration.process_inventory_adjustment') as mock_process:
+            mock_process.return_value = True  # Return success
+            
+            with patch('app.services.pos_integration.current_user') as mock_user:
+                mock_user.id = user.id
+                mock_user.is_authenticated = True
+                mock_user.organization_id = org.id
+                
+                # Call the service method
+                success, message = POSIntegrationService.reserve_inventory(
+                    item_id=item.id,
+                    quantity=5.0,
+                    order_id=f"ORD-{unique_suffix}",
+                    source="shopify",
+                    notes="Test reservation"
+                )
+                
+                # Verify canonical service was called
+                assert mock_process.called, "process_inventory_adjustment should be called"
         else:
             # If the method doesn't exist, the test passes as the service structure is being verified
             assert True, "POSIntegrationService.reserve_inventory method not implemented yet"

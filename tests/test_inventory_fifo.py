@@ -46,9 +46,10 @@ class TestInventoryFIFOCharacterization:
                 created_by=test_user.id
             )
 
-            # Verify total by refreshing the item in the current session
-            db_session.refresh(item)
-            assert item.quantity == 150.0
+            # Verify total by querying fresh data
+            db_session.commit()
+            fresh_item = db_session.get(InventoryItem, item.id)
+            assert fresh_item.quantity == 150.0
 
             # Deduct and verify FIFO order
             assert process_inventory_adjustment(
@@ -100,5 +101,5 @@ class TestInventoryFIFOCharacterization:
             
             assert success is True, f"Expected success but got: {success}, message: {message}"
             db_session.commit()
-            db_session.refresh(item)
-            assert item.quantity == 250.0
+            fresh_item = db_session.get(InventoryItem, item.id)
+            assert fresh_item.quantity == 250.0

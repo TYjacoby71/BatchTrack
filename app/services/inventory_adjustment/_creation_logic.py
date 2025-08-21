@@ -6,7 +6,7 @@ from ._fifo_ops import _internal_add_fifo_entry_enhanced
 
 
 def handle_initial_stock(item, quantity, unit=None, notes=None, created_by=None,
-                        cost_override=None, custom_expiration_date=None, custom_shelf_life_days=None, 
+                        cost_override=None, custom_expiration_date=None, custom_shelf_life_days=None,
                         change_type=None, **kwargs):
     """Handles the special case for an item's very first stock entry."""
     try:
@@ -18,8 +18,11 @@ def handle_initial_stock(item, quantity, unit=None, notes=None, created_by=None,
             return True, "Item initialized with zero stock"
 
         # Use cost override if provided, otherwise use item's cost
-        cost_per_unit = cost_override if cost_override is not None else item.cost_per_unit
+        cost_per_unit = cost_override if cost_override is not None else getattr(item, 'cost_per_unit', 0.0)
 
+        # Update the item's quantity first
+        item.quantity = quantity
+        
         # For non-zero initial entries, create the first FIFO lot
         success, error = _internal_add_fifo_entry_enhanced(
             item_id=item.id,
@@ -30,16 +33,20 @@ def handle_initial_stock(item, quantity, unit=None, notes=None, created_by=None,
             cost_per_unit=cost_per_unit,
             created_by=created_by,
             expiration_date=custom_expiration_date,
-            shelf_life_days=custom_shelf_life_days,
-            **kwargs
+            shelf_life_days=custom_shelf_life_days
         )
 
         if not success:
             return False, f"Failed to create initial stock: {error}"
 
+        # Commit the changes
+        db.session.commit()
+        
         return True, f"Initial stock added: {quantity} {final_unit}"
 
     except Exception as e:
+        db.session.rollback()
+        logging.error(f"Error in initial stock creation: {str(e)}")
         return False, f"Error in initial stock creation: {str(e)}"
 
 
@@ -125,9 +132,9 @@ def create_inventory_item(form_data: dict, organization_id: int, created_by: int
 
         # Use initial stock handler directly to avoid circular import
         from ._handlers import get_operation_handler
-        
+
         notes = form_data.get('notes', '') or 'Initial stock creation'
-        
+
         success, message = handle_initial_stock(
             item=item,
             quantity=quantity,
