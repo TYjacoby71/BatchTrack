@@ -81,41 +81,55 @@ class TestInventoryRoutesCanonicalService:
                 assert response.status_code == 302
                 assert f'/inventory/view/{item.id}' in response.location
 
-# Original test case, kept for context or potential future use
-def test_recount_adjustment_uses_canonical_service(client, app, test_user):
-    """Test that inventory recount routes use the canonical adjustment service"""
+def test_recount_adjustment_uses_canonical_service(self, client, app):
+        """Test that inventory recount routes use the canonical adjustment service"""
+        
+        with app.app_context():
+            # Create a real, valid user and item for this test
+            from app.models import db, InventoryItem, User, Organization, SubscriptionTier
 
-    with app.app_context():
-        # Create test inventory item
-        item = InventoryItem(
-            name="Test Item",
-            quantity=100,
-            unit="count",
-            organization_id=test_user.organization_id
-        )
-        db.session.add(item)
-        db.session.commit()
+            tier = SubscriptionTier(name="Test Tier", tier_type="monthly", user_limit=5)
+            db.session.add(tier)
+            db.session.flush()
 
-        # Log in the user for the test
-        with client.session_transaction() as sess:
-            sess['_user_id'] = str(test_user.id)
-            sess['_fresh'] = True
+            org = Organization(name="Test Org", billing_status='active', subscription_tier_id=tier.id)
+            db.session.add(org)
+            db.session.flush()
 
-        # Mock the canonical service at the route import path
-        with patch('app.blueprints.inventory.routes.process_inventory_adjustment') as mock_adjustment:
-            mock_adjustment.return_value = (True, "Recount successful")
+            user = User(username="recount_tester", email="recount@test.com", organization_id=org.id)
+            db.session.add(user)
+            db.session.flush()
 
-            # Make recount request
-            response = client.post(f'/inventory/adjust/{item.id}', data={
-                'change_type': 'recount',
-                'quantity': '80',
-                'notes': 'Physical count adjustment'
-            })
+            # Create test inventory item
+            item = InventoryItem(
+                name="Test Item",
+                quantity=100,
+                unit="count",
+                organization_id=org.id
+            )
+            db.session.add(item)
+            db.session.commit()
 
-            # Verify canonical service was called
-            mock_adjustment.assert_called_once()
-            call_args = mock_adjustment.call_args
+            # Log in the user for the test
+            with client.session_transaction() as sess:
+                sess['_user_id'] = str(user.id)
+                sess['_fresh'] = True
 
-            assert call_args[1]['item_id'] == item.id
-            assert call_args[1]['change_type'] == 'recount'
-            assert 'Physical count' in call_args[1]['notes']
+            # Mock the canonical service at the route import path
+            with patch('app.blueprints.inventory.routes.process_inventory_adjustment') as mock_adjustment:
+                mock_adjustment.return_value = (True, "Recount successful")
+
+                # Make recount request
+                response = client.post(f'/inventory/adjust/{item.id}', data={
+                    'change_type': 'recount',
+                    'quantity': '80',
+                    'notes': 'Physical count adjustment'
+                })
+
+                # Verify canonical service was called
+                mock_adjustment.assert_called_once()
+                call_args = mock_adjustment.call_args
+
+                assert call_args[1]['item_id'] == item.id
+                assert call_args[1]['change_type'] == 'recount'
+                assert 'Physical count' in call_args[1]['notes']
