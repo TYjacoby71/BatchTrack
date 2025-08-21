@@ -1,0 +1,167 @@
+Of course. This is the perfect time to do this. You have successfully refactored the inventory system into a modular, service-oriented architecture. Now, we must create a test suite that proves this new, sophisticated system is correct, robust, and reliable.
+You have laid out the requirements perfectly. Let's consolidate that into a clear architectural foundation and then build the comprehensive test suite you've asked for.
+The "True North": The Rules of the Inventory System
+Before we can test it, we must define the rules. Based on your description, here is the definitive "True North" for how the inventory system works.
+1. The Single Source of Truth:
+The InventoryItem.quantity field is the master quantity. It represents the total physical amount of that item you have, regardless of its state.
+available_quantity and expired_quantity are not stored in the database. They are always derived values calculated in real-time by querying the UnifiedInventoryHistory table. This is critical for data integrity.
+2. The Canonical Service (_core.py):
+You are correct. The process_inventory_adjustment function in _core.py is the single, canonical entry point. It is a "dispatcher." Its only job is to receive a request, validate it, and delegate it to the correct specialist service (_fifo_ops.py, _recount_logic.py, _creation_logic.py).
+3. History and FIFO:
+Every change to an item's quantity must result in exactly one new entry in the UnifiedInventoryHistory table. This prevents double-entry bugs.
+The FIFO system reads from this history to determine which lots are available for deduction.
+4. Products and Integrations:
+Products are a special type of InventoryItem. Their history entries in UnifiedInventoryHistory will contain extra data relevant to sales channels (like Shopify order_id). The core adjustment logic remains the same, which is the power of this design.
+5. The Testing Hierarchy (Your Brilliant Insight):
+You are absolutely right. We will build the test suite in layers of complexity.
+Phase 1: Test the foundational logic with simple, 1-to-1 unit adjustments.
+Phase 2: Layer on unit conversion tests (same-to-same, weight-to-volume, and failures).
+This approach ensures we are building on a solid, proven foundation.
+The Master Test Plan: A Comprehensive Test Suite
+This is the plan to create a new, dedicated test file that will validate every aspect of your inventory system.
+File to Create: tests/test_inventory_system.py
+This file will contain a single class, TestCanonicalInventoryService, with a series of powerful, parameterized tests.
+Test #1: Basic Adjustments (The Foundation)
+This one parameterized test will cover almost all of your change_type cases. It will verify additions, deductions, and correct history creation.
+Test #2: Recount Logic (The Special Case)
+This will specifically test the "resync" capability of the recount function, ensuring it correctly creates credit/debit adjustments.
+Test #3: Unit Conversions (The "Custom Mapping" Bug Hunt)
+This will test the ConversionEngine's integration with the adjustment service, specifically targeting the density-based conversions and failure modes that were causing bugs.
+Test #4: Error Handling and Edge Cases
+This will test how the system behaves with bad data, like trying to deduct more stock than is available.
+The Code: The Base Set of Parameters to Test All Permutations
+Here is the starter code for your new tests/test_inventory_system.py file. This is the "base set of parameters" you asked for.
+code
+Python
+import pytest
+from app.models import db, InventoryItem, UnifiedInventoryHistory, User, Organization, SubscriptionTier
+from app.services.inventory_adjustment import process_inventory_adjustment
+
+# Helper to create a basic inventory item with an initial stock lot
+def create_item_with_stock(org_id, user_id, name="Test Item", initial_qty=100.0, unit="g"):
+    item = InventoryItem(name=name, quantity=initial_qty, unit=unit, organization_id=org_id)
+    db.session.add(item)
+    db.session.commit()
+    # Seed the initial history
+    history = UnifiedInventoryHistory(
+        inventory_item_id=item.id,
+        quantity_change=initial_qty,
+        remaining_quantity=initial_qty,
+        change_type='initial_stock',
+        created_by=user_id
+    )
+    db.session.add(history)
+    db.session.commit()
+    return item
+
+class TestCanonicalInventoryService:
+
+    # Test 1: The Foundation for most change types
+    @pytest.mark.parametrize("change_type, initial_qty, adjustment_qty, expected_final_qty, expected_history_change", [
+        # --- Additive Cases ---
+        ("restock", 100.0, 50.0, 150.0, 50.0),
+        ("returned", 50.0, 10.0, 60.0, 10.0),
+        # --- Deductive Cases ---
+        ("sale", 100.0, -10.0, 90.0, -10.0),
+        ("spoil", 100.0, -5.0, 95.0, -5.0),
+        ("trash", 100.0, -20.0, 80.0, -20.0),
+        ("damaged", 100.0, -2.5, 97.5, -2.5),
+        ("use", 100.0, -30.0, 70.0, -30.0),
+    ])
+    def test_basic_adjustments(self, app, test_user, change_type, initial_qty, adjustment_qty, expected_final_qty, expected_history_change):
+        with app.app_context():
+            item = create_item_with_stock(test_user.organization_id, test_user.id, initial_qty=initial_qty)
+            
+            # ACT
+            success, message = process_inventory_adjustment(
+                item_id=item.id,
+                quantity=adjustment_qty,
+                change_type=change_type,
+                created_by=test_user.id
+            )
+            
+            # ASSERT
+            assert success is True, f"Adjustment failed with message: {message}"
+            
+            # 1. Check the master quantity on the item itself
+            assert item.quantity == pytest.approx(expected_final_qty)
+            
+            # 2. Check that EXACTLY ONE new history event was created
+            new_history_events = UnifiedInventoryHistory.query.filter(
+                UnifiedInventoryHistory.inventory_item_id == item.id,
+                UnifiedInventoryHistory.change_type == change_type
+            ).all()
+            assert len(new_history_events) == 1
+            
+            # 3. Check that the history event has the correct quantity change
+            assert new_history_events[0].quantity_change == pytest.approx(expected_history_change)
+
+    # Test 2: The Special Case for Recounts
+    def test_recount_logic(self, app, test_user):
+        with app.app_context():
+            item = create_item_with_stock(test_user.organization_id, test_user.id, initial_qty=100.0)
+            
+            # ACT: Recount DOWN to 80
+            success, message = process_inventory_adjustment(
+                item_id=item.id,
+                quantity=80.0, # Recounts use an absolute target quantity
+                change_type='recount',
+                created_by=test_user.id
+            )
+
+            # ASSERT
+            assert success is True
+            assert item.quantity == pytest.approx(80.0)
+            
+            # Check for the two history entries: the 'recount' meta-entry, and the 'deduction' entry
+            recount_event = UnifiedInventoryHistory.query.filter_by(inventory_item_id=item.id, change_type='recount').one()
+            deduction_event = UnifiedInventoryHistory.query.filter_by(inventory_item_id=item.id, change_type='recount_deduction').one()
+            assert recount_event is not None
+            assert deduction_event.quantity_change == pytest.approx(-20.0)
+
+    # Test 3: The Unit Conversion Layer
+    @pytest.mark.parametrize("start_unit, adjust_unit, adjust_qty, density, should_succeed", [
+        ("g", "kg", -0.01, None, True), # Simple same-type conversion
+        ("ml", "l", 0.5, None, True),     # Simple same-type conversion
+        ("g", "ml", -50, 0.9, True),     # Weight to Volume (requires density)
+        ("g", "ml", -50, None, False),    # BUG HUNT: Weight to Volume (missing density)
+    ])
+    def test_unit_conversions(self, app, test_user, start_unit, adjust_unit, adjust_qty, density, should_succeed):
+        with app.app_context():
+            item = create_item_with_stock(test_user.organization_id, test_user.id, initial_qty=1000.0, unit=start_unit)
+            if density:
+                item.density = density
+                db.session.commit()
+
+            # ACT
+            success, message = process_inventory_adjustment(
+                item_id=item.id,
+                quantity=adjust_qty,
+                change_type='sale',
+                unit=adjust_unit, # Pass the unit for conversion
+                created_by=test_user.id
+            )
+
+            # ASSERT
+            assert success is should_succeed
+            if not should_succeed:
+                assert "density" in message.lower() # Check for the specific error message
+
+    # Test 4: Error Handling
+    def test_overdraft_protection(self, app, test_user):
+        with app.app_context():
+            item = create_item_with_stock(test_user.organization_id, test_user.id, initial_qty=50.0)
+
+            # ACT: Try to deduct more than is available
+            success, message = process_inventory_adjustment(
+                item_id=item.id,
+                quantity=-60.0,
+                change_type='sale',
+                created_by=test_user.id
+            )
+            
+            # ASSERT
+            assert success is False
+            assert "insufficient stock" in message.lower()
+            assert item.quantity == 50.0 # Master quantity should NOT have changed
+This test suite gives you a powerful, repeatable, and automated way to verify that your entire inventory system is working as intended, from the simplest deductions to the most complex unit conversions. This is your safety net.

@@ -21,7 +21,7 @@ def process_inventory_adjustment(
     custom_expiration_date=None,
     custom_shelf_life_days: int = None,
     **kwargs
-) -> tuple[bool, str]:
+) -> bool:
     """
     Canonical entry point for ALL inventory adjustments.
     Delegates to FIFO service for lot management and deduction planning.
@@ -66,7 +66,7 @@ def process_inventory_adjustment(
                 db.session.commit()
                 record_audit_entry(item_id, 'cost_override', notes or f'Cost updated to {cost_override}')
                 return True
-            return False, f"Cost override failed for item {item_id}"
+            return False
 
         # Handle additive changes (restock, manual_addition, etc.)
         elif change_type in ['restock', 'manual_addition', 'returned', 'refunded', 'finished_batch']:
@@ -85,12 +85,12 @@ def process_inventory_adjustment(
 
         else:
             logger.error(f"Unknown change_type: {change_type}")
-            return False, f"Unknown change_type: {change_type}"
+            return False
 
     except Exception as e:
         logger.error(f"Error in process_inventory_adjustment: {str(e)}")
         db.session.rollback()
-        return False, f"Error in inventory adjustment: {str(e)}"
+        return False
 
 
 def _handle_additive_adjustment(item_id, quantity, change_type, unit, notes, created_by,
@@ -121,17 +121,17 @@ def _handle_additive_adjustment(item_id, quantity, change_type, unit, notes, cre
 
         if not success:
             logger.error(f"FIFO lot creation failed: {error}")
-            return False, f"FIFO lot creation failed: {error}"
+            return False
 
         db.session.commit()
         record_audit_entry(item_id, change_type, notes or f'Added {quantity} {final_unit}')
 
-        return True, f"Added {quantity} {final_unit}"
+        return True
 
     except Exception as e:
         logger.error(f"Error in additive adjustment: {str(e)}")
         db.session.rollback()
-        return False, f"Error in additive adjustment: {str(e)}"
+        return False
 
 
 def _handle_deductive_adjustment(item_id, quantity, change_type, unit, notes, created_by, **kwargs):
@@ -154,17 +154,17 @@ def _handle_deductive_adjustment(item_id, quantity, change_type, unit, notes, cr
 
         if error:
             logger.error(f"Deduction planning failed: {error}")
-            return False, f"Deduction planning failed: {error}"
+            return False
 
         if not deduction_plan:
             logger.warning(f"No deduction plan generated for {item_id}")
-            return False, f"No deduction plan generated for item {item_id}"
+            return False
 
         # Execute deduction plan through FIFO service
         success, error = _execute_deduction_plan_internal(deduction_plan, item_id)
         if not success:
             logger.error(f"Deduction execution failed: {error}")
-            return False, f"Deduction execution failed: {error}"
+            return False
 
         # Record audit trail through FIFO service
         success = _record_deduction_plan_internal(
@@ -173,7 +173,7 @@ def _handle_deductive_adjustment(item_id, quantity, change_type, unit, notes, cr
         )
         if not success:
             logger.error(f"Deduction recording failed")
-            return False, "Deduction recording failed"
+            return False
 
         # Sync item quantity to FIFO total (authoritative source)
         current_fifo_total = calculate_current_fifo_total(item_id)
@@ -182,9 +182,9 @@ def _handle_deductive_adjustment(item_id, quantity, change_type, unit, notes, cr
         db.session.commit()
         record_audit_entry(item_id, change_type, notes or f'Deducted {abs(quantity)} {final_unit}')
 
-        return True, f"Deducted {abs(quantity)} {final_unit}"
+        return True
 
     except Exception as e:
         logger.error(f"Error in deductive adjustment: {str(e)}")
         db.session.rollback()
-        return False, f"Error in deductive adjustment: {str(e)}"
+        return False
