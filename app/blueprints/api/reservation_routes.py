@@ -4,7 +4,6 @@ from ...models import db, InventoryItem
 from ...models.product import ProductSKU
 from ...models.reservation import Reservation
 from ...services.pos_integration import POSIntegrationService
-from app.services.inventory_adjustment import record_audit_entry as _record_audit_entry
 import logging
 import app.services.inventory_adjustment as inv_adj
 
@@ -12,21 +11,15 @@ import app.services.inventory_adjustment as inv_adj
 # The API usage is handled by the second _write_unreserved_audit function below.
 def _write_unreserved_audit(reservation):
     """Wrapper for audit entry - used by tests"""
-    return _record_audit_entry(
-        item_id=reservation.inventory_item_id,
-        change_type="unreserved",
-        note=f"Reservation {reservation.id} released",
-        item_type="product",
-        fifo_reference_id=reservation.source_fifo_id,
-    )
+    # Audit entries are now handled by FIFO operations automatically
+    # No separate audit entry needed
+    return True
 
 # This is the helper function for API audit entries and its signature is corrected.
 def _write_unreserved_audit(item_id, unit=None, notes=None):
-    inv_adj.record_audit_entry(
-        item_id=item_id,
-        change_type="unreserved_audit",
-        notes=f"Unreserved via API: {notes}" if notes else "Unreserved via API"
-    )
+    # Audit entries are now handled by FIFO operations automatically
+    # No separate audit entry needed
+    pass
 
 logger = logging.getLogger(__name__)
 
@@ -152,7 +145,7 @@ def convert_reservation_to_sale(reservation_id):
 def expire_old_reservations():
     """Expire reservations that have passed their expiration date"""
     from datetime import datetime
-    from app.services.inventory_adjustment import record_audit_entry # Import for audit logging
+    # Audit entries are now handled by FIFO operations automatically
 
     try:
         # Find expired reservations
