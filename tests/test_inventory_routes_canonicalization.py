@@ -5,7 +5,7 @@ from app.extensions import db
 from app.models.models import User, Organization, InventoryItem, SubscriptionTier
 from app.services.inventory_adjustment._fifo_ops import _internal_add_fifo_entry_enhanced, _handle_deductive_operation_internal
 from app.services.reservation_service import ReservationService
-from app.services.pos_integration import POSIntegration
+from app.services.pos_integration import POSIntegrationService
 from app.services.batch_integration_service import BatchIntegrationService
 from app.blueprints.expiration.services import ExpirationService
 from app.services.product_service import ProductService
