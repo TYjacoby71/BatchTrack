@@ -62,7 +62,7 @@ def _internal_add_fifo_entry_enhanced(inventory_item_id, quantity, change_type, 
             source_type=change_type,
             source_notes=notes,
             created_by=created_by,
-            fifo_code=generate_fifo_code(),
+            fifo_code=generate_fifo_code(change_type, inventory_item_id),
             organization_id=item.organization_id
         )
 
