@@ -1,18 +1,30 @@
+
 import logging
 from app.models import db, InventoryItem, UnifiedInventoryHistory
-from ._handlers import get_operation_handler
 from app.services.unit_conversion import ConversionEngine
 from ._validation import validate_inventory_fifo_sync
+
+# Import operation modules directly
+from ._additive_ops import _universal_additive_handler, ADDITIVE_OPERATION_GROUPS
+from ._deductive_ops import _handle_deductive_operation, DEDUCTIVE_OPERATION_GROUPS
+from ._special_ops import handle_cost_override, handle_unit_conversion
+from ._recount_logic import handle_recount
 
 logger = logging.getLogger(__name__)
 
 def process_inventory_adjustment(item_id, change_type, quantity, notes=None, created_by=None, cost_override=None, custom_expiration_date=None, custom_shelf_life_days=None, customer=None, sale_price=None, order_id=None, target_quantity=None, unit=None):
     """
-    Canonical entry point for all inventory adjustments.
-    This is the ONLY function that should modify item.quantity.
-    All handlers return deltas and let this core function apply the final quantity change.
+    CENTRAL DELEGATOR - The single entry point for ALL inventory adjustments.
+    
+    Flow:
+    1. Receive request with change_type
+    2. Delegate to appropriate operation module  
+    3. Collect results (quantity_delta, messages)
+    4. Apply quantity change (ONLY place that modifies item.quantity)
+    5. Validate FIFO sync
+    6. Return consolidated result
     """
-    logger.info(f"CANONICAL: item_id={item_id}, qty={quantity}, type={change_type}")
+    logger.info(f"CENTRAL DELEGATOR: item_id={item_id}, qty={quantity}, type={change_type}")
 
     item = db.session.get(InventoryItem, item_id)
     if not item:
@@ -25,11 +37,7 @@ def process_inventory_adjustment(item_id, change_type, quantity, notes=None, cre
     is_initial_stock = UnifiedInventoryHistory.query.filter_by(inventory_item_id=item.id).count() == 0
 
     # Route to initial_stock handler ONLY if it's the first entry, otherwise use original change_type
-    handler_type = 'initial_stock' if is_initial_stock else change_type
-
-    handler = get_operation_handler(handler_type)
-    if not handler:
-        return False, f"Unknown inventory change type: '{change_type}'"
+    effective_change_type = 'initial_stock' if is_initial_stock else change_type
 
     try:
         # Normalize quantity to the item's canonical unit if a different unit was provided
@@ -50,12 +58,12 @@ def process_inventory_adjustment(item_id, change_type, quantity, notes=None, cre
                 logger.error(f"Unit conversion failed for item {item.id}: {e}")
                 return False, f"Unit conversion failed: {str(e)}"
 
-        # Call the handler - it should NOT modify item.quantity directly
-        # Handlers should return (success, message, quantity_delta)
-        result = handler(
+        # CENTRAL DELEGATION - Route to appropriate operation module
+        result = _delegate_to_operation_module(
+            effective_change_type=effective_change_type,
+            original_change_type=change_type,
             item=item,
             quantity=normalized_quantity,
-            change_type=change_type,  # Original intent preserved
             notes=notes,
             created_by=created_by,
             cost_override=cost_override,
@@ -70,22 +78,20 @@ def process_inventory_adjustment(item_id, change_type, quantity, notes=None, cre
 
         # Handle different return formats for backwards compatibility
         if len(result) == 2:
-            # Old format: (success, message)
             success, message = result
             quantity_delta = None
         elif len(result) == 3:
-            # New format: (success, message, quantity_delta)
             success, message, quantity_delta = result
         else:
-            logger.error(f"Handler returned unexpected format: {result}")
-            return False, "Handler returned invalid response format"
+            logger.error(f"Operation returned unexpected format: {result}")
+            return False, "Operation returned invalid response format"
 
         if not success:
             db.session.rollback()
-            logger.error(f"FAILED: {change_type} operation failed for item {item.id}: {message}")
+            logger.error(f"DELEGATION FAILED: {change_type} operation failed for item {item.id}: {message}")
             return False, message
 
-        # CRITICAL: Only this core function modifies item.quantity
+        # CENTRAL QUANTITY CONTROL - Only this core function modifies item.quantity
         if quantity_delta is not None:
             new_quantity = float(item.quantity) + float(quantity_delta)
             logger.info(f"QUANTITY UPDATE: Item {item.id} quantity {item.quantity} + {quantity_delta} = {new_quantity}")
@@ -122,19 +128,96 @@ def process_inventory_adjustment(item_id, change_type, quantity, notes=None, cre
 
     except Exception as e:
         db.session.rollback()
-        logger.error(f"Handler error for {change_type} on item {item.id}: {e}", exc_info=True)
+        logger.error(f"Central delegation error for {change_type} on item {item.id}: {e}", exc_info=True)
         return False, "A critical internal error occurred."
 
-# Backwards compatibility shims
-def InventoryAdjustmentService():
-    """Legacy compatibility shim"""
-    class Shim:
-        @staticmethod
-        def process_inventory_adjustment(item_id, change_type, quantity, notes=None, created_by=None, cost_override=None, custom_expiration_date=None, custom_shelf_life_days=None, customer=None, sale_price=None, order_id=None, target_quantity=None, unit=None):
-            return process_inventory_adjustment(item_id, change_type, quantity, notes, created_by, cost_override, custom_expiration_date, custom_shelf_life_days, customer, sale_price, order_id, target_quantity, unit)
 
-        @staticmethod
-        def validate_inventory_fifo_sync(item_id, expected_quantity=None):
-            return validate_inventory_fifo_sync(item_id, expected_quantity)
-
-    return Shim()
+def _delegate_to_operation_module(effective_change_type, original_change_type, item, quantity, notes, created_by, cost_override, custom_expiration_date, custom_shelf_life_days, customer, sale_price, order_id, target_quantity, unit):
+    """
+    DELEGATION LOGIC - Routes to appropriate operation module based on change type
+    """
+    logger.info(f"DELEGATING: {effective_change_type} -> routing to operation module")
+    
+    # Check if it's an additive operation
+    for group_name, group_config in ADDITIVE_OPERATION_GROUPS.items():
+        if effective_change_type in group_config['operations']:
+            logger.info(f"ROUTING: {effective_change_type} -> ADDITIVE ({group_name})")
+            return _universal_additive_handler(
+                item=item,
+                quantity=quantity,
+                change_type=original_change_type,  # Preserve original intent
+                notes=notes,
+                created_by=created_by,
+                cost_override=cost_override,
+                custom_expiration_date=custom_expiration_date,
+                custom_shelf_life_days=custom_shelf_life_days,
+                unit=unit
+            )
+    
+    # Check if it's a deductive operation
+    for group_name, group_config in DEDUCTIVE_OPERATION_GROUPS.items():
+        if effective_change_type in group_config['operations']:
+            logger.info(f"ROUTING: {effective_change_type} -> DEDUCTIVE ({group_name})")
+            return _handle_deductive_operation(
+                item=item,
+                quantity=quantity,
+                change_type=original_change_type,
+                notes=notes,
+                created_by=created_by,
+                customer=customer,
+                sale_price=sale_price,
+                order_id=order_id
+            )
+    
+    # Check for special operations
+    if effective_change_type == 'recount':
+        logger.info(f"ROUTING: {effective_change_type} -> RECOUNT (special)")
+        return handle_recount(
+            item=item,
+            quantity=quantity,
+            change_type=original_change_type,
+            notes=notes,
+            created_by=created_by,
+            target_quantity=target_quantity,
+            unit=unit
+        )
+    elif effective_change_type == 'cost_override':
+        logger.info(f"ROUTING: {effective_change_type} -> COST_OVERRIDE (special)")
+        return handle_cost_override(
+            item=item,
+            quantity=quantity,
+            change_type=original_change_type,
+            notes=notes,
+            created_by=created_by,
+            cost_override=cost_override,
+            unit=unit
+        )
+    elif effective_change_type == 'unit_conversion':
+        logger.info(f"ROUTING: {effective_change_type} -> UNIT_CONVERSION (special)")
+        return handle_unit_conversion(
+            item=item,
+            quantity=quantity,
+            change_type=original_change_type,
+            notes=notes,
+            created_by=created_by,
+            unit=unit
+        )
+    
+    # Handle initial_stock as special additive case
+    if effective_change_type == 'initial_stock':
+        logger.info(f"ROUTING: {effective_change_type} -> INITIAL_STOCK (additive special case)")
+        return _universal_additive_handler(
+            item=item,
+            quantity=quantity,
+            change_type='restock',  # Treat as restock for processing
+            notes=notes or "Initial stock entry",
+            created_by=created_by,
+            cost_override=cost_override,
+            custom_expiration_date=custom_expiration_date,
+            custom_shelf_life_days=custom_shelf_life_days,
+            unit=unit
+        )
+    
+    # Unknown operation type
+    logger.error(f"ROUTING ERROR: Unknown change type '{effective_change_type}'")
+    return False, f"Unknown inventory change type: '{effective_change_type}'"

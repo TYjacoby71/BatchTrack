@@ -1,4 +1,3 @@
-
 """
 Additive operations handler - operations that increase inventory quantity.
 These handlers calculate what needs to happen and return deltas.
@@ -61,17 +60,24 @@ def _universal_additive_handler(item, quantity, change_type, notes=None, created
         if group_name == 'lot_creation':
             # Operations that create new lots (restock, manual_addition, finished_batch)
             success, message, lot_id = _handle_lot_creation_operation(
-                item, quantity, change_type, unit, notes, final_cost, 
-                created_by, custom_expiration_date, custom_shelf_life_days, **kwargs
+                item=item,
+                quantity=quantity,
+                change_type=change_type,
+                notes=notes,
+                created_by=created_by,
+                cost_override=cost_override,
+                custom_expiration_date=custom_expiration_date,
+                custom_shelf_life_days=custom_shelf_life_days,
+                operation_unit=unit
             )
-            
+
         elif group_name == 'lot_crediting':
             # Operations that credit back to existing lots (returned, refunded, release_reservation)
             success, message, lot_id = _handle_lot_crediting_operation(
                 item, quantity, change_type, unit, notes, final_cost, 
                 created_by, **kwargs
             )
-        
+
         else:
             return False, f"Unhandled operation group: {group_name}", 0
 
@@ -99,12 +105,49 @@ def _universal_additive_handler(item, quantity, change_type, notes=None, created
 
 
 
+def _handle_lot_creation_operation(item, quantity, change_type, notes, created_by, cost_override, custom_expiration_date, custom_shelf_life_days, operation_unit):
+    """
+    Handle operations that create new lots (restock, returns, etc.)
+    Returns (success, message, quantity_delta)
+    """
+    try:
+        logger.info(f"LOT_CREATION: Adding {quantity} to item {item.id}")
+
+        unit = operation_unit or item.unit or 'count'
+        final_cost = cost_override if cost_override is not None else item.cost_per_unit
+
+        # Create the FIFO lot
+        success, message, lot_id = create_new_fifo_lot(
+            item_id=item.id,
+            quantity=quantity,
+            change_type=change_type,
+            unit=unit,
+            notes=notes or f"{change_type.title()} operation",
+            cost_per_unit=final_cost,
+            created_by=created_by,
+            custom_expiration_date=custom_expiration_date,
+            custom_shelf_life_days=custom_shelf_life_days
+        )
+
+        if not success:
+            return False, f"Failed to create lot: {message}", 0
+
+        # Return the quantity delta for core to apply
+        quantity_delta = float(quantity)
+        logger.info(f"LOT_CREATION SUCCESS: Will add {quantity_delta} to item {item.id}")
+
+        return True, f"{change_type.title()} of {quantity} {unit} completed", quantity_delta
+
+    except Exception as e:
+        logger.error(f"Error in lot creation operation: {str(e)}")
+        return False, f"Lot creation failed: {str(e)}", 0
+
 def _handle_lot_crediting_operation(item, quantity, change_type, unit, notes, final_cost, created_by, **kwargs):
     """Handle operations that credit back to existing FIFO lots"""
     from ._fifo_ops import process_fifo_deduction
-    
+
     logger.info(f"LOT_CREDITING: Processing {change_type} credit operation")
-    
+
     # For crediting operations, we need to add inventory back using FIFO logic
     # This will credit the oldest lots first (reverse FIFO for returns)
     try:
@@ -130,30 +173,7 @@ def _handle_lot_crediting_operation(item, quantity, change_type, unit, notes, fi
         logger.error(f"Error in lot crediting operation {change_type}: {str(e)}")
         return False, f"Failed to credit inventory: {str(e)}", None
 
-# Individual handler functions for backwards compatibility and routing
-def handle_restock(item, quantity, change_type, notes=None, created_by=None, cost_override=None, custom_expiration_date=None, custom_shelf_life_days=None, **kwargs):
-    """Handle restock operations - adding new inventory."""
-    return _universal_additive_handler(item, quantity, change_type, notes, created_by, cost_override, custom_expiration_date, custom_shelf_life_days, **kwargs)
-
-def handle_manual_addition(item, quantity, change_type, notes=None, created_by=None, cost_override=None, custom_expiration_date=None, custom_shelf_life_days=None, **kwargs):
-    """Handle manual additions - administrative inventory increases."""
-    return _universal_additive_handler(item, quantity, change_type, notes, created_by, cost_override, custom_expiration_date, custom_shelf_life_days, **kwargs)
-
-def handle_returned(item, quantity, change_type, notes=None, created_by=None, cost_override=None, custom_expiration_date=None, custom_shelf_life_days=None, **kwargs):
-    """Handle returned items - items coming back into inventory."""
-    return _universal_additive_handler(item, quantity, change_type, notes, created_by, cost_override, custom_expiration_date, custom_shelf_life_days, **kwargs)
-
-def handle_refunded(item, quantity, change_type, notes=None, created_by=None, cost_override=None, custom_expiration_date=None, custom_shelf_life_days=None, **kwargs):
-    """Handle refunded items - items coming back from refunds."""
-    return _universal_additive_handler(item, quantity, change_type, notes, created_by, cost_override, custom_expiration_date, custom_shelf_life_days, **kwargs)
-
-def handle_finished_batch(item, quantity, change_type, notes=None, created_by=None, cost_override=None, custom_expiration_date=None, custom_shelf_life_days=None, **kwargs):
-    """Handle finished batch output - completed products added to inventory."""
-    return _universal_additive_handler(item, quantity, change_type, notes, created_by, cost_override, custom_expiration_date, custom_shelf_life_days, **kwargs)
-
-def handle_release_reservation(item, quantity, change_type, notes=None, created_by=None, cost_override=None, custom_expiration_date=None, custom_shelf_life_days=None, **kwargs):
-    """Handle reservation releases - unreserved inventory coming back."""
-    return _universal_additive_handler(item, quantity, change_type, notes, created_by, cost_override, custom_expiration_date, custom_shelf_life_days, **kwargs)
+# All additive operations now go through _universal_additive_handler
 
 def get_additive_operation_info(change_type):
     """Get information about an additive operation"""

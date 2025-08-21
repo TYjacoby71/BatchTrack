@@ -1,6 +1,7 @@
+
 """
 Deductive operations handler - operations that decrease inventory quantity.
-Simplified to use single handler with operation-specific notes.
+Unified to use single handler with operation type delegation.
 """
 
 import logging
@@ -8,6 +9,28 @@ from app.models import db
 from ._fifo_ops import deduct_fifo_inventory
 
 logger = logging.getLogger(__name__)
+
+# Deductive operation groups - all deductive operations follow the same pattern
+DEDUCTIVE_OPERATION_GROUPS = {
+    'consumption': {
+        'operations': ['use', 'sale', 'sample', 'tester', 'gift', 'batch'],
+        'description': 'Operations that consume inventory through normal usage',
+        'creates_lot': False,
+        'creates_history': True
+    },
+    'disposal': {
+        'operations': ['spoil', 'trash', 'expired', 'damaged', 'quality_fail'],
+        'description': 'Operations that remove inventory due to quality issues',
+        'creates_lot': False,
+        'creates_history': True
+    },
+    'reservation': {
+        'operations': ['reserved'],
+        'description': 'Operations that reserve inventory for future use',
+        'creates_lot': False,
+        'creates_history': True
+    }
+}
 
 # Mapping of operation types to user-friendly descriptions
 DEDUCTION_DESCRIPTIONS = {
@@ -25,18 +48,33 @@ DEDUCTION_DESCRIPTIONS = {
     'batch': 'Used {} in batch production'
 }
 
+def _get_operation_group(change_type):
+    """Determine which operation group a change_type belongs to"""
+    for group_name, group_config in DEDUCTIVE_OPERATION_GROUPS.items():
+        if change_type in group_config['operations']:
+            return group_name, group_config
+    return None, None
+
 def _handle_deductive_operation(item, quantity, change_type, notes=None, created_by=None, **kwargs):
     """
     Universal handler for all deductive operations.
     Returns (success, message, quantity_delta) - does NOT modify item.quantity
     """
     try:
-        logger.info(f"{change_type.upper()}: Deducting {quantity} from item {item.id}")
+        logger.info(f"DEDUCTIVE: Processing {change_type} for item {item.id}, quantity={quantity}")
+
+        # Get operation group info
+        group_name, group_config = _get_operation_group(change_type)
+        if not group_config:
+            logger.error(f"DEDUCTIVE: Unknown change type '{change_type}'")
+            return False, f"Unknown deductive operation: '{change_type}'", 0
+
+        logger.info(f"DEDUCTIVE: {change_type} -> {group_name} group")
 
         # Enhance notes with operation-specific information
         enhanced_notes = notes or ""
 
-        # Add operation-specific details
+        # Add operation-specific details for sales
         if change_type == 'sale':
             if kwargs.get('customer'):
                 enhanced_notes += f" (Customer: {kwargs['customer']})"
@@ -55,6 +93,7 @@ def _handle_deductive_operation(item, quantity, change_type, notes=None, created
         )
 
         if not success:
+            logger.error(f"DEDUCTIVE: FIFO deduction failed for {change_type}: {message}")
             return False, message, 0
 
         # Return negative delta for core to apply
@@ -64,46 +103,21 @@ def _handle_deductive_operation(item, quantity, change_type, notes=None, created
         description = DEDUCTION_DESCRIPTIONS.get(change_type, f'Used {quantity} from inventory')
         success_message = description.format(quantity)
 
-        logger.info(f"{change_type.upper()} SUCCESS: Will decrease item {item.id} by {abs(quantity_delta)}")
+        logger.info(f"DEDUCTIVE SUCCESS: {change_type} will decrease item {item.id} by {abs(quantity_delta)}")
         return True, success_message, quantity_delta
 
     except Exception as e:
-        logger.error(f"Error in {change_type} operation: {str(e)}")
+        logger.error(f"DEDUCTIVE ERROR: {change_type} operation failed: {str(e)}")
         return False, f"{change_type.title()} operation failed: {str(e)}", 0
 
-# Create individual handler functions that all use the universal handler
-def handle_use(item, quantity, change_type, notes=None, created_by=None, **kwargs):
-    return _handle_deductive_operation(item, quantity, change_type, notes, created_by, **kwargs)
-
-def handle_sale(item, quantity, change_type, notes=None, created_by=None, **kwargs):
-    return _handle_deductive_operation(item, quantity, change_type, notes, created_by, **kwargs)
-
-def handle_spoil(item, quantity, change_type, notes=None, created_by=None, **kwargs):
-    return _handle_deductive_operation(item, quantity, change_type, notes, created_by, **kwargs)
-
-def handle_trash(item, quantity, change_type, notes=None, created_by=None, **kwargs):
-    return _handle_deductive_operation(item, quantity, change_type, notes, created_by, **kwargs)
-
-def handle_expired(item, quantity, change_type, notes=None, created_by=None, **kwargs):
-    return _handle_deductive_operation(item, quantity, change_type, notes, created_by, **kwargs)
-
-def handle_damaged(item, quantity, change_type, notes=None, created_by=None, **kwargs):
-    return _handle_deductive_operation(item, quantity, change_type, notes, created_by, **kwargs)
-
-def handle_quality_fail(item, quantity, change_type, notes=None, created_by=None, **kwargs):
-    return _handle_deductive_operation(item, quantity, change_type, notes, created_by, **kwargs)
-
-def handle_sample(item, quantity, change_type, notes=None, created_by=None, **kwargs):
-    return _handle_deductive_operation(item, quantity, change_type, notes, created_by, **kwargs)
-
-def handle_tester(item, quantity, change_type, notes=None, created_by=None, **kwargs):
-    return _handle_deductive_operation(item, quantity, change_type, notes, created_by, **kwargs)
-
-def handle_gift(item, quantity, change_type, notes=None, created_by=None, **kwargs):
-    return _handle_deductive_operation(item, quantity, change_type, notes, created_by, **kwargs)
-
-def handle_reserved(item, quantity, change_type, notes=None, created_by=None, **kwargs):
-    return _handle_deductive_operation(item, quantity, change_type, notes, created_by, **kwargs)
-
-def handle_batch(item, quantity, change_type, notes=None, created_by=None, **kwargs):
-    return _handle_deductive_operation(item, quantity, change_type, notes, created_by, **kwargs)
+def get_deductive_operation_info(change_type):
+    """Get information about a deductive operation"""
+    group_name, group_config = _get_operation_group(change_type)
+    if group_config:
+        return {
+            'group': group_name,
+            'description': group_config['description'],
+            'creates_lot': group_config['creates_lot'],
+            'creates_history': group_config['creates_history']
+        }
+    return None

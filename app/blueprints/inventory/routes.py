@@ -1,10 +1,10 @@
+
 from flask import Blueprint, request, jsonify, render_template, redirect, url_for, flash, session
 from flask_login import login_required, current_user
 from app.models import db, InventoryItem, UnifiedInventoryHistory, Unit, IngredientCategory, User
-from app.utils.permissions import permission_required
-from app.utils.permissions import role_required
+from app.utils.permissions import permission_required, role_required
 from app.utils.api_responses import api_error, api_success
-from app.services.inventory_adjustment import process_inventory_adjustment, update_inventory_item
+from app.services.inventory_adjustment import process_inventory_adjustment, update_inventory_item, create_inventory_item
 from app.services.inventory_alerts import InventoryAlertService
 from app.services.reservation_service import ReservationService
 from app.utils.timezone_utils import TimezoneUtils
@@ -13,7 +13,7 @@ from ...utils.unit_utils import get_global_unit_list
 from ...utils.fifo_generator import get_change_type_prefix, int_to_base36
 from sqlalchemy import and_, or_, func
 from sqlalchemy.orm import joinedload
-from app.models.inventory_lot import InventoryLot # Import InventoryLot
+from app.models.inventory_lot import InventoryLot
 
 # Import the blueprint from __init__.py instead of creating a new one
 from . import inventory_bp
@@ -91,6 +91,7 @@ def list_inventory():
                          units=units,
                          show_archived=show_archived,
                          get_global_unit_list=get_global_unit_list)
+
 @inventory_bp.route('/set-columns', methods=['POST'])
 @login_required
 def set_column_visibility():
@@ -205,16 +206,10 @@ def view_inventory(id):
 @inventory_bp.route('/add', methods=['POST'])
 @login_required
 def add_inventory():
-    """
-    INVENTORY CREATION Route - creates entirely new inventory items.
-    This is for adding new ingredients/containers (mangoes, oranges), NOT adjusting existing ones.
-    """
+    """Create new inventory items"""
     try:
         logger.info(f"CREATE NEW INVENTORY ITEM - User: {current_user.id}, Org: {current_user.organization_id}")
-        logger.info(f"Form data: {dict(request.form)}")
-
-        from app.services.inventory_adjustment import create_inventory_item
-
+        
         success, message, item_id = create_inventory_item(
             form_data=request.form.to_dict(),
             organization_id=current_user.organization_id,
@@ -238,10 +233,7 @@ def add_inventory():
 @inventory_bp.route('/adjust/<int:item_id>', methods=['POST'])
 @login_required
 def adjust_inventory(item_id):
-    """
-    INVENTORY ADJUSTMENT Route - handles updates to existing inventory.
-    This is for adding/removing/spoiling existing items, NOT creating new items.
-    """
+    """Handle inventory adjustments"""
     try:
         item = db.session.get(InventoryItem, int(item_id))
         if not item:
@@ -256,7 +248,6 @@ def adjust_inventory(item_id):
         # Extract and validate form data
         form_data = request.form
         logger.info(f"ADJUST INVENTORY - Item: {item.name} (ID: {item_id})")
-        logger.info(f"Form data received: {dict(form_data)}")
 
         # Validate required fields
         change_type = form_data.get('change_type', '').strip().lower()
@@ -273,7 +264,7 @@ def adjust_inventory(item_id):
             flash("Invalid quantity provided.", "error")
             return redirect(url_for('.view_inventory', id=item_id))
 
-        # Extract optional cost override
+        # Extract optional parameters
         cost_override = None
         if form_data.get('cost_per_unit'):
             try:
@@ -282,42 +273,31 @@ def adjust_inventory(item_id):
                 flash("Invalid cost per unit provided.", "error")
                 return redirect(url_for('.view_inventory', id=item_id))
 
-        # Extract optional expiration date and shelf life
         custom_expiration_date = form_data.get('custom_expiration_date')
         custom_shelf_life_days = form_data.get('custom_shelf_life_days')
+        notes = form_data.get('notes', '')
+        input_unit = form_data.get('input_unit') or item.unit or 'count'
 
-        # Call the canonical inventory adjustment service
-        try:
-            # NOTE: The original 'unit' parameter was removed as it's not supported by process_inventory_adjustment.
-            # If a unit is needed for the adjustment, it should be handled within the services layer or passed differently.
-            notes = form_data.get('notes', '')
-            input_unit = form_data.get('input_unit') or item.unit or 'count' # Keep for logging context if needed, but not passed to service
-            logger.info(f"Attempting to adjust inventory for item {item.name} with quantity {quantity}, change type {change_type}, unit {input_unit}")
+        # Call the central inventory adjustment service
+        success, message = process_inventory_adjustment(
+            item_id=item.id,
+            quantity=quantity,
+            change_type=change_type,
+            notes=notes,
+            created_by=current_user.id,
+            cost_override=cost_override,
+            custom_expiration_date=custom_expiration_date,
+            custom_shelf_life_days=custom_shelf_life_days,
+            unit=input_unit
+        )
 
-
-            success, message = process_inventory_adjustment(
-                item_id=item.id,
-                quantity=quantity,
-                change_type=change_type,
-                notes=notes,
-                created_by=current_user.id,
-                cost_override=cost_override,
-                custom_expiration_date=custom_expiration_date,
-                custom_shelf_life_days=custom_shelf_life_days,
-                unit=input_unit
-            )
-
-            # Flash result and redirect
-            if success:
-                flash(f'{change_type.title()} completed: {message}', 'success')
-                logger.info(f"Adjustment successful: {message}")
-            else:
-                flash(f'Adjustment failed: {message}', 'error')
-                logger.error(f"Adjustment failed: {message}")
-
-        except Exception as e:
-            logger.error(f"Exception in process_inventory_adjustment: {str(e)}")
-            flash(f'System error during adjustment: {str(e)}', 'error')
+        # Flash result and redirect
+        if success:
+            flash(f'{change_type.title()} completed: {message}', 'success')
+            logger.info(f"Adjustment successful: {message}")
+        else:
+            flash(f'Adjustment failed: {message}', 'error')
+            logger.error(f"Adjustment failed: {message}")
 
         return redirect(url_for('.view_inventory', id=item_id))
 
@@ -326,14 +306,10 @@ def adjust_inventory(item_id):
         flash(f'System error during adjustment: {str(e)}', 'error')
         return redirect(url_for('.view_inventory', id=item_id))
 
-
 @inventory_bp.route('/edit/<int:id>', methods=['POST'])
 @login_required
 def edit_inventory(id):
-    """
-    INVENTORY EDIT Route - handles updates to inventory item details and quantity recounts.
-    Uses the canonical process_inventory_adjustment for quantity changes.
-    """
+    """Handle inventory item editing and recounts"""
     try:
         # Get scoped inventory item first to ensure access
         query = InventoryItem.query
@@ -349,9 +325,8 @@ def edit_inventory(id):
         # Extract form data
         form_data = request.form.to_dict()
         logger.info(f"EDIT INVENTORY - Item: {item.name} (ID: {id})")
-        logger.info(f"Form data received: {dict(form_data)}")
 
-        # Check if this is a quantity recount (quantity field changed)
+        # Check if this is a quantity recount
         new_quantity = form_data.get('quantity')
         recount_performed = False
 
@@ -360,13 +335,14 @@ def edit_inventory(id):
                 target_quantity = float(new_quantity)
                 logger.info(f"QUANTITY RECOUNT: Target quantity {target_quantity} for item {item.name}")
 
-                # Use canonical inventory adjustment service for recount
+                # Use central inventory adjustment service for recount
                 success, message = process_inventory_adjustment(
                     item_id=item.id,
                     quantity=target_quantity,
                     change_type='recount',
                     notes=f'Inventory recount via edit form - target: {target_quantity}',
-                    created_by=current_user.id
+                    created_by=current_user.id,
+                    target_quantity=target_quantity
                 )
 
                 if not success:
@@ -380,8 +356,7 @@ def edit_inventory(id):
                 flash("Invalid quantity provided for recount.", "error")
                 return redirect(url_for('inventory.view_inventory', id=id))
 
-        # Handle other field updates (name, cost, etc.) using the existing service
-        # Remove quantity from form_data if recount was performed to avoid conflicts
+        # Handle other field updates
         update_form_data = form_data.copy()
         if recount_performed:
             update_form_data.pop('quantity', None)
@@ -394,8 +369,6 @@ def edit_inventory(id):
         logger.error(f"Error in edit_inventory route: {str(e)}")
         flash(f'System error during edit: {str(e)}', 'error')
         return redirect(url_for('inventory.view_inventory', id=id))
-
-
 
 @inventory_bp.route('/archive/<int:id>')
 @login_required
@@ -422,7 +395,6 @@ def restore_inventory(id):
         db.session.rollback()
         flash(f'Error restoring item: {str(e)}', 'error')
     return redirect(url_for('inventory.list_inventory'))
-
 
 @inventory_bp.route('/debug/<int:id>')
 @login_required
