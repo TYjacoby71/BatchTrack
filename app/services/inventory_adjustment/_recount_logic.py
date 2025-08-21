@@ -73,7 +73,7 @@ def handle_recount(item, quantity, change_type, notes=None, created_by=None, tar
                     inventory_item_id=item.id,
                     change_type=change_type,
                     quantity_change=-deducted,
-                    remaining_quantity=0,
+                    remaining_quantity=None,  # N/A - this is an event record
                     unit=lot.unit,
                     unit_cost=lot.unit_cost,
                     fifo_code=lot.fifo_code,
@@ -118,7 +118,7 @@ def handle_recount(item, quantity, change_type, notes=None, created_by=None, tar
                         inventory_item_id=item.id,
                         change_type=change_type,  # Use original change_type (recount)
                         quantity_change=-deducted,
-                        remaining_quantity=0,
+                        remaining_quantity=None,  # N/A - this is an event record
                         unit=lot.unit,
                         unit_cost=lot.unit_cost,
                         fifo_code=lot.fifo_code,
@@ -139,7 +139,7 @@ def handle_recount(item, quantity, change_type, notes=None, created_by=None, tar
                         inventory_item_id=item.id,
                         change_type=change_type,  # Use original change_type (recount)
                         quantity_change=-remaining_to_deduct,
-                        remaining_quantity=0,
+                        remaining_quantity=None,  # N/A - this is an event record
                         unit=lot.unit,
                         unit_cost=lot.unit_cost,
                         fifo_code=lot.fifo_code,
@@ -185,7 +185,7 @@ def handle_recount(item, quantity, change_type, notes=None, created_by=None, tar
                         inventory_item_id=item.id,
                         change_type=change_type,  # Use original change_type (recount)
                         quantity_change=fill_amount,
-                        remaining_quantity=0,
+                        remaining_quantity=None,  # N/A - this is an event record
                         unit=lot.unit,
                         unit_cost=lot.unit_cost,
                         fifo_code=lot.fifo_code,
@@ -219,7 +219,7 @@ def handle_recount(item, quantity, change_type, notes=None, created_by=None, tar
                     inventory_item_id=item.id,
                     change_type=change_type,
                     quantity_change=remaining_to_add,
-                    remaining_quantity=0,
+                    remaining_quantity=None,  # N/A - this is an event record
                     unit=item.unit or 'count',
                     unit_cost=item.cost_per_unit or 0.0,
                     fifo_code=None,
