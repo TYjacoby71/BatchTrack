@@ -33,6 +33,9 @@ def handle_deductive_operation(item, quantity, change_type, notes=None, created_
     This includes: use, sale, spoil, expired, damaged, quality_fail, sample, tester, gift, reserved, batch
     """
     try:
+        # Filter out parameters not accepted by FIFO deduction function
+        fifo_kwargs = {k: v for k, v in kwargs.items() if k in ['batch_id']}
+        
         # Handle deduction using FIFO - this will check inventory internally
         success, error_msg = _handle_deductive_operation_internal(
             item_id=item.id,
@@ -40,7 +43,7 @@ def handle_deductive_operation(item, quantity, change_type, notes=None, created_
             change_type=change_type,
             notes=notes,
             created_by=created_by,
-            **kwargs
+            **fifo_kwargs
         )
 
         if not success:
