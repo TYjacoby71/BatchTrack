@@ -4,31 +4,48 @@ from ._fifo_ops import _internal_add_fifo_entry_enhanced
 
 logger = logging.getLogger(__name__)
 
-def handle_initial_stock(item, quantity, change_type, **kwargs):
+def handle_initial_stock(item, quantity, change_type, notes=None, created_by=None, cost_override=None, custom_expiration_date=None, custom_shelf_life_days=None, customer=None, sale_price=None, order_id=None, target_quantity=None):
     """
-    Handles the special case for an item's very first stock entry.
-    This is called by the dispatcher when it detects a new item.
+    Handle initial stock creation for new inventory items.
+
+    This is called when the first inventory entry is made for an item.
+    It creates the initial FIFO lot and sets the item's quantity.
     """
-    logger.info(f"INITIAL_STOCK: Adding {quantity} to new item {item.id}")
+    try:
+        logger.info(f"INITIAL STOCK: Creating first entry for item {item.id} with {quantity} units")
 
-    # For initial stock, we always use additive FIFO logic
-    success, error = _internal_add_fifo_entry_enhanced(
-        item_id=item.id,
-        quantity=quantity,
-        change_type='initial_stock',  # Always log as initial_stock for tracking
-        unit=getattr(item, 'unit', 'count'),
-        notes=kwargs.get('notes', f'Initial stock entry: {quantity}'),
-        cost_per_unit=item.cost_per_unit,
-        created_by=kwargs.get('created_by'),
-        **kwargs
-    )
+        # Use provided cost or item's default cost
+        cost_per_unit = cost_override if cost_override is not None else (item.cost_per_unit or 0.0)
 
-    if success:
-        # Update item quantity
-        item.quantity = quantity
-        return True, f"Initial stock of {quantity} {getattr(item, 'unit', 'units')} added"
-    else:
-        return False, f"Failed to add initial stock: {error}"
+        # Create the initial FIFO entry
+        success, error = _internal_add_fifo_entry_enhanced(
+            item_id=item.id,
+            quantity=quantity,
+            change_type=change_type,  # Use the original change_type for history
+            unit=item.unit or 'count',
+            notes=notes or f"Initial stock entry: {change_type}",
+            cost_per_unit=cost_per_unit,
+            created_by=created_by,
+            custom_expiration_date=custom_expiration_date,
+            custom_shelf_life_days=custom_shelf_life_days
+        )
+
+        if success:
+            # Set the item's quantity to match the FIFO entry
+            from app.models import db
+            item.quantity = float(quantity)
+            db.session.add(item)
+
+            message = f"Initial stock: {quantity} {item.unit or 'units'} added"
+            logger.info(f"INITIAL STOCK SUCCESS: {message} for item {item.id}")
+            return True, message
+        else:
+            logger.error(f"INITIAL STOCK FAILED: {error} for item {item.id}")
+            return False, error
+
+    except Exception as e:
+        logger.error(f"INITIAL STOCK ERROR: {str(e)} for item {item.id}")
+        return False, str(e)
 
 def create_inventory_item(form_data, organization_id, created_by):
     """
@@ -85,7 +102,7 @@ def create_inventory_item(form_data, organization_id, created_by):
                 change_type='initial_stock',
                 notes=f'Initial stock entry: {quantity}',
                 created_by=created_by,
-                cost_per_unit=cost_per_unit
+                cost_override=cost_per_unit # Pass cost_per_unit as cost_override
             )
 
             if not success:

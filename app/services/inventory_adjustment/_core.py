@@ -6,7 +6,7 @@ from ._validation import validate_inventory_fifo_sync
 
 logger = logging.getLogger(__name__)
 
-def process_inventory_adjustment(item_id, change_type, quantity, **kwargs):
+def process_inventory_adjustment(item_id, change_type, quantity, notes=None, created_by=None, cost_override=None, custom_expiration_date=None, custom_shelf_life_days=None, customer=None, sale_price=None, order_id=None, target_quantity=None):
     """
     Canonical entry point for all inventory adjustments.
     This is the ONLY function that should be called by external code.
@@ -30,12 +30,20 @@ def process_inventory_adjustment(item_id, change_type, quantity, **kwargs):
         return False, f"Unknown inventory change type: '{change_type}'"
     
     try:
-        # Pass the ORIGINAL change_type to the handler, not the mutated one
+        # Pass explicit arguments to the handler
         success, message = handler(
             item=item, 
             quantity=quantity, 
             change_type=change_type,  # Original intent preserved
-            **kwargs
+            notes=notes,
+            created_by=created_by,
+            cost_override=cost_override,
+            custom_expiration_date=custom_expiration_date,
+            custom_shelf_life_days=custom_shelf_life_days,
+            customer=customer,
+            sale_price=sale_price,
+            order_id=order_id,
+            target_quantity=target_quantity
         )
         
         if success:

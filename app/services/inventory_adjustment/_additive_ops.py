@@ -1,3 +1,4 @@
+
 """
 Additive Operations Handler
 
@@ -19,7 +20,7 @@ ADDITIVE_CONFIGS = {
     'unreserved': {'message': 'Unreserved', 'use_cost_override': False},
 }
 
-def handle_additive_operation(item, quantity, change_type, notes=None, created_by=None, cost_override=None, **kwargs):
+def handle_additive_operation(item, quantity, change_type, notes=None, created_by=None, cost_override=None, custom_expiration_date=None, custom_shelf_life_days=None):
     """
     Universal handler for all additive operations.
 
@@ -50,7 +51,8 @@ def handle_additive_operation(item, quantity, change_type, notes=None, created_b
             notes=notes or f"{config['message']} inventory",
             cost_per_unit=cost_per_unit,
             created_by=created_by,
-            **kwargs
+            custom_expiration_date=custom_expiration_date,
+            custom_shelf_life_days=custom_shelf_life_days
         )
 
         if success:
@@ -71,22 +73,22 @@ def handle_additive_operation(item, quantity, change_type, notes=None, created_b
 
 
 # Individual handler functions for each additive operation type
-def handle_restock(item, quantity, notes=None, created_by=None, cost_override=None, **kwargs):
+def handle_restock(item, quantity, change_type, notes=None, created_by=None, cost_override=None, custom_expiration_date=None, custom_shelf_life_days=None):
     """Handle restock operations"""
-    return handle_additive_operation(item, quantity, 'restock', notes, created_by, cost_override, **kwargs)
+    return handle_additive_operation(item, quantity, change_type, notes, created_by, cost_override, custom_expiration_date, custom_shelf_life_days)
 
-def handle_manual_addition(item, quantity, notes=None, created_by=None, **kwargs):
+def handle_manual_addition(item, quantity, change_type, notes=None, created_by=None, custom_expiration_date=None, custom_shelf_life_days=None):
     """Handle manual addition operations"""
-    return handle_additive_operation(item, quantity, 'manual_addition', notes, created_by, **kwargs)
+    return handle_additive_operation(item, quantity, change_type, notes, created_by, None, custom_expiration_date, custom_shelf_life_days)
 
-def handle_returned(item, quantity, notes=None, created_by=None, **kwargs):
+def handle_returned(item, quantity, change_type, notes=None, created_by=None, custom_expiration_date=None, custom_shelf_life_days=None):
     """Handle returned inventory operations"""
-    return handle_additive_operation(item, quantity, 'returned', notes, created_by, **kwargs)
+    return handle_additive_operation(item, quantity, change_type, notes, created_by, None, custom_expiration_date, custom_shelf_life_days)
 
-def handle_refunded(item, quantity, notes=None, created_by=None, **kwargs):
+def handle_refunded(item, quantity, change_type, notes=None, created_by=None, custom_expiration_date=None, custom_shelf_life_days=None):
     """Handle refunded inventory operations"""
-    return handle_additive_operation(item, quantity, 'refunded', notes, created_by, **kwargs)
+    return handle_additive_operation(item, quantity, change_type, notes, created_by, None, custom_expiration_date, custom_shelf_life_days)
 
-def handle_finished_batch(item, quantity, notes=None, created_by=None, **kwargs):
+def handle_finished_batch(item, quantity, change_type, notes=None, created_by=None, custom_expiration_date=None, custom_shelf_life_days=None):
     """Handle finished batch operations"""
-    return handle_additive_operation(item, quantity, 'finished_batch', notes, created_by, **kwargs)
+    return handle_additive_operation(item, quantity, change_type, notes, created_by, None, custom_expiration_date, custom_shelf_life_days)

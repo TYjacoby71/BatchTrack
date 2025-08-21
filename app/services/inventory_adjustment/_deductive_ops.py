@@ -1,3 +1,4 @@
+
 """
 Deductive Operations Handler
 
@@ -26,7 +27,7 @@ DEDUCTIVE_CONFIGS = {
     'recount_deduction': {'message': 'Recount adjustment'}
 }
 
-def handle_deductive_operation(item, quantity, change_type, notes=None, created_by=None, **kwargs):
+def handle_deductive_operation(item, quantity, change_type, notes=None, created_by=None, customer=None, sale_price=None, order_id=None):
     """
     Common handler for all deductive operations that remove inventory using FIFO.
 
@@ -35,12 +36,14 @@ def handle_deductive_operation(item, quantity, change_type, notes=None, created_
     try:
         # Handle deduction using FIFO - this will check inventory internally
         success, error_msg = _handle_deductive_operation_internal(
-            item=item,
+            item_id=item.id,
             quantity=quantity,
             change_type=change_type,
             notes=notes,
             created_by=created_by,
-            **kwargs
+            customer=customer,
+            sale_price=sale_price,
+            order_id=order_id
         )
 
         if not success:
@@ -58,50 +61,50 @@ def handle_deductive_operation(item, quantity, change_type, notes=None, created_
 
 
 # Individual handler functions for each deductive operation type
-def handle_use(item, quantity, notes=None, created_by=None, **kwargs):
+def handle_use(item, quantity, change_type, notes=None, created_by=None, customer=None, sale_price=None, order_id=None):
     """Handle use operations"""
-    return handle_deductive_operation(item, quantity, 'use', notes, created_by, **kwargs)
+    return handle_deductive_operation(item, quantity, change_type, notes, created_by, customer, sale_price, order_id)
 
-def handle_sale(item, quantity, notes=None, created_by=None, **kwargs):
+def handle_sale(item, quantity, change_type, notes=None, created_by=None, customer=None, sale_price=None, order_id=None):
     """Handle sale operations"""
-    return handle_deductive_operation(item, quantity, 'sale', notes, created_by, **kwargs)
+    return handle_deductive_operation(item, quantity, change_type, notes, created_by, customer, sale_price, order_id)
 
-def handle_spoil(item, quantity, notes=None, created_by=None, **kwargs):
+def handle_spoil(item, quantity, change_type, notes=None, created_by=None, customer=None, sale_price=None, order_id=None):
     """Handle spoil operations - uses FIFO deduction and consumes from lots"""
-    return handle_deductive_operation(item, quantity, 'spoil', notes or 'Spoiled inventory', created_by, **kwargs)
+    return handle_deductive_operation(item, quantity, change_type, notes or 'Spoiled inventory', created_by, customer, sale_price, order_id)
 
-def handle_trash(item, quantity, notes=None, created_by=None, **kwargs):
+def handle_trash(item, quantity, change_type, notes=None, created_by=None, customer=None, sale_price=None, order_id=None):
     """Handle trash operations - records as spoil but with different notes"""
-    return handle_deductive_operation(item, quantity, 'spoil', notes or 'Trashed inventory', created_by, **kwargs)
+    return handle_deductive_operation(item, quantity, 'spoil', notes or 'Trashed inventory', created_by, customer, sale_price, order_id)
 
-def handle_expired(item, quantity, notes=None, created_by=None, **kwargs):
+def handle_expired(item, quantity, change_type, notes=None, created_by=None, customer=None, sale_price=None, order_id=None):
     """Handle expired operations"""
-    return handle_deductive_operation(item, quantity, 'expired', notes, created_by, **kwargs)
+    return handle_deductive_operation(item, quantity, change_type, notes, created_by, customer, sale_price, order_id)
 
-def handle_damaged(item, quantity, notes=None, created_by=None, **kwargs):
+def handle_damaged(item, quantity, change_type, notes=None, created_by=None, customer=None, sale_price=None, order_id=None):
     """Handle damaged operations"""
-    return handle_deductive_operation(item, quantity, 'damaged', notes, created_by, **kwargs)
+    return handle_deductive_operation(item, quantity, change_type, notes, created_by, customer, sale_price, order_id)
 
-def handle_quality_fail(item, quantity, notes=None, created_by=None, **kwargs):
+def handle_quality_fail(item, quantity, change_type, notes=None, created_by=None, customer=None, sale_price=None, order_id=None):
     """Handle quality fail operations"""
-    return handle_deductive_operation(item, quantity, 'quality_fail', notes, created_by, **kwargs)
+    return handle_deductive_operation(item, quantity, change_type, notes, created_by, customer, sale_price, order_id)
 
-def handle_sample(item, quantity, notes=None, created_by=None, **kwargs):
+def handle_sample(item, quantity, change_type, notes=None, created_by=None, customer=None, sale_price=None, order_id=None):
     """Handle sample operations"""
-    return handle_deductive_operation(item, quantity, 'sample', notes, created_by, **kwargs)
+    return handle_deductive_operation(item, quantity, change_type, notes, created_by, customer, sale_price, order_id)
 
-def handle_tester(item, quantity, notes=None, created_by=None, **kwargs):
+def handle_tester(item, quantity, change_type, notes=None, created_by=None, customer=None, sale_price=None, order_id=None):
     """Handle tester operations"""
-    return handle_deductive_operation(item, quantity, 'tester', notes, created_by, **kwargs)
+    return handle_deductive_operation(item, quantity, change_type, notes, created_by, customer, sale_price, order_id)
 
-def handle_gift(item, quantity, notes=None, created_by=None, **kwargs):
+def handle_gift(item, quantity, change_type, notes=None, created_by=None, customer=None, sale_price=None, order_id=None):
     """Handle gift operations"""
-    return handle_deductive_operation(item, quantity, 'gift', notes, created_by, **kwargs)
+    return handle_deductive_operation(item, quantity, change_type, notes, created_by, customer, sale_price, order_id)
 
-def handle_reserved(item, quantity, notes=None, created_by=None, **kwargs):
+def handle_reserved(item, quantity, change_type, notes=None, created_by=None, customer=None, sale_price=None, order_id=None):
     """Handle reserved operations"""
-    return handle_deductive_operation(item, quantity, 'reserved', notes, created_by, **kwargs)
+    return handle_deductive_operation(item, quantity, change_type, notes, created_by, customer, sale_price, order_id)
 
-def handle_batch(item, quantity, notes=None, created_by=None, **kwargs):
+def handle_batch(item, quantity, change_type, notes=None, created_by=None, customer=None, sale_price=None, order_id=None):
     """Handle batch operations"""
-    return handle_deductive_operation(item, quantity, 'batch', notes, created_by, **kwargs)
+    return handle_deductive_operation(item, quantity, change_type, notes, created_by, customer, sale_price, order_id)
