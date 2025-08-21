@@ -12,12 +12,16 @@ def get_dashboard_alerts():
     """Get dashboard alerts for current user's organization"""
     try:
         from flask import session
+        import logging
         
         # Get dismissed alerts from session
         dismissed_alerts = session.get('dismissed_alerts', [])
         
         # Get alerts from service
         alert_data = DashboardAlertService.get_dashboard_alerts(dismissed_alerts=dismissed_alerts)
+        
+        # Log for debugging
+        logging.info(f"Dashboard alerts requested - found {len(alert_data.get('alerts', []))} alerts")
         
         return jsonify({
             'success': True,
@@ -27,6 +31,7 @@ def get_dashboard_alerts():
         })
         
     except Exception as e:
+        logging.error(f"Error getting dashboard alerts: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @dashboard_api_bp.route('/dismiss-alert', methods=['POST'])

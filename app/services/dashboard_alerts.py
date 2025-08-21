@@ -21,15 +21,20 @@ class DashboardAlertService:
     @staticmethod
     def get_dashboard_alerts(max_alerts: int = None, dismissed_alerts: list = None) -> Dict:
         """Get prioritized alerts for dashboard with cognitive load management"""
+        import logging
+
         # Get user preferences
         user_prefs = None
         if current_user and current_user.is_authenticated:
             user_prefs = UserPreferences.get_for_user(current_user.id)
-            if max_alerts is None:
+            if user_prefs and max_alerts is None:
                 max_alerts = user_prefs.max_dashboard_alerts
+            logging.info(f"User preferences found: {user_prefs is not None}")
 
         if max_alerts is None:
             max_alerts = 3  # Default fallback
+
+        logging.info(f"Getting dashboard alerts with max_alerts={max_alerts}")
 
         alerts = []
 
@@ -40,8 +45,13 @@ class DashboardAlertService:
             days_ahead=expiration_days
         )
 
-        # CRITICAL: Expired items with remaining quantity - only if enabled
-        if user_prefs and user_prefs.show_expiration_alerts and expiration_data['expired_total'] > 0:
+        # CRITICAL: Expired items with remaining quantity - only if enabled (default to True if no prefs)
+        show_expiration = (user_prefs.show_expiration_alerts if user_prefs else True)
+
+        # Debug logging
+        logging.info(f"Expiration data: expired_total={expiration_data.get('expired_total', 'MISSING')}, expiring_soon_total={expiration_data.get('expiring_soon_total', 'MISSING')}")
+        logging.info(f"User preferences: show_expiration={show_expiration if user_prefs else 'NO_PREFS'}")
+        if show_expiration and expiration_data['expired_total'] > 0:
             alerts.append({
                 'priority': 'CRITICAL',
                 'type': 'expired_inventory',
@@ -52,9 +62,11 @@ class DashboardAlertService:
                 'dismissible': True
             })
 
-        # CRITICAL: Stuck batches (in progress > 24 hours) - only if enabled in user preferences
-        if user_prefs and user_prefs.show_batch_alerts:
+        # CRITICAL: Stuck batches (in progress > 24 hours) - only if enabled in user preferences (default to True)
+        show_batch_alerts = (user_prefs.show_batch_alerts if user_prefs else True)
+        if show_batch_alerts:
             stuck_batches = DashboardAlertService._get_stuck_batches()
+            logging.info(f"Stuck batches found: {len(stuck_batches)}")
             if stuck_batches:
                 alerts.append({
                     'priority': 'CRITICAL',
@@ -66,8 +78,9 @@ class DashboardAlertService:
                     'dismissible': True
                 })
 
-        # CRITICAL: Recent fault log errors - only if enabled
-        if user_prefs and user_prefs.show_fault_alerts:
+        # CRITICAL: Recent fault log errors - only if enabled (default to True)
+        show_fault_alerts = (user_prefs.show_fault_alerts if user_prefs else True)
+        if show_fault_alerts:
             recent_faults = DashboardAlertService._get_recent_faults()
             if recent_faults > 0:
                 alerts.append({
@@ -80,8 +93,8 @@ class DashboardAlertService:
                     'dismissible': True
                 })
 
-        # HIGH: Items expiring soon (within expiration_warning_days) - only if enabled
-        if user_prefs and user_prefs.show_expiration_alerts and expiration_data['expiring_soon_total'] > 0:
+        # HIGH: Items expiring soon (within expiration_warning_days) - only if enabled (default to True)
+        if show_expiration and expiration_data['expiring_soon_total'] > 0:
             alerts.append({
                 'priority': 'HIGH',
                 'type': 'expiring_soon',
@@ -92,9 +105,11 @@ class DashboardAlertService:
                 'dismissible': True
             })
 
-        # HIGH: Low stock items - only if enabled
-        if user_prefs and user_prefs.show_low_stock_alerts:
+        # HIGH: Low stock items - only if enabled (default to True)
+        show_low_stock = (user_prefs.show_low_stock_alerts if user_prefs else True)
+        if show_low_stock:
             stock_summary = CombinedInventoryAlertService.get_unified_stock_summary()
+            logging.info(f"Stock summary: low_stock_ingredients_count={stock_summary.get('low_stock_ingredients_count', 'MISSING')}, low_stock_count={stock_summary.get('low_stock_count', 'MISSING')}, out_of_stock_count={stock_summary.get('out_of_stock_count', 'MISSING')}")
 
             if stock_summary['low_stock_ingredients_count'] > 0:
                 alerts.append({
@@ -129,8 +144,9 @@ class DashboardAlertService:
                     'dismissible': True
                 })
 
-        # HIGH: Expired timers - only if enabled
-        if user_prefs and user_prefs.show_timer_alerts:
+        # HIGH: Expired timers - only if enabled (default to True)
+        show_timer_alerts = (user_prefs.show_timer_alerts if user_prefs else True)
+        if show_timer_alerts:
             timer_alerts = DashboardAlertService._get_timer_alerts()
             if timer_alerts['expired_count'] > 0:
                 # Get the first expired timer's batch for redirection
@@ -150,8 +166,8 @@ class DashboardAlertService:
                     'dismissible': True
                 })
 
-        # MEDIUM: Active batches needing attention - only if enabled
-        if user_prefs and user_prefs.show_batch_alerts:
+        # MEDIUM: Active batches needing attention - only if enabled (already set above)
+        if show_batch_alerts:
             if current_user and current_user.is_authenticated and current_user.organization_id:
                 active_batches = Batch.query.filter_by(
                     status='in_progress',
@@ -184,12 +200,18 @@ class DashboardAlertService:
                 'dismissible': True
             })
 
+        # Debug total alerts before filtering
+        logging.info(f"Total alerts before filtering: {len(alerts)}")
+
         # Filter out dismissed alerts from this session
         if dismissed_alerts:
+            logging.info(f"Dismissed alerts: {dismissed_alerts}")
             alerts = [alert for alert in alerts if alert['type'] not in dismissed_alerts]
+            logging.info(f"Alerts after dismissal filtering: {len(alerts)}")
 
         # Sort by priority and limit
         alerts.sort(key=lambda x: DashboardAlertService.PRIORITY_LEVELS[x['priority']])
+        logging.info(f"Final alerts to return: {len(alerts[:max_alerts])}")
         return {
             'alerts': alerts[:max_alerts],
             'total_alerts': len(alerts),
@@ -228,7 +250,8 @@ class DashboardAlertService:
     @staticmethod
     def _get_stuck_batches() -> List:
         """Get batches that have been in progress for more than 24 hours"""
-        cutoff_time = datetime.utcnow() - timedelta(hours=24)
+        from ..utils.timezone_utils import TimezoneUtils
+        cutoff_time = TimezoneUtils.utc_now() - timedelta(hours=24)
         query = Batch.query.filter(
             Batch.status == 'in_progress',
             Batch.started_at < cutoff_time
@@ -251,7 +274,8 @@ class DashboardAlertService:
             with open(fault_file, 'r') as f:
                 faults = json.load(f)
 
-            cutoff_time = datetime.utcnow() - timedelta(hours=24)
+            from ..utils.timezone_utils import TimezoneUtils
+            cutoff_time = TimezoneUtils.utc_now() - timedelta(hours=24)
             recent_critical = 0
 
             for fault in faults:

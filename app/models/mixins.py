@@ -83,8 +83,9 @@ from flask_login import current_user
 
 class TimestampMixin:
     """Adds created_at and updated_at timestamps to models"""
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=True)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=True)
+    from ..utils.timezone_utils import TimezoneUtils
+    created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now, nullable=True)
+    updated_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now, onupdate=TimezoneUtils.utc_now, nullable=True)
 
 
 class ScopedModelMixin:

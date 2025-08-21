@@ -1,46 +1,7 @@
 
-<!-- Unified Alert System -->
-{% if alert_data.alerts %}
-<div class="alert-container mb-4" id="alertContainer">
-  {% for alert in alert_data.alerts %}
-    <div class="alert alert-{{ 'danger' if alert.priority == 'CRITICAL' else 'warning' if alert.priority == 'HIGH' else 'info' }} 
-                alert-dismissible fade show" 
-         data-alert-type="{{ alert.type }}"
-         id="alert-{{ alert.type }}">
-
-      <div class="d-flex justify-content-between align-items-start">
-        <div class="flex-grow-1">
-          <h6 class="alert-heading mb-1">
-            {% if alert.priority == 'CRITICAL' %}🚨{% elif alert.priority == 'HIGH' %}⚠️{% else %}ℹ️{% endif %}
-            {{ alert.title }}
-          </h6>
-          <p class="mb-2">{{ alert.message }}</p>
-
-          {% if alert.action_url %}
-          <a href="{{ alert.action_url }}" class="btn btn-sm btn-outline-{{ 'danger' if alert.priority == 'CRITICAL' else 'warning' if alert.priority == 'HIGH' else 'info' }}">
-            {{ alert.action_text }}
-          </a>
-          {% endif %}
-        </div>
-
-        {% if alert.dismissible %}
-        <button type="button" class="btn-close" aria-label="Close"
-                onclick="dismissAlert('{{ alert.type }}', this.closest('.alert'))"></button>
-        {% endif %}
-      </div>
-    </div>
-  {% endfor %}
-
-  {% if alert_data.hidden_count > 0 %}
-  <div class="alert alert-light text-center">
-    <small class="text-muted">
-      {{ alert_data.hidden_count }} more alerts available. 
-      <a href="/settings" class="btn btn-sm btn-outline-secondary ms-2 text-decoration-none">
-        Adjust alert settings
-      </a>
-    </small>
-  </div>
-  {% endif %}
+<!-- Dashboard Alerts Component -->
+<div class="alert-container" id="dashboard-alerts-container">
+  <!-- This will be populated by JavaScript -->
 </div>
 
 <script>
@@ -84,63 +45,85 @@ async function refreshDashboardAlerts() {
                 'X-CSRFToken': document.querySelector('meta[name=csrf-token]')?.getAttribute('content') || ''
             }
         });
+        
         if (response.ok) {
             const alertData = await response.json();
             updateAlertContainer(alertData);
         } else {
-            console.error('Failed to refresh alerts - response not ok');
+            console.error('Failed to refresh alerts - response not ok:', response.status);
         }
     } catch (error) {
-        console.error('Error refreshing alerts:', error);
+        console.error('Error refreshing dashboard alerts:', error);
     }
 }
 
 function updateAlertContainer(alertData) {
-    const container = document.getElementById('alertContainer');
+    const container = document.getElementById('dashboard-alerts-container');
     if (!container) return;
-
-    // Only update if there are new alerts to show
-    if (alertData.alerts && alertData.alerts.length > 0) {
-        // Check if any alerts are already shown
-        const currentAlerts = container.querySelectorAll('.alert[data-alert-type]');
-        const currentTypes = Array.from(currentAlerts).map(el => el.dataset.alertType);
-        const newTypes = alertData.alerts.map(alert => alert.type);
-
-        // Add new alerts that aren't currently displayed
+    
+    container.innerHTML = '';
+    
+    if (alertData.success && alertData.alerts && alertData.alerts.length > 0) {
         alertData.alerts.forEach(alert => {
-            if (!currentTypes.includes(alert.type)) {
-                addAlertToContainer(alert, container);
-            }
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${getPriorityClass(alert.priority)} alert-dismissible fade show`;
+            alertDiv.innerHTML = `
+                <div class="d-flex align-items-start">
+                    <i class="fas fa-${getPriorityIcon(alert.priority)} me-2 mt-1"></i>
+                    <div class="flex-grow-1">
+                        <strong>${alert.title}</strong>
+                        <div>${alert.message}</div>
+                        ${alert.action_url ? `<a href="${alert.action_url}" class="btn btn-sm btn-outline-${getPriorityClass(alert.priority)} mt-2">${alert.action_text || 'View'}</a>` : ''}
+                    </div>
+                    ${alert.dismissible ? `<button type="button" class="btn-close" onclick="dismissAlert('${alert.type}', this.closest('.alert'))"></button>` : ''}
+                </div>
+            `;
+            container.appendChild(alertDiv);
         });
+        
+        // Show hidden count if applicable
+        if (alertData.hidden_count > 0) {
+            const hiddenDiv = document.createElement('div');
+            hiddenDiv.className = 'alert alert-light text-center';
+            hiddenDiv.innerHTML = `
+                <small class="text-muted">
+                    ${alertData.hidden_count} more alerts available. 
+                    <a href="/settings" class="btn btn-sm btn-outline-secondary ms-2 text-decoration-none">
+                        Adjust alert settings
+                    </a>
+                </small>
+            `;
+            container.appendChild(hiddenDiv);
+        }
     }
 }
 
-function addAlertToContainer(alert, container) {
-    const priorityClass = alert.priority === 'CRITICAL' ? 'danger' : 
-                         alert.priority === 'HIGH' ? 'warning' : 'info';
-    
-    const alertHtml = `
-        <div class="alert alert-${priorityClass} alert-dismissible fade show" 
-             data-alert-type="${alert.type}"
-             id="alert-${alert.type}">
-            <div class="d-flex justify-content-between align-items-start">
-                <div class="flex-grow-1">
-                    <h6 class="alert-heading mb-1">
-                        ${alert.priority === 'CRITICAL' ? '🚨' : alert.priority === 'HIGH' ? '⚠️' : 'ℹ️'}
-                        ${alert.title}
-                    </h6>
-                    <p class="mb-2">${alert.message}</p>
-                    ${alert.action_url ? `<a href="${alert.action_url}" class="btn btn-sm btn-outline-${priorityClass}">${alert.action_text}</a>` : ''}
-                </div>
-                ${alert.dismissible ? `<button type="button" class="btn-close" aria-label="Close" onclick="dismissAlert('${alert.type}', this.closest('.alert'))"></button>` : ''}
-            </div>
-        </div>
-    `;
-    
-    container.insertAdjacentHTML('beforeend', alertHtml);
+function getPriorityClass(priority) {
+    switch(priority) {
+        case 'CRITICAL': return 'danger';
+        case 'HIGH': return 'warning';
+        case 'MEDIUM': return 'info';
+        case 'LOW': return 'light';
+        default: return 'secondary';
+    }
 }
 
-// Auto-refresh alerts every 5 minutes
-setInterval(refreshDashboardAlerts, 300000);
+function getPriorityIcon(priority) {
+    switch(priority) {
+        case 'CRITICAL': return 'exclamation-triangle';
+        case 'HIGH': return 'exclamation-circle';
+        case 'MEDIUM': return 'info-circle';
+        case 'LOW': return 'bell';
+        default: return 'bell';
+    }
+}
+
+// Load alerts when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    refreshDashboardAlerts();
+});
+
+// Refresh alerts every 5 minutes
+setInterval(refreshDashboardAlerts, 5 * 60 * 1000);
 </script>
-{% endif %}
+</div>
