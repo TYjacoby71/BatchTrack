@@ -58,7 +58,7 @@ def audit_event(
         return False
 
 
-def record_audit_entry(
+def record_non_inventory_audit_entry(
     item_id: int,
     change_type: str,
     quantity_change: float = 0,

@@ -150,10 +150,6 @@ def create_inventory_item(form_data: dict, organization_id: int, created_by: int
             return False, 'Error creating inventory item - FIFO sync failed', None
 
         db.session.commit()
-        audit_success = record_audit_entry(item.id, 'item_created', f'Created item: {name}')
-        
-        if not audit_success:
-            logger.warning(f"Audit entry failed for item creation: {item.id}")
 
         return True, 'Inventory item added successfully', item.id
 
