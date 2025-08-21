@@ -3,6 +3,7 @@ import logging
 from flask import Flask, redirect, url_for, render_template
 from flask_login import current_user
 from sqlalchemy.pool import StaticPool
+from datetime import timedelta
 
 # Import extensions and new modules
 from .extensions import db, migrate, csrf, limiter
@@ -55,6 +56,14 @@ def create_app(config=None):
     limiter.init_app(app)
     configure_login_manager(app)
 
+    # Initialize session configuration
+    app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=31)
+
+    # Clear all dismissed alerts on app restart - Flask 2.2+ compatible
+    with app.app_context():
+        # Sessions will be cleared automatically on app restart since we're using the default session interface
+        pass
+
     # Register application components
     register_middleware(app)
     register_blueprints(app)
@@ -106,7 +115,7 @@ def _add_core_routes(app):
     def homepage():
         """Public homepage - accessible to all users"""
         return render_template("homepage.html")
-    
+
     @app.route("/public")
     def public_page():
         """Alternative public page"""

@@ -58,3 +58,14 @@ def dismiss_alert():
             
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
+
+@dashboard_api_bp.route('/clear-dismissed-alerts', methods=['POST'])
+@login_required 
+def clear_dismissed_alerts():
+    """Clear all dismissed alerts from session"""
+    try:
+        from flask import session
+        session.pop('dismissed_alerts', None)
+        return jsonify({'success': True, 'message': 'All dismissed alerts cleared'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500

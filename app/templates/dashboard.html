@@ -15,7 +15,7 @@
 </div>
 
 <!-- Unified Dashboard Alerts -->
-    {% include 'components/dashboard_alerts.html' %}
+    <!-- This section is replaced by the change below -->
 
     <!-- If no alerts component exists, create inline -->
     <div id="fallback-dashboard-alerts">
@@ -158,6 +158,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 30000);
 });
 </script>
+
+<!-- Unified Dashboard Alerts -->
+{% include 'components/dashboard_alerts.html' %}
 
 {% if alert %}
 <div class="alert alert-warning mt-3">
