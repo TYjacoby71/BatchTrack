@@ -158,7 +158,13 @@ def view_inventory(id):
         item.temp_available_quantity = float(item.quantity) - item.temp_expired_quantity
     else:
         item.temp_expired_quantity = 0
-        item.temp_available_quantity = item.quantity
+        item.temp_available_quantity = float(item.quantity)
+
+    # Ensure these attributes are always set for template display
+    if not hasattr(item, 'temp_expired_quantity'):
+        item.temp_expired_quantity = 0
+    if not hasattr(item, 'temp_available_quantity'):
+        item.temp_available_quantity = float(item.quantity)
 
     history_query = UnifiedInventoryHistory.query.filter_by(inventory_item_id=id).options(
         joinedload(UnifiedInventoryHistory.batch),
