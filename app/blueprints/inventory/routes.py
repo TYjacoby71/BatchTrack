@@ -14,7 +14,7 @@ from ...utils.fifo_generator import get_change_type_prefix, int_to_base36
 from sqlalchemy import and_, or_, func
 from sqlalchemy.orm import joinedload
 from app.models.inventory_lot import InventoryLot # Import InventoryLot
-from app.blueprints.fifo.services import FIFOService
+from app.services.fifo_service import FIFOService # Corrected import for FIFOService
 
 # Import the blueprint from __init__.py instead of creating a new one
 from . import inventory_bp
@@ -163,7 +163,7 @@ def view_inventory(id):
 
     # Get expired FIFO entries for display (only from InventoryLot since lots handle FIFO tracking)
     from sqlalchemy import and_
-    
+
     expired_entries = []
     expired_total = 0
     if item.is_perishable:
