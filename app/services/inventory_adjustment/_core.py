@@ -10,7 +10,7 @@ import inspect
 from sqlalchemy.exc import SQLAlchemyError
 from app.models import db, InventoryItem, UnifiedInventoryHistory
 from ._handlers import get_operation_handler
-from ._validation import validate_operation_type
+from ._operation_registry import validate_operation_type
 
 logger = logging.getLogger(__name__)
 
