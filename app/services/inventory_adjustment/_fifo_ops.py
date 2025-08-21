@@ -55,6 +55,7 @@ def _internal_add_fifo_entry_enhanced(item_id, quantity, change_type, unit, note
 
 
         # Create new lot - ALWAYS inherit perishable status from item
+        # The InventoryLot IS the inventory record, no need for duplicate history entry
         lot = InventoryLot(
             inventory_item_id=item_id,
             remaining_quantity=float(quantity),
@@ -73,27 +74,6 @@ def _internal_add_fifo_entry_enhanced(item_id, quantity, change_type, unit, note
         )
 
         db.session.add(lot)
-
-        # Create unified history entry - ALWAYS inherit perishable status
-        history_entry = UnifiedInventoryHistory(
-            inventory_item_id=item_id,
-            change_type=change_type,
-            quantity_change=float(quantity),
-            remaining_quantity=float(quantity),  # History entries for lot creation track the quantity change
-            unit=unit,
-            unit_cost=float(cost_per_unit),
-            fifo_code=fifo_code,  # Use the same FIFO code as the lot
-            notes=notes,
-            created_by=created_by,
-            batch_id=batch_id,  # Store batch_id in history too
-            is_perishable=is_perishable,  # Always inherit from item
-            shelf_life_days=final_shelf_life_days,
-            expiration_date=final_expiration_date,
-            affected_lot_id=lot.id,
-            organization_id=item.organization_id
-        )
-
-        db.session.add(history_entry)
 
         logger.info(f"FIFO: Created lot {lot.fifo_code} with {quantity} {unit} for item {item_id} (perishable: {is_perishable})")
         return True, f"Added {quantity} {unit} to inventory"
