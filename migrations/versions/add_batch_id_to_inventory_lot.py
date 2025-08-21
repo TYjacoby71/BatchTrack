@@ -16,27 +16,30 @@ branch_labels = None
 depends_on = None
 
 def upgrade():
-    # Add batch_id column to inventory_lot table
-    op.add_column('inventory_lot', sa.Column('batch_id', sa.Integer(), nullable=True))
-    
-    # Add foreign key constraint
-    op.create_foreign_key(
-        'fk_inventory_lot_batch_id', 
-        'inventory_lot', 
-        'batch', 
-        ['batch_id'], 
-        ['id']
-    )
-    
-    # Add index for performance
-    op.create_index('idx_inventory_lot_batch', 'inventory_lot', ['batch_id'])
+    # Use batch mode for SQLite compatibility
+    with op.batch_alter_table('inventory_lot', schema=None) as batch_op:
+        # Add batch_id column
+        batch_op.add_column(sa.Column('batch_id', sa.Integer(), nullable=True))
+        
+        # Add foreign key constraint
+        batch_op.create_foreign_key(
+            'fk_inventory_lot_batch_id', 
+            'batch', 
+            ['batch_id'], 
+            ['id']
+        )
+        
+        # Add index for performance
+        batch_op.create_index('idx_inventory_lot_batch', ['batch_id'])
 
 def downgrade():
-    # Remove index
-    op.drop_index('idx_inventory_lot_batch', table_name='inventory_lot')
-    
-    # Remove foreign key constraint
-    op.drop_constraint('fk_inventory_lot_batch_id', 'inventory_lot', type_='foreignkey')
-    
-    # Remove column
-    op.drop_column('inventory_lot', 'batch_id')
+    # Use batch mode for SQLite compatibility
+    with op.batch_alter_table('inventory_lot', schema=None) as batch_op:
+        # Remove index
+        batch_op.drop_index('idx_inventory_lot_batch')
+        
+        # Remove foreign key constraint
+        batch_op.drop_constraint('fk_inventory_lot_batch_id', type_='foreignkey')
+        
+        # Remove column
+        batch_op.drop_column('batch_id')
