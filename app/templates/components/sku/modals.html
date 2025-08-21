@@ -126,9 +126,7 @@
                             <optgroup label="Manual Adjustments" id="manualGroup" style="display: none;">
                                 <option value="manual_addition">Add Existing Stock</option>
                                 <option value="recount">Recount (Set Total)</option>
-                                {% if has_permission('inventory.reserve') %}
                                 <option value="reserved">Reserve Stock</option>
-                                {% endif %}
                             </optgroup>
                         </select>
                     </div>

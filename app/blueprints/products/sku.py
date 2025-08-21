@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 # Create the sku blueprint
 sku_bp = Blueprint('sku', __name__)
 
-@sku_bp.route('/sku/<int:inventory_item_id>')
+@sku_bp.route('/<int:inventory_item_id>')
 @login_required
 def view_sku(inventory_item_id):
     """View individual SKU details"""
@@ -43,7 +43,7 @@ def view_sku(inventory_item_id):
                          timedelta=timedelta,
                          TimezoneUtils=TimezoneUtils)
 
-@sku_bp.route('/sku/<int:inventory_item_id>/edit', methods=['POST'])
+@sku_bp.route('/<int:inventory_item_id>/edit', methods=['POST'])
 @login_required
 def edit_sku(inventory_item_id):
     """Edit SKU details"""
@@ -132,7 +132,7 @@ def edit_sku(inventory_item_id):
 # Legacy adjustment route removed - all adjustments must go through centralized service
 
 @sku_bp.route('/merge/select')
-@login_required
+@login_required  
 def select_skus_to_merge():
     """Select SKUs to merge - show all active SKUs"""
     skus = ProductSKU.query.join(
