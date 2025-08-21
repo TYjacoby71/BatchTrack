@@ -1,64 +1,63 @@
-
 <div class="row">
     <div class="col-lg-6">
         <div class="card">
             <div class="card-header">
-                <h5 class="mb-0"><i class="fas fa-user"></i> Profile Information</h5>
+                <h5 class="mb-0"><i class="fas fa-user-edit"></i> Profile Information</h5>
             </div>
             <div class="card-body">
-                <!-- Debug Info -->
+                <!-- Debug info - remove after fixing -->
                 <div class="alert alert-info mb-3" style="font-family: monospace; font-size: 12px;">
                     <strong>Debug Info:</strong><br>
-                    current_user.first_name: "{{ current_user.first_name }}"<br>
-                    current_user.last_name: "{{ current_user.last_name }}"<br>
-                    current_user.email: "{{ current_user.email }}"<br>
-                    current_user.phone: "{{ current_user.phone }}"<br>
+                    current_user.first_name: "{{ current_user.first_name or 'None' }}"<br>
+                    current_user.last_name: "{{ current_user.last_name or 'None' }}"<br>
+                    current_user.email: "{{ current_user.email or 'None' }}"<br>
+                    current_user.phone: "{{ current_user.phone or 'None' }}"<br>
                     Profile data initialized: <span x-text="JSON.stringify(profile)"></span>
                 </div>
 
-                <form @submit.prevent="saveProfile()">
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">First Name *</label>
-                            <input type="text" class="form-control" x-model="profile.first_name" required>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">First Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" x-model="profile.first_name" placeholder="Enter first name">
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Email *</label>
-                            <input type="email" class="form-control" x-model="profile.email" required>
-                            <div class="text-danger small" x-show="!profile.email.includes('@')">
-                                <i class="fas fa-exclamation-triangle"></i>
-                            </div>
+                        <div class="mb-3">
+                            <label class="form-label">Last Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" x-model="profile.last_name" placeholder="Enter last name">
                         </div>
                     </div>
-
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Last Name *</label>
-                            <input type="text" class="form-control" x-model="profile.last_name" required>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Email <span class="text-danger">*</span></label>
+                            <input type="email" class="form-control" x-model="profile.email" placeholder="Enter email address">
                         </div>
-                        <div class="col-md-6 mb-3">
+                        <div class="mb-3">
                             <label class="form-label">Phone</label>
                             <input type="tel" class="form-control" x-model="profile.phone" placeholder="Enter phone number">
                         </div>
                     </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Timezone</label>
-                        <select class="form-select" x-model="profile.timezone">
-                            <option value="Pacific Time (US)">Pacific Time (US)</option>
-                            <option value="Mountain Time (US)">Mountain Time (US)</option>
-                            <option value="Central Time (US)">Central Time (US)</option>
-                            <option value="Eastern Time (US)">Eastern Time (US)</option>
-                            <option value="UTC">UTC</option>
-                        </select>
-                        <div class="form-text">Select your timezone for accurate datetime display throughout the application.</div>
-                    </div>
-
-                    <button type="submit" class="btn btn-primary" :disabled="saving">
-                        <i class="fas fa-save"></i>
-                        <span x-text="saving ? 'Saving...' : 'Save Profile'"></span>
-                    </button>
-                </form>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Timezone</label>
+                    <select class="form-select" x-model="profile.timezone">
+                        {% for group_name, timezones in grouped_timezones.items() %}
+                        {% if timezones %}
+                        <optgroup label="{{ group_name }}">
+                            {% for tz_tuple in timezones %}
+                            <option value="{{ tz_tuple[0] }}" {% if current_user.timezone == tz_tuple[0] %}selected{% endif %}>
+                                {{ tz_tuple[1] }}
+                            </option>
+                            {% endfor %}
+                        </optgroup>
+                        {% endif %}
+                        {% endfor %}
+                    </select>
+                    <div class="form-text">Select your timezone for accurate date/time display throughout the application.</div>
+                </div>
+                <button type="submit" class="btn btn-primary" :disabled="saving">
+                    <i class="fas fa-save"></i>
+                    <span x-text="saving ? 'Saving...' : 'Save Changes'"></span>
+                </button>
             </div>
         </div>
     </div>
@@ -69,47 +68,58 @@
                 <h5 class="mb-0"><i class="fas fa-lock"></i> Change Password</h5>
             </div>
             <div class="card-body">
-                {% if current_user.oauth_provider and not current_user.password_hash %}
-                <!-- OAuth user without password -->
-                <div class="alert alert-info">
-                    <i class="fas fa-info-circle"></i>
-                    You signed up with {{ current_user.oauth_provider|title }}. Set a backup password to login with email if needed.
-                </div>
-                <form @submit.prevent="setBackupPassword()">
-                    <div class="mb-3">
-                        <label class="form-label">New Password</label>
-                        <input type="password" class="form-control" x-model="backupPassword.new" placeholder="Enter new password" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Confirm New Password</label>
-                        <input type="password" class="form-control" x-model="backupPassword.confirm" placeholder="Confirm new password" required>
-                    </div>
-                    <button type="submit" class="btn btn-warning" :disabled="saving">
-                        <i class="fas fa-key"></i> Set Backup Password
-                    </button>
-                </form>
-                {% else %}
-                <!-- Regular password change -->
-                <form @submit.prevent="changePassword()">
+                <form id="passwordForm" @submit.prevent="changePassword()">
                     <div class="mb-3">
                         <label class="form-label">Current Password</label>
-                        <input type="password" class="form-control" x-model="password.current" placeholder="Enter current password" required>
+                        <input type="password" class="form-control" x-model="password.current" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">New Password</label>
-                        <input type="password" class="form-control" x-model="password.new" placeholder="Enter new password" required>
+                        <input type="password" class="form-control" x-model="password.new" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Confirm New Password</label>
-                        <input type="password" class="form-control" x-model="password.confirm" placeholder="Confirm new password" required>
+                        <input type="password" class="form-control" x-model="password.confirm" required>
                     </div>
-                    <button type="submit" class="btn btn-primary" :disabled="saving">
-                        <i class="fas fa-key"></i>
-                        <span x-text="saving ? 'Changing...' : 'Change Password'"></span>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="fas fa-key"></i> Change Password
                     </button>
                 </form>
-                {% endif %}
             </div>
         </div>
     </div>
+
+    <!-- OAuth Backup Password Section -->
+    {% if current_user.oauth_provider and not current_user.password_hash %}
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-shield-alt"></i> Account Security</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info mb-3">
+                    <i class="fas fa-info-circle me-2"></i>
+                    You signed in with {{ current_user.oauth_provider.title() }}. Set up a backup password to access your account if {{ current_user.oauth_provider.title() }} is unavailable.
+                </div>
+                <form @submit.prevent="setBackupPassword()" x-show="!backupPasswordSet">
+                    <div class="mb-3">
+                        <label class="form-label">New Password</label>
+                        <input type="password" class="form-control" x-model="backupPassword.new" required minlength="8" placeholder="Minimum 8 characters">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Confirm Password</label>
+                        <input type="password" class="form-control" x-model="backupPassword.confirm" required minlength="8">
+                    </div>
+                    <button type="submit" class="btn btn-success" :disabled="saving">
+                        <i class="fas fa-key"></i> Set Backup Password
+                    </button>
+                </form>
+                <div x-show="backupPasswordSet" class="text-success">
+                    <i class="fas fa-check-circle me-2"></i>
+                    Backup password is set. You can now log in with either {{ current_user.oauth_provider.title() }} or your password.
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 </div>
