@@ -118,6 +118,13 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
 
         # Update basic fields
         if name is not None:
+            # Validate name uniqueness for updates
+            validation_result = validate_recipe_data(
+                name=name,
+                recipe_id=recipe_id
+            )
+            if not validation_result['valid']:
+                return False, validation_result['error']
             recipe.name = name
         if instructions is not None:
             recipe.instructions = instructions
@@ -136,7 +143,8 @@ def update_recipe(recipe_id: int, name: str = None, description: str = None,
             validation_result = validate_recipe_data(
                 name=recipe.name,
                 ingredients=ingredients,
-                yield_amount=recipe.predicted_yield
+                yield_amount=recipe.predicted_yield,
+                recipe_id=recipe_id
             )
             
             if not validation_result['valid']:

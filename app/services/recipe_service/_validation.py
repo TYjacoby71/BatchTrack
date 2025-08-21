@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 def validate_recipe_data(name: str, ingredients: List[Dict] = None, 
-                        yield_amount: float = None, **kwargs) -> Dict[str, Any]:
+                        yield_amount: float = None, recipe_id: int = None, **kwargs) -> Dict[str, Any]:
     """
     Validate recipe data before creation or update.
     
@@ -22,14 +22,15 @@ def validate_recipe_data(name: str, ingredients: List[Dict] = None,
         name: Recipe name
         ingredients: List of ingredient dicts
         yield_amount: Recipe yield amount
+        recipe_id: Current recipe ID (for updates)
         **kwargs: Additional recipe fields
         
     Returns:
         Dict with 'valid' (bool) and 'error' (str) keys
     """
     try:
-        # Validate name
-        is_valid, error = validate_recipe_name(name)
+        # Validate name - pass recipe_id for edit validation
+        is_valid, error = validate_recipe_name(name, recipe_id)
         if not is_valid:
             return {'valid': False, 'error': error}
 
@@ -73,8 +74,15 @@ def validate_recipe_name(name: str, recipe_id: int = None) -> Tuple[bool, str]:
         if len(name) > 100:
             return False, "Recipe name must be less than 100 characters"
 
-        # Check for uniqueness
+        # Check for uniqueness - exclude current recipe if editing
+        from flask_login import current_user
         query = Recipe.query.filter_by(name=name)
+        
+        # Filter by organization
+        if current_user.organization_id:
+            query = query.filter_by(organization_id=current_user.organization_id)
+        
+        # Exclude current recipe when editing
         if recipe_id:
             query = query.filter(Recipe.id != recipe_id)
         
