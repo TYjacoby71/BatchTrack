@@ -101,6 +101,9 @@ def _handle_lot_creation_operation(item, quantity, change_type, unit, notes, fin
     """Handle operations that create new lots"""
     logger.info(f"LOT_CREATION: Creating new lot for {change_type}")
     
+    # Remove unit from kwargs if it exists to avoid conflict
+    kwargs.pop('unit', None)
+    
     # Create FIFO entry (lot) with proper source tracking
     success, message, lot_id = _internal_add_fifo_entry_enhanced(
         item_id=item.id,
