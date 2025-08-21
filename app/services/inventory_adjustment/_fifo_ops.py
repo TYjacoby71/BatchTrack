@@ -81,12 +81,13 @@ def _internal_add_fifo_entry_enhanced(item_id, quantity, change_type, unit, note
         # record and the historical event record
 
         logger.info(f"FIFO: Created lot {lot.fifo_code} with {quantity} {unit} for item {item_id} (perishable: {is_perishable})")
-        return True, f"Added {quantity} {unit} to inventory"
+        # Return lot id for callers that want to create a corresponding history event
+        return True, f"Added {quantity} {unit} to inventory", lot.id
 
     except Exception as e:
         logger.error(f"FIFO: Error creating lot for item {item_id}: {str(e)}")
         db.session.rollback()
-        return False, f"Error creating inventory lot: {str(e)}"
+        return False, f"Error creating inventory lot: {str(e)}", None
 
 
 def _handle_deductive_operation_internal(item_id, quantity_to_deduct, change_type, notes=None, created_by=None, batch_id=None):

@@ -11,21 +11,22 @@ from ._special_ops import handle_cost_override, handle_unit_conversion
 from ._creation_logic import handle_initial_stock
 
 
-# Registry mapping change_types to their handlers
-OPERATION_HANDLERS = {
-    # Additive operations (create new FIFO lots)
+"""Grouped handler registry for clarity and future routing by family."""
+
+ADDITIVE_OPS = {
     'restock': handle_restock,
     'manual_addition': handle_manual_addition,
     'returned': handle_returned,
     'refunded': handle_refunded,
     'finished_batch': handle_finished_batch,
     'initial_stock': handle_initial_stock,
+}
 
-    # Deductive operations (consume from FIFO lots)
+DEDUCTIVE_OPS = {
     'use': handle_use,
     'sale': handle_sale,
     'spoil': handle_spoil,
-    'trash': handle_trash,  # Records as spoil with different notes
+    'trash': handle_trash,
     'expired': handle_expired,
     'damaged': handle_damaged,
     'quality_fail': handle_quality_fail,
@@ -34,11 +35,18 @@ OPERATION_HANDLERS = {
     'gift': handle_gift,
     'reserved': handle_reserved,
     'batch': handle_batch,
+}
 
-    # Special operations (non-FIFO operations)
+SPECIAL_OPS = {
     'recount': handle_recount,
     'cost_override': handle_cost_override,
     'unit_conversion': handle_unit_conversion,
+}
+
+OPERATION_HANDLERS = {
+    **ADDITIVE_OPS,
+    **DEDUCTIVE_OPS,
+    **SPECIAL_OPS,
 }
 
 
@@ -61,17 +69,14 @@ def get_all_operation_types():
 
 def is_additive_operation(change_type: str) -> bool:
     """Check if operation adds inventory"""
-    additive_ops = {'restock', 'manual_addition', 'returned', 'refunded', 'finished_batch', 'initial_stock'}
-    return change_type in additive_ops
+    return change_type in ADDITIVE_OPS
 
 
 def is_deductive_operation(change_type: str) -> bool:
     """Check if operation removes inventory"""
-    deductive_ops = {'use', 'sale', 'spoil', 'trash', 'expired', 'damaged', 'quality_fail', 'sample', 'tester', 'gift', 'reserved', 'batch'}
-    return change_type in deductive_ops
+    return change_type in DEDUCTIVE_OPS
 
 
 def is_special_operation(change_type: str) -> bool:
     """Check if operation is a special non-FIFO operation"""
-    special_ops = {'recount', 'cost_override', 'unit_conversion'}
-    return change_type in special_ops
+    return change_type in SPECIAL_OPS

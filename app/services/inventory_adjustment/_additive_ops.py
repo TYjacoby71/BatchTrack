@@ -26,7 +26,7 @@ def handle_restock(item, quantity, change_type, notes=None, created_by=None, cos
         final_cost = cost_override if cost_override is not None else item.cost_per_unit
 
         # Create FIFO entry (lot)
-        success, message = _internal_add_fifo_entry_enhanced(
+        success, message, lot_id = _internal_add_fifo_entry_enhanced(
             item_id=item.id,
             quantity=quantity,
             change_type=change_type,
@@ -41,7 +41,7 @@ def handle_restock(item, quantity, change_type, notes=None, created_by=None, cos
         if not success:
             return False, f"Failed to create FIFO entry: {message}", 0
 
-        # Record additive event in unified history (events-only, no remaining qty semantics)
+        # Record additive event in unified history (events-only, link to created lot)
         history_event = UnifiedInventoryHistory(
             inventory_item_id=item.id,
             change_type=change_type,
@@ -50,7 +50,9 @@ def handle_restock(item, quantity, change_type, notes=None, created_by=None, cos
             unit_cost=float(final_cost) if final_cost is not None else 0.0,
             notes=notes,
             created_by=created_by,
-            organization_id=item.organization_id
+            organization_id=item.organization_id,
+            affected_lot_id=lot_id,
+            fifo_code=None
         )
         db.session.add(history_event)
 
