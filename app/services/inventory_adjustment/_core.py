@@ -7,8 +7,7 @@ from ._validation import validate_inventory_fifo_sync
 # Import operation modules directly
 from ._additive_ops import _universal_additive_handler, ADDITIVE_OPERATION_GROUPS
 from ._deductive_ops import _handle_deductive_operation, DEDUCTIVE_OPERATION_GROUPS
-from ._special_ops import handle_cost_override, handle_unit_conversion
-from ._recount_logic import handle_recount
+from ._special_ops import handle_cost_override, handle_unit_conversion, handle_recount
 
 logger = logging.getLogger(__name__)
 
