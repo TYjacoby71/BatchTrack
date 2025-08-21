@@ -6,7 +6,7 @@ from ._fifo_ops import _internal_add_fifo_entry_enhanced
 
 
 def handle_initial_stock(item, quantity, unit=None, notes=None, created_by=None,
-                        cost_override=None, custom_expiration_date=None, custom_shelf_life_days=None, 
+                        cost_override=None, custom_expiration_date=None, custom_shelf_life_days=None,
                         change_type=None, **kwargs):
     """Handles the special case for an item's very first stock entry."""
     try:
@@ -125,9 +125,9 @@ def create_inventory_item(form_data: dict, organization_id: int, created_by: int
 
         # Use initial stock handler directly to avoid circular import
         from ._handlers import get_operation_handler
-        
+
         notes = form_data.get('notes', '') or 'Initial stock creation'
-        
+
         success, message = handle_initial_stock(
             item=item,
             quantity=quantity,
