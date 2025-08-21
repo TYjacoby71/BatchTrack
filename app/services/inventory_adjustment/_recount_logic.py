@@ -1,88 +1,92 @@
-"""
-Recount Logic Handler
 
-Handles inventory recounts by comparing current FIFO totals with target quantities
-and making appropriate adjustments.
+"""
+Recount logic handler - handles inventory recounts (setting absolute quantities).
+This handler calculates the difference and lets the core apply the change.
+It should NEVER directly modify item.quantity.
 """
 
 import logging
-from app.models import db, InventoryLot
-from ._fifo_ops import _handle_deductive_operation_internal, _internal_add_fifo_entry_enhanced
+from app.models import db, UnifiedInventoryHistory
+from ._fifo_ops import _internal_add_fifo_entry_enhanced, _handle_deductive_operation_internal
 
 logger = logging.getLogger(__name__)
 
-def handle_recount(item, quantity, change_type, notes=None, created_by=None, cost_override=None, custom_expiration_date=None, custom_shelf_life_days=None, customer=None, sale_price=None, order_id=None, target_quantity=None, unit=None, **kwargs):
+def handle_recount(item, quantity, change_type, notes=None, created_by=None, target_quantity=None, **kwargs):
     """
-    Handle inventory recount operations.
-
-    Args:
-        item: InventoryItem instance
-        quantity: Target quantity for recount (this is the target_quantity)
-        change_type: Should be 'recount'
-        target_quantity: Alternative way to pass target quantity (for compatibility)
-
-    The function compares the current FIFO total with the target and adjusts accordingly.
+    Handle inventory recount - set absolute quantity.
+    This is a special operation that calculates the difference between current and target,
+    then returns success for the core to handle the absolute setting.
+    
+    Returns (success, message) - core will handle the absolute quantity setting for recounts
     """
     try:
-        # Use quantity as target, but allow target_quantity override for compatibility
-        target_qty = target_quantity if target_quantity is not None else quantity
+        # For recounts, the target_quantity is the desired final quantity
+        if target_quantity is None:
+            target_quantity = quantity
 
-        logger.info(f"RECOUNT: Starting recount for item {item.id} to target {target_qty}")
+        current_quantity = float(item.quantity)
+        target_qty = float(target_quantity)
+        difference = target_qty - current_quantity
 
-        # Calculate current FIFO total
-        current_fifo_total = db.session.query(
-            db.func.coalesce(db.func.sum(InventoryLot.remaining_quantity), 0)
-        ).filter_by(inventory_item_id=item.id).scalar() or 0.0
+        logger.info(f"RECOUNT: Item {item.id} current={current_quantity}, target={target_qty}, difference={difference}")
 
-        delta = float(target_qty) - float(current_fifo_total)
+        # Create a recount history entry to document the change
+        recount_notes = f"Inventory recount: {current_quantity} -> {target_qty}"
+        if notes:
+            recount_notes += f" | {notes}"
 
-        logger.info(f"RECOUNT: {item.name} - FIFO total: {current_fifo_total}, target: {target_qty}, delta: {delta}")
+        # Create unified history entry for the recount
+        history_entry = UnifiedInventoryHistory(
+            inventory_item_id=item.id,
+            change_type=change_type,
+            quantity_change=difference,
+            remaining_quantity=0,  # Recount entries don't have remaining quantity
+            unit=item.unit or 'count',
+            unit_cost=item.cost_per_unit or 0.0,
+            notes=recount_notes,
+            created_by=created_by,
+            organization_id=item.organization_id,
+            fifo_code=f"RECOUNT-{item.id}-{target_qty}"
+        )
 
-        if delta == 0:
-            # Update main item quantity to match FIFO
-            item.quantity = float(current_fifo_total)
-            db.session.add(item)
-            return True, f"Recount complete: quantity confirmed at {current_fifo_total} {item.unit or 'units'}"
+        db.session.add(history_entry)
 
-        elif delta > 0:
-            # Need to add inventory
-            success, error = _internal_add_fifo_entry_enhanced(
+        if difference > 0:
+            # Need to add inventory - create FIFO entry for the increase
+            logger.info(f"RECOUNT: Adding {difference} to reconcile inventory")
+            
+            add_success, add_message = _internal_add_fifo_entry_enhanced(
                 item_id=item.id,
-                quantity=delta,
-                change_type='recount',
+                quantity=difference,
+                change_type='recount_adjustment',
                 unit=item.unit or 'count',
-                notes=notes or f"Recount adjustment: +{delta}",
+                notes=f"Recount adjustment: +{difference}",
                 cost_per_unit=item.cost_per_unit or 0.0,
-                created_by=created_by,
-                custom_expiration_date=custom_expiration_date,
-                custom_shelf_life_days=custom_shelf_life_days
-            )
-
-            if success:
-                item.quantity = float(target_qty)
-                db.session.add(item)
-                return True, f"Recount complete: added {delta} {item.unit or 'units'}, new total: {target_qty}"
-            else:
-                return False, f"Recount failed during addition: {error}"
-
-        else:
-            # Need to remove inventory (delta is negative)
-            deduction_qty = abs(delta)
-            success, error_msg = _handle_deductive_operation_internal(
-                item_id=item.id,
-                quantity=deduction_qty,
-                change_type='recount',
-                notes=notes or f"Recount adjustment: -{deduction_qty}",
                 created_by=created_by
             )
+            
+            if not add_success:
+                return False, f"Failed to add recount adjustment: {add_message}"
 
-            if success:
-                item.quantity = float(target_qty)
-                db.session.add(item)
-                return True, f"Recount complete: removed {deduction_qty} {item.unit or 'units'}, new total: {target_qty}"
-            else:
-                return False, f"Recount failed during deduction: {error_msg}"
+        elif difference < 0:
+            # Need to remove inventory - use FIFO deduction for the decrease
+            logger.info(f"RECOUNT: Removing {abs(difference)} to reconcile inventory")
+            
+            remove_success, remove_message = _handle_deductive_operation_internal(
+                item_id=item.id,
+                quantity_to_deduct=abs(difference),
+                change_type='recount_adjustment',
+                notes=f"Recount adjustment: -{abs(difference)}",
+                created_by=created_by
+            )
+            
+            if not remove_success:
+                return False, f"Failed to remove recount adjustment: {remove_message}"
+
+        # Return success - core will set the absolute quantity
+        logger.info(f"RECOUNT SUCCESS: Item {item.id} will be set to {target_qty}")
+        return True, f"Inventory recounted to {target_qty}"
 
     except Exception as e:
-        logger.error(f"RECOUNT ERROR: {str(e)}")
-        return False, str(e)
+        logger.error(f"Error in recount operation: {str(e)}")
+        return False, f"Recount failed: {str(e)}"

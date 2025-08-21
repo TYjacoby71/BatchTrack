@@ -1,93 +1,183 @@
-"""
-Additive Operations Handler
 
-Handles all operations that ADD inventory (restock, manual_addition, etc.)
+"""
+Additive operations handler - operations that increase inventory quantity.
+These handlers calculate what needs to happen and return deltas.
+They should NEVER directly modify item.quantity.
 """
 
 import logging
+from app.models import db
 from ._fifo_ops import _internal_add_fifo_entry_enhanced
 
 logger = logging.getLogger(__name__)
 
-# Configuration for additive operations
-ADDITIVE_CONFIGS = {
-    'restock': {'message': 'Restocked', 'use_cost_override': True},
-    'manual_addition': {'message': 'Added manually', 'use_cost_override': False},
-    'returned': {'message': 'Returned', 'use_cost_override': False},
-    'refunded': {'message': 'Refunded', 'use_cost_override': False},
-    'finished_batch': {'message': 'Added from finished batch', 'use_cost_override': False},
-    'unreserved': {'message': 'Unreserved', 'use_cost_override': False},
-}
-
-def handle_additive_operation(item, quantity, change_type, notes=None, created_by=None, cost_override=None, custom_expiration_date=None, custom_shelf_life_days=None):
+def handle_restock(item, quantity, change_type, notes=None, created_by=None, cost_override=None, custom_expiration_date=None, custom_shelf_life_days=None, **kwargs):
     """
-    Universal handler for all additive operations.
-
-    Standardized pattern:
-    1. Validate operation type
-    2. Determine cost per unit based on config
-    3. Add FIFO entry
-    4. Return standardized message
+    Handle restock operations - adding new inventory.
+    Returns (success, message, quantity_delta) - does NOT modify item.quantity
     """
     try:
-        if change_type not in ADDITIVE_CONFIGS:
-            return False, f"Unknown additive operation: {change_type}"
+        logger.info(f"RESTOCK: Adding {quantity} to item {item.id}")
+        
+        # Use item's unit if not specified in kwargs
+        unit = kwargs.get('unit') or item.unit or 'count'
+        
+        # Use provided cost or item's default cost
+        final_cost = cost_override if cost_override is not None else item.cost_per_unit
 
-        config = ADDITIVE_CONFIGS[change_type]
-
-        # Standardized cost determination
-        if config.get('use_cost_override') and cost_override is not None:
-            cost_per_unit = cost_override
-        else:
-            cost_per_unit = item.cost_per_unit or 0.0
-
-        # Standard FIFO entry creation
-        success, error = _internal_add_fifo_entry_enhanced(
+        # Create FIFO entry
+        success, message = _internal_add_fifo_entry_enhanced(
             item_id=item.id,
             quantity=quantity,
             change_type=change_type,
-            unit=item.unit or 'count',
-            notes=notes or f"{config['message']} inventory",
-            cost_per_unit=cost_per_unit,
+            unit=unit,
+            notes=notes,
+            cost_per_unit=final_cost,
             created_by=created_by,
             custom_expiration_date=custom_expiration_date,
             custom_shelf_life_days=custom_shelf_life_days
         )
 
-        if success:
-            # Update the main item quantity
-            from app.models import db
-            item.quantity = float(item.quantity or 0) + float(quantity)
-            db.session.add(item)  # Ensure the item is tracked in this session
-            message = f"{config['message']} {quantity} {item.unit or 'units'}"
-            logger.info(f"ADDITIVE: {message} for item {item.id}, new total: {item.quantity}")
-            return True, message
-        else:
-            logger.error(f"ADDITIVE: Failed {change_type} for item {item.id}: {error}")
-            return False, error
+        if not success:
+            return False, f"Failed to create FIFO entry: {message}", 0
+
+        # Return delta for core to apply
+        quantity_delta = float(quantity)
+        logger.info(f"RESTOCK SUCCESS: Will increase item {item.id} by {quantity_delta}")
+        return True, f"Restocked {quantity} {unit}", quantity_delta
 
     except Exception as e:
-        logger.error(f"ADDITIVE: Error in {change_type} for item {item.id}: {str(e)}")
-        return False, str(e)
+        logger.error(f"Error in restock operation: {str(e)}")
+        return False, f"Restock failed: {str(e)}", 0
 
+def handle_manual_addition(item, quantity, change_type, notes=None, created_by=None, cost_override=None, custom_expiration_date=None, custom_shelf_life_days=None, **kwargs):
+    """
+    Handle manual additions - administrative inventory increases.
+    Returns (success, message, quantity_delta) - does NOT modify item.quantity
+    """
+    try:
+        logger.info(f"MANUAL_ADDITION: Adding {quantity} to item {item.id}")
+        
+        unit = kwargs.get('unit') or item.unit or 'count'
+        final_cost = cost_override if cost_override is not None else item.cost_per_unit
 
-# Individual handler functions for each additive operation type
-def handle_restock(item, quantity, change_type, notes=None, created_by=None, cost_override=None, custom_expiration_date=None, custom_shelf_life_days=None, customer=None, sale_price=None, order_id=None, target_quantity=None, unit=None, **kwargs):
-    """Handle restock operations"""
-    return handle_additive_operation(item, quantity, change_type, notes, created_by, cost_override, custom_expiration_date, custom_shelf_life_days)
+        success, message = _internal_add_fifo_entry_enhanced(
+            item_id=item.id,
+            quantity=quantity,
+            change_type=change_type,
+            unit=unit,
+            notes=notes,
+            cost_per_unit=final_cost,
+            created_by=created_by,
+            custom_expiration_date=custom_expiration_date,
+            custom_shelf_life_days=custom_shelf_life_days
+        )
 
-def handle_manual_addition(item, quantity, change_type, notes=None, created_by=None, cost_override=None, custom_expiration_date=None, custom_shelf_life_days=None, customer=None, sale_price=None, order_id=None, target_quantity=None, unit=None, **kwargs):
-    """Handle manual addition operations"""
-    return handle_additive_operation(item, quantity, change_type, notes, created_by, None, custom_expiration_date, custom_shelf_life_days)
+        if not success:
+            return False, f"Failed to create FIFO entry: {message}", 0
 
-def handle_returned(item, quantity, change_type, notes=None, created_by=None, cost_override=None, custom_expiration_date=None, custom_shelf_life_days=None, customer=None, sale_price=None, order_id=None, target_quantity=None, unit=None, **kwargs):
-    """Handle returned inventory operations"""
-    return handle_additive_operation(item, quantity, change_type, notes, created_by, None, custom_expiration_date, custom_shelf_life_days)
+        quantity_delta = float(quantity)
+        return True, f"Manual addition of {quantity} {unit}", quantity_delta
 
-def handle_refunded(item, quantity, change_type, notes=None, created_by=None, cost_override=None, custom_expiration_date=None, custom_shelf_life_days=None, customer=None, sale_price=None, order_id=None, target_quantity=None, unit=None, **kwargs):
-    """Handle refunded inventory operations"""
-    return handle_additive_operation(item, quantity, change_type, notes, created_by, None, custom_expiration_date, custom_shelf_life_days)
+    except Exception as e:
+        logger.error(f"Error in manual addition: {str(e)}")
+        return False, f"Manual addition failed: {str(e)}", 0
 
-def handle_finished_batch(item, quantity, change_type, notes=None, created_by=None, cost_override=None, custom_expiration_date=None, custom_shelf_life_days=None, customer=None, sale_price=None, order_id=None, target_quantity=None, unit=None, **kwargs):
-    """Handle finished batch operations"""
-    return handle_additive_operation(item, quantity, change_type, notes, created_by, None, custom_expiration_date, custom_shelf_life_days)
+def handle_returned(item, quantity, change_type, notes=None, created_by=None, cost_override=None, custom_expiration_date=None, custom_shelf_life_days=None, **kwargs):
+    """
+    Handle returned items - items coming back into inventory.
+    Returns (success, message, quantity_delta) - does NOT modify item.quantity
+    """
+    try:
+        logger.info(f"RETURNED: Adding {quantity} to item {item.id}")
+        
+        unit = kwargs.get('unit') or item.unit or 'count'
+        final_cost = cost_override if cost_override is not None else item.cost_per_unit
+
+        success, message = _internal_add_fifo_entry_enhanced(
+            item_id=item.id,
+            quantity=quantity,
+            change_type=change_type,
+            unit=unit,
+            notes=notes,
+            cost_per_unit=final_cost,
+            created_by=created_by,
+            custom_expiration_date=custom_expiration_date,
+            custom_shelf_life_days=custom_shelf_life_days
+        )
+
+        if not success:
+            return False, f"Failed to create FIFO entry: {message}", 0
+
+        quantity_delta = float(quantity)
+        return True, f"Returned {quantity} {unit} to inventory", quantity_delta
+
+    except Exception as e:
+        logger.error(f"Error in returned operation: {str(e)}")
+        return False, f"Return failed: {str(e)}", 0
+
+def handle_refunded(item, quantity, change_type, notes=None, created_by=None, cost_override=None, custom_expiration_date=None, custom_shelf_life_days=None, **kwargs):
+    """
+    Handle refunded items - items coming back from refunds.
+    Returns (success, message, quantity_delta) - does NOT modify item.quantity
+    """
+    try:
+        logger.info(f"REFUNDED: Adding {quantity} to item {item.id}")
+        
+        unit = kwargs.get('unit') or item.unit or 'count'
+        final_cost = cost_override if cost_override is not None else item.cost_per_unit
+
+        success, message = _internal_add_fifo_entry_enhanced(
+            item_id=item.id,
+            quantity=quantity,
+            change_type=change_type,
+            unit=unit,
+            notes=notes,
+            cost_per_unit=final_cost,
+            created_by=created_by,
+            custom_expiration_date=custom_expiration_date,
+            custom_shelf_life_days=custom_shelf_life_days
+        )
+
+        if not success:
+            return False, f"Failed to create FIFO entry: {message}", 0
+
+        quantity_delta = float(quantity)
+        return True, f"Refunded {quantity} {unit} added to inventory", quantity_delta
+
+    except Exception as e:
+        logger.error(f"Error in refund operation: {str(e)}")
+        return False, f"Refund failed: {str(e)}", 0
+
+def handle_finished_batch(item, quantity, change_type, notes=None, created_by=None, cost_override=None, custom_expiration_date=None, custom_shelf_life_days=None, **kwargs):
+    """
+    Handle finished batch output - completed products added to inventory.
+    Returns (success, message, quantity_delta) - does NOT modify item.quantity
+    """
+    try:
+        logger.info(f"FINISHED_BATCH: Adding {quantity} to item {item.id}")
+        
+        unit = kwargs.get('unit') or item.unit or 'count'
+        final_cost = cost_override if cost_override is not None else item.cost_per_unit
+
+        success, message = _internal_add_fifo_entry_enhanced(
+            item_id=item.id,
+            quantity=quantity,
+            change_type=change_type,
+            unit=unit,
+            notes=notes,
+            cost_per_unit=final_cost,
+            created_by=created_by,
+            custom_expiration_date=custom_expiration_date,
+            custom_shelf_life_days=custom_shelf_life_days
+        )
+
+        if not success:
+            return False, f"Failed to create FIFO entry: {message}", 0
+
+        quantity_delta = float(quantity)
+        return True, f"Finished batch added {quantity} {unit}", quantity_delta
+
+    except Exception as e:
+        logger.error(f"Error in finished batch operation: {str(e)}")
+        return False, f"Finished batch failed: {str(e)}", 0
