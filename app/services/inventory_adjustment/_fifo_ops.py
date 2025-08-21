@@ -48,6 +48,7 @@ def _internal_add_fifo_entry_enhanced(item_id, quantity, change_type, unit=None,
         from app.models import InventoryItem
         from app.models.inventory_lot import InventoryLot
         from app.utils.fifo_generator import generate_fifo_code
+        from flask_login import current_user # Import current_user
 
         # Get the inventory item
         item = db.session.get(InventoryItem, item_id)
@@ -109,8 +110,28 @@ def _internal_add_fifo_entry_enhanced(item_id, quantity, change_type, unit=None,
         db.session.flush()  # Get the lot ID
 
         # For restock operations, the InventoryLot IS the history record
-        # We don't create a duplicate history entry - the lot serves as both the inventory 
+        # We don't create a duplicate history entry - the lot serves as both the inventory
         # record and the historical event record
+
+        # Create history record linked to the lot - use lot's data for consistency
+        history_record = UnifiedInventoryHistory(
+            inventory_item_id=item.id,
+            change_type=change_type,
+            quantity_change=quantity,
+            unit=unit,
+            unit_cost=unit_cost,
+            notes=notes,
+            created_by=getattr(current_user, 'id', None) if current_user.is_authenticated else None,
+            organization_id=item.organization_id,
+            is_perishable=lot.is_perishable,  # Use lot's perishable status
+            shelf_life_days=final_shelf_life_days,
+            expiration_date=lot.expiration_date,  # Use lot's expiration date
+            affected_lot_id=lot.id,  # Link to the actual lot
+            remaining_quantity=lot.remaining_quantity,  # Use lot's remaining quantity
+            fifo_code=lot.fifo_code  # Use the same FIFO code as the lot
+        )
+        db.session.add(history_record)
+
 
         logger.info(f"FIFO: Created lot {lot.fifo_code} with {quantity} {unit} for item {item_id} (perishable: {is_perishable})")
         # Return lot id for callers that want to create a corresponding history event
