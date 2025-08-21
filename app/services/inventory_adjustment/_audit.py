@@ -43,7 +43,7 @@ def audit_event(
             unit=unit or item.unit,
             notes=notes,
             created_by=created_by,
-            organization_id=current_user.organization_id if current_user.is_authenticated else item.organization_id,
+            organization_id=item.organization_id,  # Trust middleware handled auth
             fifo_code=fifo_code,
             fifo_reference_id=fifo_reference_id,
             unit_cost=unit_cost
@@ -156,7 +156,7 @@ def record_audit_entry(
                 'fifo_reference_id': fifo_reference_id,
                 'fifo_code': fifo_code,
                 'batch_id': batch_id,
-                'created_by': created_by or (current_user.id if current_user.is_authenticated else None),
+                'created_by': created_by,  # Trust caller to provide this
                 'notes': notes or '',
                 'quantity_used': quantity_used or 0,
                 'used_for_batch_id': used_for_batch_id,
@@ -181,7 +181,7 @@ def record_audit_entry(
                 'lot_number': lot_number,
                 'container_id': container_id,
                 'fifo_source': fifo_source,
-                'organization_id': current_user.organization_id if current_user.is_authenticated else None
+                'organization_id': None  # Will be handled by model/middleware if needed
             }
 
             entry = UnifiedInventoryHistory(**entry_data)
