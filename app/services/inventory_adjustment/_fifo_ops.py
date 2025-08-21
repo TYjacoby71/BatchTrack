@@ -89,7 +89,7 @@ def _internal_add_fifo_entry_enhanced(
 
 
 def _handle_deductive_operation_internal(item, quantity, change_type, notes, created_by, **kwargs):
-    """Handle deductive operations using FIFO logic"""
+    """Handle deductive operations using FIFO logic - consumes from both FIFO entries and lots"""
     try:
         # Get deduction plan from FIFO service
         deduction_plan, error = _calculate_deduction_plan_internal(
@@ -104,11 +104,18 @@ def _handle_deductive_operation_internal(item, quantity, change_type, notes, cre
             logger.warning(f"No deduction plan generated for {item.id}")
             return False, "Insufficient inventory"
 
-        # Execute deduction plan
+        # Execute deduction plan on FIFO entries
         success, error = _execute_deduction_plan_internal(deduction_plan, item.id)
         if not success:
             logger.error(f"Deduction execution failed: {error}")
             return False, error
+
+        # Also consume from lot objects using FIFO order
+        from ._lot_ops import consume_from_lots
+        lot_success, lot_message, consumption_plan = consume_from_lots(item.id, abs(quantity))
+        if not lot_success:
+            logger.warning(f"FIFO entries updated but lot consumption failed: {lot_message}")
+            # Continue anyway since FIFO entries were successful
 
         # Record audit trail
         success = _record_deduction_plan_internal(
