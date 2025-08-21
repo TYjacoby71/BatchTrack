@@ -72,6 +72,9 @@ def login():
             # Log the user in
             login_user(user)
 
+            # Clear dismissed alerts from session on login
+            session.pop('dismissed_alerts', None)
+
             # Update last login
             user.last_login = TimezoneUtils.utc_now()
             db.session.commit()
@@ -178,6 +181,10 @@ def oauth_callback():
 
             # Log them in
             login_user(user)
+            
+            # Clear dismissed alerts from session on OAuth login
+            session.pop('dismissed_alerts', None)
+            
             user.last_login = TimezoneUtils.utc_now()
             db.session.commit()
 
@@ -273,6 +280,9 @@ def logout():
 
     # Clear developer customer view session if present
     session.pop('dev_selected_org_id', None)
+    
+    # Clear dismissed alerts from session on logout
+    session.pop('dismissed_alerts', None)
 
     logout_user()
     return redirect(url_for('homepage'))
