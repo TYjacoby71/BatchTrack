@@ -8,9 +8,9 @@
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="row">
         <div class="col-md-4">
-          <div class="form-group">
-            <label>Change Type</label>
-            <select class="form-control" name="change_type" required>
+          <div class="form-group mb-3">
+            <label for="changeType" class="form-label">Action *</label>
+            <select class="form-control" id="changeType" name="change_type" required>
               <option value="restock">Restock</option>
               <option value="spoil">Spoil</option>
               <option value="trash">Trash</option>
