@@ -4,6 +4,7 @@ from ...models import db, ProductSKU, InventoryItem
 from ...models.product import Product, ProductVariant
 from ...services.product_service import ProductService
 from ...utils.unit_utils import get_global_unit_list
+from app.services.inventory_adjustment import process_inventory_adjustment
 
 # Create the product variants blueprint
 product_variants_bp = Blueprint('product_variants', __name__)

@@ -22,7 +22,7 @@ import app.services.inventory_adjustment as inv_adj
 # The first definition is kept here to accurately reflect the original code's structure before the change.
 def _write_product_created_audit(variant):
     # lazy import so the patched symbol is used
-    from app.services import inventory_adjustment as inv
+    from app.services.inventory_adjustment import record_audit_entry
     inv.record_audit_entry(
         item_id=variant.id,
         change_type="product_created",
@@ -32,7 +32,7 @@ def _write_product_created_audit(variant):
 
 from ...services.product_service import ProductService
 from ...utils.fifo_generator import generate_fifo_code
-from ...services.inventory_adjustment import process_inventory_adjustment, record_audit_entry as _record_audit_entry
+from ...services.inventory_adjustment import process_inventory_adjustment
 
 # Wrapper for audit entry - used by tests
 # This function is also defined twice, the second one is the one that is used.
