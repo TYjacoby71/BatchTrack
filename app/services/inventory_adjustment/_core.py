@@ -1,4 +1,3 @@
-
 import logging
 from app.models import db, InventoryItem, UnifiedInventoryHistory
 from ._handlers import get_operation_handler
@@ -77,11 +76,30 @@ def process_inventory_adjustment(item_id, change_type, quantity, notes=None, cre
             logger.info(f"RECOUNT: Item {item.id} quantity {item.quantity} -> {target_quantity}")
             item.quantity = float(target_quantity)
 
-        db.session.commit()
-        
-        final_quantity = float(item.quantity)
-        logger.info(f"SUCCESS: {change_type} operation completed for item {item.id}. Quantity: {original_quantity} -> {final_quantity}")
-        return True, message
+        # Validate FIFO sync before commit
+        try:
+            is_valid, error_msg, inv_qty, fifo_total = validate_inventory_fifo_sync(item_id)
+
+            if not is_valid:
+                logger.error(f"FIFO VALIDATION FAILED before commit for item {item_id}: {error_msg}")
+                db.session.rollback()
+                return False, f"FIFO validation failed: {error_msg}"
+
+        except Exception as e:
+            logger.error(f"FIFO VALIDATION ERROR for item {item_id}: {str(e)}")
+            db.session.rollback()
+            return False, f"FIFO validation error: {str(e)}"
+
+        # Commit database changes
+        try:
+            db.session.commit()
+            logger.info(f"SUCCESS: {change_type} completed for item {item.id} (FIFO validated)")
+            return True, message
+
+        except Exception as e:
+            logger.error(f"FAILED: Database commit failed for item {item_id}: {str(e)}")
+            db.session.rollback()
+            return False, f"Database error: {str(e)}"
 
     except Exception as e:
         db.session.rollback()
