@@ -8,123 +8,169 @@ from sqlalchemy import and_
 logger = logging.getLogger(__name__)
 
 
-def _internal_add_fifo_entry_enhanced(item_id, quantity, change_type, unit=None, notes=None,
-                                    cost_per_unit=None, created_by=None, expiration_date=None,
-                                    shelf_life_days=None, **kwargs):
-    """Enhanced internal FIFO entry creation with better error handling"""
+def _internal_add_fifo_entry_enhanced(inventory_item_id, quantity, change_type, notes="", unit=None, cost_per_unit=None, created_by=None, batch_id=None, expiration_date=None, shelf_life_days=None):
+    """
+    Enhanced FIFO entry creation with proper lot tracking
+    """
     try:
-        from app.models import db, InventoryItem, UnifiedInventoryHistory
-        from datetime import datetime, timedelta
+        from app.models import InventoryItem
+        from app.models.inventory_lot import InventoryLot
         from app.utils.fifo_generator import generate_fifo_code
 
-        logger.info(f"Creating FIFO entry: item_id={item_id}, quantity={quantity}, change_type={change_type}")
-
         # Get the inventory item
-        item = db.session.get(InventoryItem, item_id)
+        item = db.session.get(InventoryItem, inventory_item_id)
         if not item:
-            error_msg = f"Inventory item {item_id} not found"
-            logger.error(error_msg)
-            return False, error_msg
+            logger.error(f"Inventory item {inventory_item_id} not found")
+            return False, "Inventory item not found"
 
-        # Use item defaults if not provided
-        final_unit = unit or item.unit or 'count'
-        final_cost = cost_per_unit if cost_per_unit is not None else (item.cost_per_unit or 0.0)
-        final_notes = notes or f"{change_type} operation"
+        # Use item's unit if not specified
+        if unit is None:
+            unit = item.unit
 
-        logger.info(f"FIFO entry details: unit={final_unit}, cost={final_cost}, notes={final_notes}")
+        if cost_per_unit is None:
+            cost_per_unit = item.cost_per_unit or 0.0
 
-        # Handle expiration date calculation
+        # Calculate expiration if needed - lots MUST inherit perishable status
         final_expiration_date = None
+        final_shelf_life_days = None
+        is_perishable = item.is_perishable  # Always inherit from item
+
         if expiration_date:
             final_expiration_date = expiration_date
-        elif shelf_life_days and shelf_life_days > 0:
-            final_expiration_date = datetime.now().date() + timedelta(days=shelf_life_days)
+            is_perishable = True  # If expiration is set, it's perishable
         elif item.is_perishable and item.shelf_life_days:
-            final_expiration_date = datetime.now().date() + timedelta(days=item.shelf_life_days)
+            final_expiration_date = TimezoneUtils.utc_now() + timedelta(days=item.shelf_life_days)
+            final_shelf_life_days = item.shelf_life_days
+        elif shelf_life_days and item.is_perishable:
+            final_expiration_date = TimezoneUtils.utc_now() + timedelta(days=shelf_life_days)
+            final_shelf_life_days = shelf_life_days
 
-        # Create the FIFO entry
-        fifo_entry = UnifiedInventoryHistory(
-            inventory_item_id=item_id,
-            change_type=change_type,
-            quantity_change=quantity,
-            remaining_quantity=quantity,
-            unit=final_unit,
-            unit_cost=final_cost,
-            notes=final_notes,
-            timestamp=datetime.utcnow(),
+        # If item is perishable, shelf_life_days should be set
+        if item.is_perishable:
+            final_shelf_life_days = final_shelf_life_days or item.shelf_life_days or shelf_life_days
+
+        # Create new lot - ALWAYS inherit perishable status from item
+        lot = InventoryLot(
+            inventory_item_id=inventory_item_id,
+            remaining_quantity=float(quantity),
+            original_quantity=float(quantity),
+            unit=unit,
+            unit_cost=float(cost_per_unit),
+            received_date=TimezoneUtils.utc_now(),
             expiration_date=final_expiration_date,
-            shelf_life_days=shelf_life_days,
+            shelf_life_days=final_shelf_life_days,
+            source_type=change_type,
+            source_notes=notes,
             created_by=created_by,
-            fifo_code=generate_fifo_code(change_type, item_id),
+            fifo_code=generate_fifo_code(),
             organization_id=item.organization_id
         )
 
-        db.session.add(fifo_entry)
-        logger.info(f"FIFO entry created successfully for item {item_id}")
-        return True, "FIFO entry created successfully"
+        db.session.add(lot)
+
+        # Create unified history entry - ALWAYS inherit perishable status
+        history_entry = UnifiedInventoryHistory(
+            inventory_item_id=inventory_item_id,
+            change_type=change_type,
+            quantity_change=float(quantity),
+            remaining_quantity=float(quantity),
+            unit=unit,
+            unit_cost=float(cost_per_unit),
+            fifo_code=lot.fifo_code,
+            notes=notes,
+            created_by=created_by,
+            batch_id=batch_id,
+            is_perishable=is_perishable,  # Always inherit from item
+            shelf_life_days=final_shelf_life_days,
+            expiration_date=final_expiration_date,
+            affected_lot_id=lot.id,
+            organization_id=item.organization_id
+        )
+
+        db.session.add(history_entry)
+
+        logger.info(f"FIFO: Created lot {lot.fifo_code} with {quantity} {unit} for item {inventory_item_id} (perishable: {is_perishable})")
+        return True, f"Added {quantity} {unit} to inventory"
 
     except Exception as e:
-        import traceback
-        error_msg = f"Error creating FIFO entry: {str(e)}\n{traceback.format_exc()}"
-        logger.error(error_msg)
-        return False, error_msg
+        logger.error(f"FIFO: Error creating lot for item {inventory_item_id}: {str(e)}")
+        db.session.rollback()
+        return False, f"Error creating inventory lot: {str(e)}"
 
 
-def _handle_deductive_operation_internal(item, quantity, change_type, notes, created_by, **kwargs):
+def _handle_deductive_operation_internal(inventory_item_id, quantity_to_deduct, change_type, notes="", created_by=None, batch_id=None):
     """
-    Standard FIFO deduction handler - consumes from both FIFO entries and lots.
-
-    This is the canonical deduction path that:
-    1. Plans FIFO deduction from history entries
-    2. Executes the plan on FIFO entries
-    3. Records individual audit trail entries for each lot consumed
-    4. Updates item quantity
+    Handle deductive operations using FIFO (First In, First Out) logic with lots
     """
     try:
-        item_id = item.id
-        abs_quantity = abs(quantity)
+        from app.models import InventoryItem
+        from app.models.inventory_lot import InventoryLot
 
-        logger.info(f"FIFO DEDUCTION: Starting {change_type} deduction of {abs_quantity} from item {item_id}")
+        # Get all available lots for this item (oldest first - FIFO)
+        available_lots = InventoryLot.query.filter(
+            and_(
+                InventoryLot.inventory_item_id == inventory_item_id,
+                InventoryLot.remaining_quantity > 0
+            )
+        ).order_by(InventoryLot.received_date.asc()).all()
 
-        # Step 1: Plan the deduction
-        deduction_plan, error = _calculate_deduction_plan_internal(item_id, abs_quantity, change_type)
-        if error:
-            logger.error(f"FIFO DEDUCTION: Planning failed for item {item_id}: {error}")
-            return False, error
+        if not available_lots:
+            logger.warning(f"FIFO: No available lots for deduction from item {inventory_item_id}")
+            return True, "No inventory to deduct from"
 
-        if not deduction_plan:
-            logger.warning(f"FIFO DEDUCTION: No plan generated for item {item_id}")
-            return False, "Insufficient inventory"
+        remaining_to_deduct = abs(float(quantity_to_deduct))
+        deductions = []
 
-        logger.info(f"FIFO DEDUCTION: Plan created with {len(deduction_plan)} lots to consume")
+        for lot in available_lots:
+            if remaining_to_deduct <= 0:
+                break
 
-        # Step 2: Execute on FIFO entries
-        success, error = _execute_deduction_plan_internal(deduction_plan, item_id)
-        if not success:
-            logger.error(f"FIFO DEDUCTION: Execution failed for item {item_id}: {error}")
-            return False, error
+            available_qty = lot.remaining_quantity
+            deduct_from_lot = min(remaining_to_deduct, available_qty)
 
-        # Step 3: Record individual audit trail entries for each lot consumed
-        audit_success = _record_deduction_plan_internal(
-            item_id, deduction_plan, change_type, notes, created_by=created_by, **kwargs
-        )
-        if not audit_success:
-            logger.error(f"FIFO DEDUCTION: Audit recording failed for item {item_id}")
-            return False, "Failed to record deduction"
+            # Update remaining quantity in the lot
+            lot.remaining_quantity -= deduct_from_lot
+            remaining_to_deduct -= deduct_from_lot
 
-        # Step 4: Sync item quantity to FIFO total
-        current_fifo_total = calculate_current_fifo_total(item_id)
-        item.quantity = current_fifo_total
+            # Create deduction record in unified history
+            deduction_entry = UnifiedInventoryHistory(
+                inventory_item_id=inventory_item_id,
+                change_type=change_type,
+                quantity_change=-deduct_from_lot,
+                remaining_quantity=0,  # Deductions don't have remaining quantity
+                unit=lot.unit,
+                unit_cost=lot.unit_cost,
+                fifo_code=lot.fifo_code,
+                notes=notes,
+                created_by=created_by,
+                batch_id=batch_id,
+                is_perishable=lot.expiration_date is not None,  # Inherit perishable from lot
+                shelf_life_days=lot.shelf_life_days,
+                expiration_date=lot.expiration_date,
+                affected_lot_id=lot.id,  # Link to the affected lot
+                organization_id=lot.organization_id
+            )
 
-        # Log summary of what was consumed
-        lots_summary = [f"lot {step['lot_id']}: -{step['deduct_quantity']}" for step in deduction_plan]
-        logger.info(f"FIFO DEDUCTION: Successfully deducted {abs_quantity} from item {item_id} across {len(deduction_plan)} lots: {', '.join(lots_summary)}")
-        
-        return True, f"Deducted {abs_quantity} {getattr(item, 'unit', 'units')} from {len(deduction_plan)} lots"
+            db.session.add(deduction_entry)
+            deductions.append({
+                'lot_id': lot.id,
+                'fifo_code': lot.fifo_code,
+                'amount': deduct_from_lot,
+                'unit': lot.unit
+            })
+
+            logger.info(f"FIFO: Deducted {deduct_from_lot} {lot.unit} from lot {lot.fifo_code} (ID: {lot.id})")
+
+        if remaining_to_deduct > 0:
+            logger.warning(f"FIFO: Could not deduct full amount. {remaining_to_deduct} units remaining")
+            return False, f"Insufficient inventory. {remaining_to_deduct} units could not be deducted"
+
+        return True, f"Deducted from {len(deductions)} lots"
 
     except Exception as e:
-        logger.error(f"FIFO DEDUCTION: Error for item {item.id}: {str(e)}")
-        return False, str(e)
+        logger.error(f"FIFO: Error in deductive operation for item {inventory_item_id}: {str(e)}")
+        db.session.rollback()
+        return False, f"Error processing deduction: {str(e)}"
 
 
 def _calculate_deduction_plan_internal(item_id, quantity, change_type):
@@ -176,7 +222,7 @@ def _execute_deduction_plan_internal(deduction_plan, item_id):
         for step in deduction_plan:
             lot_id = step['lot_id']
             deduct_quantity = step['deduct_quantity']
-            
+
             lot = db.session.get(UnifiedInventoryHistory, lot_id)
             if lot:
                 old_remaining = lot.remaining_quantity
@@ -197,7 +243,7 @@ def _record_deduction_plan_internal(item_id, deduction_plan, change_type, notes,
     """Record individual deduction records for each lot consumed"""
     try:
         item = db.session.get(InventoryItem, item_id)
-        
+
         # Filter out invalid kwargs for UnifiedInventoryHistory
         valid_kwargs = {}
         valid_fields = {'fifo_reference_id'}
@@ -209,10 +255,10 @@ def _record_deduction_plan_internal(item_id, deduction_plan, change_type, notes,
         for step in deduction_plan:
             lot_id = step['lot_id']
             deduct_quantity = step['deduct_quantity']
-            
+
             # Get the lot being consumed to get its details
             consumed_lot = db.session.get(UnifiedInventoryHistory, lot_id)
-            
+
             history_entry = UnifiedInventoryHistory(
                 inventory_item_id=item_id,
                 organization_id=item.organization_id,
