@@ -59,7 +59,7 @@ def _internal_add_fifo_entry_enhanced(item_id, quantity, change_type, unit=None,
             shelf_life_days=shelf_life_days,
             source_type='manual',
             created_by=created_by,
-            fifo_code=generate_fifo_code(change_type),
+            fifo_code=generate_fifo_code(change_type, item_id),
             organization_id=item.organization_id
         )
 
