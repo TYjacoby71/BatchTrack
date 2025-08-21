@@ -5,8 +5,9 @@ from ._audit import record_audit_entry
 from ._fifo_ops import _internal_add_fifo_entry_enhanced
 
 
-def handle_initial_stock(item, quantity, change_type, unit=None, notes=None, created_by=None,
-                        cost_override=None, custom_expiration_date=None, custom_shelf_life_days=None, **kwargs):
+def handle_initial_stock(item, quantity, unit=None, notes=None, created_by=None,
+                        cost_override=None, custom_expiration_date=None, custom_shelf_life_days=None, 
+                        change_type=None, **kwargs):
     """Handles the special case for an item's very first stock entry."""
     try:
         final_unit = unit or getattr(item, 'unit', 'count')
@@ -139,8 +140,7 @@ def create_inventory_item(form_data: dict, organization_id: int, created_by: int
         
         notes = form_data.get('notes', '') or 'Initial stock creation'
         
-        handler = get_operation_handler('initial_stock')
-        success, message = handler(
+        success, message = handle_initial_stock(
             item=item,
             quantity=quantity,
             unit=history_unit,
@@ -148,7 +148,8 @@ def create_inventory_item(form_data: dict, organization_id: int, created_by: int
             created_by=created_by,
             cost_override=cost_per_unit,
             custom_expiration_date=expiration_date,
-            custom_shelf_life_days=shelf_life_days
+            custom_shelf_life_days=shelf_life_days,
+            change_type='initial_stock'
         )
 
         if not success:

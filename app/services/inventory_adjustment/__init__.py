@@ -11,6 +11,7 @@ from ._creation_logic import create_inventory_item
 from ._edit_logic import update_inventory_item
 from ._audit import record_audit_entry
 from ._validation import validate_inventory_fifo_sync
+from ._fifo_ops import credit_specific_lot
 
 # Public API - expose the canonical functions needed by blueprints
 __all__ = [
@@ -18,7 +19,8 @@ __all__ = [
     'create_inventory_item', 
     'update_inventory_item',
     'record_audit_entry',
-    'validate_inventory_fifo_sync'
+    'validate_inventory_fifo_sync',
+    'credit_specific_lot'
 ]
 
 # Operation registry for introspection

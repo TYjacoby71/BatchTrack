@@ -1,9 +1,9 @@
-
 import logging
 from datetime import datetime, timedelta
 from decimal import Decimal
 from app.models import db, InventoryItem, UnifiedInventoryHistory
 from app.utils.timezone_utils import TimezoneUtils
+from sqlalchemy import and_
 
 logger = logging.getLogger(__name__)
 
@@ -49,15 +49,15 @@ def handle_additive_operation(item, quantity, change_type, notes=None, created_b
     try:
         if change_type not in ADDITIVE_OPERATIONS:
             return False, f"Unknown additive operation: {change_type}"
-        
+
         config = ADDITIVE_OPERATIONS[change_type]
-        
+
         # Determine cost per unit
         if config.get('use_cost_override') and cost_override is not None:
             cost_per_unit = cost_override
         else:
             cost_per_unit = item.cost_per_unit
-        
+
         success, error = _internal_add_fifo_entry_enhanced(
             item_id=item.id,
             quantity=quantity,
@@ -68,12 +68,12 @@ def handle_additive_operation(item, quantity, change_type, notes=None, created_b
             created_by=created_by,
             **kwargs
         )
-        
+
         if success:
             message = f"{config['message']} {quantity} {getattr(item, 'unit', 'units')}"
             return True, message
         return False, error
-        
+
     except Exception as e:
         logger.error(f"Error in additive operation {change_type}: {str(e)}")
         return False, str(e)
@@ -84,18 +84,18 @@ def handle_deductive_operation(item, quantity, change_type, notes=None, created_
     try:
         if change_type not in DEDUCTIVE_OPERATIONS:
             return False, f"Unknown deductive operation: {change_type}"
-        
+
         config = DEDUCTIVE_OPERATIONS[change_type]
-        
+
         success = _handle_deductive_operation_internal(
             item, quantity, change_type, notes, created_by, **kwargs
         )
-        
+
         if success:
             message = f"{config['message']} {quantity} {getattr(item, 'unit', 'units')}"
             return True, message
         return False, "Insufficient inventory"
-        
+
     except Exception as e:
         logger.error(f"Error in deductive operation {change_type}: {str(e)}")
         return False, str(e)
@@ -109,7 +109,7 @@ def handle_cost_override_special(item, quantity, notes=None, created_by=None, co
             db.session.commit()
             return True, f"Updated cost to {cost_override}"
         return False, "No cost override provided"
-        
+
     except Exception as e:
         logger.error(f"Error in cost override: {str(e)}")
         return False, str(e)
@@ -206,14 +206,14 @@ def _internal_add_fifo_entry_enhanced(item_id, quantity, change_type, unit, note
             history_entry.expiration_date = TimezoneUtils.utc_now() + timedelta(days=shelf_life_days)
 
         db.session.add(history_entry)
-        
+
         # Update item quantity
         item.quantity += quantity
-        
+
         logger.info(f"FIFO: Updating inventory item {item_id} quantity: {item.quantity - quantity} → {item.quantity}")
-        
+
         return True, f"Added {quantity} {unit}"
-        
+
     except Exception as e:
         logger.error(f"Error in _internal_add_fifo_entry_enhanced: {str(e)}")
         return False, str(e)
@@ -228,7 +228,7 @@ def _calculate_deduction_plan_internal(item_id, quantity, change_type):
         ).order_by(UnifiedInventoryHistory.timestamp.asc()).all()
 
         total_available = sum(lot.remaining_quantity for lot in available_lots)
-        
+
         if total_available < quantity:
             return None, f"Insufficient inventory: need {quantity}, have {total_available}"
 
@@ -238,7 +238,7 @@ def _calculate_deduction_plan_internal(item_id, quantity, change_type):
         for lot in available_lots:
             if remaining_to_deduct <= 0:
                 break
-                
+
             if lot.remaining_quantity > 0:
                 deduct_from_lot = min(lot.remaining_quantity, remaining_to_deduct)
                 deduction_plan.append({
@@ -249,7 +249,7 @@ def _calculate_deduction_plan_internal(item_id, quantity, change_type):
                 remaining_to_deduct -= deduct_from_lot
 
         return deduction_plan, None
-        
+
     except Exception as e:
         logger.error(f"Error calculating deduction plan: {str(e)}")
         return None, str(e)
@@ -262,9 +262,9 @@ def _execute_deduction_plan_internal(deduction_plan, item_id):
             lot = db.session.get(UnifiedInventoryHistory, step['lot_id'])
             if lot:
                 lot.remaining_quantity -= step['deduct_quantity']
-                
+
         return True, None
-        
+
     except Exception as e:
         logger.error(f"Error executing deduction plan: {str(e)}")
         return False, str(e)
@@ -275,7 +275,7 @@ def _record_deduction_plan_internal(item_id, deduction_plan, change_type, notes,
     try:
         item = db.session.get(InventoryItem, item_id)
         total_deducted = sum(step['deduct_quantity'] for step in deduction_plan)
-        
+
         history_entry = UnifiedInventoryHistory(
             inventory_item_id=item_id,
             organization_id=item.organization_id,
@@ -290,24 +290,45 @@ def _record_deduction_plan_internal(item_id, deduction_plan, change_type, notes,
 
         db.session.add(history_entry)
         return True
-        
+
     except Exception as e:
         logger.error(f"Error recording deduction: {str(e)}")
         return False
 
 
 def calculate_current_fifo_total(item_id):
-    """Calculate current total from FIFO lots"""
-    try:
-        total = db.session.query(
-            db.func.sum(UnifiedInventoryHistory.remaining_quantity)
-        ).filter(
+    """Calculate current FIFO total for validation"""
+    fifo_entries = UnifiedInventoryHistory.query.filter(
+        and_(
             UnifiedInventoryHistory.inventory_item_id == item_id,
             UnifiedInventoryHistory.remaining_quantity > 0
-        ).scalar() or 0.0
-        
-        return float(total)
-        
+        )
+    ).all()
+
+    return sum(float(entry.remaining_quantity) for entry in fifo_entries)
+
+
+def credit_specific_lot(lot_id, quantity, notes=None, created_by=None):
+    """Credit back to a specific FIFO lot (used for reservation releases)"""
+    from app.models import UnifiedInventoryHistory, db
+
+    try:
+        entry = UnifiedInventoryHistory.query.get(lot_id)
+        if not entry:
+            return False, "FIFO lot not found"
+
+        # Add back to the specific lot
+        entry.remaining_quantity = float(entry.remaining_quantity) + float(quantity)
+
+        # Update item quantity
+        from app.models import InventoryItem
+        item = InventoryItem.query.get(entry.inventory_item_id)
+        if item:
+            item.quantity = float(item.quantity) + float(quantity)
+
+        db.session.commit()
+        return True, f"Credited {quantity} back to lot {lot_id}"
+
     except Exception as e:
-        logger.error(f"Error calculating FIFO total: {str(e)}")
-        return 0.0
+        db.session.rollback()
+        return False, f"Error crediting lot: {str(e)}"
