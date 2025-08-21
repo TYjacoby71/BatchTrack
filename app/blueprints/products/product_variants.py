@@ -4,6 +4,7 @@ from ...models import db, ProductSKU, InventoryItem
 from ...models.product import Product, ProductVariant
 from ...services.product_service import ProductService
 from ...utils.unit_utils import get_global_unit_list
+from app.services.inventory_adjustment import process_inventory_adjustment
 
 # Create the product variants blueprint
 product_variants_bp = Blueprint('product_variants', __name__)
@@ -102,7 +103,7 @@ def add_variant(product_id):
             created_by=current_user.id
         )
         db.session.add(new_sku)
-        
+
         # Commit all changes together
         db.session.commit()
 
@@ -207,7 +208,7 @@ def view_variant(product_id, variant_name):
         size_label='Bulk',
         organization_id=current_user.organization_id
     ).first()
-    
+
     product_breadcrumb_id = base_sku.inventory_item_id if base_sku else (
         size_groups[list(size_groups.keys())[0]]['skus'][0].inventory_item_id if size_groups else None
     )

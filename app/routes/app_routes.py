@@ -35,7 +35,7 @@ def dashboard():
         if not selected_org_id:
             flash('Developers must select an organization to view customer dashboard', 'warning')
             return redirect(url_for('developer.dashboard'))
-        
+
         # Verify the organization still exists
         from app.models import Organization
         selected_org = Organization.query.get(selected_org_id)

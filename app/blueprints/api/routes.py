@@ -48,23 +48,23 @@ def get_dashboard_alerts():
         from flask import session
         from ...services.dashboard_alerts import DashboardAlertService
         import logging
-        
+
         # Get dismissed alerts from session
         dismissed_alerts = session.get('dismissed_alerts', [])
-        
+
         # Get alerts from service
         alert_data = DashboardAlertService.get_dashboard_alerts(dismissed_alerts=dismissed_alerts)
-        
+
         # Log for debugging
         logging.info(f"Dashboard alerts requested - found {len(alert_data.get('alerts', []))} alerts")
-        
+
         return jsonify({
             'success': True,
             'alerts': alert_data['alerts'],
             'total_alerts': alert_data['total_alerts'],
             'hidden_count': alert_data['hidden_count']
         })
-        
+
     except Exception as e:
         logging.error(f"Error getting dashboard alerts: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500

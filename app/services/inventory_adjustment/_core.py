@@ -3,7 +3,7 @@ import logging
 from datetime import datetime
 from app.models import db, InventoryItem, UnifiedInventoryHistory
 from ._validation import validate_inventory_fifo_sync
-from ._audit import record_audit_entry
+# Removed audit import - FIFO handles all history entries
 from ._handlers import get_operation_handler
 
 logger = logging.getLogger(__name__)
@@ -73,9 +73,8 @@ def process_inventory_adjustment(
 
             if success:
                 db.session.commit()
-                audit_success = record_audit_entry(item_id, change_type, notes or f'{change_type}: {quantity}')
-                if not audit_success:
-                    logger.warning(f"Audit entry failed for {change_type} on item {item_id}")
+                # Each handler is responsible for creating exactly one history record
+                # Core dispatcher should NOT create additional audit entries
                 return True, message
             else:
                 db.session.rollback()
