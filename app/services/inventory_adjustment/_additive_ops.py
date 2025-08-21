@@ -7,7 +7,7 @@ They should NEVER directly modify item.quantity.
 
 import logging
 from app.models import db, UnifiedInventoryHistory
-from ._fifo_ops import _internal_add_fifo_entry_enhanced
+from ._fifo_ops import create_new_fifo_lot
 
 logger = logging.getLogger(__name__)
 
@@ -138,7 +138,7 @@ def _handle_lot_crediting_operation(item, quantity, change_type, unit, notes, fi
     try:
         # For now, treat crediting operations as lot creation
         # TODO: Implement proper FIFO crediting logic that finds and credits existing lots
-        success, message, lot_id = _internal_add_fifo_entry_enhanced(
+        success, message, lot_id = create_new_fifo_lot(
             item_id=item.id,
             quantity=quantity,
             change_type=change_type,
