@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from ...models import db, Reservation, InventoryItem
 from ...services.pos_integration import POSIntegrationService
 from ...utils.permissions import has_permission
-from ...services.inventory_adjustment._audit import record_non_inventory_audit_entry
+# No separate audit needed - all history goes through UnifiedInventoryHistory via FIFO operations
 
 reservations_bp = Blueprint('reservations', __name__, url_prefix='/reservations')
 

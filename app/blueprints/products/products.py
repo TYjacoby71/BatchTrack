@@ -37,7 +37,7 @@ from ...services.inventory_adjustment import process_inventory_adjustment, recor
 # Wrapper for audit entry - used by tests
 # This function is also defined twice, the second one is the one that is used.
 # The change request targets the first definition of _write_product_created_audit, which is actually not used.
-# The second definition _write_product_created_audit(sku) is used by tests.
+# The second definition _write_product_created_audit(sku) is likely for tests.
 # Given the user message "Fix audit function to use lazy import for proper mocking",
 # it's most likely referring to the testable function.
 # The change provided in the prompt modifies the definition that takes `variant` as an argument, not `sku`.
