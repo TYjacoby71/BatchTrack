@@ -1,21 +1,24 @@
 
-from app.models import InventoryItem, UnifiedInventoryHistory
+import logging
+from app.models import db, InventoryItem
 from sqlalchemy import and_
+
+logger = logging.getLogger(__name__)
 
 
 def validate_inventory_fifo_sync(item_id, item_type=None):
-    """Validate that inventory quantity matches FIFO totals - item-scoped only"""
-    import logging
-    logger = logging.getLogger(__name__)
-    
+    """
+    Validate that inventory quantity matches FIFO totals using proper InventoryLot model.
+    This ensures the item.quantity field stays in sync with actual lot quantities.
+    """
     from app.models.inventory_lot import InventoryLot
     
-    item = InventoryItem.query.get(item_id)
+    item = db.session.get(InventoryItem, item_id)
     if not item:
         return False, "Item not found", 0, 0
 
-    # Get sum of remaining quantities from actual lots (not deprecated history fields)
-    lots = InventoryLot.query.filter(
+    # Get all active lots for this item with proper organization scoping
+    active_lots = InventoryLot.query.filter(
         and_(
             InventoryLot.inventory_item_id == item_id,
             InventoryLot.organization_id == item.organization_id,
@@ -23,10 +26,11 @@ def validate_inventory_fifo_sync(item_id, item_type=None):
         )
     ).all()
 
-    fifo_total = sum(float(lot.remaining_quantity) for lot in lots)
-    inventory_qty = float(item.quantity)
+    # Calculate total from actual lot quantities
+    fifo_total = sum(float(lot.remaining_quantity) for lot in active_lots)
+    inventory_qty = float(item.quantity or 0)
 
-    # Allow small floating point differences
+    # Allow small floating point differences (0.001 tolerance)
     tolerance = 0.001
     is_valid = abs(inventory_qty - fifo_total) < tolerance
 
@@ -35,10 +39,10 @@ def validate_inventory_fifo_sync(item_id, item_type=None):
         logger.error(f"  Item quantity: {inventory_qty}")
         logger.error(f"  FIFO total: {fifo_total}")
         logger.error(f"  Difference: {abs(inventory_qty - fifo_total)}")
-        logger.error(f"  Active FIFO lots: {len(lots)}")
+        logger.error(f"  Active FIFO lots: {len(active_lots)}")
         
         # Log individual FIFO lots for debugging
-        for i, lot in enumerate(lots):
+        for i, lot in enumerate(active_lots):
             logger.error(f"    Lot {i+1}: {lot.remaining_quantity} ({lot.source_type}, {lot.received_date})")
         
         error_msg = f"FIFO sync error: inventory={inventory_qty}, fifo_total={fifo_total}, diff={abs(inventory_qty - fifo_total)}"
