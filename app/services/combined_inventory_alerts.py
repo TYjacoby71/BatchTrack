@@ -1,4 +1,5 @@
 from ..models import db, InventoryItem, ProductSKU
+from ..models.inventory_lot import InventoryLot
 from sqlalchemy import and_
 from typing import List, Dict
 from datetime import timedelta
@@ -15,7 +16,7 @@ class CombinedInventoryAlertService:
             from ..models import InventoryItem, UnifiedInventoryHistory
             from ..utils.timezone_utils import TimezoneUtils
             from flask_login import current_user
-            from app.models.inventory_lot import InventoryLot # Import InventoryLot
+            from ..models.inventory_lot import InventoryLot
 
             current_time = TimezoneUtils.utc_now()
             expiration_cutoff = current_time + timedelta(days=days_ahead)
