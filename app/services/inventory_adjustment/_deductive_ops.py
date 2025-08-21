@@ -1,4 +1,3 @@
-
 """
 Deductive Operations Handler
 
@@ -28,25 +27,34 @@ DEDUCTIVE_CONFIGS = {
 }
 
 def handle_deductive_operation(item, quantity, change_type, notes=None, created_by=None, **kwargs):
-    """Universal handler for all deductive operations"""
+    """
+    Common handler for all deductive operations that remove inventory using FIFO.
+
+    This includes: use, sale, spoil, expired, damaged, quality_fail, sample, tester, gift, reserved, batch
+    """
     try:
-        if change_type not in DEDUCTIVE_CONFIGS:
-            return False, f"Unknown deductive operation: {change_type}"
-        
-        config = DEDUCTIVE_CONFIGS[change_type]
-        
-        success = _handle_deductive_operation_internal(
-            item, quantity, change_type, notes, created_by, **kwargs
+        # Handle deduction using FIFO - this will check inventory internally
+        success, error_msg = _handle_deductive_operation_internal(
+            item=item,
+            quantity=quantity,
+            change_type=change_type,
+            notes=notes,
+            created_by=created_by,
+            **kwargs
         )
-        
-        if success:
-            message = f"{config['message']} {quantity} {getattr(item, 'unit', 'units')}"
-            return True, message
-        return False, "Insufficient inventory"
-        
+
+        if not success:
+            return False, error_msg
+
+        # Get success message from config
+        config = DEDUCTIVE_CONFIGS.get(change_type, {})
+        message = config.get('message', f'Deducted {quantity} {getattr(item, "unit", "units")}')
+
+        return True, message.format(quantity=quantity, unit=getattr(item, 'unit', 'count'))
+
     except Exception as e:
         logger.error(f"Error in deductive operation {change_type}: {str(e)}")
-        return False, str(e)
+        return False, f"Error processing {change_type}: {str(e)}"
 
 
 # Individual handler functions for each deductive operation type
