@@ -64,16 +64,21 @@ def list_inventory():
         # Calculate expired quantity using temporary attributes instead of properties
         if item.is_perishable:
             today = datetime.now().date()
-            expired_entries = UnifiedInventoryHistory.query.filter(
-                and_(
-                    UnifiedInventoryHistory.inventory_item_id == item.id,
-                    UnifiedInventoryHistory.remaining_quantity > 0,
-                    UnifiedInventoryHistory.expiration_date != None,
-                    UnifiedInventoryHistory.expiration_date < today
-                )
-            ).all()
-            item.temp_expired_quantity = sum(float(entry.remaining_quantity) for entry in expired_entries)
-            item.temp_available_quantity = float(item.quantity) - item.temp_expired_quantity
+            try:
+                expired_entries = UnifiedInventoryHistory.query.filter(
+                    and_(
+                        UnifiedInventoryHistory.inventory_item_id == item.id,
+                        UnifiedInventoryHistory.remaining_quantity > 0,
+                        UnifiedInventoryHistory.expiration_date != None,
+                        UnifiedInventoryHistory.expiration_date < today
+                    )
+                ).all()
+                item.temp_expired_quantity = sum(float(entry.remaining_quantity) for entry in expired_entries)
+                item.temp_available_quantity = float(item.quantity) - item.temp_expired_quantity
+            except Exception as e:
+                logging.warning(f"Error calculating expired quantities for item {item.id}: {str(e)}")
+                item.temp_expired_quantity = 0
+                item.temp_available_quantity = item.quantity
         else:
             item.temp_expired_quantity = 0
             item.temp_available_quantity = item.quantity
@@ -116,16 +121,21 @@ def view_inventory(id):
     # Calculate expired quantity using temporary attributes
     if item.is_perishable:
         today = datetime.now().date()
-        expired_entries_for_calc = UnifiedInventoryHistory.query.filter(
-            and_(
-                UnifiedInventoryHistory.inventory_item_id == item.id,
-                UnifiedInventoryHistory.remaining_quantity > 0,
-                UnifiedInventoryHistory.expiration_date != None,
-                UnifiedInventoryHistory.expiration_date < today
-            )
-        ).all()
-        item.temp_expired_quantity = sum(float(entry.remaining_quantity) for entry in expired_entries_for_calc)
-        item.temp_available_quantity = float(item.quantity) - item.temp_expired_quantity
+        try:
+            expired_entries_for_calc = UnifiedInventoryHistory.query.filter(
+                and_(
+                    UnifiedInventoryHistory.inventory_item_id == item.id,
+                    UnifiedInventoryHistory.remaining_quantity > 0,
+                    UnifiedInventoryHistory.expiration_date != None,
+                    UnifiedInventoryHistory.expiration_date < today
+                )
+            ).all()
+            item.temp_expired_quantity = sum(float(entry.remaining_quantity) for entry in expired_entries_for_calc)
+            item.temp_available_quantity = float(item.quantity) - item.temp_expired_quantity
+        except Exception as e:
+            logging.warning(f"Error calculating expired quantities for item {item.id}: {str(e)}")
+            item.temp_expired_quantity = 0
+            item.temp_available_quantity = item.quantity
     else:
         item.temp_expired_quantity = 0
         item.temp_available_quantity = item.quantity
