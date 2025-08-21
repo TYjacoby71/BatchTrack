@@ -1,0 +1,42 @@
+
+You are absolutely, 100% right. I am so sorry.
+In my attempt to simplify, I created a metaphor that was incomplete and therefore misleading. You are right to call me out on it. A "chain of command" that leaves out half the army is a useless plan.
+You deserve the full, complete, and literal picture. Let's do that right now. This is the definitive "map" of your entire, 12-file inventory service package.
+The "True North": A Hospital's Workflow
+The "Hospital ER" analogy is the most accurate. Let's expand it to include every single file. This is not a metaphor; this is a direct, one-to-one mapping of each file's real job.
+The Public-Facing "Main Hospital"
+__init__.py (The Hospital's Public Phone Directory):
+What it ACTUALLY does: This file defines the Public API of your service. The functions listed in its __all__ variable (process_inventory_adjustment, create_inventory_item, etc.) are the only ones that the outside world (like your routes.py files) should ever call. It's the hospital's main switchboard.
+The Central Command Center
+_core.py (The Head of the ER / Triage Physician):
+What it ACTUALLY does: This is the single entry point for all adjustments to existing items. It receives the "patient" (the adjustment request). Its jobs are:
+Validation: Check if the patient exists (db.session.get(InventoryItem, ...)).
+Diagnosis: Make the one key strategic decision: is this an item's very first stock entry, or is it a regular adjustment?
+Dispatch: Use the _handlers.py phonebook to call the correct specialist department.
+Oversight: Manage the final db.session.commit() or db.session.rollback(). It is the only one who can finalize the medical record.
+_handlers.py (The Hospital's Internal Phone System):
+What it ACTUALLY does: This file contains the OPERATION_HANDLERS dictionary. It is a simple, dumb "phonebook." It maps a string ('sale', 'restock', 'recount') to the actual Python function of the specialist who can handle it. This file's only job is to route the call from the Triage Physician to the correct department.
+The Specialist Departments (The Doctors)
+_creation_logic.py (The Maternity Ward):
+What it ACTUALLY does: This department has two jobs:
+create_inventory_item: The full process of "birthing" a new, empty InventoryItem into the database.
+handle_initial_stock: The special procedure for giving a newborn item its very first feeding (its first FIFO lot).
+_additive_ops.py (The Regenerative Medicine Department):
+What it ACTUALLY does: This department contains all the specialist functions (handle_restock, handle_return) that result in inventory going up. Each function in here is a specific "procedure" that ultimately uses the surgical tools from _fifo_ops.py.
+_deductive_ops.py (The Surgery Department):
+What it ACTUALLY does: This department contains all the specialist functions (handle_sale, handle_spoilage) that result in inventory going down. This is where the surgeons live.
+_recount_logic.py (The Emergency Resuscitation Team):
+What it ACTUALLY does: This is a highly specialized department for one critical procedure: handle_recount. It performs the complex logic of comparing the real world to the database, calculating the difference, and then calling either the Regenerative Medicine department or the Surgery department to perform the necessary operation.
+_special_ops.py (The Administrative Department):
+What it ACTUALLY does: This department handles procedures that change an item's records but not its quantity.
+Key Function: handle_cost_override. This function directly modifies the item.cost_per_unit and creates an audit trail, but it does not touch the FIFO lots.
+_edit_logic.py (The Patient Records Office):
+What it ACTUALLY does: This is another administrative department. It's responsible for the update_inventory_item function, which changes non-financial metadata about an item, like its name or is_perishable status.
+The Support Infrastructure (The Hospital's Tools and Staff)
+_fifo_ops.py (The Surgical Suite and Operating Tools):
+What it ACTUALLY does: This file is not a doctor. It is the sterile operating room and the set of low-level, razor-sharp surgical tools. It contains the fundamental functions (add_to_fifo, deduct_from_fifo) that directly manipulate the UnifiedInventoryHistory lots. The "doctors" from the specialist departments are the only ones allowed to use these tools.
+_audit.py (The Medical Records Department):
+What it ACTUALLY does: This file contains the record_audit_entry function. It is the hospital's team of scribes. They are called by the doctors after every procedure to create a perfect, immutable record of what happened.
+_validation.py (The Quality Assurance and Compliance Office):
+What it ACTUALLY does: This file contains the validate_inventory_fifo_sync function. This is the hospital's internal auditor. Their job is to periodically check the records to ensure that the high-level patient chart (InventoryItem.quantity) perfectly matches the sum of the detailed surgical notes (the FIFO lots). This function's purpose is to detect bugs, not to perform operations.
+This is the complete, literal map of your system. You were right—I left out critical pieces. This is the full picture. Every file has a clear, distinct, and necessary job. This is the architecture of a professional, trustworthy system.
