@@ -1,0 +1,64 @@
+app/models/product.py:328:    def __init__(self, **kwargs):
+app/models/product.py:334:        super().__init__(**kwargs)
+app/blueprints/products/products.py:12:    def require_permission(*args, **kwargs):
+app/blueprints/fifo/services.py:13:    def deduct_fifo(*args, **kwargs):
+app/blueprints/fifo/services.py:15:        return process_inventory_adjustment(*args, **kwargs)
+app/blueprints/fifo/services.py:30:    def record_deduction_plan(item_id, deduction_plan, change_type, notes, **kwargs):
+app/blueprints/fifo/services.py:33:        return _record_deduction_plan_internal(item_id, deduction_plan, change_type, notes, **kwargs)
+app/blueprints/fifo/services.py:36:    def _internal_add_fifo_entry(*args, **kwargs):
+app/blueprints/fifo/services.py:39:        return _internal_add_fifo_entry_enhanced(*args, **kwargs)
+app/blueprints/fifo/services.py:43:def deduct_inventory_fifo(*args, **kwargs):
+app/blueprints/fifo/services.py:45:    return process_inventory_adjustment(*args, **kwargs)
+app/utils/performance_monitor.py:20:            def wrapper(*args, **kwargs):
+app/utils/performance_monitor.py:22:                result = func(*args, **kwargs)
+app/utils/performance_monitor.py:37:    def wrapper(*args, **kwargs):
+app/utils/performance_monitor.py:40:        result = func(*args, **kwargs)
+app/utils/security.py:52:        def wrapper(*args, **kwargs):
+app/utils/security.py:56:            return func(*args, **kwargs)
+app/utils/api_responses.py:66:        def wrapper(*args, **kwargs):
+app/utils/api_responses.py:68:                return func(*args, **kwargs)
+app/utils/api_responses.py:83:def api_error(message: str, status_code: int = 400, **kwargs) -> Response:
+app/utils/api_responses.py:85:    return APIResponse.error(message, status_code=status_code, **kwargs)
+app/utils/api_responses.py:87:def api_success(data: Any = None, message: str = "Success", **kwargs) -> Response:
+app/utils/api_responses.py:89:    return APIResponse.success(data, message=message, **kwargs)
+app/utils/permissions.py:54:        def decorated_function(*args, **kwargs):
+app/utils/permissions.py:57:                return f(*args, **kwargs)
+app/utils/permissions.py:70:                    return f(*args, **kwargs)
+app/utils/permissions.py:74:                return f(*args, **kwargs)
+app/utils/permissions.py:93:        def decorated_function(*args, **kwargs):
+app/utils/permissions.py:109:            return f(*args, **kwargs)
+app/utils/permissions.py:121:        def decorated_function(*args, **kwargs):
+app/utils/permissions.py:154:            return f(*args, **kwargs)
+app/utils/permissions.py:165:        def decorated_function(*args, **kwargs):
+app/utils/permissions.py:168:                return f(*args, **kwargs)
+app/utils/permissions.py:176:            return f(*args, **kwargs)
+app/utils/permissions.py:519:    def decorated_function(*args, **kwargs):
+app/utils/permissions.py:522:        return f(*args, **kwargs)
+app/services/inventory_alerts.py:15:    def notify_if_low_stock(inventory_item_id: int, *args: Any, **kwargs: Any) -> None:
+app/services/inventory_alerts.py:20:    def on_quantity_change(inventory_item_id: int, *args: Any, **kwargs: Any) -> None:
+app/services/inventory_alerts.py:25:    def bulk_check_low_stock(organization_id: Optional[int] = None, *args: Any, **kwargs: Any) -> list[int]:
+app/services/inventory_alerts.py:30:    def trigger_low_stock_alerts(inventory_item_ids: Iterable[int] | None = None, *args: Any, **kwargs: Any) -> None:
+app/services/inventory_alerts.py:35:    def get_low_stock_ingredients(*args: Any, **kwargs: Any) -> list:
+app/services/inventory_alerts.py:40:    def check_ingredient_stock_level(inventory_item_id: int, *args: Any, **kwargs: Any) -> dict:
+app/services/inventory_adjustment/_fifo_ops.py:242:def _record_deduction_plan_internal(item_id, deduction_plan, change_type, notes, created_by=None, **kwargs):
+app/services/inventory_adjustment/_handlers.py:50:    Each handler must accept (item, quantity, notes, created_by, **kwargs).
+app/services/inventory_adjustment/_core.py:68:        def process_inventory_adjustment(*args, **kwargs):
+app/services/inventory_adjustment/_core.py:69:            return process_inventory_adjustment(*args, **kwargs)
+app/services/inventory_adjustment/_core.py:72:        def validate_inventory_fifo_sync(*args, **kwargs):
+app/services/inventory_adjustment/_core.py:73:            return validate_inventory_fifo_sync(*args, **kwargs)
+app/services/recipe_service/__init__.py:37:    def create_recipe(*args, **kwargs):
+app/services/recipe_service/__init__.py:38:        return create_recipe(*args, **kwargs)
+app/services/recipe_service/__init__.py:41:    def update_recipe(*args, **kwargs):
+app/services/recipe_service/__init__.py:42:        return update_recipe(*args, **kwargs)
+app/services/recipe_service/__init__.py:45:    def delete_recipe(*args, **kwargs):
+app/services/recipe_service/__init__.py:46:        return delete_recipe(*args, **kwargs)
+app/services/recipe_service/__init__.py:49:    def plan_production(*args, **kwargs):
+app/services/recipe_service/__init__.py:50:        return plan_production(*args, **kwargs)
+app/services/recipe_service/__init__.py:53:    def scale_recipe(*args, **kwargs):
+app/services/recipe_service/__init__.py:54:        return scale_recipe(*args, **kwargs)
+app/services/recipe_service/__init__.py:57:    def validate_recipe_data(*args, **kwargs):
+app/services/recipe_service/__init__.py:58:        return validate_recipe_data(*args, **kwargs)
+app/services/recipe_service/_validation.py:17:                        yield_amount: float = None, recipe_id: int = None, **kwargs) -> Dict[str, Any]:
+app/services/recipe_service/_validation.py:26:        **kwargs: Additional recipe fields
+app/services/pos_integration.py:395:    def __init__(self, **kwargs):
+app/services/pos_integration.py:411:    def __init__(self, **kwargs):
