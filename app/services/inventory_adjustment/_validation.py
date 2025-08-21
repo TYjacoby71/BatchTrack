@@ -4,23 +4,25 @@ from sqlalchemy import and_
 
 
 def validate_inventory_fifo_sync(item_id, item_type=None):
-    """Validate that inventory quantity matches FIFO totals"""
+    """Validate that inventory quantity matches FIFO totals - item-scoped only"""
     import logging
     logger = logging.getLogger(__name__)
+    
+    from app.models.inventory_lot import InventoryLot
     
     item = InventoryItem.query.get(item_id)
     if not item:
         return False, "Item not found", 0, 0
 
-    # Get sum of remaining quantities from FIFO entries
-    fifo_entries = UnifiedInventoryHistory.query.filter(
+    # Get sum of remaining quantities from actual lots (not deprecated history fields)
+    lots = InventoryLot.query.filter(
         and_(
-            UnifiedInventoryHistory.inventory_item_id == item_id,
-            UnifiedInventoryHistory.remaining_quantity > 0
+            InventoryLot.inventory_item_id == item_id,
+            InventoryLot.remaining_quantity > 0
         )
     ).all()
 
-    fifo_total = sum(float(entry.remaining_quantity) for entry in fifo_entries)
+    fifo_total = sum(float(lot.remaining_quantity) for lot in lots)
     inventory_qty = float(item.quantity)
 
     # Allow small floating point differences
@@ -32,11 +34,11 @@ def validate_inventory_fifo_sync(item_id, item_type=None):
         logger.error(f"  Item quantity: {inventory_qty}")
         logger.error(f"  FIFO total: {fifo_total}")
         logger.error(f"  Difference: {abs(inventory_qty - fifo_total)}")
-        logger.error(f"  Active FIFO entries: {len(fifo_entries)}")
+        logger.error(f"  Active FIFO lots: {len(lots)}")
         
-        # Log individual FIFO entries for debugging
-        for i, entry in enumerate(fifo_entries):
-            logger.error(f"    Entry {i+1}: {entry.remaining_quantity} ({entry.change_type}, {entry.timestamp})")
+        # Log individual FIFO lots for debugging
+        for i, lot in enumerate(lots):
+            logger.error(f"    Lot {i+1}: {lot.remaining_quantity} ({lot.source_type}, {lot.received_date})")
         
         error_msg = f"FIFO sync error: inventory={inventory_qty}, fifo_total={fifo_total}, diff={abs(inventory_qty - fifo_total)}"
         return False, error_msg, inventory_qty, fifo_total

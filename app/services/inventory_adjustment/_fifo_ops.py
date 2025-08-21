@@ -180,12 +180,17 @@ def _handle_deductive_operation_internal(item_id, quantity_to_deduct, change_typ
 
 
 def _calculate_deduction_plan_internal(item_id, quantity, change_type):
-    """Calculate FIFO deduction plan with detailed lot tracking"""
+    """Calculate FIFO deduction plan with detailed lot tracking - item-scoped only"""
     try:
-        available_lots = UnifiedInventoryHistory.query.filter(
-            UnifiedInventoryHistory.inventory_item_id == item_id,
-            UnifiedInventoryHistory.remaining_quantity > 0
-        ).order_by(UnifiedInventoryHistory.timestamp.asc()).all()
+        from app.models.inventory_lot import InventoryLot
+        
+        # Use proper InventoryLot table for FIFO calculations
+        available_lots = InventoryLot.query.filter(
+            and_(
+                InventoryLot.inventory_item_id == item_id,
+                InventoryLot.remaining_quantity > 0
+            )
+        ).order_by(InventoryLot.received_date.asc()).all()
 
         total_available = sum(lot.remaining_quantity for lot in available_lots)
 
@@ -290,15 +295,18 @@ def _record_deduction_plan_internal(item_id, deduction_plan, change_type, notes,
 
 
 def calculate_current_fifo_total(item_id):
-    """Calculate current FIFO total for validation"""
-    fifo_entries = UnifiedInventoryHistory.query.filter(
+    """Calculate current FIFO total for validation - item-scoped only"""
+    from app.models.inventory_lot import InventoryLot
+    
+    # Use InventoryLot instead of deprecated UnifiedInventoryHistory remaining_quantity
+    lots = InventoryLot.query.filter(
         and_(
-            UnifiedInventoryHistory.inventory_item_id == item_id,
-            UnifiedInventoryHistory.remaining_quantity > 0
+            InventoryLot.inventory_item_id == item_id,
+            InventoryLot.remaining_quantity > 0
         )
     ).all()
 
-    return sum(float(entry.remaining_quantity) for entry in fifo_entries)
+    return sum(float(lot.remaining_quantity) for lot in lots)
 
 
 def credit_specific_lot(lot_id, quantity, notes=None, created_by=None):
