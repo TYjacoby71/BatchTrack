@@ -22,7 +22,7 @@ ADDITIVE_CONFIGS = {
 def handle_additive_operation(item, quantity, change_type, notes=None, created_by=None, cost_override=None, **kwargs):
     """
     Universal handler for all additive operations.
-    
+
     Standardized pattern:
     1. Validate operation type
     2. Determine cost per unit based on config
@@ -67,49 +67,9 @@ def handle_additive_operation(item, quantity, change_type, notes=None, created_b
 
 
 # Individual handler functions for each additive operation type
-def handle_restock(item, quantity, notes=None, created_by=None, cost_override=None, expiration_date=None, shelf_life_days=None, **kwargs):
-    """Handle restock operations - creates both FIFO entry and lot object"""
-    try:
-        # Use standard additive operation first
-        success, message = handle_additive_operation(
-            item=item,
-            quantity=quantity,
-            change_type='restock',
-            notes=notes or 'Restocked inventory',
-            created_by=created_by,
-            cost_override=cost_override,
-            expiration_date=expiration_date,
-            shelf_life_days=shelf_life_days,
-            **kwargs
-        )
-
-        if not success:
-            return False, message
-
-        # Create corresponding lot object if restock succeeded
-        from ._lot_ops import create_inventory_lot
-        lot_success, lot_message, lot = create_inventory_lot(
-            item_id=item.id,
-            quantity=quantity,
-            unit=item.unit or 'count',
-            unit_cost=cost_override or item.cost_per_unit or 0.0,
-            source_type='restock',
-            source_notes=notes,
-            created_by=created_by,
-            expiration_date=expiration_date,
-            shelf_life_days=shelf_life_days,
-            **kwargs
-        )
-
-        if not lot_success:
-            logger.warning(f"RESTOCK: FIFO entry created but lot creation failed: {lot_message}")
-            # Continue anyway since FIFO entry was successful
-
-        return True, message
-
-    except Exception as e:
-        logger.error(f"Error in restock handler: {str(e)}")
-        return False, str(e)
+def handle_restock(item, quantity, notes=None, created_by=None, cost_override=None, **kwargs):
+    """Handle restock operations"""
+    return handle_additive_operation(item, quantity, 'restock', notes, created_by, cost_override, **kwargs)
 
 def handle_manual_addition(item, quantity, notes=None, created_by=None, **kwargs):
     """Handle manual addition operations"""
