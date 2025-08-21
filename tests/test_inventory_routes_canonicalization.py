@@ -11,7 +11,7 @@ from app.blueprints.expiration.services import ExpirationService
 from app.services.product_service import ProductService
 from app.services.inventory_adjustment import process_inventory_adjustment
 from app.services.inventory_adjustment._handlers import get_all_operation_types
-from app.services.combined_inventory_alerts import CombinedInventoryAlerts
+from app.services.combined_inventory_alerts import CombinedInventoryAlertService
 
 
 # Helper function to create a mock user with organization
@@ -348,7 +348,7 @@ class TestInventoryRoutesCanonicalService:
         """Test that inventory alerts only read quantity, don't modify it"""
 
         # Alerts service should only read inventory data, never modify it directly.
-        alerts_service = CombinedInventoryAlerts()
+        alerts_service = CombinedInventoryAlertService()
 
         # Get the initial quantity from the mocked item
         original_quantity = mock_inventory_item.quantity
