@@ -11,6 +11,9 @@ class TestInventoryFIFOCharacterization:
         """Verify canonical inventory adjustment entry point exists."""
         from app.services.inventory_adjustment import process_inventory_adjustment
         assert callable(process_inventory_adjustment)
+        
+    # NOTE: All other FIFO tests moved to test_canonical_inventory_integration.py
+    # This ensures FIFO behavior is tested ONLY through canonical entry point
 
     def test_fifo_deduction_order(self, app, db_session, test_user, test_org):
         """Test FIFO deduction follows first-in-first-out order."""

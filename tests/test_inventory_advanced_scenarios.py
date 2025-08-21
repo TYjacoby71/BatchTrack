@@ -24,9 +24,9 @@ from app.models import (
     SubscriptionTier
 )
 from app.services.inventory_adjustment import process_inventory_adjustment
-from app.services.inventory_adjustment._validation import validate_inventory_fifo_sync
-from app.services.inventory_adjustment._creation_logic import create_inventory_item
-from app.services.inventory_adjustment._edit_logic import update_inventory_item
+# All inventory operations should go through canonical entry point:
+# from app.services.inventory_adjustment import process_inventory_adjustment
+# Removed direct internal imports that bypass canonical service
 
 
 class TestInventoryAdvancedScenarios:
