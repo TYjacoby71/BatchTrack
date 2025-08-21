@@ -63,8 +63,7 @@ def _internal_add_fifo_entry_enhanced(item_id, quantity, change_type, unit, note
             source_notes=notes,
             created_by=created_by,
             fifo_code=generate_fifo_code(change_type, item_id),
-            organization_id=item.organization_id,
-            batch_id=kwargs.get('batch_id')  # Optional batch_id from kwargs
+            organization_id=item.organization_id
         )
 
         db.session.add(lot)
@@ -80,7 +79,6 @@ def _internal_add_fifo_entry_enhanced(item_id, quantity, change_type, unit, note
             fifo_code=lot.fifo_code,
             notes=notes,
             created_by=created_by,
-            batch_id=kwargs.get('batch_id'),  # Optional batch_id from kwargs
             is_perishable=is_perishable,  # Always inherit from item
             shelf_life_days=final_shelf_life_days,
             expiration_date=final_expiration_date,
