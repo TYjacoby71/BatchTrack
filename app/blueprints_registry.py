@@ -52,7 +52,7 @@ def register_blueprints(app):
 
     safe_register_blueprint('app.blueprints.products.product_inventory_routes.product_inventory_bp', 'product_inventory_bp', '/product-inventory', 'Product Inventory')
     safe_register_blueprint('app.blueprints.products.reservation_routes.reservations_bp', 'reservations_bp', '/reservations', 'Reservations')
-    safe_register_blueprint('app.blueprints.products.sku.sku_bp', 'sku_bp', '/sku', 'SKU Management')
+    safe_register_blueprint('app.blueprints.products.sku.sku_bp', 'sku_bp', '/products/sku', 'SKU Management')
     safe_register_blueprint('app.blueprints.products.product_variants.product_variants_bp', 'product_variants_bp', '/product-variants', 'Product Variants')
     safe_register_blueprint('app.blueprints.products.product_alerts_bp.product_alerts_bp', 'product_alerts_bp', '/product-alerts', 'Product Alerts')
 
