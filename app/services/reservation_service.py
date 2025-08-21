@@ -32,18 +32,11 @@ class ReservationService:
 
     @staticmethod
     def _write_unreserved_audit_entry(reservation):
-        """Write audit entry for unreserved inventory"""
-        try:
-            return inv_adj.record_audit_entry(
-                item_id=reservation.inventory_item_id,
-                change_type="unreserved_audit",
-                notes=f"Released reservation (ref lot #{reservation.source_fifo_id})",
-                fifo_reference_id=reservation.source_fifo_id,
-                source=f"reservation_{getattr(reservation, 'id', '')}"
-            )
-        except Exception as e:
-            logger.error(f"Failed to write unreserved audit entry: {e}")
-            return False
+        """Write audit entry for unreserved inventory - now handled by FIFO operations"""
+        # NOTE: Audit entries are now automatically created by FIFO operations
+        # The _release_reservation_inventory method above creates the history entry
+        # No separate audit entry needed
+        return True
 
     @staticmethod
     def create_reservation(inventory_item_id, quantity, order_id, source_fifo_id, unit_cost, customer=None, sale_price=None, notes="", source="manual"):
