@@ -23,13 +23,10 @@ function handleModalTransition(fromModalId, toModalId, focusElementId) {
 function toggleIngredientForm() {
   const form = document.getElementById('addIngredientForm');
   const updateForm = document.getElementById('updateInventoryForm');
-  updateForm.style.display = 'none';
+  if (updateForm) updateForm.style.display = 'none';
 
-  if (form.style.display === 'none') {
-    form.style.display = 'block';
-    form.reset();
-  } else {
-    form.style.display = 'none';
+  if (form) {
+    form.style.display = form.style.display === 'none' ? 'block' : 'none';
   }
 }
 
@@ -103,10 +100,10 @@ document.addEventListener('DOMContentLoaded', function() {
   // Initialize clock
   updateClock();
   setInterval(updateClock, 30000);
-  
+
   // Debug navigation clicks
   console.log('Page loaded:', window.location.pathname);
-  
+
   // Track permissions navigation attempts
   document.addEventListener('click', function(e) {
     const link = e.target.closest('a[href*="permissions"]');

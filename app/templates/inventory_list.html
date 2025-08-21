@@ -863,7 +863,12 @@ function toggleContainersFilter() {
 
 function toggleIngredientForm() {
   const form = document.getElementById('addIngredientForm');
-  form.style.display = form.style.display === 'none' ? 'block' : 'none';
+  const updateForm = document.getElementById('updateInventoryForm');
+  if (updateForm) updateForm.style.display = 'none';
+
+  if (form) {
+    form.style.display = form.style.display === 'none' ? 'block' : 'none';
+  }
 }
 
 function toggleUpdateForm() {
