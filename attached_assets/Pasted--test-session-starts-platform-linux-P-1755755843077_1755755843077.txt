@@ -1,0 +1,406 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.13, pytest-8.3.5, pluggy-1.5.0 -- /home/runner/workspace/.pythonlibs/bin/python
+cachedir: .pytest_cache
+rootdir: /home/runner/workspace
+collected 13 items                                                             
+
+tests/test_inventory_routes_canonicalization.py::TestInventoryRoutesCanonicalService::test_adjust_inventory_initial_stock_calls_canonical_service PASSED [  7%]
+tests/test_inventory_routes_canonicalization.py::TestInventoryRoutesCanonicalService::test_recount_adjustment_uses_canonical_service PASSED [ 15%]
+tests/test_inventory_routes_canonicalization.py::TestInventoryRoutesCanonicalService::test_fifo_ops_uses_canonical_service FAILED [ 23%]
+tests/test_inventory_routes_canonicalization.py::TestInventoryRoutesCanonicalService::test_batch_integration_uses_canonical_service PASSED [ 30%]
+tests/test_inventory_routes_canonicalization.py::TestInventoryRoutesCanonicalService::test_reservation_service_uses_canonical_service FAILED [ 38%]
+tests/test_inventory_routes_canonicalization.py::TestInventoryRoutesCanonicalService::test_pos_integration_uses_canonical_service PASSED [ 46%]
+tests/test_inventory_routes_canonicalization.py::TestInventoryRoutesCanonicalService::test_inventory_routes_use_canonical_service PASSED [ 53%]
+tests/test_inventory_routes_canonicalization.py::TestInventoryRoutesCanonicalService::test_expiration_service_uses_canonical_service FAILED [ 61%]
+tests/test_inventory_routes_canonicalization.py::TestInventoryRoutesCanonicalService::test_no_direct_quantity_modifications PASSED [ 69%]
+tests/test_inventory_routes_canonicalization.py::TestInventoryRoutesCanonicalService::test_canonical_service_handles_all_operation_types FAILED [ 76%]
+tests/test_inventory_routes_canonicalization.py::TestInventoryRoutesCanonicalService::test_fifo_service_integration PASSED [ 84%]
+tests/test_inventory_routes_canonicalization.py::TestInventoryRoutesCanonicalService::test_inventory_alerts_read_only_access PASSED [ 92%]
+tests/test_inventory_routes_canonicalization.py::TestInventoryRoutesCanonicalService::test_product_service_uses_canonical_for_modifications FAILED [100%]
+
+=================================== FAILURES ===================================
+___ TestInventoryRoutesCanonicalService.test_fifo_ops_uses_canonical_service ___
+
+self = <tests.test_inventory_routes_canonicalization.TestInventoryRoutesCanonicalService object at 0x7f5e622131d0>
+app_context = None, mock_inventory_item = <InventoryItem 1>
+
+    def test_fifo_ops_uses_canonical_service(self, app_context, mock_inventory_item):
+        """Test that FIFO operations use canonical adjustment service"""
+    
+>       with patch('app.services.inventory_adjustment._fifo_ops.process_inventory_adjustment') as mock_process:
+
+tests/test_inventory_routes_canonicalization.py:182: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/nix/store/7d088dip86hlzri9sk0h78b63yfmx0a0-python3-3.11.13/lib/python3.11/unittest/mock.py:1446: in __enter__
+    original, local = self.get_original()
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <unittest.mock._patch object at 0x7f5e5afac690>
+
+    def get_original(self):
+        target = self.getter()
+        name = self.attribute
+    
+        original = DEFAULT
+        local = False
+    
+        try:
+            original = target.__dict__[name]
+        except (AttributeError, KeyError):
+            original = getattr(target, name, DEFAULT)
+        else:
+            local = True
+    
+        if name in _builtins and isinstance(target, ModuleType):
+            self.create = True
+    
+        if not self.create and original is DEFAULT:
+>           raise AttributeError(
+                "%s does not have the attribute %r" % (target, name)
+            )
+E           AttributeError: <module 'app.services.inventory_adjustment._fifo_ops' from '/home/runner/workspace/app/services/inventory_adjustment/_fifo_ops.py'> does not have the attribute 'process_inventory_adjustment'
+
+/nix/store/7d088dip86hlzri9sk0h78b63yfmx0a0-python3-3.11.13/lib/python3.11/unittest/mock.py:1419: AttributeError
+---------------------------- Captured stdout setup -----------------------------
+
+=== Blueprint Registration Summary ===
+✅ Successful: 27
+   - Authentication
+   - Admin
+   - Developer
+   - Inventory
+   - Recipes
+   - Batches
+   - Organization
+   - Billing
+   - Settings
+   - Timers
+   - Expiration
+   - Conversion
+   - Products Main
+   - Product Inventory
+   - Reservations
+   - SKU Management
+   - Product Variants
+   - Product Alerts
+   - Public API
+   - Main API
+   - Stock API
+   - App Routes
+   - Legal Routes
+   - Bulk Stock
+   - Fault Log
+   - Tag Manager
+   - Waitlist
+
+🎉 All blueprints registered successfully!
+------------------------------ Captured log setup ------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+_ TestInventoryRoutesCanonicalService.test_reservation_service_uses_canonical_service _
+
+self = <tests.test_inventory_routes_canonicalization.TestInventoryRoutesCanonicalService object at 0x7f5e62212e50>
+app_context = None
+
+    def test_reservation_service_uses_canonical_service(self, app_context):
+        """Test that reservation operations use canonical service"""
+    
+>       with patch('app.services.reservation_service.process_inventory_adjustment') as mock_process:
+
+tests/test_inventory_routes_canonicalization.py:209: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/nix/store/7d088dip86hlzri9sk0h78b63yfmx0a0-python3-3.11.13/lib/python3.11/unittest/mock.py:1446: in __enter__
+    original, local = self.get_original()
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <unittest.mock._patch object at 0x7f5e5ae8ffd0>
+
+    def get_original(self):
+        target = self.getter()
+        name = self.attribute
+    
+        original = DEFAULT
+        local = False
+    
+        try:
+            original = target.__dict__[name]
+        except (AttributeError, KeyError):
+            original = getattr(target, name, DEFAULT)
+        else:
+            local = True
+    
+        if name in _builtins and isinstance(target, ModuleType):
+            self.create = True
+    
+        if not self.create and original is DEFAULT:
+>           raise AttributeError(
+                "%s does not have the attribute %r" % (target, name)
+            )
+E           AttributeError: <module 'app.services.reservation_service' from '/home/runner/workspace/app/services/reservation_service.py'> does not have the attribute 'process_inventory_adjustment'
+
+/nix/store/7d088dip86hlzri9sk0h78b63yfmx0a0-python3-3.11.13/lib/python3.11/unittest/mock.py:1419: AttributeError
+---------------------------- Captured stdout setup -----------------------------
+
+=== Blueprint Registration Summary ===
+✅ Successful: 27
+   - Authentication
+   - Admin
+   - Developer
+   - Inventory
+   - Recipes
+   - Batches
+   - Organization
+   - Billing
+   - Settings
+   - Timers
+   - Expiration
+   - Conversion
+   - Products Main
+   - Product Inventory
+   - Reservations
+   - SKU Management
+   - Product Variants
+   - Product Alerts
+   - Public API
+   - Main API
+   - Stock API
+   - App Routes
+   - Legal Routes
+   - Bulk Stock
+   - Fault Log
+   - Tag Manager
+   - Waitlist
+
+🎉 All blueprints registered successfully!
+------------------------------ Captured log setup ------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+_ TestInventoryRoutesCanonicalService.test_expiration_service_uses_canonical_service _
+
+self = <tests.test_inventory_routes_canonicalization.TestInventoryRoutesCanonicalService object at 0x7f5e62211450>
+app_context = None
+
+    def test_expiration_service_uses_canonical_service(self, app_context):
+        """Test that expiration operations use canonical service"""
+    
+        with patch('app.blueprints.expiration.services.process_inventory_adjustment') as mock_process:
+            mock_process.return_value = (True, "Expired item processed")
+    
+            # Test expiration marking
+            result = ExpirationService.mark_as_expired('fifo', 123, 10.0, 'Test expiration')
+    
+            # Verify canonical service was called
+>           mock_process.assert_called()
+
+tests/test_inventory_routes_canonicalization.py:266: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <MagicMock name='process_inventory_adjustment' id='140043226513296'>
+
+    def assert_called(self):
+        """assert that the mock was called at least once
+        """
+        if self.call_count == 0:
+            msg = ("Expected '%s' to have been called." %
+                   (self._mock_name or 'mock'))
+>           raise AssertionError(msg)
+E           AssertionError: Expected 'process_inventory_adjustment' to have been called.
+
+/nix/store/7d088dip86hlzri9sk0h78b63yfmx0a0-python3-3.11.13/lib/python3.11/unittest/mock.py:908: AssertionError
+---------------------------- Captured stdout setup -----------------------------
+
+=== Blueprint Registration Summary ===
+✅ Successful: 27
+   - Authentication
+   - Admin
+   - Developer
+   - Inventory
+   - Recipes
+   - Batches
+   - Organization
+   - Billing
+   - Settings
+   - Timers
+   - Expiration
+   - Conversion
+   - Products Main
+   - Product Inventory
+   - Reservations
+   - SKU Management
+   - Product Variants
+   - Product Alerts
+   - Public API
+   - Main API
+   - Stock API
+   - App Routes
+   - Legal Routes
+   - Bulk Stock
+   - Fault Log
+   - Tag Manager
+   - Waitlist
+
+🎉 All blueprints registered successfully!
+------------------------------ Captured log setup ------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+_ TestInventoryRoutesCanonicalService.test_canonical_service_handles_all_operation_types _
+
+self = <tests.test_inventory_routes_canonicalization.TestInventoryRoutesCanonicalService object at 0x7f5e623c9190>
+app_context = None, mock_inventory_item = <InventoryItem 1>
+
+    def test_canonical_service_handles_all_operation_types(self, app_context, mock_inventory_item):
+        """Test that canonical service handles all inventory operation types"""
+    
+        # Get all supported operation types
+        operation_types = get_all_operation_types()
+    
+        # Test a few key operation types
+        critical_operations = ['restock', 'use', 'sale', 'spoil', 'recount', 'reserved']
+    
+        for op_type in critical_operations:
+            assert op_type in operation_types, f"Operation type '{op_type}' should be supported"
+    
+            # Test that the operation can be processed
+            with patch('app.services.inventory_adjustment._core.db.session.commit'): # Mocking commit to prevent actual DB writes during test
+                success, message = process_inventory_adjustment(
+                    item_id=mock_inventory_item.id,
+                    quantity=10.0 if op_type != 'recount' else 150.0,
+                    change_type=op_type,
+                    notes=f'Test {op_type} operation',
+                    created_by=1
+                )
+    
+>               assert success, f"Operation '{op_type}' should succeed: {message}"
+E               AssertionError: Operation 'restock' should succeed: Error in initial stock creation: app.services.inventory_adjustment._fifo_ops._internal_add_fifo_entry_enhanced() got multiple values for keyword argument 'expiration_date'
+E               assert False
+
+tests/test_inventory_routes_canonicalization.py:319: AssertionError
+---------------------------- Captured stdout setup -----------------------------
+
+=== Blueprint Registration Summary ===
+✅ Successful: 27
+   - Authentication
+   - Admin
+   - Developer
+   - Inventory
+   - Recipes
+   - Batches
+   - Organization
+   - Billing
+   - Settings
+   - Timers
+   - Expiration
+   - Conversion
+   - Products Main
+   - Product Inventory
+   - Reservations
+   - SKU Management
+   - Product Variants
+   - Product Alerts
+   - Public API
+   - Main API
+   - Stock API
+   - App Routes
+   - Legal Routes
+   - Bulk Stock
+   - Fault Log
+   - Tag Manager
+   - Waitlist
+
+🎉 All blueprints registered successfully!
+------------------------------ Captured log setup ------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+------------------------------ Captured log call -------------------------------
+INFO     app.services.inventory_adjustment._core:_core.py:36 CANONICAL DISPATCHER: item_id=1, quantity=10.0, change_type=restock, caller=tests/test_inventory_routes_canonicalization.py:test_canonical_service_handles_all_operation_types
+INFO     app.services.inventory_adjustment._core:_core.py:49 INITIAL STOCK: Detected item 1 has no FIFO history, using initial_stock handler
+_ TestInventoryRoutesCanonicalService.test_product_service_uses_canonical_for_modifications _
+
+self = <tests.test_inventory_routes_canonicalization.TestInventoryRoutesCanonicalService object at 0x7f5e623caad0>
+app_context = None
+
+    def test_product_service_uses_canonical_for_modifications(self, app_context):
+        """Test that product service uses canonical service for any inventory changes"""
+    
+>       with patch('app.services.product_service.process_inventory_adjustment') as mock_process:
+
+tests/test_inventory_routes_canonicalization.py:385: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/nix/store/7d088dip86hlzri9sk0h78b63yfmx0a0-python3-3.11.13/lib/python3.11/unittest/mock.py:1446: in __enter__
+    original, local = self.get_original()
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <unittest.mock._patch object at 0x7f5e5ae3c690>
+
+    def get_original(self):
+        target = self.getter()
+        name = self.attribute
+    
+        original = DEFAULT
+        local = False
+    
+        try:
+            original = target.__dict__[name]
+        except (AttributeError, KeyError):
+            original = getattr(target, name, DEFAULT)
+        else:
+            local = True
+    
+        if name in _builtins and isinstance(target, ModuleType):
+            self.create = True
+    
+        if not self.create and original is DEFAULT:
+>           raise AttributeError(
+                "%s does not have the attribute %r" % (target, name)
+            )
+E           AttributeError: <module 'app.services.product_service' from '/home/runner/workspace/app/services/product_service.py'> does not have the attribute 'process_inventory_adjustment'
+
+/nix/store/7d088dip86hlzri9sk0h78b63yfmx0a0-python3-3.11.13/lib/python3.11/unittest/mock.py:1419: AttributeError
+---------------------------- Captured stdout setup -----------------------------
+
+=== Blueprint Registration Summary ===
+✅ Successful: 27
+   - Authentication
+   - Admin
+   - Developer
+   - Inventory
+   - Recipes
+   - Batches
+   - Organization
+   - Billing
+   - Settings
+   - Timers
+   - Expiration
+   - Conversion
+   - Products Main
+   - Product Inventory
+   - Reservations
+   - SKU Management
+   - Product Variants
+   - Product Alerts
+   - Public API
+   - Main API
+   - Stock API
+   - App Routes
+   - Legal Routes
+   - Bulk Stock
+   - Fault Log
+   - Tag Manager
+   - Waitlist
+
+🎉 All blueprints registered successfully!
+------------------------------ Captured log setup ------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+=============================== warnings summary ===============================
+tests/test_inventory_routes_canonicalization.py: 13 warnings
+  /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_limiter/extension.py:333: UserWarning: Using the in-memory storage for tracking rate limits as no storage was explicitly specified. This is not recommended for production use. See: https://flask-limiter.readthedocs.io#configuring-a-storage-backend for documentation about configuring the storage backend.
+    warnings.warn(
+
+tests/test_inventory_routes_canonicalization.py::TestInventoryRoutesCanonicalService::test_expiration_service_uses_canonical_service
+  /home/runner/workspace/app/blueprints/expiration/services.py:545: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    entry = InventoryHistory.query.get(entry_id)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/test_inventory_routes_canonicalization.py::TestInventoryRoutesCanonicalService::test_fifo_ops_uses_canonical_service - AttributeError: <module 'app.services.inventory_adjustment._fifo_ops' from ...
+FAILED tests/test_inventory_routes_canonicalization.py::TestInventoryRoutesCanonicalService::test_reservation_service_uses_canonical_service - AttributeError: <module 'app.services.reservation_service' from '/home/runn...
+FAILED tests/test_inventory_routes_canonicalization.py::TestInventoryRoutesCanonicalService::test_expiration_service_uses_canonical_service - AssertionError: Expected 'process_inventory_adjustment' to have been called.
+FAILED tests/test_inventory_routes_canonicalization.py::TestInventoryRoutesCanonicalService::test_canonical_service_handles_all_operation_types - AssertionError: Operation 'restock' should succeed: Error in initial stock ...
+FAILED tests/test_inventory_routes_canonicalization.py::TestInventoryRoutesCanonicalService::test_product_service_uses_canonical_for_modifications - AttributeError: <module 'app.services.product_service' from '/home/runner/w...
+=================== 5 failed, 8 passed, 14 warnings in 9.24s ===================
