@@ -84,11 +84,11 @@ def _internal_add_fifo_entry_enhanced(item_id, quantity, change_type, unit=None,
 
         # Get batch_id from kwargs if provided
         batch_id = kwargs.get('batch_id')
-        fifo_code = generate_fifo_code(change_type, item_id)
-
+        
+        # Generate LOT-prefixed FIFO code for lot creation
+        fifo_code = generate_fifo_code('lot', item_id)
 
         # Create new lot - ALWAYS inherit perishable status from item
-        # The InventoryLot IS the inventory record, no need for duplicate history entry
         lot = InventoryLot(
             inventory_item_id=item_id,
             remaining_quantity=float(quantity),
@@ -101,19 +101,16 @@ def _internal_add_fifo_entry_enhanced(item_id, quantity, change_type, unit=None,
             source_type=change_type,
             source_notes=notes,
             created_by=created_by,
-            fifo_code=fifo_code,
-            batch_id=batch_id, # Store batch_id in lot
+            fifo_code=fifo_code,  # LOT-prefixed code
+            batch_id=batch_id,
             organization_id=item.organization_id
         )
 
         db.session.add(lot)
         db.session.flush()  # Get the lot ID
 
-        # For restock operations, the InventoryLot IS the history record
-        # We don't create a duplicate history entry - the lot serves as both the inventory
-        # record and the historical event record
-
-        # Create history record linked to the lot - use lot's data for consistency
+        # Create history record that REFERENCES the lot (no duplicate data)
+        # The history entry shows the lot event via relationship
         history_record = UnifiedInventoryHistory(
             inventory_item_id=item.id,
             change_type=change_type,
@@ -127,9 +124,8 @@ def _internal_add_fifo_entry_enhanced(item_id, quantity, change_type, unit=None,
             shelf_life_days=item.shelf_life_days,
             expiration_date=final_expiration_date,
             affected_lot_id=lot.id,  # Link to the actual lot
-            batch_id=batch_id,  # Link to batch if this came from a batch
-            # Note: We don't store remaining_quantity or fifo_code in history anymore
-            # The template will pull this data directly from the lot relationship
+            batch_id=batch_id,
+            # No fifo_code here - it will use the lot's fifo_code via relationship
         )
         db.session.add(history_record)
 
