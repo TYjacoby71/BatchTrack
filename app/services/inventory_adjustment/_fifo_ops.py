@@ -188,16 +188,14 @@ def deduct_fifo_inventory(item_id, quantity_to_deduct, change_type, notes=None, 
                     inventory_item_id=item_id,
                     change_type=change_type,
                     quantity_change=-deduct_from_lot,
+                    remaining_quantity=None,  # N/A - this is an event record, not a lot state
                     unit=lot.unit,
                     unit_cost=lot.unit_cost,
-                    notes=notes,
+                    notes=f"FIFO deduction: -{deduct_from_lot} from lot {lot.fifo_code}" + (f" | {notes}" if notes else ""),
                     created_by=created_by,
-                    batch_id=batch_id,
-                    organization_id=item.organization_id,
-                    is_perishable=lot.expiration_date is not None,
-                    expiration_date=lot.expiration_date,
-                    shelf_life_days=lot.shelf_life_days,
+                    organization_id=lot.organization_id,
                     affected_lot_id=lot.id,
+                    batch_id=batch_id
                 )
                 db.session.add(history_record)
 
