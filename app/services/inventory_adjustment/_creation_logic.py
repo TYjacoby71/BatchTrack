@@ -1,7 +1,6 @@
 import logging
 from datetime import datetime, timedelta
 from app.models import db, InventoryItem
-from ._core import process_inventory_adjustment
 from ._audit import record_audit_entry
 from ._fifo_ops import _internal_add_fifo_entry_enhanced
 
@@ -135,13 +134,15 @@ def create_inventory_item(form_data: dict, organization_id: int, created_by: int
         db.session.add(item)
         db.session.flush()  # Get the ID without committing
 
-        # Use canonical adjustment service for initial stock
+        # Use initial stock handler directly to avoid circular import
+        from ._handlers import get_operation_handler
+        
         notes = form_data.get('notes', '') or 'Initial stock creation'
-
-        success = process_inventory_adjustment(
-            item_id=item.id,
+        
+        handler = get_operation_handler('initial_stock')
+        success, message = handler(
+            item=item,
             quantity=quantity,
-            change_type='restock',
             unit=history_unit,
             notes=notes,
             created_by=created_by,
