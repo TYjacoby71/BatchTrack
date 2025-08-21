@@ -42,16 +42,6 @@ def handle_initial_stock(item, quantity, unit=None, notes=None, created_by=None,
         if not success:
             return False, f"Failed to create initial stock: {error}"
 
-        audit_success = record_audit_entry(
-            item_id=item.id,
-            change_type='initial_stock',
-            notes=f'Initial stock: {quantity} {final_unit}',
-            created_by=created_by
-        )
-        
-        if not audit_success:
-            logger.warning(f"Audit entry failed for initial stock on item {item.id}")
-
         return True, f"Initial stock added: {quantity} {final_unit}"
 
     except Exception as e:

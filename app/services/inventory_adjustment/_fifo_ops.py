@@ -74,7 +74,7 @@ def _internal_add_fifo_entry_enhanced(
         return False, str(e)
 
 
-def handle_deductive_operation_fifo(item, quantity, change_type, notes, created_by, **kwargs):
+def _handle_deductive_operation_internal(item, quantity, change_type, notes, created_by, **kwargs):
     """Handle deductive operations using FIFO logic"""
     try:
         # Get deduction plan from FIFO service
