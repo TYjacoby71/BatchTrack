@@ -51,7 +51,7 @@ def _internal_add_fifo_entry_enhanced(item_id, quantity, change_type, unit, note
 
         # Get batch_id from kwargs if provided
         batch_id = kwargs.get('batch_id')
-        fifo_code = generate_fifo_code(change_type, item_id, batch_id=batch_id)
+        fifo_code = generate_fifo_code(change_type, item_id)
 
 
         # Create new lot - ALWAYS inherit perishable status from item
