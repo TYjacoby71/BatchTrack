@@ -43,7 +43,7 @@ def handle_additive_operation(item, quantity, change_type, notes=None, created_b
 
         # Standard FIFO entry creation
         success, error = _internal_add_fifo_entry_enhanced(
-            inventory_item_id=item.id,
+            item_id=item.id,
             quantity=quantity,
             change_type=change_type,
             unit=item.unit or 'count',
