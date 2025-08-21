@@ -177,35 +177,59 @@ def _handle_deductive_operation_internal(item, quantity, change_type, notes, cre
         return False
 
 
-def _internal_add_fifo_entry_enhanced(item_id, quantity, change_type, unit, notes, cost_per_unit, created_by, expiration_date=None, shelf_life_days=None, **kwargs):
-    """Enhanced FIFO entry creation with full parameter support"""
+def _internal_add_fifo_entry_enhanced(
+    item_id: int,
+    quantity: float,
+    change_type: str,
+    unit: str = None,
+    notes: str = None,
+    cost_per_unit: float = None,
+    created_by: int = None,
+    expiration_date=None,
+    shelf_life_days: int = None,
+    **kwargs
+) -> tuple:
+    """
+    Enhanced FIFO entry creation with comprehensive field support.
+    """
     try:
+        # Get item for validation and defaults
         item = db.session.get(InventoryItem, item_id)
         if not item:
-            return False, "Item not found"
+            return False, f"Item {item_id} not found"
 
-        # Create FIFO history entry
-        history_entry = UnifiedInventoryHistory(
+        # Use item's unit if not provided - ensure we always have a unit
+        if not unit:
+            unit = item.unit if item.unit else 'count'
+
+        # Use item's cost if not provided
+        if cost_per_unit is None:
+            cost_per_unit = item.cost_per_unit or 0.0
+
+        # Create the FIFO history entry
+        fifo_entry = UnifiedInventoryHistory(
             inventory_item_id=item_id,
-            organization_id=item.organization_id,
+            timestamp=datetime.utcnow(),
             change_type=change_type,
             quantity_change=quantity,
-            remaining_quantity=quantity,
+            unit=unit,  # Now guaranteed to have a value
             unit_cost=cost_per_unit,
-            notes=notes,
+            remaining_quantity=quantity,
+            notes=notes or 'Initial stock entry',
             created_by=created_by,
-            timestamp=TimezoneUtils.utc_now(),
+            quantity_used=0.0,
+            organization_id=item.organization_id,
             **kwargs
         )
 
         # Handle expiration if applicable
         if expiration_date:
-            history_entry.expiration_date = expiration_date
+            fifo_entry.expiration_date = expiration_date
         elif shelf_life_days and shelf_life_days > 0:
-            history_entry.shelf_life_days = shelf_life_days
-            history_entry.expiration_date = TimezoneUtils.utc_now() + timedelta(days=shelf_life_days)
+            fifo_entry.shelf_life_days = shelf_life_days
+            fifo_entry.expiration_date = TimezoneUtils.utc_now() + timedelta(days=shelf_life_days)
 
-        db.session.add(history_entry)
+        db.session.add(fifo_entry)
 
         # Update item quantity
         item.quantity += quantity
