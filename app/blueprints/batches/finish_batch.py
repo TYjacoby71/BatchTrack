@@ -5,7 +5,6 @@ from flask_login import login_required, current_user
 from ...models import db, Batch, Product, ProductVariant, ProductSKU, InventoryItem, InventoryHistory
 from ...models.product import ProductSKU, ProductSKUHistory
 from ...services.inventory_adjustment import process_inventory_adjustment
-from ..fifo.services import FIFOService
 from app.utils.permissions import role_required
 
 finish_batch_bp = Blueprint('finish_batch', __name__)
@@ -17,10 +16,10 @@ def complete_batch(batch_id):
     """Complete a batch and create final products/ingredients - thin controller"""
     try:
         from ...services.batch_service import BatchOperationsService
-        
+
         # Delegate to service
         success, message = BatchOperationsService.complete_batch(batch_id, request.form)
-        
+
         if success:
             flash(message, 'success')
             return redirect(url_for('batches.list_batches'))
