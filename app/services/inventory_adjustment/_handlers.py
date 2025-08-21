@@ -5,7 +5,7 @@ Provides a centralized mapping of change_types to their respective handler funct
 
 # Import handlers locally to avoid circular imports
 from ._additive_ops import handle_restock, handle_manual_addition, handle_returned, handle_refunded, handle_finished_batch
-from ._deductive_ops import handle_use, handle_sale, handle_spoil, handle_expired, handle_damaged, handle_quality_fail, handle_sample, handle_tester, handle_gift, handle_reserved, handle_batch
+from ._deductive_ops import handle_use, handle_sale, handle_spoil, handle_trash, handle_expired, handle_damaged, handle_quality_fail, handle_sample, handle_tester, handle_gift, handle_reserved, handle_batch
 from ._recount_logic import handle_recount
 from ._special_ops import handle_cost_override, handle_unit_conversion
 from ._creation_logic import handle_initial_stock
@@ -25,7 +25,7 @@ OPERATION_HANDLERS = {
     'use': handle_use,
     'sale': handle_sale,
     'spoil': handle_spoil,
-    'trash': handle_spoil,  # Alias for spoil
+    'trash': handle_trash,  # Alias for spoil but records as spoil
     'expired': handle_expired,
     'damaged': handle_damaged,
     'quality_fail': handle_quality_fail,

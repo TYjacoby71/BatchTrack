@@ -70,14 +70,8 @@ def create_product_from_data(data):
         db.session.add(product)
         db.session.flush()
 
-        # Create initial audit entry using canonical service
-        from app.services.inventory_adjustment import record_audit_entry
-        record_audit_entry(
-            item_id=product.id,
-            change_type='product_creation',
-            notes='Initial product creation' + (' via quick add' if data.get('quick_add') else ''),
-            unit=product.unit
-        )
+        # Product creation audit is now handled by FIFO operations automatically
+        # No separate audit entry needed
         db.session.commit()
 
         return {

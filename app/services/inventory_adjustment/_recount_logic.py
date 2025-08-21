@@ -39,8 +39,7 @@ def handle_recount(item, quantity, notes=None, created_by=None, **kwargs):
                 quantity=abs(delta),
                 change_type='recount',
                 notes=notes or f'Recount adjustment: -{abs(delta)}',
-                created_by=created_by,
-                **kwargs
+                created_by=created_by
             )
 
             if success:
@@ -111,8 +110,7 @@ def _handle_recount_increase(item, delta_needed, notes, created_by, **kwargs):
                         remaining_quantity=0,  # This is a consumption record, not a lot
                         fifo_reference_id=lot.id,  # Reference the lot being refilled
                         notes=f'Recount refill to existing lot #{lot.id}: +{fill_amount}',
-                        created_by=created_by,
-                        **kwargs
+                        created_by=created_by
                     )
                     
                     # Generate RCN code for recount operations that don't create lots
