@@ -839,6 +839,146 @@ class TestInventorySystemComprehensive:
         )
         assert success is False
 
+    def test_canonical_service_dispatch(self, app, db_session, setup_test_data):
+        """Test that process_inventory_adjustment correctly dispatches to sub-services"""
+        data = setup_test_data
+        item = data['ingredient']
+        
+        # Test that each change type creates exactly one history entry
+        change_types_to_test = [
+            ('restock', 50.0),
+            ('use', 25.0),
+            ('spoil', 10.0),
+            ('recount', 100.0),  # Target quantity for recount
+        ]
+        
+        for change_type, quantity in change_types_to_test:
+            initial_history_count = UnifiedInventoryHistory.query.filter_by(
+                inventory_item_id=item.id
+            ).count()
+            
+            success = process_inventory_adjustment(
+                item_id=item.id,
+                quantity=quantity,
+                change_type=change_type,
+                created_by=data['user'].id
+            )
+            assert success is True
+            
+            # Verify exactly one new history entry was created
+            final_history_count = UnifiedInventoryHistory.query.filter_by(
+                inventory_item_id=item.id
+            ).count()
+            
+            if change_type == 'recount':
+                # Recount might create 2 entries (meta + adjustment)
+                assert final_history_count >= initial_history_count + 1
+            else:
+                assert final_history_count == initial_history_count + 1
+
+    def test_unit_conversion_edge_cases(self, app, db_session, setup_test_data):
+        """Test unit conversion failures and edge cases"""
+        data = setup_test_data
+        
+        # Create item without density
+        item_no_density = InventoryItem(
+            name="No Density Item",
+            type="ingredient",
+            unit="g",
+            quantity=1000.0,
+            cost_per_unit=1.0,
+            organization_id=data['org'].id
+        )
+        db_session.add(item_no_density)
+        db_session.commit()
+        
+        # Add initial stock
+        process_inventory_adjustment(
+            item_id=item_no_density.id,
+            quantity=1000.0,
+            change_type='restock',
+            created_by=data['user'].id
+        )
+        
+        # Try weight-to-volume conversion without density (should fail)
+        success = process_inventory_adjustment(
+            item_id=item_no_density.id,
+            quantity=50.0,
+            change_type='use',
+            unit='ml',  # Converting from g to ml without density
+            created_by=data['user'].id
+        )
+        assert success is False
+        
+        # Create item with density
+        item_with_density = InventoryItem(
+            name="With Density Item",
+            type="ingredient", 
+            unit="g",
+            quantity=1000.0,
+            cost_per_unit=1.0,
+            density=0.8,
+            organization_id=data['org'].id
+        )
+        db_session.add(item_with_density)
+        db_session.commit()
+        
+        # Add initial stock
+        process_inventory_adjustment(
+            item_id=item_with_density.id,
+            quantity=1000.0,
+            change_type='restock',
+            created_by=data['user'].id
+        )
+        
+        # Try weight-to-volume conversion with density (should succeed)
+        success = process_inventory_adjustment(
+            item_id=item_with_density.id,
+            quantity=40.0,  # 40ml = 32g at 0.8 density
+            change_type='use',
+            unit='ml',
+            created_by=data['user'].id
+        )
+        assert success is True
+        
+        db_session.refresh(item_with_density)
+        assert item_with_density.quantity == 968.0  # 1000 - 32
+
+    def test_overdraft_protection(self, app, db_session, setup_test_data):
+        """Test overdraft protection prevents negative inventory"""
+        data = setup_test_data
+        item = data['ingredient']
+        
+        # Set specific initial stock
+        process_inventory_adjustment(
+            item_id=item.id,
+            quantity=50.0,
+            change_type='restock',
+            created_by=data['user'].id
+        )
+        
+        # Try to deduct more than available
+        success = process_inventory_adjustment(
+            item_id=item.id,
+            quantity=60.0,  # More than the 50 available
+            change_type='sale',
+            created_by=data['user'].id
+        )
+        
+        # Should fail
+        assert success is False
+        
+        # Verify quantity unchanged
+        db_session.refresh(item)
+        assert item.quantity == 50.0
+        
+        # Verify no sale history entry was created
+        sale_history = UnifiedInventoryHistory.query.filter_by(
+            inventory_item_id=item.id,
+            change_type='sale'
+        ).first()
+        assert sale_history is None
+
     def test_invalid_quantity_handling(self, app, db_session, setup_test_data):
         """Test handling of invalid quantity values"""
         data = setup_test_data
@@ -864,6 +1004,83 @@ class TestInventorySystemComprehensive:
             created_by=data['user'].id
         )
         assert success is False
+
+    # ========== PARAMETERIZED FOUNDATIONAL TESTS ==========
+
+    @pytest.mark.parametrize("change_type,initial_qty,adjustment_qty,expected_final_qty", [
+        # Additive cases
+        ("restock", 100.0, 50.0, 150.0),
+        ("manual_addition", 100.0, 25.0, 125.0),
+        ("returned", 50.0, 10.0, 60.0),
+        ("refunded", 50.0, 5.0, 55.0),
+        ("finished_batch", 0.0, 48.0, 48.0),
+        
+        # Deductive cases  
+        ("use", 100.0, 30.0, 70.0),
+        ("batch", 100.0, 25.0, 75.0),
+        ("sale", 100.0, 10.0, 90.0),
+        ("spoil", 100.0, 5.0, 95.0),
+        ("trash", 100.0, 20.0, 80.0),
+        ("expired", 100.0, 15.0, 85.0),
+        ("damaged", 100.0, 2.5, 97.5),
+        ("quality_fail", 100.0, 3.0, 97.0),
+        ("sample", 100.0, 0.5, 99.5),
+        ("tester", 100.0, 1.0, 99.0),
+        ("gift", 100.0, 2.0, 98.0),
+        ("reserved", 100.0, 25.0, 75.0),
+    ])
+    def test_foundational_adjustments_parameterized(self, app, db_session, setup_test_data, 
+                                                   change_type, initial_qty, adjustment_qty, expected_final_qty):
+        """Parameterized test covering all basic adjustment types"""
+        data = setup_test_data
+        item = data['ingredient']
+        
+        # Set initial quantity
+        item.quantity = initial_qty
+        db_session.commit()
+        
+        # Add initial stock if needed
+        if initial_qty > 0:
+            process_inventory_adjustment(
+                item_id=item.id,
+                quantity=initial_qty,
+                change_type='restock',
+                created_by=data['user'].id
+            )
+        
+        # Get initial history count
+        initial_history_count = UnifiedInventoryHistory.query.filter_by(
+            inventory_item_id=item.id
+        ).count()
+        
+        # Perform the adjustment
+        success = process_inventory_adjustment(
+            item_id=item.id,
+            quantity=adjustment_qty,
+            change_type=change_type,
+            created_by=data['user'].id
+        )
+        
+        # Assertions
+        assert success is True, f"Adjustment {change_type} failed"
+        
+        # Check final quantity
+        db_session.refresh(item)
+        assert item.quantity == expected_final_qty, f"Expected {expected_final_qty}, got {item.quantity}"
+        
+        # Check exactly one new history entry was created
+        final_history_count = UnifiedInventoryHistory.query.filter_by(
+            inventory_item_id=item.id
+        ).count()
+        assert final_history_count == initial_history_count + 1
+        
+        # Check the history entry has correct change type
+        new_history = UnifiedInventoryHistory.query.filter_by(
+            inventory_item_id=item.id,
+            change_type=change_type
+        ).first()
+        assert new_history is not None
+        assert new_history.quantity_change == adjustment_qty
 
     # ========== COMPLEX SCENARIO TESTS ==========
 
