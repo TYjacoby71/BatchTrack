@@ -27,32 +27,38 @@ class TestInventorySystemComprehensive:
     def setup_test_data(self, app, db_session):
         """Setup test organization, user, and base items for testing"""
         with app.test_request_context():
-            # Create tier
-            tier = SubscriptionTier(
-                name="Test Tier",
-                tier_type="monthly",
-                user_limit=10
-            )
-            db_session.add(tier)
-            db_session.flush()
+            # Create tier - check if it exists first to avoid UNIQUE constraint errors
+            tier = db_session.query(SubscriptionTier).filter_by(name="Test Tier Comprehensive").first()
+            if not tier:
+                tier = SubscriptionTier(
+                    name="Test Tier Comprehensive",
+                    tier_type="monthly",
+                    user_limit=10
+                )
+                db_session.add(tier)
+                db_session.flush()
 
-            # Create organization
-            org = Organization(
-                name="Test Org",
-                billing_status='active',
-                subscription_tier_id=tier.id
-            )
-            db_session.add(org)
-            db_session.flush()
+            # Create organization - check if it exists first
+            org = db_session.query(Organization).filter_by(name="Test Org Comprehensive").first()
+            if not org:
+                org = Organization(
+                    name="Test Org Comprehensive",
+                    billing_status='active',
+                    subscription_tier_id=tier.id
+                )
+                db_session.add(org)
+                db_session.flush()
 
-            # Create user
-            user = User(
-                username="test_inventory_user",
-                email="inventory@test.com",
-                organization_id=org.id
-            )
-            db_session.add(user)
-            db_session.flush()
+            # Create user - check if it exists first
+            user = db_session.query(User).filter_by(email="inventory_comprehensive@test.com").first()
+            if not user:
+                user = User(
+                    username="test_inventory_user_comp",
+                    email="inventory_comprehensive@test.com",
+                    organization_id=org.id
+                )
+                db_session.add(user)
+                db_session.flush()
 
             # Create test inventory items
             ingredient = InventoryItem(
