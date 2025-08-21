@@ -96,7 +96,7 @@ def dashboard():
     print(f"Users count: {len(users)}")
 
     return render_template(
-        'organization/dashboard.html', 
+        'pages/organization/dashboard.html', 
         pricing_data=pricing_data,
         organization=organization,
         org_stats=org_stats,
