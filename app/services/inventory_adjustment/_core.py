@@ -5,9 +5,62 @@ from datetime import datetime
 from app.models import db, InventoryItem, UnifiedInventoryHistory
 from ._validation import validate_inventory_fifo_sync
 from ._audit import record_audit_entry
-from ._recount_logic import handle_recount_adjustment
+from ._creation_logic import handle_initial_stock
+from ._recount_logic import handle_recount_adjustment_clean
+from ._fifo_ops import (
+    handle_restock,
+    handle_manual_addition,
+    handle_returned,
+    handle_refunded,
+    handle_finished_batch,
+    handle_use,
+    handle_batch,
+    handle_sale,
+    handle_spoil,
+    handle_trash,
+    handle_expired,
+    handle_damaged,
+    handle_quality_fail,
+    handle_sample,
+    handle_tester,
+    handle_gift,
+    handle_reserved,
+    handle_unreserved,
+    handle_cost_override
+)
 
 logger = logging.getLogger(__name__)
+
+
+# ========== THE STRATEGY MAP (PHONEBOOK) ==========
+ADJUSTMENT_HANDLERS = {
+    # Additive operations
+    'restock': handle_restock,
+    'manual_addition': handle_manual_addition,
+    'returned': handle_returned,
+    'refunded': handle_refunded,
+    'finished_batch': handle_finished_batch,
+    'unreserved': handle_unreserved,
+    
+    # Deductive operations
+    'use': handle_use,
+    'batch': handle_batch,
+    'sale': handle_sale,
+    'spoil': handle_spoil,
+    'trash': handle_trash,
+    'expired': handle_expired,
+    'damaged': handle_damaged,
+    'quality_fail': handle_quality_fail,
+    'sample': handle_sample,
+    'tester': handle_tester,
+    'gift': handle_gift,
+    'reserved': handle_reserved,
+    
+    # Special operations
+    'cost_override': handle_cost_override,
+    'recount': handle_recount_adjustment_clean,
+    'initial_stock': handle_initial_stock,
+}
 
 
 def process_inventory_adjustment(
@@ -21,16 +74,20 @@ def process_inventory_adjustment(
     custom_expiration_date=None,
     custom_shelf_life_days: int = None,
     **kwargs
-) -> bool:
+) -> tuple:
     """
-    Canonical entry point for ALL inventory adjustments.
-    Delegates to FIFO service for lot management and deduction planning.
+    THE CANONICAL DISPATCHER for all inventory adjustments.
+    
+    Uses the Strategy Pattern to delegate work to specialist functions.
+    Each change_type maps to exactly one specialist function.
+    
+    Returns: (success: bool, message: str)
     """
     caller_info = inspect.stack()[1]
     caller_path = caller_info.filename.replace('/home/runner/workspace/', '')
     caller_function = caller_info.function
 
-    logger.info(f"CANONICAL INVENTORY ADJUSTMENT: item_id={item_id}, quantity={quantity}, change_type={change_type}, caller={caller_path}:{caller_function}")
+    logger.info(f"CANONICAL DISPATCHER: item_id={item_id}, quantity={quantity}, change_type={change_type}, caller={caller_path}:{caller_function}")
 
     try:
         # Get the inventory item
@@ -43,148 +100,46 @@ def process_inventory_adjustment(
         is_initial_stock = UnifiedInventoryHistory.query.filter_by(inventory_item_id=item.id).count() == 0
         
         if is_initial_stock:
-            logger.info(f"INITIAL STOCK: Detected item {item_id} has no FIFO history, delegating to creation logic")
-            from ._creation_logic import handle_initial_stock
-            return handle_initial_stock(item, quantity, change_type, unit, notes, created_by, 
-                                      cost_override, custom_expiration_date, custom_shelf_life_days, **kwargs)
+            logger.info(f"INITIAL STOCK: Detected item {item_id} has no FIFO history, using initial_stock handler")
+            change_type = 'initial_stock'
 
-        # Handle recount with special logic that uses FIFO service
-        if change_type == 'recount':
-            logger.info(f"RECOUNT: Processing recount from {item.quantity} to {quantity}")
-            return handle_recount_adjustment(
-                item_id=item_id,
-                target_quantity=quantity,
+        # ========== THE NEW DISPATCHER LOGIC ==========
+        
+        # 1. Look up the specialist in our phonebook
+        handler = ADJUSTMENT_HANDLERS.get(change_type)
+        
+        # 2. If the emergency type is unknown, we know immediately
+        if not handler:
+            logger.error(f"Unknown inventory change type: '{change_type}'")
+            return False, f"Unknown inventory change type: '{change_type}'"
+            
+        # 3. If the specialist is found, dispatch the call
+        try:
+            success, message = handler(
+                item=item,
+                quantity=quantity,
                 notes=notes,
                 created_by=created_by,
-                item_type=getattr(item, 'type', 'ingredient')
+                cost_override=cost_override,
+                custom_expiration_date=custom_expiration_date,
+                custom_shelf_life_days=custom_shelf_life_days,
+                **kwargs
             )
-
-        # Handle cost override (no quantity change)
-        elif change_type == 'cost_override':
-            if cost_override is not None:
-                item.cost_per_unit = cost_override
+            
+            if success:
                 db.session.commit()
-                record_audit_entry(item_id, 'cost_override', notes or f'Cost updated to {cost_override}')
-                return True
-            return False
-
-        # Handle additive changes (restock, manual_addition, etc.)
-        elif change_type in ['restock', 'manual_addition', 'returned', 'refunded', 'finished_batch']:
-            return _handle_additive_adjustment(
-                item_id, quantity, change_type, unit, notes, created_by, 
-                cost_override, custom_expiration_date, custom_shelf_life_days, **kwargs
-            )
-
-        # Handle deductive changes (spoil, trash, use, batch, recount, etc.)
-        elif change_type in ['spoil', 'trash', 'expired', 'gift', 'sample', 'tester',
-                           'quality_fail', 'damaged', 'sold', 'sale', 'use', 'batch',
-                           'reserved', 'unreserved', 'recount']:
-            return _handle_deductive_adjustment(
-                item_id, quantity, change_type, unit, notes, created_by, **kwargs
-            )
-
-        else:
-            logger.error(f"Unknown change_type: {change_type}")
-            return False
+                record_audit_entry(item_id, change_type, notes or f'{change_type}: {quantity}')
+                return True, message
+            else:
+                db.session.rollback()
+                return False, message
+                
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Error executing handler for {change_type} on item {item.id}: {e}")
+            return False, "A critical internal error occurred"
 
     except Exception as e:
         logger.error(f"Error in process_inventory_adjustment: {str(e)}")
         db.session.rollback()
-        return False
-
-
-def _handle_additive_adjustment(item_id, quantity, change_type, unit, notes, created_by,
-                               cost_override, custom_expiration_date, custom_shelf_life_days, **kwargs):
-    """Handle additive adjustments by creating new FIFO lots."""
-    try:
-        from ._fifo_ops import _internal_add_fifo_entry_enhanced
-
-        item = db.session.get(InventoryItem, item_id)
-        final_unit = unit or getattr(item, 'unit', 'count')
-
-        # Use cost override if provided, otherwise use item's cost
-        cost_per_unit = cost_override if cost_override is not None else item.cost_per_unit
-
-        # Create new FIFO lot through FIFO service
-        success, error = _internal_add_fifo_entry_enhanced(
-            item_id=item_id,
-            quantity=quantity,
-            change_type=change_type,
-            unit=final_unit,
-            notes=notes,
-            cost_per_unit=cost_per_unit,
-            created_by=created_by,
-            expiration_date=custom_expiration_date,
-            shelf_life_days=custom_shelf_life_days,
-            **kwargs
-        )
-
-        if not success:
-            logger.error(f"FIFO lot creation failed: {error}")
-            return False
-
-        db.session.commit()
-        record_audit_entry(item_id, change_type, notes or f'Added {quantity} {final_unit}')
-
-        return True
-
-    except Exception as e:
-        logger.error(f"Error in additive adjustment: {str(e)}")
-        db.session.rollback()
-        return False
-
-
-def _handle_deductive_adjustment(item_id, quantity, change_type, unit, notes, created_by, **kwargs):
-    """Handle deductive adjustments using FIFO service for deduction planning."""
-    try:
-        from ._fifo_ops import (
-            _calculate_deduction_plan_internal, 
-            _execute_deduction_plan_internal,
-            _record_deduction_plan_internal,
-            calculate_current_fifo_total
-        )
-
-        item = db.session.get(InventoryItem, item_id)
-        final_unit = unit or getattr(item, 'unit', 'count')
-
-        # Get deduction plan from FIFO service
-        deduction_plan, error = _calculate_deduction_plan_internal(
-            item_id, abs(quantity), change_type
-        )
-
-        if error:
-            logger.error(f"Deduction planning failed: {error}")
-            return False
-
-        if not deduction_plan:
-            logger.warning(f"No deduction plan generated for {item_id}")
-            return False
-
-        # Execute deduction plan through FIFO service
-        success, error = _execute_deduction_plan_internal(deduction_plan, item_id)
-        if not success:
-            logger.error(f"Deduction execution failed: {error}")
-            return False
-
-        # Record audit trail through FIFO service
-        success = _record_deduction_plan_internal(
-            item_id, deduction_plan, change_type, notes, 
-            created_by=created_by, **kwargs
-        )
-        if not success:
-            logger.error(f"Deduction recording failed")
-            return False
-
-        # Sync item quantity to FIFO total (authoritative source)
-        current_fifo_total = calculate_current_fifo_total(item_id)
-        item.quantity = current_fifo_total
-
-        db.session.commit()
-        record_audit_entry(item_id, change_type, notes or f'Deducted {abs(quantity)} {final_unit}')
-
-        return True
-
-    except Exception as e:
-        logger.error(f"Error in deductive adjustment: {str(e)}")
-        db.session.rollback()
-        return False
+        return False, str(e)
