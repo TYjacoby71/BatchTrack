@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime, timedelta
 from app.models import db, InventoryItem
-from ._audit import record_audit_entry
+# Removed audit import - FIFO should be the only thing creating history
 from ._fifo_ops import _internal_add_fifo_entry_enhanced
 
 
@@ -14,12 +14,7 @@ def handle_initial_stock(item, quantity, unit=None, notes=None, created_by=None,
         final_notes = notes or 'Initial stock entry'
 
         if quantity == 0:
-            record_audit_entry(
-                item_id=item.id,
-                change_type='initial_stock',
-                notes='Item created with zero initial stock',
-                created_by=created_by
-            )
+            # No FIFO entry needed for zero stock
             return True, "Item initialized with zero stock"
 
         # Use cost override if provided, otherwise use item's cost
@@ -150,10 +145,6 @@ def create_inventory_item(form_data: dict, organization_id: int, created_by: int
             return False, 'Error creating inventory item - FIFO sync failed', None
 
         db.session.commit()
-        audit_success = record_audit_entry(item.id, 'item_created', f'Created item: {name}')
-        
-        if not audit_success:
-            logger.warning(f"Audit entry failed for item creation: {item.id}")
 
         return True, 'Inventory item added successfully', item.id
 

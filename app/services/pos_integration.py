@@ -10,7 +10,7 @@ from ..utils import generate_fifo_code
 # Import necessary canonical functions
 # Import moved to avoid circular dependency - use canonical service instead
 # from app.blueprints.fifo.services import FIFOService
-from app.services.inventory_adjustment import record_audit_entry, process_inventory_adjustment
+from app.services.inventory_adjustment import process_inventory_adjustment
 
 def _db():
     """Get database session - works with real SQLAlchemy and test mocks"""
