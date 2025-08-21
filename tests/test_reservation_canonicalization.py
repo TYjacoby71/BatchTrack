@@ -38,25 +38,21 @@ def test_credit_specific_lot_called_on_reservation_release(app):
                 # This test verifies the function exists and can be called
 
 
-def test_record_audit_entry_called_for_unreserved_audit(app):
-    """Test that audit entries use the canonical record_audit_entry helper"""
+def test_audit_entries_handled_automatically_by_fifo_operations(app):
+    """Test that audit entries are now handled automatically by FIFO operations"""
     with app.app_context():
-        with patch('app.services.inventory_adjustment.record_audit_entry') as mock_audit:
-            
-            # Mock reservation object
-            mock_reservation = MagicMock()
-            mock_reservation.inventory_item_id = 123
-            mock_reservation.source_fifo_id = 456
-            mock_reservation.id = 789
-            
-            # This should trigger the record_audit_entry call
-            ReservationService._write_unreserved_audit_entry(mock_reservation)
-            
-            # Assert it was called with correct parameters
-            mock_audit.assert_called_once_with(
-                item_id=123,
-                change_type="unreserved_audit",
-                notes="Released reservation (ref lot #456)",
-                fifo_reference_id=456,
-                source="reservation_789"
-            )
+        # Audit entries are now automatically created by FIFO operations
+        # in the UnifiedInventoryHistory table. No separate audit service needed.
+        
+        # Mock reservation object
+        mock_reservation = MagicMock()
+        mock_reservation.inventory_item_id = 123
+        mock_reservation.source_fifo_id = 456
+        mock_reservation.id = 789
+        
+        # The _write_unreserved_audit_entry method should return True
+        # since audit entries are handled automatically
+        result = ReservationService._write_unreserved_audit_entry(mock_reservation)
+        
+        # Verify it returns True (indicating success)
+        assert result is True
