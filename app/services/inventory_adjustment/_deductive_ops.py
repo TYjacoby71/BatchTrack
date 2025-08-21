@@ -5,7 +5,7 @@ Simplified to use single handler with operation-specific notes.
 
 import logging
 from app.models import db
-from ._fifo_ops import _handle_deductive_operation_internal
+from ._fifo_ops import process_fifo_deduction
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +46,7 @@ def _handle_deductive_operation(item, quantity, change_type, notes=None, created
                 enhanced_notes += f" (Order: {kwargs['order_id']})"
 
         # Use FIFO deduction logic
-        success, message = _handle_deductive_operation_internal(
+        success, message = process_fifo_deduction(
             item_id=item.id,
             quantity_to_deduct=quantity,
             change_type=change_type,

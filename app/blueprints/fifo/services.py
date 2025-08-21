@@ -18,20 +18,20 @@ class FIFOService:
     @staticmethod
     def calculate_deduction_plan(item_id, quantity, change_type='use'):
         """Legacy method - use process_inventory_adjustment instead"""
-        from app.services.inventory_adjustment import _calculate_deduction_plan_internal
-        return _calculate_deduction_plan_internal(item_id, quantity, change_type)
+        from app.services.inventory_adjustment._fifo_ops import calculate_fifo_deduction_plan
+        return calculate_fifo_deduction_plan(item_id, quantity, change_type)
 
     @staticmethod
     def execute_deduction_plan(deduction_plan, item_id):
         """Legacy method - use process_inventory_adjustment instead"""
-        from app.services.inventory_adjustment import _execute_deduction_plan_internal
-        return _execute_deduction_plan_internal(deduction_plan, item_id)
+        from app.services.inventory_adjustment._fifo_ops import execute_fifo_deduction_plan
+        return execute_fifo_deduction_plan(deduction_plan, item_id)
 
     @staticmethod
     def record_deduction_plan(item_id, deduction_plan, change_type, notes, created_by=None):
         """Legacy method - use process_inventory_adjustment instead"""
-        from app.services.inventory_adjustment import _record_deduction_plan_internal
-        return _record_deduction_plan_internal(item_id, deduction_plan, change_type, notes, created_by)
+        from app.services.inventory_adjustment._fifo_ops import create_fifo_deduction_audit_trail
+        return create_fifo_deduction_audit_trail(item_id, deduction_plan, change_type, notes, created_by) _record_deduction_plan_internal(item_id, deduction_plan, change_type, notes, created_by)
 
     @staticmethod
     def _internal_add_fifo_entry(inventory_item_id, quantity, change_type, notes="", unit=None, cost_per_unit=None, created_by=None, batch_id=None, expiration_date=None, shelf_life_days=None):

@@ -129,7 +129,7 @@ def _handle_lot_creation_operation(item, quantity, change_type, unit, notes, fin
 
 def _handle_lot_crediting_operation(item, quantity, change_type, unit, notes, final_cost, created_by, **kwargs):
     """Handle operations that credit back to existing FIFO lots"""
-    from ._fifo_ops import _handle_deductive_operation_internal
+    from ._fifo_ops import process_fifo_deduction
     
     logger.info(f"LOT_CREDITING: Processing {change_type} credit operation")
     
