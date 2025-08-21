@@ -109,7 +109,11 @@
                       {% endif %}
                     </td>
                     <td>
-                      {% if entry.fifo_reference_id %}
+                      {% if entry.fifo_code %}
+                        {{ entry.fifo_code }}
+                      {% elif entry.affected_lot and entry.affected_lot.fifo_code %}
+                        {{ entry.affected_lot.fifo_code }}
+                      {% elif entry.fifo_reference_id %}
                         {% set ref_entry = history|selectattr('id', 'equalto', entry.fifo_reference_id)|first %}
                         {% if ref_entry and ref_entry.change_type == 'finished_batch' and ref_entry.batch %}
                           <a href="{{ url_for('inventory.view_inventory', id=item.id) }}#entry-{{ entry.fifo_reference_id }}">

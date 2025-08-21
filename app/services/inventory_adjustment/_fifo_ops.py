@@ -86,8 +86,18 @@ def create_new_fifo_lot(item_id, quantity, change_type, unit=None, notes=None, c
         # Get batch_id from kwargs if provided
         batch_id = kwargs.get('batch_id')
 
-        # Generate LOT-prefixed FIFO code for lot creation
-        fifo_code = generate_fifo_code('lot', item_id)
+        # Generate a single FIFO code that will be shared by both lot and history
+        # For finished_batch operations, use batch-specific code if batch_id exists
+        if change_type == 'finished_batch' and batch_id:
+            from app.models import Batch
+            batch = db.session.get(Batch, batch_id)
+            if batch and batch.label_code:
+                fifo_code = f"BCH-{batch.label_code}"
+            else:
+                fifo_code = generate_fifo_code(change_type, item_id, remaining_quantity=quantity)
+        else:
+            # For regular lot creation, use LOT prefix
+            fifo_code = generate_fifo_code('restock', item_id, remaining_quantity=quantity)
 
         # Create new lot - ALWAYS inherit perishable status from item
         lot = InventoryLot(
@@ -102,16 +112,16 @@ def create_new_fifo_lot(item_id, quantity, change_type, unit=None, notes=None, c
             source_type=change_type,
             source_notes=notes,
             created_by=created_by,
-            fifo_code=fifo_code,  # LOT-prefixed code
-            batch_id=batch_id,
+            fifo_code=fifo_code,  # Use the shared FIFO code
+            batch_id=batch_id if change_type == 'finished_batch' else None,  # Only link batch for finished_batch
             organization_id=item.organization_id
         )
 
         db.session.add(lot)
         db.session.flush()  # Get the lot ID
 
-        # Create history record that REFERENCES the lot (no duplicate data)
-        # The history entry shows the lot event via relationship
+        # Create history record that SHARES the same FIFO code
+        # The history entry shows the lot creation event with the SAME fifo_code
         history_record = UnifiedInventoryHistory(
             inventory_item_id=item.id,
             change_type=change_type,
@@ -126,7 +136,7 @@ def create_new_fifo_lot(item_id, quantity, change_type, unit=None, notes=None, c
             expiration_date=final_expiration_date,
             affected_lot_id=lot.id,  # Link to the actual lot
             batch_id=batch_id,
-            # No fifo_code here - it will use the lot's fifo_code via relationship
+            fifo_code=fifo_code,  # USE THE SAME FIFO CODE AS THE LOT
         )
         db.session.add(history_record)
 
@@ -183,7 +193,12 @@ def deduct_fifo_inventory(item_id, quantity_to_deduct, change_type, notes=None, 
                 # Update lot
                 lot.remaining_quantity -= deduct_from_lot
 
-                # Create audit record
+                # Create audit record with FIFO code prefix based on change_type
+                from app.utils.fifo_generator import generate_fifo_code
+                
+                # Generate deductive FIFO code for this specific transaction
+                deduction_fifo_code = generate_fifo_code(change_type, item_id)
+                
                 history_record = UnifiedInventoryHistory(
                     inventory_item_id=item_id,
                     change_type=change_type,
@@ -195,7 +210,8 @@ def deduct_fifo_inventory(item_id, quantity_to_deduct, change_type, notes=None, 
                     created_by=created_by,
                     organization_id=lot.organization_id,
                     affected_lot_id=lot.id,
-                    batch_id=batch_id
+                    batch_id=batch_id,
+                    fifo_code=deduction_fifo_code  # Use proper deductive FIFO code
                 )
                 db.session.add(history_record)
 

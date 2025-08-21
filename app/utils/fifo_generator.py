@@ -202,9 +202,14 @@ def generate_fifo_id(change_type):
     """Legacy function - use generate_fifo_code instead"""
     return generate_fifo_code(change_type)
 
-def generate_fifo_code(change_type: str, item_id: int) -> str:
+def generate_fifo_code(change_type: str, item_id: int, remaining_quantity: float = 0.0) -> str:
     """Generate unique FIFO tracking code"""
     prefix = get_change_type_prefix(change_type)
+    
+    # For lot-creating operations (restock, finished_batch, manual_addition), use LOT prefix
+    if change_type in ['restock', 'finished_batch', 'manual_addition', 'initial_stock'] and remaining_quantity > 0:
+        prefix = 'LOT'
+    
     # Use higher precision timestamp + random component for uniqueness
     timestamp_ms = int(time.time() * 1000000)  # microseconds for better uniqueness
     timestamp_component = int_to_base36(timestamp_ms % 100000000)  # larger range
