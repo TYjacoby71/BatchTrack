@@ -61,6 +61,9 @@ class UnifiedInventoryHistory(ScopedModelMixin, db.Model):
     lot_number = db.Column(db.String(128), nullable=True)
     container_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'), nullable=True)
     fifo_source = db.Column(db.String(128), nullable=True)
+    
+    # Organization scoping
+    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=False)
 
     # Relationships
     inventory_item = db.relationship('InventoryItem', foreign_keys=[inventory_item_id], backref='unified_history')
