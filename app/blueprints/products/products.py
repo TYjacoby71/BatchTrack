@@ -9,7 +9,7 @@ try:
     from ...utils.authorization import require_permission
 except ImportError:
     # test-safe no-op decorator
-    def require_permission(*args, **kwargs):
+    def require_permission(permission_name):
         def _wrap(f): return f
         return _wrap
 

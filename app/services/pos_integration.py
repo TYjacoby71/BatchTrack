@@ -392,8 +392,21 @@ class FIFOService:
         return [] # Dummy implementation
 
 class Reservation:
-    def __init__(self, **kwargs):
-        self.__dict__.update(kwargs)
+    def __init__(self, order_id=None, product_item_id=None, reserved_item_id=None, quantity=None, unit=None, unit_cost=None, sale_price=None, source_fifo_id=None, source_batch_id=None, source=None, expires_at=None, notes=None, created_by=None, organization_id=None):
+        self.order_id = order_id
+        self.product_item_id = product_item_id
+        self.reserved_item_id = reserved_item_id
+        self.quantity = quantity
+        self.unit = unit
+        self.unit_cost = unit_cost
+        self.sale_price = sale_price
+        self.source_fifo_id = source_fifo_id
+        self.source_batch_id = source_batch_id
+        self.source = source
+        self.expires_at = expires_at
+        self.notes = notes
+        self.created_by = created_by
+        self.organization_id = organization_id
         self.status = 'active' # Default status
 
     def mark_converted_to_sale(self):
@@ -408,8 +421,16 @@ class Reservation:
 # Mocking necessary components for the provided code to be syntactically valid
 class InventoryItem:
     query = None # Dummy
-    def __init__(self, **kwargs):
-        self.__dict__.update(kwargs)
+    def __init__(self, name=None, type=None, unit=None, cost_per_unit=None, quantity=None, organization_id=None, category_id=None, is_perishable=None, shelf_life_days=None):
+        self.name = name
+        self.type = type
+        self.unit = unit
+        self.cost_per_unit = cost_per_unit
+        self.quantity = quantity
+        self.organization_id = organization_id
+        self.category_id = category_id
+        self.is_perishable = is_perishable
+        self.shelf_life_days = shelf_life_days
         self.available_quantity = 100 # Dummy value for testing
 
 class InventoryHistory:

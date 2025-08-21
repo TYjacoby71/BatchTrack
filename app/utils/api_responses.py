@@ -63,9 +63,9 @@ class APIResponse:
 def api_route(methods=['GET']):
     """Decorator for API routes with consistent error handling"""
     def decorator(func):
-        def wrapper(*args, **kwargs):
+        def wrapper(*args, **named_args):
             try:
-                return func(*args, **kwargs)
+                return func(*args, **named_args)
             except ValueError as e:
                 return APIResponse.validation_error({'general': [str(e)]})
             except PermissionError as e:
@@ -80,13 +80,13 @@ def api_route(methods=['GET']):
     return decorator
 
 # Backwards compatibility functions
-def api_error(message: str, status_code: int = 400, **kwargs) -> Response:
+def api_error(message: str, status_code: int = 400, errors: Optional[Dict] = None) -> Response:
     """Legacy function - use APIResponse.error() instead"""
-    return APIResponse.error(message, status_code=status_code, **kwargs)
+    return APIResponse.error(message, status_code=status_code, errors=errors)
 
-def api_success(data: Any = None, message: str = "Success", **kwargs) -> Response:
+def api_success(data: Any = None, message: str = "Success", status_code: int = 200) -> Response:
     """Legacy function - use APIResponse.success() instead"""
-    return APIResponse.success(data, message=message, **kwargs)
+    return APIResponse.success(data, message=message, status_code=status_code)
 
 # Export APIResponse class for backwards compatibility
 __all__ = ['APIResponse', 'api_response', 'api_error', 'api_success']

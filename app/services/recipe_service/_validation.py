@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 def validate_recipe_data(name: str, ingredients: List[Dict] = None, 
-                        yield_amount: float = None, recipe_id: int = None, **kwargs) -> Dict[str, Any]:
+                        yield_amount: float = None, recipe_id: int = None, notes: str = None, category: str = None, tags: str = None, batch_size: float = None) -> Dict[str, Any]:
     """
     Validate recipe data before creation or update.
     
@@ -23,7 +23,10 @@ def validate_recipe_data(name: str, ingredients: List[Dict] = None,
         ingredients: List of ingredient dicts
         yield_amount: Recipe yield amount
         recipe_id: Current recipe ID (for updates)
-        **kwargs: Additional recipe fields
+        notes: Recipe notes
+        category: Recipe category
+        tags: Recipe tags
+        batch_size: Recipe batch size
         
     Returns:
         Dict with 'valid' (bool) and 'error' (str) keys

@@ -34,25 +34,25 @@ class RecipeService:
     """Backwards compatibility shim for tests and legacy code"""
 
     @staticmethod
-    def create_recipe(*args, **kwargs):
-        return create_recipe(*args, **kwargs)
+    def create_recipe(name, ingredients, yield_amount, unit, notes=None, category=None, tags=None, batch_size=None, organization_id=None, created_by=None):
+        return create_recipe(name, ingredients, yield_amount, unit, notes, category, tags, batch_size, organization_id, created_by)
 
     @staticmethod
-    def update_recipe(*args, **kwargs):
-        return update_recipe(*args, **kwargs)
+    def update_recipe(recipe_id, name=None, ingredients=None, yield_amount=None, unit=None, notes=None, category=None, tags=None, batch_size=None):
+        return update_recipe(recipe_id, name, ingredients, yield_amount, unit, notes, category, tags, batch_size)
 
     @staticmethod
-    def delete_recipe(*args, **kwargs):
-        return delete_recipe(*args, **kwargs)
+    def delete_recipe(recipe_id):
+        return delete_recipe(recipe_id)
 
     @staticmethod
-    def plan_production(*args, **kwargs):
-        return plan_production(*args, **kwargs)
+    def plan_production(recipe_id, quantity_needed, organization_id=None, check_availability=True):
+        return plan_production(recipe_id, quantity_needed, organization_id, check_availability)
 
     @staticmethod
-    def scale_recipe(*args, **kwargs):
-        return scale_recipe(*args, **kwargs)
+    def scale_recipe(recipe_id, scale_factor):
+        return scale_recipe(recipe_id, scale_factor)
 
     @staticmethod
-    def validate_recipe_data(*args, **kwargs):
-        return validate_recipe_data(*args, **kwargs)
+    def validate_recipe_data(name, ingredients=None, yield_amount=None, recipe_id=None, notes=None, category=None, tags=None, batch_size=None):
+        return validate_recipe_data(name, ingredients, yield_amount, recipe_id, notes, category, tags, batch_size)

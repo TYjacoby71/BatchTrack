@@ -325,13 +325,29 @@ class ProductSKU(db.Model, ScopedModelMixin):
 
         return f"{product_slug}-{variant_slug}-{size_slug}"
 
-    def __init__(self, **kwargs):
+    def __init__(self, product_id=None, variant_id=None, size_label='Bulk', sku_code=None, sku=None, sku_name=None, unit=None, low_stock_threshold=10.0, inventory_item_id=None, organization_id=None, created_by=None, quantity=None, id=None, **remaining_kwargs):
         # Allow tests to pass quantity= and map to quantity_override
-        qty = kwargs.pop("quantity", None)
+        qty = quantity
         # Don't pass id=None to avoid SQLite autoincrement issues
-        if 'id' in kwargs and kwargs['id'] is None:
-            kwargs.pop('id')
-        super().__init__(**kwargs)
+        if id is not None:
+            self.id = id
+        
+        # Set explicit attributes
+        self.product_id = product_id
+        self.variant_id = variant_id
+        self.size_label = size_label
+        self.sku_code = sku_code
+        self.sku = sku
+        self.sku_name = sku_name
+        self.unit = unit
+        self.low_stock_threshold = low_stock_threshold
+        self.inventory_item_id = inventory_item_id
+        self.organization_id = organization_id
+        self.created_by = created_by
+        
+        # Call parent with remaining kwargs for any additional fields
+        super().__init__(**remaining_kwargs)
+        
         if qty is not None:
             self._quantity = qty
 
