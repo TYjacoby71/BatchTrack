@@ -1,4 +1,3 @@
-
 """
 Special Operations Handler
 
@@ -8,8 +7,9 @@ Handles special operations that don't fit additive/deductive patterns, including
 import logging
 from app.models import db, UnifiedInventoryHistory
 from ._operation_registry import get_operation_config, is_special_operation
-from ._fifo_ops import calculate_current_fifo_total, _internal_add_fifo_entry_enhanced, _handle_deductive_operation_internal
-from sqlalchemy import and_
+from ._fifo_ops import calculate_current_fifo_total
+from ._additive_ops import handle_additive_operation
+from ._deductive_ops import handle_deductive_operation
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +30,7 @@ def handle_special_operation(item, quantity, change_type, notes=None, created_by
             return _handle_unit_conversion(item, **kwargs)
         else:
             return False, f"Unknown special operation: {change_type}"
-            
+
     except Exception as e:
         logger.error(f"Error in special operation {change_type}: {str(e)}")
         return False, str(e)
@@ -38,130 +38,105 @@ def handle_special_operation(item, quantity, change_type, notes=None, created_by
 
 def _handle_recount(item, quantity, notes=None, created_by=None, **kwargs):
     """
-    SOPHISTICATED recount handler consolidated from _recount_logic.py:
-    1. First fills existing FIFO lots with remaining capacity
-    2. Then creates new lots for any overflow
-    3. Creates separate history entries for each operation
+    THE DEFINITIVE RECOUNT HANDLER implementing "True North" rules:
+
+    1. Input is absolute target quantity (not delta)
+    2. Calculate delta = target - current_fifo_total  
+    3. Positive delta = delegate to additive operations
+    4. Negative delta = delegate to deductive operations
+    5. Zero delta = log no-change event
+    6. Final item.quantity MUST match target exactly
     """
     try:
-        # Get current FIFO total for comparison
-        current_fifo_total = calculate_current_fifo_total(item.id)
+        # Rule #1: Input is absolute target quantity
         target_quantity = float(quantity)
+
+        # Rule #2: Calculate delta from current FIFO total
+        current_fifo_total = calculate_current_fifo_total(item.id)
         delta = target_quantity - current_fifo_total
 
-        logger.info(f"RECOUNT: {item.name} - FIFO total: {current_fifo_total}, target: {target_quantity}, delta: {delta}")
+        logger.info(f"RECOUNT: {item.name} - Current FIFO: {current_fifo_total}, Target: {target_quantity}, Delta: {delta}")
 
-        # No change needed
+        # Rule #7: Handle no-change case gracefully
         if abs(delta) < 0.001:
-            item.quantity = current_fifo_total
-            return True, f"Inventory already at target quantity: {target_quantity}"
-
-        if delta > 0:
-            # Need to add inventory - use sophisticated filling logic
-            return _handle_recount_increase(item, delta, notes, created_by, **kwargs)
-        else:
-            # Need to deduct inventory - use standard deductive logic
-            success, error_msg = _handle_deductive_operation_internal(
-                item_id=item.id,
-                quantity_to_deduct=abs(delta),
+            # Create audit trail for zero-change recount
+            history_entry = UnifiedInventoryHistory(
+                inventory_item_id=item.id,
+                organization_id=item.organization_id,
                 change_type='recount',
-                notes=notes or f'Recount adjustment: -{abs(delta)}',
+                quantity_change=0.0,
+                remaining_quantity=0.0,
+                unit=getattr(item, 'unit', 'count'),
+                unit_cost=getattr(item, 'cost_per_unit', 0.0),
+                notes=f"{notes or 'Recount'} - No change needed (target matches current)",
                 created_by=created_by
             )
+            db.session.add(history_entry)
 
-            if success:
-                return True, f"Recount removed {abs(delta)} {getattr(item, 'unit', 'units')}"
-            else:
-                return False, "Insufficient inventory for recount adjustment"
+            # Rule #6: For no-change case, item.quantity should already match FIFO total
+            # Just verify they're in sync
+            if abs(current_fifo_total - item.quantity) > 0.001:
+                logger.warning(f"RECOUNT NO-CHANGE: Sync issue detected - FIFO: {current_fifo_total}, Item: {item.quantity}")
+                item.quantity = current_fifo_total  # Sync to FIFO as source of truth
 
-    except Exception as e:
-        logger.error(f"RECOUNT ERROR: {str(e)}")
-        return False, str(e)
+            return True, f"Inventory already at target quantity: {target_quantity}"
 
+        # Rule #3: Positive delta = delegate to additive operations
+        if delta > 0:
+            logger.info(f"RECOUNT INCREASE: Adding {delta} {getattr(item, 'unit', 'units')} to reach target")
 
-def _handle_recount_increase(item, delta_needed, notes, created_by, **kwargs):
-    """
-    Handle recount increase by:
-    1. First filling existing lots with remaining capacity
-    2. Then creating new lots for overflow
-    """
-    try:
-        # Find existing lots with remaining capacity - fill newest first
-        existing_lots = UnifiedInventoryHistory.query.filter(
-            and_(
-                UnifiedInventoryHistory.inventory_item_id == item.id,
-                UnifiedInventoryHistory.remaining_quantity > 0,
-                UnifiedInventoryHistory.change_type.in_(['restock', 'initial_stock', 'manual_addition', 'finished_batch', 'recount'])
-            )
-        ).order_by(UnifiedInventoryHistory.timestamp.desc()).all()
-
-        remaining_to_add = delta_needed
-        entries_created = 0
-
-        # Phase 1: Fill existing lots that have capacity
-        for lot in existing_lots:
-            if remaining_to_add <= 0:
-                break
-                
-            original_quantity = lot.quantity_change
-            current_remaining = lot.remaining_quantity
-            
-            # Only lots that were partially consumed have capacity
-            if original_quantity > current_remaining:
-                capacity = original_quantity - current_remaining
-                fill_amount = min(capacity, remaining_to_add)
-                
-                if fill_amount > 0:
-                    # Add back to this specific lot
-                    lot.remaining_quantity += fill_amount
-                    remaining_to_add -= fill_amount
-                    
-                    # Create a history entry for this refill
-                    refill_entry = UnifiedInventoryHistory(
-                        inventory_item_id=item.id,
-                        organization_id=item.organization_id,
-                        change_type='recount',
-                        quantity_change=fill_amount,
-                        unit=getattr(item, 'unit', 'count'),
-                        unit_cost=item.cost_per_unit,
-                        remaining_quantity=0,
-                        fifo_reference_id=lot.id,
-                        notes=f'Recount refill to existing lot #{lot.id}: +{fill_amount}',
-                        created_by=created_by
-                    )
-                    
-                    # Generate RCN code for recount operations
-                    from app.utils.fifo_generator import generate_fifo_code
-                    refill_entry.fifo_code = generate_fifo_code('recount', 0)
-                    
-                    db.session.add(refill_entry)
-                    entries_created += 1
-
-        # Phase 2: Create new lot for any remaining overflow
-        if remaining_to_add > 0:
-            success, error = _internal_add_fifo_entry_enhanced(
-                item_id=item.id,
-                quantity=remaining_to_add,
-                change_type='recount',
-                unit=getattr(item, 'unit', 'count'),
-                notes=f'Recount overflow - new lot: +{remaining_to_add}',
-                cost_per_unit=getattr(item, 'cost_per_unit', 0.0) or 0.0,
+            success, message = handle_additive_operation(
+                item=item,
+                quantity=abs(delta),
+                change_type='recount',  # This will create proper audit trail
+                notes=f"{notes or 'Recount adjustment'} - target: {target_quantity} (+{delta})",
                 created_by=created_by,
                 **kwargs
             )
-            
+
             if not success:
-                return False, f"Failed to create overflow lot: {error}"
-                
-            entries_created += 1
+                return False, f"Recount increase failed: {message}"
 
-        # Update item quantity
-        item.quantity += delta_needed
+            # Rule #6: FIFO operations should have synced the quantity automatically
+            # Verify the sync worked correctly
+            from ._fifo_ops import calculate_current_fifo_total
+            final_fifo_total = calculate_current_fifo_total(item.id)
+            
+            if abs(final_fifo_total - target_quantity) > 0.001:
+                logger.error(f"RECOUNT SYNC ERROR: FIFO total {final_fifo_total} != target {target_quantity}")
+                return False, f"FIFO sync failed after recount: expected {target_quantity}, got {final_fifo_total}"
 
-        return True, f"Recount added {delta_needed} {getattr(item, 'unit', 'units')} across {entries_created} operations"
+            return True, f"Recount added {delta} {getattr(item, 'unit', 'units')} to reach target {target_quantity}"
+
+        # Rule #4: Negative delta = delegate to deductive operations  
+        else:  # delta < 0
+            logger.info(f"RECOUNT DECREASE: Removing {abs(delta)} {getattr(item, 'unit', 'units')} to reach target")
+
+            success, message = handle_deductive_operation(
+                item=item,
+                quantity=abs(delta),
+                change_type='recount',  # This will create proper audit trail
+                notes=f"{notes or 'Recount adjustment'} - target: {target_quantity} ({delta})",
+                created_by=created_by,
+                **kwargs
+            )
+
+            if not success:
+                return False, f"Recount decrease failed: {message}"
+
+            # Rule #6: FIFO operations should have synced the quantity automatically
+            # Verify the sync worked correctly
+            from ._fifo_ops import calculate_current_fifo_total
+            final_fifo_total = calculate_current_fifo_total(item.id)
+            
+            if abs(final_fifo_total - target_quantity) > 0.001:
+                logger.error(f"RECOUNT SYNC ERROR: FIFO total {final_fifo_total} != target {target_quantity}")
+                return False, f"FIFO sync failed after recount: expected {target_quantity}, got {final_fifo_total}"
+
+            return True, f"Recount removed {abs(delta)} {getattr(item, 'unit', 'units')} to reach target {target_quantity}"
 
     except Exception as e:
-        logger.error(f"Error in recount increase: {str(e)}")
+        logger.error(f"RECOUNT ERROR: {str(e)}")
         return False, str(e)
 
 
