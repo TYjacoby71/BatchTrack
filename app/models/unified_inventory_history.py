@@ -1,10 +1,14 @@
-
 from datetime import datetime
 from ..extensions import db
 from .mixins import ScopedModelMixin
 
 class UnifiedInventoryHistory(ScopedModelMixin, db.Model):
-    """Unified history table for all inventory changes (ingredients, products, containers)"""
+    """
+    Event log for ALL inventory movements and adjustments.
+
+    This table records EVENTS, not lots. For FIFO lot tracking, see InventoryLot.
+    Every inventory change creates exactly one event record here.
+    """
     __tablename__ = 'unified_inventory_history'
 
     id = db.Column(db.Integer, primary_key=True)
@@ -13,12 +17,14 @@ class UnifiedInventoryHistory(ScopedModelMixin, db.Model):
     change_type = db.Column(db.String(50), nullable=False, index=True)
     quantity_change = db.Column(db.Float, nullable=False)
     unit = db.Column(db.String(50), nullable=False)
-    unit_cost = db.Column(db.Float, nullable=True)
-    remaining_quantity = db.Column(db.Float, default=0.0)
+    # Lot reference for tracking which lots were affected
+    affected_lot_id = db.Column(db.Integer, db.ForeignKey('inventory_lot.id'), nullable=True)
 
-    # FIFO Tracking
+    # Legacy FIFO fields (deprecated - use InventoryLot instead)
+    remaining_quantity = db.Column(db.Float, nullable=True, default=0.0)  # DEPRECATED
+    unit_cost = db.Column(db.Float, nullable=True, default=0.0)
     fifo_reference_id = db.Column(db.Integer, db.ForeignKey('unified_inventory_history.id'), nullable=True)
-    fifo_code = db.Column(db.String(64), nullable=True, index=True)
+    fifo_code = db.Column(db.String(32), nullable=True)
 
     # Contextual Information
     batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'), nullable=True)
@@ -57,11 +63,12 @@ class UnifiedInventoryHistory(ScopedModelMixin, db.Model):
     fifo_source = db.Column(db.String(128), nullable=True)
 
     # Relationships
-    inventory_item = db.relationship('InventoryItem', foreign_keys=[inventory_item_id], backref='unified_history')
+    inventory_item = db.relationship('InventoryItem', backref='unified_history')
+    affected_lot = db.relationship('InventoryLot', backref='events')
     batch = db.relationship('Batch', foreign_keys=[batch_id])
     used_for_batch = db.relationship('Batch', foreign_keys=[used_for_batch_id])
-    container = db.relationship('InventoryItem', foreign_keys=[container_id])
-    creator = db.relationship('User', foreign_keys=[created_by])
+    user = db.relationship('User')
+    organization = db.relationship('Organization')
     quality_checker = db.relationship('User', foreign_keys=[quality_checked_by])
     fifo_reference = db.relationship('UnifiedInventoryHistory', remote_side=[id])
 
