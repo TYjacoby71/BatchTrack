@@ -143,8 +143,36 @@ def base36_to_int(base36_str):
     return int(base36_str, 36)
 
 def get_change_type_prefix(change_type):
-    """Legacy function - use get_fifo_prefix instead"""
-    return get_fifo_prefix(change_type, False)
+    """Map change types to their FIFO code prefixes"""
+    prefix_map = {
+        # Additive operations - create new lots
+        'restock': 'LOT',
+        'manual_addition': 'LOT',
+        'returned': 'RTN',
+        'refunded': 'RFD',
+        'finished_batch': 'BCH',
+        'initial_stock': 'LOT',
+
+        # Deductive operations - consume from lots
+        'use': 'USE',
+        'sale': 'SLD',
+        'spoil': 'SPL',
+        'trash': 'TRS',
+        'expired': 'EXP',
+        'damaged': 'DMG',
+        'quality_fail': 'QFL',
+        'sample': 'SMP',
+        'tester': 'TST',
+        'gift': 'GFT',
+        'reserved': 'RSV',
+        'batch': 'BCH',
+
+        # Special operations
+        'recount': 'RCN',
+        'cost_override': 'CST',
+        'unit_conversion': 'CNV',
+    }
+    return prefix_map.get(change_type, 'UNK')
 
 # Legacy function for backward compatibility
 def generate_fifo_id(change_type):
