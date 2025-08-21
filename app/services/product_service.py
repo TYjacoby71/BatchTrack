@@ -75,14 +75,14 @@ class ProductService:
             # Generate SKU name - never leave it empty
             sku_name = f"{product.name} - {variant.name} - {size_label}"
             
-            # Create the ProductSKU entry
+            # Create the ProductSKU entry - ensure sku field is properly set
             product_sku = ProductSKU(
                 product_id=product.id,
                 variant_id=variant.id,
                 size_label=size_label,
                 sku_code=sku_code,
-                sku=sku_code,  # Set the sku field which is the unique identifier
-                sku_name=sku_name,  # Always set the sku_name
+                sku=sku_code,  # This is the required unique identifier field
+                sku_name=sku_name,
                 inventory_item_id=inventory_item.id,
                 unit=unit,
                 organization_id=current_user.organization_id,

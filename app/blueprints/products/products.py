@@ -280,6 +280,7 @@ def new_product():
                 variant_id=variant.id,
                 size_label='Bulk',
                 sku_code=sku_code,
+                sku=sku_code,  # Set the required sku field
                 sku_name=sku_name,  # Always set the sku_name
                 unit=unit,
                 low_stock_threshold=float(low_stock_threshold) if low_stock_threshold else 0,
