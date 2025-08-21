@@ -6,7 +6,7 @@ This handler calculates the difference and adjusts FIFO lots to match the target
 
 import logging
 from app.models import db, UnifiedInventoryHistory, InventoryLot
-from ._fifo_ops import _internal_add_fifo_entry_enhanced
+from ._fifo_ops import create_new_fifo_lot
 from sqlalchemy import and_
 
 logger = logging.getLogger(__name__)
@@ -201,7 +201,7 @@ def handle_recount(item, quantity, change_type, notes=None, created_by=None, tar
             if remaining_to_add > 0:
                 logger.info(f"RECOUNT: Creating new lot for overflow: {remaining_to_add}")
                 
-                add_success, add_message, new_lot_id = _internal_add_fifo_entry_enhanced(
+                add_success, add_message, new_lot_id = create_new_fifo_lot(
                     item_id=item.id,
                     quantity=remaining_to_add,
                     change_type=change_type,  # Use original change_type (recount)

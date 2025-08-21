@@ -6,9 +6,8 @@ from ..utils import generate_fifo_code
 import logging
 
 # Import necessary canonical functions
-# Import moved to avoid circular dependency - use canonical service instead
-# from app.blueprints.fifo.services import FIFOService
-import app.services.inventory_adjustment as inv_adj
+# Use canonical inventory adjustment service
+from app.services.inventory_adjustment import process_inventory_adjustment
 
 logger = logging.getLogger(__name__)
 

@@ -1,3 +1,4 @@
+
 import logging
 from datetime import datetime, timedelta
 from decimal import Decimal
@@ -40,9 +41,10 @@ def get_item_lots(item_id: int, active_only: bool = False, order: str = 'desc'):
     return query.all()
 
 
-def _internal_add_fifo_entry_enhanced(item_id, quantity, change_type, unit=None, notes=None, cost_per_unit=None, created_by=None, custom_expiration_date=None, custom_shelf_life_days=None, **kwargs):
+def create_new_fifo_lot(item_id, quantity, change_type, unit=None, notes=None, cost_per_unit=None, created_by=None, custom_expiration_date=None, custom_shelf_life_days=None, **kwargs):
     """
-    Enhanced FIFO entry creation with proper lot tracking
+    Create a new FIFO lot with complete tracking and audit trail.
+    This is the primary function for creating new inventory lots.
     """
     try:
         from app.models import InventoryItem
@@ -129,7 +131,6 @@ def _internal_add_fifo_entry_enhanced(item_id, quantity, change_type, unit=None,
         )
         db.session.add(history_record)
 
-
         logger.info(f"FIFO: Created lot {lot.fifo_code} with {quantity} {unit} for item {item_id} (perishable: {is_perishable})")
         # Return lot id for callers that want to create a corresponding history event
         return True, f"Added {quantity} {unit} to inventory", lot.id
@@ -140,9 +141,10 @@ def _internal_add_fifo_entry_enhanced(item_id, quantity, change_type, unit=None,
         return False, f"Error creating inventory lot: {str(e)}", None
 
 
-def _handle_deductive_operation_internal(item_id, quantity_to_deduct, change_type, notes=None, created_by=None, batch_id=None):
+def process_fifo_deduction(item_id, quantity_to_deduct, change_type, notes=None, created_by=None, batch_id=None):
     """
-    Handle deductive operations using FIFO (First In, First Out) logic with lots
+    Process inventory deduction using FIFO (First In, First Out) logic.
+    Deducts from oldest lots first and creates appropriate audit trail.
     """
     try:
         from app.models import InventoryItem
@@ -215,8 +217,11 @@ def _handle_deductive_operation_internal(item_id, quantity_to_deduct, change_typ
         return False, f"Error processing deduction: {str(e)}"
 
 
-def _calculate_deduction_plan_internal(item_id, quantity, change_type):
-    """Calculate FIFO deduction plan with detailed lot tracking - item-scoped only"""
+def calculate_fifo_deduction_plan(item_id, quantity, change_type):
+    """
+    Calculate what lots will be consumed for a FIFO deduction without executing it.
+    Returns a detailed plan showing which lots will be affected and by how much.
+    """
     try:
         from app.models.inventory_lot import InventoryLot
 
@@ -252,11 +257,11 @@ def _calculate_deduction_plan_internal(item_id, quantity, change_type):
                     'deduct_quantity': deduct_from_lot,
                     'lot_remaining_before': lot.remaining_quantity,
                     'lot_remaining_after': lot.remaining_quantity - deduct_from_lot,
-                    'lot_change_type': lot.change_type,
-                    'lot_timestamp': lot.timestamp
+                    'lot_change_type': lot.source_type,
+                    'lot_timestamp': lot.received_date
                 })
                 remaining_to_deduct -= deduct_from_lot
-                logger.info(f"DEDUCTION PLAN: Will consume {deduct_from_lot} from lot {lot.id} ({lot.change_type}, {lot.timestamp})")
+                logger.info(f"DEDUCTION PLAN: Will consume {deduct_from_lot} from lot {lot.id} ({lot.source_type}, {lot.received_date})")
 
         logger.info(f"DEDUCTION PLAN: Created plan consuming from {len(deduction_plan)} lots")
         return deduction_plan, None
@@ -266,14 +271,17 @@ def _calculate_deduction_plan_internal(item_id, quantity, change_type):
         return None, str(e)
 
 
-def _execute_deduction_plan_internal(deduction_plan, item_id):
-    """Execute the FIFO deduction plan with detailed tracking"""
+def execute_fifo_deduction_plan(deduction_plan, item_id):
+    """
+    Execute a pre-calculated FIFO deduction plan.
+    Updates lot quantities according to the plan.
+    """
     try:
         for step in deduction_plan:
             lot_id = step['lot_id']
             deduct_quantity = step['deduct_quantity']
 
-            lot = db.session.get(InventoryLot, lot_id) # Changed to InventoryLot
+            lot = db.session.get(InventoryLot, lot_id)
             if lot:
                 old_remaining = lot.remaining_quantity
                 lot.remaining_quantity -= deduct_quantity
@@ -289,11 +297,14 @@ def _execute_deduction_plan_internal(deduction_plan, item_id):
         return False, str(e)
 
 
-def _record_deduction_plan_internal(item_id, deduction_plan, change_type, notes, created_by=None, fifo_reference_id=None):
-    """Record individual deduction records for each lot consumed"""
+def create_fifo_deduction_audit_trail(item_id, deduction_plan, change_type, notes, created_by=None, fifo_reference_id=None):
+    """
+    Create audit trail records for each lot consumed in a FIFO deduction.
+    This provides detailed tracking of exactly which lots were affected.
+    """
     try:
         item = db.session.get(InventoryItem, item_id)
-        organization_id = item.organization_id # Get organization_id from item
+        organization_id = item.organization_id
 
         # Handle fifo_reference_id explicitly
         reference_kwargs = {}
@@ -306,7 +317,7 @@ def _record_deduction_plan_internal(item_id, deduction_plan, change_type, notes,
             deduct_quantity = step['deduct_quantity']
 
             # Get the lot being consumed to get its details
-            consumed_lot = db.session.get(InventoryLot, lot_id) # Changed to InventoryLot
+            consumed_lot = db.session.get(InventoryLot, lot_id)
 
             history_record = UnifiedInventoryHistory(
                 inventory_item_id=item_id,
@@ -317,7 +328,7 @@ def _record_deduction_plan_internal(item_id, deduction_plan, change_type, notes,
                 notes=notes,
                 created_by=created_by,
                 organization_id=organization_id,
-                is_perishable=consumed_lot.is_perishable,
+                is_perishable=consumed_lot.expiration_date is not None,
                 expiration_date=consumed_lot.expiration_date,
                 shelf_life_days=consumed_lot.shelf_life_days,
                 affected_lot_id=lot_id,  # Link to the lot being consumed
@@ -334,11 +345,13 @@ def _record_deduction_plan_internal(item_id, deduction_plan, change_type, notes,
         return False
 
 
-def calculate_current_fifo_total(item_id):
-    """Calculate current FIFO total for validation - item-scoped only"""
+def calculate_total_available_inventory(item_id):
+    """
+    Calculate total available inventory from all active lots for an item.
+    Used for validation and inventory sync checks.
+    """
     from app.models.inventory_lot import InventoryLot
 
-    # Use InventoryLot instead of deprecated UnifiedInventoryHistory remaining_quantity
     lots = InventoryLot.query.filter(
         and_(
             InventoryLot.inventory_item_id == item_id,
@@ -349,18 +362,23 @@ def calculate_current_fifo_total(item_id):
     return sum(float(lot.remaining_quantity) for lot in lots)
 
 
-def credit_specific_lot(lot_id, quantity, notes=None, created_by=None):
-    """Credit back to a specific FIFO lot (used for reservation releases)"""
+def credit_back_to_specific_lot(lot_id, quantity, notes=None, created_by=None):
+    """
+    Credit inventory back to a specific FIFO lot.
+    Used for reservation releases, returns, and corrections.
+    """
     try:
-        entry = db.session.get(InventoryLot, lot_id) # Changed to InventoryLot
-        if not entry:
+        from app.models.inventory_lot import InventoryLot
+        
+        lot = db.session.get(InventoryLot, lot_id)
+        if not lot:
             return False, "FIFO lot not found"
 
         # Add back to the specific lot
-        entry.remaining_quantity = float(entry.remaining_quantity) + float(quantity)
+        lot.remaining_quantity = float(lot.remaining_quantity) + float(quantity)
 
         # Update item quantity
-        item = InventoryItem.query.get(entry.inventory_item_id)
+        item = InventoryItem.query.get(lot.inventory_item_id)
         if item:
             item.quantity = float(item.quantity) + float(quantity)
 
