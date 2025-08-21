@@ -1,0 +1,315 @@
+2025-08-21 00:54:17,959 INFO: WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://172.31.106.2:5000
+2025-08-21 00:54:17,959 INFO: Press CTRL+C to quit
+2025-08-21 00:54:17,959 INFO:  * Restarting with stat
+/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_limiter/extension.py:333: UserWarning: Using the in-memory storage for tracking rate limits as no storage was explicitly specified. This is not recommended for production use. See: https://flask-limiter.readthedocs.io#configuring-a-storage-backend for documentation about configuring the storage backend.
+  warnings.warn(
+
+=== Blueprint Registration Summary ===
+✅ Successful: 27
+   - Authentication
+   - Admin
+   - Developer
+   - Inventory
+   - Recipes
+   - Batches
+   - Organization
+   - Billing
+   - Settings
+   - Timers
+   - Expiration
+   - Conversion
+   - Products Main
+   - Product Inventory
+   - Reservations
+   - SKU Management
+   - Product Variants
+   - Product Alerts
+   - Public API
+   - Main API
+   - Stock API
+   - App Routes
+   - Legal Routes
+   - Bulk Stock
+   - Fault Log
+   - Tag Manager
+   - Waitlist
+
+🎉 All blueprints registered successfully!
+[2025-08-21 00:54:19,759] INFO in unit_utils: BatchTrack startup
+2025-08-21 00:54:19,771 WARNING:  * Debugger is active!
+2025-08-21 00:54:19,771 INFO:  * Debugger PIN: 611-315-940
+--- EXECUTING CORRECT MIDDLEWARE ---
+MIDDLEWARE DEBUG: Allowing public endpoint: index
+2025-08-21 00:54:19,982 INFO: 172.31.106.2 - - [21/Aug/2025 00:54:19] "GET / HTTP/1.1" 302 -
+--- EXECUTING CORRECT MIDDLEWARE ---
+MIDDLEWARE DEBUG: Processing GET /user_dashboard, endpoint=app_routes.dashboard
+MIDDLEWARE DEBUG: User authenticated=True
+DEBUG: User 2, Org billing_status=active
+DEBUG: Tier exempt=True
+DEBUG: Tier is billing exempt, allowing access
+2025-08-21 00:54:20,079 INFO: User preferences found: True
+2025-08-21 00:54:20,079 INFO: Getting dashboard alerts with max_alerts=3
+2025-08-21 00:54:20,089 INFO: Expiration alerts debug: expired_fifo=4, expired_products=0, expiring_fifo=0, expiring_products=0
+2025-08-21 00:54:20,089 INFO: Current time: 2025-08-21 00:54:20.079708, cutoff: 2025-08-28 00:54:20.079708
+2025-08-21 00:54:20,089 INFO: Expiration data: expired_total=4, expiring_soon_total=0
+2025-08-21 00:54:20,089 INFO: User preferences: show_expiration=True
+2025-08-21 00:54:20,091 INFO: Stuck batches found: 1
+2025-08-21 00:54:20,095 INFO: Stock summary: low_stock_ingredients_count=0, low_stock_count=0, out_of_stock_count=0
+2025-08-21 00:54:20,104 INFO: Total alerts before filtering: 3
+2025-08-21 00:54:20,104 INFO: Dismissed alerts: ['active_batches', 'stuck_batches', 'expired_inventory']
+2025-08-21 00:54:20,104 INFO: Alerts after dismissal filtering: 0
+2025-08-21 00:54:20,104 INFO: Final alerts to return: 0
+[2025-08-21 00:54:20,128] INFO in unit_utils: Getting global unit list
+2025-08-21 00:54:20,128 INFO: Getting global unit list
+[2025-08-21 00:54:20,183] DEBUG in permissions: Permission tags.manage not allowed by tier exempt
+2025-08-21 00:54:20,183 DEBUG: Permission tags.manage not allowed by tier exempt
+[2025-08-21 00:54:20,183] DEBUG in permissions: Permission dev.system_admin not allowed by tier exempt
+2025-08-21 00:54:20,183 DEBUG: Permission dev.system_admin not allowed by tier exempt
+2025-08-21 00:54:20,189 INFO: 172.31.106.2 - - [21/Aug/2025 00:54:20] "GET /user_dashboard HTTP/1.1" 200 -
+--- EXECUTING CORRECT MIDDLEWARE ---
+MIDDLEWARE DEBUG: Allowing public endpoint: static
+2025-08-21 00:54:20,269 INFO: 172.31.106.2 - - [21/Aug/2025 00:54:20] "GET /static/style.css HTTP/1.1" 304 -
+--- EXECUTING CORRECT MIDDLEWARE ---
+MIDDLEWARE DEBUG: Allowing public endpoint: static
+2025-08-21 00:54:20,314 INFO: 172.31.106.2 - - [21/Aug/2025 00:54:20] "GET /static/js/utils/utils.js HTTP/1.1" 304 -
+--- EXECUTING CORRECT MIDDLEWARE ---
+MIDDLEWARE DEBUG: Allowing public endpoint: static
+2025-08-21 00:54:20,320 INFO: 172.31.106.2 - - [21/Aug/2025 00:54:20] "GET /static/js/main.js HTTP/1.1" 304 -
+--- EXECUTING CORRECT MIDDLEWARE ---
+MIDDLEWARE DEBUG: Allowing public endpoint: static
+2025-08-21 00:54:20,323 INFO: 172.31.106.2 - - [21/Aug/2025 00:54:20] "GET /static/js/inventory/inventory_adjust.js HTTP/1.1" 304 -
+--- EXECUTING CORRECT MIDDLEWARE ---
+MIDDLEWARE DEBUG: Allowing public endpoint: static
+2025-08-21 00:54:20,329 INFO: 172.31.106.2 - - [21/Aug/2025 00:54:20] "GET /static/js/expiration_alerts.js HTTP/1.1" 304 -
+--- EXECUTING CORRECT MIDDLEWARE ---
+MIDDLEWARE DEBUG: Allowing public endpoint: static
+2025-08-21 00:54:20,333 INFO: 172.31.106.2 - - [21/Aug/2025 00:54:20] "GET /static/js/conversion/unit_converter.js HTTP/1.1" 304 -
+--- EXECUTING CORRECT MIDDLEWARE ---
+MIDDLEWARE DEBUG: Allowing public endpoint: static
+2025-08-21 00:54:20,386 INFO: 172.31.106.2 - - [21/Aug/2025 00:54:20] "GET /static/style.css HTTP/1.1" 304 -
+--- EXECUTING CORRECT MIDDLEWARE ---
+MIDDLEWARE DEBUG: Processing GET /api/dashboard-alerts, endpoint=api.get_dashboard_alerts
+MIDDLEWARE DEBUG: User authenticated=True
+DEBUG: User 2, Org billing_status=active
+--- EXECUTING CORRECT MIDDLEWARE ---
+MIDDLEWARE DEBUG: Processing GET /api/server-time, endpoint=api.server_time
+DEBUG: Tier exempt=True
+DEBUG: Tier is billing exempt, allowing access
+2025-08-21 00:54:20,969 INFO: User preferences found: True
+2025-08-21 00:54:20,969 INFO: Getting dashboard alerts with max_alerts=10
+2025-08-21 00:54:20,972 INFO: Expiration alerts debug: expired_fifo=4, expired_products=0, expiring_fifo=0, expiring_products=0
+2025-08-21 00:54:20,972 INFO: Current time: 2025-08-21 00:54:20.969819, cutoff: 2025-08-28 00:54:20.969819
+2025-08-21 00:54:20,973 INFO: Expiration data: expired_total=4, expiring_soon_total=0
+2025-08-21 00:54:20,973 INFO: User preferences: show_expiration=True
+2025-08-21 00:54:20,973 INFO: Stuck batches found: 1
+2025-08-21 00:54:20,976 INFO: Stock summary: low_stock_ingredients_count=0, low_stock_count=0, out_of_stock_count=0
+2025-08-21 00:54:20,977 INFO: Total alerts before filtering: 3
+2025-08-21 00:54:20,977 INFO: Dismissed alerts: ['active_batches', 'stuck_batches', 'expired_inventory']
+2025-08-21 00:54:20,978 INFO: Alerts after dismissal filtering: 0
+2025-08-21 00:54:20,978 INFO: Final alerts to return: 0
+2025-08-21 00:54:20,978 INFO: Dashboard alerts requested - found 0 alerts
+2025-08-21 00:54:20,979 INFO: 172.31.106.2 - - [21/Aug/2025 00:54:20] "GET /api/dashboard-alerts HTTP/1.1" 200 -
+MIDDLEWARE DEBUG: User authenticated=True
+DEBUG: User 2, Org billing_status=active
+DEBUG: Tier exempt=True
+DEBUG: Tier is billing exempt, allowing access
+2025-08-21 00:54:21,000 INFO: 172.31.106.2 - - [21/Aug/2025 00:54:21] "GET /api/server-time HTTP/1.1" 200 -
+--- EXECUTING CORRECT MIDDLEWARE ---
+MIDDLEWARE DEBUG: Processing GET /settings, endpoint=settings.index
+MIDDLEWARE DEBUG: User authenticated=True
+DEBUG: User 2, Org billing_status=active
+DEBUG: Tier exempt=True
+DEBUG: Tier is billing exempt, allowing access
+[2025-08-21 00:54:24,324] INFO in stripe_service: Stripe initialized successfully
+2025-08-21 00:54:24,324 INFO: Stripe initialized successfully
+2025-08-21 00:54:24,330 INFO: message='Request to Stripe api' method=get url=https://api.stripe.com/v1/prices?lookup_keys[0]=batchtrack_solo_monthly&active=true&limit=1
+2025-08-21 00:54:24,330 DEBUG: api_version=2025-06-30.basil message='Post details' post_data=lookup_keys[0]=batchtrack_solo_monthly&active=true&limit=1
+2025-08-21 00:54:24,335 DEBUG: Starting new HTTPS connection (1): api.stripe.com:443
+2025-08-21 00:54:24,506 DEBUG: https://api.stripe.com:443 "GET /v1/prices?lookup_keys%5B0%5D=batchtrack_solo_monthly&active=true&limit=1 HTTP/1.1" 200 839
+2025-08-21 00:54:24,508 INFO: message='Stripe API response' path=https://api.stripe.com/v1/prices?lookup_keys[0]=batchtrack_solo_monthly&active=true&limit=1 response_code=200
+2025-08-21 00:54:24,508 DEBUG: body='{\n  "object": "list",\n  "data": [\n    {\n      "id": "price_1RnRlnF4Y9XQgiJBzKnYadVL",\n      "object": "price",\n      "active": true,\n      "billing_scheme": "per_unit",\n      "created": 1753135275,\n      "currency": "usd",\n      "custom_unit_amount": null,\n      "livemode": true,\n      "lookup_key": "batchtrack_solo_monthly",\n      "metadata": {},\n      "nickname": "Solo Monthly",\n      "product": "prod_SitYi7JOtdlJ7b",\n      "recurring": {\n        "interval": "month",\n        "interval_count": 1,\n        "meter": null,\n        "trial_period_days": null,\n        "usage_type": "licensed"\n      },\n      "tax_behavior": "unspecified",\n      "tiers_mode": null,\n      "transform_quantity": null,\n      "type": "recurring",\n      "unit_amount": 0,\n      "unit_amount_decimal": "0"\n    }\n  ],\n  "has_more": false,\n  "url": "/v1/prices"\n}' message='API response body'
+2025-08-21 00:54:24,509 DEBUG: link=https://dashboard.stripe.com/live/logs/req_THiYE85ydvsiPt message='Dashboard link for request'
+[2025-08-21 00:54:24,517] INFO in stripe_service: Stripe initialized successfully
+2025-08-21 00:54:24,517 INFO: Stripe initialized successfully
+2025-08-21 00:54:24,519 INFO: message='Request to Stripe api' method=get url=https://api.stripe.com/v1/prices?lookup_keys[0]=batchtrack_team_monthly&active=true&limit=1
+2025-08-21 00:54:24,520 DEBUG: api_version=2025-06-30.basil message='Post details' post_data=lookup_keys[0]=batchtrack_team_monthly&active=true&limit=1
+2025-08-21 00:54:24,647 DEBUG: https://api.stripe.com:443 "GET /v1/prices?lookup_keys%5B0%5D=batchtrack_team_monthly&active=true&limit=1 HTTP/1.1" 200 835
+2025-08-21 00:54:24,648 INFO: message='Stripe API response' path=https://api.stripe.com/v1/prices?lookup_keys[0]=batchtrack_team_monthly&active=true&limit=1 response_code=200
+2025-08-21 00:54:24,648 DEBUG: body='{\n  "object": "list",\n  "data": [\n    {\n      "id": "price_1RnRzOF4Y9XQgiJB7cuiGZf4",\n      "object": "price",\n      "active": true,\n      "billing_scheme": "per_unit",\n      "created": 1753136118,\n      "currency": "usd",\n      "custom_unit_amount": null,\n      "livemode": true,\n      "lookup_key": "batchtrack_team_monthly",\n      "metadata": {},\n      "nickname": null,\n      "product": "prod_SitmVnokhyMVZ8",\n      "recurring": {\n        "interval": "month",\n        "interval_count": 1,\n        "meter": null,\n        "trial_period_days": null,\n        "usage_type": "licensed"\n      },\n      "tax_behavior": "unspecified",\n      "tiers_mode": null,\n      "transform_quantity": null,\n      "type": "recurring",\n      "unit_amount": 1499,\n      "unit_amount_decimal": "1499"\n    }\n  ],\n  "has_more": false,\n  "url": "/v1/prices"\n}' message='API response body'
+2025-08-21 00:54:24,648 DEBUG: link=https://dashboard.stripe.com/live/logs/req_nDtlVhBamQa67w message='Dashboard link for request'
+[2025-08-21 00:54:24,649] INFO in stripe_service: Stripe initialized successfully
+2025-08-21 00:54:24,649 INFO: Stripe initialized successfully
+2025-08-21 00:54:24,650 INFO: message='Request to Stripe api' method=get url=https://api.stripe.com/v1/prices?lookup_keys[0]=batchtrack_enterprise_monthly&active=true&limit=1
+2025-08-21 00:54:24,651 DEBUG: api_version=2025-06-30.basil message='Post details' post_data=lookup_keys[0]=batchtrack_enterprise_monthly&active=true&limit=1
+2025-08-21 00:54:24,789 DEBUG: https://api.stripe.com:443 "GET /v1/prices?lookup_keys%5B0%5D=batchtrack_enterprise_monthly&active=true&limit=1 HTTP/1.1" 200 841
+2025-08-21 00:54:24,789 INFO: message='Stripe API response' path=https://api.stripe.com/v1/prices?lookup_keys[0]=batchtrack_enterprise_monthly&active=true&limit=1 response_code=200
+2025-08-21 00:54:24,789 DEBUG: body='{\n  "object": "list",\n  "data": [\n    {\n      "id": "price_1RnS8pF4Y9XQgiJBr3Wq1LIH",\n      "object": "price",\n      "active": true,\n      "billing_scheme": "per_unit",\n      "created": 1753136703,\n      "currency": "usd",\n      "custom_unit_amount": null,\n      "livemode": true,\n      "lookup_key": "batchtrack_enterprise_monthly",\n      "metadata": {},\n      "nickname": null,\n      "product": "prod_SitwN8yYtFrNcM",\n      "recurring": {\n        "interval": "month",\n        "interval_count": 1,\n        "meter": null,\n        "trial_period_days": null,\n        "usage_type": "licensed"\n      },\n      "tax_behavior": "unspecified",\n      "tiers_mode": null,\n      "transform_quantity": null,\n      "type": "recurring",\n      "unit_amount": 1999,\n      "unit_amount_decimal": "1999"\n    }\n  ],\n  "has_more": false,\n  "url": "/v1/prices"\n}' message='API response body'
+2025-08-21 00:54:24,790 DEBUG: link=https://dashboard.stripe.com/live/logs/req_eFgmuPWl2d1La3 message='Dashboard link for request'
+[2025-08-21 00:54:24,830] DEBUG in permissions: Permission tags.manage not allowed by tier exempt
+2025-08-21 00:54:24,830 DEBUG: Permission tags.manage not allowed by tier exempt
+[2025-08-21 00:54:24,831] DEBUG in permissions: Permission dev.system_admin not allowed by tier exempt
+2025-08-21 00:54:24,831 DEBUG: Permission dev.system_admin not allowed by tier exempt
+[2025-08-21 00:54:24,831] DEBUG in permissions: Permission settings.edit not allowed by tier exempt
+2025-08-21 00:54:24,831 DEBUG: Permission settings.edit not allowed by tier exempt
+[2025-08-21 00:54:24,841] DEBUG in permissions: Permission settings.edit not allowed by tier exempt
+2025-08-21 00:54:24,841 DEBUG: Permission settings.edit not allowed by tier exempt
+2025-08-21 00:54:24,855 INFO: 172.31.106.2 - - [21/Aug/2025 00:54:24] "GET /settings HTTP/1.1" 200 -
+--- EXECUTING CORRECT MIDDLEWARE ---
+MIDDLEWARE DEBUG: Allowing public endpoint: static
+2025-08-21 00:54:24,943 INFO: 172.31.106.2 - - [21/Aug/2025 00:54:24] "GET /static/style.css HTTP/1.1" 304 -
+--- EXECUTING CORRECT MIDDLEWARE ---
+MIDDLEWARE DEBUG: Allowing public endpoint: static
+2025-08-21 00:54:25,122 INFO: 172.31.106.2 - - [21/Aug/2025 00:54:25] "GET /static/style.css HTTP/1.1" 304 -
+--- EXECUTING CORRECT MIDDLEWARE ---
+MIDDLEWARE DEBUG: Allowing public endpoint: static
+2025-08-21 00:54:25,127 INFO: 172.31.106.2 - - [21/Aug/2025 00:54:25] "GET /static/js/utils/utils.js HTTP/1.1" 304 -
+--- EXECUTING CORRECT MIDDLEWARE ---
+MIDDLEWARE DEBUG: Allowing public endpoint: static
+2025-08-21 00:54:25,139 INFO: 172.31.106.2 - - [21/Aug/2025 00:54:25] "GET /static/js/inventory/inventory_adjust.js HTTP/1.1" 304 -
+--- EXECUTING CORRECT MIDDLEWARE ---
+MIDDLEWARE DEBUG: Allowing public endpoint: static
+2025-08-21 00:54:25,142 INFO: 172.31.106.2 - - [21/Aug/2025 00:54:25] "GET /static/js/main.js HTTP/1.1" 304 -
+--- EXECUTING CORRECT MIDDLEWARE ---
+MIDDLEWARE DEBUG: Allowing public endpoint: static
+2025-08-21 00:54:25,144 INFO: 172.31.106.2 - - [21/Aug/2025 00:54:25] "GET /static/js/conversion/unit_converter.js HTTP/1.1" 304 -
+--- EXECUTING CORRECT MIDDLEWARE ---
+MIDDLEWARE DEBUG: Allowing public endpoint: static
+2025-08-21 00:54:25,188 INFO: 172.31.106.2 - - [21/Aug/2025 00:54:25] "GET /static/js/expiration_alerts.js HTTP/1.1" 304 -
+--- EXECUTING CORRECT MIDDLEWARE ---
+MIDDLEWARE DEBUG: Processing GET /api/server-time, endpoint=api.server_time
+MIDDLEWARE DEBUG: User authenticated=True
+DEBUG: User 2, Org billing_status=active
+DEBUG: Tier exempt=True
+DEBUG: Tier is billing exempt, allowing access
+2025-08-21 00:54:25,660 INFO: 172.31.106.2 - - [21/Aug/2025 00:54:25] "GET /api/server-time HTTP/1.1" 200 -
+--- EXECUTING CORRECT MIDDLEWARE ---
+MIDDLEWARE DEBUG: Processing GET /products/list, endpoint=products.list_products
+MIDDLEWARE DEBUG: User authenticated=True
+DEBUG: User 2, Org billing_status=active
+DEBUG: Tier exempt=True
+DEBUG: Tier is billing exempt, allowing access
+[2025-08-21 00:54:30,564] DEBUG in permissions: Permission tags.manage not allowed by tier exempt
+2025-08-21 00:54:30,564 DEBUG: Permission tags.manage not allowed by tier exempt
+[2025-08-21 00:54:30,565] DEBUG in permissions: Permission dev.system_admin not allowed by tier exempt
+2025-08-21 00:54:30,565 DEBUG: Permission dev.system_admin not allowed by tier exempt
+2025-08-21 00:54:30,567 INFO: 172.31.106.2 - - [21/Aug/2025 00:54:30] "GET /products/list HTTP/1.1" 200 -
+--- EXECUTING CORRECT MIDDLEWARE ---
+MIDDLEWARE DEBUG: Allowing public endpoint: static
+2025-08-21 00:54:30,675 INFO: 172.31.106.2 - - [21/Aug/2025 00:54:30] "GET /static/style.css HTTP/1.1" 304 -
+--- EXECUTING CORRECT MIDDLEWARE ---
+MIDDLEWARE DEBUG: Allowing public endpoint: static
+2025-08-21 00:54:30,699 INFO: 172.31.106.2 - - [21/Aug/2025 00:54:30] "GET /static/js/inventory/inventory_adjust.js HTTP/1.1" 304 -
+--- EXECUTING CORRECT MIDDLEWARE ---
+MIDDLEWARE DEBUG: Allowing public endpoint: static
+2025-08-21 00:54:30,702 INFO: 172.31.106.2 - - [21/Aug/2025 00:54:30] "GET /static/js/main.js HTTP/1.1" 304 -
+--- EXECUTING CORRECT MIDDLEWARE ---
+MIDDLEWARE DEBUG: Allowing public endpoint: static
+2025-08-21 00:54:30,707 INFO: 172.31.106.2 - - [21/Aug/2025 00:54:30] "GET /static/js/utils/utils.js HTTP/1.1" 304 -
+--- EXECUTING CORRECT MIDDLEWARE ---
+MIDDLEWARE DEBUG: Allowing public endpoint: static
+2025-08-21 00:54:30,741 INFO: 172.31.106.2 - - [21/Aug/2025 00:54:30] "GET /static/js/conversion/unit_converter.js HTTP/1.1" 304 -
+--- EXECUTING CORRECT MIDDLEWARE ---
+MIDDLEWARE DEBUG: Allowing public endpoint: static
+2025-08-21 00:54:30,744 INFO: 172.31.106.2 - - [21/Aug/2025 00:54:30] "GET /static/js/expiration_alerts.js HTTP/1.1" 304 -
+--- EXECUTING CORRECT MIDDLEWARE ---
+MIDDLEWARE DEBUG: Allowing public endpoint: static
+2025-08-21 00:54:30,759 INFO: 172.31.106.2 - - [21/Aug/2025 00:54:30] "GET /static/style.css HTTP/1.1" 304 -
+--- EXECUTING CORRECT MIDDLEWARE ---
+MIDDLEWARE DEBUG: Processing GET /api/server-time, endpoint=api.server_time
+MIDDLEWARE DEBUG: User authenticated=True
+DEBUG: User 2, Org billing_status=active
+DEBUG: Tier exempt=True
+DEBUG: Tier is billing exempt, allowing access
+2025-08-21 00:54:31,160 INFO: 172.31.106.2 - - [21/Aug/2025 00:54:31] "GET /api/server-time HTTP/1.1" 200 -
+--- EXECUTING CORRECT MIDDLEWARE ---
+MIDDLEWARE DEBUG: Processing GET /products/new, endpoint=products.new_product
+MIDDLEWARE DEBUG: User authenticated=True
+DEBUG: User 2, Org billing_status=active
+DEBUG: Tier exempt=True
+DEBUG: Tier is billing exempt, allowing access
+[2025-08-21 00:54:32,040] INFO in unit_utils: Getting global unit list
+2025-08-21 00:54:32,040 INFO: Getting global unit list
+[2025-08-21 00:54:32,062] DEBUG in permissions: Permission tags.manage not allowed by tier exempt
+2025-08-21 00:54:32,062 DEBUG: Permission tags.manage not allowed by tier exempt
+[2025-08-21 00:54:32,062] DEBUG in permissions: Permission dev.system_admin not allowed by tier exempt
+2025-08-21 00:54:32,062 DEBUG: Permission dev.system_admin not allowed by tier exempt
+2025-08-21 00:54:32,064 INFO: 172.31.106.2 - - [21/Aug/2025 00:54:32] "GET /products/new HTTP/1.1" 200 -
+--- EXECUTING CORRECT MIDDLEWARE ---
+MIDDLEWARE DEBUG: Allowing public endpoint: static
+2025-08-21 00:54:32,149 INFO: 172.31.106.2 - - [21/Aug/2025 00:54:32] "GET /static/js/inventory/inventory_adjust.js HTTP/1.1" 304 -
+--- EXECUTING CORRECT MIDDLEWARE ---
+MIDDLEWARE DEBUG: Allowing public endpoint: static
+2025-08-21 00:54:32,157 INFO: 172.31.106.2 - - [21/Aug/2025 00:54:32] "GET /static/js/utils/utils.js HTTP/1.1" 304 -
+--- EXECUTING CORRECT MIDDLEWARE ---
+MIDDLEWARE DEBUG: Allowing public endpoint: static
+2025-08-21 00:54:32,160 INFO: 172.31.106.2 - - [21/Aug/2025 00:54:32] "GET /static/style.css HTTP/1.1" 304 -
+--- EXECUTING CORRECT MIDDLEWARE ---
+MIDDLEWARE DEBUG: Allowing public endpoint: static
+2025-08-21 00:54:32,162 INFO: 172.31.106.2 - - [21/Aug/2025 00:54:32] "GET /static/js/main.js HTTP/1.1" 304 -
+--- EXECUTING CORRECT MIDDLEWARE ---
+MIDDLEWARE DEBUG: Allowing public endpoint: static
+2025-08-21 00:54:32,213 INFO: 172.31.106.2 - - [21/Aug/2025 00:54:32] "GET /static/js/conversion/unit_converter.js HTTP/1.1" 304 -
+--- EXECUTING CORRECT MIDDLEWARE ---
+MIDDLEWARE DEBUG: Allowing public endpoint: static
+2025-08-21 00:54:32,221 INFO: 172.31.106.2 - - [21/Aug/2025 00:54:32] "GET /static/js/expiration_alerts.js HTTP/1.1" 304 -
+--- EXECUTING CORRECT MIDDLEWARE ---
+MIDDLEWARE DEBUG: Allowing public endpoint: static
+2025-08-21 00:54:32,230 INFO: 172.31.106.2 - - [21/Aug/2025 00:54:32] "GET /static/style.css HTTP/1.1" 304 -
+--- EXECUTING CORRECT MIDDLEWARE ---
+MIDDLEWARE DEBUG: Processing GET /api/server-time, endpoint=api.server_time
+MIDDLEWARE DEBUG: User authenticated=True
+DEBUG: User 2, Org billing_status=active
+DEBUG: Tier exempt=True
+DEBUG: Tier is billing exempt, allowing access
+2025-08-21 00:54:32,466 INFO: 172.31.106.2 - - [21/Aug/2025 00:54:32] "GET /api/server-time HTTP/1.1" 200 -
+--- EXECUTING CORRECT MIDDLEWARE ---
+MIDDLEWARE DEBUG: Processing POST /products/new, endpoint=products.new_product
+MIDDLEWARE DEBUG: User authenticated=True
+DEBUG: User 2, Org billing_status=active
+DEBUG: Tier exempt=True
+DEBUG: Tier is billing exempt, allowing access
+2025-08-21 00:54:40,482 INFO: 172.31.106.2 - - [21/Aug/2025 00:54:40] "POST /products/new HTTP/1.1" 302 -
+--- EXECUTING CORRECT MIDDLEWARE ---
+MIDDLEWARE DEBUG: Processing GET /products/new, endpoint=products.new_product
+MIDDLEWARE DEBUG: User authenticated=True
+DEBUG: User 2, Org billing_status=active
+DEBUG: Tier exempt=True
+DEBUG: Tier is billing exempt, allowing access
+[2025-08-21 00:54:40,560] INFO in unit_utils: Getting global unit list
+2025-08-21 00:54:40,560 INFO: Getting global unit list
+[2025-08-21 00:54:40,584] DEBUG in permissions: Permission tags.manage not allowed by tier exempt
+2025-08-21 00:54:40,584 DEBUG: Permission tags.manage not allowed by tier exempt
+[2025-08-21 00:54:40,585] DEBUG in permissions: Permission dev.system_admin not allowed by tier exempt
+2025-08-21 00:54:40,585 DEBUG: Permission dev.system_admin not allowed by tier exempt
+2025-08-21 00:54:40,586 INFO: 172.31.106.2 - - [21/Aug/2025 00:54:40] "GET /products/new HTTP/1.1" 200 -
+--- EXECUTING CORRECT MIDDLEWARE ---
+MIDDLEWARE DEBUG: Allowing public endpoint: static
+2025-08-21 00:54:40,671 INFO: 172.31.106.2 - - [21/Aug/2025 00:54:40] "GET /static/style.css HTTP/1.1" 304 -
+--- EXECUTING CORRECT MIDDLEWARE ---
+MIDDLEWARE DEBUG: Allowing public endpoint: static
+2025-08-21 00:54:40,739 INFO: 172.31.106.2 - - [21/Aug/2025 00:54:40] "GET /static/style.css HTTP/1.1" 304 -
+--- EXECUTING CORRECT MIDDLEWARE ---
+MIDDLEWARE DEBUG: Allowing public endpoint: static
+2025-08-21 00:54:40,743 INFO: 172.31.106.2 - - [21/Aug/2025 00:54:40] "GET /static/js/utils/utils.js HTTP/1.1" 304 -
+--- EXECUTING CORRECT MIDDLEWARE ---
+MIDDLEWARE DEBUG: Allowing public endpoint: static
+2025-08-21 00:54:40,745 INFO: 172.31.106.2 - - [21/Aug/2025 00:54:40] "GET /static/js/main.js HTTP/1.1" 304 -
+--- EXECUTING CORRECT MIDDLEWARE ---
+MIDDLEWARE DEBUG: Allowing public endpoint: static
+2025-08-21 00:54:40,750 INFO: 172.31.106.2 - - [21/Aug/2025 00:54:40] "GET /static/js/inventory/inventory_adjust.js HTTP/1.1" 304 -
+--- EXECUTING CORRECT MIDDLEWARE ---
+MIDDLEWARE DEBUG: Allowing public endpoint: static
+2025-08-21 00:54:40,753 INFO: 172.31.106.2 - - [21/Aug/2025 00:54:40] "GET /static/js/conversion/unit_converter.js HTTP/1.1" 304 -
+--- EXECUTING CORRECT MIDDLEWARE ---
+MIDDLEWARE DEBUG: Allowing public endpoint: static
+2025-08-21 00:54:40,799 INFO: 172.31.106.2 - - [21/Aug/2025 00:54:40] "GET /static/js/expiration_alerts.js HTTP/1.1" 304 -
+--- EXECUTING CORRECT MIDDLEWARE ---
+MIDDLEWARE DEBUG: Processing GET /api/server-time, endpoint=api.server_time
+MIDDLEWARE DEBUG: User authenticated=True
+DEBUG: User 2, Org billing_status=active
+DEBUG: Tier exempt=True
+DEBUG: Tier is billing exempt, allowing access
+2025-08-21 00:54:41,183 INFO: 172.31.106.2 - - [21/Aug/2025 00:54:41] "GET /api/server-time HTTP/1.1" 200 -
