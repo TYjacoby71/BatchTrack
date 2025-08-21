@@ -6,7 +6,7 @@ in BatchTrack. All inventory changes must go through process_inventory_adjustmen
 """
 
 from ._core import process_inventory_adjustment
-from ._handlers import OPERATION_HANDLERS
+from ._handlers import OPERATION_HANDLERS, get_operation_handler
 
 # Public API - only expose the canonical dispatcher
 __all__ = ['process_inventory_adjustment']
@@ -15,7 +15,3 @@ __all__ = ['process_inventory_adjustment']
 def get_supported_operations():
     """Return list of all supported operation types"""
     return list(OPERATION_HANDLERS.keys())
-
-def get_operation_handler(change_type):
-    """Get handler function for a specific operation type"""
-    return OPERATION_HANDLERS.get(change_type)

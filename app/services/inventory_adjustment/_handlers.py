@@ -22,6 +22,7 @@ def get_operation_handler(change_type: str):
     from ._recount_logic import handle_recount_adjustment_clean
     
     # Registry mapping change_types to their handlers
+    global OPERATION_HANDLERS
     OPERATION_HANDLERS = {
         # Additive operations (add inventory)
         'restock': handle_additive_operation,
@@ -54,3 +55,47 @@ def get_operation_handler(change_type: str):
     }
     
     return OPERATION_HANDLERS.get(change_type)
+
+
+# Export the handlers registry for external use
+def _initialize_handlers():
+    """Initialize and return the operation handlers registry"""
+    # Import handlers locally to avoid circular imports
+    from ._additive_ops import handle_additive_operation
+    from ._deductive_ops import handle_deductive_operation
+    from ._special_ops import handle_special_operation
+    from ._creation_logic import handle_initial_stock
+    from ._recount_logic import handle_recount_adjustment_clean
+    
+    return {
+        # Additive operations (add inventory)
+        'restock': handle_additive_operation,
+        'found': handle_additive_operation,
+        'return': handle_additive_operation,
+        'adjustment_increase': handle_additive_operation,
+        'production_yield': handle_additive_operation,
+        'recount_increase': handle_additive_operation,
+        
+        # Deductive operations (remove inventory) 
+        'use': handle_deductive_operation,
+        'waste': handle_deductive_operation,
+        'expired': handle_deductive_operation,
+        'lost': handle_deductive_operation,
+        'sold': handle_deductive_operation,
+        'damaged': handle_deductive_operation,
+        'adjustment_decrease': handle_deductive_operation,
+        'sample': handle_deductive_operation,
+        'recount_deduction': handle_deductive_operation,
+        
+        # Special operations (non-quantity changes)
+        'cost_override': handle_special_operation,
+        'unit_conversion': handle_special_operation,
+        
+        # Initial stock creation
+        'initial_stock': handle_initial_stock,
+        
+        # Recount operations
+        'recount': handle_recount_adjustment_clean,
+    }
+
+OPERATION_HANDLERS = _initialize_handlers()
