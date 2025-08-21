@@ -222,7 +222,7 @@ def _execute_deduction_plan_internal(deduction_plan, item_id):
             lot = db.session.get(InventoryLot, lot_id) # Changed to InventoryLot
             if lot:
                 old_remaining = lot.remaining_quantity
-                lot.remaining_quantity -= deduct_from_quantity
+                lot.remaining_quantity -= deduct_quantity
                 logger.info(f"DEDUCTION EXECUTE: Lot {lot_id} remaining: {old_remaining} -> {lot.remaining_quantity}")
             else:
                 logger.error(f"DEDUCTION EXECUTE: Lot {lot_id} not found!")
@@ -257,7 +257,7 @@ def _record_deduction_plan_internal(item_id, deduction_plan, change_type, notes,
                 inventory_item_id=item_id,
                 organization_id=item.organization_id,
                 change_type=change_type,
-                quantity_change=-deduct_from_quantity,  # Individual lot deduction amount
+                quantity_change=-deduct_quantity,  # Individual lot deduction amount
                 remaining_quantity=0,  # This is a deduction record, not a lot
                 notes=f"{notes} (from lot {lot_id}: -{deduct_quantity})",
                 created_by=created_by,

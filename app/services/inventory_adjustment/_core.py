@@ -1,6 +1,7 @@
 import logging
 from app.models import db, InventoryItem, UnifiedInventoryHistory
 from ._handlers import get_operation_handler
+from app.services.unit_conversion import ConversionEngine
 from ._validation import validate_inventory_fifo_sync
 
 logger = logging.getLogger(__name__)
@@ -31,11 +32,29 @@ def process_inventory_adjustment(item_id, change_type, quantity, notes=None, cre
         return False, f"Unknown inventory change type: '{change_type}'"
 
     try:
+        # Normalize quantity to the item's canonical unit if a different unit was provided
+        normalized_quantity = quantity
+        if unit and item.unit and unit != item.unit:
+            try:
+                conv = ConversionEngine.convert_units(
+                    amount=float(quantity),
+                    from_unit=unit,
+                    to_unit=item.unit,
+                    ingredient_id=item.id,
+                    density=item.density
+                )
+                normalized_quantity = conv['converted_value']
+                logger.info(f"UNIT NORMALIZATION: {quantity} {unit} -> {normalized_quantity} {item.unit} for item {item.id}")
+            except Exception as e:
+                db.session.rollback()
+                logger.error(f"Unit conversion failed for item {item.id}: {e}")
+                return False, f"Unit conversion failed: {str(e)}"
+
         # Call the handler - it should NOT modify item.quantity directly
         # Handlers should return (success, message, quantity_delta)
         result = handler(
             item=item,
-            quantity=quantity,
+            quantity=normalized_quantity,
             change_type=change_type,  # Original intent preserved
             notes=notes,
             created_by=created_by,
@@ -46,7 +65,7 @@ def process_inventory_adjustment(item_id, change_type, quantity, notes=None, cre
             sale_price=sale_price,
             order_id=order_id,
             target_quantity=target_quantity,
-            unit=unit
+            unit=item.unit or unit
         )
 
         # Handle different return formats for backwards compatibility

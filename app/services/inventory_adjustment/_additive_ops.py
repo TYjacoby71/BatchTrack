@@ -6,7 +6,7 @@ They should NEVER directly modify item.quantity.
 """
 
 import logging
-from app.models import db
+from app.models import db, UnifiedInventoryHistory
 from ._fifo_ops import _internal_add_fifo_entry_enhanced
 
 logger = logging.getLogger(__name__)
@@ -25,7 +25,7 @@ def handle_restock(item, quantity, change_type, notes=None, created_by=None, cos
         # Use provided cost or item's default cost
         final_cost = cost_override if cost_override is not None else item.cost_per_unit
 
-        # Create FIFO entry
+        # Create FIFO entry (lot)
         success, message = _internal_add_fifo_entry_enhanced(
             item_id=item.id,
             quantity=quantity,
@@ -40,6 +40,19 @@ def handle_restock(item, quantity, change_type, notes=None, created_by=None, cos
 
         if not success:
             return False, f"Failed to create FIFO entry: {message}", 0
+
+        # Record additive event in unified history (events-only, no remaining qty semantics)
+        history_event = UnifiedInventoryHistory(
+            inventory_item_id=item.id,
+            change_type=change_type,
+            quantity_change=float(quantity),
+            unit=unit,
+            unit_cost=float(final_cost) if final_cost is not None else 0.0,
+            notes=notes,
+            created_by=created_by,
+            organization_id=item.organization_id
+        )
+        db.session.add(history_event)
 
         # Return delta for core to apply
         quantity_delta = float(quantity)
