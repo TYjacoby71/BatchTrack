@@ -53,3 +53,25 @@ def handle_additive_operation(item, quantity, change_type, notes=None, created_b
     except Exception as e:
         logger.error(f"Error in additive operation {change_type}: {str(e)}")
         return False, str(e)
+
+
+# Individual handler functions for each additive operation type
+def handle_restock(item, quantity, notes=None, created_by=None, cost_override=None, **kwargs):
+    """Handle restock operations"""
+    return handle_additive_operation(item, quantity, 'restock', notes, created_by, cost_override, **kwargs)
+
+def handle_manual_addition(item, quantity, notes=None, created_by=None, **kwargs):
+    """Handle manual addition operations"""
+    return handle_additive_operation(item, quantity, 'manual_addition', notes, created_by, **kwargs)
+
+def handle_returned(item, quantity, notes=None, created_by=None, **kwargs):
+    """Handle returned inventory operations"""
+    return handle_additive_operation(item, quantity, 'returned', notes, created_by, **kwargs)
+
+def handle_refunded(item, quantity, notes=None, created_by=None, **kwargs):
+    """Handle refunded inventory operations"""
+    return handle_additive_operation(item, quantity, 'refunded', notes, created_by, **kwargs)
+
+def handle_finished_batch(item, quantity, notes=None, created_by=None, **kwargs):
+    """Handle finished batch operations"""
+    return handle_additive_operation(item, quantity, 'finished_batch', notes, created_by, **kwargs)
