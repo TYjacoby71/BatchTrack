@@ -144,72 +144,27 @@ def create_new_fifo_lot(item_id, quantity, change_type, unit=None, notes=None, c
 def process_fifo_deduction(item_id, quantity_to_deduct, change_type, notes=None, created_by=None, batch_id=None):
     """
     Process inventory deduction using FIFO (First In, First Out) logic.
-    Deducts from oldest lots first and creates appropriate audit trail.
+    This is a high-level function that calculates, executes, and audits the deduction.
     """
     try:
-        from app.models import InventoryItem
-        from app.models.inventory_lot import InventoryLot
+        # Calculate deduction plan
+        deduction_plan, error = calculate_fifo_deduction_plan(item_id, abs(float(quantity_to_deduct)), change_type)
+        if error:
+            return False, error
 
-        # Get all available lots for this item (oldest first - FIFO)
-        item = db.session.get(InventoryItem, item_id)
-        available_lots = InventoryLot.query.filter(
-            and_(
-                InventoryLot.inventory_item_id == item_id,
-                InventoryLot.organization_id == item.organization_id,
-                InventoryLot.remaining_quantity > 0
-            )
-        ).order_by(InventoryLot.received_date.asc()).all()
+        # Execute the plan
+        success, error = execute_fifo_deduction_plan(deduction_plan, item_id)
+        if not success:
+            return False, error
 
-        if not available_lots:
-            logger.warning(f"FIFO: No available lots for deduction from item {item_id}")
-            return True, "No inventory to deduct from"
+        # Create audit trail
+        audit_success = create_fifo_deduction_audit_trail(
+            item_id, deduction_plan, change_type, notes, created_by, batch_id
+        )
+        if not audit_success:
+            logger.warning(f"FIFO: Deduction succeeded but audit trail creation failed for item {item_id}")
 
-        remaining_to_deduct = abs(float(quantity_to_deduct))
-        deductions = []
-
-        for lot in available_lots:
-            if remaining_to_deduct <= 0:
-                break
-
-            available_qty = lot.remaining_quantity
-            deduct_from_lot = min(remaining_to_deduct, available_qty)
-
-            # Update remaining quantity in the lot
-            lot.remaining_quantity -= deduct_from_lot
-            remaining_to_deduct -= deduct_from_lot
-
-            # Create deduction record in unified history
-            deduction_entry = UnifiedInventoryHistory(
-                inventory_item_id=item_id,
-                change_type=change_type,
-                quantity_change=-deduct_from_lot,
-                unit=lot.unit,
-                unit_cost=lot.unit_cost,
-                notes=notes,
-                created_by=created_by,
-                batch_id=batch_id,
-                is_perishable=lot.expiration_date is not None,  # Inherit perishable from lot
-                shelf_life_days=lot.shelf_life_days,
-                expiration_date=lot.expiration_date,
-                affected_lot_id=lot.id,  # Link to the affected lot
-                organization_id=lot.organization_id
-            )
-
-            db.session.add(deduction_entry)
-            deductions.append({
-                'lot_id': lot.id,
-                'fifo_code': lot.fifo_code,
-                'amount': deduct_from_lot,
-                'unit': lot.unit
-            })
-
-            logger.info(f"FIFO: Deducted {deduct_from_lot} {lot.unit} from lot {lot.fifo_code} (ID: {lot.id})")
-
-        if remaining_to_deduct > 0:
-            logger.warning(f"FIFO: Could not deduct full amount. {remaining_to_deduct} units remaining")
-            return False, f"Insufficient inventory. {remaining_to_deduct} units could not be deducted"
-
-        return True, f"Deducted from {len(deductions)} lots"
+        return True, f"Deducted from {len(deduction_plan)} lots"
 
     except Exception as e:
         logger.error(f"FIFO: Error in deductive operation for item {item_id}: {str(e)}")
@@ -297,7 +252,7 @@ def execute_fifo_deduction_plan(deduction_plan, item_id):
         return False, str(e)
 
 
-def create_fifo_deduction_audit_trail(item_id, deduction_plan, change_type, notes, created_by=None, fifo_reference_id=None):
+def create_fifo_deduction_audit_trail(item_id, deduction_plan, change_type, notes, created_by=None, batch_id=None, fifo_reference_id=None):
     """
     Create audit trail records for each lot consumed in a FIFO deduction.
     This provides detailed tracking of exactly which lots were affected.
@@ -327,6 +282,7 @@ def create_fifo_deduction_audit_trail(item_id, deduction_plan, change_type, note
                 unit_cost=consumed_lot.unit_cost,
                 notes=notes,
                 created_by=created_by,
+                batch_id=batch_id,
                 organization_id=organization_id,
                 is_perishable=consumed_lot.expiration_date is not None,
                 expiration_date=consumed_lot.expiration_date,
@@ -362,9 +318,10 @@ def calculate_total_available_inventory(item_id):
     return sum(float(lot.remaining_quantity) for lot in lots)
 
 
-def credit_back_to_specific_lot(lot_id, quantity, notes=None, created_by=None):
+def credit_specific_lot(lot_id, quantity, notes=None, created_by=None):
     """
     Credit inventory back to a specific FIFO lot.
+    This is the canonical function used by all inventory adjustment operations.
     Used for reservation releases, returns, and corrections.
     """
     try:
@@ -388,11 +345,3 @@ def credit_back_to_specific_lot(lot_id, quantity, notes=None, created_by=None):
     except Exception as e:
         db.session.rollback()
         return False, f"Error crediting lot: {str(e)}"
-
-
-def credit_specific_lot(lot_id, quantity, notes=None, created_by=None):
-    """
-    Credit inventory back to a specific FIFO lot.
-    This is the canonical function used by all inventory adjustment operations.
-    """
-    return credit_back_to_specific_lot(lot_id, quantity, notes, created_by)
