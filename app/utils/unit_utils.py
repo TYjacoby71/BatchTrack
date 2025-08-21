@@ -29,59 +29,44 @@ def setup_logging(app):
 
 def get_global_unit_list():
     """Get list of all active units, including both standard and organization-specific custom units"""
-    # Cache the result to prevent multiple database calls
-    if not hasattr(get_global_unit_list, '_cache'):
-        logger.info("Getting global unit list")
+    logger.info("Getting global unit list")
+
+    try:
+        from flask_login import current_user
+        from ..models import Unit
 
         # Base query for active units
         query = Unit.query.filter_by(is_active=True)
 
         # If user is authenticated, include their organization's custom units
-        try:
-            from flask_login import current_user
-            if current_user and current_user.is_authenticated:
-                if current_user.organization_id:
-                    # Regular user: show standard units + their org's custom units
+        if current_user and current_user.is_authenticated:
+            if current_user.organization_id:
+                # Regular user: show standard units + their org's custom units
+                query = query.filter(
+                    (Unit.is_custom == False) |
+                    (Unit.organization_id == current_user.organization_id)
+                )
+            elif current_user.user_type == 'developer':
+                # Developer: check for selected organization
+                from flask import session
+                selected_org_id = session.get('dev_selected_org_id')
+                if selected_org_id:
                     query = query.filter(
                         (Unit.is_custom == False) |
-                        (Unit.organization_id == current_user.organization_id)
+                        (Unit.organization_id == selected_org_id)
                     )
-                elif current_user.user_type == 'developer':
-                    # Developer: check for selected organization
-                    from flask import session
-                    selected_org_id = session.get('dev_selected_org_id')
-                    if selected_org_id:
-                        query = query.filter(
-                            (Unit.is_custom == False) |
-                            (Unit.organization_id == selected_org_id)
-                        )
-                    # Otherwise show all units for system-wide developer access
-                else:
-                    # User without organization: only show standard units
-                    query = query.filter(Unit.is_custom == False)
+                # Otherwise show all units for system-wide developer access
             else:
-                # Unauthenticated: only show standard units
+                # User without organization: only show standard units
                 query = query.filter(Unit.is_custom == False)
+        else:
+            # Unauthenticated: only show standard units
+            query = query.filter(Unit.is_custom == False)
 
-            # Order by type and name for consistent display
-            get_global_unit_list._cache = query.order_by(Unit.unit_type, Unit.name).all()
+        # Order by type and name for consistent display
+        units = query.order_by(Unit.unit_type, Unit.name).all()
 
-        except Exception as e:
-            logger.error(f"Error getting global unit list: {e}")
-            # Create fallback unit objects
-            class FallbackUnitLocal: # Renamed to avoid conflict with the dataclass
-                def __init__(self, symbol, name, unit_type):
-                    self.symbol = symbol
-                    self.name = name
-                    self.type = unit_type
-
-            get_global_unit_list._cache = [
-                FallbackUnitLocal('g', 'gram', 'weight'),
-                FallbackUnitLocal('ml', 'milliliter', 'volume'),
-                FallbackUnitLocal('count', 'count', 'quantity')
-            ]
-
-        if not get_global_unit_list._cache:
+        if not units:
             logger.warning("No units found, creating fallback units")
             # Create fallback units if none exist
             fallback_units = [
@@ -92,14 +77,24 @@ def get_global_unit_list():
                 FallbackUnit('fl oz', ('fl oz',), 1.0),
                 FallbackUnit('count', ('count',), 1.0)
             ]
-            get_global_unit_list._cache = fallback_units
+            return fallback_units
 
-    return get_global_unit_list._cache
+        return units
 
-def clear_unit_cache():
-    """Clear the unit list cache."""
-    if hasattr(get_global_unit_list, '_cache'):
-        delattr(get_global_unit_list, '_cache')
+    except Exception as e:
+        logger.error(f"Error getting global unit list: {e}")
+        # Create fallback unit objects
+        class FallbackUnitLocal: # Renamed to avoid conflict with the dataclass
+            def __init__(self, symbol, name, unit_type):
+                self.symbol = symbol
+                self.name = name
+                self.type = unit_type
+
+        return [
+            FallbackUnitLocal('g', 'gram', 'weight'),
+            FallbackUnitLocal('ml', 'milliliter', 'volume'),
+            FallbackUnitLocal('count', 'count', 'quantity')
+        ]
 
 def validate_density_requirements(from_unit, to_unit, ingredient=None):
     """
