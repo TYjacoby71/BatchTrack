@@ -35,8 +35,8 @@ def handle_recount(item, quantity, notes=None, created_by=None, **kwargs):
             # Need to deduct inventory - use standard deductive logic
             from ._fifo_ops import _handle_deductive_operation_internal
             success = _handle_deductive_operation_internal(
-                item=item,
-                quantity=abs(delta),
+                inventory_item_id=item.id,
+                quantity_to_deduct=abs(delta),
                 change_type='recount',
                 notes=notes or f'Recount adjustment: -{abs(delta)}',
                 created_by=created_by
@@ -125,7 +125,7 @@ def _handle_recount_increase(item, delta_needed, notes, created_by, **kwargs):
         # Phase 2: Create new lot for any remaining overflow
         if remaining_to_add > 0:
             success, error = _internal_add_fifo_entry_enhanced(
-                inventory_item_id=item.id,
+                item_id=item.id,
                 quantity=remaining_to_add,
                 change_type='recount',
                 unit=getattr(item, 'unit', 'count'),
