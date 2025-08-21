@@ -162,7 +162,7 @@ def view_inventory(id):
         expired_total = sum(float(entry.remaining_quantity) for entry in expired_entries)
 
     from ...utils.timezone_utils import TimezoneUtils
-    return render_template('inventory/view.html',
+    return render_template('pages/inventory/view.html',
                          abs=abs,
                          item=item,
                          history=history,

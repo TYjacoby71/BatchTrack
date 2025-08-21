@@ -1,4 +1,3 @@
-
 <div class="modal fade" id="finishBatchModal" tabindex="-1">
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
@@ -7,7 +6,7 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
-        <form id="finishBatchModalForm" method="post" action="{{ url_for('finish_batch.complete_batch', batch_id=batch.id) }}">
+        <form id="finishBatchModalForm" method="post" action="{{ url_for('batches.finish_batch.complete_batch', batch_id=batch.id) }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
           <!-- Basic Batch Information Section -->
@@ -36,7 +35,7 @@
 
             <div class="form-group mb-3">
               <label for="final_quantity">Final Quantity</label>
-              <input type="number" 
+              <input type="number"
                      id="final_quantity"
                      name="final_quantity"
                      class="form-control"
@@ -132,7 +131,7 @@
                   <tbody id="containerTableBody">
                     <!-- Combined containers grouped by container ID -->
                     {% set combined_containers = {} %}
-                    
+
                     <!-- Process regular containers -->
                     {% for container in batch.containers %}
                       {% set container_id = container.container_id %}
@@ -189,11 +188,11 @@
                       <td>{{ data.container.storage_amount or 0 }} {{ data.container.storage_unit or 'count' }}</td>
                       <td>{{ data.total_used }}</td>
                       <td>
-                        <input type="number" 
-                               name="container_final_{{ container_id }}" 
+                        <input type="number"
+                               name="container_final_{{ container_id }}"
                                class="form-control form-control-sm container-final-input"
-                               value="{{ data.total_used }}" 
-                               min="0" 
+                               value="{{ data.total_used }}"
+                               min="0"
                                max="{{ data.max_available }}"
                                data-container-id="{{ container_id }}"
                                data-container-size="{{ data.container.storage_amount or 0 }}"
@@ -294,14 +293,14 @@ function updateExpirationDate() {
 function loadVariants() {
   const productSelect = document.getElementById('product_id');
   const variantSelect = document.getElementById('variant_id');
-  
+
   if (!productSelect || !variantSelect) {
     console.error('Product or variant select not found');
     return;
   }
 
   const productId = productSelect.value;
-  
+
   // Reset variant dropdown
   variantSelect.innerHTML = '<option value="">Loading variants...</option>';
   variantSelect.disabled = true;
@@ -327,7 +326,7 @@ function loadVariants() {
   })
   .then(data => {
     variantSelect.innerHTML = '<option value="">Select Variant</option>';
-    
+
     if (data.variants && data.variants.length > 0) {
       data.variants.forEach(variant => {
         const option = document.createElement('option');
