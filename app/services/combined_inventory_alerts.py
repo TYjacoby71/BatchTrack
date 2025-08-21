@@ -1,4 +1,5 @@
 from ..models import db, InventoryItem, ProductSKU
+from ..models.inventory_lot import InventoryLot
 from sqlalchemy import and_
 from typing import List, Dict
 from datetime import timedelta
@@ -15,25 +16,28 @@ class CombinedInventoryAlertService:
             from ..models import InventoryItem, UnifiedInventoryHistory
             from ..utils.timezone_utils import TimezoneUtils
             from flask_login import current_user
+            from ..models.inventory_lot import InventoryLot
 
             current_time = TimezoneUtils.utc_now()
             expiration_cutoff = current_time + timedelta(days=days_ahead)
 
-            # Get expired FIFO entries (using UnifiedInventoryHistory)
-            expired_fifo_entries = db.session.query(UnifiedInventoryHistory).filter(
-                UnifiedInventoryHistory.expiration_date < current_time,
-                UnifiedInventoryHistory.remaining_quantity > 0,
-                UnifiedInventoryHistory.organization_id == current_user.organization_id if current_user.organization_id else True
+            # Get expired FIFO entries (using InventoryLot)
+            expired_fifo_entries = db.session.query(InventoryLot).filter(
+                and_(
+                    InventoryLot.expiration_date < current_time,
+                    InventoryLot.remaining_quantity > 0,
+                    InventoryLot.organization_id == current_user.organization_id if current_user.organization_id else True
+                )
             ).all()
 
-            # Get expiring soon FIFO entries (using UnifiedInventoryHistory)
-            expiring_fifo_entries = db.session.query(UnifiedInventoryHistory).filter(
+            # Get expiring soon FIFO entries (using InventoryLot)
+            expiring_fifo_entries = db.session.query(InventoryLot).filter(
                 and_(
-                    UnifiedInventoryHistory.expiration_date >= current_time,
-                    UnifiedInventoryHistory.expiration_date <= expiration_cutoff,
-                    UnifiedInventoryHistory.remaining_quantity > 0
+                    InventoryLot.expiration_date >= current_time,
+                    InventoryLot.expiration_date <= expiration_cutoff,
+                    InventoryLot.remaining_quantity > 0
                 ),
-                UnifiedInventoryHistory.organization_id == current_user.organization_id if current_user.organization_id else True
+                InventoryLot.organization_id == current_user.organization_id if current_user.organization_id else True
             ).all()
 
             # Get expired product inventory items
@@ -89,6 +93,8 @@ class CombinedInventoryAlertService:
     def get_low_stock_ingredients():
         """Get all raw ingredients/containers that are below their low stock threshold"""
         from flask_login import current_user
+        # Query InventoryItem for raw materials with low stock thresholds
+        # Then check if total remaining quantity across all lots is below threshold
         query = InventoryItem.query.filter(
             and_(
                 InventoryItem.low_stock_threshold > 0,

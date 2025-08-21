@@ -54,14 +54,15 @@ class InventoryItem(ScopedModelMixin, db.Model):
 
         from datetime import datetime
         from sqlalchemy import and_
+        from app.models.inventory_lot import InventoryLot
 
         today = datetime.now().date()
-        expired_total = db.session.query(db.func.sum(InventoryHistory.remaining_quantity))\
+        expired_total = db.session.query(db.func.sum(InventoryLot.remaining_quantity))\
             .filter(and_(
-                InventoryHistory.inventory_item_id == self.id,
-                InventoryHistory.remaining_quantity > 0,
-                InventoryHistory.expiration_date != None,
-                InventoryHistory.expiration_date < today
+                InventoryLot.inventory_item_id == self.id,
+                InventoryLot.remaining_quantity > 0,
+                InventoryLot.expiration_date != None,
+                InventoryLot.expiration_date < today
             )).scalar() or 0
 
         return max(0, self.quantity - expired_total)
@@ -74,14 +75,15 @@ class InventoryItem(ScopedModelMixin, db.Model):
 
         from datetime import datetime
         from sqlalchemy import and_
+        from app.models.inventory_lot import InventoryLot
 
         today = datetime.now().date()
-        return db.session.query(db.func.sum(InventoryHistory.remaining_quantity))\
+        return db.session.query(db.func.sum(InventoryLot.remaining_quantity))\
             .filter(and_(
-                InventoryHistory.inventory_item_id == self.id,
-                InventoryHistory.remaining_quantity > 0,
-                InventoryHistory.expiration_date != None,
-                InventoryHistory.expiration_date < today
+                InventoryLot.inventory_item_id == self.id,
+                InventoryLot.remaining_quantity > 0,
+                InventoryLot.expiration_date != None,
+                InventoryLot.expiration_date < today
             )).scalar() or 0
 
 class InventoryHistory(ScopedModelMixin, db.Model):

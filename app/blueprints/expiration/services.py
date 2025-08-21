@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, date, timezone
-from ...models import db, InventoryItem, InventoryHistory, ProductSKU, ProductSKUHistory, Batch
+from ...models import db, InventoryItem, InventoryHistory, ProductSKU, ProductSKUHistory, Batch, InventoryLot
 from sqlalchemy import and_, or_
 from typing import List, Dict, Optional, Tuple
 from flask_login import current_user
@@ -584,46 +584,47 @@ class ExpirationService:
             # Calculate the future date
             future_date = datetime.now(timezone.utc) + timedelta(days=days_ahead)
 
-            # Query ingredients with organization scoping
-            query = db.session.query(InventoryItem).filter(
-                InventoryItem.expiration_date.isnot(None),
-                InventoryItem.expiration_date <= future_date,
-                InventoryItem.quantity > 0
+            # Query inventory lots with organization scoping
+            query = db.session.query(InventoryLot).filter(
+                InventoryLot.expiration_date.isnot(None),
+                InventoryLot.expiration_date <= future_date,
+                InventoryLot.remaining_quantity > 0,
+                InventoryLot.is_perishable == True,
             )
 
             # Apply organization scoping
             if current_user.is_authenticated and current_user.organization_id:
-                query = query.filter(InventoryItem.organization_id == current_user.organization_id)
+                query = query.filter(InventoryLot.organization_id == current_user.organization_id)
             elif current_user.user_type == 'developer':
                 # Developers can see all or selected org
                 from flask import session
                 selected_org_id = session.get('dev_selected_org_id')
                 if selected_org_id:
-                    query = query.filter(InventoryItem.organization_id == selected_org_id)
+                    query = query.filter(InventoryLot.organization_id == selected_org_id)
 
             # Order by expiration date
-            items = query.order_by(InventoryItem.expiration_date.asc()).all()
+            lots = query.order_by(InventoryLot.expiration_date.asc()).all()
 
             results = []
-            for item in items:
+            for lot in lots:
                 # Calculate days until expiration
-                if item.expiration_date:
-                    days_left = (item.expiration_date.date() - datetime.now(timezone.utc).date()).days
-                    expiration_time = item.expiration_date.strftime('%H:%M:%S') if item.expiration_date else '00:00:00'
+                if lot.expiration_date:
+                    days_left = (lot.expiration_date.date() - datetime.now(timezone.utc).date()).days
+                    expiration_time = lot.expiration_date.strftime('%H:%M:%S') if lot.expiration_date else '00:00:00'
                 else:
                     days_left = None
                     expiration_time = '00:00:00'
 
                 results.append({
-                    'id': item.id,
-                    'ingredient_name': item.ingredient_name or 'Unknown Ingredient',
-                    'quantity': float(item.quantity) if item.quantity else 0.0,
-                    'unit': item.unit or '',
-                    'lot_number': item.lot_number or '-',
-                    'expiration_date': item.expiration_date.date() if item.expiration_date else None,
+                    'id': lot.id,
+                    'ingredient_name': lot.inventory_item.name if lot.inventory_item else 'Unknown Ingredient',
+                    'quantity': float(lot.remaining_quantity) if lot.remaining_quantity else 0.0,
+                    'unit': lot.unit or '',
+                    'lot_number': lot.lot_number or f"LOT-{lot.id}",
+                    'expiration_date': lot.expiration_date.date() if lot.expiration_date else None,
                     'expiration_time': expiration_time,
                     'days_left': days_left,
-                    'fifo_code': item.fifo_code or f"#{item.id}"
+                    'fifo_code': lot.fifo_code or f"#{lot.id}"
                 })
 
             return results
@@ -631,3 +632,66 @@ class ExpirationService:
         except Exception as e:
             logging.error(f"Error getting expiring items: {e}")
             return []
+
+    @staticmethod
+    def get_expired_inventory():
+        """Get all expired inventory items using lots"""
+        from datetime import datetime
+        from sqlalchemy import and_
+        from app.models import InventoryLot
+        from ...utils.timezone_utils import TimezoneUtils
+
+        now_utc = TimezoneUtils.utc_now()
+
+        # Get all lots that are expired and still have remaining quantity
+        expired_lots = db.session.query(InventoryLot).filter(
+            and_(
+                InventoryLot.remaining_quantity > 0,
+                InventoryLot.expiration_date != None,
+                InventoryLot.expiration_date < now_utc,
+                InventoryLot.is_perishable == True
+            )
+        )
+
+        # Apply organization scoping
+        if current_user.is_authenticated and current_user.organization_id:
+            expired_lots = expired_lots.filter(InventoryLot.organization_id == current_user.organization_id)
+        elif current_user.user_type == 'developer':
+            from flask import session
+            selected_org_id = session.get('dev_selected_org_id')
+            if selected_org_id:
+                expired_lots = expired_lots.filter(InventoryLot.organization_id == selected_org_id)
+
+        return expired_lots.all()
+
+    @staticmethod
+    def get_expiring_soon(days_ahead=7):
+        """Get inventory expiring within the specified days using lots"""
+        from datetime import datetime, timedelta
+        from sqlalchemy import and_
+        from app.models import InventoryLot
+        from ...utils.timezone_utils import TimezoneUtils
+
+        now_utc = TimezoneUtils.utc_now()
+        cutoff_date_utc = now_utc + timedelta(days=days_ahead)
+
+        expiring_lots = db.session.query(InventoryLot).filter(
+            and_(
+                InventoryLot.remaining_quantity > 0,
+                InventoryLot.expiration_date != None,
+                InventoryLot.expiration_date > now_utc,
+                InventoryLot.expiration_date <= cutoff_date_utc,
+                InventoryLot.is_perishable == True
+            )
+        )
+
+        # Apply organization scoping
+        if current_user.is_authenticated and current_user.organization_id:
+            expiring_lots = expiring_lots.filter(InventoryLot.organization_id == current_user.organization_id)
+        elif current_user.user_type == 'developer':
+            from flask import session
+            selected_org_id = session.get('dev_selected_org_id')
+            if selected_org_id:
+                expiring_lots = expiring_lots.filter(InventoryLot.organization_id == selected_org_id)
+
+        return expiring_lots.all()

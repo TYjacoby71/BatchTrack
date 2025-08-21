@@ -42,6 +42,32 @@ class InventoryLot(ScopedModelMixin, db.Model):
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)
     
     # Relationships
+    inventory_item = db.relationship('InventoryItem', foreign_keys=[inventory_item_id], backref='lots')
+    organization = db.relationship('Organization', foreign_keys=[organization_id])
+    
+    @property
+    def is_perishable(self):
+        """Check if this lot is perishable based on expiration date or parent item"""
+        return (self.expiration_date is not None) or (self.inventory_item and self.inventory_item.is_perishable)
+    
+    @property
+    def is_expired(self):
+        """Check if this lot is expired"""
+        if not self.expiration_date:
+            return False
+        from datetime import datetime
+        return self.expiration_date < datetime.now().date()
+    
+    @property
+    def days_until_expiration(self):
+        """Get days until expiration (negative if already expired)"""
+        if not self.expiration_date:
+            return None
+        from datetime import datetime
+        delta = self.expiration_date - datetime.now().date()
+        return delta.days
+    
+    # Relationships
     inventory_item = db.relationship('InventoryItem', backref='lots')
     user = db.relationship('User')
     organization = db.relationship('Organization')

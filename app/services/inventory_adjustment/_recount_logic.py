@@ -125,12 +125,12 @@ def _handle_recount_increase(item, delta_needed, notes, created_by, **kwargs):
         # Phase 2: Create new lot for any remaining overflow
         if remaining_to_add > 0:
             success, error = _internal_add_fifo_entry_enhanced(
-                item_id=item.id,
+                inventory_item_id=item.id,
                 quantity=remaining_to_add,
                 change_type='recount',
                 unit=getattr(item, 'unit', 'count'),
                 notes=f'Recount overflow - new lot: +{remaining_to_add}',
-                cost_per_unit=item.cost_per_unit,
+                cost_per_unit=getattr(item, 'cost_per_unit', 0.0) or 0.0,
                 created_by=created_by,
                 **kwargs
             )
