@@ -8,17 +8,60 @@ from app.utils.timezone_utils import TimezoneUtils
 logger = logging.getLogger(__name__)
 
 
-# ========== SPECIALIST HANDLER FUNCTIONS ==========
+# ========== OPERATION TYPE CONFIGURATIONS ==========
 
-def handle_restock(item, quantity, notes=None, created_by=None, cost_override=None, **kwargs):
-    """Handle restocking inventory - adds new FIFO lot"""
+ADDITIVE_OPERATIONS = {
+    'restock': {'message': 'Restocked', 'use_cost_override': True},
+    'manual_addition': {'message': 'Added manually', 'use_cost_override': False},
+    'returned': {'message': 'Returned', 'use_cost_override': False},
+    'refunded': {'message': 'Refunded', 'use_cost_override': False},
+    'finished_batch': {'message': 'Added from finished batch', 'use_cost_override': False},
+    'unreserved': {'message': 'Unreserved', 'use_cost_override': False},
+    'initial_stock': {'message': 'Initial stock added', 'use_cost_override': True}
+}
+
+DEDUCTIVE_OPERATIONS = {
+    'use': {'message': 'Used'},
+    'batch': {'message': 'Used in batch'},
+    'sale': {'message': 'Sold'},
+    'spoil': {'message': 'Marked as spoiled'},
+    'trash': {'message': 'Trashed'},
+    'expired': {'message': 'Removed (expired)'},
+    'damaged': {'message': 'Removed (damaged)'},
+    'quality_fail': {'message': 'Removed (quality fail)'},
+    'sample': {'message': 'Used for sample'},
+    'tester': {'message': 'Used for tester'},
+    'gift': {'message': 'Gave as gift'},
+    'reserved': {'message': 'Reserved'},
+    'recount_deduction': {'message': 'Recount adjustment'}
+}
+
+SPECIAL_OPERATIONS = {
+    'cost_override': 'handle_cost_override_special',
+    'recount': 'handle_recount_special'  # Handled in _recount_logic.py
+}
+
+
+# ========== UNIFIED HANDLERS ==========
+
+def handle_additive_operation(item, quantity, change_type, notes=None, created_by=None, cost_override=None, **kwargs):
+    """Universal handler for all additive operations"""
     try:
-        cost_per_unit = cost_override if cost_override is not None else item.cost_per_unit
+        if change_type not in ADDITIVE_OPERATIONS:
+            return False, f"Unknown additive operation: {change_type}"
+        
+        config = ADDITIVE_OPERATIONS[change_type]
+        
+        # Determine cost per unit
+        if config.get('use_cost_override') and cost_override is not None:
+            cost_per_unit = cost_override
+        else:
+            cost_per_unit = item.cost_per_unit
         
         success, error = _internal_add_fifo_entry_enhanced(
             item_id=item.id,
             quantity=quantity,
-            change_type='restock',
+            change_type=change_type,
             unit=getattr(item, 'unit', 'count'),
             notes=notes,
             cost_per_unit=cost_per_unit,
@@ -27,325 +70,39 @@ def handle_restock(item, quantity, notes=None, created_by=None, cost_override=No
         )
         
         if success:
-            return True, f"Restocked {quantity} {getattr(item, 'unit', 'units')}"
+            message = f"{config['message']} {quantity} {getattr(item, 'unit', 'units')}"
+            return True, message
         return False, error
         
     except Exception as e:
-        logger.error(f"Error in handle_restock: {str(e)}")
+        logger.error(f"Error in additive operation {change_type}: {str(e)}")
         return False, str(e)
 
 
-def handle_manual_addition(item, quantity, notes=None, created_by=None, **kwargs):
-    """Handle manual inventory addition"""
+def handle_deductive_operation(item, quantity, change_type, notes=None, created_by=None, **kwargs):
+    """Universal handler for all deductive operations"""
     try:
-        success, error = _internal_add_fifo_entry_enhanced(
-            item_id=item.id,
-            quantity=quantity,
-            change_type='manual_addition',
-            unit=getattr(item, 'unit', 'count'),
-            notes=notes,
-            cost_per_unit=item.cost_per_unit,
-            created_by=created_by,
-            **kwargs
+        if change_type not in DEDUCTIVE_OPERATIONS:
+            return False, f"Unknown deductive operation: {change_type}"
+        
+        config = DEDUCTIVE_OPERATIONS[change_type]
+        
+        success = _handle_deductive_operation_internal(
+            item, quantity, change_type, notes, created_by, **kwargs
         )
         
         if success:
-            return True, f"Added {quantity} {getattr(item, 'unit', 'units')} manually"
-        return False, error
-        
-    except Exception as e:
-        logger.error(f"Error in handle_manual_addition: {str(e)}")
-        return False, str(e)
-
-
-def handle_returned(item, quantity, notes=None, created_by=None, **kwargs):
-    """Handle returned inventory"""
-    try:
-        success, error = _internal_add_fifo_entry_enhanced(
-            item_id=item.id,
-            quantity=quantity,
-            change_type='returned',
-            unit=getattr(item, 'unit', 'count'),
-            notes=notes,
-            cost_per_unit=item.cost_per_unit,
-            created_by=created_by,
-            **kwargs
-        )
-        
-        if success:
-            return True, f"Returned {quantity} {getattr(item, 'unit', 'units')}"
-        return False, error
-        
-    except Exception as e:
-        logger.error(f"Error in handle_returned: {str(e)}")
-        return False, str(e)
-
-
-def handle_refunded(item, quantity, notes=None, created_by=None, **kwargs):
-    """Handle refunded inventory"""
-    try:
-        success, error = _internal_add_fifo_entry_enhanced(
-            item_id=item.id,
-            quantity=quantity,
-            change_type='refunded',
-            unit=getattr(item, 'unit', 'count'),
-            notes=notes,
-            cost_per_unit=item.cost_per_unit,
-            created_by=created_by,
-            **kwargs
-        )
-        
-        if success:
-            return True, f"Refunded {quantity} {getattr(item, 'unit', 'units')}"
-        return False, error
-        
-    except Exception as e:
-        logger.error(f"Error in handle_refunded: {str(e)}")
-        return False, str(e)
-
-
-def handle_finished_batch(item, quantity, notes=None, created_by=None, batch_id=None, **kwargs):
-    """Handle finished batch addition"""
-    try:
-        success, error = _internal_add_fifo_entry_enhanced(
-            item_id=item.id,
-            quantity=quantity,
-            change_type='finished_batch',
-            unit=getattr(item, 'unit', 'count'),
-            notes=notes,
-            cost_per_unit=item.cost_per_unit,
-            created_by=created_by,
-            batch_id=batch_id,
-            **kwargs
-        )
-        
-        if success:
-            return True, f"Added {quantity} {getattr(item, 'unit', 'units')} from finished batch"
-        return False, error
-        
-    except Exception as e:
-        logger.error(f"Error in handle_finished_batch: {str(e)}")
-        return False, str(e)
-
-
-def handle_use(item, quantity, notes=None, created_by=None, **kwargs):
-    """Handle using inventory (generic deduction)"""
-    try:
-        success = _handle_deductive_operation(
-            item, quantity, 'use', notes, created_by, **kwargs
-        )
-        
-        if success:
-            return True, f"Used {quantity} {getattr(item, 'unit', 'units')}"
+            message = f"{config['message']} {quantity} {getattr(item, 'unit', 'units')}"
+            return True, message
         return False, "Insufficient inventory"
         
     except Exception as e:
-        logger.error(f"Error in handle_use: {str(e)}")
+        logger.error(f"Error in deductive operation {change_type}: {str(e)}")
         return False, str(e)
 
 
-def handle_batch(item, quantity, notes=None, created_by=None, batch_id=None, **kwargs):
-    """Handle batch consumption"""
-    try:
-        success = _handle_deductive_operation(
-            item, quantity, 'batch', notes, created_by, batch_id=batch_id, **kwargs
-        )
-        
-        if success:
-            return True, f"Used {quantity} {getattr(item, 'unit', 'units')} in batch"
-        return False, "Insufficient inventory"
-        
-    except Exception as e:
-        logger.error(f"Error in handle_batch: {str(e)}")
-        return False, str(e)
-
-
-def handle_sale(item, quantity, notes=None, created_by=None, sale_price=None, customer=None, order_id=None, **kwargs):
-    """Handle sale deduction"""
-    try:
-        success = _handle_deductive_operation(
-            item, quantity, 'sale', notes, created_by, 
-            sale_price=sale_price, customer=customer, order_id=order_id, **kwargs
-        )
-        
-        if success:
-            return True, f"Sold {quantity} {getattr(item, 'unit', 'units')}"
-        return False, "Insufficient inventory"
-        
-    except Exception as e:
-        logger.error(f"Error in handle_sale: {str(e)}")
-        return False, str(e)
-
-
-def handle_spoil(item, quantity, notes=None, created_by=None, **kwargs):
-    """Handle spoilage deduction"""
-    try:
-        success = _handle_deductive_operation(
-            item, quantity, 'spoil', notes, created_by, **kwargs
-        )
-        
-        if success:
-            return True, f"Marked {quantity} {getattr(item, 'unit', 'units')} as spoiled"
-        return False, "Insufficient inventory"
-        
-    except Exception as e:
-        logger.error(f"Error in handle_spoil: {str(e)}")
-        return False, str(e)
-
-
-def handle_trash(item, quantity, notes=None, created_by=None, **kwargs):
-    """Handle trash deduction"""
-    try:
-        success = _handle_deductive_operation(
-            item, quantity, 'trash', notes, created_by, **kwargs
-        )
-        
-        if success:
-            return True, f"Trashed {quantity} {getattr(item, 'unit', 'units')}"
-        return False, "Insufficient inventory"
-        
-    except Exception as e:
-        logger.error(f"Error in handle_trash: {str(e)}")
-        return False, str(e)
-
-
-def handle_expired(item, quantity, notes=None, created_by=None, **kwargs):
-    """Handle expired inventory deduction"""
-    try:
-        success = _handle_deductive_operation(
-            item, quantity, 'expired', notes, created_by, **kwargs
-        )
-        
-        if success:
-            return True, f"Removed {quantity} {getattr(item, 'unit', 'units')} (expired)"
-        return False, "Insufficient inventory"
-        
-    except Exception as e:
-        logger.error(f"Error in handle_expired: {str(e)}")
-        return False, str(e)
-
-
-def handle_damaged(item, quantity, notes=None, created_by=None, **kwargs):
-    """Handle damaged inventory deduction"""
-    try:
-        success = _handle_deductive_operation(
-            item, quantity, 'damaged', notes, created_by, **kwargs
-        )
-        
-        if success:
-            return True, f"Removed {quantity} {getattr(item, 'unit', 'units')} (damaged)"
-        return False, "Insufficient inventory"
-        
-    except Exception as e:
-        logger.error(f"Error in handle_damaged: {str(e)}")
-        return False, str(e)
-
-
-def handle_quality_fail(item, quantity, notes=None, created_by=None, **kwargs):
-    """Handle quality failure deduction"""
-    try:
-        success = _handle_deductive_operation(
-            item, quantity, 'quality_fail', notes, created_by, **kwargs
-        )
-        
-        if success:
-            return True, f"Removed {quantity} {getattr(item, 'unit', 'units')} (quality fail)"
-        return False, "Insufficient inventory"
-        
-    except Exception as e:
-        logger.error(f"Error in handle_quality_fail: {str(e)}")
-        return False, str(e)
-
-
-def handle_sample(item, quantity, notes=None, created_by=None, **kwargs):
-    """Handle sample deduction"""
-    try:
-        success = _handle_deductive_operation(
-            item, quantity, 'sample', notes, created_by, **kwargs
-        )
-        
-        if success:
-            return True, f"Used {quantity} {getattr(item, 'unit', 'units')} for sample"
-        return False, "Insufficient inventory"
-        
-    except Exception as e:
-        logger.error(f"Error in handle_sample: {str(e)}")
-        return False, str(e)
-
-
-def handle_tester(item, quantity, notes=None, created_by=None, **kwargs):
-    """Handle tester deduction"""
-    try:
-        success = _handle_deductive_operation(
-            item, quantity, 'tester', notes, created_by, **kwargs
-        )
-        
-        if success:
-            return True, f"Used {quantity} {getattr(item, 'unit', 'units')} for tester"
-        return False, "Insufficient inventory"
-        
-    except Exception as e:
-        logger.error(f"Error in handle_tester: {str(e)}")
-        return False, str(e)
-
-
-def handle_gift(item, quantity, notes=None, created_by=None, **kwargs):
-    """Handle gift deduction"""
-    try:
-        success = _handle_deductive_operation(
-            item, quantity, 'gift', notes, created_by, **kwargs
-        )
-        
-        if success:
-            return True, f"Gave {quantity} {getattr(item, 'unit', 'units')} as gift"
-        return False, "Insufficient inventory"
-        
-    except Exception as e:
-        logger.error(f"Error in handle_gift: {str(e)}")
-        return False, str(e)
-
-
-def handle_reserved(item, quantity, notes=None, created_by=None, order_id=None, **kwargs):
-    """Handle reservation deduction"""
-    try:
-        success = _handle_deductive_operation(
-            item, quantity, 'reserved', notes, created_by, order_id=order_id, **kwargs
-        )
-        
-        if success:
-            return True, f"Reserved {quantity} {getattr(item, 'unit', 'units')}"
-        return False, "Insufficient inventory"
-        
-    except Exception as e:
-        logger.error(f"Error in handle_reserved: {str(e)}")
-        return False, str(e)
-
-
-def handle_unreserved(item, quantity, notes=None, created_by=None, **kwargs):
-    """Handle unreservation (additive)"""
-    try:
-        success, error = _internal_add_fifo_entry_enhanced(
-            item_id=item.id,
-            quantity=quantity,
-            change_type='unreserved',
-            unit=getattr(item, 'unit', 'count'),
-            notes=notes,
-            cost_per_unit=item.cost_per_unit,
-            created_by=created_by,
-            **kwargs
-        )
-        
-        if success:
-            return True, f"Unreserved {quantity} {getattr(item, 'unit', 'units')}"
-        return False, error
-        
-    except Exception as e:
-        logger.error(f"Error in handle_unreserved: {str(e)}")
-        return False, str(e)
-
-
-def handle_cost_override(item, quantity, notes=None, created_by=None, cost_override=None, **kwargs):
-    """Handle cost override (no quantity change)"""
+def handle_cost_override_special(item, quantity, notes=None, created_by=None, cost_override=None, **kwargs):
+    """Special handler for cost override (no quantity change)"""
     try:
         if cost_override is not None:
             item.cost_per_unit = cost_override
@@ -354,14 +111,32 @@ def handle_cost_override(item, quantity, notes=None, created_by=None, cost_overr
         return False, "No cost override provided"
         
     except Exception as e:
-        logger.error(f"Error in handle_cost_override: {str(e)}")
+        logger.error(f"Error in cost override: {str(e)}")
         return False, str(e)
+
+
+# ========== OPERATION DISPATCHER ==========
+
+def get_operation_handler(change_type):
+    """Get the appropriate handler for a change_type"""
+    if change_type in ADDITIVE_OPERATIONS:
+        return handle_additive_operation
+    elif change_type in DEDUCTIVE_OPERATIONS:
+        return handle_deductive_operation
+    elif change_type in SPECIAL_OPERATIONS:
+        handler_name = SPECIAL_OPERATIONS[change_type]
+        if handler_name == 'handle_cost_override_special':
+            return handle_cost_override_special
+        # For recount, return None - it's handled in _recount_logic.py
+        return None
+    else:
+        return None
 
 
 # ========== INTERNAL HELPER FUNCTIONS ==========
 
-def _handle_deductive_operation(item, quantity, change_type, notes, created_by, **kwargs):
-    """Handle all deductive operations using FIFO service"""
+def _handle_deductive_operation_internal(item, quantity, change_type, notes, created_by, **kwargs):
+    """Internal logic for deductive operations using FIFO service"""
     try:
         # Get deduction plan from FIFO service
         deduction_plan, error = _calculate_deduction_plan_internal(
@@ -401,9 +176,6 @@ def _handle_deductive_operation(item, quantity, change_type, notes, created_by, 
         logger.error(f"Error in deductive operation: {str(e)}")
         return False
 
-
-# ========== EXISTING FIFO HELPER FUNCTIONS ==========
-# (Keep all the existing helper functions like _internal_add_fifo_entry_enhanced, etc.)
 
 def _internal_add_fifo_entry_enhanced(item_id, quantity, change_type, unit, notes, cost_per_unit, created_by, expiration_date=None, shelf_life_days=None, **kwargs):
     """Enhanced FIFO entry creation with full parameter support"""

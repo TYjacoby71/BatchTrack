@@ -7,57 +7,14 @@ from ._validation import validate_inventory_fifo_sync
 from ._audit import record_audit_entry
 from ._creation_logic import handle_initial_stock
 from ._recount_logic import handle_recount_adjustment_clean
-from ._fifo_ops import (
-    handle_restock,
-    handle_manual_addition,
-    handle_returned,
-    handle_refunded,
-    handle_finished_batch,
-    handle_use,
-    handle_batch,
-    handle_sale,
-    handle_spoil,
-    handle_trash,
-    handle_expired,
-    handle_damaged,
-    handle_quality_fail,
-    handle_sample,
-    handle_tester,
-    handle_gift,
-    handle_reserved,
-    handle_unreserved,
-    handle_cost_override
-)
+from ._fifo_ops import get_operation_handler
 
 logger = logging.getLogger(__name__)
 
 
-# ========== THE STRATEGY MAP (PHONEBOOK) ==========
-ADJUSTMENT_HANDLERS = {
-    # Additive operations
-    'restock': handle_restock,
-    'manual_addition': handle_manual_addition,
-    'returned': handle_returned,
-    'refunded': handle_refunded,
-    'finished_batch': handle_finished_batch,
-    'unreserved': handle_unreserved,
-    
-    # Deductive operations
-    'use': handle_use,
-    'batch': handle_batch,
-    'sale': handle_sale,
-    'spoil': handle_spoil,
-    'trash': handle_trash,
-    'expired': handle_expired,
-    'damaged': handle_damaged,
-    'quality_fail': handle_quality_fail,
-    'sample': handle_sample,
-    'tester': handle_tester,
-    'gift': handle_gift,
-    'reserved': handle_reserved,
-    
-    # Special operations
-    'cost_override': handle_cost_override,
+# ========== THE STRATEGY MAP (SIMPLIFIED) ==========
+# Instead of 20+ individual functions, we use 3 operation type handlers
+SPECIAL_HANDLERS = {
     'recount': handle_recount_adjustment_clean,
     'initial_stock': handle_initial_stock,
 }
@@ -103,17 +60,21 @@ def process_inventory_adjustment(
             logger.info(f"INITIAL STOCK: Detected item {item_id} has no FIFO history, using initial_stock handler")
             change_type = 'initial_stock'
 
-        # ========== THE NEW DISPATCHER LOGIC ==========
+        # ========== THE SIMPLIFIED DISPATCHER LOGIC ==========
         
-        # 1. Look up the specialist in our phonebook
-        handler = ADJUSTMENT_HANDLERS.get(change_type)
+        # 1. Check for special handlers first
+        if change_type in SPECIAL_HANDLERS:
+            handler = SPECIAL_HANDLERS[change_type]
+        else:
+            # 2. Use operation type dispatcher for standard operations
+            handler = get_operation_handler(change_type)
         
-        # 2. If the emergency type is unknown, we know immediately
+        # 3. If no handler found, operation is unknown
         if not handler:
             logger.error(f"Unknown inventory change type: '{change_type}'")
             return False, f"Unknown inventory change type: '{change_type}'"
             
-        # 3. If the specialist is found, dispatch the call
+        # 4. Dispatch the call
         try:
             success, message = handler(
                 item=item,
