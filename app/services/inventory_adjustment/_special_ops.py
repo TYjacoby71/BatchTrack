@@ -73,8 +73,11 @@ def _handle_recount(item, quantity, notes=None, created_by=None, **kwargs):
             )
             db.session.add(history_entry)
 
-            # Rule #6: Ensure final quantity matches target exactly
-            item.quantity = target_quantity
+            # Rule #6: For no-change case, item.quantity should already match FIFO total
+            # Just verify they're in sync
+            if abs(current_fifo_total - item.quantity) > 0.001:
+                logger.warning(f"RECOUNT NO-CHANGE: Sync issue detected - FIFO: {current_fifo_total}, Item: {item.quantity}")
+                item.quantity = current_fifo_total  # Sync to FIFO as source of truth
 
             return True, f"Inventory already at target quantity: {target_quantity}"
 
@@ -94,8 +97,14 @@ def _handle_recount(item, quantity, notes=None, created_by=None, **kwargs):
             if not success:
                 return False, f"Recount increase failed: {message}"
 
-            # Rule #6: Ensure final quantity matches target exactly
-            item.quantity = target_quantity
+            # Rule #6: FIFO operations should have synced the quantity automatically
+            # Verify the sync worked correctly
+            from ._fifo_ops import calculate_current_fifo_total
+            final_fifo_total = calculate_current_fifo_total(item.id)
+            
+            if abs(final_fifo_total - target_quantity) > 0.001:
+                logger.error(f"RECOUNT SYNC ERROR: FIFO total {final_fifo_total} != target {target_quantity}")
+                return False, f"FIFO sync failed after recount: expected {target_quantity}, got {final_fifo_total}"
 
             return True, f"Recount added {delta} {getattr(item, 'unit', 'units')} to reach target {target_quantity}"
 
@@ -115,8 +124,14 @@ def _handle_recount(item, quantity, notes=None, created_by=None, **kwargs):
             if not success:
                 return False, f"Recount decrease failed: {message}"
 
-            # Rule #6: Ensure final quantity matches target exactly  
-            item.quantity = target_quantity
+            # Rule #6: FIFO operations should have synced the quantity automatically
+            # Verify the sync worked correctly
+            from ._fifo_ops import calculate_current_fifo_total
+            final_fifo_total = calculate_current_fifo_total(item.id)
+            
+            if abs(final_fifo_total - target_quantity) > 0.001:
+                logger.error(f"RECOUNT SYNC ERROR: FIFO total {final_fifo_total} != target {target_quantity}")
+                return False, f"FIFO sync failed after recount: expected {target_quantity}, got {final_fifo_total}"
 
             return True, f"Recount removed {abs(delta)} {getattr(item, 'unit', 'units')} to reach target {target_quantity}"
 
