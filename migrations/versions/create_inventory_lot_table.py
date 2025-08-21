@@ -2,7 +2,7 @@
 """Create inventory_lot table for proper FIFO tracking
 
 Revision ID: create_inventory_lot
-Revises: 6f9bc65166b3
+Revises: fix_product_sku_id_autoincrement
 Create Date: 2025-08-21 04:57:00.000000
 
 """
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers
 revision = 'create_inventory_lot'
-down_revision = '6f9bc65166b3'
+down_revision = 'fix_product_sku_id_autoincrement'
 branch_labels = None
 depends_on = None
 
