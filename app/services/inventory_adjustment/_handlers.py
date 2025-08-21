@@ -4,7 +4,7 @@ Provides a centralized mapping of change_types to their respective handler funct
 """
 
 # Import handlers locally to avoid circular imports
-from ._additive_ops import handle_restock, handle_manual_addition, handle_returned, handle_refunded, handle_finished_batch, handle_release_reservation
+from ._additive_ops import _universal_additive_handler
 from ._deductive_ops import handle_use, handle_sale, handle_spoil, handle_trash, handle_expired, handle_damaged, handle_quality_fail, handle_sample, handle_tester, handle_gift, handle_reserved, handle_batch
 from ._recount_logic import handle_recount
 from ._special_ops import handle_cost_override, handle_unit_conversion
@@ -14,12 +14,12 @@ from ._creation_logic import handle_initial_stock
 """Grouped handler registry for clarity and future routing by family."""
 
 ADDITIVE_OPS = {
-    'restock': handle_restock,
-    'manual_addition': handle_manual_addition,
-    'returned': handle_returned,
-    'refunded': handle_refunded,
-    'finished_batch': handle_finished_batch,
-    'release_reservation': handle_release_reservation,
+    'restock': _universal_additive_handler,
+    'manual_addition': _universal_additive_handler,
+    'returned': _universal_additive_handler,
+    'refunded': _universal_additive_handler,
+    'finished_batch': _universal_additive_handler,
+    'release_reservation': _universal_additive_handler,
     'initial_stock': handle_initial_stock,
 }
 

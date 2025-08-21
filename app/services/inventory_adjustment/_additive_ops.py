@@ -160,13 +160,7 @@ def _handle_lot_crediting_operation(item, quantity, change_type, unit, notes, fi
         logger.error(f"Error in lot crediting operation {change_type}: {str(e)}")
         return False, f"Failed to credit inventory: {str(e)}", None
 
-# Export the universal handler as the canonical interface
-handle_restock = _universal_additive_handler
-handle_manual_addition = _universal_additive_handler
-handle_returned = _universal_additive_handler
-handle_refunded = _universal_additive_handler
-handle_finished_batch = _universal_additive_handler
-handle_release_reservation = _universal_additive_handler
+# All additive operations now go through _universal_additive_handler
 
 def get_additive_operation_info(change_type):
     """Get information about an additive operation"""
