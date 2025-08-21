@@ -24,8 +24,6 @@ def _write_product_created_audit(variant):
     # Product creation audit is now handled by FIFO operations automatically
     # No separate audit entry needed
     return True
-        notes=f"Product variant created: {variant.name}",
-    )
 
 
 from ...services.product_service import ProductService

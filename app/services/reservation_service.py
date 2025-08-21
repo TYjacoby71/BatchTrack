@@ -162,13 +162,14 @@ class ReservationService:
         reservation.status = 'cancelled'
 
         # Record the transaction in inventory history using canonical helper
-        inv_adj.record_audit_entry(
-            item_id=product_item.id,
-            change_type='reservation_cancellation_audit',
-            notes=f"Cancelled reservation {reservation_id} for order {reservation.order_id}",
-            fifo_reference_id=reservation.source_fifo_id, # Assuming source_fifo_id is relevant here
-            source=f"reservation_{reservation.id}",
-        )
+        # Audit entries now handled by FIFO operations
+        # inv_adj.record_audit_entry(
+        #     item_id=product_item.id,
+        #     change_type='reservation_cancellation_audit',
+        #     notes=f"Cancelled reservation {reservation_id} for order {reservation.order_id}",
+        #     fifo_reference_id=reservation.source_fifo_id, # Assuming source_fifo_id is relevant here
+        #     source=f"reservation_{reservation.id}",
+        # )
 
         try:
             db.session.commit()
@@ -198,13 +199,14 @@ class ReservationService:
         reservation.status = 'fulfilled'
 
         # Record the transaction in inventory history using canonical helper
-        inv_adj.record_audit_entry(
-            item_id=reserved_item.id,
-            change_type='reservation_fulfillment_audit',
-            notes=f"Fulfilled reservation {reservation_id} for order {reservation.order_id}",
-            fifo_reference_id=reservation.source_fifo_id, # Assuming source_fifo_id is relevant here
-            source=f"reservation_{reservation.id}",
-        )
+        # Audit entries now handled by FIFO operations
+        # inv_adj.record_audit_entry(
+        #     item_id=reserved_item.id,
+        #     change_type='reservation_fulfillment_audit',
+        #     notes=f"Fulfilled reservation {reservation_id} for order {reservation.order_id}",
+        #     fifo_reference_id=reservation.source_fifo_id, # Assuming source_fifo_id is relevant here
+        #     source=f"reservation_{reservation.id}",
+        # )
 
         try:
             db.session.commit()
