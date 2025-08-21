@@ -106,6 +106,12 @@ def _handle_deductive_operation_internal(item_id, quantity_to_deduct, change_typ
         from app.models import InventoryItem
         from app.models.inventory_lot import InventoryLot
 
+        # Get the inventory item to update its quantity
+        item = db.session.get(InventoryItem, item_id)
+        if not item:
+            logger.error(f"FIFO: Inventory item {item_id} not found")
+            return False, "Inventory item not found"
+
         # Get all available lots for this item (oldest first - FIFO)
         available_lots = InventoryLot.query.filter(
             and_(
@@ -119,6 +125,7 @@ def _handle_deductive_operation_internal(item_id, quantity_to_deduct, change_typ
             return True, "No inventory to deduct from"
 
         remaining_to_deduct = abs(float(quantity_to_deduct))
+        total_deducted = 0
         deductions = []
 
         for lot in available_lots:
@@ -128,9 +135,10 @@ def _handle_deductive_operation_internal(item_id, quantity_to_deduct, change_typ
             available_qty = lot.remaining_quantity
             deduct_from_lot = min(remaining_to_deduct, available_qty)
 
-            # Update remaining quantity in the lot
+            # Update remaining quantity in the ACTUAL lot
             lot.remaining_quantity -= deduct_from_lot
             remaining_to_deduct -= deduct_from_lot
+            total_deducted += deduct_from_lot
 
             # Create deduction record in unified history
             deduction_entry = UnifiedInventoryHistory(
@@ -159,11 +167,15 @@ def _handle_deductive_operation_internal(item_id, quantity_to_deduct, change_typ
                 'unit': lot.unit
             })
 
-            logger.info(f"FIFO: Deducted {deduct_from_lot} {lot.unit} from lot {lot.fifo_code} (ID: {lot.id})")
+            logger.info(f"FIFO: Deducted {deduct_from_lot} {lot.unit} from lot {lot.fifo_code} (ID: {lot.id}), remaining: {lot.remaining_quantity}")
 
         if remaining_to_deduct > 0:
             logger.warning(f"FIFO: Could not deduct full amount. {remaining_to_deduct} units remaining")
             return False, f"Insufficient inventory. {remaining_to_deduct} units could not be deducted"
+
+        # Update the item's total quantity
+        item.quantity -= total_deducted
+        logger.info(f"FIFO: Updated item {item_id} quantity: reduced by {total_deducted}, new total: {item.quantity}")
 
         return True, f"Deducted from {len(deductions)} lots"
 
