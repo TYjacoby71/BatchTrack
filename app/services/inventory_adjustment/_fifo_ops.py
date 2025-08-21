@@ -18,9 +18,9 @@ def _internal_add_fifo_entry_enhanced(inventory_item_id, quantity, change_type, 
         from app.utils.fifo_generator import generate_fifo_code
 
         # Get the inventory item
-        item = db.session.get(InventoryItem, inventory_item_id)
+        item = db.session.get(InventoryItem, item_id)
         if not item:
-            logger.error(f"Inventory item {inventory_item_id} not found")
+            logger.error(f"Inventory item {item_id} not found")
             return False, "Inventory item not found"
 
         # Use item's unit if not specified
@@ -51,7 +51,7 @@ def _internal_add_fifo_entry_enhanced(inventory_item_id, quantity, change_type, 
 
         # Create new lot - ALWAYS inherit perishable status from item
         lot = InventoryLot(
-            inventory_item_id=inventory_item_id,
+            inventory_item_id=item_id,
             remaining_quantity=float(quantity),
             original_quantity=float(quantity),
             unit=unit,
@@ -62,7 +62,7 @@ def _internal_add_fifo_entry_enhanced(inventory_item_id, quantity, change_type, 
             source_type=change_type,
             source_notes=notes,
             created_by=created_by,
-            fifo_code=generate_fifo_code(change_type, inventory_item_id),
+            fifo_code=generate_fifo_code(change_type, item_id),
             organization_id=item.organization_id
         )
 
@@ -70,7 +70,7 @@ def _internal_add_fifo_entry_enhanced(inventory_item_id, quantity, change_type, 
 
         # Create unified history entry - ALWAYS inherit perishable status
         history_entry = UnifiedInventoryHistory(
-            inventory_item_id=inventory_item_id,
+            inventory_item_id=item_id,
             change_type=change_type,
             quantity_change=float(quantity),
             remaining_quantity=float(quantity),
@@ -89,11 +89,11 @@ def _internal_add_fifo_entry_enhanced(inventory_item_id, quantity, change_type, 
 
         db.session.add(history_entry)
 
-        logger.info(f"FIFO: Created lot {lot.fifo_code} with {quantity} {unit} for item {inventory_item_id} (perishable: {is_perishable})")
+        logger.info(f"FIFO: Created lot {lot.fifo_code} with {quantity} {unit} for item {item_id} (perishable: {is_perishable})")
         return True, f"Added {quantity} {unit} to inventory"
 
     except Exception as e:
-        logger.error(f"FIFO: Error creating lot for item {inventory_item_id}: {str(e)}")
+        logger.error(f"FIFO: Error creating lot for item {item_id}: {str(e)}")
         db.session.rollback()
         return False, f"Error creating inventory lot: {str(e)}"
 
