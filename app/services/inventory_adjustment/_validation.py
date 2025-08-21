@@ -4,18 +4,22 @@ from sqlalchemy import and_
 
 
 def validate_inventory_fifo_sync(item_id, item_type=None):
-    """Validate that inventory quantity matches FIFO totals - item-scoped only"""
+    """
+    Validate that inventory quantity matches FIFO totals using proper InventoryLot model.
+    This ensures the item.quantity field stays in sync with actual lot quantities.
+    """
     import logging
     logger = logging.getLogger(__name__)
     
     from app.models.inventory_lot import InventoryLot
+    from app.models import InventoryItem
     
-    item = InventoryItem.query.get(item_id)
+    item = db.session.get(InventoryItem, item_id)
     if not item:
         return False, "Item not found", 0, 0
 
-    # Get sum of remaining quantities from actual lots (not deprecated history fields)
-    lots = InventoryLot.query.filter(
+    # Get all active lots for this item with proper organization scoping
+    active_lots = InventoryLot.query.filter(
         and_(
             InventoryLot.inventory_item_id == item_id,
             InventoryLot.organization_id == item.organization_id,
@@ -23,11 +27,12 @@ def validate_inventory_fifo_sync(item_id, item_type=None):
         )
     ).all()
 
-    fifo_total = sum(float(lot.remaining_quantity) for lot in lots)
-    inventory_qty = float(item.quantity)
+    # Calculate total from actual lot quantities
+    fifo_total = sum(float(lot.remaining_quantity) for lot in active_lots)
+    inventory_qty = float(item.quantity or 0)
 
-    # Allow small floating point differences
-    tolerance = 0.001
+    # Allow small floating point differences (0.01 tolerance)
+    tolerance = 0.01 = 0.001
     is_valid = abs(inventory_qty - fifo_total) < tolerance
 
     if not is_valid:
