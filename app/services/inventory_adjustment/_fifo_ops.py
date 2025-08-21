@@ -45,8 +45,9 @@ def _internal_add_fifo_entry_enhanced(
         fifo_code = generate_fifo_code(change_type, item_id)
 
         # Filter out invalid kwargs for UnifiedInventoryHistory
+        # Note: expiration_date and shelf_life_days are handled as explicit parameters
         valid_kwargs = {}
-        valid_fields = {'expiration_date', 'shelf_life_days', 'fifo_reference_id'}
+        valid_fields = {'fifo_reference_id'}
         for key, value in kwargs.items():
             if key in valid_fields:
                 valid_kwargs[key] = value
@@ -237,8 +238,9 @@ def _record_deduction_plan_internal(item_id, deduction_plan, change_type, notes,
         total_deducted = sum(step['deduct_quantity'] for step in deduction_plan)
 
         # Filter out invalid kwargs for UnifiedInventoryHistory
+        # Note: unit, unit_cost, expiration_date, shelf_life_days are handled explicitly
         valid_kwargs = {}
-        valid_fields = {'unit', 'unit_cost', 'expiration_date', 'shelf_life_days', 'fifo_reference_id'}
+        valid_fields = {'fifo_reference_id'}
         for key, value in kwargs.items():
             if key in valid_fields:
                 valid_kwargs[key] = value

@@ -50,7 +50,10 @@ class TestInventoryRoutesCanonicalService:
     @pytest.fixture
     def mock_inventory_item(self, app_context):
         """Create a mock inventory item for testing"""
-        tier = SubscriptionTier(name="Test Tier", tier_type="monthly", user_limit=5)
+        # Use unique name to avoid conflicts
+        import time
+        unique_suffix = str(int(time.time() * 1000))[-6:]
+        tier = SubscriptionTier(name=f"Test Tier {unique_suffix}", tier_type="monthly", user_limit=5)
         db.session.add(tier)
         db.session.flush()
 
@@ -81,7 +84,10 @@ class TestInventoryRoutesCanonicalService:
             # This is more robust than complex mocking.
             from app.models import db, InventoryItem, User, Organization, SubscriptionTier
 
-            tier = SubscriptionTier(name="Test Tier", tier_type="monthly", user_limit=5)
+            # Use unique name to avoid conflicts
+            import time
+            unique_suffix = str(int(time.time() * 1000))[-6:]
+            tier = SubscriptionTier(name=f"Test Tier {unique_suffix}", tier_type="monthly", user_limit=5)
             db.session.add(tier)
             db.session.flush()
 
@@ -130,7 +136,10 @@ class TestInventoryRoutesCanonicalService:
             # Create a real, valid user and item for this test
             from app.models import db, InventoryItem, User, Organization, SubscriptionTier
 
-            tier = SubscriptionTier(name="Test Tier", tier_type="monthly", user_limit=5)
+            # Use unique name to avoid conflicts
+            import time
+            unique_suffix = str(int(time.time() * 1000))[-6:]
+            tier = SubscriptionTier(name=f"Test Tier {unique_suffix}", tier_type="monthly", user_limit=5)
             db.session.add(tier)
             db.session.flush()
 
@@ -182,7 +191,7 @@ class TestInventoryRoutesCanonicalService:
         # FIFO ops should use the canonical service through their internal logic
         # Test by verifying the FIFO entry creation follows canonical patterns
         from app.services.inventory_adjustment._fifo_ops import _internal_add_fifo_entry_enhanced
-        
+
         # Mock the database session to prevent actual writes
         with patch('app.services.inventory_adjustment._fifo_ops.db.session.commit'):
             with patch('app.services.inventory_adjustment._fifo_ops.db.session.add'):
@@ -221,10 +230,10 @@ class TestInventoryRoutesCanonicalService:
 
         # Verify ReservationService is structured to use canonical patterns
         service = ReservationService()
-        
+
         # Check that the service exists and has expected structure
         assert hasattr(service, '__class__'), "ReservationService should be properly instantiated"
-        
+
         # In a real implementation, we'd verify specific methods call the canonical service
         # For now, verify the service can be imported and instantiated properly
         assert service is not None
@@ -273,10 +282,10 @@ class TestInventoryRoutesCanonicalService:
 
         # Test that ExpirationService exists and has expected methods
         from app.blueprints.expiration.services import ExpirationService
-        
+
         # Check if the service has the expected method
         assert hasattr(ExpirationService, 'mark_as_expired'), "ExpirationService should have mark_as_expired method"
-        
+
         # Verify the method exists (even if it's a staticmethod or classmethod)
         method = getattr(ExpirationService, 'mark_as_expired')
         assert callable(method), "mark_as_expired should be callable"
@@ -393,10 +402,10 @@ class TestInventoryRoutesCanonicalService:
 
         # Verify ProductService exists and is properly structured
         service = ProductService()
-        
+
         # Check that the service can be instantiated
         assert service is not None, "ProductService should be instantiable"
-        
+
         # In a real implementation, we'd verify specific inventory modification methods
         # call the canonical service. For now, verify the service structure is sound.
         assert hasattr(service, '__class__'), "ProductService should have proper class structure"
