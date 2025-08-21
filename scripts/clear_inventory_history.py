@@ -100,13 +100,15 @@ def clear_specific_item(item_id):
             
             print(f"📊 Item has {history_count} history entries and {lot_count} FIFO lots")
             
-            # Clear history for this item
-            UnifiedInventoryHistory.query.filter_by(inventory_item_id=item_id).delete()
-            print("   ✅ History entries cleared")
+            # Clear history for this item (must be done first due to foreign key constraints)
+            if history_count > 0:
+                UnifiedInventoryHistory.query.filter_by(inventory_item_id=item_id).delete()
+                print("   ✅ History entries cleared")
             
             # Clear FIFO lots for this item
-            InventoryLot.query.filter_by(inventory_item_id=item_id).delete()
-            print("   ✅ FIFO lots cleared")
+            if lot_count > 0:
+                InventoryLot.query.filter_by(inventory_item_id=item_id).delete()
+                print("   ✅ FIFO lots cleared")
             
             # Reset item quantity to zero
             item.quantity = 0.0
@@ -114,6 +116,20 @@ def clear_specific_item(item_id):
             
             db.session.commit()
             print(f"💾 Changes committed for {item.name}")
+            
+            # Verify cleanup for this specific item
+            final_history = UnifiedInventoryHistory.query.filter_by(inventory_item_id=item_id).count()
+            final_lots = InventoryLot.query.filter_by(inventory_item_id=item_id).count()
+            
+            print(f"\n✅ Item cleanup complete:")
+            print(f"   - History entries remaining: {final_history}")
+            print(f"   - FIFO lots remaining: {final_lots}")
+            print(f"   - Item quantity: {item.quantity}")
+            
+            if final_history == 0 and final_lots == 0 and item.quantity == 0:
+                print("🎉 Perfect! Item data cleared successfully.")
+            else:
+                print("⚠️  Some data may not have been cleared completely.")
             
             return True
             
