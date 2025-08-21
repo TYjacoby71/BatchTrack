@@ -94,21 +94,8 @@ def handle_recount(item, quantity, change_type, notes=None, created_by=None, tar
         if notes:
             recount_notes += f" | {notes}"
 
-        # Create unified history entry for the recount
-        history_entry = UnifiedInventoryHistory(
-            inventory_item_id=item.id,
-            change_type=change_type,
-            quantity_change=delta,
-            remaining_quantity=0,  # Recount entries don't have remaining quantity
-            unit=item.unit or 'count',
-            unit_cost=item.cost_per_unit or 0.0,
-            notes=recount_notes,
-            created_by=created_by,
-            organization_id=item.organization_id,
-            fifo_code=f"RECOUNT-{item.id}-{target_qty}"
-        )
-
-        db.session.add(history_entry)
+        # Note: Individual lot adjustments will create their own history entries
+        # No need for a main recount entry as the lot-specific entries provide full audit trail
 
         # Special-case: recount to zero must drain ALL lots regardless of desync
         if target_qty == 0:
@@ -131,7 +118,7 @@ def handle_recount(item, quantity, change_type, notes=None, created_by=None, tar
                     remaining_quantity=None,  # N/A - this is an event record
                     unit=lot.unit,
                     unit_cost=lot.unit_cost,
-                    fifo_code=lot.fifo_code,
+                    fifo_code=lot.fifo_code,  # Use the lot's original FIFO code
                     notes=f"Recount to zero: drained lot {lot.fifo_code}",
                     created_by=created_by,
                     affected_lot_id=lot.id,
@@ -168,10 +155,7 @@ def handle_recount(item, quantity, change_type, notes=None, created_by=None, tar
                     lot.remaining_quantity = 0.0
                     remaining_to_deduct -= deducted
 
-                    # Create deduction record with recount-specific FIFO code
-                    from app.utils.fifo_generator import generate_fifo_code
-                    recount_fifo_code = generate_fifo_code('recount', item.id)
-
+                    # Create deduction record using the lot's original FIFO code
                     deduction_entry = UnifiedInventoryHistory(
                         inventory_item_id=item.id,
                         change_type=change_type,  # Use original change_type (recount)
@@ -179,7 +163,7 @@ def handle_recount(item, quantity, change_type, notes=None, created_by=None, tar
                         remaining_quantity=None,  # N/A - this is an event record
                         unit=lot.unit,
                         unit_cost=lot.unit_cost,
-                        fifo_code=recount_fifo_code,  # Use proper recount FIFO code
+                        fifo_code=lot.fifo_code,  # Use the lot's original FIFO code
                         notes=f"Recount deduction: -{deducted} from lot {lot.fifo_code}",
                         created_by=created_by,
                         affected_lot_id=lot.id,
@@ -192,10 +176,7 @@ def handle_recount(item, quantity, change_type, notes=None, created_by=None, tar
                     # Partially deduct from this lot
                     lot.remaining_quantity -= remaining_to_deduct
 
-                    # Create deduction record with recount-specific FIFO code
-                    from app.utils.fifo_generator import generate_fifo_code
-                    recount_fifo_code = generate_fifo_code('recount', item.id)
-
+                    # Create deduction record using the lot's original FIFO code
                     deduction_entry = UnifiedInventoryHistory(
                         inventory_item_id=item.id,
                         change_type=change_type,  # Use original change_type (recount)
@@ -203,7 +184,7 @@ def handle_recount(item, quantity, change_type, notes=None, created_by=None, tar
                         remaining_quantity=None,  # N/A - this is an event record
                         unit=lot.unit,
                         unit_cost=lot.unit_cost,
-                        fifo_code=recount_fifo_code,  # Use proper recount FIFO code
+                        fifo_code=lot.fifo_code,  # Use the lot's original FIFO code
                         notes=f"Recount deduction: -{remaining_to_deduct} from lot {lot.fifo_code}",
                         created_by=created_by,
                         affected_lot_id=lot.id,
