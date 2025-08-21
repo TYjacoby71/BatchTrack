@@ -1,0 +1,61 @@
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+        
+        {% include "inventory/components/adjustment_form.html" %}
+        
+        <!-- FIFO Filter Toggle -->
+        <div class="card mb-3">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center">
+              <h5 class="mb-0">Transaction History</h5>
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="fifoFilter" onchange="toggleFifoFilter()">
+                <label class="form-check-label" for="fifoFilter">
+                  Show Active FIFO Only
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {% include "inventory/components/history_table.html" %}
+      {% else %}
+        <div class="alert alert-warning text-center">
+          <h5>Initial Inventory Setup Required</h5>
+          <p>This item needs an initial inventory entry before you can view its details.</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{% include "inventory/components/edit_details_modal.html" %}
+{% include "inventory/components/modals.html" %}
+
+<!-- Initial Inventory Modal for Empty FIFO -->
+{% if item.quantity == 0 and history|length == 0 %}
+<div class="modal fade" id="initialInventoryModal" tabindex="-1" aria-labelledby="initialInventoryModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="initialInventoryModalLabel">Initial Inventory Required</h5>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-info">
+          <h6>This item has no current inventory.</h6>
+          <p>Please make the initial stock entry to begin tracking this item. This will create your first FIFO entry and allow you to manage inventory properly.</p>
+        </div>
+        
+        <form id="initialInventoryForm" method="POST" action="{{ url_for('inventory.adjust_inventory', id=item.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="change_type" value="restock">
+          
+          <div class="row">
+            <div class="col-md-6">
