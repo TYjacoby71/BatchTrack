@@ -33,17 +33,18 @@ def clear_inventory_history():
             print(f"   - History entries: {history_count}")
             print(f"   - FIFO lots: {lot_count}")
             
-            # Clear all history entries
+            # Clear history entries first (some may reference lots via affected_lot_id)
             if history_count > 0:
                 print(f"🗑️  Deleting {history_count} history entries...")
-                UnifiedInventoryHistory.query.delete()
-                print("   ✅ History entries cleared")
+                # Delete in batches to avoid potential memory issues
+                deleted_count = db.session.query(UnifiedInventoryHistory).delete()
+                print(f"   ✅ {deleted_count} history entries cleared")
             
-            # Clear all FIFO lots
+            # Clear all FIFO lots (now safe since history references are gone)
             if lot_count > 0:
                 print(f"🗑️  Deleting {lot_count} FIFO lots...")
-                InventoryLot.query.delete()
-                print("   ✅ FIFO lots cleared")
+                deleted_lot_count = db.session.query(InventoryLot).delete()
+                print(f"   ✅ {deleted_lot_count} FIFO lots cleared")
             
             # Reset all inventory item quantities to zero
             if item_count > 0:
@@ -53,7 +54,8 @@ def clear_inventory_history():
                 })
                 print(f"   ✅ {items_updated} item quantities reset to zero")
             
-            # Commit all changes
+            # Commit all changes with explicit flush first
+            db.session.flush()
             db.session.commit()
             print("💾 All changes committed successfully!")
             
@@ -102,18 +104,19 @@ def clear_specific_item(item_id):
             
             # Clear history for this item (must be done first due to foreign key constraints)
             if history_count > 0:
-                UnifiedInventoryHistory.query.filter_by(inventory_item_id=item_id).delete()
-                print("   ✅ History entries cleared")
+                deleted_history = db.session.query(UnifiedInventoryHistory).filter_by(inventory_item_id=item_id).delete()
+                print(f"   ✅ {deleted_history} history entries cleared")
             
             # Clear FIFO lots for this item
             if lot_count > 0:
-                InventoryLot.query.filter_by(inventory_item_id=item_id).delete()
-                print("   ✅ FIFO lots cleared")
+                deleted_lots = db.session.query(InventoryLot).filter_by(inventory_item_id=item_id).delete()
+                print(f"   ✅ {deleted_lots} FIFO lots cleared")
             
             # Reset item quantity to zero
             item.quantity = 0.0
             print("   ✅ Item quantity reset to zero")
             
+            db.session.flush()
             db.session.commit()
             print(f"💾 Changes committed for {item.name}")
             
