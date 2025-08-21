@@ -221,18 +221,3 @@ def _delegate_to_operation_module(effective_change_type, original_change_type, i
     # Unknown operation type
     logger.error(f"ROUTING ERROR: Unknown change type '{effective_change_type}'")
     return False, f"Unknown inventory change type: '{effective_change_type}'"
-
-
-# Backwards compatibility shims
-def InventoryAdjustmentService():
-    """Legacy compatibility shim"""
-    class Shim:
-        @staticmethod
-        def process_inventory_adjustment(item_id, change_type, quantity, notes=None, created_by=None, cost_override=None, custom_expiration_date=None, custom_shelf_life_days=None, customer=None, sale_price=None, order_id=None, target_quantity=None, unit=None):
-            return process_inventory_adjustment(item_id, change_type, quantity, notes, created_by, cost_override, custom_expiration_date, custom_shelf_life_days, customer, sale_price, order_id, target_quantity, unit)
-
-        @staticmethod
-        def validate_inventory_fifo_sync(item_id, expected_quantity=None):
-            return validate_inventory_fifo_sync(item_id, expected_quantity)
-
-    return Shim()
