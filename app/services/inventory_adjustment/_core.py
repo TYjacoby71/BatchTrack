@@ -3,7 +3,7 @@ import logging
 from datetime import datetime
 from app.models import db, InventoryItem, UnifiedInventoryHistory
 from ._validation import validate_inventory_fifo_sync
-# Removed audit import - FIFO handles all history entries
+from ._audit import record_audit_entry
 from ._handlers import get_operation_handler
 
 logger = logging.getLogger(__name__)

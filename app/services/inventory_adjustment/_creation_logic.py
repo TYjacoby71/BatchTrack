@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime, timedelta
 from app.models import db, InventoryItem
-# Removed audit import - FIFO should be the only thing creating history
+from ._audit import record_audit_entry
 from ._fifo_ops import _internal_add_fifo_entry_enhanced
 
 
@@ -14,7 +14,12 @@ def handle_initial_stock(item, quantity, unit=None, notes=None, created_by=None,
         final_notes = notes or 'Initial stock entry'
 
         if quantity == 0:
-            # No FIFO entry needed for zero stock
+            record_audit_entry(
+                item_id=item.id,
+                change_type='initial_stock',
+                notes='Item created with zero initial stock',
+                created_by=created_by
+            )
             return True, "Item initialized with zero stock"
 
         # Use cost override if provided, otherwise use item's cost
