@@ -1,0 +1,28 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.13, pytest-8.3.5, pluggy-1.5.0 -- /home/runner/workspace/.pythonlibs/bin/python
+cachedir: .pytest_cache
+rootdir: /home/runner/workspace
+collected 1 item                                                               
+
+tests/test_inventory_comprehensive.py::TestInventorySystemComprehensive::test_create_ingredient_with_initial_stock PASSED [100%]
+
+=================================== warnings summary ===================================
+tests/test_inventory_comprehensive.py::TestInventorySystemComprehensive::test_create_ingredient_with_initial_stock
+  /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_limiter/extension.py:333: UserWarning: Using the in-memory storage for tracking rate limits as no storage was explicitly specified. This is not recommended for production use. See: https://flask-limiter.readthedocs.io#configuring-a-storage-backend for documentation about configuring the storage backend.
+    warnings.warn(
+
+tests/test_inventory_comprehensive.py::TestInventorySystemComprehensive::test_create_ingredient_with_initial_stock
+tests/test_inventory_comprehensive.py::TestInventorySystemComprehensive::test_create_ingredient_with_initial_stock
+  /home/runner/workspace/app/services/inventory_adjustment/_audit.py:76: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    item = InventoryItem.query.get(item_id)
+
+tests/test_inventory_comprehensive.py::TestInventorySystemComprehensive::test_create_ingredient_with_initial_stock
+  /home/runner/workspace/tests/test_inventory_comprehensive.py:130: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    item = InventoryItem.query.get(item_id)
+
+tests/test_inventory_comprehensive.py::TestInventorySystemComprehensive::test_create_ingredient_with_initial_stock
+  /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_sqlalchemy/extension.py:881: SAWarning: Can't sort tables for DROP; an unresolvable foreign key dependency exists between tables: batch, product_sku; and backend does not support ALTER.  To restore at least a partial sort, apply use_alter=True to ForeignKey and ForeignKeyConstraint objects involved in the cycle to mark these as known cycles that will be ignored.
+    getattr(metadata, op_name)(bind=engine)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+============================ 1 passed, 5 warnings in 3.83s =============================

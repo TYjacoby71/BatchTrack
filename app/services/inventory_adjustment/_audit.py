@@ -1,4 +1,3 @@
-
 """
 Audit Trail Management for Inventory Adjustments
 
@@ -69,7 +68,7 @@ def record_audit_entry(
 ) -> bool:
     """
     Record an audit trail entry for inventory operations.
-    
+
     This is used for operations that need to log activity but don't affect FIFO lots,
     such as cost overrides, administrative changes, etc.
     """
@@ -79,29 +78,26 @@ def record_audit_entry(
             logger.error(f"Cannot record audit entry - item {item_id} not found")
             return False
 
+        # Create the audit entry
         audit_entry = UnifiedInventoryHistory(
             inventory_item_id=item_id,
-            organization_id=item.organization_id,
             timestamp=datetime.utcnow(),
             change_type=change_type,
-            quantity_change=quantity_change,
-            remaining_quantity=0.0,  # Audit entries don't create FIFO lots
-            unit=item.unit,
-            notes=notes,
+            quantity_change=quantity_change,  # This should be the numeric quantity
+            unit=item.unit if item.unit else 'count',
+            notes=notes or f'{change_type}: {quantity}',  # This should be the notes string
             created_by=created_by,
-            fifo_code=generate_fifo_code(change_type),
-            batch_id=kwargs.get('batch_id'),
-            customer=kwargs.get('customer'),
-            order_id=kwargs.get('order_id'),
-            sale_price=kwargs.get('sale_price')
+            organization_id=item.organization_id,
+            quantity_used=0.0,
+            remaining_quantity=0.0
         )
-        
+
         db.session.add(audit_entry)
         db.session.commit()
-        
+
         logger.info(f"Recorded audit entry for item {item_id}: {change_type}")
         return True
-        
+
     except Exception as e:
         db.session.rollback()
         logger.error(f"Failed to record audit entry for item {item_id}: {str(e)}")
