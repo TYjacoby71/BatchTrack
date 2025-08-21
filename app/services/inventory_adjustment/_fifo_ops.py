@@ -8,125 +8,70 @@ from sqlalchemy import and_
 logger = logging.getLogger(__name__)
 
 
-def _internal_add_fifo_entry_enhanced(
-    item_id: int,
-    quantity: float,
-    change_type: str,
-    unit: str = None,
-    notes: str = None,
-    cost_per_unit: float = None,
-    created_by: int = None,
-    expiration_date=None,
-    shelf_life_days: int = None,
-    **kwargs
-) -> tuple:
-    """
-    Enhanced FIFO entry creation with comprehensive field support.
-    """
+def _internal_add_fifo_entry_enhanced(item_id, quantity, change_type, unit=None, notes=None,
+                                    cost_per_unit=None, created_by=None, expiration_date=None,
+                                    shelf_life_days=None, **kwargs):
+    """Enhanced internal FIFO entry creation with better error handling"""
     try:
-        # Get item for validation and defaults
+        from app.models import db, InventoryItem, UnifiedInventoryHistory
+        from datetime import datetime, timedelta
+        from app.utils.fifo_generator import generate_fifo_code
+
+        logger.info(f"Creating FIFO entry: item_id={item_id}, quantity={quantity}, change_type={change_type}")
+
+        # Get the inventory item
         item = db.session.get(InventoryItem, item_id)
         if not item:
-            return False, f"Item {item_id} not found"
+            error_msg = f"Inventory item {item_id} not found"
+            logger.error(error_msg)
+            return False, error_msg
 
-        # Use item's unit if not provided - ensure we always have a unit
-        if not unit:
-            unit = item.unit if item.unit else 'count'
+        # Use item defaults if not provided
+        final_unit = unit or item.unit or 'count'
+        final_cost = cost_per_unit if cost_per_unit is not None else (item.cost_per_unit or 0.0)
+        final_notes = notes or f"{change_type} operation"
 
-        # Use item's cost if not provided
-        if cost_per_unit is None:
-            cost_per_unit = item.cost_per_unit or 0.0
+        logger.info(f"FIFO entry details: unit={final_unit}, cost={final_cost}, notes={final_notes}")
 
-        # For additive operations, remaining_quantity = quantity_change
-        remaining_qty = quantity
+        # Handle expiration date calculation
+        final_expiration_date = None
+        if expiration_date:
+            final_expiration_date = expiration_date
+        elif shelf_life_days and shelf_life_days > 0:
+            final_expiration_date = datetime.now().date() + timedelta(days=shelf_life_days)
+        elif item.is_perishable and item.shelf_life_days:
+            final_expiration_date = datetime.now().date() + timedelta(days=item.shelf_life_days)
 
-        # Generate FIFO code with enhanced logic for recount operations
-        from app.utils.fifo_generator import generate_fifo_code
-        fifo_code = generate_fifo_code(change_type, item_id)
-
-        # Filter out invalid kwargs for UnifiedInventoryHistory
-        # Note: expiration_date and shelf_life_days are handled as explicit parameters
-        valid_kwargs = {}
-        valid_fields = {'fifo_reference_id'}
-        for key, value in kwargs.items():
-            if key in valid_fields:
-                valid_kwargs[key] = value
-
-        # Create the FIFO history entry
+        # Create the FIFO entry
         fifo_entry = UnifiedInventoryHistory(
             inventory_item_id=item_id,
+            change_type=change_type,
+            quantity_changed=quantity,
+            remaining_quantity=quantity,
+            original_quantity=quantity,
+            unit=final_unit,
+            unit_cost=final_cost,
+            total_cost=quantity * final_cost,
+            notes=final_notes,
             timestamp=datetime.utcnow(),
-            change_type=change_type,  # Always use the actual change_type for audit trail
-            quantity_change=quantity,
-            unit=unit,
-            unit_cost=cost_per_unit,
-            remaining_quantity=remaining_qty,
-            notes=notes or 'FIFO entry',
+            received_date=datetime.utcnow(),
+            expiration_date=final_expiration_date,
+            shelf_life_days=shelf_life_days,
+            source_type='manual',
             created_by=created_by,
-            quantity_used=0.0,
-            organization_id=item.organization_id,
-            **valid_kwargs
+            fifo_code=generate_fifo_code(change_type),
+            organization_id=item.organization_id
         )
 
-        # Handle expiration if applicable
-        if expiration_date:
-            fifo_entry.expiration_date = expiration_date
-        elif shelf_life_days and shelf_life_days > 0:
-            fifo_entry.shelf_life_days = shelf_life_days
-            fifo_entry.expiration_date = TimezoneUtils.utc_now() + timedelta(days=shelf_life_days)
-
         db.session.add(fifo_entry)
-
-        # Create corresponding lot object for additive operations
-        if quantity > 0:  # Only create lots for additive operations
-            from datetime import timedelta
-            from app.models.inventory_lot import InventoryLot
-            from app.utils.timezone_utils import TimezoneUtils
-            from app.utils.fifo_generator import get_fifo_prefix
-
-            try:
-                # Handle expiration
-                final_expiration = expiration_date
-                if not final_expiration and shelf_life_days and shelf_life_days > 0:
-                    final_expiration = TimezoneUtils.utc_now() + timedelta(days=shelf_life_days)
-
-                # Use the already generated FIFO code
-                # fifo_code is already generated above
-
-                # Create the lot
-                lot = InventoryLot(
-                    inventory_item_id=item_id,
-                    remaining_quantity=quantity,
-                    original_quantity=quantity,
-                    unit=unit,
-                    unit_cost=cost_per_unit,
-                    source_type=change_type,
-                    source_notes=notes,
-                    created_by=created_by,
-                    expiration_date=final_expiration,
-                    shelf_life_days=shelf_life_days,
-                    fifo_code=fifo_code,
-                    organization_id=item.organization_id
-                )
-
-                db.session.add(lot)
-                db.session.flush()  # Get ID
-                logger.info(f"FIFO: Created lot {lot.id} with {quantity} {unit} for item {item_id}")
-
-            except Exception as e:
-                logger.warning(f"FIFO: History entry created but lot creation failed: {str(e)}")
-                # Continue anyway since FIFO history entry was successful
-
-        # Update item quantity
-        item.quantity += quantity
-
-        logger.info(f"FIFO: Added {quantity} {unit} to item {item_id}, new total: {item.quantity}")
-
-        return True, f"Added {quantity} {unit}"
+        logger.info(f"FIFO entry created successfully for item {item_id}")
+        return True, "FIFO entry created successfully"
 
     except Exception as e:
-        logger.error(f"Error in _internal_add_fifo_entry_enhanced: {str(e)}")
-        return False, str(e)
+        import traceback
+        error_msg = f"Error creating FIFO entry: {str(e)}\n{traceback.format_exc()}"
+        logger.error(error_msg)
+        return False, error_msg
 
 
 def _handle_deductive_operation_internal(item, quantity, change_type, notes, created_by, **kwargs):

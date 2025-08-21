@@ -263,21 +263,28 @@ def adjust_inventory(item_id):
                 return redirect(url_for('.view_inventory', id=item_id))
 
         # Call the canonical inventory adjustment service
-        success, message = process_inventory_adjustment(
-            item_id=item.id,
-            quantity=quantity,
-            change_type=change_type,
-            notes=form_data.get('notes', ''),
-            unit=form_data.get('input_unit') or item.unit or 'count',
-            cost_override=cost_override,
-            created_by=current_user.id
-        )
+        try:
+            success, message = process_inventory_adjustment(
+                item_id=item.id,
+                quantity=quantity,
+                change_type=change_type,
+                notes=form_data.get('notes', ''),
+                unit=form_data.get('input_unit') or item.unit or 'count',
+                cost_override=cost_override,
+                created_by=current_user.id
+            )
 
-        # Flash result and redirect
-        if success:
-            flash(f'{change_type.title()} completed: {message}', 'success')
-        else:
-            flash(f'Adjustment failed: {message}', 'error')
+            # Flash result and redirect
+            if success:
+                flash(f'{change_type.title()} completed: {message}', 'success')
+                logger.info(f"Adjustment successful: {message}")
+            else:
+                flash(f'Adjustment failed: {message}', 'error')
+                logger.error(f"Adjustment failed: {message}")
+
+        except Exception as e:
+            logger.error(f"Exception in process_inventory_adjustment: {str(e)}")
+            flash(f'System error during adjustment: {str(e)}', 'error')
 
         return redirect(url_for('.view_inventory', id=item_id))
 
