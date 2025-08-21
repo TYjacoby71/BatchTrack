@@ -1,4 +1,3 @@
-
 import logging
 from datetime import datetime, timedelta
 from decimal import Decimal
@@ -86,7 +85,7 @@ def create_new_fifo_lot(item_id, quantity, change_type, unit=None, notes=None, c
 
         # Get batch_id from kwargs if provided
         batch_id = kwargs.get('batch_id')
-        
+
         # Generate LOT-prefixed FIFO code for lot creation
         fifo_code = generate_fifo_code('lot', item_id)
 
@@ -141,48 +140,19 @@ def create_new_fifo_lot(item_id, quantity, change_type, unit=None, notes=None, c
         return False, f"Error creating inventory lot: {str(e)}", None
 
 
-def process_fifo_deduction(item_id, quantity_to_deduct, change_type, notes=None, created_by=None, batch_id=None):
+def deduct_fifo_inventory(item_id, quantity_to_deduct, change_type, notes=None, created_by=None, batch_id=None):
     """
-    Process inventory deduction using FIFO (First In, First Out) logic.
-    This is a high-level function that calculates, executes, and audits the deduction.
-    """
-    try:
-        # Calculate deduction plan
-        deduction_plan, error = calculate_fifo_deduction_plan(item_id, abs(float(quantity_to_deduct)), change_type)
-        if error:
-            return False, error
-
-        # Execute the plan
-        success, error = execute_fifo_deduction_plan(deduction_plan, item_id)
-        if not success:
-            return False, error
-
-        # Create audit trail
-        audit_success = create_fifo_deduction_audit_trail(
-            item_id, deduction_plan, change_type, notes, created_by, batch_id
-        )
-        if not audit_success:
-            logger.warning(f"FIFO: Deduction succeeded but audit trail creation failed for item {item_id}")
-
-        return True, f"Deducted from {len(deduction_plan)} lots"
-
-    except Exception as e:
-        logger.error(f"FIFO: Error in deductive operation for item {item_id}: {str(e)}")
-        db.session.rollback()
-        return False, f"Error processing deduction: {str(e)}"
-
-
-def calculate_fifo_deduction_plan(item_id, quantity, change_type):
-    """
-    Calculate what lots will be consumed for a FIFO deduction without executing it.
-    Returns a detailed plan showing which lots will be affected and by how much.
+    CONSOLIDATED: Single function to handle FIFO deduction - calculate, execute, and audit in one step.
+    This replaces the previous separate calculate/execute/audit functions.
     """
     try:
         from app.models.inventory_lot import InventoryLot
 
-        # Use proper InventoryLot table for FIFO calculations
-        from app.models import InventoryItem
+        # Get available lots ordered by FIFO (oldest first)
         item = db.session.get(InventoryItem, item_id)
+        if not item:
+            return False, "Inventory item not found"
+
         available_lots = InventoryLot.query.filter(
             and_(
                 InventoryLot.inventory_item_id == item_id,
@@ -192,14 +162,16 @@ def calculate_fifo_deduction_plan(item_id, quantity, change_type):
         ).order_by(InventoryLot.received_date.asc()).all()
 
         total_available = sum(lot.remaining_quantity for lot in available_lots)
+        quantity_needed = abs(float(quantity_to_deduct))
 
-        logger.info(f"DEDUCTION PLAN: Found {len(available_lots)} available lots with total {total_available}, need {quantity}")
+        logger.info(f"FIFO DEDUCT: Need {quantity_needed}, have {total_available} from {len(available_lots)} lots")
 
-        if total_available < quantity:
-            return None, f"Insufficient inventory: need {quantity}, have {total_available}"
+        if total_available < quantity_needed:
+            return False, f"Insufficient inventory: need {quantity_needed}, have {total_available}"
 
-        deduction_plan = []
-        remaining_to_deduct = quantity
+        # Execute deduction and create audit trail in one pass
+        remaining_to_deduct = quantity_needed
+        lots_consumed = 0
 
         for lot in available_lots:
             if remaining_to_deduct <= 0:
@@ -207,98 +179,40 @@ def calculate_fifo_deduction_plan(item_id, quantity, change_type):
 
             if lot.remaining_quantity > 0:
                 deduct_from_lot = min(lot.remaining_quantity, remaining_to_deduct)
-                deduction_plan.append({
-                    'lot_id': lot.id,
-                    'deduct_quantity': deduct_from_lot,
-                    'lot_remaining_before': lot.remaining_quantity,
-                    'lot_remaining_after': lot.remaining_quantity - deduct_from_lot,
-                    'lot_change_type': lot.source_type,
-                    'lot_timestamp': lot.received_date
-                })
+
+                # Update lot
+                lot.remaining_quantity -= deduct_from_lot
+
+                # Create audit record
+                history_record = UnifiedInventoryHistory(
+                    inventory_item_id=item_id,
+                    change_type=change_type,
+                    quantity_change=-deduct_from_lot,
+                    unit=lot.unit,
+                    unit_cost=lot.unit_cost,
+                    notes=notes,
+                    created_by=created_by,
+                    batch_id=batch_id,
+                    organization_id=item.organization_id,
+                    is_perishable=lot.expiration_date is not None,
+                    expiration_date=lot.expiration_date,
+                    shelf_life_days=lot.shelf_life_days,
+                    affected_lot_id=lot.id,
+                )
+                db.session.add(history_record)
+
                 remaining_to_deduct -= deduct_from_lot
-                logger.info(f"DEDUCTION PLAN: Will consume {deduct_from_lot} from lot {lot.id} ({lot.source_type}, {lot.received_date})")
+                lots_consumed += 1
 
-        logger.info(f"DEDUCTION PLAN: Created plan consuming from {len(deduction_plan)} lots")
-        return deduction_plan, None
+                logger.info(f"FIFO DEDUCT: Consumed {deduct_from_lot} from lot {lot.id} (remaining: {lot.remaining_quantity})")
 
-    except Exception as e:
-        logger.error(f"Error calculating deduction plan: {str(e)}")
-        return None, str(e)
-
-
-def execute_fifo_deduction_plan(deduction_plan, item_id):
-    """
-    Execute a pre-calculated FIFO deduction plan.
-    Updates lot quantities according to the plan.
-    """
-    try:
-        for step in deduction_plan:
-            lot_id = step['lot_id']
-            deduct_quantity = step['deduct_quantity']
-
-            lot = db.session.get(InventoryLot, lot_id)
-            if lot:
-                old_remaining = lot.remaining_quantity
-                lot.remaining_quantity -= deduct_quantity
-                logger.info(f"DEDUCTION EXECUTE: Lot {lot_id} remaining: {old_remaining} -> {lot.remaining_quantity}")
-            else:
-                logger.error(f"DEDUCTION EXECUTE: Lot {lot_id} not found!")
-                return False, f"Lot {lot_id} not found during execution"
-
-        return True, None
+        logger.info(f"FIFO DEDUCT SUCCESS: Consumed from {lots_consumed} lots")
+        return True, f"Deducted from {lots_consumed} lots"
 
     except Exception as e:
-        logger.error(f"Error executing deduction plan: {str(e)}")
-        return False, str(e)
-
-
-def create_fifo_deduction_audit_trail(item_id, deduction_plan, change_type, notes, created_by=None, batch_id=None, fifo_reference_id=None):
-    """
-    Create audit trail records for each lot consumed in a FIFO deduction.
-    This provides detailed tracking of exactly which lots were affected.
-    """
-    try:
-        item = db.session.get(InventoryItem, item_id)
-        organization_id = item.organization_id
-
-        # Handle fifo_reference_id explicitly
-        reference_kwargs = {}
-        if fifo_reference_id is not None:
-            reference_kwargs['fifo_reference_id'] = fifo_reference_id
-
-        # Create individual history record for each lot consumed
-        for step in deduction_plan:
-            lot_id = step['lot_id']
-            deduct_quantity = step['deduct_quantity']
-
-            # Get the lot being consumed to get its details
-            consumed_lot = db.session.get(InventoryLot, lot_id)
-
-            history_record = UnifiedInventoryHistory(
-                inventory_item_id=item_id,
-                change_type=change_type,
-                quantity_change=-deduct_quantity,
-                unit=consumed_lot.unit,
-                unit_cost=consumed_lot.unit_cost,
-                notes=notes,
-                created_by=created_by,
-                batch_id=batch_id,
-                organization_id=organization_id,
-                is_perishable=consumed_lot.expiration_date is not None,
-                expiration_date=consumed_lot.expiration_date,
-                shelf_life_days=consumed_lot.shelf_life_days,
-                affected_lot_id=lot_id,  # Link to the lot being consumed
-                **reference_kwargs
-            )
-
-            db.session.add(history_record)
-            logger.info(f"DEDUCTION RECORD: Created {change_type} record for -{deduct_quantity} from lot {lot_id}")
-
-        return True
-
-    except Exception as e:
-        logger.error(f"Error recording deduction plan: {str(e)}")
-        return False
+        logger.error(f"FIFO: Error in deduction for item {item_id}: {str(e)}")
+        db.session.rollback()
+        return False, f"Error processing deduction: {str(e)}"
 
 
 def calculate_total_available_inventory(item_id):
@@ -326,7 +240,7 @@ def credit_specific_lot(lot_id, quantity, notes=None, created_by=None):
     """
     try:
         from app.models.inventory_lot import InventoryLot
-        
+
         lot = db.session.get(InventoryLot, lot_id)
         if not lot:
             return False, "FIFO lot not found"
