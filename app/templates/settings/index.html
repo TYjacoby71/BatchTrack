@@ -119,11 +119,11 @@ function settingsData() {
         userPrefs: {{ user_prefs | tojson }},
         systemSettings: {{ system_settings | tojson }},
         profile: {
-            first_name: '{{ current_user.first_name or "" }}',
-            last_name: '{{ current_user.last_name or "" }}',
-            email: '{{ current_user.email or "" }}',
-            phone: '{{ current_user.phone or "" }}',
-            timezone: '{{ current_user.timezone or "America/New_York" }}'
+            first_name: {{ (current_user.first_name or "") | tojson }},
+            last_name: {{ (current_user.last_name or "") | tojson }},
+            email: {{ (current_user.email or "") | tojson }},
+            phone: {{ (current_user.phone or "") | tojson }},
+            timezone: {{ (current_user.timezone or "America/New_York") | tojson }}
         },
         password: {
             current: '',
