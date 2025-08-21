@@ -1,4 +1,3 @@
-
 """
 Additive operations handler - operations that increase inventory quantity.
 These handlers calculate what needs to happen and return deltas.
@@ -61,17 +60,24 @@ def _universal_additive_handler(item, quantity, change_type, notes=None, created
         if group_name == 'lot_creation':
             # Operations that create new lots (restock, manual_addition, finished_batch)
             success, message, lot_id = _handle_lot_creation_operation(
-                item, quantity, change_type, unit, notes, final_cost, 
-                created_by, custom_expiration_date, custom_shelf_life_days, **kwargs
+                item=item,
+                quantity=quantity,
+                change_type=change_type,
+                notes=notes,
+                created_by=created_by,
+                cost_override=cost_override,
+                custom_expiration_date=custom_expiration_date,
+                custom_shelf_life_days=custom_shelf_life_days,
+                operation_unit=unit
             )
-            
+
         elif group_name == 'lot_crediting':
             # Operations that credit back to existing lots (returned, refunded, release_reservation)
             success, message, lot_id = _handle_lot_crediting_operation(
                 item, quantity, change_type, unit, notes, final_cost, 
                 created_by, **kwargs
             )
-        
+
         else:
             return False, f"Unhandled operation group: {group_name}", 0
 
@@ -99,42 +105,49 @@ def _universal_additive_handler(item, quantity, change_type, notes=None, created
 
 
 
-def _handle_lot_creation_operation(item, quantity, change_type, unit, notes, final_cost, created_by, custom_expiration_date, custom_shelf_life_days, **kwargs):
-    """Handle operations that create new lots"""
-    logger.info(f"LOT_CREATION: Creating new lot for {change_type}")
-    
-    # Remove unit from kwargs if it exists to avoid conflict
-    kwargs.pop('unit', None)
-    
-    # Create FIFO entry (lot) with proper source tracking
-    success, message, lot_id = create_new_fifo_lot(
-        item_id=item.id,
-        quantity=quantity,
-        change_type=change_type,
-        unit=unit,
-        notes=notes,
-        cost_per_unit=final_cost,
-        created_by=created_by,
-        custom_expiration_date=custom_expiration_date,
-        custom_shelf_life_days=custom_shelf_life_days,
-        **kwargs
-    )
+def _handle_lot_creation_operation(item, quantity, change_type, notes, created_by, cost_override, custom_expiration_date, custom_shelf_life_days, operation_unit):
+    """
+    Handle operations that create new lots (restock, returns, etc.)
+    Returns (success, message, quantity_delta)
+    """
+    try:
+        logger.info(f"LOT_CREATION: Adding {quantity} to item {item.id}")
 
-    if not success:
-        return False, f"Failed to create lot: {message}", None
+        unit = operation_unit or item.unit or 'count'
+        final_cost = cost_override if cost_override is not None else item.cost_per_unit
 
-    # Note: create_new_fifo_lot already creates the history record
-    # No additional history record needed for lot creation operations
-    
-    logger.info(f"LOT_CREATION: Successfully created lot {lot_id} for {change_type}")
-    return True, message, lot_id
+        # Create the FIFO lot
+        success, message, lot_id = create_new_fifo_lot(
+            item_id=item.id,
+            quantity=quantity,
+            change_type=change_type,
+            unit=unit,
+            notes=notes or f"{change_type.title()} operation",
+            cost_per_unit=final_cost,
+            created_by=created_by,
+            custom_expiration_date=custom_expiration_date,
+            custom_shelf_life_days=custom_shelf_life_days
+        )
+
+        if not success:
+            return False, f"Failed to create lot: {message}", 0
+
+        # Return the quantity delta for core to apply
+        quantity_delta = float(quantity)
+        logger.info(f"LOT_CREATION SUCCESS: Will add {quantity_delta} to item {item.id}")
+
+        return True, f"{change_type.title()} of {quantity} {unit} completed", quantity_delta
+
+    except Exception as e:
+        logger.error(f"Error in lot creation operation: {str(e)}")
+        return False, f"Lot creation failed: {str(e)}", 0
 
 def _handle_lot_crediting_operation(item, quantity, change_type, unit, notes, final_cost, created_by, **kwargs):
     """Handle operations that credit back to existing FIFO lots"""
     from ._fifo_ops import process_fifo_deduction
-    
+
     logger.info(f"LOT_CREDITING: Processing {change_type} credit operation")
-    
+
     # For crediting operations, we need to add inventory back using FIFO logic
     # This will credit the oldest lots first (reverse FIFO for returns)
     try:
