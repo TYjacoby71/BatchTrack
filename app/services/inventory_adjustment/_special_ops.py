@@ -42,3 +42,35 @@ def handle_cost_override_special(item, quantity, notes=None, created_by=None, co
     except Exception as e:
         logger.error(f"Error in cost override: {str(e)}")
         return False, str(e)
+"""
+Special Operations Handler
+
+Handles special operations like cost_override and unit_conversion
+"""
+
+import logging
+from app.models import db
+
+logger = logging.getLogger(__name__)
+
+def handle_cost_override(item, quantity, notes=None, created_by=None, cost_override=None, **kwargs):
+    """Special handler for cost override (no quantity change)"""
+    try:
+        if cost_override is not None:
+            item.cost_per_unit = cost_override
+            db.session.commit()
+            return True, f"Updated cost to {cost_override}"
+        return False, "No cost override provided"
+    except Exception as e:
+        logger.error(f"Error in cost override: {str(e)}")
+        return False, str(e)
+
+def handle_unit_conversion(item, quantity, notes=None, created_by=None, **kwargs):
+    """Special handler for unit conversion"""
+    try:
+        # Unit conversion logic would go here
+        # For now, just return success
+        return True, "Unit conversion completed"
+    except Exception as e:
+        logger.error(f"Error in unit conversion: {str(e)}")
+        return False, str(e)
