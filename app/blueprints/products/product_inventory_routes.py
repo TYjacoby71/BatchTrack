@@ -3,6 +3,7 @@ from flask_login import login_required, current_user
 from ...models import db, ProductSKU, Batch
 from ...models.product import ProductSKUHistory
 from ...services.product_service import ProductService
+from ...services.inventory_adjustment import process_inventory_adjustment
 from app.services.inventory_adjustment import process_inventory_adjustment
 import logging
 

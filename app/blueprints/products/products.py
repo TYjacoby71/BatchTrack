@@ -100,7 +100,7 @@ def create_product_from_data(data):
 
 @products_bp.route('/')
 @products_bp.route('/list')
-@login_required
+@login_required  
 def list_products():
     """List all products with inventory summary and sorting"""
     from ...services.product_service import ProductService
