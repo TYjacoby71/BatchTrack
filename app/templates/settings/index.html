@@ -35,7 +35,7 @@
                 <i class="fas fa-sliders-h"></i> Preferences
             </button>
         </li>
-        {% if has_permission('settings.edit') %}
+        {% if has_permission(current_user, 'settings.edit') %}
         <li class="nav-item" role="presentation">
             <button class="nav-link" id="system-tab" data-bs-toggle="tab" data-bs-target="#system" type="button" role="tab">
                 <i class="fas fa-server"></i> System
@@ -70,7 +70,7 @@
         </div>
 
         <!-- System Tab -->
-        {% if has_permission('settings.edit') %}
+        {% if has_permission(current_user, 'settings.edit') %}
         <div class="tab-pane fade" id="system" role="tabpanel">
             {% include 'settings/components/system_tab.html' %}
         </div>
