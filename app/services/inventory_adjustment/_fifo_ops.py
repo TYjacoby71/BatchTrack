@@ -37,15 +37,22 @@ def _internal_add_fifo_entry_enhanced(
         if cost_per_unit is None:
             cost_per_unit = item.cost_per_unit or 0.0
 
+        # For additive operations, remaining_quantity = quantity_change
+        remaining_qty = quantity
+        
+        # Generate FIFO code with enhanced logic for recount operations
+        from app.utils.fifo_generator import get_fifo_prefix
+        fifo_prefix = get_fifo_prefix(change_type, remaining_qty > 0)
+        
         # Create the FIFO history entry
         fifo_entry = UnifiedInventoryHistory(
             inventory_item_id=item_id,
             timestamp=datetime.utcnow(),
-            change_type=change_type,
+            change_type=change_type,  # Always use the actual change_type for audit trail
             quantity_change=quantity,
             unit=unit,
             unit_cost=cost_per_unit,
-            remaining_quantity=quantity,
+            remaining_quantity=remaining_qty,
             notes=notes or 'FIFO entry',
             created_by=created_by,
             quantity_used=0.0,
