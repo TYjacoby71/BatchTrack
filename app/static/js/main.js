@@ -33,12 +33,11 @@ function toggleIngredientForm() {
 function toggleUpdateForm() {
   const form = document.getElementById('updateInventoryForm');
   const addForm = document.getElementById('addIngredientForm');
-  addForm.style.display = 'none';
+  if (addForm) addForm.style.display = 'none';
 
-  if (form.style.display === 'none') {
+  if (form && form.style.display === 'none') {
     form.style.display = 'block';
-    form.reset();
-  } else {
+  } else if (form) {
     form.style.display = 'none';
   }
 }
