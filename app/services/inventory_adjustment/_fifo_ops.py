@@ -101,6 +101,7 @@ def _internal_add_fifo_entry_enhanced(item_id, quantity, change_type, notes="", 
 def _handle_deductive_operation_internal(item_id, quantity_to_deduct, change_type, notes="", created_by=None, batch_id=None):
     """
     Handle deductive operations using FIFO (First In, First Out) logic with lots
+    Special handling for recount operations to force absolute adjustments
     """
     try:
         from app.models import InventoryItem
@@ -120,7 +121,10 @@ def _handle_deductive_operation_internal(item_id, quantity_to_deduct, change_typ
             )
         ).order_by(InventoryLot.received_date.asc()).all()
 
-        if not available_lots:
+        # For recount operations, we need to force the adjustment even if insufficient inventory
+        is_recount = change_type == 'recount'
+        
+        if not available_lots and not is_recount:
             logger.warning(f"FIFO: No available lots for deduction from item {item_id}")
             return True, "No inventory to deduct from"
 
@@ -128,6 +132,7 @@ def _handle_deductive_operation_internal(item_id, quantity_to_deduct, change_typ
         total_deducted = 0
         deductions = []
 
+        # Process available lots first
         for lot in available_lots:
             if remaining_to_deduct <= 0:
                 break
@@ -169,7 +174,37 @@ def _handle_deductive_operation_internal(item_id, quantity_to_deduct, change_typ
 
             logger.info(f"FIFO: Deducted {deduct_from_lot} {lot.unit} from lot {lot.fifo_code} (ID: {lot.id}), remaining: {lot.remaining_quantity}")
 
-        if remaining_to_deduct > 0:
+        # Handle remaining deduction for recount operations (force negative inventory)
+        if remaining_to_deduct > 0 and is_recount:
+            logger.warning(f"RECOUNT FORCE: Creating phantom deduction for remaining {remaining_to_deduct} units")
+            
+            # Create a phantom deduction entry for the remaining amount
+            phantom_entry = UnifiedInventoryHistory(
+                inventory_item_id=item_id,
+                change_type=change_type,
+                quantity_change=-remaining_to_deduct,
+                remaining_quantity=0,
+                unit=item.unit if item.unit else 'count',
+                unit_cost=item.cost_per_unit or 0.0,
+                fifo_code=None,  # No specific lot
+                notes=f"{notes} (phantom deduction for recount shortfall)",
+                created_by=created_by,
+                batch_id=batch_id,
+                is_perishable=item.is_perishable,
+                shelf_life_days=item.shelf_life_days,
+                expiration_date=None,
+                affected_lot_id=None,
+                organization_id=item.organization_id
+            )
+            
+            db.session.add(phantom_entry)
+            total_deducted += remaining_to_deduct
+            remaining_to_deduct = 0
+            
+            logger.info(f"RECOUNT FORCE: Created phantom deduction for {remaining_to_deduct} units")
+
+        # Check for insufficient inventory for non-recount operations
+        if remaining_to_deduct > 0 and not is_recount:
             logger.warning(f"FIFO: Could not deduct full amount. {remaining_to_deduct} units remaining")
             return False, f"Insufficient inventory. {remaining_to_deduct} units could not be deducted"
 
@@ -177,7 +212,10 @@ def _handle_deductive_operation_internal(item_id, quantity_to_deduct, change_typ
         item.quantity -= total_deducted
         logger.info(f"FIFO: Updated item {item_id} quantity: reduced by {total_deducted}, new total: {item.quantity}")
 
-        return True, f"Deducted from {len(deductions)} lots"
+        if is_recount:
+            return True, f"Recount: Forcibly deducted {total_deducted} units (from {len(deductions)} lots)"
+        else:
+            return True, f"Deducted from {len(deductions)} lots"
 
     except Exception as e:
         logger.error(f"FIFO: Error in deductive operation for item {item_id}: {str(e)}")
