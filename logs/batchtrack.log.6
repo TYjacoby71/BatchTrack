@@ -1,67 +1,90 @@
-2025-08-21 07:34:33,873 INFO: RECOUNT SUCCESS: Inventory already at target quantity: 10.0 [in /home/runner/workspace/app/blueprints/inventory/routes.py:383]
-2025-08-21 07:34:33,966 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
-2025-08-21 07:34:33,988 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
-2025-08-21 07:34:33,992 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
-2025-08-21 07:34:38,907 INFO: ADJUST INVENTORY - Item: Admin Apples (ID: 2) [in /home/runner/workspace/app/blueprints/inventory/routes.py:280]
-2025-08-21 07:34:38,908 INFO: Form data received: {'csrf_token': 'IjNmY2I2MDg5Mzc0Y2YyYWMwMzcyYjRjNGY1ODU1NWU5ODA2OTRlNGYi.aKbMCQ.OYaHaN-MC-XPtYWuZUS67nirr-c', 'change_type': 'restock', 'quantity': '1', 'input_unit': 'count', 'cost_entry_type': 'no_change', 'cost_per_unit': '3', 'notes': ''} [in /home/runner/workspace/app/blueprints/inventory/routes.py:281]
-2025-08-21 07:34:38,909 INFO: CANONICAL DISPATCHER: item_id=2, quantity=1.0, change_type=restock, caller=app/blueprints/inventory/routes.py:adjust_inventory [in /home/runner/workspace/app/services/inventory_adjustment/_core.py:36]
-2025-08-21 07:34:38,911 ERROR: ADDITIVE: Error in restock for item 2: _internal_add_fifo_entry_enhanced() got an unexpected keyword argument 'item_id' [in /home/runner/workspace/app/services/inventory_adjustment/_additive_ops.py:69]
-2025-08-21 07:34:38,911 ERROR: Adjustment failed: _internal_add_fifo_entry_enhanced() got an unexpected keyword argument 'item_id' [in /home/runner/workspace/app/blueprints/inventory/routes.py:325]
-2025-08-21 07:34:38,977 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
-2025-08-21 07:34:38,998 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
-2025-08-21 07:34:39,001 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
-2025-08-21 07:36:35,016 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
-2025-08-21 07:36:40,825 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
-2025-08-21 07:36:42,682 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
-2025-08-21 07:36:43,236 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
-2025-08-21 07:39:31,618 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
-2025-08-21 07:39:31,705 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
-2025-08-21 07:39:31,707 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
-2025-08-21 07:39:31,708 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
-2025-08-21 07:39:31,709 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
-2025-08-21 07:39:31,711 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
-2025-08-21 07:39:31,712 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
-2025-08-21 07:39:31,713 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
-2025-08-21 07:39:31,726 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
-2025-08-21 07:39:33,747 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
-2025-08-21 07:39:33,793 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
-2025-08-21 07:39:33,846 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
-2025-08-21 07:39:37,780 INFO: ADJUST INVENTORY - Item: Admin Apples (ID: 2) [in /home/runner/workspace/app/blueprints/inventory/routes.py:280]
-2025-08-21 07:39:37,780 INFO: Form data received: {'csrf_token': 'IjNmY2I2MDg5Mzc0Y2YyYWMwMzcyYjRjNGY1ODU1NWU5ODA2OTRlNGYi.aKbNNQ.S6dhqG7wgQ1N2mKTrF8jJ1hlRBo', 'change_type': 'restock', 'quantity': '10', 'input_unit': 'count', 'cost_entry_type': 'no_change', 'cost_per_unit': '3', 'notes': ''} [in /home/runner/workspace/app/blueprints/inventory/routes.py:281]
-2025-08-21 07:39:37,853 INFO: CANONICAL DISPATCHER: item_id=2, quantity=10.0, change_type=restock, caller=app/blueprints/inventory/routes.py:adjust_inventory [in /home/runner/workspace/app/services/inventory_adjustment/_core.py:36]
-2025-08-21 07:39:37,860 ERROR: FIFO: Error creating lot for item 2: generate_fifo_code() missing 2 required positional arguments: 'change_type' and 'item_id' [in /home/runner/workspace/app/services/inventory_adjustment/_fifo_ops.py:96]
-2025-08-21 07:39:37,862 ERROR: ADDITIVE: Failed restock for item 2: Error creating inventory lot: generate_fifo_code() missing 2 required positional arguments: 'change_type' and 'item_id' [in /home/runner/workspace/app/services/inventory_adjustment/_additive_ops.py:65]
-2025-08-21 07:39:37,862 ERROR: Adjustment failed: Error creating inventory lot: generate_fifo_code() missing 2 required positional arguments: 'change_type' and 'item_id' [in /home/runner/workspace/app/blueprints/inventory/routes.py:325]
-2025-08-21 07:39:37,923 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
-2025-08-21 07:39:37,945 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
-2025-08-21 07:39:37,948 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
-2025-08-21 07:41:10,094 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
-2025-08-21 07:41:16,998 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
-2025-08-21 07:41:18,887 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
-2025-08-21 07:41:19,319 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
-2025-08-21 07:41:22,457 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
-2025-08-21 07:41:22,559 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
-2025-08-21 07:41:22,561 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
-2025-08-21 07:41:22,564 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
-2025-08-21 07:41:22,565 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
-2025-08-21 07:41:22,568 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
-2025-08-21 07:41:22,569 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
-2025-08-21 07:41:22,570 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
-2025-08-21 07:41:22,584 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
-2025-08-21 07:41:25,196 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
-2025-08-21 07:41:25,238 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
-2025-08-21 07:41:25,291 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
-2025-08-21 07:41:27,915 INFO: ADJUST INVENTORY - Item: Admin Apples (ID: 2) [in /home/runner/workspace/app/blueprints/inventory/routes.py:280]
-2025-08-21 07:41:27,915 INFO: Form data received: {'csrf_token': 'IjNmY2I2MDg5Mzc0Y2YyYWMwMzcyYjRjNGY1ODU1NWU5ODA2OTRlNGYi.aKbNpQ.3Edm4h2OjeuEYDvXcUAM6gDqTU4', 'change_type': 'restock', 'quantity': '10', 'input_unit': 'count', 'cost_entry_type': 'no_change', 'cost_per_unit': '3', 'notes': ''} [in /home/runner/workspace/app/blueprints/inventory/routes.py:281]
-2025-08-21 07:41:28,006 INFO: CANONICAL DISPATCHER: item_id=2, quantity=10.0, change_type=restock, caller=app/blueprints/inventory/routes.py:adjust_inventory [in /home/runner/workspace/app/services/inventory_adjustment/_core.py:36]
-2025-08-21 07:41:28,013 INFO: FIFO: Created lot LOT1GEF6S2A7 with 10.0 count for item 2 (perishable: True) [in /home/runner/workspace/app/services/inventory_adjustment/_fifo_ops.py:92]
-2025-08-21 07:41:28,013 INFO: ADDITIVE: Restocked 10.0 count for item 2, new total: 20.0 [in /home/runner/workspace/app/services/inventory_adjustment/_additive_ops.py:62]
-2025-08-21 07:41:28,074 INFO: Adjustment successful: Restocked 10.0 count [in /home/runner/workspace/app/blueprints/inventory/routes.py:322]
-2025-08-21 07:41:28,147 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
-2025-08-21 07:41:28,166 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
-2025-08-21 07:41:28,171 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
-2025-08-21 07:41:36,580 INFO: EDIT INVENTORY - Item: Admin Apples (ID: 2) [in /home/runner/workspace/app/blueprints/inventory/routes.py:360]
-2025-08-21 07:41:36,581 INFO: Form data received: {'csrf_token': 'IjNmY2I2MDg5Mzc0Y2YyYWMwMzcyYjRjNGY1ODU1NWU5ODA2OTRlNGYi.aKbNqA.iNanDR3ipxlziLQmCzr7LGTqG3g', 'name': 'Admin Apples', 'quantity': '0', 'type': 'ingredient', 'is_perishable': 'on', 'shelf_life_days': '1', 'category_id': '', 'unit': 'count', 'density': '0.0', 'cost_per_unit': '3.0', 'confirm_unit_change': 'false', 'convert_inventory': 'false', 'change_type': 'recount'} [in /home/runner/workspace/app/blueprints/inventory/routes.py:361]
-2025-08-21 07:41:36,582 INFO: QUANTITY RECOUNT: Target quantity 0.0 for item Admin Apples [in /home/runner/workspace/app/blueprints/inventory/routes.py:368]
-2025-08-21 07:41:36,584 INFO: CANONICAL DISPATCHER: item_id=2, quantity=0.0, change_type=recount, caller=app/blueprints/inventory/routes.py:edit_inventory [in /home/runner/workspace/app/services/inventory_adjustment/_core.py:36]
-2025-08-21 07:41:36,589 INFO: RECOUNT: Admin Apples - FIFO total: 20.0, target: 0.0, delta: -20.0 [in /home/runner/workspace/app/services/inventory_adjustment/_recount_logic.py:23]
+2025-08-21 06:58:42,593 ERROR: Error creating FIFO entry: 'quantity_changed' is an invalid keyword argument for UnifiedInventoryHistory
+Traceback (most recent call last):
+  File "/home/runner/workspace/app/services/inventory_adjustment/_fifo_ops.py", line 46, in _internal_add_fifo_entry_enhanced
+    fifo_entry = UnifiedInventoryHistory(
+                 ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<string>", line 4, in __init__
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py", line 571, in _initialize_instance
+    with util.safe_reraise():
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py", line 569, in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py", line 2175, in _declarative_constructor
+    raise TypeError(
+TypeError: 'quantity_changed' is an invalid keyword argument for UnifiedInventoryHistory
+ [in /home/runner/workspace/app/services/inventory_adjustment/_fifo_ops.py:73]
+2025-08-21 06:58:42,595 ERROR: ADDITIVE: Failed restock for item 2: Error creating FIFO entry: 'quantity_changed' is an invalid keyword argument for UnifiedInventoryHistory
+Traceback (most recent call last):
+  File "/home/runner/workspace/app/services/inventory_adjustment/_fifo_ops.py", line 46, in _internal_add_fifo_entry_enhanced
+    fifo_entry = UnifiedInventoryHistory(
+                 ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<string>", line 4, in __init__
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py", line 571, in _initialize_instance
+    with util.safe_reraise():
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py", line 569, in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py", line 2175, in _declarative_constructor
+    raise TypeError(
+TypeError: 'quantity_changed' is an invalid keyword argument for UnifiedInventoryHistory
+ [in /home/runner/workspace/app/services/inventory_adjustment/_additive_ops.py:61]
+2025-08-21 06:58:42,595 ERROR: Adjustment failed: Error creating FIFO entry: 'quantity_changed' is an invalid keyword argument for UnifiedInventoryHistory
+Traceback (most recent call last):
+  File "/home/runner/workspace/app/services/inventory_adjustment/_fifo_ops.py", line 46, in _internal_add_fifo_entry_enhanced
+    fifo_entry = UnifiedInventoryHistory(
+                 ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<string>", line 4, in __init__
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py", line 571, in _initialize_instance
+    with util.safe_reraise():
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state.py", line 569, in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/decl_base.py", line 2175, in _declarative_constructor
+    raise TypeError(
+TypeError: 'quantity_changed' is an invalid keyword argument for UnifiedInventoryHistory
+ [in /home/runner/workspace/app/blueprints/inventory/routes.py:283]
+2025-08-21 06:58:42,669 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-08-21 06:58:42,698 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-08-21 06:58:42,702 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-08-21 06:59:23,244 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-08-21 06:59:26,341 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-08-21 06:59:28,208 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-08-21 06:59:28,586 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-08-21 06:59:31,937 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-08-21 06:59:31,995 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-08-21 06:59:31,996 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-08-21 06:59:31,997 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-08-21 06:59:31,998 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-08-21 06:59:31,999 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-08-21 06:59:32,000 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-08-21 06:59:32,001 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-08-21 06:59:32,021 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-08-21 06:59:34,105 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-08-21 06:59:34,145 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-08-21 06:59:34,197 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-08-21 06:59:37,274 INFO: ADJUST INVENTORY - Item: Admin Apples (ID: 2) [in /home/runner/workspace/app/blueprints/inventory/routes.py:238]
+2025-08-21 06:59:37,274 INFO: Form data received: {'csrf_token': 'IjNmY2I2MDg5Mzc0Y2YyYWMwMzcyYjRjNGY1ODU1NWU5ODA2OTRlNGYi.aKbD1g.uhgJFRqB6iIJH4N4P6q83NVzC5Y', 'change_type': 'restock', 'quantity': '10', 'input_unit': 'count', 'cost_entry_type': 'no_change', 'cost_per_unit': '3', 'notes': ''} [in /home/runner/workspace/app/blueprints/inventory/routes.py:239]
+2025-08-21 06:59:37,348 INFO: CANONICAL DISPATCHER: item_id=2, quantity=10.0, change_type=restock, caller=app/blueprints/inventory/routes.py:adjust_inventory [in /home/runner/workspace/app/services/inventory_adjustment/_core.py:36]
+2025-08-21 06:59:37,354 INFO: Creating FIFO entry: item_id=2, quantity=10.0, change_type=restock [in /home/runner/workspace/app/services/inventory_adjustment/_fifo_ops.py:20]
+2025-08-21 06:59:37,354 INFO: FIFO entry details: unit=count, cost=3.0, notes=Restocked inventory [in /home/runner/workspace/app/services/inventory_adjustment/_fifo_ops.py:34]
+2025-08-21 06:59:37,354 INFO: FIFO entry created successfully for item 2 [in /home/runner/workspace/app/services/inventory_adjustment/_fifo_ops.py:63]
+2025-08-21 06:59:37,354 INFO: ADDITIVE: Restocked 10.0 count for item 2 [in /home/runner/workspace/app/services/inventory_adjustment/_additive_ops.py:58]
+2025-08-21 06:59:37,421 INFO: Adjustment successful: Restocked 10.0 count [in /home/runner/workspace/app/blueprints/inventory/routes.py:280]
+2025-08-21 06:59:37,505 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-08-21 06:59:37,522 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-08-21 06:59:37,525 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-08-21 06:59:42,476 INFO: ADJUST INVENTORY - Item: Admin Apples (ID: 2) [in /home/runner/workspace/app/blueprints/inventory/routes.py:238]
+2025-08-21 06:59:42,476 INFO: Form data received: {'csrf_token': 'IjNmY2I2MDg5Mzc0Y2YyYWMwMzcyYjRjNGY1ODU1NWU5ODA2OTRlNGYi.aKbD2Q.9ktgG46TLrluhsx7Xa2qgT6BDhE', 'change_type': 'spoil', 'quantity': '10', 'input_unit': 'count', 'cost_entry_type': 'no_change', 'notes': ''} [in /home/runner/workspace/app/blueprints/inventory/routes.py:239]
+2025-08-21 06:59:42,477 INFO: CANONICAL DISPATCHER: item_id=2, quantity=10.0, change_type=spoil, caller=app/blueprints/inventory/routes.py:adjust_inventory [in /home/runner/workspace/app/services/inventory_adjustment/_core.py:36]
+2025-08-21 06:59:42,485 INFO: FIFO DEDUCTION: Successfully deducted 10.0 from item 2 [in /home/runner/workspace/app/services/inventory_adjustment/_fifo_ops.py:116]
+2025-08-21 06:59:42,504 INFO: Adjustment successful: Marked as spoiled [in /home/runner/workspace/app/blueprints/inventory/routes.py:280]
+2025-08-21 06:59:42,579 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-08-21 06:59:42,607 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-08-21 06:59:42,611 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-08-21 06:59:47,807 INFO: EDIT INVENTORY - Item: Admin Apples (ID: 2) [in /home/runner/workspace/app/blueprints/inventory/routes.py:318]
+2025-08-21 06:59:47,807 INFO: Form data received: {'csrf_token': 'IjNmY2I2MDg5Mzc0Y2YyYWMwMzcyYjRjNGY1ODU1NWU5ODA2OTRlNGYi.aKbD3g.L7sq9Jk-p3mnCm0iM-wFmP0ZQoQ', 'name': 'Admin Apples', 'quantity': '10', 'type': 'ingredient', 'is_perishable': 'on', 'shelf_life_days': '1', 'category_id': '', 'unit': 'count', 'density': '0.0', 'cost_per_unit': '3.0', 'confirm_unit_change': 'false', 'convert_inventory': 'false', 'change_type': 'recount'} [in /home/runner/workspace/app/blueprints/inventory/routes.py:319]
+2025-08-21 06:59:47,807 INFO: QUANTITY RECOUNT: Target quantity 10.0 for item Admin Apples [in /home/runner/workspace/app/blueprints/inventory/routes.py:326]
+2025-08-21 06:59:47,808 INFO: CANONICAL DISPATCHER: item_id=2, quantity=10.0, change_type=recount, caller=app/blueprints/inventory/routes.py:edit_inventory [in /home/runner/workspace/app/services/inventory_adjustment/_core.py:36]

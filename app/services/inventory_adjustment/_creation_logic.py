@@ -1,9 +1,8 @@
 import logging
 from datetime import datetime, timedelta
 from app.models import db, InventoryItem
+# Removed audit import - FIFO should be the only thing creating history
 from ._fifo_ops import _internal_add_fifo_entry_enhanced
-
-logger = logging.getLogger(__name__)
 
 
 def handle_initial_stock(item, quantity, unit=None, notes=None, created_by=None,
@@ -23,10 +22,10 @@ def handle_initial_stock(item, quantity, unit=None, notes=None, created_by=None,
 
         # Update the item's quantity first
         item.quantity = quantity
-
+        
         # For non-zero initial entries, create the first FIFO lot
         success, error = _internal_add_fifo_entry_enhanced(
-            inventory_item_id=item.id,
+            item_id=item.id,
             quantity=quantity,
             change_type='initial_stock',
             unit=final_unit,
@@ -40,15 +39,18 @@ def handle_initial_stock(item, quantity, unit=None, notes=None, created_by=None,
         if not success:
             return False, f"Failed to create initial stock: {error}"
 
-        db.session.commit() # Commit the changes
-
+        # Commit the changes
+        db.session.commit()
+        
         return True, f"Initial stock added: {quantity} {final_unit}"
 
     except Exception as e:
-        db.session.rollback() # Rollback on error
-        logger.error(f"Error in initial stock creation: {str(e)}")
-        return False, str(e)
+        db.session.rollback()
+        logging.error(f"Error in initial stock creation: {str(e)}")
+        return False, f"Error in initial stock creation: {str(e)}"
 
+
+logger = logging.getLogger(__name__)
 
 def create_inventory_item(form_data: dict, organization_id: int, created_by: int) -> tuple[bool, str, int]:
     """
