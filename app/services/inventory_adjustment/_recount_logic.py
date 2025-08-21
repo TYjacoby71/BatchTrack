@@ -47,7 +47,7 @@ def handle_recount(item, quantity, change_type, notes=None, created_by=None, cos
         elif delta > 0:
             # Need to add inventory
             success, error = _internal_add_fifo_entry_enhanced(
-                item_id=item.id,
+                inventory_item_id=item.id,
                 quantity=delta,
                 change_type='recount',
                 unit=item.unit or 'count',
@@ -69,7 +69,7 @@ def handle_recount(item, quantity, change_type, notes=None, created_by=None, cos
             # Need to remove inventory (delta is negative)
             deduction_qty = abs(delta)
             success, error_msg = _handle_deductive_operation_internal(
-                item_id=item.id,
+                inventory_item_id=item.id,
                 quantity=deduction_qty,
                 change_type='recount',
                 notes=notes or f"Recount adjustment: -{deduction_qty}",
