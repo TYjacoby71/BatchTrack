@@ -59,10 +59,9 @@ def create_app(config=None):
     # Initialize session configuration
     app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=31)
 
-    # Clear all dismissed alerts on app restart
-    @app.before_first_request
-    def clear_dismissed_alerts_on_restart():
-        # This will be cleared automatically when sessions are reset on restart
+    # Clear all dismissed alerts on app restart - Flask 2.2+ compatible
+    with app.app_context():
+        # Sessions will be cleared automatically on app restart since we're using the default session interface
         pass
 
     # Register application components
