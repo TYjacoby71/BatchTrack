@@ -4,13 +4,13 @@
     <h5 class="mb-0">Adjust Inventory</h5>
   </div>
   <div class="card-body">
-    <form method="POST" action="{{ url_for('inventory.adjust_inventory', item_id=item.id) }}">
+    <form method="POST" action="{{ url_for('inventory.adjust_inventory', id=item.id) }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="row">
         <div class="col-md-4">
-          <div class="form-group">
-            <label>Change Type</label>
-            <select class="form-control" name="change_type" required>
+          <div class="form-group mb-3">
+            <label for="changeType" class="form-label">Action *</label>
+            <select class="form-control" id="changeType" name="change_type" required>
               <option value="restock">Restock</option>
               <option value="spoil">Spoil</option>
               <option value="trash">Trash</option>

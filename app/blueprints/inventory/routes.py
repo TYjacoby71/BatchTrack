@@ -219,7 +219,12 @@ def adjust_inventory(item_id):
 
     # --- 1. Gather all data from the form ---
     form_data = request.form
-    adjustment_type = form_data.get('adjustment_type', '').strip().lower()
+    # Try multiple possible field names for change_type
+    adjustment_type = (
+        form_data.get('change_type', '') or 
+        form_data.get('adjustment_type', '') or
+        form_data.get('action', '')
+    ).strip().lower()
 
     try:
         quantity = float(form_data.get('quantity', 0.0))
