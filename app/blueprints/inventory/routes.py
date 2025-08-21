@@ -162,29 +162,6 @@ def view_inventory(id):
     history = pagination.items
     lots = lots_query.all()
 
-    # Combine lots and history into a unified timeline
-    # Each lot represents a restock event and should be displayed as such
-    combined_history = []
-
-    # Add regular history entries
-    for entry in history:
-        combined_history.append({
-            'type': 'history',
-            'data': entry,
-            'timestamp': entry.timestamp
-        })
-
-    # Add lots as restock history entries
-    for lot in lots:
-        combined_history.append({
-            'type': 'lot',
-            'data': lot,
-            'timestamp': lot.created_at
-        })
-
-    # Sort by timestamp descending
-    combined_history.sort(key=lambda x: x['timestamp'], reverse=True)
-
     from datetime import datetime
 
     # Get expired FIFO entries for display (only from InventoryLot since lots handle FIFO tracking)
@@ -210,7 +187,8 @@ def view_inventory(id):
     return render_template('pages/inventory/view.html',
                          abs=abs,
                          item=item,
-                         history=combined_history, # Use combined_history here
+                         history=history,
+                         lots=lots,
                          pagination=pagination,
                          expired_entries=expired_entries,
                          expired_total=expired_total,
