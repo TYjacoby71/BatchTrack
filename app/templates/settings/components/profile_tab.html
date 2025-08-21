@@ -20,28 +20,28 @@
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label class="form-label">First Name <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" x-model="profile.first_name" placeholder="Enter first name">
+                                <input type="text" class="form-control" :value="profile.first_name" @input="profile.first_name = $event.target.value" placeholder="Enter first name">
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">Last Name <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" x-model="profile.last_name" placeholder="Enter last name">
+                                <input type="text" class="form-control" :value="profile.last_name" @input="profile.last_name = $event.target.value" placeholder="Enter last name">
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label class="form-label">Email <span class="text-danger">*</span></label>
-                                <input type="email" class="form-control" x-model="profile.email" placeholder="Enter email address">
+                                <input type="email" class="form-control" :value="profile.email" @input="profile.email = $event.target.value" placeholder="Enter email address">
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">Phone</label>
-                                <input type="tel" class="form-control" x-model="profile.phone" placeholder="Enter phone number">
+                                <input type="tel" class="form-control" :value="profile.phone" @input="profile.phone = $event.target.value" placeholder="Enter phone number">
                             </div>
                         </div>
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label">Timezone</label>
-                        <select class="form-control" x-model="profile.timezone">
+                        <select class="form-control" :value="profile.timezone" @change="profile.timezone = $event.target.value">
                             <option value="America/New_York">Eastern Time (ET)</option>
                             <option value="America/Chicago">Central Time (CT)</option>
                             <option value="America/Denver">Mountain Time (MT)</option>
