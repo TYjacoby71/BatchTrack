@@ -76,6 +76,7 @@ class ProductService:
             sku_name = f"{product.name} - {variant.name} - {size_label}"
             
             # Create the ProductSKU entry - ensure sku field is properly set
+            # Note: Don't pass id parameter to let SQLAlchemy auto-generate it
             product_sku = ProductSKU(
                 product_id=product.id,
                 variant_id=variant.id,

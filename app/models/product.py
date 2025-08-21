@@ -328,6 +328,9 @@ class ProductSKU(db.Model, ScopedModelMixin):
     def __init__(self, **kwargs):
         # Allow tests to pass quantity= and map to quantity_override
         qty = kwargs.pop("quantity", None)
+        # Don't pass id=None to avoid SQLite autoincrement issues
+        if 'id' in kwargs and kwargs['id'] is None:
+            kwargs.pop('id')
         super().__init__(**kwargs)
         if qty is not None:
             self._quantity = qty
