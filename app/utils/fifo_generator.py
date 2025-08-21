@@ -51,16 +51,20 @@ def generate_fifo_code(change_type, remaining_quantity=0, batch_label=None):
     if batch_label:
         return f"BCH-{batch_label}"
 
-    # Recount operations should ALWAYS use RCN prefix, never LOT
+    # For recount operations, use enhanced logic
     if change_type == 'recount':
-        prefix = 'RCN'
+        if remaining_quantity > 0:
+            prefix = 'LOT'  # Recount overflow creates new lots
+        else:
+            prefix = 'RCN'  # Recount refills/deductions don't create lots
     else:
         # Determine if this is a lot (creates remaining quantity)
         # Only these types with positive quantities create lots
         lot_creation_types = [
             'restock', 
             'finished_batch', 
-            'manual_addition'  # adding existing quantities
+            'manual_addition',
+            'initial_stock'
         ]
 
         is_lot = change_type in lot_creation_types and remaining_quantity > 0
