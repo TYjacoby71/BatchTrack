@@ -23,7 +23,9 @@
           {% for lot in lots %}
           <tr>
             <td>{{ TimezoneUtils.format_for_user(lot.created_at, '%Y-%m-%d %H:%M') }}</td>
-            <td>{{ lot.fifo_code or '-' }}</td>
+            <td class="text-center">
+                            <small class="text-muted">{{ lot.display_code }}</small>
+                        </td>
             <td>{{ '%.2f'|format(lot.remaining_quantity) }}</td>
             <td>{{ '%.2f'|format(lot.original_quantity) }}</td>
             <td>{{ lot.unit }}</td>

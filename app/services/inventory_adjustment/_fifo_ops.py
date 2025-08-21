@@ -123,12 +123,13 @@ def _internal_add_fifo_entry_enhanced(item_id, quantity, change_type, unit=None,
             notes=notes,
             created_by=getattr(current_user, 'id', None) if current_user.is_authenticated else None,
             organization_id=item.organization_id,
-            is_perishable=lot.is_perishable,  # Use lot's perishable status
-            shelf_life_days=final_shelf_life_days,
-            expiration_date=lot.expiration_date,  # Use lot's expiration date
+            is_perishable=item.is_perishable,
+            shelf_life_days=item.shelf_life_days,
+            expiration_date=final_expiration_date,
             affected_lot_id=lot.id,  # Link to the actual lot
-            remaining_quantity=lot.remaining_quantity,  # Use lot's remaining quantity
-            fifo_code=lot.fifo_code  # Use the same FIFO code as the lot
+            batch_id=batch_id,  # Link to batch if this came from a batch
+            # Note: We don't store remaining_quantity or fifo_code in history anymore
+            # The template will pull this data directly from the lot relationship
         )
         db.session.add(history_record)
 
@@ -184,10 +185,8 @@ def _handle_deductive_operation_internal(item_id, quantity_to_deduct, change_typ
                 inventory_item_id=item_id,
                 change_type=change_type,
                 quantity_change=-deduct_from_lot,
-                remaining_quantity=0,  # Deductions don't have remaining quantity
                 unit=lot.unit,
                 unit_cost=lot.unit_cost,
-                fifo_code=lot.fifo_code,
                 notes=notes,
                 created_by=created_by,
                 batch_id=batch_id,
@@ -298,6 +297,7 @@ def _record_deduction_plan_internal(item_id, deduction_plan, change_type, notes,
     """Record individual deduction records for each lot consumed"""
     try:
         item = db.session.get(InventoryItem, item_id)
+        organization_id = item.organization_id # Get organization_id from item
 
         # Handle fifo_reference_id explicitly
         reference_kwargs = {}
@@ -312,23 +312,23 @@ def _record_deduction_plan_internal(item_id, deduction_plan, change_type, notes,
             # Get the lot being consumed to get its details
             consumed_lot = db.session.get(InventoryLot, lot_id) # Changed to InventoryLot
 
-            history_entry = UnifiedInventoryHistory(
+            history_record = UnifiedInventoryHistory(
                 inventory_item_id=item_id,
-                organization_id=item.organization_id,
                 change_type=change_type,
-                quantity_change=-deduct_quantity,  # Individual lot deduction amount
-                remaining_quantity=0,  # This is a deduction record, not a lot
-                notes=f"{notes} (from lot {lot_id}: -{deduct_quantity})",
+                quantity_change=-deduct_quantity,
+                unit=consumed_lot.unit,
+                unit_cost=consumed_lot.unit_cost,
+                notes=notes,
                 created_by=created_by,
-                timestamp=TimezoneUtils.utc_now(),
-                unit=item.unit if item.unit else 'count',
-                unit_cost=consumed_lot.unit_cost if consumed_lot else (item.cost_per_unit or 0.0),
-                affected_lot_id=lot_id,  # This is the "credited/debited to" field
-                fifo_reference_id=lot_id,  # Reference to the lot being consumed
+                organization_id=organization_id,
+                is_perishable=consumed_lot.is_perishable,
+                expiration_date=consumed_lot.expiration_date,
+                shelf_life_days=consumed_lot.shelf_life_days,
+                affected_lot_id=lot_id,  # Link to the lot being consumed
                 **reference_kwargs
             )
 
-            db.session.add(history_entry)
+            db.session.add(history_record)
             logger.info(f"DEDUCTION RECORD: Created {change_type} record for -{deduct_quantity} from lot {lot_id}")
 
         return True

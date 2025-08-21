@@ -73,15 +73,23 @@
                     </td>
                     <td>{{ entry.quantity_change }}{% if item.type != 'container' %} {{ entry.unit }}{% endif %}</td>
                     <td>
-                        {% if entry.affected_lot and entry.change_type in ['restock', 'finished_batch', 'initial_stock'] %}
-                            {{ entry.affected_lot.remaining_quantity|round(2) }} {{ entry.unit }}
+                        {% if entry.affected_lot_id and entry.affected_lot %}
+                            {{ entry.affected_lot.remaining_quantity|round(2) }} {{ entry.affected_lot.unit }}
                         {% elif entry.remaining_quantity is not none %}
                             {{ entry.remaining_quantity|round(2) }} {{ entry.unit }}
                         {% else %}
                             -
                         {% endif %}
                     </td>
-                    <td>${{ "%.2f"|format(entry.unit_cost) if entry.unit_cost is not none else 'NA' }}</td>
+                    <td>
+                        {% if entry.affected_lot_id and entry.affected_lot %}
+                            ${{ entry.affected_lot.unit_cost|round(2) }}
+                        {% elif entry.unit_cost %}
+                            ${{ entry.unit_cost|round(2) }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
                     <td>{% if entry.unit_cost is not none %}${{ "%.2f"|format(abs(entry.quantity_change) * entry.unit_cost) }}{% else %}NA{% endif %}</td>
                     <td>
                       {% if entry.quantity_change < 0 and entry.used_for_batch %}

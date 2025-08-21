@@ -87,6 +87,16 @@ class InventoryLot(ScopedModelMixin, db.Model):
         return f'<InventoryLot {self.id}: {self.remaining_quantity}/{self.original_quantity} {self.unit}>'
     
     @property
+    def display_code(self):
+        """Get the customer-facing lot identifier"""
+        return self.fifo_code or f"LOT-{self.id}"
+    
+    @property
+    def lot_number(self):
+        """Legacy compatibility - return display code as lot number"""
+        return self.display_code
+    
+    @property
     def is_depleted(self):
         """Check if this lot is completely consumed"""
         return self.remaining_quantity <= 0
