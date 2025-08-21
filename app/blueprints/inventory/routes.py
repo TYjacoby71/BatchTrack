@@ -191,6 +191,8 @@ def add_inventory():
         logger.info(f"CREATE NEW INVENTORY ITEM - User: {current_user.id}, Org: {current_user.organization_id}")
         logger.info(f"Form data: {dict(request.form)}")
 
+        from app.services.inventory_adjustment import create_inventory_item
+        
         success, message, item_id = create_inventory_item(
             form_data=request.form.to_dict(),
             organization_id=current_user.organization_id,
