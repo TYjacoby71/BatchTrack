@@ -46,30 +46,29 @@
         <button type="button" class="btn btn-secondary" onclick="closeModal()">Close</button>
       </div>
       {% else %}
-      <form id="recipeForm" method="post">
+      <form id="recipeForm" method="get" action="#">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
         <div class="mb-3">
-          <label for="recipe_id" class="form-label">Recipe</label>
-          <select name="recipe_id" id="recipe_id" class="form-select" required>
-            <option value="">Choose Recipe...</option>
+          <label for="recipe_id" class="form-label">Select Recipe:</label>
+          <select class="form-select" id="recipe_id" name="recipe_id" required>
+            <option value="">Choose a recipe...</option>
             {% for recipe in recipes %}
             <option value="{{ recipe.id }}">{{ recipe.name }}</option>
             {% endfor %}
           </select>
         </div>
 
-        <!-- Check if selected recipe has variants -->
+        <!-- Variant Selection (hidden by default) -->
         <div id="variantSection" class="mb-3" style="display: none;">
-          <label for="variant_id" class="form-label">Variant <span class="text-muted">(optional)</span></label>
-          <select name="variant_id" id="variant_id" class="form-select">
-            <option value="">No variant</option>
+          <label for="variant_id" class="form-label">Select Variation:</label>
+          <select class="form-select" id="variant_id" name="variant_id">
+            <option value="">Choose a variation...</option>
           </select>
         </div>
 
-        <div class="d-flex gap-2 justify-content-center">
-          <button type="submit" class="btn btn-primary">Continue to Production Planning</button>
-          <button type="button" onclick="closeModal()" class="btn btn-secondary">Cancel</button>
+        <div class="d-flex justify-content-between">
+          <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+          <button type="button" class="btn btn-primary" onclick="goToPlanProduction()">Start Planning</button>
         </div>
       </form>
       {% endif %}
@@ -117,6 +116,15 @@ document.addEventListener('DOMContentLoaded', function() {
     backdrop.style.display = 'none';
   };
 
+  window.goToPlanProduction = function() {
+    const selectedRecipeId = recipeSelect.value;
+    if (selectedRecipeId) {
+      window.location.href = `/recipes/${selectedRecipeId}/plan`;
+    } else {
+      alert('Please select a recipe');
+    }
+  };
+
   if (recipeSelect) {
     recipeSelect.addEventListener('change', function() {
       const selectedRecipeId = this.value;
@@ -136,19 +144,6 @@ document.addEventListener('DOMContentLoaded', function() {
         // Hide variant section
         variantSection.style.display = 'none';
         variantSelect.innerHTML = '<option value="">No variant</option>';
-      }
-    });
-
-    // Handle form submission with dynamic action
-    recipeForm.addEventListener('submit', function(e) {
-      e.preventDefault();
-      const selectedRecipeId = recipeSelect.value;
-      if (selectedRecipeId) {
-        // Set the form action to the correct recipe planning URL
-        this.action = `/recipes/${selectedRecipeId}/plan`;
-        this.submit();
-      } else {
-        alert('Please select a recipe');
       }
     });
   }
