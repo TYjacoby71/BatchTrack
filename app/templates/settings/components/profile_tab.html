@@ -5,17 +5,8 @@
                 <h5 class="mb-0"><i class="fas fa-user-edit"></i> Profile Information</h5>
             </div>
             <div class="card-body">
-                <!-- Debug info - remove after fixing -->
-                <div class="alert alert-info mb-3" style="font-family: monospace; font-size: 12px;">
-                    <strong>Debug Info:</strong><br>
-                    current_user.first_name: "{{ current_user.first_name or 'None' }}"<br>
-                    current_user.last_name: "{{ current_user.last_name or 'None' }}"<br>
-                    current_user.email: "{{ current_user.email or 'None' }}"<br>
-                    current_user.phone: "{{ current_user.phone or 'None' }}"<br>
-                    Profile data initialized: <span x-text="JSON.stringify(profile)"></span>
-                </div>
-
-                <div class="row">
+                <form id="profileForm" @submit.prevent="saveProfile()">
+                    <div class="row">
                     <div class="col-md-6">
                         <div class="mb-3">
                             <label class="form-label">First Name <span class="text-danger">*</span></label>
@@ -54,10 +45,15 @@
                     </select>
                     <div class="form-text">Select your timezone for accurate date/time display throughout the application.</div>
                 </div>
-                <button type="submit" class="btn btn-primary" :disabled="saving">
-                    <i class="fas fa-save"></i>
-                    <span x-text="saving ? 'Saving...' : 'Save Changes'"></span>
-                </button>
+                <div class="row">
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary" :disabled="saving">
+                                <i class="fas fa-save"></i>
+                                <span x-text="saving ? 'Saving...' : 'Save Changes'"></span>
+                            </button>
+                        </div>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
