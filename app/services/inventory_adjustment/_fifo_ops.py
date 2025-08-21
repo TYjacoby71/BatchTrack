@@ -1,243 +1,313 @@
 
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
+from decimal import Decimal
 from app.models import db, InventoryItem, UnifiedInventoryHistory
-from app.utils.fifo_generator import generate_fifo_code
+from app.utils.timezone_utils import TimezoneUtils
 
 logger = logging.getLogger(__name__)
 
-def identify_lots(item_id):
-    """
-    Identify consumable lots for an inventory item.
-    
-    LOTS are FIFO events where:
-    - quantity_change > 0 (inventory was added for consumption)
-    - remaining_quantity > 0 (still has consumable inventory)
-    
-    These lots house the consumable inventory. All other events must interact 
-    with them using FIFO logic.
-    """
-    lots = UnifiedInventoryHistory.query.filter(
-        UnifiedInventoryHistory.inventory_item_id == item_id,
-        UnifiedInventoryHistory.quantity_change > 0,  # Only additive events
-        UnifiedInventoryHistory.remaining_quantity > 0  # Has remaining consumable quantity
-    ).order_by(UnifiedInventoryHistory.timestamp.asc()).all()
-    
-    return lots
+
+# ========== OPERATION TYPE CONFIGURATIONS ==========
+
+ADDITIVE_OPERATIONS = {
+    'restock': {'message': 'Restocked', 'use_cost_override': True},
+    'manual_addition': {'message': 'Added manually', 'use_cost_override': False},
+    'returned': {'message': 'Returned', 'use_cost_override': False},
+    'refunded': {'message': 'Refunded', 'use_cost_override': False},
+    'finished_batch': {'message': 'Added from finished batch', 'use_cost_override': False},
+    'unreserved': {'message': 'Unreserved', 'use_cost_override': False},
+    'initial_stock': {'message': 'Initial stock added', 'use_cost_override': True}
+}
+
+DEDUCTIVE_OPERATIONS = {
+    'use': {'message': 'Used'},
+    'batch': {'message': 'Used in batch'},
+    'sale': {'message': 'Sold'},
+    'spoil': {'message': 'Marked as spoiled'},
+    'trash': {'message': 'Trashed'},
+    'expired': {'message': 'Removed (expired)'},
+    'damaged': {'message': 'Removed (damaged)'},
+    'quality_fail': {'message': 'Removed (quality fail)'},
+    'sample': {'message': 'Used for sample'},
+    'tester': {'message': 'Used for tester'},
+    'gift': {'message': 'Gave as gift'},
+    'reserved': {'message': 'Reserved'},
+    'recount_deduction': {'message': 'Recount adjustment'}
+}
+
+SPECIAL_OPERATIONS = {
+    'cost_override': 'handle_cost_override_special',
+    'recount': 'handle_recount_special'  # Handled in _recount_logic.py
+}
 
 
-def identify_refillable_lots(item_id):
-    """
-    Identify lots that can be refilled during recount operations.
-    These are additive entries where remaining_quantity < original quantity_change.
-    """
-    lots = UnifiedInventoryHistory.query.filter(
-        UnifiedInventoryHistory.inventory_item_id == item_id,
-        UnifiedInventoryHistory.quantity_change > 0  # Only additive entries
-    ).order_by(UnifiedInventoryHistory.timestamp.asc()).all()
-    
-    refillable_lots = []
-    for lot in lots:
-        original_qty = float(lot.quantity_change)
-        current_remaining = float(lot.remaining_quantity)
-        available_capacity = original_qty - current_remaining
+# ========== UNIFIED HANDLERS ==========
+
+def handle_additive_operation(item, quantity, change_type, notes=None, created_by=None, cost_override=None, **kwargs):
+    """Universal handler for all additive operations"""
+    try:
+        if change_type not in ADDITIVE_OPERATIONS:
+            return False, f"Unknown additive operation: {change_type}"
         
-        if available_capacity > 0:
-            refillable_lots.append((lot, available_capacity))
-    
-    return refillable_lots
+        config = ADDITIVE_OPERATIONS[change_type]
+        
+        # Determine cost per unit
+        if config.get('use_cost_override') and cost_override is not None:
+            cost_per_unit = cost_override
+        else:
+            cost_per_unit = item.cost_per_unit
+        
+        success, error = _internal_add_fifo_entry_enhanced(
+            item_id=item.id,
+            quantity=quantity,
+            change_type=change_type,
+            unit=getattr(item, 'unit', 'count'),
+            notes=notes,
+            cost_per_unit=cost_per_unit,
+            created_by=created_by,
+            **kwargs
+        )
+        
+        if success:
+            message = f"{config['message']} {quantity} {getattr(item, 'unit', 'units')}"
+            return True, message
+        return False, error
+        
+    except Exception as e:
+        logger.error(f"Error in additive operation {change_type}: {str(e)}")
+        return False, str(e)
 
 
-def calculate_current_fifo_total(item_id):
-    """
-    Calculate total consumable inventory from FIFO lots.
-    This is the authoritative source of how much inventory is actually available.
-    """
-    lots = identify_lots(item_id)
-    return sum(float(lot.remaining_quantity) for lot in lots)
+def handle_deductive_operation(item, quantity, change_type, notes=None, created_by=None, **kwargs):
+    """Universal handler for all deductive operations"""
+    try:
+        if change_type not in DEDUCTIVE_OPERATIONS:
+            return False, f"Unknown deductive operation: {change_type}"
+        
+        config = DEDUCTIVE_OPERATIONS[change_type]
+        
+        success = _handle_deductive_operation_internal(
+            item, quantity, change_type, notes, created_by, **kwargs
+        )
+        
+        if success:
+            message = f"{config['message']} {quantity} {getattr(item, 'unit', 'units')}"
+            return True, message
+        return False, "Insufficient inventory"
+        
+    except Exception as e:
+        logger.error(f"Error in deductive operation {change_type}: {str(e)}")
+        return False, str(e)
 
 
-def _calculate_deduction_plan_internal(item_id, required_quantity, change_type='use'):
-    """
-    Calculates a deduction plan from available FIFO lots.
-    Only operates on consumable lots (positive quantity_change with remaining_quantity > 0).
-    Returns a list of tuples: [(entry_id, quantity_to_deduct, unit_cost), ...]
-    """
-    available_lots = identify_lots(item_id)
-    
-    deduction_plan = []
-    remaining_needed = float(required_quantity)
-    total_available = sum(float(lot.remaining_quantity) for lot in available_lots)
-
-    if total_available < remaining_needed:
-        return None, f"Insufficient inventory: need {remaining_needed}, available {total_available}"
-
-    for lot in available_lots:
-        if remaining_needed <= 0:
-            break
-        deduct_from_lot = min(float(lot.remaining_quantity), remaining_needed)
-        deduction_plan.append((lot.id, deduct_from_lot, lot.unit_cost))
-        remaining_needed -= deduct_from_lot
-
-    return deduction_plan, None
+def handle_cost_override_special(item, quantity, notes=None, created_by=None, cost_override=None, **kwargs):
+    """Special handler for cost override (no quantity change)"""
+    try:
+        if cost_override is not None:
+            item.cost_per_unit = cost_override
+            db.session.commit()
+            return True, f"Updated cost to {cost_override}"
+        return False, "No cost override provided"
+        
+    except Exception as e:
+        logger.error(f"Error in cost override: {str(e)}")
+        return False, str(e)
 
 
-def _calculate_addition_plan_internal(item_id, quantity_to_add, change_type='restock'):
-    """
-    Calculates an addition plan for refilling existing lots during recount.
-    Returns list of (lot_id, fill_amount) tuples and remaining overflow quantity.
-    """
-    refillable_lots = identify_refillable_lots(item_id)
-    
-    addition_plan = []
-    remaining_to_add = float(quantity_to_add)
-    
-    for lot, available_capacity in refillable_lots:
-        if remaining_to_add <= 0:
-            break
-            
-        fill_amount = min(remaining_to_add, available_capacity)
-        if fill_amount > 0:
-            addition_plan.append((lot.id, fill_amount))
-            remaining_to_add -= fill_amount
-    
-    return addition_plan, remaining_to_add
+# ========== OPERATION DISPATCHER ==========
+
+def get_operation_handler(change_type):
+    """Get the appropriate handler for a change_type"""
+    if change_type in ADDITIVE_OPERATIONS:
+        return handle_additive_operation
+    elif change_type in DEDUCTIVE_OPERATIONS:
+        return handle_deductive_operation
+    elif change_type in SPECIAL_OPERATIONS:
+        handler_name = SPECIAL_OPERATIONS[change_type]
+        if handler_name == 'handle_cost_override_special':
+            return handle_cost_override_special
+        # For recount, return None - it's handled in _recount_logic.py
+        return None
+    else:
+        return None
+
+
+# ========== INTERNAL HELPER FUNCTIONS ==========
+
+def _handle_deductive_operation_internal(item, quantity, change_type, notes, created_by, **kwargs):
+    """Internal logic for deductive operations using FIFO service"""
+    try:
+        # Get deduction plan from FIFO service
+        deduction_plan, error = _calculate_deduction_plan_internal(
+            item.id, abs(quantity), change_type
+        )
+
+        if error:
+            logger.error(f"Deduction planning failed: {error}")
+            return False
+
+        if not deduction_plan:
+            logger.warning(f"No deduction plan generated for {item.id}")
+            return False
+
+        # Execute deduction plan
+        success, error = _execute_deduction_plan_internal(deduction_plan, item.id)
+        if not success:
+            logger.error(f"Deduction execution failed: {error}")
+            return False
+
+        # Record audit trail
+        success = _record_deduction_plan_internal(
+            item.id, deduction_plan, change_type, notes, 
+            created_by=created_by, **kwargs
+        )
+        if not success:
+            logger.error(f"Deduction recording failed")
+            return False
+
+        # Sync item quantity to FIFO total
+        current_fifo_total = calculate_current_fifo_total(item.id)
+        item.quantity = current_fifo_total
+
+        return True
+
+    except Exception as e:
+        logger.error(f"Error in deductive operation: {str(e)}")
+        return False
+
+
+def _internal_add_fifo_entry_enhanced(item_id, quantity, change_type, unit, notes, cost_per_unit, created_by, expiration_date=None, shelf_life_days=None, **kwargs):
+    """Enhanced FIFO entry creation with full parameter support"""
+    try:
+        item = db.session.get(InventoryItem, item_id)
+        if not item:
+            return False, "Item not found"
+
+        # Create FIFO history entry
+        history_entry = UnifiedInventoryHistory(
+            inventory_item_id=item_id,
+            organization_id=item.organization_id,
+            change_type=change_type,
+            quantity_change=quantity,
+            remaining_quantity=quantity,
+            unit_cost=cost_per_unit,
+            notes=notes,
+            created_by=created_by,
+            timestamp=TimezoneUtils.utc_now(),
+            **kwargs
+        )
+
+        # Handle expiration if applicable
+        if expiration_date:
+            history_entry.expiration_date = expiration_date
+        elif shelf_life_days and shelf_life_days > 0:
+            history_entry.shelf_life_days = shelf_life_days
+            history_entry.expiration_date = TimezoneUtils.utc_now() + timedelta(days=shelf_life_days)
+
+        db.session.add(history_entry)
+        
+        # Update item quantity
+        item.quantity += quantity
+        
+        logger.info(f"FIFO: Updating inventory item {item_id} quantity: {item.quantity - quantity} → {item.quantity}")
+        
+        return True, f"Added {quantity} {unit}"
+        
+    except Exception as e:
+        logger.error(f"Error in _internal_add_fifo_entry_enhanced: {str(e)}")
+        return False, str(e)
+
+
+def _calculate_deduction_plan_internal(item_id, quantity, change_type):
+    """Calculate FIFO deduction plan"""
+    try:
+        available_lots = UnifiedInventoryHistory.query.filter(
+            UnifiedInventoryHistory.inventory_item_id == item_id,
+            UnifiedInventoryHistory.remaining_quantity > 0
+        ).order_by(UnifiedInventoryHistory.timestamp.asc()).all()
+
+        total_available = sum(lot.remaining_quantity for lot in available_lots)
+        
+        if total_available < quantity:
+            return None, f"Insufficient inventory: need {quantity}, have {total_available}"
+
+        deduction_plan = []
+        remaining_to_deduct = quantity
+
+        for lot in available_lots:
+            if remaining_to_deduct <= 0:
+                break
+                
+            if lot.remaining_quantity > 0:
+                deduct_from_lot = min(lot.remaining_quantity, remaining_to_deduct)
+                deduction_plan.append({
+                    'lot_id': lot.id,
+                    'deduct_quantity': deduct_from_lot,
+                    'lot_remaining_before': lot.remaining_quantity
+                })
+                remaining_to_deduct -= deduct_from_lot
+
+        return deduction_plan, None
+        
+    except Exception as e:
+        logger.error(f"Error calculating deduction plan: {str(e)}")
+        return None, str(e)
 
 
 def _execute_deduction_plan_internal(deduction_plan, item_id):
-    """
-    Executes a deduction plan against FIFO lots.
-    Decrements remaining_quantity on each affected lot.
-    """
-    for entry_id, deduct_quantity, _ in deduction_plan:
-        entry = db.session.get(UnifiedInventoryHistory, entry_id)
-        if entry:
-            entry.remaining_quantity = float(entry.remaining_quantity) - deduct_quantity
-    return True, None
-
-
-def _execute_addition_plan_internal(addition_plan, item_id):
-    """
-    Executes an addition plan against FIFO lots.
-    Increments remaining_quantity on each affected lot.
-    """
-    for entry_id, add_quantity in addition_plan:
-        entry = db.session.get(UnifiedInventoryHistory, entry_id)
-        if entry:
-            entry.remaining_quantity = float(entry.remaining_quantity) + add_quantity
-    return True, None
-
-
-def _record_deduction_plan_internal(item_id, deduction_plan, change_type, notes, **kwargs):
-    """
-    Creates audit trail entries for a deduction from lots.
-    """
-    item = db.session.get(InventoryItem, item_id)
-    if not item:
-        return False
-
-    for entry_id, qty_deducted, unit_cost in deduction_plan:
-        history_entry = UnifiedInventoryHistory(
-            inventory_item_id=item_id,
-            organization_id=item.organization_id,
-            change_type=change_type,
-            quantity_change=-abs(qty_deducted),
-            remaining_quantity=0.0,  # Deduction entries are not lots
-            unit=item.unit,
-            unit_cost=unit_cost,
-            notes=notes,
-            fifo_reference_id=entry_id,
-            fifo_code=generate_fifo_code(change_type),
-            batch_id=kwargs.get('batch_id'),
-            created_by=kwargs.get('created_by'),
-            customer=kwargs.get('customer'),
-            sale_price=kwargs.get('sale_price'),
-            order_id=kwargs.get('order_id'),
-        )
-        db.session.add(history_entry)
-    return True
-
-
-def _record_addition_plan_internal(item_id, addition_plan, change_type, notes, **kwargs):
-    """
-    Creates audit trail entries for additions to existing lots.
-    """
-    item = db.session.get(InventoryItem, item_id)
-    if not item:
-        return False
-
-    for entry_id, qty_added in addition_plan:
-        history_entry = UnifiedInventoryHistory(
-            inventory_item_id=item_id,
-            organization_id=item.organization_id,
-            change_type=change_type,
-            quantity_change=qty_added,
-            remaining_quantity=0.0,  # Addition entries are not new lots
-            unit=item.unit,
-            unit_cost=item.cost_per_unit,
-            notes=f"{notes or 'Lot refill'} - Refilled lot {entry_id}",
-            fifo_reference_id=entry_id,
-            fifo_code=generate_fifo_code(change_type),
-            created_by=kwargs.get('created_by'),
-        )
-        db.session.add(history_entry)
-    return True
-
-
-def _internal_add_fifo_entry_enhanced(
-    item_id: int,
-    quantity: float,
-    change_type: str,
-    unit: str | None,
-    notes: str | None,
-    cost_per_unit: float | None,
-    **kwargs,
-) -> tuple[bool, str | None]:
-    """
-    Creates a new FIFO lot in the unified history table.
-    Only creates lots for additive change types.
-    """
-    item = db.session.get(InventoryItem, item_id)
-    if not item:
-        return False, f"Item with ID {item_id} not found."
-
+    """Execute the FIFO deduction plan"""
     try:
-        # Prevent adding entries with zero or negative quantity
-        if float(quantity) <= 0:
-            logger.warning(f"Ignoring zero or negative quantity adjustment for item {item_id}: {quantity}")
-            return True, None  # Treat as a successful no-op
+        for step in deduction_plan:
+            lot = db.session.get(UnifiedInventoryHistory, step['lot_id'])
+            if lot:
+                lot.remaining_quantity -= step['deduct_quantity']
+                
+        return True, None
+        
+    except Exception as e:
+        logger.error(f"Error executing deduction plan: {str(e)}")
+        return False, str(e)
 
+
+def _record_deduction_plan_internal(item_id, deduction_plan, change_type, notes, created_by=None, **kwargs):
+    """Record the deduction in audit trail"""
+    try:
+        item = db.session.get(InventoryItem, item_id)
+        total_deducted = sum(step['deduct_quantity'] for step in deduction_plan)
+        
         history_entry = UnifiedInventoryHistory(
             inventory_item_id=item_id,
             organization_id=item.organization_id,
-            timestamp=datetime.utcnow(),
             change_type=change_type,
-            quantity_change=float(quantity),
-            unit=unit or item.unit,
-            remaining_quantity=float(quantity),  # New lot starts with full quantity
-            unit_cost=cost_per_unit,
+            quantity_change=-total_deducted,
+            remaining_quantity=0,
             notes=notes,
-            fifo_code=generate_fifo_code(change_type, remaining_quantity=float(quantity)),
-            batch_id=kwargs.get("batch_id"),
-            created_by=kwargs.get("created_by"),
-            customer=kwargs.get("customer"),
-            sale_price=kwargs.get("sale_price"),
-            order_id=kwargs.get("order_id"),
-            is_perishable=item.is_perishable,
-            shelf_life_days=kwargs.get("shelf_life_days") or item.shelf_life_days,
-            expiration_date=kwargs.get("expiration_date"),
+            created_by=created_by,
+            timestamp=TimezoneUtils.utc_now(),
+            **kwargs
         )
+
         db.session.add(history_entry)
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error recording deduction: {str(e)}")
+        return False
 
-        # Update parent inventory item quantity
-        from app.services.unit_conversion import ConversionEngine
-        rounded_qty_change = ConversionEngine.round_value(float(quantity), 3)
-        new_quantity = ConversionEngine.round_value(item.quantity + rounded_qty_change, 3)
 
-        logger.info(f"FIFO: Updating inventory item {item_id} quantity: {item.quantity} → {new_quantity}")
-        item.quantity = new_quantity
-
-        return True, None
-    except TypeError as e:
-        logger.error(f"Failed to add FIFO entry for item {item_id}: {e}")
-        return False, str(e)
+def calculate_current_fifo_total(item_id):
+    """Calculate current total from FIFO lots"""
+    try:
+        total = db.session.query(
+            db.func.sum(UnifiedInventoryHistory.remaining_quantity)
+        ).filter(
+            UnifiedInventoryHistory.inventory_item_id == item_id,
+            UnifiedInventoryHistory.remaining_quantity > 0
+        ).scalar() or 0.0
+        
+        return float(total)
+        
+    except Exception as e:
+        logger.error(f"Error calculating FIFO total: {str(e)}")
+        return 0.0

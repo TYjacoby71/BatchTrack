@@ -3,7 +3,6 @@ from app.models import db, InventoryItem, InventoryHistory, IngredientCategory
 from flask import session
 from sqlalchemy import and_
 import logging
-from ._core import process_inventory_adjustment
 
 logger = logging.getLogger(__name__)
 
@@ -58,9 +57,12 @@ def update_inventory_item(item_id, form_data):
         # Handle quantity update with recount
         new_quantity = float(form_data.get('quantity', item.quantity))
         if abs(new_quantity - item.quantity) > 0.001:
-            # Use recount to set absolute quantity
-            success = process_inventory_adjustment(
-                item_id=item.id,
+            # Use recount handler directly to avoid circular import
+            from ._handlers import get_operation_handler
+            
+            handler = get_operation_handler('recount')
+            success, message = handler(
+                item=item,
                 quantity=new_quantity,  # Recount target quantity, not delta
                 change_type='recount',
                 notes=f'Quantity updated via edit: {item.quantity} → {new_quantity}',
@@ -68,7 +70,7 @@ def update_inventory_item(item_id, form_data):
                 item_type=item.type
             )
             if not success:
-                return False, 'Error updating quantity'
+                return False, f'Error updating quantity: {message}'
 
         # Handle perishable status changes
         is_perishable = form_data.get('is_perishable') == 'on'
