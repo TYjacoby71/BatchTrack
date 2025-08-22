@@ -89,10 +89,10 @@ class PlanProductionManager {
     }
 
     updateProjectedYield() {
-        const projectedYieldInput = document.querySelector('input[readonly]');
+        const projectedYieldInput = document.getElementById('projectedYield');
         if (projectedYieldInput) {
             const newYield = (this.baseYield * this.scale).toFixed(2);
-            projectedYieldInput.value = newYield;
+            projectedYieldInput.value = `${newYield} ${this.unit}`;
         }
     }
 
@@ -199,6 +199,12 @@ class PlanProductionManager {
 
         if (this.requiresContainers) {
             this.fetchContainerPlan();
+        } else {
+            // Clear container results when toggled off
+            const containerResults = document.getElementById('containerResults');
+            if (containerResults) {
+                containerResults.innerHTML = '';
+            }
         }
     }
 

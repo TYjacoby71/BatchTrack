@@ -3,7 +3,7 @@
 
 {% block content %}
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-<div class="container-fluid mt-4" data-recipe-id="{{ recipe.id }}" data-recipe-name="{{ recipe.name }}" data-base-yield="{{ recipe.yield_amount }}" data-yield-unit="{{ recipe.yield_unit }}">
+<div class="container-fluid mt-4" data-recipe-id="{{ recipe.id }}" data-recipe-name="{{ recipe.name }}" data-base-yield="{{ recipe.predicted_yield }}" data-yield-unit="{{ recipe.predicted_yield_unit }}">
     <!-- Page Header -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
