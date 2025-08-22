@@ -321,23 +321,22 @@ function planProduction() {
     },
 
     get totalContained() {
-      return this.containersSelected.reduce((sum, c) => sum + (c.capacity * c.quantity), 0);
+      // Simple UI calculation - let backend handle complex logic
+      return this.containersSelected.reduce((sum, c) => sum + ((c.capacity || 0) * (c.quantity || 0)), 0);
     },
 
     get liveContainmentMessage() {
-      if (this.containersSelected.length === 0) return '';
+      // Simple UI feedback based on backend calculations
       if (this.containmentPercent < 100) {
-        return `There will be ${this.remainingToContain.toFixed(2)} ${this.unit} left uncontained.`;
+        return `${this.remainingToContain.toFixed(2)} ${this.unit} remaining uncontained`;
       }
-      return 'Full containment achieved.';
+      return 'Full containment achieved';
     },
 
     get canStartBatch() {
-      const batchTypeSelected = this.batchType !== '';
-      if (this.requiresContainers) {
-        return batchTypeSelected && this.containmentPercent >= 100 && this.stockChecked && this.stockCheckPassed;
-      }
-      return batchTypeSelected && this.stockChecked && this.stockCheckPassed;
+      // UI state check - backend validates business rules
+      return this.batchType !== '' && this.stockChecked && this.stockCheckPassed && 
+             (!this.requiresContainers || this.containmentPercent >= 100);
     },
 
     onContainerRequirementChange() {
@@ -445,76 +444,34 @@ function planProduction() {
       });
     },
 
-    performAutoFill() {
-      const projected = this.baseYield * this.scale;
-      let remainingVolume = projected;
+    async performAutoFill() {
+      // Let backend handle complex auto-fill logic
+      try {
+        const response = await fetch(`/recipes/${this.recipeId}/auto-fill-containers`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': this.getCSRFToken()
+          },
+          body: JSON.stringify({
+            scale: this.scale,
+            yield_amount: this.baseYield * this.scale,
+            yield_unit: this.unit
+          })
+        });
 
-      console.log('🔍 AUTO-FILL DEBUG: Starting auto-fill');
-      console.log('🔍 AUTO-FILL DEBUG: Projected volume:', projected, this.unit);
-      console.log('🔍 AUTO-FILL DEBUG: Available containers:', this.allowedContainers);
-
-      // Sort containers by capacity (largest first) - these are already filtered by the API
-      const availableContainers = [...this.allowedContainers]
-        .filter(c => c.stock_qty > 0)
-        .sort((a, b) => b.storage_amount - a.storage_amount);
-
-      console.log('🔍 AUTO-FILL DEBUG: Filtered/sorted containers:', availableContainers);
-
-      let selectedContainers = [];
-
-      // First pass: Try to fill with largest containers that fit perfectly or don't exceed target
-      for (const container of availableContainers) {
-        if (remainingVolume <= 0) break;
-
-        const capacity = container.storage_amount;
-        const maxNeeded = Math.floor(remainingVolume / capacity);
-        const qtyToUse = Math.min(maxNeeded, container.stock_qty);
-
-        console.log(`🔍 AUTO-FILL DEBUG: Container ${container.name}: capacity=${capacity}, maxNeeded=${maxNeeded}, stock=${container.stock_qty}, qtyToUse=${qtyToUse}`);
-
-        if (qtyToUse > 0) {
-          selectedContainers.push({
-            id: container.id,
-            quantity: qtyToUse,
-            name: container.name,
-            capacity: capacity,
-            unit: container.storage_unit
-          });
-          remainingVolume -= qtyToUse * capacity;
-          console.log(`🔍 AUTO-FILL DEBUG: Added ${qtyToUse}x ${container.name}, remaining volume: ${remainingVolume}`);
+        const data = await response.json();
+        if (data.success) {
+          this.containersSelected = data.container_selection;
+          this.updateProgress();
+        } else {
+          console.error('Auto-fill failed:', data.error);
+          alert('Auto-fill failed: ' + data.error);
         }
+      } catch (error) {
+        console.error('Auto-fill error:', error);
+        alert('Auto-fill failed due to network error');
       }
-
-      // Second pass: If there's still remaining volume, add one more container for partial fill
-      if (remainingVolume > 0) {
-        console.log('🔍 AUTO-FILL DEBUG: Still need to contain:', remainingVolume, 'looking for partial fill container');
-        for (const container of availableContainers) {
-          const alreadyUsed = selectedContainers.find(s => s.id === container.id);
-          const remainingStock = container.stock_qty - (alreadyUsed ? alreadyUsed.quantity : 0);
-
-          if (remainingStock > 0) {
-            if (alreadyUsed) {
-              alreadyUsed.quantity += 1;
-              console.log(`🔍 AUTO-FILL DEBUG: Added 1 more ${container.name} (partial fill)`);
-            } else {
-              selectedContainers.push({
-                id: container.id,
-                quantity: 1,
-                name: container.name,
-                capacity: container.storage_amount,
-                unit: container.storage_unit
-              });
-              console.log(`🔍 AUTO-FILL DEBUG: Added 1x ${container.name} (partial fill)`);
-            }
-            break;
-          }
-        }
-      }
-
-      console.log('🔍 AUTO-FILL DEBUG: Final selection:', selectedContainers);
-      this.containersSelected = selectedContainers;
-      this.updateProgress();
-      this.evaluateContainment();
     },
 
     validateExistingSelections() {

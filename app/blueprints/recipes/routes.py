@@ -77,6 +77,32 @@ def view_recipe(recipe_id):
         logger.exception(f"Error viewing recipe: {str(e)}")
         return redirect(url_for('recipes.list_recipes'))
 
+@recipes_bp.route('/<int:recipe_id>/auto-fill-containers', methods=['POST'])
+@login_required
+@require_permission('recipes.plan_production')
+def auto_fill_containers(recipe_id):
+    """Auto-fill container selection for recipe"""
+    try:
+        data = request.get_json()
+        scale = float(data.get('scale', 1.0))
+        yield_amount = float(data.get('yield_amount'))
+        yield_unit = data.get('yield_unit')
+
+        # Delegate to production planning service
+        from app.services.production_planning import calculate_container_fill_strategy
+        result = calculate_container_fill_strategy(
+            recipe_id=recipe_id,
+            scale=scale,
+            yield_amount=yield_amount,
+            yield_unit=yield_unit
+        )
+
+        return jsonify(result)
+
+    except Exception as e:
+        logger.error(f"Error in auto-fill containers: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @recipes_bp.route('/<int:recipe_id>/plan', methods=['GET', 'POST'])
 @login_required
 @require_permission('recipes.plan_production')
