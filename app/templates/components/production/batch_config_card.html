@@ -16,10 +16,41 @@
                     <div class="form-text text-muted">Multiply recipe by this factor</div>
                 </div>
                 <div class="col-md-6">
+                    <label for="projectedYield" class="form-label fw-bold">Projected Yield</label>
+                    <input type="text" id="projectedYield" class="form-control" 
+                           x-bind:value="(scale * {{ recipe.predicted_yield or 0 }}).toFixed(2) + ' {{ recipe.predicted_yield_unit or 'units' }}'" 
+                           readonly>
+                    <div class="form-text text-muted">Calculated from scale × recipe yield</div>
+                </div>
+            </div>
+
+            <div class="row g-3 mt-3">
+                <div class="col-md-6">
+                    <label for="batchType" class="form-label fw-bold">Batch Type</label>
+                    <select id="batchType" class="form-select" x-model="batchType">
+                        <option value="ingredient">Ingredient (for further use)</option>
+                        <option value="product">Product (for sale)</option>
+                    </select>
+                    <div class="form-text text-muted">How will this batch be used?</div>
+                </div>
+                <div class="col-md-6">
                     <label for="batchCode" class="form-label fw-bold">Batch Code (Optional)</label>
                     <input type="text" id="batchCode" class="form-control" 
                            x-model="batchCode" placeholder="Auto-generated if empty">
                     <div class="form-text text-muted">Leave empty for auto-generation</div>
+                </div>
+            </div>
+
+            <div class="row g-3 mt-3">
+                <div class="col-12">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="requireContainers" 
+                               x-model="requiresContainers" @change="toggleContainerCheck($event)">
+                        <label class="form-check-label fw-bold" for="requireContainers">
+                            Require Containers
+                        </label>
+                        <div class="form-text text-muted">Check container availability for this batch</div>
+                    </div>
                 </div>
             </div>
 
