@@ -229,26 +229,37 @@ def _build_recipe_requests(recipe, scale: float, check_containers: bool = False)
 
     # Add container requests if requested
     if check_containers:
-        # Get all available containers for this organization
+        # Get containers allowed for this recipe or all available containers
         from ...models import InventoryItem
         from flask_login import current_user
         
-        containers = InventoryItem.query.filter_by(
-            type='container',
-            organization_id=current_user.organization_id if current_user.is_authenticated else None
-        ).all()
+        # Check if recipe has specific allowed containers
+        if recipe.allowed_containers:
+            # Filter to only allowed containers
+            containers = InventoryItem.query.filter(
+                InventoryItem.id.in_(recipe.allowed_containers),
+                InventoryItem.type == 'container',
+                InventoryItem.organization_id == (current_user.organization_id if current_user.is_authenticated else None)
+            ).all()
+        else:
+            # Get all available containers for this organization
+            containers = InventoryItem.query.filter_by(
+                type='container',
+                organization_id=current_user.organization_id if current_user.is_authenticated else None
+            ).all()
 
         yield_amount = recipe.predicted_yield * scale if recipe.predicted_yield else 1.0
 
         for container in containers:
-            # Check each available container type
-            requests.append(StockCheckRequest(
-                item_id=container.id,
-                quantity_needed=yield_amount,  # Will be converted by handler
-                unit=recipe.predicted_yield_unit or "count",
-                category=InventoryCategory.CONTAINER,
-                scale_factor=scale
-            ))
+            # Only include containers that have stock
+            if hasattr(container, 'quantity') and container.quantity > 0:
+                requests.append(StockCheckRequest(
+                    item_id=container.id,
+                    quantity_needed=1,  # Check for at least 1 container
+                    unit="count",
+                    category=InventoryCategory.CONTAINER,
+                    scale_factor=scale
+                ))
 
     return requests
 
@@ -264,7 +275,7 @@ def _process_stock_results(stock_results: List) -> List[Dict[str, Any]]:
         else:
             result_dict = result
 
-        processed.append({
+        base_result = {
             'item_id': result_dict.get('item_id'),
             'item_name': result_dict.get('item_name', 'Unknown'),
             'name': result_dict.get('item_name', 'Unknown'),  # Backwards compatibility
@@ -278,6 +289,17 @@ def _process_stock_results(stock_results: List) -> List[Dict[str, Any]]:
             'status': result_dict.get('status', 'UNKNOWN'),
             'category': result_dict.get('category', 'ingredient'),
             'type': result_dict.get('category', 'ingredient')  # Backwards compatibility
-        })
+        }
+
+        # Add container-specific fields if this is a container
+        if result_dict.get('category') == 'container':
+            conversion_details = result_dict.get('conversion_details', {})
+            base_result.update({
+                'storage_amount': conversion_details.get('storage_capacity', 0),
+                'storage_unit': conversion_details.get('storage_unit', 'ml'),
+                'stock_qty': result_dict.get('available_quantity', 0)
+            })
+        
+        processed.append(base_result)
     
     return processed
