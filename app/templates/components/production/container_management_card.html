@@ -55,11 +55,26 @@
     <div class="alert alert-warning mt-3" id="containmentIssue" style="display: none;">
       <i class="fas fa-exclamation-triangle"></i>
       <span id="containmentIssueText"></span>
+      <hr>
+      <small class="text-muted">
+        <i class="fas fa-info-circle"></i> 
+        You can still start the batch - uncontained product will need manual handling
+      </small>
     </div>
 
     <div class="alert alert-danger mt-3" id="noContainersMessage" style="display: none;">
       <i class="fas fa-exclamation-circle"></i>
-      No containers selected. Please add containers or enable Auto-Fill.
+      No containers available for this recipe.
+      <hr>
+      <div class="d-flex justify-content-between align-items-center">
+        <small class="text-muted">
+          <i class="fas fa-info-circle"></i> 
+          You can still start the batch with manual containment
+        </small>
+        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('requiresContainers').click()">
+          <i class="fas fa-times"></i> Disable Container Requirement
+        </button>
+      </div>
     </div>
   </div>
 </div>
