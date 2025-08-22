@@ -1,17 +1,12 @@
 """
-Production Planning Operations
+Production Planning Operations - DEPRECATED
 
-Handles planning production batches from recipes, checking stock availability,
-and calculating requirements using the UniversalStockCheckService.
+This module now delegates to the dedicated Production Planning Service Package.
+The logic has been moved to app/services/production_planning/ for better organization.
 """
 
 import logging
-from typing import Dict, List, Any, Optional, Tuple
-from decimal import Decimal
-
-from ...models import Recipe, RecipeIngredient, InventoryItem
-from ...services.stock_check import UniversalStockCheckService
-from ...services.stock_check.types import StockCheckRequest, InventoryCategory
+from typing import Dict, Any
 
 logger = logging.getLogger(__name__)
 
@@ -19,144 +14,50 @@ logger = logging.getLogger(__name__)
 def plan_production(recipe_id: int, scale: float = 1.0,
                    container_id: int = None, check_containers: bool = False) -> Dict[str, Any]:
     """
-    Plan production for a recipe with comprehensive stock checking.
-
-    Args:
-        recipe_id: Recipe to plan
-        scale: Scaling factor for recipe
-        container_id: Optional container for batch
-        check_containers: Whether to check available containers
-
-    Returns:
-        Dict with planning results including stock status and requirements
+    Plan production for a recipe - DELEGATES to Production Planning Service.
+    
+    This function is kept for backwards compatibility but now delegates
+    to the dedicated production planning service package.
     """
     try:
-        recipe = Recipe.query.get(recipe_id)
-        if not recipe:
-            return {'success': False, 'error': 'Recipe not found'}
-
-        # Build stock check requests from recipe
-        requests = _build_recipe_requests(recipe, scale, check_containers=check_containers)
-
-        # Use UniversalStockCheckService for individual item checks
-        stock_service = UniversalStockCheckService()
-        stock_results = stock_service.check_bulk_items(requests)
-
-        # Process results into recipe-specific format
-        processed_results = _process_stock_results(stock_results)
-
-        # Only check ingredient availability for overall success
-        ingredient_results = [r for r in processed_results if r.get('category') == 'ingredient']
-        all_available = all(result['status'] in ['OK', 'AVAILABLE', 'LOW'] for result in ingredient_results)
-
-        # Calculate requirements and costs
-        requirements = calculate_recipe_requirements(recipe_id, scale)
-        cost_info = calculate_production_cost(recipe_id, scale)
-
-        return {
-            'success': True,
-            'recipe_id': recipe_id,
-            'scale': scale,
-            'stock_check': processed_results,
-            'all_ok': all_available,
-            'all_available': all_available,  # For backwards compatibility
-            'requirements': requirements,
-            'cost_info': cost_info,
-            'stock_results': processed_results  # For backwards compatibility
-        }
-
+        # Delegate to the new production planning service
+        from ...services.production_planning import plan_production_comprehensive
+        
+        return plan_production_comprehensive(
+            recipe_id=recipe_id,
+            scale=scale,
+            preferred_container_id=container_id,
+            include_container_analysis=check_containers
+        )
+        
     except Exception as e:
-        logger.error(f"Error in production planning: {e}")
+        logger.error(f"Error delegating to production planning service: {e}")
         return {'success': False, 'error': str(e)}
 
 
 def calculate_recipe_requirements(recipe_id: int, scale: float = 1.0) -> Dict[str, Any]:
     """
-    Calculate ingredient requirements for a recipe at given scale.
-
-    Args:
-        recipe_id: Recipe to calculate for
-        scale: Scaling factor
-
-    Returns:
-        Dict with success status and ingredient requirements
+    Calculate ingredient requirements - DELEGATES to Production Planning Service.
     """
     try:
-        recipe = Recipe.query.get(recipe_id)
-        if not recipe:
-            return {'success': False, 'error': 'Recipe not found'}
-
-        ingredients = []
-        for recipe_ingredient in recipe.recipe_ingredients:
-            scaled_quantity = recipe_ingredient.quantity * scale
-
-            ingredients.append({
-                'ingredient_id': recipe_ingredient.inventory_item_id,
-                'ingredient_name': recipe_ingredient.inventory_item.name,
-                'base_quantity': recipe_ingredient.quantity,
-                'scaled_quantity': scaled_quantity,
-                'unit': recipe_ingredient.unit,
-                'cost_per_unit': getattr(recipe_ingredient.inventory_item, 'cost_per_unit', 0) or 0
-            })
-
-        return {
-            'success': True,
-            'ingredients': ingredients,
-            'recipe_id': recipe_id,
-            'scale': scale
-        }
-
+        from ...services.production_planning import calculate_production_requirements
+        return calculate_production_requirements(recipe_id, scale)
+        
     except Exception as e:
-        logger.error(f"Error calculating requirements for recipe {recipe_id}: {e}")
+        logger.error(f"Error delegating recipe requirements calculation: {e}")
         return {'success': False, 'error': str(e)}
 
 
 def check_ingredient_availability(recipe_id: int, scale: float = 1.0) -> Dict[str, Any]:
     """
-    Check availability of all ingredients for a recipe.
-
-    Args:
-        recipe_id: Recipe to check
-        scale: Scaling factor
-
-    Returns:
-        Dict with availability results
+    Check ingredient availability - DELEGATES to Production Planning Service.
     """
     try:
-        recipe = Recipe.query.get(recipe_id)
-        if not recipe:
-            return {'success': False, 'error': 'Recipe not found'}
-
-        # Build requests for ingredients only
-        requests = []
-        for recipe_ingredient in recipe.recipe_ingredients:
-            requests.append(StockCheckRequest(
-                item_id=recipe_ingredient.inventory_item_id,
-                quantity_needed=recipe_ingredient.quantity * scale,
-                unit=recipe_ingredient.unit,
-                category=InventoryCategory.INGREDIENT,
-                organization_id=current_user.organization_id if current_user.is_authenticated else None,
-                scale_factor=scale
-            ))
-
-        # Use stock service
-        stock_service = UniversalStockCheckService()
-        results = stock_service.check_bulk_items(requests)
-
-        # Format results
-        processed_results = _process_stock_results(results)
-        all_available = all(result['status'] in ['OK', 'LOW'] for result in processed_results)
-
-        return {
-            'success': True,
-            'all_available': all_available,
-            'ingredients': processed_results,
-            'recipe_id': recipe_id,
-            'scale': scale
-        }
-
+        from ...services.production_planning import validate_ingredient_availability
+        return validate_ingredient_availability(recipe_id, scale)
+        
     except Exception as e:
-        logger.error(f"Error checking ingredient availability for recipe {recipe_id}: {e}")
+        logger.error(f"Error delegating ingredient availability check: {e}")
         return {'success': False, 'error': str(e)}
 
 
