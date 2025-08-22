@@ -28,6 +28,31 @@
                 </div>
             </div>
 
+            <!-- Batch Type and Container Options -->
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <label for="batchType" class="form-label fw-bold">Batch Type <span class="text-danger">*</span></label>
+                    <select id="batchType" name="batch_type" class="form-select">
+                        <option value="">Select Type</option>
+                        <option value="ingredient">Intermediate Ingredient</option>
+                        <option value="product">Final Product</option>
+                    </select>
+                    <div class="form-text text-muted">Choose batch purpose</div>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-bold">Container Options</label>
+                    <div class="form-control bg-light border-0 d-flex align-items-center" style="height: 38px;">
+                        <div class="form-check form-switch mb-0">
+                            <input type="checkbox" class="form-check-input" id="requiresContainers" name="requires_containers">
+                            <label class="form-check-label fw-normal" for="requiresContainers">
+                                Require containers for this batch
+                            </label>
+                        </div>
+                    </div>
+                    <div class="form-text text-muted">Enable if batch needs containers</div>
+                </div>
+            </div>
+
             <!-- Batch Code -->
             <div class="row g-3 mb-3">
                 <div class="col-md-6">
