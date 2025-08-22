@@ -163,12 +163,7 @@
                     <td>
                       {% if entry.affected_lot and entry.affected_lot.expiration_date %}
                         {% set exp_date = TimezoneUtils.format_for_user(entry.affected_lot.expiration_date, '%Y-%m-%d') %}
-                        {% set exp_time = TimezoneUtils.format_for_user(entry.affected_lot.expiration_date, '%H:%M') %}
-                        {% if exp_time != '00:00' %}
-                          {{ exp_date }} {{ exp_time }}
-                        {% else %}
-                          {{ exp_date }}
-                        {% endif %}
+                        {{ exp_date }}
                         {% if is_expired %}
                           <span class="badge bg-danger ms-1">EXPIRED</span>
                         {% elif is_expiring_soon %}
