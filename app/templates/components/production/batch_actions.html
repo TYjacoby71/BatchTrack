@@ -1,25 +1,20 @@
-
 <!-- Action Buttons -->
 <div class="card">
-  <div class="card-body">
-    <div class="d-flex justify-content-between align-items-center">
-      <div>
-        <p class="mb-0 text-muted">
-          <i class="fas fa-info-circle"></i>
-          Ready to start batch when all requirements are met
-        </p>
-      </div>
-      <div class="d-flex gap-2">
-        <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-secondary">
-          <i class="fas fa-times"></i> Cancel
-        </a>
-        <button type="button" class="btn btn-success" x-show="canStartBatch" @click="startBatch">
-          <i class="fas fa-play"></i> Start Batch
-        </button>
-        <button type="button" class="btn btn-outline-success" x-show="!canStartBatch" disabled>
-          <i class="fas fa-clock"></i> Requirements Not Met
-        </button>
-      </div>
+    <div class="card-header">
+        <h5 class="card-title mb-0">
+            <i class="fas fa-play-circle text-primary me-2"></i>Batch Actions
+        </h5>
     </div>
-  </div>
+    <div class="card-body">
+        <p class="text-muted">Ready to start production?</p>
+
+        <!-- Start Batch Button -->
+        <button type="button" id="startBatchBtn" class="btn btn-secondary btn-lg w-100" disabled>
+            <i class="fas fa-play me-2"></i>Select batch type first
+        </button>
+
+        <small class="text-muted mt-2 d-block">
+            Complete configuration and stock check to enable batch start.
+        </small>
+    </div>
 </div>
