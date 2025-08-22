@@ -1,4 +1,3 @@
-
 from flask import Blueprint, request, jsonify, render_template, redirect, url_for, flash, session
 from flask_login import login_required, current_user
 from app.models import db, InventoryItem, UnifiedInventoryHistory, Unit, IngredientCategory, User
@@ -10,7 +9,8 @@ from app.services.reservation_service import ReservationService
 from app.utils.timezone_utils import TimezoneUtils
 import logging
 from ...utils.unit_utils import get_global_unit_list
-from ...utils.fifo_generator import get_change_type_prefix, int_to_base36
+# Removed deprecated get_change_type_prefix import - functionality moved to generate_fifo_code
+from ...utils.fifo_generator import int_to_base36
 from sqlalchemy import and_, or_, func
 from sqlalchemy.orm import joinedload
 from app.models.inventory_lot import InventoryLot
@@ -198,7 +198,6 @@ def view_inventory(id):
                          User=User,
                          UnifiedInventoryHistory=UnifiedInventoryHistory,
                          now=datetime.utcnow(),
-                         get_change_type_prefix=get_change_type_prefix,
                          int_to_base36=int_to_base36,
                          fifo_filter=fifo_filter,
                          TimezoneUtils=TimezoneUtils)
@@ -209,7 +208,7 @@ def add_inventory():
     """Create new inventory items"""
     try:
         logger.info(f"CREATE NEW INVENTORY ITEM - User: {current_user.id}, Org: {current_user.organization_id}")
-        
+
         success, message, item_id = create_inventory_item(
             form_data=request.form.to_dict(),
             organization_id=current_user.organization_id,
