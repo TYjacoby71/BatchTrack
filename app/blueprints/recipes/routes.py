@@ -1,19 +1,19 @@
-from flask import render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
-from . import recipes_bp
-from app.extensions import db
-from app.models import Recipe, InventoryItem
-from app.utils.permissions import require_permission
-
+from typing import List
+from app.models import Recipe, RecipeIngredient, InventoryItem
 from app.services.recipe_service import (
-    create_recipe, update_recipe, delete_recipe, get_recipe_details,
-    plan_production, scale_recipe, validate_recipe_data, duplicate_recipe
+    get_recipe_details,
+    create_recipe,
+    update_recipe,
+    delete_recipe,
+    plan_production
 )
-from app.utils.unit_utils import get_global_unit_list
-from app.models.unit import Unit
 import logging
 
 logger = logging.getLogger(__name__)
+
+recipes_bp = Blueprint('recipes', __name__, url_prefix='/recipes')
 
 @recipes_bp.route('/new', methods=['GET', 'POST'])
 @login_required
@@ -97,9 +97,10 @@ def plan_production_route(recipe_id):
 
             scale = float(data.get('scale', 1.0))
             container_id = data.get('container_id')
+            check_containers = data.get('check_containers', False) # Added check_containers
 
             # Delegate to service - no business logic here
-            planning_result = plan_production(recipe_id, scale, container_id)
+            planning_result = plan_production(recipe_id, scale, container_id, check_containers) # Pass check_containers
 
             if planning_result['success']:
                 return jsonify({

@@ -41,7 +41,7 @@ document.addEventListener('alpine:init', () => {
           console.error('Recipe ID not found.');
         }
       }
-      
+
       // Initialize scale from input if available
       const scaleInput = document.querySelector('input[name="scale"]');
       if (scaleInput) {
@@ -162,7 +162,7 @@ document.addEventListener('alpine:init', () => {
           return;
         }
 
-        const containerResults = (data.stock_results || []).filter(item => 
+        const containerResults = (data.stock_results || []).filter(item =>
           item.category === 'container' || item.type === 'container'
         );
 
@@ -172,7 +172,7 @@ document.addEventListener('alpine:init', () => {
         if (this.containerToggleEnabled && containerResults.length === 0) {
           console.warn('[CONTAINER DEBUG] No containers found despite toggle being enabled');
 
-          // Check if recipe has no allowed containers specified
+          // Show alert for missing containers
           alert('⚠️ No containers available!\n\nThe container toggle is selected but either:\n• No containers are specified as allowable for this recipe, or\n• No containers are currently in stock\n\nPlease add containers to inventory or specify allowed containers for this recipe.');
           this.allOk = false; // Mark as not OK if no containers are found
         }
