@@ -26,16 +26,8 @@ class PlanProductionManager {
                 id: parseInt(recipeElement.dataset.recipeId),
                 name: recipeElement.dataset.recipeName || 'Unknown Recipe'
             };
-        }
-
-        // Get base yield from the projected yield input
-        const projectedYieldInput = document.querySelector('input[readonly]');
-        if (projectedYieldInput) {
-            this.baseYield = parseFloat(projectedYieldInput.value) || 0;
-            const unitSpan = document.querySelector('.input-group-text');
-            if (unitSpan) {
-                this.unit = unitSpan.textContent.trim();
-            }
+            this.baseYield = parseFloat(recipeElement.dataset.baseYield) || 0;
+            this.unit = recipeElement.dataset.yieldUnit || 'units';
         }
 
         this.bindEvents();
@@ -200,7 +192,7 @@ class PlanProductionManager {
     }
 
     onContainerRequirementChange() {
-        const containerCard = document.querySelector('.container-management-card');
+        const containerCard = document.getElementById('containerManagementCard');
         if (containerCard) {
             containerCard.style.display = this.requiresContainers ? 'block' : 'none';
         }
