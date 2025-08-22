@@ -1,63 +1,49 @@
-{% extends 'layout.html' %}
+{% extends "layout.html" %}
+{% block title %}Plan Production - {{ recipe.name }}{% endblock %}
 
 {% block content %}
-<div class="container-xl" x-data="planProductionApp()">
-    <!-- Header -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h2 class="mb-2">Plan Production</h2>
-                    <nav aria-label="breadcrumb">
-                        <ol class="breadcrumb">
-                            <li class="breadcrumb-item"><a href="{{ url_for('recipes.list_recipes') }}">Recipes</a></li>
-                            <li class="breadcrumb-item"><a href="{{ url_for('recipes.view_recipe', recipe_id=recipe.id) }}">{{ recipe.name }}</a></li>
-                            <li class="breadcrumb-item active">Plan Production</li>
-                        </ol>
-                    </nav>
-                </div>
-                <div>
-                    <a href="{{ url_for('recipes.view_recipe', recipe_id=recipe.id) }}" class="btn btn-secondary">
-                        <i class="fas fa-arrow-left"></i> Back to Recipe
-                    </a>
-                </div>
-            </div>
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="fas fa-cogs me-2"></i>Plan Production: {{ recipe.name }}</h2>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('app_routes.dashboard') }}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('recipes.list_recipes') }}">Recipes</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('recipes.view_recipe', recipe_id=recipe.id) }}">{{ recipe.name }}</a></li>
+                    <li class="breadcrumb-item active">Plan Production</li>
+                </ol>
+            </nav>
+        </div>
+        <div>
+            <a href="{{ url_for('recipes.view_recipe', recipe_id=recipe.id) }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Recipe
+            </a>
         </div>
     </div>
 
-    <!-- Alert Messages -->
-    <div x-show="alertMessage" class="alert alert-info alert-dismissible fade show" role="alert">
-        <span x-text="alertMessage"></span>
-        <button type="button" class="btn-close" @click="alertMessage = ''" aria-label="Close"></button>
-    </div>
-
-    <div x-show="errorMessage" class="alert alert-danger alert-dismissible fade show" role="alert">
-        <span x-text="errorMessage"></span>
-        <button type="button" class="btn-close" @click="errorMessage = ''" aria-label="Close"></button>
-    </div>
-
-    <!-- Main Content Grid -->
+    <!-- Main Content -->
     <div class="row g-4">
-        <!-- Left Column: Configuration -->
+        <!-- Left Column -->
         <div class="col-lg-6">
-            <!-- Include batch configuration component -->
+            <!-- Batch Configuration Card -->
             {% include 'components/production/batch_config_card.html' %}
 
-            <!-- Include stock check component -->
+            <!-- Stock Check Card -->
             {% include 'components/production/stock_check_card.html' %}
         </div>
 
-        <!-- Right Column: Container Management & Actions -->
+        <!-- Right Column -->
         <div class="col-lg-6">
-            <!-- Include container management component -->
+            <!-- Container Management Card -->
             {% include 'components/production/container_management_card.html' %}
 
-            <!-- Include batch actions component -->
+            <!-- Batch Actions -->
             {% include 'components/production/batch_actions.html' %}
         </div>
     </div>
 </div>
-
 {% endblock %}
 
 {% block scripts %}
