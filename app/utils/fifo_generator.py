@@ -202,12 +202,26 @@ def generate_fifo_id(change_type):
     """Legacy function - use generate_fifo_code instead"""
     return generate_fifo_code(change_type)
 
-def generate_fifo_code(change_type: str, item_id: int, remaining_quantity: float = 0.0) -> str:
-    """Generate unique FIFO tracking code"""
+def generate_fifo_code(change_type: str, item_id: int, remaining_quantity: float = 0.0, is_lot_creation: bool = False) -> str:
+    """
+    Generate unique FIFO tracking code
+    
+    Args:
+        change_type: Type of inventory change
+        item_id: ID of the inventory item
+        remaining_quantity: Remaining quantity (legacy parameter, use is_lot_creation instead)
+        is_lot_creation: True if this creates/references an actual InventoryLot object
+    """
     prefix = get_change_type_prefix(change_type)
     
-    # For lot-creating operations (restock, finished_batch, manual_addition), use LOT prefix
-    if change_type in ['restock', 'finished_batch', 'manual_addition', 'initial_stock'] and remaining_quantity > 0:
+    # Special handling for recount operations
+    if change_type == 'recount':
+        if is_lot_creation:
+            prefix = 'LOT'  # Recount overflow creates new lots
+        else:
+            prefix = 'RCN'  # Recount events use RCN prefix
+    # For lot-creating operations, use LOT prefix if creating actual lot
+    elif change_type in ['restock', 'finished_batch', 'manual_addition', 'initial_stock'] and is_lot_creation:
         prefix = 'LOT'
     
     # Use higher precision timestamp + random component for uniqueness

@@ -8,6 +8,9 @@ Handles special inventory operations that don't follow standard FIFO patterns:
 
 import logging
 from app.models import db
+from app.utils.fifo_generator import generate_fifo_code # Moved to module level import
+from ._fifo_ops import create_new_fifo_lot # Kept for local use within this file
+from sqlalchemy import and_
 
 logger = logging.getLogger(__name__)
 
@@ -76,8 +79,8 @@ def handle_recount(item, quantity, change_type, notes=None, created_by=None, tar
     """
     try:
         from app.models import UnifiedInventoryHistory, InventoryLot
-        from ._fifo_ops import create_new_fifo_lot
-        from sqlalchemy import and_
+        # from ._fifo_ops import create_new_fifo_lot # This import is now handled at the module level
+        # from sqlalchemy import and_ # This import is now handled at the module level
 
         # For recounts, the target_quantity is the desired final quantity
         if target_quantity is None:
@@ -111,6 +114,9 @@ def handle_recount(item, quantity, change_type, notes=None, created_by=None, tar
                 deducted = lot.remaining_quantity
                 lot.remaining_quantity = 0.0
 
+                # Generate proper recount event FIFO code (not creating lot, so is_lot_creation=False)
+                recount_fifo_code = generate_fifo_code('recount', item.id, is_lot_creation=False)
+
                 deduction_entry = UnifiedInventoryHistory(
                     inventory_item_id=item.id,
                     change_type=change_type,
@@ -118,7 +124,7 @@ def handle_recount(item, quantity, change_type, notes=None, created_by=None, tar
                     remaining_quantity=None,  # N/A - this is an event record
                     unit=lot.unit,
                     unit_cost=lot.unit_cost,
-                    fifo_code=lot.fifo_code,  # Use the lot's original FIFO code
+                    fifo_code=recount_fifo_code,  # Use generated recount event code
                     notes=f"Recount to zero: drained lot {lot.fifo_code}",
                     created_by=created_by,
                     affected_lot_id=lot.id,
@@ -155,7 +161,10 @@ def handle_recount(item, quantity, change_type, notes=None, created_by=None, tar
                     lot.remaining_quantity = 0.0
                     remaining_to_deduct -= deducted
 
-                    # Create deduction record using the lot's original FIFO code
+                    # Generate proper recount event FIFO code (not creating lot, so is_lot_creation=False)
+                    recount_fifo_code = generate_fifo_code('recount', item.id, is_lot_creation=False)
+
+                    # Create deduction record using generated recount event code
                     deduction_entry = UnifiedInventoryHistory(
                         inventory_item_id=item.id,
                         change_type=change_type,  # Use original change_type (recount)
@@ -163,7 +172,7 @@ def handle_recount(item, quantity, change_type, notes=None, created_by=None, tar
                         remaining_quantity=None,  # N/A - this is an event record
                         unit=lot.unit,
                         unit_cost=lot.unit_cost,
-                        fifo_code=lot.fifo_code,  # Use the lot's original FIFO code
+                        fifo_code=recount_fifo_code,  # Use generated recount event code
                         notes=f"Recount deduction: -{deducted} from lot {lot.fifo_code}",
                         created_by=created_by,
                         affected_lot_id=lot.id,
@@ -176,7 +185,10 @@ def handle_recount(item, quantity, change_type, notes=None, created_by=None, tar
                     # Partially deduct from this lot
                     lot.remaining_quantity -= remaining_to_deduct
 
-                    # Create deduction record using the lot's original FIFO code
+                    # Generate proper recount event FIFO code (not creating lot, so is_lot_creation=False)
+                    recount_fifo_code = generate_fifo_code('recount', item.id, is_lot_creation=False)
+
+                    # Create deduction record using generated recount event code
                     deduction_entry = UnifiedInventoryHistory(
                         inventory_item_id=item.id,
                         change_type=change_type,  # Use original change_type (recount)
@@ -184,7 +196,7 @@ def handle_recount(item, quantity, change_type, notes=None, created_by=None, tar
                         remaining_quantity=None,  # N/A - this is an event record
                         unit=lot.unit,
                         unit_cost=lot.unit_cost,
-                        fifo_code=lot.fifo_code,  # Use the lot's original FIFO code
+                        fifo_code=recount_fifo_code,  # Use generated recount event code
                         notes=f"Recount deduction: -{remaining_to_deduct} from lot {lot.fifo_code}",
                         created_by=created_by,
                         affected_lot_id=lot.id,
@@ -222,6 +234,9 @@ def handle_recount(item, quantity, change_type, notes=None, created_by=None, tar
                     lot.remaining_quantity += fill_amount
                     remaining_to_add -= fill_amount
 
+                    # Generate proper recount event FIFO code (not creating lot, so is_lot_creation=False)
+                    recount_fifo_code = generate_fifo_code('recount', item.id, is_lot_creation=False)
+
                     # Create addition record
                     addition_entry = UnifiedInventoryHistory(
                         inventory_item_id=item.id,
@@ -230,7 +245,7 @@ def handle_recount(item, quantity, change_type, notes=None, created_by=None, tar
                         remaining_quantity=None,  # N/A - this is an event record
                         unit=lot.unit,
                         unit_cost=lot.unit_cost,
-                        fifo_code=lot.fifo_code,
+                        fifo_code=recount_fifo_code,  # Use generated recount event code
                         notes=f"Recount refill: +{fill_amount} to lot {lot.fifo_code}",
                         created_by=created_by,
                         affected_lot_id=lot.id,
@@ -256,6 +271,9 @@ def handle_recount(item, quantity, change_type, notes=None, created_by=None, tar
                 if not add_success:
                     return False, f"Failed to create recount overflow lot: {add_message}"
 
+                # Generate proper recount event FIFO code (not creating lot, so is_lot_creation=False)
+                recount_fifo_code = generate_fifo_code('recount', item.id, is_lot_creation=False)
+
                 # Record the lot creation as an event linked to the lot
                 overflow_event = UnifiedInventoryHistory(
                     inventory_item_id=item.id,
@@ -264,7 +282,7 @@ def handle_recount(item, quantity, change_type, notes=None, created_by=None, tar
                     remaining_quantity=None,  # N/A - this is an event record
                     unit=item.unit or 'count',
                     unit_cost=item.cost_per_unit or 0.0,
-                    fifo_code=None,
+                    fifo_code=recount_fifo_code,  # Use generated recount event code
                     notes=f"Recount overflow lot created: +{remaining_to_add}",
                     created_by=created_by,
                     affected_lot_id=new_lot_id,
