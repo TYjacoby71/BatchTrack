@@ -152,7 +152,7 @@ def create_new_fifo_lot(item_id, quantity, change_type, unit=None, notes=None, c
             affected_lot_id=lot.id,  # Link to the actual lot
             batch_id=batch_id,
             fifo_code=fifo_code,  # USE THE SAME FIFO CODE AS THE LOT
-            remaining_quantity=quantity,  # ONLY lot creation events set remaining_quantity
+            remaining_quantity=None,  # Only the lot object holds remaining quantity, not history events
         )
         db.session.add(history_record)
 
