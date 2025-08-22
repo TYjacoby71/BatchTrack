@@ -208,9 +208,10 @@ def handle_recount(item, quantity, change_type, notes=None, created_by=None, tar
             logger.info(f"RECOUNT: Adding {delta} to reconcile inventory")
 
             # Get all lots (including depleted ones) to see if we can fill them
+            # Order by newest first for refilling - prioritize most recent lots
             existing_lots = InventoryLot.query.filter(
                 InventoryLot.inventory_item_id == item.id
-            ).order_by(InventoryLot.received_date.asc()).all()
+            ).order_by(InventoryLot.received_date.desc()).all()
 
             remaining_to_add = delta
 
