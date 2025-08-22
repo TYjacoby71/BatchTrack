@@ -5,13 +5,36 @@ console.log('Plan production JavaScript loaded');
 
 // Alpine.js component for Plan Production
 document.addEventListener('alpine:init', () => {
-  Alpine.data('planProduction', () => ({
+  Alpine.data('planProductionApp', () => ({
     recipeId: null,
     scale: 1,
     csrfToken: null,
-    containers: [],
-    containerToggleEnabled: false,
+    batchCode: '',
+    batchType: 'ingredient',
+    
+    // Alert messages
+    alertMessage: '',
+    errorMessage: '',
+    
+    // Loading states
+    loading: false,
+    
+    // Stock check properties
+    stockChecked: false,
+    stockCheckPassed: false,
     stockResults: [],
+    
+    // Container properties
+    requiresContainers: false,
+    containersSelected: [],
+    containerToggleEnabled: false,
+    containers: [],
+    containmentPercent: 0,
+    liveContainmentMessage: 'No containers selected',
+    containmentIssue: '',
+    
+    // Batch actions
+    canStartBatch: false,
     allOk: true,
     costInfo: {},
     containerDebug: {
@@ -29,16 +52,24 @@ document.addEventListener('alpine:init', () => {
         console.warn('CSRF token meta tag not found.');
       }
 
-      // Initialize recipeId from a hidden input or data attribute if available
-      const recipeIdInput = document.querySelector('input[name="recipe_id"]');
-      if (recipeIdInput) {
-        this.recipeId = recipeIdInput.value;
+      // Initialize recipeId from URL path
+      const pathParts = window.location.pathname.split('/');
+      const recipeIndex = pathParts.indexOf('recipes');
+      if (recipeIndex !== -1 && pathParts[recipeIndex + 1]) {
+        this.recipeId = pathParts[recipeIndex + 1];
+        console.log('Recipe ID found:', this.recipeId);
       } else {
-        const recipeElement = document.querySelector('[data-recipe-id]');
-        if (recipeElement) {
-          this.recipeId = recipeElement.dataset.recipeId;
+        // Fallback to hidden input or data attribute
+        const recipeIdInput = document.querySelector('input[name="recipe_id"]');
+        if (recipeIdInput) {
+          this.recipeId = recipeIdInput.value;
         } else {
-          console.error('Recipe ID not found.');
+          const recipeElement = document.querySelector('[data-recipe-id]');
+          if (recipeElement) {
+            this.recipeId = recipeElement.dataset.recipeId;
+          } else {
+            console.error('Recipe ID not found.');
+          }
         }
       }
       
@@ -117,6 +148,127 @@ document.addEventListener('alpine:init', () => {
         console.error('Error during plan production submission:', error);
         alert(`An unexpected error occurred: ${error.message}`);
         this.allOk = false;
+      }
+    },
+
+    async checkStock() {
+      this.loading = true;
+      this.errorMessage = '';
+      this.alertMessage = '';
+      
+      try {
+        const response = await fetch(`/recipes/${this.recipeId}/plan`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': this.csrfToken
+          },
+          body: JSON.stringify({
+            scale: this.scale,
+            check_containers: this.requiresContainers
+          })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          this.errorMessage = errorData.error || 'Stock check failed';
+          this.stockChecked = false;
+          this.stockCheckPassed = false;
+          return;
+        }
+
+        const data = await response.json();
+        this.stockResults = data.stock_results || [];
+        this.stockChecked = true;
+        this.stockCheckPassed = data.success;
+        
+        if (this.stockCheckPassed) {
+          this.alertMessage = 'Stock check passed! All ingredients available.';
+          this.canStartBatch = true;
+        } else {
+          this.errorMessage = 'Stock check failed. Some ingredients are not available.';
+          this.canStartBatch = false;
+        }
+
+        // Handle container results if containers are required
+        if (this.requiresContainers) {
+          const containerResults = this.stockResults.filter(item => 
+            item.category === 'container' || item.type === 'container'
+          );
+          this.containers = containerResults;
+          this.updateContainmentInfo();
+        }
+
+      } catch (error) {
+        this.errorMessage = `Stock check failed: ${error.message}`;
+        this.stockChecked = false;
+        this.stockCheckPassed = false;
+        this.canStartBatch = false;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    checkStockOrWarn() {
+      if (!this.stockChecked) {
+        this.checkStock();
+      } else if (!this.stockCheckPassed) {
+        this.alertMessage = 'Please resolve stock issues before proceeding.';
+      }
+    },
+
+    resetForm() {
+      this.scale = 1;
+      this.batchCode = '';
+      this.batchType = 'ingredient';
+      this.requiresContainers = false;
+      this.stockChecked = false;
+      this.stockCheckPassed = false;
+      this.stockResults = [];
+      this.containers = [];
+      this.containersSelected = [];
+      this.canStartBatch = false;
+      this.alertMessage = '';
+      this.errorMessage = '';
+      this.containmentPercent = 0;
+      this.liveContainmentMessage = 'No containers selected';
+      this.containmentIssue = '';
+    },
+
+    toggleContainerCheck(event) {
+      this.requiresContainers = event.target.checked;
+      if (!this.requiresContainers) {
+        this.containers = [];
+        this.containersSelected = [];
+        this.containmentPercent = 0;
+        this.liveContainmentMessage = 'Container check disabled';
+        this.containmentIssue = '';
+      }
+    },
+
+    updateContainmentInfo() {
+      if (!this.requiresContainers || this.containers.length === 0) {
+        this.containmentPercent = 0;
+        this.liveContainmentMessage = 'No containers available';
+        return;
+      }
+
+      const totalSelected = this.containersSelected.length;
+      const totalAvailable = this.containers.length;
+      
+      if (totalSelected === 0) {
+        this.containmentPercent = 0;
+        this.liveContainmentMessage = 'No containers selected';
+        this.containmentIssue = 'Please select containers for this batch';
+      } else {
+        this.containmentPercent = Math.min((totalSelected / totalAvailable) * 100, 100);
+        this.liveContainmentMessage = `${totalSelected} of ${totalAvailable} containers selected`;
+        
+        if (this.containmentPercent < 100) {
+          this.containmentIssue = 'Additional containers may be needed';
+        } else {
+          this.containmentIssue = '';
+        }
       }
     },
 

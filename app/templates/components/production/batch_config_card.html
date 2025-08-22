@@ -1,51 +1,74 @@
 
 <!-- Batch Configuration Card -->
 <div class="card mb-4">
-  <div class="card-header">
-    <h5 class="mb-0">
-      <i class="fas fa-cogs"></i> Batch Configuration
-    </h5>
-  </div>
-  <div class="card-body">
-    <div class="row g-3">
-      <div class="col-md-3">
-        <div class="form-group">
-          <label class="form-label fw-semibold">Batch Scale</label>
-          <input type="number" min="0.1" step="0.1" class="form-control" x-model.number="scale" @input="fetchContainerPlan" placeholder="1.0">
-        </div>
-      </div>
-      <div class="col-md-3">
-        <div class="form-group">
-          <label class="form-label fw-semibold">Projected Yield</label>
-          <div class="form-control bg-light border-0 fw-bold text-primary d-flex align-items-center" style="height: 38px;" x-text="(baseYield * scale).toFixed(2) + ' ' + unit"></div>
-        </div>
-      </div>
-      <div class="col-md-3">
-        <div class="form-group">
-          <label class="form-label fw-semibold">Batch Type <span class="text-danger">*</span></label>
-          <select class="form-select" x-model="batchType" :class="batchType === '' ? 'is-invalid' : ''">
-            <option value="">Select Type</option>
-            <option value="ingredient">Intermediate Ingredient</option>
-            <option value="product">Final Product</option>
-          </select>
-          <div class="invalid-feedback" x-show="batchType === ''">
-            Please select a batch type
-          </div>
-        </div>
-      </div>
-      <div class="col-md-3">
-        <div class="form-group">
-          <label class="form-label fw-semibold">Container Options</label>
-          <div class="form-control bg-light border-0 d-flex align-items-center" style="height: 38px;">
-            <div class="form-check form-switch mb-0">
-              <input type="checkbox" class="form-check-input" id="requireContainers" x-model="requiresContainers" @change="onContainerRequirementChange">
-              <label class="form-check-label fw-normal" for="requireContainers">
-                <i class="fas fa-box me-1"></i> Require Containers
-              </label>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div class="card-header">
+        <h5 class="card-title mb-0">
+            <i class="fas fa-cogs text-primary me-2"></i>Batch Configuration
+        </h5>
     </div>
-  </div>
+    <div class="card-body">
+        <form @submit.prevent="checkStock">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label for="scale" class="form-label fw-bold">Scale Factor</label>
+                    <input type="number" id="scale" class="form-control" 
+                           x-model="scale" min="0.1" step="0.1" required>
+                    <div class="form-text text-muted">Multiply recipe by this factor</div>
+                </div>
+                <div class="col-md-6">
+                    <label for="projectedYield" class="form-label fw-bold">Projected Yield</label>
+                    <input type="text" id="projectedYield" class="form-control" 
+                           x-bind:value="(scale * {{ recipe.predicted_yield or 0 }}).toFixed(2) + ' {{ recipe.predicted_yield_unit or 'units' }}'" 
+                           readonly>
+                    <div class="form-text text-muted">Calculated from scale × recipe yield</div>
+                </div>
+            </div>
+
+            <div class="row g-3 mt-3">
+                <div class="col-md-6">
+                    <label for="batchType" class="form-label fw-bold">Batch Type</label>
+                    <select id="batchType" class="form-select" x-model="batchType">
+                        <option value="ingredient">Ingredient (for further use)</option>
+                        <option value="product">Product (for sale)</option>
+                    </select>
+                    <div class="form-text text-muted">How will this batch be used?</div>
+                </div>
+                <div class="col-md-6">
+                    <label for="batchCode" class="form-label fw-bold">Batch Code (Optional)</label>
+                    <input type="text" id="batchCode" class="form-control" 
+                           x-model="batchCode" placeholder="Auto-generated if empty">
+                    <div class="form-text text-muted">Leave empty for auto-generation</div>
+                </div>
+            </div>
+
+            <div class="row g-3 mt-3">
+                <div class="col-12">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="requireContainers" 
+                               x-model="requiresContainers" @change="toggleContainerCheck($event)">
+                        <label class="form-check-label fw-bold" for="requireContainers">
+                            Require Containers
+                        </label>
+                        <div class="form-text text-muted">Check container availability for this batch</div>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="my-4">
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary" 
+                        :disabled="loading">
+                    <span x-show="loading" class="spinner-border spinner-border-sm me-2"></span>
+                    <i class="fas fa-search me-2" x-show="!loading"></i>
+                    Check Stock Availability
+                </button>
+                <button type="button" class="btn btn-outline-secondary" 
+                        @click="resetForm">
+                    <i class="fas fa-undo me-2"></i>
+                    Reset
+                </button>
+            </div>
+        </form>
+    </div>
 </div>
