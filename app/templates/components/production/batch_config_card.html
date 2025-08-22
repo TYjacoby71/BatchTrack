@@ -10,24 +10,34 @@
             <div class="col-md-3">
                 <div class="form-group">
                     <label class="form-label fw-semibold">Batch Scale</label>
-                    <input type="number" min="0.1" step="0.1" class="form-control" x-model.number="scale" @input="fetchContainerPlan" placeholder="1.0">
+                    <input type="number" 
+                           id="scale"
+                           min="0.1" 
+                           step="0.1" 
+                           class="form-control" 
+                           value="1.0"
+                           placeholder="1.0">
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="form-group">
                     <label class="form-label fw-semibold">Projected Yield</label>
-                    <div class="form-control bg-light border-0 fw-bold text-primary d-flex align-items-center" style="height: 38px;" x-text="(baseYield * scale).toFixed(2) + ' ' + unit"></div>
+                    <div class="form-control bg-light border-0 d-flex align-items-center fw-normal" style="height: 38px;">
+                        <span id="projectedYield">0.0 units</span>
+                    </div>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="form-group">
                     <label class="form-label fw-semibold">Batch Type <span class="text-danger">*</span></label>
-                    <select class="form-select" x-model="batchType" :class="batchType === '' ? 'is-invalid' : ''">
+                    <select id="batchType" 
+                            class="form-select" 
+                            required>
                         <option value="">Select Type</option>
                         <option value="ingredient">Intermediate Ingredient</option>
                         <option value="product">Final Product</option>
                     </select>
-                    <div class="invalid-feedback" x-show="batchType === ''">
+                    <div class="invalid-feedback" id="batchTypeError" style="display: none;">
                         Please select a batch type
                     </div>
                 </div>
@@ -37,8 +47,10 @@
                     <label class="form-label fw-semibold">Container Options</label>
                     <div class="form-control bg-light border-0 d-flex align-items-center" style="height: 38px;">
                         <div class="form-check form-switch mb-0">
-                            <input type="checkbox" class="form-check-input" id="requireContainers" x-model="requiresContainers" @change="onContainerRequirementChange">
-                            <label class="form-check-label fw-normal" for="requireContainers">
+                            <input type="checkbox" 
+                                   id="requiresContainers" 
+                                   class="form-check-input">
+                            <label class="form-check-label fw-normal" for="requiresContainers">
                                 <i class="fas fa-box me-1"></i> Require Containers
                             </label>
                         </div>

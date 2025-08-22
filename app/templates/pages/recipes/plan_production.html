@@ -1,9 +1,10 @@
+
 {% extends "layout.html" %}
 {% block title %}Plan Production - {{ recipe.name }}{% endblock %}
 
 {% block content %}
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-<div class="container-fluid mt-4" data-recipe-id="{{ recipe.id }}" data-recipe-name="{{ recipe.name }}" x-data="productionPlanningApp({{ recipe.id }}, {{ recipe.predicted_yield }}, '{{ recipe.predicted_yield_unit }}')">
+<div class="container-fluid mt-4" data-recipe-id="{{ recipe.id }}" data-recipe-name="{{ recipe.name }}" data-base-yield="{{ recipe.predicted_yield }}" data-yield-unit="{{ recipe.predicted_yield_unit }}">
     <!-- Page Header -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
@@ -31,13 +32,11 @@
             <!-- Batch Configuration Card -->
             {% include 'components/production/batch_config_card.html' %}
 
+            <!-- Container Management Card - Hidden by default, shown when requiresContainers is true -->
+            {% include 'components/production/container_management_card.html' %}
+
             <!-- Stock Check Card -->
             {% include 'components/production/stock_check_card.html' %}
-
-            <!-- Container Management Card - Hidden by default, shown when requiresContainers is true -->
-            <div x-show="requiresContainers" style="display: none;">
-                {% include 'components/production/container_management_card.html' %}
-            </div>
 
             <!-- Batch Actions -->
             {% include 'components/production/batch_actions.html' %}
