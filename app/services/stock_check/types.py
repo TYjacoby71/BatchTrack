@@ -32,6 +32,7 @@ class StockCheckRequest:
     quantity_needed: float
     unit: str
     category: InventoryCategory
+    organization_id: int  # Explicit organization context
     scale_factor: float = 1.0
 
 

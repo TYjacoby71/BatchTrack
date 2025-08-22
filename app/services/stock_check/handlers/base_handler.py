@@ -47,15 +47,7 @@ class BaseInventoryHandler(ABC):
         """
         pass
 
-    def _check_organization_access(self, item) -> bool:
-        """Check if current user has access to this item"""
-        if not current_user or not current_user.is_authenticated:
-            return False
-
-        if not current_user.organization_id:
-            return current_user.user_type == 'developer'
-
-        return hasattr(item, 'organization_id') and item.organization_id == current_user.organization_id
+    # Removed _check_organization_access - using query-level filtering instead
 
     def _format_quantity_display(self, quantity: float, unit: str) -> str:
         """Format quantity for display"""
