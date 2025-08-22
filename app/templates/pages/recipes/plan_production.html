@@ -1,451 +1,65 @@
-
 {% extends 'layout.html' %}
+
 {% block content %}
-<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-<div x-data="planProduction()" x-init="init()" class="container">
-  <!-- Page Header -->
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2>Plan Production: {{ recipe.name }}</h2>
-    <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-secondary">
-      <i class="fas fa-arrow-left"></i> Back to Recipes
-    </a>
-  </div>
+<div class="container-xl" x-data="planProductionApp()">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="mb-2">Plan Production</h2>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a href="{{ url_for('recipes.list_recipes') }}">Recipes</a></li>
+                            <li class="breadcrumb-item"><a href="{{ url_for('recipes.view_recipe', id=recipe.id) }}">{{ recipe.name }}</a></li>
+                            <li class="breadcrumb-item active">Plan Production</li>
+                        </ol>
+                    </nav>
+                </div>
+                <div>
+                    <a href="{{ url_for('recipes.view_recipe', id=recipe.id) }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to Recipe
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
 
-  <!-- Batch Configuration -->
-  {% include 'components/production/batch_config_card.html' %}
+    <!-- Alert Messages -->
+    <div x-show="alertMessage" class="alert alert-info alert-dismissible fade show" role="alert">
+        <span x-text="alertMessage"></span>
+        <button type="button" class="btn-close" @click="alertMessage = ''" aria-label="Close"></button>
+    </div>
 
-  <!-- Container Management -->
-  {% include 'components/production/container_management_card.html' %}
+    <div x-show="errorMessage" class="alert alert-danger alert-dismissible fade show" role="alert">
+        <span x-text="errorMessage"></span>
+        <button type="button" class="btn-close" @click="errorMessage = ''" aria-label="Close"></button>
+    </div>
 
-  <!-- Stock Check -->
-  {% include 'components/production/stock_check_card.html' %}
+    <!-- Main Content Grid -->
+    <div class="row g-4">
+        <!-- Left Column: Configuration -->
+        <div class="col-lg-6">
+            <!-- Include batch configuration component -->
+            {% include 'components/production/batch_config_card.html' %}
 
-  <!-- Action Buttons -->
-  {% include 'components/production/batch_actions.html' %}
+            <!-- Include stock check component -->
+            {% include 'components/production/stock_check_card.html' %}
+        </div>
+
+        <!-- Right Column: Container Management & Actions -->
+        <div class="col-lg-6">
+            <!-- Include container management component -->
+            {% include 'components/production/container_management_card.html' %}
+
+            <!-- Include batch actions component -->
+            {% include 'components/production/batch_actions.html' %}
+        </div>
+    </div>
 </div>
 
-<script>
-function planProduction() {
-  return {
-      recipeId: {{ recipe.id }},
-      baseYield: {{ '%.2f'|format(recipe.predicted_yield) }},
-      unit: '{{ recipe.predicted_yield_unit }}',
-      allowedContainers: [],
-      containersSelected: [],
-      autoFill: true,
-      scale: 1.0,
-      batchType: '',
-      requiresContainers: false,
-      stockChecked: false,
-      stockCheckPassed: false,
-      stockResults: [],
-      containmentPercent: 0,
-      remainingToContain: 0,
-      containmentIssue: '',
-      scaleTimeout: null,
-      containerToggleEnabled: true,
-      containerDebug: {
-          lastCall: null,
-          callCount: 0
-      },
+{% endblock %}
 
-    init() {
-      this.fetchContainerPlan();
-      this.$watch('autoFill', (newValue) => {
-        if (this.requiresContainers && this.allowedContainers.length > 0) {
-          if (newValue) {
-            this.performAutoFill();
-          } else {
-            this.validateExistingSelections();
-          }
-        }
-      });
-      this.$watch('scale', (newValue, oldValue) => {
-        if (newValue !== oldValue && newValue > 0) {
-          clearTimeout(this.scaleTimeout);
-          this.scaleTimeout = setTimeout(() => {
-            this.fetchContainerPlan();
-          }, 500);
-        }
-      });
-    },
-
-    getRemainingStock(containerId, currentIndex) {
-      const match = this.allowedContainers.find(c => c.id == containerId);
-      if (!match) return 0;
-      const allocated = this.containersSelected.reduce((sum, c, idx) => {
-        if (idx !== currentIndex && c.id == containerId) {
-          return sum + (c.quantity || 0);
-        }
-        return sum;
-      }, 0);
-      return match.stock_qty - allocated;
-    },
-
-    get totalContained() {
-      return this.containersSelected.reduce((sum, c) => sum + (c.capacity * c.quantity), 0);
-    },
-
-    get liveContainmentMessage() {
-      if (this.containersSelected.length === 0) return '';
-      if (this.containmentPercent < 100) {
-        return `There will be ${this.remainingToContain.toFixed(2)} ${this.unit} left uncontained.`;
-      }
-      return 'Full containment achieved.';
-    },
-
-    get canStartBatch() {
-      const batchTypeSelected = this.batchType !== '';
-      if (this.requiresContainers) {
-        return batchTypeSelected && this.containmentPercent >= 100 && this.stockChecked && this.stockCheckPassed;
-      }
-      return batchTypeSelected && this.stockChecked && this.stockCheckPassed;
-    },
-
-    onContainerRequirementChange() {
-      if (!this.requiresContainers) {
-        this.containersSelected = [];
-        this.containmentPercent = 0;
-        this.remainingToContain = 0;
-        this.containmentIssue = '';
-        this.allowedContainers = [];
-      } else {
-        this.$nextTick(() => {
-          this.fetchContainerPlan();
-        });
-      }
-    },
-
-    fetchContainerPlan() {
-      this.containerDebug.callCount++;
-      this.containerDebug.lastCall = new Date().toLocaleTimeString();
-
-      if (!this.requiresContainers) {
-        this.allowedContainers = [];
-        this.containersSelected = [];
-        this.updateProgress();
-        return;
-      }
-
-      const scale = this.scale || 1.0;
-
-      fetch(`/recipes/${this.recipeId}/plan`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRF-Token': this.getCSRFToken()
-        },
-        body: JSON.stringify({
-          scale: scale,
-          check_containers: true
-        })
-      })
-      .then(res => res.json())
-      .then(data => {
-        if (!data.success) {
-          alert('Error loading containers: ' + data.error);
-          this.allowedContainers = [];
-          this.containersSelected = [];
-          this.updateProgress();
-          return;
-        }
-
-        const containers = data.stock_results?.filter(r => r.category === 'container') || [];
-        this.allowedContainers = containers.map(c => ({
-          id: c.item_id,
-          name: c.item_name,
-          storage_amount: c.storage_amount || 0,
-          storage_unit: c.storage_unit || 'ml',
-          stock_qty: c.available_quantity || 0
-        }));
-
-        if (this.requiresContainers && this.allowedContainers.length === 0) {
-          alert('⚠️ No containers configured for this recipe.');
-          this.requiresContainers = false;
-          return;
-        }
-
-        if (this.autoFill && this.requiresContainers && this.allowedContainers.length > 0) {
-          this.performAutoFill();
-        } else if (!this.autoFill) {
-          this.validateExistingSelections();
-        }
-
-        this.refreshContainmentStatus();
-      })
-      .catch(err => {
-        alert('Network error while loading containers.');
-        this.allowedContainers = [];
-        this.containersSelected = [];
-        this.updateProgress();
-      });
-    },
-
-    performAutoFill() {
-      const projected = this.baseYield * this.scale;
-      let remainingVolume = projected;
-      const availableContainers = [...this.allowedContainers]
-        .filter(c => c.stock_qty > 0)
-        .sort((a, b) => b.storage_amount - a.storage_amount);
-
-      let selectedContainers = [];
-
-      for (const container of availableContainers) {
-        if (remainingVolume <= 0) break;
-        const capacity = container.storage_amount;
-        const maxNeeded = Math.floor(remainingVolume / capacity);
-        const qtyToUse = Math.min(maxNeeded, container.stock_qty);
-
-        if (qtyToUse > 0) {
-          selectedContainers.push({
-            id: container.id,
-            quantity: qtyToUse,
-            name: container.name,
-            capacity: capacity,
-            unit: container.storage_unit
-          });
-          remainingVolume -= qtyToUse * capacity;
-        }
-      }
-
-      if (remainingVolume > 0) {
-        for (const container of availableContainers) {
-          const alreadyUsed = selectedContainers.find(s => s.id === container.id);
-          const remainingStock = container.stock_qty - (alreadyUsed ? alreadyUsed.quantity : 0);
-
-          if (remainingStock > 0) {
-            if (alreadyUsed) {
-              alreadyUsed.quantity += 1;
-            } else {
-              selectedContainers.push({
-                id: container.id,
-                quantity: 1,
-                name: container.name,
-                capacity: container.storage_amount,
-                unit: container.storage_unit
-              });
-            }
-            break;
-          }
-        }
-      }
-
-      this.containersSelected = selectedContainers;
-      this.updateProgress();
-      this.evaluateContainment();
-    },
-
-    validateExistingSelections() {
-      this.containersSelected = this.containersSelected.filter(selected => {
-        const container = this.allowedContainers.find(c => c.id === selected.id);
-        if (!container) return false;
-
-        selected.name = container.name;
-        selected.capacity = container.storage_amount;
-        selected.unit = container.storage_unit;
-
-        const remainingStock = this.getRemainingStock(selected.id, -1);
-        if (selected.quantity > remainingStock) {
-          selected.quantity = Math.max(0, remainingStock);
-        }
-
-        return selected.quantity > 0;
-      });
-
-      this.updateProgress();
-      this.evaluateContainment();
-    },
-
-    updateProgress() {
-      const projected = this.baseYield * this.scale;
-      const contained = this.totalContained;
-      this.containmentPercent = Math.min((contained / projected) * 100, 100).toFixed(0);
-      this.remainingToContain = Math.max(projected - contained, 0);
-    },
-
-    refreshContainmentStatus() {
-      this.updateProgress();
-      this.evaluateContainment();
-    },
-
-    evaluateContainment() {
-      const projected = this.baseYield * this.scale;
-      const totalAvailable = this.allowedContainers.reduce((sum, c) => sum + (c.storage_amount * c.stock_qty), 0);
-
-      this.containmentIssue = '';
-
-      if (totalAvailable < projected) {
-        const sizes = this.allowedContainers.map(c => c.storage_amount);
-        const smallestContainer = sizes.length ? Math.min(...sizes) : 1;
-        const missingUnits = Math.ceil((projected - totalAvailable) / smallestContainer);
-        this.containmentIssue = `Error: You need ${missingUnits} more containers to make this batch.`;
-        return;
-      }
-
-      const totalContained = this.totalContained;
-      const containmentRatio = totalContained / projected;
-      const isExactMatch = Math.abs(containmentRatio - 1) < 0.001;
-
-      if (totalContained < projected) {
-        this.containmentIssue = 'Warning: Need one more container for partial fill';
-      } else if (totalContained > projected && !isExactMatch) {
-        const lastContainer = this.containersSelected[this.containersSelected.length - 1];
-        if (lastContainer) {
-          const partialAmount = projected - (totalContained - lastContainer.capacity);
-          if (partialAmount < lastContainer.capacity && partialAmount > 0) {
-            this.containmentIssue = `Warning: Last container will be partially filled (${partialAmount.toFixed(2)} ${this.unit})`;
-          }
-        }
-      }
-    },
-
-    updateContainer(index) {
-      const container = this.containersSelected[index];
-      if (!container || !container.id) return;
-
-      const match = this.allowedContainers.find(c => c.id == container.id);
-      if (match) {
-        container.capacity = match.storage_amount;
-        container.unit = match.storage_unit;
-        container.name = match.name;
-        const remainingStock = this.getRemainingStock(container.id, index);
-
-        if (remainingStock <= 0) {
-          container.quantity = 0;
-        } else if (container.quantity > remainingStock) {
-          container.quantity = remainingStock;
-        }
-      }
-      this.updateProgress();
-      this.evaluateContainment();
-    },
-
-    removeContainer(index) {
-      this.containersSelected.splice(index, 1);
-      this.updateProgress();
-      this.evaluateContainment();
-    },
-
-    checkStockOrWarn() {
-      this.checkStock();
-    },
-
-    checkStock() {
-      fetch(`/recipes/${this.recipeId}/plan`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRF-Token': this.getCSRFToken()
-        },
-        body: JSON.stringify({
-          scale: parseFloat(this.scale),
-          check_containers: false
-        })
-      })
-      .then(res => res.json())
-      .then(data => {
-        this.stockChecked = true;
-        this.stockCheckPassed = data.all_available || false;
-
-        const ingredients = data.stock_results?.filter(r => r.category === 'ingredient') || [];
-        this.stockResults = ingredients.map(item => ({
-          ingredient: item.item_name,
-          needed: item.quantity_needed || 0,
-          available: item.available_quantity || 0,
-          unit: item.unit || '',
-          status: item.available_quantity >= item.quantity_needed ? 'OK' : 'NEEDED'
-        }));
-      })
-      .catch(err => {
-        this.stockChecked = false;
-        this.stockResults = [];
-      });
-    },
-
-    downloadCSV() {
-      if (!this.stockResults?.length) return;
-      let csv = "Ingredient,Required,Available,Unit,Status\n";
-      this.stockResults.forEach(row => {
-        csv += `${row.ingredient},${row.needed},${row.available},${row.unit},${row.status}\n`;
-      });
-      const blob = new Blob([csv], { type: 'text/csv' });
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = 'stock_check_report.csv';
-      link.click();
-    },
-
-    downloadShoppingList() {
-      if (!this.stockResults?.length) return;
-      const needed = this.stockResults.filter(item => item.status === 'LOW' || item.status === 'NEEDED');
-      if (!needed.length) {
-        alert('No items need restocking!');
-        return;
-      }
-      let text = "Shopping List\n=============\n\n";
-      needed.forEach(item => {
-        const missing = item.needed - item.available;
-        text += `${item.ingredient}: ${missing.toFixed(2)} ${item.unit}\n`;
-      });
-      const blob = new Blob([text], { type: 'text/plain' });
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = 'shopping_list.txt';
-      link.click();
-    },
-
-    async startBatch() {
-      if (!this.canStartBatch) {
-        if (this.batchType === '') {
-          alert('Please select a batch type before starting the batch');
-          return;
-        }
-        alert('Please check stock and ensure containers are properly allocated before starting batch');
-        return;
-      }
-
-      const csrfToken = this.getCSRFToken();
-      try {
-        const response = await fetch('/start-batch/start_batch', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': csrfToken
-          },
-          body: JSON.stringify({
-            recipe_id: this.recipeId,
-            scale: this.scale,
-            batch_type: this.batchType,
-            requires_containers: this.requiresContainers,
-            notes: '',
-            containers: this.containersSelected.map(c => ({
-              id: c.id,
-              quantity: c.quantity
-            }))
-          })
-        });
-
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.message || 'Network response was not ok');
-        }
-
-        const data = await response.json();
-        if (data.batch_id) {
-          window.location.href = `/batches/in-progress/${data.batch_id}`;
-        } else {
-          throw new Error('No batch ID returned');
-        }
-      } catch (error) {
-        alert('Error starting batch: ' + error.message);
-      }
-    },
-
-    getCSRFToken() {
-      const csrfToken = document.querySelector('input[name="csrf_token"]');
-      return csrfToken ? csrfToken.value : '';
-    }
-  };
-}
-</script>
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/recipes/plan_production.js') }}"></script>
 {% endblock %}
