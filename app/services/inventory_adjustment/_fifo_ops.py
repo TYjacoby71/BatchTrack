@@ -12,7 +12,7 @@ def get_item_lots(item_id: int, active_only: bool = False, order: str = 'desc'):
     """
     Retrieve lots for an inventory item using the proper InventoryLot model.
     This replaces any legacy history-based lot queries.
-    
+
     Args:
         item_id: ID of the inventory item
         active_only: If True, only return lots with remaining_quantity > 0
@@ -34,7 +34,7 @@ def get_item_lots(item_id: int, active_only: bool = False, order: str = 'desc'):
             InventoryLot.organization_id == item.organization_id
         )
     )
-    
+
     # Filter to active lots only if requested
     if active_only:
         query = query.filter(InventoryLot.remaining_quantity > 0)
@@ -46,9 +46,9 @@ def get_item_lots(item_id: int, active_only: bool = False, order: str = 'desc'):
         query = query.order_by(InventoryLot.created_at.desc())
 
     lots = query.all()
-    
+
     logger.info(f"FIFO: Retrieved {len(lots)} lots for item {item_id} (active_only={active_only})")
-    
+
     return lots
 
 
@@ -101,7 +101,7 @@ def create_new_fifo_lot(item_id, quantity, change_type, unit=None, notes=None, c
         # Generate a single FIFO code that will be shared by both lot and history
         # Import the proper FIFO generator
         from app.utils.fifo_generator import generate_fifo_code
-        
+
         # For finished_batch operations, use batch-specific code if batch_id exists
         if change_type == 'finished_batch' and batch_id:
             from app.models import Batch
@@ -152,6 +152,7 @@ def create_new_fifo_lot(item_id, quantity, change_type, unit=None, notes=None, c
             affected_lot_id=lot.id,  # Link to the actual lot
             batch_id=batch_id,
             fifo_code=fifo_code,  # USE THE SAME FIFO CODE AS THE LOT
+            remaining_quantity=None,  # Only the lot object holds remaining quantity, not history events
         )
         db.session.add(history_record)
 
@@ -212,10 +213,10 @@ def deduct_fifo_inventory(item_id, quantity_to_deduct, change_type, notes=None, 
 
             # Create audit record linking to the specific lot
             from app.utils.fifo_generator import generate_fifo_code
-            
+
             # Generate appropriate FIFO code for this deduction event
             deduction_fifo_code = generate_fifo_code(change_type, item_id, is_lot_creation=False)
-            
+
             history_record = UnifiedInventoryHistory(
                 inventory_item_id=item_id,
                 change_type=change_type,
@@ -269,9 +270,9 @@ def calculate_total_available_inventory(item_id):
     ).all()
 
     total_available = sum(float(lot.remaining_quantity) for lot in active_lots)
-    
+
     logger.info(f"FIFO CALC: Item {item_id} has {total_available} units available across {len(active_lots)} active lots")
-    
+
     return total_available
 
 
