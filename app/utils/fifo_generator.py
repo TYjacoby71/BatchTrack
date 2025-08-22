@@ -206,8 +206,14 @@ def generate_fifo_code(change_type: str, item_id: int, remaining_quantity: float
     """Generate unique FIFO tracking code"""
     prefix = get_change_type_prefix(change_type)
     
+    # Special handling for recount operations
+    if change_type == 'recount':
+        if remaining_quantity > 0:
+            prefix = 'LOT'  # Recount overflow creates new lots
+        else:
+            prefix = 'RCN'  # Recount events use RCN prefix
     # For lot-creating operations (restock, finished_batch, manual_addition), use LOT prefix
-    if change_type in ['restock', 'finished_batch', 'manual_addition', 'initial_stock'] and remaining_quantity > 0:
+    elif change_type in ['restock', 'finished_batch', 'manual_addition', 'initial_stock'] and remaining_quantity > 0:
         prefix = 'LOT'
     
     # Use higher precision timestamp + random component for uniqueness
