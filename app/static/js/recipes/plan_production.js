@@ -1,4 +1,3 @@
-
 // Plan Production JavaScript functionality
 // This file provides form enhancements for the plan production page
 
@@ -14,7 +13,7 @@ class PlanProductionManager {
         this.requiresContainers = false;
         this.stockCheckResults = null;
         this.containerPlan = null;
-        
+
         this.init();
     }
 
@@ -89,10 +88,10 @@ class PlanProductionManager {
     }
 
     updateProjectedYield() {
-        const projectedYieldInput = document.getElementById('projectedYield');
-        if (projectedYieldInput) {
-            const newYield = (this.baseYield * this.scale).toFixed(2);
-            projectedYieldInput.value = `${newYield} ${this.unit}`;
+        const projectedYieldElement = document.getElementById('projectedYield');
+        if (projectedYieldElement) {
+            const projectedYield = (this.baseYield * this.scale).toFixed(2);
+            projectedYieldElement.textContent = `${projectedYield} ${this.unit}`;
         }
     }
 
@@ -130,14 +129,14 @@ class PlanProductionManager {
         if (!resultsContainer || !this.stockCheckResults) return;
 
         const { ingredients, all_available } = this.stockCheckResults;
-        
+
         let html = '<div class="table-responsive"><table class="table table-sm">';
         html += '<thead><tr><th>Ingredient</th><th>Needed</th><th>Available</th><th>Status</th></tr></thead><tbody>';
 
         ingredients.forEach(ingredient => {
             const statusClass = this.getStatusClass(ingredient.status);
             const statusIcon = this.getStatusIcon(ingredient.status);
-            
+
             html += `
                 <tr class="table-${statusClass}">
                     <td>${ingredient.item_name}</td>
@@ -149,8 +148,6 @@ class PlanProductionManager {
         });
 
         html += '</tbody></table></div>';
-
-        resultsContainer.innerHTML = html;
 
         // Update overall status
         const statusElement = document.getElementById('stockCheckStatus');
@@ -213,7 +210,7 @@ class PlanProductionManager {
 
         try {
             const yieldAmount = this.baseYield * this.scale;
-            
+
             const response = await fetch(`/recipes/${this.recipe.id}/auto-fill-containers`, {
                 method: 'POST',
                 headers: {
@@ -243,7 +240,7 @@ class PlanProductionManager {
         if (!containerResults || !this.containerPlan?.success) return;
 
         const { container_selection, total_capacity, containment_percentage } = this.containerPlan;
-        
+
         let html = '<div class="table-responsive"><table class="table table-sm">';
         html += '<thead><tr><th>Container</th><th>Capacity</th><th>Quantity Needed</th><th>Total Volume</th></tr></thead><tbody>';
 
@@ -294,7 +291,7 @@ class PlanProductionManager {
         }
 
         startBatchBtn.disabled = !isValid;
-        
+
         // Update button text with reasons
         if (isValid) {
             startBatchBtn.textContent = 'Start Batch';
@@ -332,7 +329,7 @@ class PlanProductionManager {
                 const successDiv = document.createElement('div');
                 successDiv.className = 'alert alert-success';
                 successDiv.innerHTML = `<i class="fas fa-check-circle"></i> ${result.message}`;
-                
+
                 const mainContent = document.querySelector('.container-fluid');
                 mainContent.insertBefore(successDiv, mainContent.firstChild);
 
@@ -345,7 +342,7 @@ class PlanProductionManager {
                 const errorDiv = document.createElement('div');
                 errorDiv.className = 'alert alert-danger';
                 errorDiv.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${result.message}`;
-                
+
                 const mainContent = document.querySelector('.container-fluid');
                 mainContent.insertBefore(errorDiv, mainContent.firstChild);
             }

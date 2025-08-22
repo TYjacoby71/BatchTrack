@@ -31,13 +31,13 @@
             <!-- Batch Configuration Card -->
             {% include 'components/production/batch_config_card.html' %}
 
-            <!-- Stock Check Card -->
-            {% include 'components/production/stock_check_card.html' %}
-
             <!-- Container Management Card - Hidden by default, shown when requiresContainers is true -->
             <div id="containerManagementCard" style="display: none;">
                 {% include 'components/production/container_management_card.html' %}
             </div>
+
+            <!-- Stock Check Card -->
+            {% include 'components/production/stock_check_card.html' %}
 
             <!-- Batch Actions -->
             {% include 'components/production/batch_actions.html' %}

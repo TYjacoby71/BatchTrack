@@ -22,30 +22,6 @@
     </div>
 
     <div id="containerMessage" class="text-muted" style="display: none;"></div>
-  </div>
-</div>
-        <div class="col-md-5">
-          <label class="form-label small">Container Type</label>
-          <select class="form-select form-select-sm" id="containerType" disabled>
-            <option value="">Select Container</option>
-          </select>
-        </div>
-        <div class="col-md-3">
-          <label class="form-label small">Quantity</label>
-          <input type="number" min="1" class="form-control form-control-sm" id="containerQuantity" disabled>
-        </div>
-        <div class="col-md-3">
-          <label class="form-label small">Available Stock</label>
-          <div class="badge bg-info fs-6" id="availableStock"></div>
-        </div>
-        <div class="col-md-1">
-          <label class="form-label small">&nbsp;</label>
-          <button type="button" class="btn btn-danger btn-sm d-block" id="removeContainerBtn" disabled>
-            <i class="fas fa-times"></i>
-          </button>
-        </div>
-      </div>
-    </template>
 
     <!-- Containment Progress -->
     <div class="mt-4">
@@ -74,35 +50,4 @@
     </div>
   </div>
 </div>
-
-<!-- Container Selection Display -->
-        <div id="containerAnalysis" class="mt-3">
-            <h6>Container Analysis</h6>
-            <div id="containerResults" class="mt-3">
-                <!-- Dynamic container results will be populated here -->
-            </div>
-
-            <!-- Container selection summary -->
-            <div id="containerSummary">
-                <!-- Will be populated by JavaScript -->
-            </div>
-
-            <!-- Containment percentage indicator -->
-            <div class="mt-3">
-                <label class="form-label">Fill Efficiency: <span id="containmentPercentLabel">0%</span></label>
-                <div class="progress" style="height: 20px;">
-                    <div id="containmentProgressBar" 
-                         class="progress-bar bg-warning" 
-                         style="width: 0%">0%</div>
-                </div>
-                <small id="containmentMessage" class="text-muted mt-1 d-block"></small>
-                <div id="containmentIssue" class="alert alert-warning mt-2" style="display: none;">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <span id="containmentIssueText"></span>
-                </div>
-                <div id="noContainersMessage" class="alert alert-info mt-2">
-                    <i class="fas fa-info-circle"></i>
-                    No containers have been selected yet.
-                </div>
-            </div>
-        </div>
+        
