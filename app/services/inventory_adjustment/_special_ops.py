@@ -111,10 +111,10 @@ def handle_recount(item, quantity, change_type, notes=None, created_by=None, tar
                 deducted = lot.remaining_quantity
                 lot.remaining_quantity = 0.0
 
-                # Generate proper recount event FIFO code
+                # Generate proper recount event FIFO code (not creating lot, so is_lot_creation=False)
                 from app.utils.fifo_generator import generate_fifo_code
-                recount_fifo_code = generate_fifo_code('recount', item.id, 0.0)  # 0.0 = no remaining qty, triggers RCN prefix
-                
+                recount_fifo_code = generate_fifo_code('recount', item.id, is_lot_creation=False)
+
                 deduction_entry = UnifiedInventoryHistory(
                     inventory_item_id=item.id,
                     change_type=change_type,
@@ -159,10 +159,10 @@ def handle_recount(item, quantity, change_type, notes=None, created_by=None, tar
                     lot.remaining_quantity = 0.0
                     remaining_to_deduct -= deducted
 
-                    # Generate proper recount event FIFO code
+                    # Generate proper recount event FIFO code (not creating lot, so is_lot_creation=False)
                     from app.utils.fifo_generator import generate_fifo_code
-                    recount_fifo_code = generate_fifo_code('recount', item.id, 0.0)  # 0.0 = no remaining qty, triggers RCN prefix
-                    
+                    recount_fifo_code = generate_fifo_code('recount', item.id, is_lot_creation=False)
+
                     # Create deduction record using generated recount event code
                     deduction_entry = UnifiedInventoryHistory(
                         inventory_item_id=item.id,
@@ -184,10 +184,10 @@ def handle_recount(item, quantity, change_type, notes=None, created_by=None, tar
                     # Partially deduct from this lot
                     lot.remaining_quantity -= remaining_to_deduct
 
-                    # Generate proper recount event FIFO code
+                    # Generate proper recount event FIFO code (not creating lot, so is_lot_creation=False)
                     from app.utils.fifo_generator import generate_fifo_code
-                    recount_fifo_code = generate_fifo_code('recount', item.id, 0.0)  # 0.0 = no remaining qty, triggers RCN prefix
-                    
+                    recount_fifo_code = generate_fifo_code('recount', item.id, is_lot_creation=False)
+
                     # Create deduction record using generated recount event code
                     deduction_entry = UnifiedInventoryHistory(
                         inventory_item_id=item.id,
@@ -234,10 +234,10 @@ def handle_recount(item, quantity, change_type, notes=None, created_by=None, tar
                     lot.remaining_quantity += fill_amount
                     remaining_to_add -= fill_amount
 
-                    # Generate proper recount event FIFO code
+                    # Generate proper recount event FIFO code (not creating lot, so is_lot_creation=False)
                     from app.utils.fifo_generator import generate_fifo_code
-                    recount_fifo_code = generate_fifo_code('recount', item.id, 0.0)  # 0.0 = no remaining qty, triggers RCN prefix
-                    
+                    recount_fifo_code = generate_fifo_code('recount', item.id, is_lot_creation=False)
+
                     # Create addition record
                     addition_entry = UnifiedInventoryHistory(
                         inventory_item_id=item.id,
@@ -272,10 +272,10 @@ def handle_recount(item, quantity, change_type, notes=None, created_by=None, tar
                 if not add_success:
                     return False, f"Failed to create recount overflow lot: {add_message}"
 
-                # Generate proper recount event FIFO code
+                # Generate proper recount event FIFO code (not creating lot, so is_lot_creation=False)
                 from app.utils.fifo_generator import generate_fifo_code
-                recount_fifo_code = generate_fifo_code('recount', item.id, 0.0)  # 0.0 = no remaining qty, triggers RCN prefix
-                
+                recount_fifo_code = generate_fifo_code('recount', item.id, is_lot_creation=False)
+
                 # Record the lot creation as an event linked to the lot
                 overflow_event = UnifiedInventoryHistory(
                     inventory_item_id=item.id,

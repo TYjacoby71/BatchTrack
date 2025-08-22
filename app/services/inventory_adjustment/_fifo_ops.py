@@ -210,8 +210,8 @@ def deduct_fifo_inventory(item_id, quantity_to_deduct, change_type, notes=None, 
             # Create audit record linking to the specific lot
             from app.utils.fifo_generator import generate_fifo_code
             
-            # Generate deductive FIFO code for this transaction
-            deduction_fifo_code = generate_fifo_code(change_type, item_id)
+            # Generate deductive FIFO code for this transaction (not creating lot)
+            deduction_fifo_code = generate_fifo_code(change_type, item_id, is_lot_creation=False)
             
             history_record = UnifiedInventoryHistory(
                 inventory_item_id=item_id,
