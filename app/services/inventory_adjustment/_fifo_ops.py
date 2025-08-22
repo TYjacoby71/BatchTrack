@@ -111,8 +111,8 @@ def create_new_fifo_lot(item_id, quantity, change_type, unit=None, notes=None, c
             else:
                 fifo_code = generate_fifo_code(change_type, item_id, is_lot_creation=True)
         else:
-            # For regular lot creation, use LOT prefix - this creates an actual lot
-            fifo_code = generate_fifo_code('restock', item_id, is_lot_creation=True)
+            # For lot creation, this always creates an actual lot
+            fifo_code = generate_fifo_code(change_type, item_id, is_lot_creation=True)
 
         # Create new lot - ALWAYS inherit perishable status from item
         lot = InventoryLot(
@@ -213,7 +213,7 @@ def deduct_fifo_inventory(item_id, quantity_to_deduct, change_type, notes=None, 
             # Create audit record linking to the specific lot
             from app.utils.fifo_generator import generate_fifo_code
             
-            # Generate deductive FIFO code for this transaction (not creating lot)
+            # Generate appropriate FIFO code for this deduction event
             deduction_fifo_code = generate_fifo_code(change_type, item_id, is_lot_creation=False)
             
             history_record = UnifiedInventoryHistory(
@@ -228,7 +228,7 @@ def deduct_fifo_inventory(item_id, quantity_to_deduct, change_type, notes=None, 
                 organization_id=item.organization_id,
                 affected_lot_id=lot.id,  # Link to the specific lot that was affected
                 batch_id=batch_id,
-                fifo_code=deduction_fifo_code
+                fifo_code=deduction_fifo_code  # RCN-xxx for recount, other prefixes for other operations
             )
             db.session.add(history_record)
 

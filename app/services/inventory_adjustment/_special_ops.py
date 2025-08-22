@@ -67,14 +67,20 @@ def handle_unit_conversion(item, quantity, change_type, notes=None, created_by=N
 
 def handle_recount(item, quantity, change_type, notes=None, created_by=None, target_quantity=None, **kwargs):
     """
-    Handle inventory recount - set absolute quantity and reconcile FIFO lots.
-
-    This function now delegates to standard FIFO operations instead of manually creating history entries.
-
-    Returns (success, message) - core will handle the absolute quantity setting for recounts
+    Handle inventory recount with complete FIFO reconciliation.
+    
+    Four scenarios:
+    1. Delta < 0: Deductive recount - remove inventory using FIFO
+    2. Delta > 0 + existing lots can be refilled: Refill existing lots to capacity
+    3. Delta > 0 + overflow needed: Refill existing lots + create new lot for overflow
+    4. Delta = 0: Sync check only
+    
+    Each scenario generates proper recount event codes (RCN-xxx) with affected lot references.
     """
     try:
-        from ._fifo_ops import deduct_fifo_inventory
+        from ._fifo_ops import deduct_fifo_inventory, create_new_fifo_lot, get_item_lots
+        from app.models import UnifiedInventoryHistory
+        from app.utils.fifo_generator import generate_fifo_code
 
         # For recounts, the target_quantity is the desired final quantity
         if target_quantity is None:
@@ -90,42 +96,103 @@ def handle_recount(item, quantity, change_type, notes=None, created_by=None, tar
         if notes:
             recount_notes += f" | {notes}"
 
-        if delta < 0:
-            # Need to remove inventory - use standard FIFO deduction
+        if delta == 0:
+            # No change needed - just sync verification
+            logger.info(f"RECOUNT: No adjustment needed for item {item.id}")
+            return True, f"Inventory verified at {target_qty}"
+
+        elif delta < 0:
+            # SCENARIO 1: Deductive recount - remove inventory using FIFO
             abs_delta = abs(delta)
-            logger.info(f"RECOUNT: Deducting {abs_delta} using standard FIFO operations")
+            logger.info(f"RECOUNT: Deducting {abs_delta} using FIFO deduction")
 
             success, message = deduct_fifo_inventory(
                 item_id=item.id,
                 quantity_to_deduct=abs_delta,
-                change_type=change_type,
+                change_type=change_type,  # This will create RCN-xxx codes in deduct_fifo_inventory
                 notes=recount_notes,
                 created_by=created_by
             )
 
             if not success:
-                logger.warning(f"RECOUNT: FIFO deduction failed, but continuing with absolute recount: {message}")
-                # For recount, we continue even if FIFO fails - we'll set absolute quantity
+                logger.warning(f"RECOUNT: FIFO deduction failed: {message}")
+                return False, f"Recount deduction failed: {message}"
 
-        elif delta > 0:
-            # Need to add inventory - use standard lot creation
-            logger.info(f"RECOUNT: Adding {delta} using standard FIFO operations")
+        else:
+            # SCENARIOS 2 & 3: Additive recount - refill existing lots + handle overflow
+            logger.info(f"RECOUNT: Adding {delta} - checking for refillable lots vs overflow")
 
-            success, message, new_lot_id = create_new_fifo_lot(
-                item_id=item.id,
-                quantity=delta,
-                change_type=change_type,
-                unit=item.unit or 'count',
-                notes=recount_notes,
-                cost_per_unit=item.cost_per_unit or 0.0,
-                created_by=created_by
-            )
+            # Get existing lots that can be refilled (depleted lots)
+            existing_lots = get_item_lots(item.id, active_only=False, order='desc')  # Newest first
+            depleted_lots = [lot for lot in existing_lots if lot.remaining_quantity == 0]
+            
+            remaining_to_add = delta
+            refilled_lots = 0
 
-            if not success:
-                return False, f"Failed to create recount lot: {message}"
+            # SCENARIO 2: Try to refill depleted lots first (newest first for recount)
+            for lot in depleted_lots:
+                if remaining_to_add <= 0:
+                    break
+
+                # Calculate how much we can refill this lot
+                refill_capacity = lot.original_quantity
+                refill_amount = min(remaining_to_add, refill_capacity)
+
+                # Refill the lot
+                lot.remaining_quantity = refill_amount
+                db.session.add(lot)
+
+                # Create recount event history for this refill
+                recount_fifo_code = generate_fifo_code(change_type, item.id, is_lot_creation=False)
+                
+                refill_history = UnifiedInventoryHistory(
+                    inventory_item_id=item.id,
+                    change_type=change_type,
+                    quantity_change=refill_amount,
+                    unit=lot.unit,
+                    unit_cost=lot.unit_cost,
+                    notes=f"RECOUNT: Refilled {refill_amount} to lot {lot.fifo_code}" + (f" | {notes}" if notes else ""),
+                    created_by=created_by,
+                    organization_id=item.organization_id,
+                    affected_lot_id=lot.id,  # Links to the specific lot refilled
+                    fifo_code=recount_fifo_code  # Recount event code (RCN-xxx)
+                )
+                db.session.add(refill_history)
+
+                remaining_to_add -= refill_amount
+                refilled_lots += 1
+                
+                logger.info(f"RECOUNT: Refilled {refill_amount} to lot {lot.id} ({lot.fifo_code})")
+
+            # SCENARIO 3: Handle overflow if there's still quantity to add
+            if remaining_to_add > 0:
+                logger.info(f"RECOUNT: Creating overflow lot for remaining {remaining_to_add}")
+
+                success, message, overflow_lot_id = create_new_fifo_lot(
+                    item_id=item.id,
+                    quantity=remaining_to_add,
+                    change_type=change_type,
+                    unit=item.unit or 'count',
+                    notes=f"RECOUNT overflow: {remaining_to_add}" + (f" | {notes}" if notes else ""),
+                    cost_per_unit=item.cost_per_unit or 0.0,
+                    created_by=created_by
+                )
+
+                if not success:
+                    return False, f"Failed to create recount overflow lot: {message}"
+
+            # Log summary
+            if refilled_lots > 0 and remaining_to_add > 0:
+                summary_msg = f"Refilled {refilled_lots} lots, created overflow lot for {remaining_to_add}"
+            elif refilled_lots > 0:
+                summary_msg = f"Refilled {refilled_lots} existing lots"
+            else:
+                summary_msg = f"Created new lot for {delta}"
+
+            logger.info(f"RECOUNT SUCCESS: {summary_msg}")
 
         # Return success - core will set the absolute quantity using target_quantity
-        logger.info(f"RECOUNT SUCCESS: Item {item.id} FIFO reconciled for target {target_qty}")
+        logger.info(f"RECOUNT COMPLETE: Item {item.id} FIFO reconciled for target {target_qty}")
         return True, f"Inventory recounted to {target_qty}"
 
     except Exception as e:

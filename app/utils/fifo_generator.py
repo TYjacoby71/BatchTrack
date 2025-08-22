@@ -37,13 +37,14 @@ def get_fifo_prefix(change_type, is_lot=False):
     }
     return prefix_map.get(change_type, 'TXN')
 
-def generate_fifo_code(change_type, remaining_quantity=0, batch_label=None):
+def generate_fifo_code(change_type, item_id=None, is_lot_creation=False, batch_label=None):
     """
     Generate FIFO code with proper prefix and base32 suffix
 
     Args:
         change_type: Type of inventory change
-        remaining_quantity: Quantity remaining after transaction (>0 = lot)
+        item_id: Item ID (for future use)
+        is_lot_creation: True if this creates a new lot, False for events
         batch_label: If from batch, use batch label instead of generated code
 
     Returns:
@@ -54,26 +55,15 @@ def generate_fifo_code(change_type, remaining_quantity=0, batch_label=None):
     if batch_label:
         return f"BCH-{batch_label}"
 
-    # For recount operations, use enhanced logic
+    # For recount operations, use specific logic
     if change_type == 'recount':
-        if remaining_quantity > 0:
+        if is_lot_creation:
             prefix = 'LOT'  # Recount overflow creates new lots
         else:
-            prefix = 'RCN'  # Recount refills/deductions don't create lots
+            prefix = 'RCN'  # Recount events (refills/deductions) get event codes
     else:
-        # Determine if this is a lot (creates remaining quantity)
-        # Only these types with positive quantities create lots
-        lot_creation_types = [
-            'restock', 
-            'finished_batch', 
-            'manual_addition',
-            'initial_stock'
-        ]
-
-        is_lot = change_type in lot_creation_types and remaining_quantity > 0
-
-        # Get prefix
-        prefix = get_fifo_prefix(change_type, is_lot)
+        # Get prefix based on change type and whether it creates a lot
+        prefix = get_fifo_prefix(change_type, is_lot_creation)
 
     # Generate base36 suffix (8 characters)
     suffix = int_to_base36(secrets.randbits(32))[:8].upper()
