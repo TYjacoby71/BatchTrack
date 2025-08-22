@@ -154,3 +154,46 @@ class ContainerHandler(BaseInventoryHandler):
             formatted_needed="1 count",
             formatted_available="0 count"
         )
+
+    def check_stock(self, request: StockCheckRequest) -> StockCheckResult:
+        """Check container stock availability"""
+        try:
+            # Get the container item
+            container = InventoryItem.query.get(request.item_id)
+            if not container or container.type != 'container':
+                return self._create_not_found_result(request)
+
+            # Get current stock quantity
+            available_quantity = container.quantity or 0
+
+            # For containers, we typically check if we have enough units available
+            needed_quantity = request.quantity_needed or 1
+
+            # Determine status
+            if available_quantity >= needed_quantity:
+                status = StockStatus.AVAILABLE
+            elif available_quantity > 0:
+                status = StockStatus.LOW
+            else:
+                status = StockStatus.OUT_OF_STOCK
+
+            return StockCheckResult(
+                item_id=container.id,
+                item_name=container.name,
+                needed_quantity=needed_quantity,
+                needed_unit=request.unit or 'count',
+                available_quantity=available_quantity,
+                available_unit=container.unit or 'count',
+                status=status,
+                category=InventoryCategory.CONTAINER,
+                conversion_details={
+                    'storage_capacity': getattr(container, 'storage_amount', 0),
+                    'storage_unit': getattr(container, 'storage_unit', 'ml'),
+                    'item_id': container.id,
+                    'item_name': container.name,
+                    'stock_qty': available_quantity
+                }
+            )
+        except Exception as e:
+            logger.error(f"Error checking container stock for item {request.item_id}: {e}")
+            return self._create_error_result(request, str(e))
