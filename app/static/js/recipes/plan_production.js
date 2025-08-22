@@ -9,6 +9,31 @@ document.addEventListener('alpine:init', () => {
     recipeId: null,
     scale: 1,
     csrfToken: null,
+    batchCode: '',
+    
+    // Alert messages
+    alertMessage: '',
+    errorMessage: '',
+    
+    // Loading states
+    loading: false,
+    
+    // Stock check properties
+    stockChecked: false,
+    stockCheckPassed: false,
+    stockResults: [],
+    
+    // Container properties
+    requiresContainers: true,
+    containersSelected: [],
+    containerToggleEnabled: false,
+    containers: [],
+    containmentPercent: 0,
+    liveContainmentMessage: '',
+    containmentIssue: '',
+    
+    // Batch actions
+    canStartBatch: false,
     containers: [],
     containerToggleEnabled: false,
     stockResults: [],
@@ -117,6 +142,14 @@ document.addEventListener('alpine:init', () => {
         console.error('Error during plan production submission:', error);
         alert(`An unexpected error occurred: ${error.message}`);
         this.allOk = false;
+      }
+    },
+
+    checkStockOrWarn() {
+      if (!this.stockChecked) {
+        this.checkStock();
+      } else if (!this.stockCheckPassed) {
+        this.alertMessage = 'Please resolve stock issues before proceeding.';
       }
     },
 
