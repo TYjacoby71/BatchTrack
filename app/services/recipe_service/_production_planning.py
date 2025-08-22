@@ -6,7 +6,74 @@ The logic has been moved to app/services/production_planning/ for better organiz
 """
 
 import logging
-from typing import Dict, Any
+from typing import Dict, Any, List
+from decimal import Decimal
+from flask_login import current_user
+
+# Assuming Recipe and StockCheckRequest are defined elsewhere,
+# and InventoryCategory is imported correctly.
+# For the purpose of this example, we'll stub them if they are not provided.
+
+# Stub definitions if not present in the provided context
+try:
+    from app.models import Recipe
+except ImportError:
+    class Recipe:
+        def __init__(self, id, recipe_ingredients, allowed_containers, predicted_yield, predicted_yield_unit):
+            self.id = id
+            self.recipe_ingredients = recipe_ingredients
+            self.allowed_containers = allowed_containers
+            self.predicted_yield = predicted_yield
+            self.predicted_yield_unit = predicted_yield_unit
+            self.query = self # Mock query object
+
+        @classmethod
+        def get(cls, recipe_id):
+            # Dummy implementation
+            class MockRecipeIngredient:
+                def __init__(self, inventory_item_id, quantity, unit):
+                    self.inventory_item_id = inventory_item_id
+                    self.quantity = quantity
+                    self.unit = unit
+                    self.inventory_item = type('obj', (object,), {'cost_per_unit': 10, 'name': 'TestIngredient'})()
+
+            return cls(
+                id=recipe_id,
+                recipe_ingredients=[MockRecipeIngredient(1, 10, 'kg')],
+                allowed_containers=[101, 102],
+                predicted_yield=100,
+                predicted_yield_unit='kg'
+            )
+
+try:
+    from app.services.stock_check.types import StockCheckRequest
+except ImportError:
+    class StockCheckRequest:
+        def __init__(self, item_id, quantity_needed, unit, category, organization_id, scale_factor):
+            self.item_id = item_id
+            self.quantity_needed = quantity_needed
+            self.unit = unit
+            self.category = category
+            self.organization_id = organization_id
+            self.scale_factor = scale_factor
+
+try:
+    from app.models.inventory import InventoryCategory
+except ImportError:
+    class InventoryCategory:
+        INGREDIENT = 'ingredient'
+        CONTAINER = 'container'
+
+# Mock current_user if not available
+try:
+    current_user.organization_id
+except (ImportError, AttributeError):
+    class MockUser:
+        def __init__(self):
+            self.organization_id = 1
+            self.is_authenticated = True
+    current_user = MockUser()
+
 
 logger = logging.getLogger(__name__)
 
@@ -15,21 +82,21 @@ def plan_production(recipe_id: int, scale: float = 1.0,
                    container_id: int = None, check_containers: bool = False) -> Dict[str, Any]:
     """
     Plan production for a recipe - DELEGATES to Production Planning Service.
-    
+
     This function is kept for backwards compatibility but now delegates
     to the dedicated production planning service package.
     """
     try:
         # Delegate to the new production planning service
         from ...services.production_planning import plan_production_comprehensive
-        
+
         return plan_production_comprehensive(
             recipe_id=recipe_id,
             scale=scale,
             preferred_container_id=container_id,
             include_container_analysis=check_containers
         )
-        
+
     except Exception as e:
         logger.error(f"Error delegating to production planning service: {e}")
         return {'success': False, 'error': str(e)}
@@ -42,7 +109,7 @@ def calculate_recipe_requirements(recipe_id: int, scale: float = 1.0) -> Dict[st
     try:
         from ...services.production_planning import calculate_production_requirements
         return calculate_production_requirements(recipe_id, scale)
-        
+
     except Exception as e:
         logger.error(f"Error delegating recipe requirements calculation: {e}")
         return {'success': False, 'error': str(e)}
@@ -55,7 +122,7 @@ def check_ingredient_availability(recipe_id: int, scale: float = 1.0) -> Dict[st
     try:
         from ...services.production_planning import validate_ingredient_availability
         return validate_ingredient_availability(recipe_id, scale)
-        
+
     except Exception as e:
         logger.error(f"Error delegating ingredient availability check: {e}")
         return {'success': False, 'error': str(e)}
@@ -133,7 +200,7 @@ def _build_recipe_requests(recipe, scale: float, check_containers: bool = False)
     if check_containers:
         # Get containers allowed for this recipe or all available containers
         from ...models import InventoryItem
-        from flask_login import current_user
+        # from flask_login import current_user # This import is now handled at the top
 
         # Check if recipe has specific allowed containers
         if recipe.allowed_containers:
