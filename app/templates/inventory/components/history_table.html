@@ -75,12 +75,11 @@
                     </td>
                     <td>{{ entry.quantity_change }}{% if item.type != 'container' %} {{ entry.unit }}{% endif %}</td>
                     <td>
-                        {% if entry.affected_lot_id and entry.affected_lot %}
-                            {{ entry.affected_lot.remaining_quantity|round(2) }} {{ entry.affected_lot.unit }}
-                        {% elif entry.remaining_quantity is not none %}
+                        {% set lot_creation_types = ['restock', 'manual_addition', 'finished_batch', 'initial_stock', 'returned', 'refunded'] %}
+                        {% if entry.change_type in lot_creation_types and entry.remaining_quantity is not none %}
                             {{ entry.remaining_quantity|round(2) }} {{ entry.unit }}
                         {% else %}
-                            -
+                            N/A
                         {% endif %}
                     </td>
                     <td>
