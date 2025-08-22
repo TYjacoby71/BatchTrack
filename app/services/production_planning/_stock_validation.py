@@ -6,13 +6,13 @@ Validates ingredient availability and formats results for production planning.
 """
 
 import logging
-from typing import List
+from typing import List, Dict, Any
 from flask_login import current_user
 
 from ...models import Recipe, RecipeIngredient
 from ..stock_check import UniversalStockCheckService
 from ..stock_check.types import StockCheckRequest, InventoryCategory
-from .types import IngredientRequirement
+from .types import IngredientRequirement, ProductionRequest, ProductionPlan
 
 logger = logging.getLogger(__name__)
 
@@ -146,4 +146,38 @@ def validate_ingredient_availability(recipe_id: int, scale: float = 1.0):
 
     except Exception as e:
         logger.error(f"Error in ingredient availability check: {e}")
+        return {'success': False, 'error': str(e)}
+
+
+def check_container_availability(recipe_id: int, scale: float = 1.0) -> Dict[str, Any]:
+    """
+    Check container availability for a recipe at given scale.
+    This is a compatibility function for the container management system.
+    """
+    try:
+        # Use the existing container management functionality
+        from ._container_management import select_optimal_containers
+        from ..recipe_service import get_recipe_details
+
+        recipe = get_recipe_details(recipe_id)
+        if not recipe:
+            return {'success': False, 'error': 'Recipe not found'}
+
+        yield_amount = recipe.predicted_yield * scale
+        yield_unit = recipe.predicted_yield_unit
+
+        container_result = select_optimal_containers(
+            recipe_id=recipe_id,
+            yield_amount=yield_amount,
+            yield_unit=yield_unit
+        )
+
+        return {
+            'success': True,
+            'containers': container_result.get('available_containers', []),
+            'can_contain': container_result.get('can_contain_full_batch', False)
+        }
+
+    except Exception as e:
+        logger.error(f"Error checking container availability: {e}")
         return {'success': False, 'error': str(e)}
