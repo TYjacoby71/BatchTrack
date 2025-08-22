@@ -1,23 +1,17 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
-from typing import List
+from . import recipes_bp
 from app.extensions import db
-from app.models import Recipe, RecipeIngredient, InventoryItem, Unit
+from app.models import Recipe, InventoryItem
 from app.utils.permissions import require_permission
 
 from app.services.recipe_service import (
     create_recipe, update_recipe, delete_recipe, get_recipe_details,
-    scale_recipe, validate_recipe_data, duplicate_recipe
+    plan_production, scale_recipe, validate_recipe_data, duplicate_recipe
 )
-from app.services.production_planning import plan_production
 from app.utils.unit_utils import get_global_unit_list
+from app.models.unit import Unit
 import logging
-
-# Create the blueprint
-recipes_bp = Blueprint('recipes', __name__, 
-                      template_folder='templates',
-                      static_folder='static',
-                      url_prefix='/recipes')
 
 logger = logging.getLogger(__name__)
 
@@ -83,6 +77,32 @@ def view_recipe(recipe_id):
         logger.exception(f"Error viewing recipe: {str(e)}")
         return redirect(url_for('recipes.list_recipes'))
 
+@recipes_bp.route('/<int:recipe_id>/auto-fill-containers', methods=['POST'])
+@login_required
+@require_permission('recipes.plan_production')
+def auto_fill_containers(recipe_id):
+    """Auto-fill container selection for recipe"""
+    try:
+        data = request.get_json()
+        scale = float(data.get('scale', 1.0))
+        yield_amount = float(data.get('yield_amount'))
+        yield_unit = data.get('yield_unit')
+
+        # Delegate to production planning service
+        from app.services.production_planning import calculate_container_fill_strategy
+        result = calculate_container_fill_strategy(
+            recipe_id=recipe_id,
+            scale=scale,
+            yield_amount=yield_amount,
+            yield_unit=yield_unit
+        )
+
+        return jsonify(result)
+
+    except Exception as e:
+        logger.error(f"Error in auto-fill containers: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @recipes_bp.route('/<int:recipe_id>/plan', methods=['GET', 'POST'])
 @login_required
 @require_permission('recipes.plan_production')
@@ -104,7 +124,7 @@ def plan_production_route(recipe_id):
             scale = float(data.get('scale', 1.0))
             container_id = data.get('container_id')
 
-            # Delegate to production planning service - no business logic here
+            # Delegate to service - no business logic here
             planning_result = plan_production(recipe_id, scale, container_id)
 
             if planning_result['success']:
@@ -373,3 +393,23 @@ def _create_variation_template(parent):
         predicted_yield_unit=parent.predicted_yield_unit
     )
 
+# This is the API endpoint for production planning which has been updated
+@recipes_bp.route('/<int:recipe_id>/plan', methods=['POST'])
+@login_required
+@require_permission('batch_production.create')
+def plan_production_api(recipe_id):
+    """API endpoint for production planning"""
+    try:
+        data = request.get_json() or {}
+        scale = float(data.get('scale', 1.0))
+        container_id = data.get('container_id')
+        check_containers = data.get('check_containers', False)
+
+        from app.services.recipe_service import plan_production
+        result = plan_production(recipe_id, scale, container_id, check_containers)
+
+        return jsonify(result)
+
+    except Exception as e:
+        logger.error(f"Error in plan production API: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
