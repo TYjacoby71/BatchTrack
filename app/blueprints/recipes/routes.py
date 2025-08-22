@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import login_required, current_user
 from typing import List
 from app.extensions import db
-from app.models import Recipe, RecipeIngredient, InventoryItem, Unit
+from app.models import Recipe, InventoryItem, Unit
 from app.utils.permissions import require_permission
 
 from app.services.recipe_service import (
