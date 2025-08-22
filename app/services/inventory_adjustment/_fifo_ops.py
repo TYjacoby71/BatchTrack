@@ -99,6 +99,9 @@ def create_new_fifo_lot(item_id, quantity, change_type, unit=None, notes=None, c
         batch_id = kwargs.get('batch_id')
 
         # Generate a single FIFO code that will be shared by both lot and history
+        # Import the proper FIFO generator
+        from app.utils.fifo_generator import generate_fifo_code
+        
         # For finished_batch operations, use batch-specific code if batch_id exists
         if change_type == 'finished_batch' and batch_id:
             from app.models import Batch
@@ -106,10 +109,10 @@ def create_new_fifo_lot(item_id, quantity, change_type, unit=None, notes=None, c
             if batch and batch.label_code:
                 fifo_code = f"BCH-{batch.label_code}"
             else:
-                fifo_code = generate_fifo_code(change_type, item_id, remaining_quantity=quantity)
+                fifo_code = generate_fifo_code(change_type, item_id, is_lot_creation=True)
         else:
-            # For regular lot creation, use LOT prefix
-            fifo_code = generate_fifo_code('restock', item_id, remaining_quantity=quantity)
+            # For regular lot creation, use LOT prefix - this creates an actual lot
+            fifo_code = generate_fifo_code('restock', item_id, is_lot_creation=True)
 
         # Create new lot - ALWAYS inherit perishable status from item
         lot = InventoryLot(
