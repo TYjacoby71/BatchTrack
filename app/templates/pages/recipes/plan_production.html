@@ -325,13 +325,17 @@ function planProduction() {
     },
 
     onContainerRequirementChange() {
+      console.log('🔍 DEBUG: Container requirement changed to:', this.requiresContainers);
+      
       if (!this.requiresContainers) {
+        console.log('🔍 DEBUG: Disabling containers, clearing selections');
         this.containersSelected = [];
         this.containmentPercent = 0;
         this.remainingToContain = 0;
         this.containmentIssue = '';
         this.allowedContainers = [];
       } else {
+        console.log('🔍 DEBUG: Enabling containers, fetching plan...');
         // Small delay to ensure the DOM has updated
         this.$nextTick(() => {
           this.fetchContainerPlan();
@@ -350,6 +354,8 @@ function planProduction() {
 
       const scale = this.scale || 1.0;
       
+      console.log('🔍 DEBUG: Fetching container plan for recipe', this.recipeId, 'with scale', scale);
+      
       // Use USCS for container checking
       fetch(`/recipes/${this.recipeId}/plan`, {
         method: 'POST',
@@ -362,12 +368,26 @@ function planProduction() {
           check_containers: true
         })
       })
-      .then(res => res.json())
+      .then(res => {
+        console.log('🔍 DEBUG: Response status:', res.status);
+        return res.json();
+      })
       .then(data => {
-        console.log('USCS Container response:', data);
+        console.log('🔍 DEBUG: USCS Container response:', data);
+        
+        if (!data.success) {
+          console.error('🚨 USCS Error:', data.error);
+          alert('Error loading containers: ' + data.error);
+          this.allowedContainers = [];
+          this.containersSelected = [];
+          this.updateProgress();
+          return;
+        }
         
         // Extract containers from USCS response
         const containers = data.stock_results?.filter(r => r.category === 'container') || [];
+        console.log('🔍 DEBUG: Raw container results:', containers);
+        
         this.allowedContainers = containers.map(c => ({
           id: c.item_id,
           name: c.item_name,
@@ -376,11 +396,20 @@ function planProduction() {
           stock_qty: c.available_quantity || 0
         }));
         
-        console.log('Processed containers:', this.allowedContainers);
+        console.log('🔍 DEBUG: Processed containers:', this.allowedContainers);
+        
+        // Check if recipe has no allowed containers configured
+        if (this.requiresContainers && this.allowedContainers.length === 0) {
+          alert('⚠️ No containers configured for this recipe.\n\nThis recipe has no allowable containers specified. Please edit the recipe to add allowed containers, or disable the "Require Containers" option.');
+          this.requiresContainers = false;
+          return;
+        }
 
         if (this.autoFill && this.requiresContainers && this.allowedContainers.length > 0) {
+          console.log('🔍 DEBUG: Performing auto-fill');
           this.performAutoFill();
         } else if (!this.autoFill) {
+          console.log('🔍 DEBUG: Validating existing selections');
           // Keep existing selections but validate them
           this.validateExistingSelections();
         }
@@ -388,7 +417,8 @@ function planProduction() {
         this.refreshContainmentStatus();
       })
       .catch(err => {
-        console.error('Error fetching container plan:', err);
+        console.error('🚨 Error fetching container plan:', err);
+        alert('Network error while loading containers. Please try again.');
         this.allowedContainers = [];
         this.containersSelected = [];
         this.updateProgress();
@@ -399,10 +429,16 @@ function planProduction() {
       const projected = this.baseYield * this.scale;
       let remainingVolume = projected;
 
+      console.log('🔍 AUTO-FILL DEBUG: Starting auto-fill');
+      console.log('🔍 AUTO-FILL DEBUG: Projected volume:', projected, this.unit);
+      console.log('🔍 AUTO-FILL DEBUG: Available containers:', this.allowedContainers);
+
       // Sort containers by capacity (largest first) - these are already filtered by the API
       const availableContainers = [...this.allowedContainers]
         .filter(c => c.stock_qty > 0)
         .sort((a, b) => b.storage_amount - a.storage_amount);
+
+      console.log('🔍 AUTO-FILL DEBUG: Filtered/sorted containers:', availableContainers);
 
       let selectedContainers = [];
       
@@ -414,6 +450,8 @@ function planProduction() {
         const maxNeeded = Math.floor(remainingVolume / capacity);
         const qtyToUse = Math.min(maxNeeded, container.stock_qty);
 
+        console.log(`🔍 AUTO-FILL DEBUG: Container ${container.name}: capacity=${capacity}, maxNeeded=${maxNeeded}, stock=${container.stock_qty}, qtyToUse=${qtyToUse}`);
+
         if (qtyToUse > 0) {
           selectedContainers.push({
             id: container.id,
@@ -423,11 +461,13 @@ function planProduction() {
             unit: container.storage_unit
           });
           remainingVolume -= qtyToUse * capacity;
+          console.log(`🔍 AUTO-FILL DEBUG: Added ${qtyToUse}x ${container.name}, remaining volume: ${remainingVolume}`);
         }
       }
 
       // Second pass: If there's still remaining volume, add one more container for partial fill
       if (remainingVolume > 0) {
+        console.log('🔍 AUTO-FILL DEBUG: Still need to contain:', remainingVolume, 'looking for partial fill container');
         for (const container of availableContainers) {
           const alreadyUsed = selectedContainers.find(s => s.id === container.id);
           const remainingStock = container.stock_qty - (alreadyUsed ? alreadyUsed.quantity : 0);
@@ -435,6 +475,7 @@ function planProduction() {
           if (remainingStock > 0) {
             if (alreadyUsed) {
               alreadyUsed.quantity += 1;
+              console.log(`🔍 AUTO-FILL DEBUG: Added 1 more ${container.name} (partial fill)`);
             } else {
               selectedContainers.push({
                 id: container.id,
@@ -443,12 +484,14 @@ function planProduction() {
                 capacity: container.storage_amount,
                 unit: container.storage_unit
               });
+              console.log(`🔍 AUTO-FILL DEBUG: Added 1x ${container.name} (partial fill)`);
             }
             break;
           }
         }
       }
 
+      console.log('🔍 AUTO-FILL DEBUG: Final selection:', selectedContainers);
       this.containersSelected = selectedContainers;
       this.updateProgress();
       this.evaluateContainment();

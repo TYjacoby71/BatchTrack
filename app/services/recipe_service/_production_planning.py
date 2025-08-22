@@ -1,4 +1,3 @@
-
 """
 Production Planning Operations
 
@@ -38,14 +37,14 @@ def plan_production(recipe_id: int, scale: float = 1.0,
 
         # Build stock check requests from recipe
         requests = _build_recipe_requests(recipe, scale, check_containers=check_containers)
-        
+
         # Use UniversalStockCheckService for individual item checks
         stock_service = UniversalStockCheckService()
         stock_results = stock_service.check_bulk_items(requests)
 
         # Process results into recipe-specific format
         processed_results = _process_stock_results(stock_results)
-        
+
         # Only check ingredient availability for overall success
         ingredient_results = [r for r in processed_results if r.get('category') == 'ingredient']
         all_available = all(result['status'] in ['OK', 'AVAILABLE', 'LOW'] for result in ingredient_results)
@@ -136,6 +135,7 @@ def check_ingredient_availability(recipe_id: int, scale: float = 1.0) -> Dict[st
                 quantity_needed=recipe_ingredient.quantity * scale,
                 unit=recipe_ingredient.unit,
                 category=InventoryCategory.INGREDIENT,
+                organization_id=current_user.organization_id if current_user.is_authenticated else None,
                 scale_factor=scale
             ))
 
@@ -224,6 +224,7 @@ def _build_recipe_requests(recipe, scale: float, check_containers: bool = False)
             quantity_needed=recipe_ingredient.quantity * scale,
             unit=recipe_ingredient.unit,
             category=InventoryCategory.INGREDIENT,
+            organization_id=current_user.organization_id if current_user.is_authenticated else None,
             scale_factor=scale
         ))
 
@@ -232,7 +233,7 @@ def _build_recipe_requests(recipe, scale: float, check_containers: bool = False)
         # Get containers allowed for this recipe or all available containers
         from ...models import InventoryItem
         from flask_login import current_user
-        
+
         # Check if recipe has specific allowed containers
         if recipe.allowed_containers:
             # Filter to only allowed containers
@@ -248,6 +249,11 @@ def _build_recipe_requests(recipe, scale: float, check_containers: bool = False)
                 organization_id=current_user.organization_id if current_user.is_authenticated else None
             ).all()
 
+        # Check if no containers are specified and the toggle is selected
+        if check_containers and not recipe.allowed_containers and not containers:
+            logger.warning(f"User has not specified any allowable containers for recipe {recipe.id}, but container toggle is selected.")
+            # Optionally, you could raise an alert here or return a specific status
+
         yield_amount = recipe.predicted_yield * scale if recipe.predicted_yield else 1.0
 
         for container in containers:
@@ -258,6 +264,7 @@ def _build_recipe_requests(recipe, scale: float, check_containers: bool = False)
                     quantity_needed=1,  # Check for at least 1 container
                     unit="count",
                     category=InventoryCategory.CONTAINER,
+                    organization_id=current_user.organization_id if current_user.is_authenticated else None,
                     scale_factor=scale
                 ))
 
@@ -267,7 +274,7 @@ def _build_recipe_requests(recipe, scale: float, check_containers: bool = False)
 def _process_stock_results(stock_results: List) -> List[Dict[str, Any]]:
     """Process stock check results into consistent format"""
     processed = []
-    
+
     for result in stock_results:
         # Handle both StockCheckResult objects and dicts
         if hasattr(result, 'to_dict'):
@@ -299,7 +306,7 @@ def _process_stock_results(stock_results: List) -> List[Dict[str, Any]]:
                 'storage_unit': conversion_details.get('storage_unit', 'ml'),
                 'stock_qty': result_dict.get('available_quantity', 0)
             })
-        
+
         processed.append(base_result)
-    
+
     return processed
