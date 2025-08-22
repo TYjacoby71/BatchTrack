@@ -1,103 +1,50 @@
 
 <div class="card mb-4">
     <div class="card-header">
-        <h5 class="card-title mb-0">
-            <i class="fas fa-cogs text-primary me-2"></i>Batch Configuration
+        <h5 class="mb-0">
+            <i class="fas fa-cogs"></i> Batch Configuration
         </h5>
     </div>
     <div class="card-body">
-        <form method="POST" action="{{ url_for('recipes.plan_production_route', recipe_id=recipe.id) }}">
-            {{ csrf_token() }}
-            
-            <!-- Scale Factor -->
-            <div class="row g-3 mb-3">
-                <div class="col-md-6">
-                    <label for="scale" class="form-label fw-bold">Scale Factor</label>
-                    <input type="number" id="scale" name="scale" class="form-control" 
-                           value="1" min="0.1" step="0.1" required>
-                    <div class="form-text text-muted">Multiply recipe by this factor</div>
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label fw-bold">Projected Yield</label>
-                    <div class="input-group">
-                        <input type="text" class="form-control" 
-                               value="{{ (recipe.predicted_yield or 0) }}" readonly>
-                        <span class="input-group-text">{{ recipe.predicted_yield_unit or 'units' }}</span>
-                    </div>
-                    <div class="form-text text-muted">Expected output amount</div>
+        <div class="row g-3">
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label class="form-label fw-semibold">Batch Scale</label>
+                    <input type="number" min="0.1" step="0.1" class="form-control" x-model.number="scale" @input="fetchContainerPlan" placeholder="1.0">
                 </div>
             </div>
-
-            <!-- Batch Type and Container Options -->
-            <div class="row g-3 mb-3">
-                <div class="col-md-6">
-                    <label for="batchType" class="form-label fw-bold">Batch Type <span class="text-danger">*</span></label>
-                    <select id="batchType" name="batch_type" class="form-select">
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label class="form-label fw-semibold">Projected Yield</label>
+                    <div class="form-control bg-light border-0 fw-bold text-primary d-flex align-items-center" style="height: 38px;" x-text="(baseYield * scale).toFixed(2) + ' ' + unit"></div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label class="form-label fw-semibold">Batch Type <span class="text-danger">*</span></label>
+                    <select class="form-select" x-model="batchType" :class="batchType === '' ? 'is-invalid' : ''">
                         <option value="">Select Type</option>
                         <option value="ingredient">Intermediate Ingredient</option>
                         <option value="product">Final Product</option>
                     </select>
-                    <div class="form-text text-muted">Choose batch purpose</div>
+                    <div class="invalid-feedback" x-show="batchType === ''">
+                        Please select a batch type
+                    </div>
                 </div>
-                <div class="col-md-6">
-                    <label class="form-label fw-bold">Container Options</label>
+            </div>
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label class="form-label fw-semibold">Container Options</label>
                     <div class="form-control bg-light border-0 d-flex align-items-center" style="height: 38px;">
                         <div class="form-check form-switch mb-0">
-                            <input type="checkbox" class="form-check-input" id="requiresContainers" name="requires_containers">
-                            <label class="form-check-label fw-normal" for="requiresContainers">
-                                Require containers for this batch
+                            <input type="checkbox" class="form-check-input" id="requireContainers" x-model="requiresContainers" @change="onContainerRequirementChange">
+                            <label class="form-check-label fw-normal" for="requireContainers">
+                                <i class="fas fa-box me-1"></i> Require Containers
                             </label>
                         </div>
                     </div>
-                    <div class="form-text text-muted">Enable if batch needs containers</div>
                 </div>
             </div>
-
-            <!-- Batch Code -->
-            <div class="row g-3 mb-3">
-                <div class="col-md-6">
-                    <label for="batchCode" class="form-label fw-bold">Batch Code (Optional)</label>
-                    <input type="text" id="batchCode" name="batch_code" class="form-control" 
-                           placeholder="Auto-generated if empty">
-                    <div class="form-text text-muted">Leave empty for auto-generation</div>
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label fw-bold">Batch Type</label>
-                    <select name="batch_type" class="form-select">
-                        <option value="production">Production Batch</option>
-                        <option value="test">Test Batch</option>
-                        <option value="sample">Sample Batch</option>
-                    </select>
-                    <div class="form-text text-muted">Purpose of this batch</div>
-                </div>
-            </div>
-
-            <!-- Container Required Toggle -->
-            <div class="row g-3 mb-4">
-                <div class="col-12">
-                    <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" id="requiresContainers" 
-                               name="requires_containers" checked>
-                        <label class="form-check-label fw-bold" for="requiresContainers">
-                            Requires Container Planning
-                        </label>
-                    </div>
-                    <div class="form-text text-muted">Check if this batch needs specific containers</div>
-                </div>
-            </div>
-
-            <hr class="my-4">
-
-            <div class="d-flex gap-2">
-                <button type="submit" name="action" value="check_stock" class="btn btn-primary">
-                    <i class="fas fa-search me-2"></i>
-                    Check Stock & Plan Production
-                </button>
-                <button type="reset" class="btn btn-outline-secondary">
-                    <i class="fas fa-undo me-2"></i>
-                    Reset Form
-                </button>
-            </div>
-        </form>
+        </div>
     </div>
 </div>
