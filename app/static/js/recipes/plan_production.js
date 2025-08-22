@@ -1,5 +1,6 @@
+
 // Plan Production JavaScript functionality
-// This file provides additional functionality for the plan production page
+// This file provides form enhancements for the plan production page
 
 console.log('Plan production JavaScript loaded');
 
@@ -20,10 +21,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Container toggle functionality
     const containerToggle = document.getElementById('requiresContainers');
-    // The selector for containerCard might need to be adjusted if the HTML structure is different
-    // Assuming a card element that contains an element with id="containerToggle"
-    const containerCard = document.querySelector('.card:has(#containerToggle)');
-
+    const containerCard = document.querySelector('.container-management-card');
 
     if (containerToggle && containerCard) {
         // Initialize the display based on the initial state of the toggle
@@ -40,7 +38,6 @@ document.addEventListener('DOMContentLoaded', function() {
         form.addEventListener('submit', function() {
             const submitBtn = this.querySelector('button[type="submit"]');
             if (submitBtn) {
-                // Using Bootstrap spinner classes for visual feedback
                 submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Planning...';
                 submitBtn.disabled = true;
             }
