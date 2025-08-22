@@ -5,7 +5,7 @@ console.log('Plan production JavaScript loaded');
 
 // Alpine.js component for Plan Production
 document.addEventListener('alpine:init', () => {
-  Alpine.data('planProduction', () => ({
+  Alpine.data('planProductionApp', () => ({
     recipeId: null,
     scale: 1,
     csrfToken: null,

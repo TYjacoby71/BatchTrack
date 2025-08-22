@@ -5,7 +5,7 @@ Handles container selection, optimization, and fill strategies for production ba
 """
 
 import logging
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Tuple
 from ...models import Recipe, InventoryItem
 from flask_login import current_user
 from ..stock_check import UniversalStockCheckService
