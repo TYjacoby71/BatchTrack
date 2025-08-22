@@ -1,14 +1,17 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
 from typing import List
-from app.models import Recipe, RecipeIngredient, InventoryItem
+from app.models import Recipe, RecipeIngredient, InventoryItem, Unit, db
 from app.services.recipe_service import (
     get_recipe_details,
     create_recipe,
     update_recipe,
     delete_recipe,
-    plan_production
+    duplicate_recipe
 )
+from app.services.production_planning import plan_production
+from app.utils.permissions import require_permission
+from app.utils.unit_utils import get_global_unit_list
 import logging
 
 logger = logging.getLogger(__name__)
@@ -380,7 +383,7 @@ def plan_production_api(recipe_id):
         container_id = data.get('container_id')
         check_containers = data.get('check_containers', False)
 
-        from app.services.recipe_service import plan_production
+        from app.services.production_planning import plan_production
         result = plan_production(recipe_id, scale, container_id, check_containers)
 
         return jsonify(result)
