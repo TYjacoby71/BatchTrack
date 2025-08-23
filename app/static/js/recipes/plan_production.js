@@ -31,6 +31,8 @@ class PlanProductionApp {
             this.baseYield = parseFloat(recipeData.yield_amount) || 0;
             this.unit = recipeData.yield_unit || '';
             console.log('🔍 RECIPE: Loaded recipe data:', this.recipe);
+            // Update initial projected yield
+            this.updateProjectedYield();
         }
     }
 
@@ -73,6 +75,12 @@ class PlanProductionApp {
                 this.toggleManualContainerSection(!e.target.checked);
                 if (e.target.checked && this.requiresContainers) {
                     this.fetchContainerPlan();
+                } else if (!e.target.checked) {
+                    // Clear auto-fill results when switching to manual
+                    const autoFillResults = document.getElementById('autoFillResults');
+                    if (autoFillResults) {
+                        autoFillResults.style.display = 'none';
+                    }
                 }
             });
         }
@@ -262,42 +270,124 @@ class PlanProductionApp {
         const manualSection = document.getElementById('manualContainerSection');
         const autoFillSection = document.getElementById('autoFillResults');
         
-        if (manualSection) manualSection.style.display = show ? 'block' : 'none';
-        if (autoFillSection) autoFillSection.style.display = show ? 'none' : 'block';
+        console.log('🔍 TOGGLE MANUAL SECTION:', show);
+        if (manualSection) {
+            manualSection.style.display = show ? 'block' : 'none';
+            console.log('🔍 MANUAL SECTION display:', show ? 'block' : 'none');
+        }
+        if (autoFillSection) {
+            autoFillSection.style.display = show ? 'none' : 'block';
+            console.log('🔍 AUTO-FILL SECTION display:', show ? 'none' : 'block');
+        }
     }
 
     addContainerRow() {
-        const template = document.getElementById('containerRowTemplate');
-        const container = document.getElementById('containerSelectionRows');
-        
-        if (template && container) {
-            const clone = template.cloneNode(true);
-            clone.style.display = 'block';
-            clone.id = '';
-            clone.setAttribute('data-container-row', Date.now());
-            
-            // Bind remove button
-            const removeBtn = clone.querySelector('.remove-container-btn');
-            if (removeBtn) {
-                removeBtn.addEventListener('click', () => {
-                    clone.remove();
-                    this.updateManualContainerProgress();
-                });
-            }
-
-            // Bind change events
-            const select = clone.querySelector('.container-select');
-            const quantityInput = clone.querySelector('.container-quantity');
-            
-            if (select) {
-                select.addEventListener('change', () => this.updateManualContainerProgress());
-            }
-            if (quantityInput) {
-                quantityInput.addEventListener('input', () => this.updateManualContainerProgress());
-            }
-
-            container.appendChild(clone);
+        // Check if auto-fill is enabled and prevent manual addition
+        const autoFillToggle = document.getElementById('autoFillEnabled');
+        if (autoFillToggle && autoFillToggle.checked) {
+            alert('Please uncheck Auto-Fill to add containers manually.');
+            return;
         }
+
+        // Check if we have container data available
+        if (!this.containerPlan || !this.containerPlan.container_selection || this.containerPlan.container_selection.length === 0) {
+            alert('No containers available for this recipe.');
+            return;
+        }
+
+        const containerRows = document.getElementById('containerSelectionRows');
+        if (!containerRows) return;
+
+        const rowIndex = containerRows.children.length;
+        const availableContainers = this.containerPlan.container_selection;
+        
+        // Create options HTML
+        let optionsHTML = '<option value="">Select Container</option>';
+        availableContainers.forEach(container => {
+            optionsHTML += `<option value="${container.id}">${container.name} (${container.capacity} ${container.unit})</option>`;
+        });
+
+        // Create row HTML
+        const rowHTML = `
+            <div class="row mb-2 align-items-center" data-container-row="${rowIndex}">
+                <div class="col-md-5">
+                    <select class="form-select container-select">
+                        ${optionsHTML}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <input type="number" class="form-control container-quantity" min="1" placeholder="Qty">
+                </div>
+                <div class="col-md-2">
+                    <span class="badge bg-light text-dark available-stock">-</span>
+                </div>
+                <div class="col-md-2">
+                    <button type="button" class="btn btn-danger btn-sm remove-container-btn">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+
+        // Add the row
+        const rowDiv = document.createElement('div');
+        rowDiv.innerHTML = rowHTML;
+        const newRow = rowDiv.firstElementChild;
+        containerRows.appendChild(newRow);
+
+        // Bind events to the new row
+        this.bindContainerRowEvents(rowIndex);
+    }
+
+    bindContainerRowEvents(rowIndex) {
+        const row = document.querySelector(`[data-container-row="${rowIndex}"]`);
+        if (!row) return;
+
+        const select = row.querySelector('.container-select');
+        const quantityInput = row.querySelector('.container-quantity');
+        const removeBtn = row.querySelector('.remove-container-btn');
+
+        if (select) {
+            select.addEventListener('change', () => this.updateContainerRowStock(rowIndex));
+        }
+
+        if (quantityInput) {
+            quantityInput.addEventListener('input', () => this.updateManualContainerProgress());
+        }
+
+        if (removeBtn) {
+            removeBtn.addEventListener('click', () => {
+                row.remove();
+                this.updateManualContainerProgress();
+            });
+        }
+
+        this.updateContainerRowStock(rowIndex);
+    }
+
+    updateContainerRowStock(rowIndex) {
+        const row = document.querySelector(`[data-container-row="${rowIndex}"]`);
+        if (!row) return;
+
+        const select = row.querySelector('.container-select');
+        const stockBadge = row.querySelector('.available-stock');
+
+        if (!select || !stockBadge) return;
+
+        const selectedId = select.value;
+        if (!selectedId) {
+            stockBadge.textContent = '-';
+            return;
+        }
+
+        const container = this.containerPlan?.container_selection?.find(c => c.id == selectedId);
+        if (container) {
+            stockBadge.textContent = container.quantity || 0;
+        } else {
+            stockBadge.textContent = '-';
+        }
+
+        this.updateManualContainerProgress();
     }
 
     updateManualContainerProgress() {

@@ -29,12 +29,23 @@
 
     <!-- Manual Container Selection (shown when auto-fill is disabled) -->
     <div id="manualContainerSection" style="display: none;">
-      <div id="containerSelectionRows">
-        <!-- Manual container rows will be added here -->
+      <div class="mb-3">
+        <div class="row mb-2">
+          <div class="col-md-5"><strong>Container</strong></div>
+          <div class="col-md-3"><strong>Quantity</strong></div>
+          <div class="col-md-2"><strong>Available</strong></div>
+          <div class="col-md-2"><strong>Action</strong></div>
+        </div>
+        <div id="containerSelectionRows">
+          <!-- Manual container rows will be added here -->
+        </div>
       </div>
       
-      <!-- Template for container row (hidden) -->
-      <div id="containerRowTemplate" style="display: none;">
+      <!-- No containers message -->
+      <div id="noContainersMessage" class="alert alert-warning" style="display: none;">
+        <i class="fas fa-exclamation-triangle"></i>
+        No suitable containers found for this recipe's yield requirements.
+      </div>
         <div class="row align-items-center mb-3 p-3 border rounded bg-light" data-container-row="">
           <div class="col-md-5">
             <label class="form-label small">Container Type</label>
