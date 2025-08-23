@@ -146,6 +146,7 @@ export class ContainerManager {
         let html = '<div class="auto-fill-results">';
         
         containers.forEach((container, index) => {
+            const stockQuantity = container.stock_qty || container.quantity || container.available_quantity || 0;
             html += `
                 <div class="row align-items-center mb-3 p-3 border rounded bg-success bg-opacity-10" data-auto-container="${index}">
                     <div class="col-md-5">
@@ -155,7 +156,7 @@ export class ContainerManager {
                         </div>
                     </div>
                     <div class="col-md-3">
-                        <label class="form-label small">Quantity Needed</label>
+                        <label class="form-label small">Quantity</label>
                         <div class="form-control form-control-sm bg-light border-0">
                             <strong>${container.quantity || 0}</strong>
                         </div>
@@ -167,10 +168,8 @@ export class ContainerManager {
                         </div>
                     </div>
                     <div class="col-md-1">
-                        <label class="form-label small">Auto</label>
-                        <div class="text-center">
-                            <i class="fas fa-magic text-success"></i>
-                        </div>
+                        <label class="form-label small">Available Stock</label>
+                        <div class="badge bg-success fs-6">${stockQuantity}</div>
                     </div>
                 </div>
             `;
@@ -247,14 +246,19 @@ export class ContainerManager {
                            data-row="${index}" value="1">
                 </div>
                 <div class="col-md-3">
+                    <label class="form-label small">Capacity Each</label>
+                    <div class="form-control form-control-sm bg-light border-0 container-capacity" data-row="${index}">-</div>
+                </div>
+                <div class="col-md-1">
                     <label class="form-label small">Available Stock</label>
                     <div class="badge bg-info fs-6 available-stock" data-row="${index}">-</div>
                 </div>
-                <div class="col-md-1">
-                    <label class="form-label small">&nbsp;</label>
-                    <button type="button" class="btn btn-danger btn-sm d-block remove-container-btn" 
+            </div>
+            <div class="row">
+                <div class="col-12 text-end">
+                    <button type="button" class="btn btn-danger btn-sm remove-container-btn" 
                             data-row="${index}">
-                        <i class="fas fa-times"></i>
+                        <i class="fas fa-times"></i> Remove
                     </button>
                 </div>
             </div>
@@ -290,18 +294,21 @@ export class ContainerManager {
 
         const select = row.querySelector('.container-select');
         const stockBadge = row.querySelector('.available-stock');
+        const capacityDiv = row.querySelector('.container-capacity');
 
         if (!select || !stockBadge) return;
 
         const selectedId = select.value;
         if (!selectedId) {
             stockBadge.textContent = '-';
+            if (capacityDiv) capacityDiv.textContent = '-';
             return;
         }
 
         const container = this.containerPlan?.container_selection?.find(c => c.id == selectedId);
         if (!container) {
             stockBadge.textContent = '-';
+            if (capacityDiv) capacityDiv.textContent = '-';
             return;
         }
 
@@ -309,6 +316,12 @@ export class ContainerManager {
         const stockQuantity = container.stock_qty || container.quantity || container.available_quantity || 0;
         console.log('🔍 STOCK DISPLAY DEBUG: Container:', container.name, 'Stock:', stockQuantity);
         stockBadge.textContent = stockQuantity;
+
+        // Update capacity display
+        if (capacityDiv) {
+            capacityDiv.textContent = `${container.capacity || 0} ${container.unit || 'ml'}`;
+        }
+
         this.updateContainerProgress();
     }
 
