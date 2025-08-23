@@ -1,5 +1,10 @@
-// Plan Production JavaScript functionality
-// This file provides form enhancements for the plan production page
+// Plan Production Main Orchestrator
+// This file coordinates between specialized modules
+
+import { StockCheckManager } from './modules/stock-check.js';
+import { ContainerManager } from './modules/container-management.js';
+import { ValidationManager } from './modules/validation.js';
+import { BatchManager } from './modules/batch-management.js';
 
 console.log('Plan production JavaScript loaded');
 
@@ -11,8 +16,12 @@ class PlanProductionManager {
         this.unit = 'units';
         this.batchType = '';
         this.requiresContainers = false;
-        this.stockCheckResults = null;
-        this.containerPlan = null;
+
+        // Initialize managers
+        this.stockManager = new StockCheckManager(this);
+        this.containerManager = new ContainerManager(this);
+        this.validationManager = new ValidationManager(this);
+        this.batchManager = new BatchManager(this);
 
         this.init();
     }
@@ -40,9 +49,9 @@ class PlanProductionManager {
             scaleInput.addEventListener('input', (e) => {
                 this.scale = parseFloat(e.target.value) || 1.0;
                 this.updateProjectedYield();
-                this.fetchStockCheck();
+                this.stockManager.fetchStockCheck();
                 if (this.requiresContainers) {
-                    this.fetchContainerPlan();
+                    this.containerManager.fetchContainerPlan();
                 }
             });
         }
@@ -52,7 +61,7 @@ class PlanProductionManager {
         if (batchTypeSelect) {
             batchTypeSelect.addEventListener('change', (e) => {
                 this.batchType = e.target.value;
-                this.validateForm();
+                this.validationManager.validateForm();
             });
         }
 
@@ -61,53 +70,17 @@ class PlanProductionManager {
         if (containerToggle) {
             containerToggle.addEventListener('change', (e) => {
                 this.requiresContainers = e.target.checked;
-                this.onContainerRequirementChange();
+                this.containerManager.onContainerRequirementChange();
             });
         }
 
-        // Stock check button
-        const stockCheckBtn = document.getElementById('checkStockBtn');
-        if (stockCheckBtn) {
-            stockCheckBtn.addEventListener('click', () => this.fetchStockCheck());
-        }
-
-        // Add container button
-        const addContainerBtn = document.getElementById('addContainerBtn');
-        if (addContainerBtn) {
-            addContainerBtn.addEventListener('click', () => this.addContainerRow());
-        }
-
-        // Auto-fill toggle
-        const autoFillToggle = document.getElementById('autoFillEnabled');
-        if (autoFillToggle) {
-            autoFillToggle.addEventListener('change', (e) => {
-                console.log('🔍 AUTO-FILL TOGGLE:', e.target.checked);
-                
-                // Toggle display sections
-                const autoFillResults = document.getElementById('autoFillResults');
-                const manualSection = document.getElementById('manualContainerSection');
-                
-                if (autoFillResults) autoFillResults.style.display = e.target.checked ? 'block' : 'none';
-                if (manualSection) manualSection.style.display = e.target.checked ? 'none' : 'block';
-                
-                if (e.target.checked && this.requiresContainers) {
-                    this.fetchContainerPlan();
-                } else if (!e.target.checked) {
-                    this.populateContainerOptions();
-                }
-                
-                this.updateContainerProgress();
-            });
-        }
-
-        // Start batch button
-        const startBatchBtn = document.getElementById('startBatchBtn');
-        if (startBatchBtn) {
-            startBatchBtn.addEventListener('click', () => this.startBatch());
-        }
+        // Delegate other events to managers
+        this.stockManager.bindEvents();
+        this.containerManager.bindEvents();
+        this.batchManager.bindEvents();
 
         // Initial stock check
-        setTimeout(() => this.fetchStockCheck(), 500);
+        setTimeout(() => this.stockManager.fetchStockCheck(), 500);
     }
 
     updateProjectedYield() {
@@ -118,578 +91,22 @@ class PlanProductionManager {
         }
     }
 
-    async fetchStockCheck() {
-        if (!this.recipe) return;
-
-        try {
-            const response = await fetch('/api/stock-check', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
-                },
-                body: JSON.stringify({
-                    recipe_id: this.recipe.id,
-                    scale: this.scale
-                })
-            });
-
-            if (response.ok) {
-                this.stockCheckResults = await response.json();
-                this.displayStockResults();
-            } else {
-                console.error('Stock check failed:', response.statusText);
-                this.displayStockError('Failed to check stock availability');
-            }
-        } catch (error) {
-            console.error('Stock check error:', error);
-            this.displayStockError('Error checking stock availability');
-        }
-    }
-
-    displayStockResults() {
-        const resultsContainer = document.getElementById('stockCheckResults');
-        if (!resultsContainer || !this.stockCheckResults) return;
-
-        const { ingredients, all_available } = this.stockCheckResults;
-
-        let html = '<div class="table-responsive"><table class="table table-sm">';
-        html += '<thead><tr><th>Ingredient</th><th>Needed</th><th>Available</th><th>Status</th></tr></thead><tbody>';
-
-        ingredients.forEach(ingredient => {
-            const statusClass = this.getStatusClass(ingredient.status);
-            const statusIcon = this.getStatusIcon(ingredient.status);
-
-            html += `
-                <tr class="table-${statusClass}">
-                    <td>${ingredient.item_name}</td>
-                    <td>${ingredient.needed_quantity} ${ingredient.unit}</td>
-                    <td>${ingredient.available_quantity} ${ingredient.unit}</td>
-                    <td><i class="fas ${statusIcon}"></i> ${ingredient.status}</td>
-                </tr>
-            `;
+    // Shared utilities
+    async apiCall(endpoint, data) {
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
+            },
+            body: JSON.stringify(data)
         });
 
-        html += '</tbody></table></div>';
-
-        // Update overall status
-        const statusElement = document.getElementById('stockCheckStatus');
-        if (statusElement) {
-            statusElement.className = `alert ${all_available ? 'alert-success' : 'alert-warning'}`;
-            statusElement.innerHTML = all_available 
-                ? '<i class="fas fa-check-circle"></i> All ingredients available'
-                : '<i class="fas fa-exclamation-triangle"></i> Some ingredients unavailable';
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
 
-        this.validateForm();
-    }
-
-    displayStockError(message) {
-        const resultsContainer = document.getElementById('stockCheckResults');
-        if (resultsContainer) {
-            resultsContainer.innerHTML = `<div class="alert alert-danger">${message}</div>`;
-        }
-    }
-
-    getStatusClass(status) {
-        const statusMap = {
-            'available': 'success',
-            'low': 'warning',
-            'insufficient': 'danger',
-            'unavailable': 'danger'
-        };
-        return statusMap[status] || 'secondary';
-    }
-
-    getStatusIcon(status) {
-        const iconMap = {
-            'available': 'fa-check-circle',
-            'low': 'fa-exclamation-triangle',
-            'insufficient': 'fa-times-circle',
-            'unavailable': 'fa-times-circle'
-        };
-        return iconMap[status] || 'fa-question-circle';
-    }
-
-    onContainerRequirementChange() {
-        console.log('🔍 CONTAINER TOGGLE: Requirements changed to:', this.requiresContainers);
-        
-        const containerCard = document.getElementById('containerManagementCard');
-        if (containerCard) {
-            containerCard.style.display = this.requiresContainers ? 'block' : 'none';
-            console.log('🔍 CONTAINER TOGGLE: Card display set to:', this.requiresContainers ? 'block' : 'none');
-        }
-
-        if (this.requiresContainers) {
-            console.log('🔍 CONTAINER TOGGLE: Fetching container plan...');
-            this.fetchContainerPlan();
-        } else {
-            console.log('🔍 CONTAINER TOGGLE: Clearing container data');
-            // Clear container results when toggled off
-            this.containerPlan = null;
-            const containerResults = document.getElementById('containerResults');
-            if (containerResults) {
-                containerResults.innerHTML = '<p class="text-muted">Container management disabled</p>';
-            }
-            this.clearContainerProgress();
-        }
-    }
-
-    clearContainerProgress() {
-        const progressBar = document.getElementById('containmentProgressBar');
-        const percentSpan = document.getElementById('containmentPercent');
-        const messageSpan = document.getElementById('liveContainmentMessage');
-        const noContainersMsg = document.getElementById('noContainersMessage');
-        const containmentIssue = document.getElementById('containmentIssue');
-
-        if (progressBar) {
-            progressBar.style.width = '0%';
-            progressBar.textContent = '0%';
-            progressBar.className = 'progress-bar bg-warning';
-        }
-
-        if (percentSpan) percentSpan.textContent = '0%';
-        if (messageSpan) messageSpan.textContent = '';
-        if (noContainersMsg) noContainersMsg.style.display = 'none';
-        if (containmentIssue) containmentIssue.style.display = 'none';
-    }
-
-    async fetchContainerPlan() {
-        if (!this.recipe || !this.requiresContainers) {
-            console.log('🔍 CONTAINER DEBUG: Not fetching - recipe:', !!this.recipe, 'requiresContainers:', this.requiresContainers);
-            return;
-        }
-
-        console.log('🔍 CONTAINER DEBUG: Fetching container plan for recipe', this.recipe.id, 'scale:', this.scale);
-
-        try {
-            const yieldAmount = this.baseYield * this.scale;
-            console.log('🔍 CONTAINER DEBUG: Yield amount:', yieldAmount, this.unit);
-
-            const response = await fetch(`/recipes/${this.recipe.id}/auto-fill-containers`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
-                },
-                body: JSON.stringify({
-                    scale: this.scale,
-                    yield_amount: yieldAmount,
-                    yield_unit: this.unit
-                })
-            });
-
-            const result = await response.json();
-            console.log('🔍 CONTAINER DEBUG: Server response:', result);
-
-            if (response.ok && result.success) {
-                this.containerPlan = result;
-                this.displayContainerPlan();
-                this.updateContainerProgress();
-            } else {
-                console.error('🚨 CONTAINER ERROR:', result.error || response.statusText);
-                this.displayContainerError(result.error || 'Failed to load containers');
-            }
-        } catch (error) {
-            console.error('🚨 CONTAINER NETWORK ERROR:', error);
-            this.displayContainerError('Network error while loading containers');
-        }
-    }
-
-    displayContainerPlan() {
-        const containerResults = document.getElementById('containerResults');
-        const autoFillResults = document.getElementById('autoFillResults');
-        const manualSection = document.getElementById('manualContainerSection');
-        const autoFillEnabled = document.getElementById('autoFillEnabled')?.checked;
-
-        if (!containerResults) {
-            console.error('🚨 CONTAINER DISPLAY: containerResults element not found');
-            return;
-        }
-
-        // Toggle sections based on auto-fill setting
-        if (autoFillResults) autoFillResults.style.display = autoFillEnabled ? 'block' : 'none';
-        if (manualSection) manualSection.style.display = autoFillEnabled ? 'none' : 'block';
-
-        if (!this.containerPlan?.success) {
-            console.log('🔍 CONTAINER DISPLAY: No valid container plan:', this.containerPlan);
-            containerResults.innerHTML = '<p class="text-muted">No container plan available</p>';
-            return;
-        }
-
-        const { container_selection, containment_percentage } = this.containerPlan;
-        console.log('🔍 CONTAINER DISPLAY: Displaying', container_selection?.length || 0, 'containers');
-
-        if (!container_selection || container_selection.length === 0) {
-            containerResults.innerHTML = '<div class="alert alert-warning"><i class="fas fa-exclamation-triangle"></i> No suitable containers found</div>';
-            return;
-        }
-
-        if (autoFillEnabled) {
-            // Show auto-fill results in table format
-            let html = '<div class="table-responsive"><table class="table table-sm">';
-            html += '<thead><tr><th>Container</th><th>Capacity</th><th>Quantity Needed</th><th>Total Volume</th></tr></thead><tbody>';
-
-            container_selection.forEach(container => {
-                html += `
-                    <tr>
-                        <td>${container.name || 'Unknown Container'}</td>
-                        <td>${container.capacity || 0} ${container.unit || 'ml'}</td>
-                        <td>${container.quantity || 0}</td>
-                        <td>${(container.capacity || 0) * (container.quantity || 0)} ${container.unit || 'ml'}</td>
-                    </tr>
-                `;
-            });
-
-            html += '</tbody></table></div>';
-            html += `<div class="mt-2"><small class="text-muted">Fill efficiency: ${(containment_percentage || 0).toFixed(1)}%</small></div>`;
-            containerResults.innerHTML = html;
-        } else {
-            // Populate container options for manual selection
-            this.populateContainerOptions();
-        }
-    }
-
-    populateContainerOptions() {
-        if (!this.containerPlan?.container_selection) return;
-
-        const template = document.getElementById('containerRowTemplate');
-        if (!template) return;
-
-        // Update the template's select options
-        const templateSelect = template.querySelector('.container-select');
-        if (templateSelect) {
-            let optionsHTML = '<option value="">Select Container</option>';
-            this.containerPlan.container_selection.forEach(container => {
-                optionsHTML += `<option value="${container.id}">${container.name} (${container.capacity} ${container.unit})</option>`;
-            });
-            templateSelect.innerHTML = optionsHTML;
-        }
-    }
-
-    displayContainerError(message) {
-        const containerResults = document.getElementById('containerResults');
-        if (containerResults) {
-            containerResults.innerHTML = `
-                <div class="alert alert-danger">
-                    <i class="fas fa-exclamation-circle"></i> ${message}
-                    <hr>
-                    <div class="d-flex justify-content-between align-items-center">
-                        <small class="text-muted">Cannot find suitable containers for this recipe</small>
-                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('requiresContainers').click()">
-                            <i class="fas fa-times"></i> Disable Container Requirement
-                        </button>
-                    </div>
-                </div>
-            `;
-        }
-    }
-
-    updateContainerProgress() {
-        if (!this.containerPlan?.success) return;
-
-        // Calculate containment from manual rows if auto-fill is disabled
-        const autoFillEnabled = document.getElementById('autoFillEnabled')?.checked;
-        let containment_percentage = 0;
-
-        if (!autoFillEnabled) {
-            // Calculate from manual container rows
-            const projectedYield = this.baseYield * this.scale;
-            let totalContained = 0;
-
-            document.querySelectorAll('[data-container-row]').forEach(row => {
-                const select = row.querySelector('.container-select');
-                const quantityInput = row.querySelector('.container-quantity');
-                
-                if (select && quantityInput && select.value) {
-                    const container = this.containerPlan?.container_selection?.find(c => c.id == select.value);
-                    if (container) {
-                        const quantity = parseInt(quantityInput.value) || 0;
-                        totalContained += container.capacity * quantity;
-                    }
-                }
-            });
-
-            containment_percentage = projectedYield > 0 ? Math.min((totalContained / projectedYield) * 100, 100) : 0;
-        } else {
-            containment_percentage = this.containerPlan.containment_percentage || 0;
-        }
-        
-        // Update progress bar
-        const progressBar = document.getElementById('containmentProgressBar');
-        const percentSpan = document.getElementById('containmentPercent');
-        const messageSpan = document.getElementById('liveContainmentMessage');
-
-        if (progressBar) {
-            progressBar.style.width = `${containment_percentage}%`;
-            progressBar.textContent = `${containment_percentage.toFixed(1)}%`;
-            progressBar.className = `progress-bar ${containment_percentage >= 100 ? 'bg-success' : 'bg-warning'}`;
-        }
-
-        if (percentSpan) {
-            percentSpan.textContent = `${containment_percentage.toFixed(1)}%`;
-        }
-
-        if (messageSpan) {
-            if (containment_percentage >= 100) {
-                messageSpan.textContent = 'Full containment achieved';
-                messageSpan.className = 'form-text text-success mt-1';
-            } else if (containment_percentage > 0) {
-                const remaining = this.baseYield * this.scale - (this.containerPlan.total_capacity || 0);
-                messageSpan.textContent = `${remaining.toFixed(2)} ${this.unit} will be uncontained (batch can still proceed)`;
-                messageSpan.className = 'form-text text-warning mt-1';
-            } else {
-                messageSpan.textContent = 'No containers - full manual containment required (batch can still proceed)';
-                messageSpan.className = 'form-text text-warning mt-1';
-            }
-        }
-
-        // Show/hide warnings
-        const noContainersMsg = document.getElementById('noContainersMessage');
-        const containmentIssue = document.getElementById('containmentIssue');
-
-        if (noContainersMsg) {
-            noContainersMsg.style.display = (!this.containerPlan.container_selection || this.containerPlan.container_selection.length === 0) ? 'block' : 'none';
-        }
-
-        if (containmentIssue) {
-            if (containment_percentage < 100 && this.containerPlan.container_selection?.length > 0) {
-                containmentIssue.style.display = 'block';
-                document.getElementById('containmentIssueText').textContent = 'Insufficient containers for full containment';
-            } else {
-                containmentIssue.style.display = 'none';
-            }
-        }
-    }
-
-    async autoFillContainers() {
-        await this.fetchContainerPlan();
-    }
-
-    addContainerRow() {
-        const autoFillEnabled = document.getElementById('autoFillEnabled')?.checked;
-        if (autoFillEnabled) {
-            alert('Please uncheck Auto-Fill to add containers manually.');
-            return;
-        }
-
-        if (!this.containerPlan?.container_selection || this.containerPlan.container_selection.length === 0) {
-            alert('No containers available for this recipe.');
-            return;
-        }
-
-        const rowsContainer = document.getElementById('containerSelectionRows');
-        const template = document.getElementById('containerRowTemplate');
-        
-        if (!rowsContainer || !template) return;
-
-        // Clone the template
-        const newRow = template.cloneNode(true);
-        const rowIndex = rowsContainer.children.length;
-        
-        // Update the cloned row
-        newRow.id = '';
-        newRow.style.display = 'block';
-        newRow.setAttribute('data-container-row', rowIndex);
-        
-        // Set data attributes for easier event binding
-        newRow.querySelector('.container-select').setAttribute('data-row', rowIndex);
-        newRow.querySelector('.container-quantity').setAttribute('data-row', rowIndex);
-        newRow.querySelector('.available-stock').setAttribute('data-row', rowIndex);
-        newRow.querySelector('.remove-container-btn').setAttribute('data-row', rowIndex);
-
-        rowsContainer.appendChild(newRow);
-
-        // Bind events for the new row
-        this.bindContainerRowEvents(rowIndex);
-    }
-
-    bindContainerRowEvents(rowIndex) {
-        const row = document.querySelector(`[data-container-row="${rowIndex}"]`);
-        if (!row) return;
-
-        const select = row.querySelector('.container-select');
-        const quantityInput = row.querySelector('.container-quantity');
-        const removeBtn = row.querySelector('.remove-container-btn');
-
-        if (select) {
-            select.addEventListener('change', () => this.updateContainerRow(rowIndex));
-        }
-
-        if (quantityInput) {
-            quantityInput.addEventListener('input', () => this.updateContainerProgress());
-        }
-
-        if (removeBtn) {
-            removeBtn.addEventListener('click', () => this.removeContainerRow(rowIndex));
-        }
-
-        // Initial update
-        this.updateContainerRow(rowIndex);
-    }
-
-    updateContainerRow(rowIndex) {
-        const row = document.querySelector(`[data-container-row="${rowIndex}"]`);
-        if (!row) return;
-
-        const select = row.querySelector('.container-select');
-        const quantityInput = row.querySelector('.container-quantity');
-        const stockBadge = row.querySelector('.available-stock');
-
-        if (!select || !quantityInput || !stockBadge) return;
-
-        const selectedId = select.value;
-        if (!selectedId) {
-            stockBadge.textContent = '-';
-            return;
-        }
-
-        // Find container details
-        const container = this.containerPlan?.container_selection?.find(c => c.id == selectedId);
-        if (!container) {
-            stockBadge.textContent = '-';
-            return;
-        }
-
-        // Calculate available stock (considering other rows using same container)
-        let usedQuantity = 0;
-        document.querySelectorAll('.container-select').forEach((otherSelect, idx) => {
-            if (idx !== rowIndex && otherSelect.value == selectedId) {
-                const otherQuantityInput = document.querySelector(`[data-row="${idx}"] .container-quantity`);
-                if (otherQuantityInput) {
-                    usedQuantity += parseInt(otherQuantityInput.value) || 0;
-                }
-            }
-        });
-
-        const availableStock = Math.max(0, (container.quantity || 0) - usedQuantity);
-        stockBadge.textContent = availableStock;
-
-        // Adjust quantity if it exceeds available stock
-        const currentQuantity = parseInt(quantityInput.value) || 1;
-        if (currentQuantity > availableStock) {
-            quantityInput.value = Math.max(1, availableStock);
-        }
-
-        this.updateContainerProgress();
-    }
-
-    removeContainerRow(rowIndex) {
-        const row = document.querySelector(`[data-container-row="${rowIndex}"]`);
-        if (row) {
-            row.remove();
-            this.updateContainerProgress();
-        }
-    }
-
-    validateForm() {
-        const startBatchBtn = document.getElementById('startBatchBtn');
-        if (!startBatchBtn) return;
-
-        let isValid = true;
-        let reasons = [];
-        let warnings = [];
-
-        console.log('🔍 VALIDATION: Checking form validity...');
-
-        // Check batch type - REQUIRED
-        if (!this.batchType) {
-            isValid = false;
-            reasons.push('Select batch type');
-        }
-
-        // Check stock availability - REQUIRED
-        if (this.stockCheckResults && !this.stockCheckResults.all_available) {
-            isValid = false;
-            reasons.push('Insufficient ingredients');
-        }
-
-        // Container validation - allows bypass with warnings
-        if (this.requiresContainers) {
-            if (!this.containerPlan?.success) {
-                // No containers found - allow bypass with warning
-                warnings.push('No containers available - product will be uncontained');
-                console.log('🔍 VALIDATION: Container requirement set but no containers available - allowing bypass');
-            } else if (this.containerPlan.containment_percentage < 100) {
-                // Partial containment - allow bypass with warning
-                const uncontained = this.baseYield * this.scale - (this.containerPlan.total_capacity || 0);
-                warnings.push(`Incomplete containment: ${uncontained.toFixed(2)} ${this.unit} will be uncontained`);
-                console.log('🔍 VALIDATION: Incomplete containment - allowing bypass with warning:', this.containerPlan.containment_percentage + '%');
-            }
-        }
-
-        console.log('🔍 VALIDATION: Valid:', isValid, 'Reasons:', reasons, 'Warnings:', warnings);
-
-        // Only disable button for critical validation failures
-        startBatchBtn.disabled = !isValid;
-
-        // Update button appearance based on validation state
-        if (isValid) {
-            if (warnings.length > 0) {
-                startBatchBtn.textContent = 'Start Batch (with containment issues)';
-                startBatchBtn.classList.remove('btn-secondary', 'btn-success');
-                startBatchBtn.classList.add('btn-warning');
-                startBatchBtn.title = 'Warning: ' + warnings.join('; ');
-            } else {
-                startBatchBtn.textContent = 'Start Batch';
-                startBatchBtn.classList.remove('btn-secondary', 'btn-warning');
-                startBatchBtn.classList.add('btn-success');
-                startBatchBtn.title = '';
-            }
-        } else {
-            startBatchBtn.textContent = `Cannot Start: ${reasons[0]}`;
-            startBatchBtn.classList.remove('btn-success', 'btn-warning');
-            startBatchBtn.classList.add('btn-secondary');
-            startBatchBtn.title = 'Required: ' + reasons.join('; ');
-        }
-    }
-
-    async startBatch() {
-        if (!this.recipe) return;
-
-        try {
-            const productQuantity = this.baseYield * this.scale;
-
-            const response = await fetch('/api/batches/api-start-batch', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
-                },
-                body: JSON.stringify({
-                    recipe_id: this.recipe.id,
-                    product_quantity: productQuantity
-                })
-            });
-
-            const result = await response.json();
-
-            if (result.success) {
-                // Show success message
-                const successDiv = document.createElement('div');
-                successDiv.className = 'alert alert-success';
-                successDiv.innerHTML = `<i class="fas fa-check-circle"></i> ${result.message}`;
-
-                const mainContent = document.querySelector('.container-fluid');
-                mainContent.insertBefore(successDiv, mainContent.firstChild);
-
-                // Redirect to batch view after short delay
-                setTimeout(() => {
-                    window.location.href = `/batches/${result.batch_id}`;
-                }, 2000);
-            } else {
-                // Show error message
-                const errorDiv = document.createElement('div');
-                errorDiv.className = 'alert alert-danger';
-                errorDiv.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${result.message}`;
-
-                const mainContent = document.querySelector('.container-fluid');
-                mainContent.insertBefore(errorDiv, mainContent.firstChild);
-            }
-        } catch (error) {
-            console.error('Start batch error:', error);
-            alert('Error starting batch. Please try again.');
-        }
+        return await response.json();
     }
 }
 
