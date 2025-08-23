@@ -1,5 +1,9 @@
+// Plan Production Main Script - Modular Version
+import { ContainerManager } from './modules/container-management.js';
+import { StockChecker } from './modules/stock-check.js';
+import { ValidationManager } from './modules/validation.js';
+import { BatchManager } from './modules/batch-management.js';
 
-// Plan Production Main Script
 console.log('Plan production JavaScript loaded');
 
 class PlanProductionApp {
@@ -10,9 +14,14 @@ class PlanProductionApp {
         this.unit = '';
         this.batchType = '';
         this.requiresContainers = false;
-        this.containerPlan = null;
         this.stockCheckResults = null;
-        
+
+        // Initialize managers
+        this.containerManager = new ContainerManager(this);
+        this.stockChecker = new StockChecker(this);
+        this.validationManager = new ValidationManager(this);
+        this.batchManager = new BatchManager(this);
+
         this.init();
     }
 
@@ -42,7 +51,7 @@ class PlanProductionApp {
                 this.scale = parseFloat(scaleInput.value) || 1.0;
                 this.updateProjectedYield();
                 if (this.requiresContainers) {
-                    this.fetchContainerPlan();
+                    this.containerManager.fetchContainerPlan();
                 }
             });
         }
@@ -61,26 +70,9 @@ class PlanProductionApp {
         if (containerToggle) {
             containerToggle.addEventListener('change', () => {
                 this.requiresContainers = containerToggle.checked;
-                this.onContainerRequirementChange();
+                this.containerManager.onContainerRequirementChange();
+                this.updateValidation();
             });
-        }
-
-        // Auto-fill toggle
-        const autoFillToggle = document.getElementById('autoFillEnabled');
-        if (autoFillToggle) {
-            autoFillToggle.addEventListener('change', (e) => {
-                console.log('🔍 AUTO-FILL TOGGLE:', e.target.checked);
-                this.toggleManualContainerSection(!e.target.checked);
-                if (e.target.checked && this.requiresContainers) {
-                    this.fetchContainerPlan();
-                }
-            });
-        }
-
-        // Add container button
-        const addContainerBtn = document.getElementById('addContainerBtn');
-        if (addContainerBtn) {
-            addContainerBtn.addEventListener('click', () => this.addContainerRow());
         }
 
         // Form submission
@@ -88,6 +80,12 @@ class PlanProductionApp {
         if (form) {
             form.addEventListener('submit', (e) => this.handleFormSubmit(e));
         }
+
+        // Bind module events
+        this.containerManager.bindEvents();
+        this.stockChecker.bindEvents();
+        this.validationManager.bindEvents();
+        this.batchManager.bindEvents();
     }
 
     updateProjectedYield() {
@@ -98,267 +96,41 @@ class PlanProductionApp {
         }
     }
 
-    onContainerRequirementChange() {
-        console.log('🔍 CONTAINER TOGGLE: Requirements changed to:', this.requiresContainers);
-        
-        const containerCard = document.getElementById('containerManagementCard');
-        if (containerCard) {
-            containerCard.style.display = this.requiresContainers ? 'block' : 'none';
-            console.log('🔍 CONTAINER TOGGLE: Card display set to:', this.requiresContainers ? 'block' : 'none');
-        }
-
-        if (this.requiresContainers) {
-            console.log('🔍 CONTAINER TOGGLE: Fetching container plan...');
-            this.fetchContainerPlan();
-        } else {
-            console.log('🔍 CONTAINER TOGGLE: Clearing container data');
-            this.containerPlan = null;
-            this.clearContainerResults();
-        }
-        
-        this.updateValidation();
-    }
-
-    async fetchContainerPlan() {
-        if (!this.recipe || !this.requiresContainers) return;
-
-        const yieldAmount = this.baseYield * this.scale;
-        console.log('🔍 CONTAINER DEBUG: Fetching container plan for recipe', this.recipe.id, 'scale:', this.scale);
-        console.log('🔍 CONTAINER DEBUG: Yield amount:', yieldAmount, this.unit);
-
-        try {
-            const response = await fetch('/api/container-plan', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': this.getCSRFToken()
-                },
-                body: JSON.stringify({
-                    recipe_id: this.recipe.id,
-                    yield_amount: yieldAmount,
-                    yield_unit: this.unit
-                })
-            });
-
-            const data = await response.json();
-            console.log('🔍 CONTAINER DEBUG: Server response:', data);
-
-            if (data.success) {
-                this.containerPlan = data;
-                this.displayContainerResults(data);
-            } else {
-                this.displayContainerError(data.message || 'Failed to get container plan');
-            }
-        } catch (error) {
-            console.error('Container plan fetch error:', error);
-            this.displayContainerError('Error fetching container plan');
-        }
-    }
-
-    displayContainerResults(data) {
-        const autoFillResults = document.getElementById('autoFillResults');
-        const containerResults = document.getElementById('containerResults');
-        
-        if (!containerResults) return;
-
-        console.log('🔍 CONTAINER DISPLAY: Displaying', data.container_selection?.length || 0, 'containers');
-
-        if (data.container_selection && data.container_selection.length > 0) {
-            let html = '<div class="row g-3">';
-            
-            data.container_selection.forEach(container => {
-                html += `
-                    <div class="col-md-6">
-                        <div class="card border-primary">
-                            <div class="card-body">
-                                <h6 class="card-title">${container.name}</h6>
-                                <p class="card-text">
-                                    <strong>Quantity:</strong> ${container.quantity}<br>
-                                    <strong>Capacity:</strong> ${container.capacity} ${container.unit} each<br>
-                                    <strong>Total:</strong> ${(container.capacity * container.quantity)} ${container.unit}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            });
-            
-            html += '</div>';
-            containerResults.innerHTML = html;
-            
-            this.updateContainmentProgress(data.containment_percentage || 0);
-        } else {
-            this.displayNoContainersMessage();
-        }
-    }
-
-    displayContainerError(message) {
-        const containerResults = document.getElementById('containerResults');
-        if (containerResults) {
-            containerResults.innerHTML = `
-                <div class="alert alert-danger">
-                    <i class="fas fa-exclamation-circle"></i> ${message}
-                </div>
-            `;
-        }
-    }
-
-    displayNoContainersMessage() {
-        const noContainersMsg = document.getElementById('noContainersMessage');
-        if (noContainersMsg) {
-            noContainersMsg.style.display = 'block';
-        }
-    }
-
-    updateContainmentProgress(percentage) {
-        const progressBar = document.getElementById('containmentProgressBar');
-        const percentSpan = document.getElementById('containmentPercent');
-        const messageSpan = document.getElementById('liveContainmentMessage');
-
-        if (progressBar) {
-            progressBar.style.width = percentage + '%';
-            progressBar.textContent = percentage + '%';
-            
-            if (percentage >= 100) {
-                progressBar.className = 'progress-bar bg-success';
-            } else if (percentage > 0) {
-                progressBar.className = 'progress-bar bg-warning';
-            } else {
-                progressBar.className = 'progress-bar bg-danger';
-            }
-        }
-
-        if (percentSpan) percentSpan.textContent = percentage + '%';
-
-        if (messageSpan) {
-            if (percentage >= 100) {
-                messageSpan.textContent = 'Full containment achieved';
-                messageSpan.className = 'form-text text-success mt-1';
-            } else if (percentage > 0) {
-                messageSpan.textContent = 'Partial containment (batch can still proceed)';
-                messageSpan.className = 'form-text text-warning mt-1';
-            } else {
-                messageSpan.textContent = 'No containers - manual containment required (batch can still proceed)';
-                messageSpan.className = 'form-text text-warning mt-1';
-            }
-        }
-
-        // Show/hide containment issue alert
-        const containmentIssue = document.getElementById('containmentIssue');
-        if (containmentIssue) {
-            if (percentage < 100 && percentage > 0) {
-                const issueText = document.getElementById('containmentIssueText');
-                if (issueText) {
-                    issueText.textContent = `Only ${percentage}% of yield can be contained. Remaining product will need manual handling.`;
-                }
-                containmentIssue.style.display = 'block';
-            } else {
-                containmentIssue.style.display = 'none';
-            }
-        }
-    }
-
-    toggleManualContainerSection(show) {
-        const manualSection = document.getElementById('manualContainerSection');
-        const autoFillSection = document.getElementById('autoFillResults');
-        
-        if (manualSection) manualSection.style.display = show ? 'block' : 'none';
-        if (autoFillSection) autoFillSection.style.display = show ? 'none' : 'block';
-    }
-
-    addContainerRow() {
-        const template = document.getElementById('containerRowTemplate');
-        const container = document.getElementById('containerSelectionRows');
-        
-        if (template && container) {
-            const clone = template.cloneNode(true);
-            clone.style.display = 'block';
-            clone.id = '';
-            clone.setAttribute('data-container-row', Date.now());
-            
-            // Bind remove button
-            const removeBtn = clone.querySelector('.remove-container-btn');
-            if (removeBtn) {
-                removeBtn.addEventListener('click', () => {
-                    clone.remove();
-                    this.updateManualContainerProgress();
-                });
-            }
-
-            // Bind change events
-            const select = clone.querySelector('.container-select');
-            const quantityInput = clone.querySelector('.container-quantity');
-            
-            if (select) {
-                select.addEventListener('change', () => this.updateManualContainerProgress());
-            }
-            if (quantityInput) {
-                quantityInput.addEventListener('input', () => this.updateManualContainerProgress());
-            }
-
-            container.appendChild(clone);
-        }
-    }
-
-    updateManualContainerProgress() {
-        // This would calculate progress from manual container rows
-        // Implementation depends on available container data
-    }
-
-    clearContainerResults() {
-        const containerResults = document.getElementById('containerResults');
-        const containerRows = document.getElementById('containerSelectionRows');
-        const noContainersMsg = document.getElementById('noContainersMessage');
-        
-        if (containerResults) {
-            containerResults.innerHTML = '<p class="text-muted">Container management disabled</p>';
-        }
-        
-        if (containerRows) {
-            containerRows.innerHTML = '';
-        }
-
-        if (noContainersMsg) {
-            noContainersMsg.style.display = 'none';
-        }
-        
-        this.updateContainmentProgress(0);
-    }
-
     updateValidation() {
-        console.log('🔍 VALIDATION: Checking form validity...');
-        
-        const reasons = [];
-        const warnings = [];
-        
-        if (!this.batchType) {
-            reasons.push('Select batch type');
-        }
-        
-        const isValid = reasons.length === 0;
-        console.log('🔍 VALIDATION: Valid:', isValid, 'Reasons:', reasons, 'Warnings:', warnings);
-        
-        // Update submit button state
-        const submitBtn = document.getElementById('submitBtn');
-        if (submitBtn) {
-            submitBtn.disabled = !isValid;
-        }
+        this.validationManager.updateValidation();
     }
 
     handleFormSubmit(e) {
         e.preventDefault();
-        
+
         if (!this.batchType) {
             alert('Please select a batch type');
             return;
         }
-        
-        // Continue with form submission logic
+
         console.log('Form submitted with data:', {
             scale: this.scale,
             batchType: this.batchType,
             requiresContainers: this.requiresContainers
         });
+    }
+
+    // Utility method for API calls
+    async apiCall(url, data = null) {
+        const options = {
+            method: data ? 'POST' : 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': this.getCSRFToken()
+            }
+        };
+
+        if (data) {
+            options.body = JSON.stringify(data);
+        }
+
+        const response = await fetch(url, options);
+        return await response.json();
     }
 
     getCSRFToken() {

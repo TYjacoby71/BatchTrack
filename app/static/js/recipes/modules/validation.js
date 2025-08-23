@@ -69,3 +69,62 @@ export class ValidationManager {
         }
     }
 }
+// Validation Management Module
+export class ValidationManager {
+    constructor(mainManager) {
+        this.main = mainManager;
+    }
+
+    bindEvents() {
+        // Validation events can be bound here if needed
+    }
+
+    updateValidation() {
+        console.log('🔍 VALIDATION: Checking form validity...');
+        
+        const reasons = [];
+        const warnings = [];
+        
+        if (!this.main.batchType) {
+            reasons.push('Select batch type');
+        }
+        
+        const isValid = reasons.length === 0;
+        console.log('🔍 VALIDATION: Valid:', isValid, 'Reasons:', reasons, 'Warnings:', warnings);
+        
+        // Update submit button state
+        const submitBtn = document.getElementById('submitBtn');
+        if (submitBtn) {
+            submitBtn.disabled = !isValid;
+        }
+
+        // Update any validation UI
+        this.updateValidationUI(isValid, reasons, warnings);
+    }
+
+    updateValidationUI(isValid, reasons, warnings) {
+        // Update validation messages in the UI
+        const validationContainer = document.getElementById('validationMessages');
+        if (validationContainer) {
+            let html = '';
+            
+            if (reasons.length > 0) {
+                html += '<div class="alert alert-danger"><ul class="mb-0">';
+                reasons.forEach(reason => {
+                    html += `<li>${reason}</li>`;
+                });
+                html += '</ul></div>';
+            }
+            
+            if (warnings.length > 0) {
+                html += '<div class="alert alert-warning"><ul class="mb-0">';
+                warnings.forEach(warning => {
+                    html += `<li>${warning}</li>`;
+                });
+                html += '</ul></div>';
+            }
+            
+            validationContainer.innerHTML = html;
+        }
+    }
+}
