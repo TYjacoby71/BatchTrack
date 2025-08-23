@@ -373,9 +373,12 @@ class PlanProductionManager {
             if (containment_percentage >= 100) {
                 messageSpan.textContent = 'Full containment achieved';
                 messageSpan.className = 'form-text text-success mt-1';
-            } else {
+            } else if (containment_percentage > 0) {
                 const remaining = this.baseYield * this.scale - (this.containerPlan.total_capacity || 0);
-                messageSpan.textContent = `${remaining.toFixed(2)} ${this.unit} remaining uncontained`;
+                messageSpan.textContent = `${remaining.toFixed(2)} ${this.unit} will be uncontained (batch can still proceed)`;
+                messageSpan.className = 'form-text text-warning mt-1';
+            } else {
+                messageSpan.textContent = 'No containers - full manual containment required (batch can still proceed)';
                 messageSpan.className = 'form-text text-warning mt-1';
             }
         }
@@ -412,41 +415,44 @@ class PlanProductionManager {
 
         console.log('🔍 VALIDATION: Checking form validity...');
 
-        // Check batch type
+        // Check batch type - REQUIRED
         if (!this.batchType) {
             isValid = false;
             reasons.push('Select batch type');
         }
 
-        // Check stock availability
+        // Check stock availability - REQUIRED
         if (this.stockCheckResults && !this.stockCheckResults.all_available) {
             isValid = false;
             reasons.push('Insufficient ingredients');
         }
 
-        // Check containers if required
+        // Container validation - allows bypass with warnings
         if (this.requiresContainers) {
             if (!this.containerPlan?.success) {
-                // Allow bypass if no containers available
-                warnings.push('No containers available - consider disabling container requirement');
-                console.log('🔍 VALIDATION: Container requirement set but no containers available');
+                // No containers found - allow bypass with warning
+                warnings.push('No containers available - product will be uncontained');
+                console.log('🔍 VALIDATION: Container requirement set but no containers available - allowing bypass');
             } else if (this.containerPlan.containment_percentage < 100) {
-                warnings.push('Incomplete containment - some product will be uncontained');
-                console.log('🔍 VALIDATION: Incomplete containment:', this.containerPlan.containment_percentage + '%');
+                // Partial containment - allow bypass with warning
+                const uncontained = this.baseYield * this.scale - (this.containerPlan.total_capacity || 0);
+                warnings.push(`Incomplete containment: ${uncontained.toFixed(2)} ${this.unit} will be uncontained`);
+                console.log('🔍 VALIDATION: Incomplete containment - allowing bypass with warning:', this.containerPlan.containment_percentage + '%');
             }
         }
 
         console.log('🔍 VALIDATION: Valid:', isValid, 'Reasons:', reasons, 'Warnings:', warnings);
 
+        // Only disable button for critical validation failures
         startBatchBtn.disabled = !isValid;
 
-        // Update button text with reasons
+        // Update button appearance based on validation state
         if (isValid) {
             if (warnings.length > 0) {
-                startBatchBtn.textContent = 'Start Batch (with warnings)';
-                startBatchBtn.classList.remove('btn-secondary');
+                startBatchBtn.textContent = 'Start Batch (with containment issues)';
+                startBatchBtn.classList.remove('btn-secondary', 'btn-success');
                 startBatchBtn.classList.add('btn-warning');
-                startBatchBtn.title = warnings.join('; ');
+                startBatchBtn.title = 'Warning: ' + warnings.join('; ');
             } else {
                 startBatchBtn.textContent = 'Start Batch';
                 startBatchBtn.classList.remove('btn-secondary', 'btn-warning');
@@ -457,7 +463,7 @@ class PlanProductionManager {
             startBatchBtn.textContent = `Cannot Start: ${reasons[0]}`;
             startBatchBtn.classList.remove('btn-success', 'btn-warning');
             startBatchBtn.classList.add('btn-secondary');
-            startBatchBtn.title = reasons.join('; ');
+            startBatchBtn.title = 'Required: ' + reasons.join('; ');
         }
     }
 
