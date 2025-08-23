@@ -46,13 +46,25 @@ export class ContainerManager {
         if (manualSection) {
             manualSection.style.display = autoFillEnabled ? 'none' : 'block';
         }
+
+        // Update progress bar when switching modes
+        this.updateContainerProgress();
     }
 
     clearAutoFillResults() {
         const containerResults = document.getElementById('containerResults');
+        const containerRows = document.getElementById('containerSelectionRows');
+        
         if (containerResults) {
             containerResults.innerHTML = '<p class="text-muted">Switch to manual container selection mode</p>';
         }
+        
+        if (containerRows) {
+            containerRows.innerHTML = '';
+        }
+        
+        // Clear progress bar when switching to manual
+        this.updateContainerProgress();
     }
 
     onContainerRequirementChange() {
@@ -130,24 +142,43 @@ export class ContainerManager {
         }
     }
 
-    displayAutoFillResults(container, containers) {
-        let html = '<div class="table-responsive"><table class="table table-sm">';
-        html += '<thead><tr><th>Container</th><th>Capacity</th><th>Quantity Needed</th><th>Total Volume</th></tr></thead><tbody>';
-
-        containers.forEach(container => {
+    displayAutoFillResults(containerResults, containers) {
+        let html = '<div class="auto-fill-results">';
+        
+        containers.forEach((container, index) => {
             html += `
-                <tr>
-                    <td>${container.name || 'Unknown Container'}</td>
-                    <td>${container.capacity || 0} ${container.unit || 'ml'}</td>
-                    <td>${container.quantity || 0}</td>
-                    <td>${(container.capacity || 0) * (container.quantity || 0)} ${container.unit || 'ml'}</td>
-                </tr>
+                <div class="row align-items-center mb-3 p-3 border rounded bg-success bg-opacity-10" data-auto-container="${index}">
+                    <div class="col-md-5">
+                        <label class="form-label small">Container Type</label>
+                        <div class="form-control form-control-sm bg-light border-0">
+                            <strong>${container.name || 'Unknown Container'}</strong>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small">Quantity Needed</label>
+                        <div class="form-control form-control-sm bg-light border-0">
+                            <strong>${container.quantity || 0}</strong>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small">Capacity Each</label>
+                        <div class="form-control form-control-sm bg-light border-0">
+                            ${container.capacity || 0} ${container.unit || 'ml'}
+                        </div>
+                    </div>
+                    <div class="col-md-1">
+                        <label class="form-label small">Auto</label>
+                        <div class="text-center">
+                            <i class="fas fa-magic text-success"></i>
+                        </div>
+                    </div>
+                </div>
             `;
         });
 
-        html += '</tbody></table></div>';
-        html += `<div class="mt-2"><small class="text-muted">Fill efficiency: ${(this.containerPlan.containment_percentage || 0).toFixed(1)}%</small></div>`;
-        container.innerHTML = html;
+        html += '</div>';
+        html += `<div class="mt-2"><small class="text-muted"><i class="fas fa-info-circle"></i> Auto-fill efficiency: ${(this.containerPlan.containment_percentage || 0).toFixed(1)}%</small></div>`;
+        containerResults.innerHTML = html;
     }
 
     addContainerRow() {

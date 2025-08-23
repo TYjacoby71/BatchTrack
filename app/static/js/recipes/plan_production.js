@@ -54,9 +54,14 @@ class PlanProductionApp {
         const scaleInput = document.getElementById('batchScale');
         if (scaleInput) {
             scaleInput.addEventListener('input', () => {
-                this.scale = parseFloat(scaleInput.value) || 1.0;
+                const newScale = parseFloat(scaleInput.value) || 1.0;
+                console.log('🔍 SCALE DEBUG: Scale changed from', this.scale, 'to', newScale);
+                this.scale = newScale;
                 this.updateProjectedYield();
+                
+                // Update container plan if containers are required
                 if (this.requiresContainers) {
+                    console.log('🔍 SCALE DEBUG: Updating container plan for new scale');
                     this.containerManager.fetchContainerPlan();
                 }
             });
