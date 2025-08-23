@@ -26,13 +26,7 @@ export class ContainerManager {
     }
 
     onContainerRequirementChange() {
-        console.log('🔍 CONTAINER TOGGLE: Requirements changed to:', this.main.requiresContainers);
-        
-        const containerCard = document.getElementById('containerManagementCard');
-        if (containerCard) {
-            containerCard.style.display = this.main.requiresContainers ? 'block' : 'none';
-        }
-
+        // Container card display is now handled in the main app
         if (this.main.requiresContainers) {
             this.fetchContainerPlan();
         } else {

@@ -45,5 +45,14 @@
 {% endblock %}
 
 {% block scripts %}
+<script>
+// Set up recipe data for the module
+window.recipeData = {
+    id: {{ recipe.id }},
+    name: "{{ recipe.name }}",
+    yield_amount: {{ recipe.predicted_yield or 0 }},
+    yield_unit: "{{ recipe.predicted_yield_unit or 'units' }}"
+};
+</script>
 <script type="module" src="{{ url_for('static', filename='js/recipes/plan_production.js') }}"></script>
 {% endblock %}
