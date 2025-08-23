@@ -20,27 +20,44 @@
       </label>
     </div>
 
-    <!-- Container Selection Rows -->
-    <div id="containerSelectionRows">
-      <!-- Dynamic container rows will be added here -->
-    </div></div>
-  <div class="card-body">
-    <!-- Auto-Fill Toggle -->
-    <div class="form-check mb-3">
-      <input type="checkbox" class="form-check-input" id="autoFillEnabled" checked>
-      <label class="form-check-label" for="autoFillEnabled">
-        <i class="fas fa-magic"></i> Auto-Fill Containers
-      </label>
+    <!-- Auto-Fill Results (shown when auto-fill is enabled) -->
+    <div id="autoFillResults" style="display: block;">
+      <div id="containerResults">
+        <p class="text-muted">Container analysis will appear here</p>
+      </div>
     </div>
 
-    <!-- Container Selection Rows -->
-    <div id="containerSelectionRows">
-      <!-- Dynamic container rows will be added here -->
-    </div>
-
-    <!-- Container Results -->
-    <div id="containerResults">
-      <p class="text-muted">Container analysis will appear here</p>
+    <!-- Manual Container Selection (shown when auto-fill is disabled) -->
+    <div id="manualContainerSection" style="display: none;">
+      <div id="containerSelectionRows">
+        <!-- Manual container rows will be added here -->
+      </div>
+      
+      <!-- Template for container row (hidden) -->
+      <div id="containerRowTemplate" style="display: none;">
+        <div class="row align-items-center mb-3 p-3 border rounded bg-light" data-container-row="">
+          <div class="col-md-5">
+            <label class="form-label small">Container Type</label>
+            <select class="form-select form-select-sm container-select">
+              <option value="">Select Container</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small">Quantity</label>
+            <input type="number" min="1" class="form-control form-control-sm container-quantity" value="1">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small">Available Stock</label>
+            <div class="badge bg-info fs-6 available-stock">-</div>
+          </div>
+          <div class="col-md-1">
+            <label class="form-label small">&nbsp;</label>
+            <button type="button" class="btn btn-danger btn-sm d-block remove-container-btn">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Container Fill Progress -->

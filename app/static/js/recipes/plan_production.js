@@ -82,9 +82,21 @@ class PlanProductionManager {
         if (autoFillToggle) {
             autoFillToggle.addEventListener('change', (e) => {
                 console.log('🔍 AUTO-FILL TOGGLE:', e.target.checked);
+                
+                // Toggle display sections
+                const autoFillResults = document.getElementById('autoFillResults');
+                const manualSection = document.getElementById('manualContainerSection');
+                
+                if (autoFillResults) autoFillResults.style.display = e.target.checked ? 'block' : 'none';
+                if (manualSection) manualSection.style.display = e.target.checked ? 'none' : 'block';
+                
                 if (e.target.checked && this.requiresContainers) {
                     this.fetchContainerPlan();
+                } else if (!e.target.checked) {
+                    this.populateContainerOptions();
                 }
+                
+                this.updateContainerProgress();
             });
         }
 
@@ -286,7 +298,8 @@ class PlanProductionManager {
 
     displayContainerPlan() {
         const containerResults = document.getElementById('containerResults');
-        const containerRowsContainer = document.getElementById('containerSelectionRows');
+        const autoFillResults = document.getElementById('autoFillResults');
+        const manualSection = document.getElementById('manualContainerSection');
         const autoFillEnabled = document.getElementById('autoFillEnabled')?.checked;
 
         if (!containerResults) {
@@ -294,12 +307,13 @@ class PlanProductionManager {
             return;
         }
 
+        // Toggle sections based on auto-fill setting
+        if (autoFillResults) autoFillResults.style.display = autoFillEnabled ? 'block' : 'none';
+        if (manualSection) manualSection.style.display = autoFillEnabled ? 'none' : 'block';
+
         if (!this.containerPlan?.success) {
             console.log('🔍 CONTAINER DISPLAY: No valid container plan:', this.containerPlan);
             containerResults.innerHTML = '<p class="text-muted">No container plan available</p>';
-            if (containerRowsContainer) {
-                containerRowsContainer.innerHTML = '';
-            }
             return;
         }
 
@@ -308,9 +322,6 @@ class PlanProductionManager {
 
         if (!container_selection || container_selection.length === 0) {
             containerResults.innerHTML = '<div class="alert alert-warning"><i class="fas fa-exclamation-triangle"></i> No suitable containers found</div>';
-            if (containerRowsContainer) {
-                containerRowsContainer.innerHTML = '';
-            }
             return;
         }
 
@@ -333,14 +344,26 @@ class PlanProductionManager {
             html += '</tbody></table></div>';
             html += `<div class="mt-2"><small class="text-muted">Fill efficiency: ${(containment_percentage || 0).toFixed(1)}%</small></div>`;
             containerResults.innerHTML = html;
-
-            // Clear manual rows when auto-fill is enabled
-            if (containerRowsContainer) {
-                containerRowsContainer.innerHTML = '';
-            }
         } else {
-            // Hide auto-fill results when in manual mode
-            containerResults.innerHTML = '<p class="text-muted">Manual container selection mode</p>';
+            // Populate container options for manual selection
+            this.populateContainerOptions();
+        }
+    }
+
+    populateContainerOptions() {
+        if (!this.containerPlan?.container_selection) return;
+
+        const template = document.getElementById('containerRowTemplate');
+        if (!template) return;
+
+        // Update the template's select options
+        const templateSelect = template.querySelector('.container-select');
+        if (templateSelect) {
+            let optionsHTML = '<option value="">Select Container</option>';
+            this.containerPlan.container_selection.forEach(container => {
+                optionsHTML += `<option value="${container.id}">${container.name} (${container.capacity} ${container.unit})</option>`;
+            });
+            templateSelect.innerHTML = optionsHTML;
         }
     }
 
@@ -456,53 +479,29 @@ class PlanProductionManager {
         }
 
         const rowsContainer = document.getElementById('containerSelectionRows');
-        if (!rowsContainer) return;
-
-        const rowIndex = rowsContainer.children.length;
-        const rowHtml = this.createContainerRowHTML(rowIndex);
+        const template = document.getElementById('containerRowTemplate');
         
-        const rowDiv = document.createElement('div');
-        rowDiv.innerHTML = rowHtml;
-        rowsContainer.appendChild(rowDiv.firstElementChild);
+        if (!rowsContainer || !template) return;
+
+        // Clone the template
+        const newRow = template.cloneNode(true);
+        const rowIndex = rowsContainer.children.length;
+        
+        // Update the cloned row
+        newRow.id = '';
+        newRow.style.display = 'block';
+        newRow.setAttribute('data-container-row', rowIndex);
+        
+        // Set data attributes for easier event binding
+        newRow.querySelector('.container-select').setAttribute('data-row', rowIndex);
+        newRow.querySelector('.container-quantity').setAttribute('data-row', rowIndex);
+        newRow.querySelector('.available-stock').setAttribute('data-row', rowIndex);
+        newRow.querySelector('.remove-container-btn').setAttribute('data-row', rowIndex);
+
+        rowsContainer.appendChild(newRow);
 
         // Bind events for the new row
         this.bindContainerRowEvents(rowIndex);
-    }
-
-    createContainerRowHTML(index) {
-        const availableContainers = this.containerPlan?.container_selection || [];
-        
-        let optionsHTML = '<option value="">Select Container</option>';
-        availableContainers.forEach(container => {
-            optionsHTML += `<option value="${container.id}">${container.name} (${container.capacity} ${container.unit})</option>`;
-        });
-
-        return `
-            <div class="row align-items-center mb-3 p-3 border rounded bg-light" data-container-row="${index}">
-                <div class="col-md-5">
-                    <label class="form-label small">Container Type</label>
-                    <select class="form-select form-select-sm container-select" data-row="${index}">
-                        ${optionsHTML}
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label small">Quantity</label>
-                    <input type="number" min="1" class="form-control form-control-sm container-quantity" 
-                           data-row="${index}" value="1">
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label small">Available Stock</label>
-                    <div class="badge bg-info fs-6 available-stock" data-row="${index}">-</div>
-                </div>
-                <div class="col-md-1">
-                    <label class="form-label small">&nbsp;</label>
-                    <button type="button" class="btn btn-danger btn-sm d-block remove-container-btn" 
-                            data-row="${index}">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-            </div>
-        `;
     }
 
     bindContainerRowEvents(rowIndex) {
