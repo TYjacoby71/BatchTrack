@@ -7,18 +7,23 @@ export class ContainerManager {
     }
 
     bindEvents() {
+        console.log('🔍 CONTAINER MANAGER DEBUG: Binding events');
+        
         // Add container button
         const addContainerBtn = document.getElementById('addContainerBtn');
+        console.log('🔍 CONTAINER MANAGER DEBUG: Add container button found:', !!addContainerBtn);
         if (addContainerBtn) {
             addContainerBtn.addEventListener('click', () => this.addContainerRow());
         }
 
         // Auto-fill toggle
         const autoFillToggle = document.getElementById('autoFillEnabled');
+        console.log('🔍 CONTAINER MANAGER DEBUG: Auto-fill toggle found:', !!autoFillToggle);
         if (autoFillToggle) {
             autoFillToggle.addEventListener('change', (e) => {
                 console.log('🔍 AUTO-FILL TOGGLE:', e.target.checked);
                 if (e.target.checked && this.main.requiresContainers) {
+                    console.log('🔍 AUTO-FILL TOGGLE: Fetching container plan...');
                     this.fetchContainerPlan();
                 }
             });
@@ -36,12 +41,20 @@ export class ContainerManager {
     }
 
     async fetchContainerPlan() {
-        if (!this.main.recipe || !this.main.requiresContainers) return;
+        console.log('🔍 CONTAINER DEBUG: fetchContainerPlan called');
+        console.log('🔍 CONTAINER DEBUG: Recipe exists:', !!this.main.recipe);
+        console.log('🔍 CONTAINER DEBUG: Requires containers:', this.main.requiresContainers);
+        
+        if (!this.main.recipe || !this.main.requiresContainers) {
+            console.log('🔍 CONTAINER DEBUG: Skipping fetch - recipe or requirement missing');
+            return;
+        }
 
         console.log('🔍 CONTAINER DEBUG: Fetching container plan for recipe', this.main.recipe.id, 'scale:', this.main.scale);
 
         try {
             const yieldAmount = this.main.baseYield * this.main.scale;
+            console.log('🔍 CONTAINER DEBUG: Yield amount calculated:', yieldAmount);
 
             this.containerPlan = await this.main.apiCall(`/recipes/${this.main.recipe.id}/auto-fill-containers`, {
                 scale: this.main.scale,
@@ -52,9 +65,11 @@ export class ContainerManager {
             console.log('🔍 CONTAINER DEBUG: Server response:', this.containerPlan);
 
             if (this.containerPlan.success) {
+                console.log('🔍 CONTAINER DEBUG: Plan successful, displaying results');
                 this.displayContainerPlan();
                 this.updateContainerProgress();
             } else {
+                console.log('🔍 CONTAINER DEBUG: Plan failed:', this.containerPlan.error);
                 this.displayContainerError(this.containerPlan.error || 'Failed to load containers');
             }
         } catch (error) {

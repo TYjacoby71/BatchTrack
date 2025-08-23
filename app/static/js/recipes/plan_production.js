@@ -27,9 +27,21 @@ class PlanProductionApp {
 
     init() {
         console.log('🔍 INIT: Starting plan production app');
+        console.log('🔍 INIT DEBUG: Container manager:', !!this.containerManager);
+        console.log('🔍 INIT DEBUG: Stock checker:', !!this.stockChecker);
+        console.log('🔍 INIT DEBUG: Validation manager:', !!this.validationManager);
+        console.log('🔍 INIT DEBUG: Batch manager:', !!this.batchManager);
+        
         this.loadRecipeData();
         this.bindEvents();
         this.updateValidation();
+        
+        // Check if container card exists
+        const containerCard = document.getElementById('containerManagementCard');
+        console.log('🔍 INIT DEBUG: Container card found:', !!containerCard);
+        if (containerCard) {
+            console.log('🔍 INIT DEBUG: Container card initial display:', containerCard.style.display);
+        }
     }
 
     loadRecipeData() {
@@ -67,25 +79,49 @@ class PlanProductionApp {
 
         // Container requirement toggle
         const containerToggle = document.getElementById('requiresContainers');
+        console.log('🔍 CONTAINER TOGGLE DEBUG: Element found:', !!containerToggle);
+        
         if (containerToggle) {
+            console.log('🔍 CONTAINER TOGGLE DEBUG: Adding event listener');
             containerToggle.addEventListener('change', () => {
                 this.requiresContainers = containerToggle.checked;
                 console.log('🔍 CONTAINER TOGGLE: Requirements changed to:', this.requiresContainers);
                 
                 const containerCard = document.getElementById('containerManagementCard');
+                console.log('🔍 CONTAINER TOGGLE DEBUG: Container card found:', !!containerCard);
+                
                 if (containerCard) {
                     containerCard.style.display = this.requiresContainers ? 'block' : 'none';
                     console.log('🔍 CONTAINER TOGGLE: Card display set to:', containerCard.style.display);
+                    console.log('🔍 CONTAINER TOGGLE DEBUG: Card visibility classes:', containerCard.className);
                 }
                 
                 if (this.requiresContainers) {
                     console.log('🔍 CONTAINER TOGGLE: Fetching container plan...');
-                    this.containerManager.fetchContainerPlan();
+                    console.log('🔍 CONTAINER TOGGLE DEBUG: Container manager available:', !!this.containerManager);
+                    if (this.containerManager && typeof this.containerManager.fetchContainerPlan === 'function') {
+                        this.containerManager.fetchContainerPlan();
+                    } else {
+                        console.error('🚨 CONTAINER TOGGLE ERROR: Container manager or fetchContainerPlan not available');
+                    }
                 } else {
-                    this.containerManager.clearContainerResults();
+                    console.log('🔍 CONTAINER TOGGLE: Clearing container results...');
+                    if (this.containerManager && typeof this.containerManager.clearContainerResults === 'function') {
+                        this.containerManager.clearContainerResults();
+                    } else {
+                        console.error('🚨 CONTAINER TOGGLE ERROR: Container manager or clearContainerResults not available');
+                    }
                 }
                 
                 this.updateValidation();
+            });
+        } else {
+            console.error('🚨 CONTAINER TOGGLE ERROR: requiresContainers element not found');
+            // Try to find elements with similar IDs for debugging
+            const allInputs = document.querySelectorAll('input[type="checkbox"]');
+            console.log('🔍 CONTAINER TOGGLE DEBUG: All checkboxes found:', allInputs.length);
+            allInputs.forEach((input, index) => {
+                console.log(`🔍 CONTAINER TOGGLE DEBUG: Checkbox ${index}: id="${input.id}", name="${input.name}"`);
             });
         }
 
