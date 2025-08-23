@@ -71,16 +71,10 @@ class PlanProductionManager {
             stockCheckBtn.addEventListener('click', () => this.fetchStockCheck());
         }
 
-        // Auto-fill containers button
-        const autoFillBtn = document.getElementById('autoFillContainers');
-        if (autoFillBtn) {
-            autoFillBtn.addEventListener('click', () => this.autoFillContainers());
-        }
-
-        // Refresh containers button
-        const refreshBtn = document.getElementById('refreshContainers');
-        if (refreshBtn) {
-            refreshBtn.addEventListener('click', () => this.fetchContainerPlan());
+        // Add container button
+        const addContainerBtn = document.getElementById('addContainerBtn');
+        if (addContainerBtn) {
+            addContainerBtn.addEventListener('click', () => this.addContainerRow());
         }
 
         // Auto-fill toggle
@@ -88,9 +82,21 @@ class PlanProductionManager {
         if (autoFillToggle) {
             autoFillToggle.addEventListener('change', (e) => {
                 console.log('🔍 AUTO-FILL TOGGLE:', e.target.checked);
+                
+                // Toggle display sections
+                const autoFillResults = document.getElementById('autoFillResults');
+                const manualSection = document.getElementById('manualContainerSection');
+                
+                if (autoFillResults) autoFillResults.style.display = e.target.checked ? 'block' : 'none';
+                if (manualSection) manualSection.style.display = e.target.checked ? 'none' : 'block';
+                
                 if (e.target.checked && this.requiresContainers) {
                     this.fetchContainerPlan();
+                } else if (!e.target.checked) {
+                    this.populateContainerOptions();
                 }
+                
+                this.updateContainerProgress();
             });
         }
 
@@ -292,10 +298,18 @@ class PlanProductionManager {
 
     displayContainerPlan() {
         const containerResults = document.getElementById('containerResults');
+        const autoFillResults = document.getElementById('autoFillResults');
+        const manualSection = document.getElementById('manualContainerSection');
+        const autoFillEnabled = document.getElementById('autoFillEnabled')?.checked;
+
         if (!containerResults) {
             console.error('🚨 CONTAINER DISPLAY: containerResults element not found');
             return;
         }
+
+        // Toggle sections based on auto-fill setting
+        if (autoFillResults) autoFillResults.style.display = autoFillEnabled ? 'block' : 'none';
+        if (manualSection) manualSection.style.display = autoFillEnabled ? 'none' : 'block';
 
         if (!this.containerPlan?.success) {
             console.log('🔍 CONTAINER DISPLAY: No valid container plan:', this.containerPlan);
@@ -303,7 +317,7 @@ class PlanProductionManager {
             return;
         }
 
-        const { container_selection, total_capacity, containment_percentage } = this.containerPlan;
+        const { container_selection, containment_percentage } = this.containerPlan;
         console.log('🔍 CONTAINER DISPLAY: Displaying', container_selection?.length || 0, 'containers');
 
         if (!container_selection || container_selection.length === 0) {
@@ -311,24 +325,46 @@ class PlanProductionManager {
             return;
         }
 
-        let html = '<div class="table-responsive"><table class="table table-sm">';
-        html += '<thead><tr><th>Container</th><th>Capacity</th><th>Quantity Needed</th><th>Total Volume</th></tr></thead><tbody>';
+        if (autoFillEnabled) {
+            // Show auto-fill results in table format
+            let html = '<div class="table-responsive"><table class="table table-sm">';
+            html += '<thead><tr><th>Container</th><th>Capacity</th><th>Quantity Needed</th><th>Total Volume</th></tr></thead><tbody>';
 
-        container_selection.forEach(container => {
-            html += `
-                <tr>
-                    <td>${container.name || 'Unknown Container'}</td>
-                    <td>${container.capacity || 0} ${container.unit || 'ml'}</td>
-                    <td>${container.quantity || 0}</td>
-                    <td>${(container.capacity || 0) * (container.quantity || 0)} ${container.unit || 'ml'}</td>
-                </tr>
-            `;
-        });
+            container_selection.forEach(container => {
+                html += `
+                    <tr>
+                        <td>${container.name || 'Unknown Container'}</td>
+                        <td>${container.capacity || 0} ${container.unit || 'ml'}</td>
+                        <td>${container.quantity || 0}</td>
+                        <td>${(container.capacity || 0) * (container.quantity || 0)} ${container.unit || 'ml'}</td>
+                    </tr>
+                `;
+            });
 
-        html += '</tbody></table></div>';
-        html += `<div class="mt-2"><small class="text-muted">Fill efficiency: ${(containment_percentage || 0).toFixed(1)}%</small></div>`;
+            html += '</tbody></table></div>';
+            html += `<div class="mt-2"><small class="text-muted">Fill efficiency: ${(containment_percentage || 0).toFixed(1)}%</small></div>`;
+            containerResults.innerHTML = html;
+        } else {
+            // Populate container options for manual selection
+            this.populateContainerOptions();
+        }
+    }
 
-        containerResults.innerHTML = html;
+    populateContainerOptions() {
+        if (!this.containerPlan?.container_selection) return;
+
+        const template = document.getElementById('containerRowTemplate');
+        if (!template) return;
+
+        // Update the template's select options
+        const templateSelect = template.querySelector('.container-select');
+        if (templateSelect) {
+            let optionsHTML = '<option value="">Select Container</option>';
+            this.containerPlan.container_selection.forEach(container => {
+                optionsHTML += `<option value="${container.id}">${container.name} (${container.capacity} ${container.unit})</option>`;
+            });
+            templateSelect.innerHTML = optionsHTML;
+        }
     }
 
     displayContainerError(message) {
@@ -352,7 +388,32 @@ class PlanProductionManager {
     updateContainerProgress() {
         if (!this.containerPlan?.success) return;
 
-        const { containment_percentage = 0 } = this.containerPlan;
+        // Calculate containment from manual rows if auto-fill is disabled
+        const autoFillEnabled = document.getElementById('autoFillEnabled')?.checked;
+        let containment_percentage = 0;
+
+        if (!autoFillEnabled) {
+            // Calculate from manual container rows
+            const projectedYield = this.baseYield * this.scale;
+            let totalContained = 0;
+
+            document.querySelectorAll('[data-container-row]').forEach(row => {
+                const select = row.querySelector('.container-select');
+                const quantityInput = row.querySelector('.container-quantity');
+                
+                if (select && quantityInput && select.value) {
+                    const container = this.containerPlan?.container_selection?.find(c => c.id == select.value);
+                    if (container) {
+                        const quantity = parseInt(quantityInput.value) || 0;
+                        totalContained += container.capacity * quantity;
+                    }
+                }
+            });
+
+            containment_percentage = projectedYield > 0 ? Math.min((totalContained / projectedYield) * 100, 100) : 0;
+        } else {
+            containment_percentage = this.containerPlan.containment_percentage || 0;
+        }
         
         // Update progress bar
         const progressBar = document.getElementById('containmentProgressBar');
@@ -403,6 +464,122 @@ class PlanProductionManager {
 
     async autoFillContainers() {
         await this.fetchContainerPlan();
+    }
+
+    addContainerRow() {
+        const autoFillEnabled = document.getElementById('autoFillEnabled')?.checked;
+        if (autoFillEnabled) {
+            alert('Please uncheck Auto-Fill to add containers manually.');
+            return;
+        }
+
+        if (!this.containerPlan?.container_selection || this.containerPlan.container_selection.length === 0) {
+            alert('No containers available for this recipe.');
+            return;
+        }
+
+        const rowsContainer = document.getElementById('containerSelectionRows');
+        const template = document.getElementById('containerRowTemplate');
+        
+        if (!rowsContainer || !template) return;
+
+        // Clone the template
+        const newRow = template.cloneNode(true);
+        const rowIndex = rowsContainer.children.length;
+        
+        // Update the cloned row
+        newRow.id = '';
+        newRow.style.display = 'block';
+        newRow.setAttribute('data-container-row', rowIndex);
+        
+        // Set data attributes for easier event binding
+        newRow.querySelector('.container-select').setAttribute('data-row', rowIndex);
+        newRow.querySelector('.container-quantity').setAttribute('data-row', rowIndex);
+        newRow.querySelector('.available-stock').setAttribute('data-row', rowIndex);
+        newRow.querySelector('.remove-container-btn').setAttribute('data-row', rowIndex);
+
+        rowsContainer.appendChild(newRow);
+
+        // Bind events for the new row
+        this.bindContainerRowEvents(rowIndex);
+    }
+
+    bindContainerRowEvents(rowIndex) {
+        const row = document.querySelector(`[data-container-row="${rowIndex}"]`);
+        if (!row) return;
+
+        const select = row.querySelector('.container-select');
+        const quantityInput = row.querySelector('.container-quantity');
+        const removeBtn = row.querySelector('.remove-container-btn');
+
+        if (select) {
+            select.addEventListener('change', () => this.updateContainerRow(rowIndex));
+        }
+
+        if (quantityInput) {
+            quantityInput.addEventListener('input', () => this.updateContainerProgress());
+        }
+
+        if (removeBtn) {
+            removeBtn.addEventListener('click', () => this.removeContainerRow(rowIndex));
+        }
+
+        // Initial update
+        this.updateContainerRow(rowIndex);
+    }
+
+    updateContainerRow(rowIndex) {
+        const row = document.querySelector(`[data-container-row="${rowIndex}"]`);
+        if (!row) return;
+
+        const select = row.querySelector('.container-select');
+        const quantityInput = row.querySelector('.container-quantity');
+        const stockBadge = row.querySelector('.available-stock');
+
+        if (!select || !quantityInput || !stockBadge) return;
+
+        const selectedId = select.value;
+        if (!selectedId) {
+            stockBadge.textContent = '-';
+            return;
+        }
+
+        // Find container details
+        const container = this.containerPlan?.container_selection?.find(c => c.id == selectedId);
+        if (!container) {
+            stockBadge.textContent = '-';
+            return;
+        }
+
+        // Calculate available stock (considering other rows using same container)
+        let usedQuantity = 0;
+        document.querySelectorAll('.container-select').forEach((otherSelect, idx) => {
+            if (idx !== rowIndex && otherSelect.value == selectedId) {
+                const otherQuantityInput = document.querySelector(`[data-row="${idx}"] .container-quantity`);
+                if (otherQuantityInput) {
+                    usedQuantity += parseInt(otherQuantityInput.value) || 0;
+                }
+            }
+        });
+
+        const availableStock = Math.max(0, (container.quantity || 0) - usedQuantity);
+        stockBadge.textContent = availableStock;
+
+        // Adjust quantity if it exceeds available stock
+        const currentQuantity = parseInt(quantityInput.value) || 1;
+        if (currentQuantity > availableStock) {
+            quantityInput.value = Math.max(1, availableStock);
+        }
+
+        this.updateContainerProgress();
+    }
+
+    removeContainerRow(rowIndex) {
+        const row = document.querySelector(`[data-container-row="${rowIndex}"]`);
+        if (row) {
+            row.remove();
+            this.updateContainerProgress();
+        }
     }
 
     validateForm() {
