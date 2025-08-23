@@ -31,17 +31,11 @@ class PlanProductionApp {
         console.log('🔍 INIT DEBUG: Stock checker:', !!this.stockChecker);
         console.log('🔍 INIT DEBUG: Validation manager:', !!this.validationManager);
         console.log('🔍 INIT DEBUG: Batch manager:', !!this.batchManager);
-        
+
         this.loadRecipeData();
         this.bindEvents();
+        this.updateProjectedYield(); // Initialize projected yield display
         this.updateValidation();
-        
-        // Check if container card exists
-        const containerCard = document.getElementById('containerManagementCard');
-        console.log('🔍 INIT DEBUG: Container card found:', !!containerCard);
-        if (containerCard) {
-            console.log('🔍 INIT DEBUG: Container card initial display:', containerCard.style.display);
-        }
     }
 
     loadRecipeData() {
@@ -80,22 +74,22 @@ class PlanProductionApp {
         // Container requirement toggle
         const containerToggle = document.getElementById('requiresContainers');
         console.log('🔍 CONTAINER TOGGLE DEBUG: Element found:', !!containerToggle);
-        
+
         if (containerToggle) {
             console.log('🔍 CONTAINER TOGGLE DEBUG: Adding event listener');
             containerToggle.addEventListener('change', () => {
                 this.requiresContainers = containerToggle.checked;
                 console.log('🔍 CONTAINER TOGGLE: Requirements changed to:', this.requiresContainers);
-                
+
                 const containerCard = document.getElementById('containerManagementCard');
                 console.log('🔍 CONTAINER TOGGLE DEBUG: Container card found:', !!containerCard);
-                
+
                 if (containerCard) {
                     containerCard.style.display = this.requiresContainers ? 'block' : 'none';
                     console.log('🔍 CONTAINER TOGGLE: Card display set to:', containerCard.style.display);
                     console.log('🔍 CONTAINER TOGGLE DEBUG: Card visibility classes:', containerCard.className);
                 }
-                
+
                 if (this.requiresContainers) {
                     console.log('🔍 CONTAINER TOGGLE: Fetching container plan...');
                     console.log('🔍 CONTAINER TOGGLE DEBUG: Container manager available:', !!this.containerManager);
@@ -112,7 +106,7 @@ class PlanProductionApp {
                         console.error('🚨 CONTAINER TOGGLE ERROR: Container manager or clearContainerResults not available');
                     }
                 }
-                
+
                 this.updateValidation();
             });
         } else {
@@ -139,10 +133,14 @@ class PlanProductionApp {
     }
 
     updateProjectedYield() {
-        const projectedYield = this.baseYield * this.scale;
-        const yieldDisplay = document.getElementById('projectedYield');
-        if (yieldDisplay) {
-            yieldDisplay.textContent = projectedYield.toFixed(2) + ' ' + this.unit;
+        const projectedYieldElement = document.getElementById('projectedYield');
+        console.log('🔍 PROJECTED YIELD DEBUG: Element found:', !!projectedYieldElement);
+        console.log('🔍 PROJECTED YIELD DEBUG: Base yield:', this.baseYield, 'Scale:', this.scale, 'Unit:', this.unit);
+
+        if (projectedYieldElement) {
+            const projectedValue = (this.baseYield * this.scale).toFixed(2);
+            projectedYieldElement.textContent = `${projectedValue} ${this.unit}`;
+            console.log('🔍 PROJECTED YIELD DEBUG: Updated to:', `${projectedValue} ${this.unit}`);
         }
     }
 
@@ -184,7 +182,7 @@ class PlanProductionApp {
     }
 
     getCSRFToken() {
-        return document.querySelector('meta[name="csrf-token"]')?.content || 
+        return document.querySelector('meta[name="csrf-token"]')?.content ||
                document.querySelector('input[name="csrf_token"]')?.value;
     }
 }

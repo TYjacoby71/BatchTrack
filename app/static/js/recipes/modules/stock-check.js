@@ -1,6 +1,5 @@
-
 // Stock Check Management Module
-export class StockChecker {
+export class StockCheckManager {
     constructor(mainManager) {
         this.main = mainManager;
         this.stockCheckResults = null;
@@ -54,7 +53,7 @@ export class StockChecker {
         ingredients.forEach(ingredient => {
             const status = ingredient.available >= ingredient.required ? 'Available' : 'Low Stock';
             const statusClass = ingredient.available >= ingredient.required ? 'text-success' : 'text-warning';
-            
+
             html += `
                 <tr>
                     <td>${ingredient.name}</td>
@@ -84,33 +83,27 @@ export class StockChecker {
     }
 
     displayStockError(message) {
-        const stockResults = document.getElementById('stockCheckResults');
-        if (stockResults) {
-            stockResults.innerHTML = `
-                <div class="alert alert-danger">
-                    <i class="fas fa-exclamation-circle"></i> ${message}
-                </div>
-            `;
+        const stockResults = document.getElementById('stockResults');
+        if (!stockResults) {
+            console.error('stockResults element not found');
+            return;
+        }
+        const statusElement = document.getElementById('stockCheckStatus');
+        if (!statusElement) {
+            console.error('stockCheckStatus element not found');
+            return;
         }
 
-        const statusElement = document.getElementById('stockCheckStatus');
-        if (statusElement) {
-            statusElement.className = 'alert alert-danger';
-            statusElement.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${message}`;
-        }
-    }
+        stockResults.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-circle"></i> ${message}
+            </div>
+        `;
 
-    clearStockResults() {
-        const stockResults = document.getElementById('stockCheckResults');
-        const statusElement = document.getElementById('stockCheckStatus');
-        
-        if (stockResults) {
-            stockResults.innerHTML = '<p class="text-muted">Stock check will appear here</p>';
-        }
-        
-        if (statusElement) {
-            statusElement.className = 'alert alert-info';
-            statusElement.innerHTML = '<i class="fas fa-info-circle"></i> Ready for stock check';
-        }
+        console.error('Stock error:', message);
+        statusElement.innerHTML = `<div class="alert alert-danger"><i class="fas fa-exclamation-circle"></i> ${message}</div>`;
     }
 }
+
+// Export alias for backward compatibility
+export { StockCheckManager as StockChecker };

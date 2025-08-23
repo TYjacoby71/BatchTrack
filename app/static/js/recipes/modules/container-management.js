@@ -22,17 +22,46 @@ export class ContainerManager {
         if (autoFillToggle) {
             autoFillToggle.addEventListener('change', (e) => {
                 console.log('🔍 AUTO-FILL TOGGLE:', e.target.checked);
+                this.toggleContainerSections(e.target.checked);
+                
                 if (e.target.checked && this.main.requiresContainers) {
                     console.log('🔍 AUTO-FILL TOGGLE: Fetching container plan...');
                     this.fetchContainerPlan();
+                } else if (!e.target.checked) {
+                    // Clear auto-fill results when switching to manual
+                    this.clearAutoFillResults();
                 }
             });
+        }
+    }
+
+    toggleContainerSections(autoFillEnabled) {
+        const autoFillResults = document.getElementById('autoFillResults');
+        const manualSection = document.getElementById('manualContainerSection');
+        
+        if (autoFillResults) {
+            autoFillResults.style.display = autoFillEnabled ? 'block' : 'none';
+        }
+        
+        if (manualSection) {
+            manualSection.style.display = autoFillEnabled ? 'none' : 'block';
+        }
+    }
+
+    clearAutoFillResults() {
+        const containerResults = document.getElementById('containerResults');
+        if (containerResults) {
+            containerResults.innerHTML = '<p class="text-muted">Switch to manual container selection mode</p>';
         }
     }
 
     onContainerRequirementChange() {
         // Container card display is now handled in the main app
         if (this.main.requiresContainers) {
+            // Initialize section visibility
+            const autoFillEnabled = document.getElementById('autoFillEnabled')?.checked ?? true;
+            this.toggleContainerSections(autoFillEnabled);
+            
             this.fetchContainerPlan();
         } else {
             this.containerPlan = null;
@@ -122,28 +151,47 @@ export class ContainerManager {
     }
 
     addContainerRow() {
+        console.log('🔍 ADD CONTAINER DEBUG: Add container row called');
+        
         const autoFillEnabled = document.getElementById('autoFillEnabled')?.checked;
+        console.log('🔍 ADD CONTAINER DEBUG: Auto-fill enabled:', autoFillEnabled);
+        
         if (autoFillEnabled) {
             alert('Please uncheck Auto-Fill to add containers manually.');
             return;
         }
 
         if (!this.containerPlan?.container_selection || this.containerPlan.container_selection.length === 0) {
+            console.log('🔍 ADD CONTAINER DEBUG: No containers available');
             alert('No containers available for this recipe.');
             return;
         }
 
         const rowsContainer = document.getElementById('containerSelectionRows');
-        if (!rowsContainer) return;
+        console.log('🔍 ADD CONTAINER DEBUG: Rows container found:', !!rowsContainer);
+        
+        if (!rowsContainer) {
+            console.error('🚨 Container rows container not found!');
+            return;
+        }
 
         const rowIndex = rowsContainer.children.length;
+        console.log('🔍 ADD CONTAINER DEBUG: Creating row index:', rowIndex);
+        
         const rowHtml = this.createContainerRowHTML(rowIndex);
+        console.log('🔍 ADD CONTAINER DEBUG: Row HTML created:', rowHtml.substring(0, 100) + '...');
         
         const rowDiv = document.createElement('div');
         rowDiv.innerHTML = rowHtml;
-        rowsContainer.appendChild(rowDiv.firstElementChild);
-
-        this.bindContainerRowEvents(rowIndex);
+        const newRow = rowDiv.firstElementChild;
+        
+        if (newRow) {
+            rowsContainer.appendChild(newRow);
+            console.log('🔍 ADD CONTAINER DEBUG: Row appended successfully');
+            this.bindContainerRowEvents(rowIndex);
+        } else {
+            console.error('🚨 Failed to create new row element');
+        }
     }
 
     createContainerRowHTML(index) {
