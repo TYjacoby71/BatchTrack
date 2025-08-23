@@ -9,29 +9,26 @@ export class ValidationManager {
     }
 
     updateValidation() {
-        console.log('🔍 VALIDATION: Checking form validity...');
-
-        const issues = [];
+        const reasons = [];
         const warnings = [];
 
         // Check batch type
         if (!this.main.batchType) {
-            issues.push('Select batch type');
+            reasons.push('Select batch type');
         }
 
-        // Check container requirements if enabled
-        if (this.main.requiresContainers && this.main.containerManager.containerPlan) {
-            const containmentPercentage = this.main.containerManager.containerPlan.containment_percentage || 0;
-            if (containmentPercentage < 50) {
-                warnings.push('Low container coverage');
+        // Container validation
+        if (this.main.requiresContainers && this.main.containerManager) {
+            const containerValidation = this.main.containerManager.validateContainers();
+            if (!containerValidation.valid) {
+                reasons.push(...containerValidation.reasons);
             }
+            warnings.push(...containerValidation.warnings);
         }
 
-        const isValid = issues.length === 0;
-        console.log('🔍 VALIDATION: Valid:', isValid, 'Reasons:', issues, 'Warnings:', warnings);
+        const isValid = reasons.length === 0;
 
-        this.updateValidationUI(isValid, issues, warnings);
-        return isValid;
+        this.updateUI(isValid, reasons, warnings);
     }
 
     updateValidationUI(isValid, issues, warnings) {
