@@ -290,7 +290,9 @@ def calculate_container_fill_strategy(recipe_id: int, scale: float, yield_amount
                     'id': c.id,
                     'name': c.name,
                     'capacity': capacity,
-                    'stock_qty': c.quantity or 0,
+                    'quantity': c.quantity or 0,  # Keep this for backward compatibility
+                    'stock_qty': c.quantity or 0,  # Explicit stock quantity
+                    'available_quantity': c.quantity or 0,  # Alternative property name
                     'unit': unit
                 })
         
@@ -334,6 +336,8 @@ def calculate_container_fill_strategy(recipe_id: int, scale: float, yield_amount
                     'name': container['name'],
                     'capacity': capacity,
                     'quantity': qty_to_use,
+                    'stock_qty': container['stock_qty'],  # Include available stock
+                    'available_quantity': container['stock_qty'],  # Alternative property
                     'unit': container['unit']
                 })
                 remaining_volume -= qty_to_use * capacity
@@ -356,6 +360,8 @@ def calculate_container_fill_strategy(recipe_id: int, scale: float, yield_amount
                             'name': container['name'],
                             'capacity': container['capacity'],
                             'quantity': 1,
+                            'stock_qty': container['stock_qty'],  # Include available stock
+                            'available_quantity': container['stock_qty'],  # Alternative property
                             'unit': container['unit']
                         })
                         logger.info(f"CONTAINER_FILL: Added 1x {container['name']} for partial fill")

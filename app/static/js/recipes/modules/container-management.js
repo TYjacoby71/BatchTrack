@@ -305,7 +305,10 @@ export class ContainerManager {
             return;
         }
 
-        stockBadge.textContent = container.quantity || 0;
+        // Look for stock quantity in various possible properties from the server response
+        const stockQuantity = container.stock_qty || container.quantity || container.available_quantity || 0;
+        console.log('🔍 STOCK DISPLAY DEBUG: Container:', container.name, 'Stock:', stockQuantity);
+        stockBadge.textContent = stockQuantity;
         this.updateContainerProgress();
     }
 
