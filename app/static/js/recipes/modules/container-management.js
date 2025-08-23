@@ -1,3 +1,4 @@
+
 // Container Management Module
 export class ContainerManager {
     constructor(mainManager) {
@@ -6,19 +7,28 @@ export class ContainerManager {
     }
 
     bindEvents() {
+        console.log('🔍 CONTAINER MANAGER DEBUG: Binding events');
+        
+        // Add container button
         const addContainerBtn = document.getElementById('addContainerBtn');
-        const autoFillToggle = document.getElementById('autoFillEnabled');
+        console.log('🔍 CONTAINER MANAGER DEBUG: Add container button found:', !!addContainerBtn);
         if (addContainerBtn) {
             addContainerBtn.addEventListener('click', () => this.addContainerRow());
         }
 
+        // Auto-fill toggle
+        const autoFillToggle = document.getElementById('autoFillEnabled');
+        console.log('🔍 CONTAINER MANAGER DEBUG: Auto-fill toggle found:', !!autoFillToggle);
         if (autoFillToggle) {
             autoFillToggle.addEventListener('change', (e) => {
+                console.log('🔍 AUTO-FILL TOGGLE:', e.target.checked);
                 this.toggleContainerSections(e.target.checked);
-
+                
                 if (e.target.checked && this.main.requiresContainers) {
+                    console.log('🔍 AUTO-FILL TOGGLE: Fetching container plan...');
                     this.fetchContainerPlan();
                 } else if (!e.target.checked) {
+                    // Clear auto-fill results when switching to manual
                     this.clearAutoFillResults();
                 }
             });
@@ -28,11 +38,11 @@ export class ContainerManager {
     toggleContainerSections(autoFillEnabled) {
         const autoFillResults = document.getElementById('autoFillResults');
         const manualSection = document.getElementById('manualContainerSection');
-
+        
         if (autoFillResults) {
             autoFillResults.style.display = autoFillEnabled ? 'block' : 'none';
         }
-
+        
         if (manualSection) {
             manualSection.style.display = autoFillEnabled ? 'none' : 'block';
         }
@@ -51,7 +61,7 @@ export class ContainerManager {
             // Initialize section visibility
             const autoFillEnabled = document.getElementById('autoFillEnabled')?.checked ?? true;
             this.toggleContainerSections(autoFillEnabled);
-
+            
             this.fetchContainerPlan();
         } else {
             this.containerPlan = null;
@@ -60,12 +70,20 @@ export class ContainerManager {
     }
 
     async fetchContainerPlan() {
+        console.log('🔍 CONTAINER DEBUG: fetchContainerPlan called');
+        console.log('🔍 CONTAINER DEBUG: Recipe exists:', !!this.main.recipe);
+        console.log('🔍 CONTAINER DEBUG: Requires containers:', this.main.requiresContainers);
+        
         if (!this.main.recipe || !this.main.requiresContainers) {
+            console.log('🔍 CONTAINER DEBUG: Skipping fetch - recipe or requirement missing');
             return;
         }
 
+        console.log('🔍 CONTAINER DEBUG: Fetching container plan for recipe', this.main.recipe.id, 'scale:', this.main.scale);
+
         try {
             const yieldAmount = this.main.baseYield * this.main.scale;
+            console.log('🔍 CONTAINER DEBUG: Yield amount calculated:', yieldAmount);
 
             this.containerPlan = await this.main.apiCall(`/recipes/${this.main.recipe.id}/auto-fill-containers`, {
                 scale: this.main.scale,
@@ -73,10 +91,14 @@ export class ContainerManager {
                 yield_unit: this.main.unit
             });
 
+            console.log('🔍 CONTAINER DEBUG: Server response:', this.containerPlan);
+
             if (this.containerPlan.success) {
+                console.log('🔍 CONTAINER DEBUG: Plan successful, displaying results');
                 this.displayContainerPlan();
                 this.updateContainerProgress();
             } else {
+                console.log('🔍 CONTAINER DEBUG: Plan failed:', this.containerPlan.error);
                 this.displayContainerError(this.containerPlan.error || 'Failed to load containers');
             }
         } catch (error) {
@@ -129,33 +151,43 @@ export class ContainerManager {
     }
 
     addContainerRow() {
+        console.log('🔍 ADD CONTAINER DEBUG: Add container row called');
+        
         const autoFillEnabled = document.getElementById('autoFillEnabled')?.checked;
-
+        console.log('🔍 ADD CONTAINER DEBUG: Auto-fill enabled:', autoFillEnabled);
+        
         if (autoFillEnabled) {
             alert('Please uncheck Auto-Fill to add containers manually.');
             return;
         }
 
         if (!this.containerPlan?.container_selection || this.containerPlan.container_selection.length === 0) {
+            console.log('🔍 ADD CONTAINER DEBUG: No containers available');
             alert('No containers available for this recipe.');
             return;
         }
 
         const rowsContainer = document.getElementById('containerSelectionRows');
-
+        console.log('🔍 ADD CONTAINER DEBUG: Rows container found:', !!rowsContainer);
+        
         if (!rowsContainer) {
             console.error('🚨 Container rows container not found!');
             return;
         }
 
         const rowIndex = rowsContainer.children.length;
+        console.log('🔍 ADD CONTAINER DEBUG: Creating row index:', rowIndex);
+        
         const rowHtml = this.createContainerRowHTML(rowIndex);
+        console.log('🔍 ADD CONTAINER DEBUG: Row HTML created:', rowHtml.substring(0, 100) + '...');
+        
         const rowDiv = document.createElement('div');
         rowDiv.innerHTML = rowHtml;
         const newRow = rowDiv.firstElementChild;
-
+        
         if (newRow) {
             rowsContainer.appendChild(newRow);
+            console.log('🔍 ADD CONTAINER DEBUG: Row appended successfully');
             this.bindContainerRowEvents(rowIndex);
         } else {
             console.error('🚨 Failed to create new row element');
@@ -164,7 +196,7 @@ export class ContainerManager {
 
     createContainerRowHTML(index) {
         const availableContainers = this.containerPlan?.container_selection || [];
-
+        
         let optionsHTML = '<option value="">Select Container</option>';
         availableContainers.forEach(container => {
             optionsHTML += `<option value="${container.id}">${container.name} (${container.capacity} ${container.unit})</option>`;
@@ -268,7 +300,7 @@ export class ContainerManager {
             document.querySelectorAll('[data-container-row]').forEach(row => {
                 const select = row.querySelector('.container-select');
                 const quantityInput = row.querySelector('.container-quantity');
-
+                
                 if (select && quantityInput && select.value) {
                     const container = this.containerPlan?.container_selection?.find(c => c.id == select.value);
                     if (container) {
@@ -282,7 +314,7 @@ export class ContainerManager {
         } else {
             containment_percentage = this.containerPlan.containment_percentage || 0;
         }
-
+        
         this.updateProgressBar(containment_percentage);
     }
 
@@ -318,15 +350,15 @@ export class ContainerManager {
     clearContainerResults() {
         const containerResults = document.getElementById('containerResults');
         const containerRows = document.getElementById('containerSelectionRows');
-
+        
         if (containerResults) {
             containerResults.innerHTML = '<p class="text-muted">Container management disabled</p>';
         }
-
+        
         if (containerRows) {
             containerRows.innerHTML = '';
         }
-
+        
         this.clearProgressBar();
     }
 

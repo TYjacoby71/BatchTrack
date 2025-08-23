@@ -26,7 +26,11 @@ class PlanProductionApp {
     }
 
     init() {
-        console.log('Plan production app initialized');
+        console.log('🔍 INIT: Starting plan production app');
+        console.log('🔍 INIT DEBUG: Container manager:', !!this.containerManager);
+        console.log('🔍 INIT DEBUG: Stock checker:', !!this.stockChecker);
+        console.log('🔍 INIT DEBUG: Validation manager:', !!this.validationManager);
+        console.log('🔍 INIT DEBUG: Batch manager:', !!this.batchManager);
 
         this.loadRecipeData();
         this.bindEvents();
@@ -41,6 +45,7 @@ class PlanProductionApp {
             this.recipe = recipeData;
             this.baseYield = parseFloat(recipeData.yield_amount) || 0;
             this.unit = recipeData.yield_unit || '';
+            console.log('🔍 RECIPE: Loaded recipe data:', this.recipe);
         }
     }
 
@@ -68,35 +73,50 @@ class PlanProductionApp {
 
         // Container requirement toggle
         const containerToggle = document.getElementById('requiresContainers');
+        console.log('🔍 CONTAINER TOGGLE DEBUG: Element found:', !!containerToggle);
 
         if (containerToggle) {
+            console.log('🔍 CONTAINER TOGGLE DEBUG: Adding event listener');
             containerToggle.addEventListener('change', () => {
                 this.requiresContainers = containerToggle.checked;
+                console.log('🔍 CONTAINER TOGGLE: Requirements changed to:', this.requiresContainers);
 
                 const containerCard = document.getElementById('containerManagementCard');
+                console.log('🔍 CONTAINER TOGGLE DEBUG: Container card found:', !!containerCard);
 
                 if (containerCard) {
                     containerCard.style.display = this.requiresContainers ? 'block' : 'none';
+                    console.log('🔍 CONTAINER TOGGLE: Card display set to:', containerCard.style.display);
+                    console.log('🔍 CONTAINER TOGGLE DEBUG: Card visibility classes:', containerCard.className);
                 }
 
                 if (this.requiresContainers) {
+                    console.log('🔍 CONTAINER TOGGLE: Fetching container plan...');
+                    console.log('🔍 CONTAINER TOGGLE DEBUG: Container manager available:', !!this.containerManager);
                     if (this.containerManager && typeof this.containerManager.fetchContainerPlan === 'function') {
                         this.containerManager.fetchContainerPlan();
                     } else {
-                        console.error('Container manager or fetchContainerPlan not available');
+                        console.error('🚨 CONTAINER TOGGLE ERROR: Container manager or fetchContainerPlan not available');
                     }
                 } else {
+                    console.log('🔍 CONTAINER TOGGLE: Clearing container results...');
                     if (this.containerManager && typeof this.containerManager.clearContainerResults === 'function') {
                         this.containerManager.clearContainerResults();
                     } else {
-                        console.error('Container manager or clearContainerResults not available');
+                        console.error('🚨 CONTAINER TOGGLE ERROR: Container manager or clearContainerResults not available');
                     }
                 }
 
                 this.updateValidation();
             });
         } else {
-            console.error('requiresContainers element not found');
+            console.error('🚨 CONTAINER TOGGLE ERROR: requiresContainers element not found');
+            // Try to find elements with similar IDs for debugging
+            const allInputs = document.querySelectorAll('input[type="checkbox"]');
+            console.log('🔍 CONTAINER TOGGLE DEBUG: All checkboxes found:', allInputs.length);
+            allInputs.forEach((input, index) => {
+                console.log(`🔍 CONTAINER TOGGLE DEBUG: Checkbox ${index}: id="${input.id}", name="${input.name}"`);
+            });
         }
 
         // Form submission
@@ -114,10 +134,13 @@ class PlanProductionApp {
 
     updateProjectedYield() {
         const projectedYieldElement = document.getElementById('projectedYield');
+        console.log('🔍 PROJECTED YIELD DEBUG: Element found:', !!projectedYieldElement);
+        console.log('🔍 PROJECTED YIELD DEBUG: Base yield:', this.baseYield, 'Scale:', this.scale, 'Unit:', this.unit);
 
         if (projectedYieldElement) {
             const projectedValue = (this.baseYield * this.scale).toFixed(2);
             projectedYieldElement.textContent = `${projectedValue} ${this.unit}`;
+            console.log('🔍 PROJECTED YIELD DEBUG: Updated to:', `${projectedValue} ${this.unit}`);
         }
     }
 
