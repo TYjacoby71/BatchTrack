@@ -70,7 +70,21 @@ class PlanProductionApp {
         if (containerToggle) {
             containerToggle.addEventListener('change', () => {
                 this.requiresContainers = containerToggle.checked;
-                this.containerManager.onContainerRequirementChange();
+                console.log('🔍 CONTAINER TOGGLE: Requirements changed to:', this.requiresContainers);
+                
+                const containerCard = document.getElementById('containerManagementCard');
+                if (containerCard) {
+                    containerCard.style.display = this.requiresContainers ? 'block' : 'none';
+                    console.log('🔍 CONTAINER TOGGLE: Card display set to:', containerCard.style.display);
+                }
+                
+                if (this.requiresContainers) {
+                    console.log('🔍 CONTAINER TOGGLE: Fetching container plan...');
+                    this.containerManager.fetchContainerPlan();
+                } else {
+                    this.containerManager.clearContainerResults();
+                }
+                
                 this.updateValidation();
             });
         }
