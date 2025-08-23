@@ -71,16 +71,10 @@ class PlanProductionManager {
             stockCheckBtn.addEventListener('click', () => this.fetchStockCheck());
         }
 
-        // Auto-fill containers button
-        const autoFillBtn = document.getElementById('autoFillContainers');
-        if (autoFillBtn) {
-            autoFillBtn.addEventListener('click', () => this.autoFillContainers());
-        }
-
-        // Refresh containers button
-        const refreshBtn = document.getElementById('refreshContainers');
-        if (refreshBtn) {
-            refreshBtn.addEventListener('click', () => this.fetchContainerPlan());
+        // Add container button
+        const addContainerBtn = document.getElementById('addContainerBtn');
+        if (addContainerBtn) {
+            addContainerBtn.addEventListener('click', () => this.addContainerRow());
         }
 
         // Auto-fill toggle
@@ -292,6 +286,9 @@ class PlanProductionManager {
 
     displayContainerPlan() {
         const containerResults = document.getElementById('containerResults');
+        const containerRowsContainer = document.getElementById('containerSelectionRows');
+        const autoFillEnabled = document.getElementById('autoFillEnabled')?.checked;
+
         if (!containerResults) {
             console.error('🚨 CONTAINER DISPLAY: containerResults element not found');
             return;
@@ -300,35 +297,51 @@ class PlanProductionManager {
         if (!this.containerPlan?.success) {
             console.log('🔍 CONTAINER DISPLAY: No valid container plan:', this.containerPlan);
             containerResults.innerHTML = '<p class="text-muted">No container plan available</p>';
+            if (containerRowsContainer) {
+                containerRowsContainer.innerHTML = '';
+            }
             return;
         }
 
-        const { container_selection, total_capacity, containment_percentage } = this.containerPlan;
+        const { container_selection, containment_percentage } = this.containerPlan;
         console.log('🔍 CONTAINER DISPLAY: Displaying', container_selection?.length || 0, 'containers');
 
         if (!container_selection || container_selection.length === 0) {
             containerResults.innerHTML = '<div class="alert alert-warning"><i class="fas fa-exclamation-triangle"></i> No suitable containers found</div>';
+            if (containerRowsContainer) {
+                containerRowsContainer.innerHTML = '';
+            }
             return;
         }
 
-        let html = '<div class="table-responsive"><table class="table table-sm">';
-        html += '<thead><tr><th>Container</th><th>Capacity</th><th>Quantity Needed</th><th>Total Volume</th></tr></thead><tbody>';
+        if (autoFillEnabled) {
+            // Show auto-fill results in table format
+            let html = '<div class="table-responsive"><table class="table table-sm">';
+            html += '<thead><tr><th>Container</th><th>Capacity</th><th>Quantity Needed</th><th>Total Volume</th></tr></thead><tbody>';
 
-        container_selection.forEach(container => {
-            html += `
-                <tr>
-                    <td>${container.name || 'Unknown Container'}</td>
-                    <td>${container.capacity || 0} ${container.unit || 'ml'}</td>
-                    <td>${container.quantity || 0}</td>
-                    <td>${(container.capacity || 0) * (container.quantity || 0)} ${container.unit || 'ml'}</td>
-                </tr>
-            `;
-        });
+            container_selection.forEach(container => {
+                html += `
+                    <tr>
+                        <td>${container.name || 'Unknown Container'}</td>
+                        <td>${container.capacity || 0} ${container.unit || 'ml'}</td>
+                        <td>${container.quantity || 0}</td>
+                        <td>${(container.capacity || 0) * (container.quantity || 0)} ${container.unit || 'ml'}</td>
+                    </tr>
+                `;
+            });
 
-        html += '</tbody></table></div>';
-        html += `<div class="mt-2"><small class="text-muted">Fill efficiency: ${(containment_percentage || 0).toFixed(1)}%</small></div>`;
+            html += '</tbody></table></div>';
+            html += `<div class="mt-2"><small class="text-muted">Fill efficiency: ${(containment_percentage || 0).toFixed(1)}%</small></div>`;
+            containerResults.innerHTML = html;
 
-        containerResults.innerHTML = html;
+            // Clear manual rows when auto-fill is enabled
+            if (containerRowsContainer) {
+                containerRowsContainer.innerHTML = '';
+            }
+        } else {
+            // Hide auto-fill results when in manual mode
+            containerResults.innerHTML = '<p class="text-muted">Manual container selection mode</p>';
+        }
     }
 
     displayContainerError(message) {
@@ -352,7 +365,32 @@ class PlanProductionManager {
     updateContainerProgress() {
         if (!this.containerPlan?.success) return;
 
-        const { containment_percentage = 0 } = this.containerPlan;
+        // Calculate containment from manual rows if auto-fill is disabled
+        const autoFillEnabled = document.getElementById('autoFillEnabled')?.checked;
+        let containment_percentage = 0;
+
+        if (!autoFillEnabled) {
+            // Calculate from manual container rows
+            const projectedYield = this.baseYield * this.scale;
+            let totalContained = 0;
+
+            document.querySelectorAll('[data-container-row]').forEach(row => {
+                const select = row.querySelector('.container-select');
+                const quantityInput = row.querySelector('.container-quantity');
+                
+                if (select && quantityInput && select.value) {
+                    const container = this.containerPlan?.container_selection?.find(c => c.id == select.value);
+                    if (container) {
+                        const quantity = parseInt(quantityInput.value) || 0;
+                        totalContained += container.capacity * quantity;
+                    }
+                }
+            });
+
+            containment_percentage = projectedYield > 0 ? Math.min((totalContained / projectedYield) * 100, 100) : 0;
+        } else {
+            containment_percentage = this.containerPlan.containment_percentage || 0;
+        }
         
         // Update progress bar
         const progressBar = document.getElementById('containmentProgressBar');
@@ -403,6 +441,146 @@ class PlanProductionManager {
 
     async autoFillContainers() {
         await this.fetchContainerPlan();
+    }
+
+    addContainerRow() {
+        const autoFillEnabled = document.getElementById('autoFillEnabled')?.checked;
+        if (autoFillEnabled) {
+            alert('Please uncheck Auto-Fill to add containers manually.');
+            return;
+        }
+
+        if (!this.containerPlan?.container_selection || this.containerPlan.container_selection.length === 0) {
+            alert('No containers available for this recipe.');
+            return;
+        }
+
+        const rowsContainer = document.getElementById('containerSelectionRows');
+        if (!rowsContainer) return;
+
+        const rowIndex = rowsContainer.children.length;
+        const rowHtml = this.createContainerRowHTML(rowIndex);
+        
+        const rowDiv = document.createElement('div');
+        rowDiv.innerHTML = rowHtml;
+        rowsContainer.appendChild(rowDiv.firstElementChild);
+
+        // Bind events for the new row
+        this.bindContainerRowEvents(rowIndex);
+    }
+
+    createContainerRowHTML(index) {
+        const availableContainers = this.containerPlan?.container_selection || [];
+        
+        let optionsHTML = '<option value="">Select Container</option>';
+        availableContainers.forEach(container => {
+            optionsHTML += `<option value="${container.id}">${container.name} (${container.capacity} ${container.unit})</option>`;
+        });
+
+        return `
+            <div class="row align-items-center mb-3 p-3 border rounded bg-light" data-container-row="${index}">
+                <div class="col-md-5">
+                    <label class="form-label small">Container Type</label>
+                    <select class="form-select form-select-sm container-select" data-row="${index}">
+                        ${optionsHTML}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small">Quantity</label>
+                    <input type="number" min="1" class="form-control form-control-sm container-quantity" 
+                           data-row="${index}" value="1">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small">Available Stock</label>
+                    <div class="badge bg-info fs-6 available-stock" data-row="${index}">-</div>
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label small">&nbsp;</label>
+                    <button type="button" class="btn btn-danger btn-sm d-block remove-container-btn" 
+                            data-row="${index}">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+    bindContainerRowEvents(rowIndex) {
+        const row = document.querySelector(`[data-container-row="${rowIndex}"]`);
+        if (!row) return;
+
+        const select = row.querySelector('.container-select');
+        const quantityInput = row.querySelector('.container-quantity');
+        const removeBtn = row.querySelector('.remove-container-btn');
+
+        if (select) {
+            select.addEventListener('change', () => this.updateContainerRow(rowIndex));
+        }
+
+        if (quantityInput) {
+            quantityInput.addEventListener('input', () => this.updateContainerProgress());
+        }
+
+        if (removeBtn) {
+            removeBtn.addEventListener('click', () => this.removeContainerRow(rowIndex));
+        }
+
+        // Initial update
+        this.updateContainerRow(rowIndex);
+    }
+
+    updateContainerRow(rowIndex) {
+        const row = document.querySelector(`[data-container-row="${rowIndex}"]`);
+        if (!row) return;
+
+        const select = row.querySelector('.container-select');
+        const quantityInput = row.querySelector('.container-quantity');
+        const stockBadge = row.querySelector('.available-stock');
+
+        if (!select || !quantityInput || !stockBadge) return;
+
+        const selectedId = select.value;
+        if (!selectedId) {
+            stockBadge.textContent = '-';
+            return;
+        }
+
+        // Find container details
+        const container = this.containerPlan?.container_selection?.find(c => c.id == selectedId);
+        if (!container) {
+            stockBadge.textContent = '-';
+            return;
+        }
+
+        // Calculate available stock (considering other rows using same container)
+        let usedQuantity = 0;
+        document.querySelectorAll('.container-select').forEach((otherSelect, idx) => {
+            if (idx !== rowIndex && otherSelect.value == selectedId) {
+                const otherQuantityInput = document.querySelector(`[data-row="${idx}"] .container-quantity`);
+                if (otherQuantityInput) {
+                    usedQuantity += parseInt(otherQuantityInput.value) || 0;
+                }
+            }
+        });
+
+        const availableStock = Math.max(0, (container.quantity || 0) - usedQuantity);
+        stockBadge.textContent = availableStock;
+
+        // Adjust quantity if it exceeds available stock
+        const currentQuantity = parseInt(quantityInput.value) || 1;
+        if (currentQuantity > availableStock) {
+            quantityInput.value = Math.max(1, availableStock);
+        }
+
+        this.updateContainerProgress();
+    }
+
+    removeContainerRow(rowIndex) {
+        const row = document.querySelector(`[data-container-row="${rowIndex}"]`);
+        if (row) {
+            row.remove();
+            this.updateContainerProgress();
+        }
     }
 
     validateForm() {
