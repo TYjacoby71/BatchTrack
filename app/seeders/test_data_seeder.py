@@ -1,4 +1,3 @@
-
 from datetime import datetime, timedelta
 from flask import current_app
 from flask_login import current_user
@@ -18,21 +17,21 @@ def seed_test_data(organization_id=None):
     - Test recipes with unit conversions
     - Container items
     """
-    
+
     if organization_id is None:
         org = Organization.query.first()
         if not org:
             print("❌ No organization found! Run user seeder first.")
             return
         organization_id = org.id
-    
+
     admin_user = User.query.filter_by(username='admin').first()
     if not admin_user:
         print("❌ Admin user not found! Run user seeder first.")
         return
-    
+
     print("=== Seeding Test Data ===")
-    
+
     # Get categories
     liquid_cat = IngredientCategory.query.filter_by(name='Liquid', organization_id=organization_id).first()
     solid_cat = IngredientCategory.query.filter_by(name='Solid', organization_id=organization_id).first()
@@ -40,11 +39,11 @@ def seed_test_data(organization_id=None):
     dairy_cat = IngredientCategory.query.filter_by(name='Dairy', organization_id=organization_id).first()
     wax_cat = IngredientCategory.query.filter_by(name='Wax', organization_id=organization_id).first()
     container_cat = IngredientCategory.query.filter_by(name='Container', organization_id=organization_id).first()
-    
+
     if not liquid_cat:
         print("❌ Categories not found! Run category seeder first.")
         return
-    
+
     # Get units
     units = {
         'count': Unit.query.filter_by(name='count').first(),
@@ -58,7 +57,7 @@ def seed_test_data(organization_id=None):
         'gram': Unit.query.filter_by(name='gram').first(),
         'unit': Unit.query.filter_by(name='unit').first(),
     }
-    
+
     # Test inventory items with various units for conversion testing
     test_items = [
         # Fruits (count units)
@@ -77,7 +76,7 @@ def seed_test_data(organization_id=None):
         },
         {
             'name': 'Bananas',
-            'type': 'ingredient', 
+            'type': 'ingredient',
             'unit': 'count',
             'cost_per_unit': 0.50,
             'category_id': solid_cat.id,
@@ -88,7 +87,7 @@ def seed_test_data(organization_id=None):
                 {'quantity': 36, 'unit_cost': 0.45, 'days_ago': 1, 'expired': False},  # Fresh lot
             ]
         },
-        
+
         # Meat (weight units)
         {
             'name': 'Ground Beef',
@@ -102,7 +101,7 @@ def seed_test_data(organization_id=None):
                 {'quantity': 5.0, 'unit_cost': 8.99, 'days_ago': 1, 'expired': False},
             ]
         },
-        
+
         # Dairy (volume converted to weight)
         {
             'name': 'Whole Milk',
@@ -117,7 +116,7 @@ def seed_test_data(organization_id=None):
                 {'quantity': 2.0, 'unit_cost': 4.25, 'days_ago': 5, 'expired': False},
             ]
         },
-        
+
         # Liquids for volume conversions
         {
             'name': 'Apple Cider Vinegar',
@@ -131,7 +130,7 @@ def seed_test_data(organization_id=None):
                 {'quantity': 2.0, 'unit_cost': 3.25, 'days_ago': 10, 'expired': False},
             ]
         },
-        
+
         # Oil stored in volume
         {
             'name': 'Olive Oil',
@@ -145,7 +144,7 @@ def seed_test_data(organization_id=None):
                 {'quantity': 1000.0, 'unit_cost': 0.02, 'days_ago': 15, 'expired': False},
             ]
         },
-        
+
         # Wax (weight)
         {
             'name': 'Beeswax',
@@ -159,7 +158,7 @@ def seed_test_data(organization_id=None):
                 {'quantity': 32.0, 'unit_cost': 1.25, 'days_ago': 30, 'expired': False},
             ]
         },
-        
+
         # Sugar for weight conversions (kg to grams)
         {
             'name': 'Granulated Sugar',
@@ -173,7 +172,7 @@ def seed_test_data(organization_id=None):
                 {'quantity': 5.0, 'unit_cost': 3.50, 'days_ago': 20, 'expired': False},
             ]
         },
-        
+
         # Item with no lots/history for modal testing
         {
             'name': 'Vanilla Extract',
@@ -185,7 +184,7 @@ def seed_test_data(organization_id=None):
             'shelf_life_days': None,
             'lots': []  # No lots - for testing initial entry
         },
-        
+
         {
             'name': 'Sea Salt',
             'type': 'ingredient',
@@ -196,7 +195,7 @@ def seed_test_data(organization_id=None):
             'shelf_life_days': None,
             'lots': []  # No lots - for testing initial entry
         },
-        
+
         # Containers
         {
             'name': 'Glass 4oz Jars',
@@ -210,7 +209,7 @@ def seed_test_data(organization_id=None):
                 {'quantity': 50, 'unit_cost': 1.25, 'days_ago': 14, 'expired': False},
             ]
         },
-        
+
         {
             'name': 'Glass 10oz Jars',
             'type': 'container',
@@ -223,7 +222,7 @@ def seed_test_data(organization_id=None):
                 {'quantity': 30, 'unit_cost': 1.75, 'days_ago': 14, 'expired': False},
             ]
         },
-        
+
         {
             'name': 'Paper Plates (5-pack)',
             'type': 'container',
@@ -237,55 +236,55 @@ def seed_test_data(organization_id=None):
             ]
         },
     ]
-    
+
     print(f"Creating {len(test_items)} test inventory items...")
-    
+
     created_items = {}
     total_lots = 0
-    
+
     for item_data in test_items:
         # Create inventory item
         lots_data = item_data.pop('lots')
-        
+
         # Check if item already exists
         existing_item = InventoryItem.query.filter_by(
             name=item_data['name'],
             organization_id=organization_id
         ).first()
-        
+
         if existing_item:
             print(f"   ⚠️  Item {item_data['name']} already exists, skipping...")
             created_items[item_data['name']] = existing_item
             continue
-        
+
         # Add organization_id and unit (keep as string, not unit_id)
         item_data['organization_id'] = organization_id
         unit_name = item_data['unit']
         # Keep unit as string since InventoryItem expects unit field, not unit_id
-        
+
         # Set default quantity to 0 (will be updated by lots)
         item_data['quantity'] = 0.0
-        
+
         inventory_item = InventoryItem(**item_data)
         db.session.add(inventory_item)
         db.session.flush()  # Get the ID
-        
+
         created_items[inventory_item.name] = inventory_item
-        
+
         # Create lots for this item
         total_quantity = 0.0
         for lot_data in lots_data:
             # Calculate expiration date
             received_date = TimezoneUtils.utc_now() - timedelta(days=lot_data['days_ago'])
             expiration_date = None
-            
+
             if inventory_item.is_perishable and inventory_item.shelf_life_days:
                 if lot_data.get('expired', False):
                     # Force expiration by setting shelf life to 1 day and received date further back
                     expiration_date = received_date + timedelta(days=1)
                 else:
                     expiration_date = received_date + timedelta(days=inventory_item.shelf_life_days)
-            
+
             lot = InventoryLot(
                 inventory_item_id=inventory_item.id,
                 remaining_quantity=lot_data['quantity'],
@@ -303,12 +302,12 @@ def seed_test_data(organization_id=None):
             db.session.add(lot)
             total_quantity += lot_data['quantity']
             total_lots += 1
-        
+
         # Update item quantity
         inventory_item.quantity = total_quantity
-        
+
         print(f"   ✅ Created {inventory_item.name} with {len(lots_data)} lots")
-    
+
     # Commit all inventory items and lots
     try:
         db.session.commit()
@@ -317,14 +316,14 @@ def seed_test_data(organization_id=None):
         print(f"❌ Error creating inventory items: {e}")
         db.session.rollback()
         return
-    
+
     # Create test recipes
     print("\nCreating test recipes...")
-    
+
     recipes_data = [
         {
             'name': 'Simple Applesauce',
-            'description': 'Basic applesauce recipe testing count to volume conversion',
+            'instructions': 'Blend apples until smooth. Pour into glass containers.',
             'predicted_yield': 4.0,
             'predicted_yield_unit': 'floz',
             'ingredients': [
@@ -335,7 +334,7 @@ def seed_test_data(organization_id=None):
         },
         {
             'name': 'Milk and Honey Mixture',
-            'description': 'Recipe testing gallon to liter and volume conversions',
+            'instructions': 'Recipe testing gallon to liter and volume conversions',
             'predicted_yield': 500.0,
             'predicted_yield_unit': 'ml',
             'ingredients': [
@@ -346,7 +345,7 @@ def seed_test_data(organization_id=None):
         },
         {
             'name': 'Complex Conversion Test',
-            'description': 'Recipe testing multiple unit conversions simultaneously',
+            'instructions': 'Recipe testing multiple unit conversions simultaneously',
             'predicted_yield': 1.0,
             'predicted_yield_unit': 'liter',
             'ingredients': [
@@ -359,7 +358,7 @@ def seed_test_data(organization_id=None):
         },
         {
             'name': 'Fruit Salad',
-            'description': 'Multi-fruit recipe with perishable ingredients',
+            'instructions': 'Multi-fruit recipe with perishable ingredients',
             'predicted_yield': 2.0,
             'predicted_yield_unit': 'lb',
             'ingredients': [
@@ -370,7 +369,7 @@ def seed_test_data(organization_id=None):
             'containers': ['Paper Plates (5-pack)']
         }
     ]
-    
+
     created_recipes = 0
     for recipe_data in recipes_data:
         # Check if recipe exists
@@ -378,15 +377,14 @@ def seed_test_data(organization_id=None):
             name=recipe_data['name'],
             organization_id=organization_id
         ).first()
-        
+
         if existing_recipe:
             print(f"   ⚠️  Recipe {recipe_data['name']} already exists, skipping...")
             continue
-        
+
         # Create recipe
         recipe = Recipe(
             name=recipe_data['name'],
-            description=recipe_data['description'],
             predicted_yield=recipe_data['predicted_yield'],
             predicted_yield_unit=recipe_data['predicted_yield_unit'],
             organization_id=organization_id,
@@ -394,19 +392,19 @@ def seed_test_data(organization_id=None):
         )
         db.session.add(recipe)
         db.session.flush()  # Get the ID
-        
+
         # Add ingredients
         for ingredient_data in recipe_data['ingredients']:
             inventory_item = created_items.get(ingredient_data['name'])
             if not inventory_item:
                 print(f"   ⚠️  Ingredient {ingredient_data['name']} not found for recipe {recipe_data['name']}")
                 continue
-            
+
             unit = units.get(ingredient_data['unit'])
             if not unit:
                 print(f"   ⚠️  Unit {ingredient_data['unit']} not found")
                 continue
-            
+
             recipe_ingredient = RecipeIngredient(
                 recipe_id=recipe.id,
                 inventory_item_id=inventory_item.id,
@@ -415,16 +413,16 @@ def seed_test_data(organization_id=None):
                 organization_id=organization_id
             )
             db.session.add(recipe_ingredient)
-        
+
         # Add allowed containers
         for container_name in recipe_data['containers']:
             container_item = created_items.get(container_name)
             if container_item:
                 recipe.allowed_containers.append(container_item)
-        
+
         print(f"   ✅ Created recipe: {recipe.name}")
         created_recipes += 1
-    
+
     try:
         db.session.commit()
         print(f"✅ Created {created_recipes} test recipes")
@@ -432,7 +430,7 @@ def seed_test_data(organization_id=None):
         print(f"❌ Error creating recipes: {e}")
         db.session.rollback()
         return
-    
+
     # Summary
     print("\n=== Test Data Summary ===")
     print(f"✅ Inventory Items: {len(created_items)}")
