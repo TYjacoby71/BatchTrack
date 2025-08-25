@@ -127,26 +127,9 @@ def plan_production_route(recipe_id):
             # Delegate to service - no business logic here
             planning_result = plan_production(recipe_id, scale, container_id)
 
-            # Check if this is a system error vs business logic result
-            if planning_result.get('status') in ['insufficient_ingredients', 'no_containers', 'cost_prohibitive']:
-                # These are valid business results, not errors
-                return jsonify({
-                    'success': True,  # Success means the system worked, not that all ingredients are available
-                    'feasible': planning_result.get('feasible', False),
-                    'status': planning_result.get('status'),
-                    'stock_results': planning_result.get('stock_results', []),
-                    'all_available': planning_result.get('all_available', False),
-                    'scale': scale,
-                    'cost_info': planning_result.get('cost_info', {}),
-                    'issues': planning_result.get('issues', []),
-                    'recommendations': planning_result.get('recommendations', []),
-                    'all_ok': planning_result.get('all_available', False)  # For backwards compatibility
-                })
-            elif planning_result.get('success', False):
-                # Fully feasible production
+            if planning_result.get('success', False):
                 return jsonify({
                     'success': True,
-                    'feasible': True,
                     'stock_results': planning_result.get('stock_results', []),
                     'all_available': planning_result.get('all_available', False),
                     'scale': scale,
@@ -154,8 +137,7 @@ def plan_production_route(recipe_id):
                     'all_ok': planning_result.get('all_available', False)  # For backwards compatibility
                 })
             else:
-                # Actual system error (should be rare)
-                error_msg = planning_result.get('error') or planning_result.get('message') or 'Production planning system error'
+                error_msg = planning_result.get('error') or planning_result.get('message') or 'Production planning failed'
                 return jsonify({'success': False, 'error': error_msg}), 500
 
         except Exception as e:

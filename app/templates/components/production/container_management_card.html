@@ -1,65 +1,110 @@
 
-<div class="card mb-4" id="containerCard" style="display: none;">
-    <div class="card-header">
-        <h5 class="mb-0">
-            <i class="fas fa-box"></i> Container Selection
-        </h5>
+<!-- Container Management Card -->
+<div class="card mb-4" id="containerManagementCard" style="display: none;">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <h5 class="mb-0">
+      <i class="fas fa-box"></i> Container Management
+    </h5>
+    <div class="d-flex align-items-center gap-3">
+      <button type="button" class="btn btn-outline-primary btn-sm" id="addContainerBtn">
+        <i class="fas fa-plus"></i> Add Container
+      </button>
     </div>
-    <div class="card-body">
-        <!-- Auto-fill Toggle -->
-        <div class="row mb-3">
-            <div class="col-12">
-                <div class="form-check form-switch">
-                    <input class="form-check-input" type="checkbox" id="autoFillEnabled" checked>
-                    <label class="form-check-label" for="autoFillEnabled">
-                        Auto-fill container selection
-                    </label>
-                </div>
-                <small class="form-text text-muted">
-                    Automatically select optimal containers based on yield
-                </small>
-            </div>
-        </div>
-
-        <!-- Auto-fill Results -->
-        <div id="autoFillSection">
-            <button type="button" class="btn btn-outline-primary mb-3" id="autoFillBtn">
-                <i class="fas fa-magic"></i> Auto-Fill Containers
-            </button>
-            
-            <div id="containerPlanResults" class="mb-3">
-                <!-- Auto-fill results will appear here -->
-            </div>
-        </div>
-
-        <!-- Manual Container Selection -->
-        <div id="manualContainerSection" style="display: none;">
-            <div class="row mb-3">
-                <div class="col-md-8">
-                    <label for="containerSelect" class="form-label">Available Containers</label>
-                    <select class="form-select" id="containerSelect">
-                        <option value="">Select a container...</option>
-                        <!-- Will be populated by JavaScript -->
-                    </select>
-                </div>
-                <div class="col-md-4">
-                    <label for="containerQuantity" class="form-label">Quantity</label>
-                    <input type="number" class="form-control" id="containerQuantity" 
-                           min="1" value="1">
-                </div>
-            </div>
-            
-            <button type="button" class="btn btn-primary" id="addContainerBtn">
-                <i class="fas fa-plus"></i> Add Container
-            </button>
-        </div>
-
-        <!-- Selected Containers List -->
-        <div id="selectedContainersSection" class="mt-3">
-            <h6>Selected Containers:</h6>
-            <div id="selectedContainersList">
-                <!-- Selected containers will appear here -->
-            </div>
-        </div>
+  </div>
+  <div class="card-body">
+    <!-- Auto-Fill Toggle -->
+    <div class="form-check mb-3">
+      <input type="checkbox" class="form-check-input" id="autoFillEnabled" checked>
+      <label class="form-check-label" for="autoFillEnabled">
+        <i class="fas fa-magic"></i> Auto-Fill Containers
+      </label>
     </div>
+
+    <!-- Auto-Fill Results (shown when auto-fill is enabled) -->
+    <div id="autoFillResults" style="display: block;">
+      <div id="containerResults">
+        <p class="text-muted">Container analysis will appear here</p>
+      </div>
+    </div>
+
+    <!-- Manual Container Selection (shown when auto-fill is disabled) -->
+    <div id="manualContainerSection">
+      <div id="containerSelectionRows">
+        <!-- Manual container rows will be added here -->
+      </div>
+      
+      <!-- Template for container row (hidden) -->
+      <div id="containerRowTemplate" style="display: none;">
+        <div class="row align-items-center mb-3 p-3 border rounded bg-light" data-container-row="">
+          <div class="col-md-5">
+            <label class="form-label small">Container Type</label>
+            <select class="form-select form-select-sm container-select">
+              <option value="">Select Container</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small">Quantity</label>
+            <input type="number" min="1" class="form-control form-control-sm container-quantity" value="1">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small">Available Stock</label>
+            <div class="badge bg-info fs-6 available-stock">-</div>
+          </div>
+          <div class="col-md-1">
+            <label class="form-label small">&nbsp;</label>
+            <button type="button" class="btn btn-danger btn-sm d-block remove-container-btn">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Container Fill Progress -->
+    <div class="progress mb-3" style="display: none;" id="containerProgress">
+      <div class="progress-bar" role="progressbar" style="width: 0%">0%</div>
+    </div>
+
+    <div id="containerMessage" class="text-muted" style="display: none;"></div>
+
+    <!-- Containment Progress -->
+    <div class="mt-4">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <label class="form-label mb-0">Containment Progress:</label>
+        <span class="badge bg-primary" id="containmentPercent">0%</span>
+      </div>
+      <div class="progress" style="height: 25px;">
+        <div class="progress-bar bg-warning" role="progressbar" 
+          style="width: 0%"
+          id="containmentProgressBar">0%</div>
+      </div>
+      <small class="form-text text-muted mt-1" id="liveContainmentMessage"></small>
+    </div>
+
+    <!-- Warnings -->
+    <div class="alert alert-warning mt-3" id="containmentIssue" style="display: none;">
+      <i class="fas fa-exclamation-triangle"></i>
+      <span id="containmentIssueText"></span>
+      <hr>
+      <small class="text-muted">
+        <i class="fas fa-info-circle"></i> 
+        You can still start the batch - uncontained product will need manual handling
+      </small>
+    </div>
+
+    <div class="alert alert-danger mt-3" id="noContainersMessage" style="display: none;">
+      <i class="fas fa-exclamation-circle"></i>
+      No containers available for this recipe.
+      <hr>
+      <div class="d-flex justify-content-between align-items-center">
+        <small class="text-muted">
+          <i class="fas fa-info-circle"></i> 
+          You can still start the batch with manual containment
+        </small>
+        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('requiresContainers').click()">
+          <i class="fas fa-times"></i> Disable Container Requirement
+        </button>
+      </div>
+    </div>
+  </div>
 </div>

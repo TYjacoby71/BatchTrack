@@ -58,7 +58,7 @@ class PlanProductionApp {
                 console.log('🔍 SCALE DEBUG: Scale changed from', this.scale, 'to', newScale);
                 this.scale = newScale;
                 this.updateProjectedYield();
-
+                
                 // Update container plan if containers are required
                 if (this.requiresContainers) {
                     console.log('🔍 SCALE DEBUG: Updating container plan for new scale');
@@ -194,48 +194,5 @@ class PlanProductionApp {
 
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Plan production JavaScript loaded');
-
-    // Ensure all required elements exist before initializing
-    const requiredElements = [
-        'batchConfigCard',
-        'containerCard',
-        'stockCheckBtn',
-        'requiresContainersToggle'
-    ];
-
-    let missingElements = [];
-    requiredElements.forEach(id => {
-        if (!document.getElementById(id)) {
-            missingElements.push(id);
-        }
-    });
-
-    if (missingElements.length > 0) {
-        console.error('Missing required elements:', missingElements);
-        return;
-    }
-
-    // Initialize the main app
-    const app = new PlanProductionApp();
-    window.planProductionApp = app; // Make it globally accessible for debugging
-
-    // Add explicit container toggle handler as backup
-    const containerToggle = document.getElementById('requiresContainersToggle');
-    if (containerToggle) {
-        containerToggle.addEventListener('change', function() {
-            const containerCard = document.getElementById('containerCard');
-            if (containerCard) {
-                containerCard.style.display = this.checked ? 'block' : 'none';
-                console.log('Container card toggled:', this.checked);
-            }
-        });
-    }
-
-    // Ensure stock check button is clickable
-    const stockBtn = document.getElementById('stockCheckBtn');
-    if (stockBtn) {
-        stockBtn.style.cursor = 'pointer';
-        stockBtn.removeAttribute('disabled');
-    }
+    window.planProductionApp = new PlanProductionApp();
 });

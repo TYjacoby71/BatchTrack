@@ -1,61 +1,59 @@
-
-<div class="card mb-4" id="batchConfigCard">
+<div class="card mb-4">
     <div class="card-header">
         <h5 class="mb-0">
             <i class="fas fa-cogs"></i> Batch Configuration
         </h5>
     </div>
     <div class="card-body">
-        <form id="batchPlanningForm">
-            <!-- Batch Type Selection -->
-            <div class="row mb-3">
-                <div class="col-md-6">
-                    <label for="batchType" class="form-label">Batch Type</label>
-                    <select class="form-select" id="batchType" name="batch_type" required>
-                        <option value="">Select batch type</option>
-                        <option value="production">Production Batch</option>
-                        <option value="test">Test Batch</option>
-                        <option value="sample">Sample Batch</option>
+        <div class="row g-3">
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label class="form-label fw-semibold">Batch Scale</label>
+                    <input type="number" 
+                           min="0.1" 
+                           step="0.1" 
+                           class="form-control" 
+                           id="batchScale"
+                           value="1.0"
+                           placeholder="1.0">
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label class="form-label fw-semibold">Projected Yield</label>
+                    <div class="form-control bg-light border-0 d-flex align-items-center fw-normal" style="height: 38px;" id="projectedYield">{{ recipe.predicted_yield or 0 }} {{ recipe.predicted_yield_unit or 'units' }}</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label class="form-label fw-semibold">Batch Type <span class="text-danger">*</span></label>
+                    <select id="batchType" 
+                            class="form-select" 
+                            required>
+                        <option value="">Select Type</option>
+                        <option value="ingredient">Intermediate Ingredient</option>
+                        <option value="product">Final Product</option>
                     </select>
-                </div>
-                <div class="col-md-6">
-                    <label for="scaleInput" class="form-label">Production Scale</label>
-                    <div class="input-group">
-                        <input type="number" class="form-control" id="scaleInput" name="scale" 
-                               value="1.0" min="0.1" max="100" step="0.1" required>
-                        <span class="input-group-text">x</span>
-                    </div>
-                    <small class="form-text text-muted">Scale multiplier for the recipe</small>
-                </div>
-            </div>
-
-            <!-- Projected Yield Display -->
-            <div class="row mb-3">
-                <div class="col-12">
-                    <label class="form-label">Projected Yield</label>
-                    <div class="p-2 bg-light rounded">
-                        <span id="projectedYield" class="fw-bold">
-                            <!-- Will be calculated by JavaScript -->
-                        </span>
+                    <div class="invalid-feedback" id="batchTypeError" style="display: none;">
+                        Please select a batch type
                     </div>
                 </div>
             </div>
-
-            <!-- Container Requirements Toggle -->
-            <div class="row mb-3">
-                <div class="col-12">
-                    <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" id="requiresContainersToggle" 
-                               name="requires_containers">
-                        <label class="form-check-label" for="requiresContainersToggle">
-                            This batch requires specific containers
-                        </label>
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label class="form-label fw-semibold">Container Options</label>
+                    <div class="form-control bg-light border-0 d-flex align-items-center" style="height: 38px;">
+                        <div class="form-check form-switch mb-0">
+                            <input type="checkbox" 
+                                   id="requiresContainers" 
+                                   class="form-check-input">
+                            <label class="form-check-label fw-normal" for="requiresContainers">
+                                <i class="fas fa-box me-1"></i> Require Containers
+                            </label>
+                        </div>
                     </div>
-                    <small class="form-text text-muted">
-                        Enable this if you need to select specific containers for storage
-                    </small>
                 </div>
             </div>
-        </form>
+        </div>
     </div>
 </div>
