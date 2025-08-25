@@ -111,7 +111,9 @@ def upgrade():
                 tags, description, is_active, is_product_active, is_discontinued,
                 created_at, updated_at, created_by, supplier_name, supplier_sku, supplier_cost,
                 weight, weight_unit, dimensions, barcode, upc, quality_status, compliance_status,
-                quality_checked_by, quality_checked_at, location_id, location_name,
+                quality_checked_by, quality_checked_at, 
+                CASE WHEN location_id ~ '^[0-9]+$' THEN location_id::INTEGER ELSE NULL END as location_id, 
+                location_name,
                 temperature_at_time, shopify_product_id, shopify_variant_id, etsy_listing_id,
                 amazon_asin, marketplace_sync_status, marketplace_last_sync, expiration_date,
                 is_perishable, shelf_life_days, organization_id
