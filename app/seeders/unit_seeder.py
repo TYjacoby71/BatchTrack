@@ -1,4 +1,3 @@
-
 from ..models import Unit
 from ..extensions import db
 from ..utils.timezone_utils import TimezoneUtils
@@ -7,11 +6,11 @@ def seed_units():
     from flask import current_app
     from ..models import Unit
     from ..extensions import db
-    
+
     # Ensure we're in an application context
     if not current_app:
         raise RuntimeError("seed_units() must be called within Flask application context")
-    
+
     units = [
         # Weight Units
         {"name": "gram", "symbol": "g", "unit_type": "weight", "base_unit": "gram", "conversion_factor": 1.0, "is_custom": False, "is_mapped": True, "created_by": None},
@@ -43,10 +42,10 @@ def seed_units():
         {"name": "meter", "symbol": "m", "unit_type": "length", "base_unit": "cm", "conversion_factor": 100.0, "is_custom": False, "is_mapped": True, "created_by": None},
 
         # Area Units
-        {"name": "sqcm", "symbol": "cm²", "unit_type": "area", "base_unit": "sqcm", "conversion_factor": 1.0, "is_custom": False, "is_mapped": True, "created_by": None},
-        {"name": "sqm", "symbol": "m²", "unit_type": "area", "base_unit": "sqcm", "conversion_factor": 10000.0, "is_custom": False, "is_mapped": True, "created_by": None},
-        {"name": "sqinch", "symbol": "in²", "unit_type": "area", "base_unit": "sqcm", "conversion_factor": 6.4516, "is_custom": False, "is_mapped": True, "created_by": None},
-        {"name": "sqft", "symbol": "ft²", "unit_type": "area", "base_unit": "sqcm", "conversion_factor": 929.03, "is_custom": False, "is_mapped": True, "created_by": None},
+        {"name": "sqcm", "symbol": "cm2", "unit_type": "area", "base_unit": "sqcm", "conversion_factor": 1.0, "is_custom": False, "is_mapped": True, "created_by": None},
+        {"name": "sqm", "symbol": "m2", "unit_type": "area", "base_unit": "sqcm", "conversion_factor": 10000.0, "is_custom": False, "is_mapped": True, "created_by": None},
+        {"name": "sqinch", "symbol": "in2", "unit_type": "area", "base_unit": "sqcm", "conversion_factor": 6.4516, "is_custom": False, "is_mapped": True, "created_by": None},
+        {"name": "sqft", "symbol": "ft2", "unit_type": "area", "base_unit": "sqcm", "conversion_factor": 929.03, "is_custom": False, "is_mapped": True, "created_by": None},
         {"name": "sqyard", "symbol": "yd²", "unit_type": "area", "base_unit": "sqcm", "conversion_factor": 8361.27, "is_custom": False, "is_mapped": True, "created_by": None},
         {"name": "acre", "symbol": "acre", "unit_type": "area", "base_unit": "sqcm", "conversion_factor": 40468564.0, "is_custom": False, "is_mapped": True, "created_by": None},
 
@@ -74,7 +73,7 @@ def seed_units():
     ]
 
     print(f"=== Seeding {len(units)} standard units ===")
-    
+
     # Seed regular units
     added_count = 0
     for unit_data in units:
@@ -82,7 +81,7 @@ def seed_units():
             unit = Unit(**unit_data)
             db.session.add(unit)
             added_count += 1
-            
+
     try:
         db.session.commit()
         print(f"✅ Added {added_count} new units")
