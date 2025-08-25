@@ -1,4 +1,12 @@
 
+"""
+FIFO Batch Analysis Routes
+
+These routes provide FIFO breakdown and freshness analysis for batches.
+This functionality is essential for tracking ingredient usage and freshness
+in completed batches. DO NOT REMOVE - this is batch analytics, not stock checking.
+"""
+
 from flask import Blueprint, jsonify, request
 from flask_login import login_required
 from ...models import db, InventoryItem, InventoryHistory, Batch, BatchIngredient, ExtraBatchIngredient, BatchContainer, ExtraBatchContainer

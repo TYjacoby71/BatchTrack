@@ -12,33 +12,8 @@ logger = logging.getLogger(__name__)
 # Create the blueprint
 stock_api_bp = Blueprint('stock_api', __name__)
 
-@stock_api_bp.route('/stock-check', methods=['POST'])
-@login_required
-@permission_required('batch_production.create')
-def check_stock():
-    """Check stock availability for items"""
-    try:
-        data = request.get_json()
-        if not data:
-            return jsonify({'success': False, 'error': 'No data provided'}), 400
-
-        items = data.get('items', [])
-        organization_id = current_user.organization_id if current_user.is_authenticated else None
-
-        # Use the Universal Stock Check Service
-        uscs = UniversalStockCheckService(organization_id=organization_id)
-        result = uscs.check_multiple_items(items)
-
-        if not isinstance(result, dict):
-            result = {'stock_check': [], 'status': 'error', 'message': 'Invalid result format'}
-
-        # Always return 200 OK for successful stock checks, even if ingredients are insufficient
-        # The frontend will handle displaying the results appropriately
-        return jsonify(result), 200
-
-    except Exception as e:
-        current_app.logger.error(f"Stock check error: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+# Stock check functionality is now internal only
+# Recipe stock checking is handled through the production planning service
 
 
 @stock_api_bp.route('/stock-check/recipe/<int:recipe_id>', methods=['POST'])

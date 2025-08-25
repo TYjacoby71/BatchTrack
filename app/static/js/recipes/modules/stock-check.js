@@ -40,14 +40,15 @@ export class StockCheckManager {
         stockCheckBtn.disabled = true;
 
         try {
-            // Use the dedicated stock check API endpoint that calls USCS ingredient handler
-            const response = await fetch(`/api/stock-check/recipe/${this.main.recipe.id}`, {
+            // Use production planning service for internal stock validation
+            const response = await fetch(`/api/production/validate-stock`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': this.main.getCSRFToken()
                 },
                 body: JSON.stringify({
+                    recipe_id: this.main.recipe.id,
                     scale: this.main.scale
                 })
             });
