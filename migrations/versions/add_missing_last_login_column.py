@@ -2,7 +2,7 @@
 """add missing last_login column
 
 Revision ID: add_missing_last_login_column
-Revises: fix_product_sku_id_autoincrement
+Revises: add_batch_id_to_inventory_lot
 Create Date: 2025-08-25 16:55:00.000000
 
 """
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = 'add_missing_last_login_column'
-down_revision = 'fix_product_sku_id_autoincrement'
+down_revision = 'add_batch_id_to_inventory_lot'
 branch_labels = None
 depends_on = None
 
