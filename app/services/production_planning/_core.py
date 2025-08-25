@@ -138,7 +138,11 @@ def analyze_production_feasibility(
     if insufficient_ingredients:
         issues.append(f"{len(insufficient_ingredients)} ingredients have insufficient stock")
         recommendations.append("Restock insufficient ingredients before production")
+        # If we have insufficient ingredients, we can't proceed
+        # We still want to return the stock check results, so we don't raise an error here.
+        # The status will reflect the insufficient ingredients.
         return ProductionStatus.INSUFFICIENT_INGREDIENTS, issues, recommendations
+
 
     # Check container availability  
     if request.include_container_analysis and (not container_strategy or not container_strategy.selected_containers):

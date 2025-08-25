@@ -38,6 +38,10 @@ def check_stock():
         uscs = UniversalStockCheckService()
         result = uscs.check_recipe_stock(recipe, scale)
 
+        # Ensure we always return a valid response structure
+        if not isinstance(result, dict):
+            result = {'stock_check': [], 'status': 'error', 'message': 'Invalid result format'}
+
         return jsonify(result)
 
     except Exception as e:
