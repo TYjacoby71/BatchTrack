@@ -42,7 +42,9 @@ def check_stock():
         if not isinstance(result, dict):
             result = {'stock_check': [], 'status': 'error', 'message': 'Invalid result format'}
 
-        return jsonify(result)
+        # Always return 200 OK for successful stock checks, even if ingredients are insufficient
+        # The frontend will handle displaying the results appropriately
+        return jsonify(result), 200
 
     except Exception as e:
         current_app.logger.error(f"Stock check error: {e}")
