@@ -6,26 +6,59 @@ export class StockCheckManager {
     }
 
     bindEvents() {
+        console.log('🔍 STOCK CHECK DEBUG: Binding events...');
         const stockCheckBtn = document.getElementById('stockCheckBtn');
+        console.log('🔍 STOCK CHECK DEBUG: Stock check button found:', !!stockCheckBtn);
+        
         if (stockCheckBtn) {
-            stockCheckBtn.addEventListener('click', () => this.performStockCheck());
+            stockCheckBtn.addEventListener('click', () => {
+                console.log('🔍 STOCK CHECK DEBUG: Button clicked!');
+                this.performStockCheck();
+            });
+            console.log('🔍 STOCK CHECK DEBUG: Event listener added successfully');
+        } else {
+            console.error('🚨 STOCK CHECK ERROR: Stock check button not found in DOM');
         }
     }
 
     async performStockCheck() {
+        console.log('🔍 STOCK CHECK DEBUG: performStockCheck called');
+        
         if (!this.main.recipe) {
             console.warn('🔍 STOCK CHECK: No recipe available');
+            alert('No recipe loaded');
             return;
         }
 
         console.log('🔍 STOCK CHECK: Starting stock check for recipe', this.main.recipe.id, 'scale:', this.main.scale);
 
+        // Show loading state
+        const stockCheckBtn = document.getElementById('stockCheckBtn');
+        const originalText = stockCheckBtn.innerHTML;
+        stockCheckBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking...';
+        stockCheckBtn.disabled = true;
+
         try {
-            this.stockCheckResults = await this.main.apiCall('/api/stock-check', {
-                recipe_id: this.main.recipe.id,
-                scale: this.main.scale
+            // Use the recipe plan route which includes stock checking
+            const response = await fetch(`/recipes/${this.main.recipe.id}/plan`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': this.main.getCSRFToken()
+                },
+                body: JSON.stringify({
+                    scale: this.main.scale,
+                    check_containers: false
+                })
             });
 
+            console.log('🔍 STOCK CHECK: Response status:', response.status);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            this.stockCheckResults = await response.json();
             console.log('🔍 STOCK CHECK: Results received:', this.stockCheckResults);
 
             if (this.stockCheckResults.success) {
@@ -35,31 +68,57 @@ export class StockCheckManager {
             }
         } catch (error) {
             console.error('🚨 STOCK CHECK ERROR:', error);
-            this.displayStockError('Network error during stock check');
+            this.displayStockError(`Network error during stock check: ${error.message}`);
+        } finally {
+            // Restore button state
+            stockCheckBtn.innerHTML = originalText;
+            stockCheckBtn.disabled = false;
         }
     }
 
     displayStockResults() {
+        console.log('🔍 STOCK CHECK: Displaying results');
         const stockResults = document.getElementById('stockCheckResults');
         if (!stockResults || !this.stockCheckResults?.success) {
+            console.warn('🔍 STOCK CHECK: No results element or unsuccessful result');
             return;
         }
 
-        const { ingredients, all_available } = this.stockCheckResults;
+        console.log('🔍 STOCK CHECK: Full results object:', this.stockCheckResults);
+
+        // Handle the actual structure from the production planning service
+        const stockData = this.stockCheckResults.stock_results || [];
+        const allAvailable = this.stockCheckResults.all_available || false;
+
+        console.log('🔍 STOCK CHECK: Stock data:', stockData);
+        console.log('🔍 STOCK CHECK: All available:', allAvailable);
+
+        if (!stockData || stockData.length === 0) {
+            stockResults.innerHTML = '<div class="alert alert-info">No ingredients found for this recipe.</div>';
+            return;
+        }
 
         let html = '<div class="table-responsive"><table class="table table-sm">';
         html += '<thead><tr><th>Ingredient</th><th>Required</th><th>Available</th><th>Status</th></tr></thead><tbody>';
 
-        ingredients.forEach(ingredient => {
-            const status = ingredient.available >= ingredient.required ? 'Available' : 'Low Stock';
-            const statusClass = ingredient.available >= ingredient.required ? 'text-success' : 'text-warning';
+        stockData.forEach(ingredient => {
+            console.log('🔍 STOCK CHECK: Processing ingredient:', ingredient);
+            
+            const needed = ingredient.needed_amount || ingredient.required_quantity || 0;
+            const available = ingredient.available_quantity || 0;
+            const unit = ingredient.unit || ingredient.needed_unit || '';
+            const name = ingredient.ingredient_name || ingredient.name || 'Unknown';
+            const isAvailable = ingredient.available !== false && available >= needed;
+            
+            const status = isAvailable ? 'Available' : 'Insufficient';
+            const statusClass = isAvailable ? 'text-success' : 'text-warning';
 
             html += `
                 <tr>
-                    <td>${ingredient.name}</td>
-                    <td>${ingredient.required} ${ingredient.unit}</td>
-                    <td>${ingredient.available} ${ingredient.unit}</td>
-                    <td class="${statusClass}">${status}</td>
+                    <td>${name}</td>
+                    <td>${needed.toFixed(2)} ${unit}</td>
+                    <td>${available.toFixed(2)} ${unit}</td>
+                    <td class="${statusClass}"><i class="fas fa-${isAvailable ? 'check' : 'exclamation-triangle'}"></i> ${status}</td>
                 </tr>
             `;
         });
@@ -69,28 +128,32 @@ export class StockCheckManager {
 
         const statusElement = document.getElementById('stockCheckStatus');
         if (statusElement) {
-            statusElement.className = `alert ${all_available ? 'alert-success' : 'alert-warning'}`;
-            statusElement.innerHTML = all_available
-                ? '<i class="fas fa-check-circle"></i> All ingredients available'
-                : '<i class="fas fa-exclamation-triangle"></i> Some ingredients unavailable';
+            statusElement.className = `alert ${allAvailable ? 'alert-success' : 'alert-warning'}`;
+            statusElement.innerHTML = allAvailable
+                ? '<i class="fas fa-check-circle"></i> All ingredients available for production'
+                : '<i class="fas fa-exclamation-triangle"></i> Some ingredients have insufficient stock';
         }
 
-        if (this.main && this.main.validationManager && typeof this.main.validationManager.validateForm === 'function') {
-            this.main.validationManager.validateForm();
+        // Update validation
+        if (this.main && this.main.validationManager && typeof this.main.validationManager.updateValidation === 'function') {
+            this.main.validationManager.updateValidation();
         } else {
-            console.warn("ValidationManager or validateForm method not available on mainManager.");
+            console.warn("🔍 STOCK CHECK: ValidationManager or updateValidation method not available");
         }
     }
 
     displayStockError(message) {
-        const stockResults = document.getElementById('stockResults');
+        console.error('🚨 STOCK CHECK ERROR: Displaying error:', message);
+        
+        const stockResults = document.getElementById('stockCheckResults');
         if (!stockResults) {
-            console.error('stockResults element not found');
+            console.error('🚨 STOCK CHECK ERROR: stockCheckResults element not found');
             return;
         }
+        
         const statusElement = document.getElementById('stockCheckStatus');
         if (!statusElement) {
-            console.error('stockCheckStatus element not found');
+            console.error('🚨 STOCK CHECK ERROR: stockCheckStatus element not found');
             return;
         }
 
@@ -100,8 +163,11 @@ export class StockCheckManager {
             </div>
         `;
 
-        console.error('Stock error:', message);
-        statusElement.innerHTML = `<div class="alert alert-danger"><i class="fas fa-exclamation-circle"></i> ${message}</div>`;
+        statusElement.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-circle"></i> Stock check failed: ${message}
+            </div>
+        `;
     }
 }
 
