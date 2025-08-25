@@ -10,7 +10,7 @@ from typing import Dict, Any, List
 from flask_login import current_user
 
 from ...models import Recipe, RecipeIngredient
-from ..stock_check import UniversalStockCheckService
+from ..stock_check.core import UniversalStockCheckService
 from ..stock_check.types import StockCheckRequest, InventoryCategory, StockStatus
 
 logger = logging.getLogger(__name__)
@@ -38,12 +38,15 @@ def check_recipe_stock(recipe: Recipe, scale: float = 1.0) -> Dict[str, Any]:
 
         # Build USCS requests for all recipe ingredients
         requests = []
+        organization_id = current_user.organization_id if current_user.is_authenticated else None
+        
         for recipe_ingredient in recipe.recipe_ingredients:
             requests.append(StockCheckRequest(
                 item_id=recipe_ingredient.inventory_item_id,
                 quantity_needed=recipe_ingredient.quantity * scale,
                 unit=recipe_ingredient.unit,
-                category=InventoryCategory.INGREDIENT
+                category=InventoryCategory.INGREDIENT,
+                organization_id=organization_id
             ))
 
         # Use USCS for bulk checking
@@ -112,12 +115,15 @@ def get_recipe_ingredients_for_stock_check(recipe_id: int, scale: float = 1.0) -
             return []
 
         requests = []
+        organization_id = current_user.organization_id if current_user.is_authenticated else None
+        
         for recipe_ingredient in recipe.recipe_ingredients:
             requests.append(StockCheckRequest(
                 item_id=recipe_ingredient.inventory_item_id,
                 quantity_needed=recipe_ingredient.quantity * scale,
                 unit=recipe_ingredient.unit,
-                category=InventoryCategory.INGREDIENT
+                category=InventoryCategory.INGREDIENT,
+                organization_id=organization_id
             ))
 
         return requests

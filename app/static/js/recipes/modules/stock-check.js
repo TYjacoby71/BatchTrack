@@ -40,8 +40,8 @@ export class StockCheckManager {
         stockCheckBtn.disabled = true;
 
         try {
-            // Use the dedicated stock check API endpoint
-            const response = await fetch('/api/check-stock', {
+            // Use the recipe stock check endpoint (internally uses USCS)
+            const response = await fetch('/stock/check', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
