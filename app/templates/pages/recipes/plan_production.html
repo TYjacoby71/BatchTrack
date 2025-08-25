@@ -35,7 +35,28 @@
             {% include 'components/production/container_management_card.html' %}
 
             <!-- Stock Check Card -->
-            {% include 'components/production/stock_check_card.html' %}
+                    <div class="card mb-4" id="stockCheckCard">
+                        <div class="card-header">
+                            <h5 class="mb-0">
+                                <i class="fas fa-clipboard-check"></i> Stock Availability Check
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted">Check if you have enough ingredients in stock for this recipe at the current scale.</p>
+
+                            <button type="button" class="btn btn-primary" id="stockCheckBtn">
+                                <i class="fas fa-search"></i> Check Stock Availability
+                            </button>
+
+                            <div id="stockCheckResults" class="mt-3">
+                                <!-- Results will be populated here -->
+                            </div>
+
+                            <div id="stockCheckStatus" class="mt-3">
+                                <!-- Status will be shown here -->
+                            </div>
+                        </div>
+                    </div>
 
             <!-- Batch Actions -->
             {% include 'components/production/batch_actions.html' %}
