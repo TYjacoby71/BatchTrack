@@ -43,7 +43,7 @@ def check_stock():
 
 @stock_api_bp.route('/stock-check/recipe/<int:recipe_id>', methods=['POST'])
 @login_required
-@permission_required('batch_production.create')
+@permission_required('recipes.view')
 def check_recipe_ingredients(recipe_id):
     """Check stock availability for all ingredients in a recipe using USCS ingredient handler"""
     try:
