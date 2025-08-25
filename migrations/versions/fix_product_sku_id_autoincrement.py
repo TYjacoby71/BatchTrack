@@ -43,7 +43,6 @@ def upgrade():
                 variant_id INTEGER,
                 size_label VARCHAR(32),
                 sku_code VARCHAR(64),
-                sku VARCHAR(64),
                 sku_name VARCHAR(128),
                 quantity_override FLOAT,
                 unit VARCHAR(32),
@@ -95,7 +94,7 @@ def upgrade():
         # Copy data from old table to new table (excluding id to let autoincrement work)
         connection.execute(text("""
             INSERT INTO product_sku_temp (
-                inventory_item_id, product_id, variant_id, size_label, sku_code, sku, sku_name,
+                inventory_item_id, product_id, variant_id, size_label, sku_code, sku_name,
                 quantity_override, unit, low_stock_threshold, fifo_id, batch_id, container_id,
                 retail_price, wholesale_price, profit_margin_target, category, subcategory,
                 tags, description, is_active, is_product_active, is_discontinued,
@@ -107,7 +106,7 @@ def upgrade():
                 is_perishable, shelf_life_days, organization_id
             )
             SELECT 
-                inventory_item_id, product_id, variant_id, size_label, sku_code, sku, sku_name,
+                inventory_item_id, product_id, variant_id, size_label, sku_code, sku_name,
                 quantity_override, unit, low_stock_threshold, fifo_id, batch_id, container_id,
                 retail_price, wholesale_price, profit_margin_target, category, subcategory,
                 tags, description, is_active, is_product_active, is_discontinued,
