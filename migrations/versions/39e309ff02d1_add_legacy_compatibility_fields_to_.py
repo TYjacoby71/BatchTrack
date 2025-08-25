@@ -73,17 +73,35 @@ def upgrade():
     print("=== Legacy compatibility fields migration completed ===")
 
 def downgrade():
-    """Remove the legacy compatibility fields"""
+    """Remove legacy compatibility fields"""
     print("=== Removing legacy compatibility fields ===")
 
-    with op.batch_alter_table('subscription_tier', schema=None) as batch_op:
-        # Drop columns
-        try:
-            batch_op.drop_column('stripe_price_id_yearly')
-            batch_op.drop_column('stripe_price_id_monthly')
-            batch_op.drop_column('stripe_price_id')
-            batch_op.drop_column('stripe_product_id')
-        except Exception as e:
-            print(f"   ⚠️  Could not remove some columns: {e}")
+    # Helper function to check if column exists
+    from sqlalchemy import inspect
+    connection = op.get_bind()
+    inspector = inspect(connection)
 
-    print("✅ Downgrade completed")
+    def column_exists(table_name, column_name):
+        columns = [col['name'] for col in inspector.get_columns(table_name)]
+        return column_name in columns
+
+    # Remove the columns only if they exist
+    columns_to_remove = ['stripe_price_id_yearly', 'stripe_price_id_monthly', 'stripe_price_id', 'whop_plan_id']
+    existing_columns = []
+
+    for col in columns_to_remove:
+        if column_exists('subscription_tier', col):
+            existing_columns.append(col)
+            print(f"   Will remove column: {col}")
+        else:
+            print(f"   Column {col} does not exist - skipping")
+
+    if existing_columns:
+        with op.batch_alter_table('subscription_tier', schema=None) as batch_op:
+            for col in existing_columns:
+                batch_op.drop_column(col)
+        print(f"   ✅ Removed {len(existing_columns)} columns")
+    else:
+        print("   ✅ No columns to remove")
+
+    print("✅ Legacy compatibility fields removal completed")
