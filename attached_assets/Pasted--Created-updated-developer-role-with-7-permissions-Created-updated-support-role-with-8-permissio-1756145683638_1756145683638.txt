@@ -1,11 +1,3 @@
-Updated: app.integrations.api_access
-  Updated: app.ai.recipe_optimization
-  Updated: app.ai.demand_forecasting
-  Updated: app.ai.quality_insights
-✅ Developer permissions seeded successfully!
-🔧 Seeding developer roles...
-   Current developer roles in DB: 3
-✅ Created/updated system_admin role with 62 permissions
 ✅ Created/updated developer role with 7 permissions
 ✅ Created/updated support role with 8 permissions
 ✅ Developer roles seeded successfully! (Total: 3)
