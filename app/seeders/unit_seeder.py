@@ -42,12 +42,16 @@ def seed_units():
         {"name": "meter", "symbol": "m", "unit_type": "length", "base_unit": "cm", "conversion_factor": 100.0, "is_custom": False, "is_mapped": True, "created_by": None},
 
         # Area Units
-        {"name": "sqcm", "symbol": "cm2", "unit_type": "area", "base_unit": "sqcm", "conversion_factor": 1.0, "is_custom": False, "is_mapped": True, "created_by": None},
-        {"name": "sqm", "symbol": "m2", "unit_type": "area", "base_unit": "sqcm", "conversion_factor": 10000.0, "is_custom": False, "is_mapped": True, "created_by": None},
-        {"name": "sqinch", "symbol": "in2", "unit_type": "area", "base_unit": "sqcm", "conversion_factor": 6.4516, "is_custom": False, "is_mapped": True, "created_by": None},
-        {"name": "sqft", "symbol": "ft2", "unit_type": "area", "base_unit": "sqcm", "conversion_factor": 929.03, "is_custom": False, "is_mapped": True, "created_by": None},
+        {"name": "sqcm", "symbol": "cm²", "unit_type": "area", "base_unit": "sqcm", "conversion_factor": 1.0, "is_custom": False, "is_mapped": True, "created_by": None},
+        {"name": "sqmm", "symbol": "mm²", "unit_type": "area", "base_unit": "sqcm", "conversion_factor": 0.01, "is_custom": False, "is_mapped": True, "created_by": None},
+        {"name": "sqm", "symbol": "m²", "unit_type": "area", "base_unit": "sqcm", "conversion_factor": 10000.0, "is_custom": False, "is_mapped": True, "created_by": None},
+        {"name": "sqkm", "symbol": "km²", "unit_type": "area", "base_unit": "sqcm", "conversion_factor": 10000000000.0, "is_custom": False, "is_mapped": True, "created_by": None},
+        {"name": "sqinch", "symbol": "in²", "unit_type": "area", "base_unit": "sqcm", "conversion_factor": 6.4516, "is_custom": False, "is_mapped": True, "created_by": None},
+        {"name": "sqft", "symbol": "ft²", "unit_type": "area", "base_unit": "sqcm", "conversion_factor": 929.03, "is_custom": False, "is_mapped": True, "created_by": None},
         {"name": "sqyard", "symbol": "yd²", "unit_type": "area", "base_unit": "sqcm", "conversion_factor": 8361.27, "is_custom": False, "is_mapped": True, "created_by": None},
+        {"name": "sqmile", "symbol": "mi²", "unit_type": "area", "base_unit": "sqcm", "conversion_factor": 25899881103.36, "is_custom": False, "is_mapped": True, "created_by": None},
         {"name": "acre", "symbol": "acre", "unit_type": "area", "base_unit": "sqcm", "conversion_factor": 40468564.0, "is_custom": False, "is_mapped": True, "created_by": None},
+        {"name": "hectare", "symbol": "ha", "unit_type": "area", "base_unit": "sqcm", "conversion_factor": 100000000.0, "is_custom": False, "is_mapped": True, "created_by": None},
 
         # Cubic Volume Units
         {"name": "cubicinch", "symbol": "in³", "unit_type": "volume", "base_unit": "ml", "conversion_factor": 16.3871, "is_custom": False, "is_mapped": True, "created_by": None},
