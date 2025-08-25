@@ -36,7 +36,7 @@ def upgrade():
     op.drop_table('billing_snapshot')
     with op.batch_alter_table('batch', schema=None) as batch_op:
         batch_op.drop_constraint('batch_sku_id_fkey', type_='foreignkey')
-        batch_op.create_foreign_key(None, 'product_sku', ['sku_id'], ['inventory_item_id'])
+        batch_op.create_foreign_key(None, 'product_sku', ['sku_id'], ['id'])
         batch_op.drop_column('created_at')
         batch_op.drop_column('updated_at')
 
@@ -1305,6 +1305,8 @@ def downgrade():
         batch_op.add_column(sa.Column('container_name', sa.VARCHAR(length=100), autoincrement=False, nullable=False))
         batch_op.add_column(sa.Column('quantity_filled', sa.DOUBLE_PRECISION(precision=53), autoincrement=False, nullable=True))
         batch_op.add_column(sa.Column('container_unit', sa.VARCHAR(length=20), autoincrement=False, nullable=False))
+        batch_op.add_column(sa.Column('label_printed', sa.BOOLEAN(), autoincrement=False, nullable=True))
+        batch_op.add_column(sa.Column('qr_code', sa.VARCHAR(length=255), autoincrement=False, nullable=True))
         batch_op.add_column(sa.Column('container_size', sa.DOUBLE_PRECISION(precision=53), autoincrement=False, nullable=False))
         batch_op.add_column(sa.Column('created_at', postgresql.TIMESTAMP(), autoincrement=False, nullable=True))
         batch_op.drop_constraint(None, type_='foreignkey')
