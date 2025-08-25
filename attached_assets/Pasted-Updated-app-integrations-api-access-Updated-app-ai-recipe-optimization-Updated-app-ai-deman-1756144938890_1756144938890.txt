@@ -1,0 +1,44 @@
+Updated: app.integrations.api_access
+  Updated: app.ai.recipe_optimization
+  Updated: app.ai.demand_forecasting
+  Updated: app.ai.quality_insights
+✅ Developer permissions seeded successfully!
+🔧 Seeding developer roles...
+   Current developer roles in DB: 3
+✅ Created/updated system_admin role with 62 permissions
+✅ Created/updated developer role with 7 permissions
+✅ Created/updated support role with 8 permissions
+✅ Developer roles seeded successfully! (Total: 3)
+   ✅ system_admin role confirmed (ID: 1)
+=== Seeding Organization System Roles ===
+ℹ️  organization_owner system role already exists
+✅ Organization system roles seeded successfully!
+✅ Assigned 0 permissions to fresh organization owner role
+✅ Cleaned up old permissions
+✅ Consolidated permissions system seeded successfully!
+
+📊 Summary:
+Organization permissions: 44
+Developer permissions: 62
+✅ Permissions, organization roles, and developer roles seeded
+=== Seeding Exempt Subscription Tier Only ===
+=== Seeding Subscription Tiers (Exempt Only) ===
+✅ Creating exempt tier
+⚠️  Subscription seeding issue: property 'key' of 'SubscriptionTier' object has no setter
+   Continuing with remaining steps...
+=== Seeding 45 standard units ===
+⚠️  Unit seeding issue: 'ascii' codec can't encode character '\xb2' in position 2: ordinal not in range(128)
+   Continuing with remaining steps...
+=== Step 2: Organization-dependent setup ===
+ℹ️  Developer roles should now exist for user assignment...
+=== Creating Default Organization with Essential Users ===
+⚠️  User/organization seeding issue: This Session's transaction has been rolled back due to a previous exception during flush. To begin a new transaction with this Session, first issue Session.rollback(). Original exception was: 'ascii' codec can't encode character '\xb2' in position 2: ordinal not in range(128) (Background on this error at: https://sqlalche.me/e/20/7s2a)
+   Continuing with remaining steps...
+=== Step 3: Organization-specific data ===
+⚠️  Category seeding issue: This Session's transaction has been rolled back due to a previous exception during flush. To begin a new transaction with this Session, first issue Session.rollback(). Original exception was: 'ascii' codec can't encode character '\xb2' in position 2: ordinal not in range(128) (Background on this error at: https://sqlalche.me/e/20/7s2a)
+✅ Production seeding complete!
+🔒 Login: admin/admin (CHANGE IMMEDIATELY)
+📝 Note: This command can be run multiple times safely
+📊 Database status:
+   - Status check failed: This Session's transaction has been rolled back due to a previous exception during flush. To begin a new transaction with this Session, first issue Session.rollback(). Original exception was: 'ascii' codec can't encode character '\xb2' in position 2: ordinal not in range(128) (Background on this error at: https://sqlalche.me/e/20/7s2a)
+~/workspace$ 
