@@ -73,27 +73,8 @@ def get_dashboard_alerts():
         logging.error(f"Error getting dashboard alerts: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@api_bp.route('/stock-check', methods=['POST'])
-@login_required
-def api_stock_check():
-    """API endpoint for stock checking from plan production page"""
-    try:
-        data = request.get_json()
-        recipe_id = data.get('recipe_id')
-        scale = float(data.get('scale', 1.0))
-
-        if not recipe_id:
-            return jsonify({'success': False, 'error': 'Recipe ID required'}), 400
-
-        # Use the production planning service for stock validation
-        from app.services.production_planning import validate_ingredient_availability
-        result = validate_ingredient_availability(recipe_id, scale)
-
-        return jsonify(result)
-
-    except Exception as e:
-        logger.error(f"Error in API stock check: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+# Stock checking is now handled by the dedicated stock_routes.py blueprint
+# All stock check requests should use /api/check-stock endpoint
 
 # Import sub-blueprints to register their routes
 from .stock_routes import stock_api_bp
