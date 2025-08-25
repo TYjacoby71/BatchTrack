@@ -8,6 +8,7 @@ Supports ingredients, containers, products, and future categories like consumabl
 from .core import UniversalStockCheckService
 from .handlers import IngredientHandler, ContainerHandler, ProductHandler
 from .types import StockCheckRequest, StockCheckResult, InventoryCategory
+from . import bulk_operations
 
 # Stock check service package
 from .core import UniversalStockCheckService
@@ -24,5 +25,6 @@ __all__ = [
     'ProductHandler',
     'StockCheckRequest',
     'StockCheckResult', 
-    'InventoryCategory'
+    'InventoryCategory',
+    'bulk_operations'
 ]

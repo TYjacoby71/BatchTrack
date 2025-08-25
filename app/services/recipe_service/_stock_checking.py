@@ -1,4 +1,3 @@
-
 """
 Recipe Stock Checking Operations
 
@@ -19,11 +18,11 @@ logger = logging.getLogger(__name__)
 def check_recipe_stock(recipe: Recipe, scale: float = 1.0) -> Dict[str, Any]:
     """
     Check stock for all ingredients in a recipe using USCS.
-    
+
     Args:
         recipe: Recipe object
         scale: Scale factor for the recipe
-        
+
     Returns:
         Dictionary with stock check results
     """
@@ -39,7 +38,7 @@ def check_recipe_stock(recipe: Recipe, scale: float = 1.0) -> Dict[str, Any]:
         # Build USCS requests for all recipe ingredients
         requests = []
         organization_id = current_user.organization_id if current_user.is_authenticated else None
-        
+
         for recipe_ingredient in recipe.recipe_ingredients:
             requests.append(StockCheckRequest(
                 item_id=recipe_ingredient.inventory_item_id,
@@ -52,11 +51,11 @@ def check_recipe_stock(recipe: Recipe, scale: float = 1.0) -> Dict[str, Any]:
         # Use USCS for bulk checking
         uscs = UniversalStockCheckService()
         results = uscs.check_bulk_items(requests)
-        
+
         # Convert results to dictionaries
         stock_check_data = []
         has_insufficient = False
-        
+
         for result in results:
             result_dict = {
                 'item_id': result.item_id,
@@ -69,15 +68,15 @@ def check_recipe_stock(recipe: Recipe, scale: float = 1.0) -> Dict[str, Any]:
                 'formatted_needed': result.formatted_needed,
                 'formatted_available': result.formatted_available
             }
-            
+
             if hasattr(result, 'error_message') and result.error_message:
                 result_dict['error_message'] = result.error_message
-                
+
             if hasattr(result, 'conversion_details') and result.conversion_details:
                 result_dict['conversion_details'] = result.conversion_details
-                
+
             stock_check_data.append(result_dict)
-            
+
             if result.status in [StockStatus.NEEDED, StockStatus.OUT_OF_STOCK]:
                 has_insufficient = True
 
@@ -101,11 +100,11 @@ def get_recipe_ingredients_for_stock_check(recipe_id: int, scale: float = 1.0) -
     """
     Get recipe ingredients formatted as stock check requests.
     This is used by bulk stock checking systems.
-    
+
     Args:
         recipe_id: Recipe ID
         scale: Scale factor
-        
+
     Returns:
         List of StockCheckRequest objects
     """
@@ -116,7 +115,7 @@ def get_recipe_ingredients_for_stock_check(recipe_id: int, scale: float = 1.0) -
 
         requests = []
         organization_id = current_user.organization_id if current_user.is_authenticated else None
-        
+
         for recipe_ingredient in recipe.recipe_ingredients:
             requests.append(StockCheckRequest(
                 item_id=recipe_ingredient.inventory_item_id,
