@@ -1,0 +1,474 @@
+Adding timestamp columns to custom_unit_mapping table...
+  ℹ️  created_at column already exists
+  ✅ Added updated_at column
+Adding timestamp columns to conversion_log table...
+  ✅ Added created_at column
+  ✅ Added updated_at column
+✅ Migration completed: Added missing timestamp columns
+INFO  [alembic.runtime.migration] Running upgrade add_unit_timestamps -> add_missing_created_at_columns, add missing created_at and updated_at columns to all models
+=== Adding missing timestamp columns to all models ===
+   Checking table: batch
+      ✅ Added created_at column
+      ✅ Added updated_at column
+   Checking table: billing_snapshot
+      ✅ Added created_at column
+      ✅ Added updated_at column
+   ⚠️  Skipping 'ingredient_category' - timestamps intentionally excluded
+   Checking table: inventory_item
+      ℹ️  created_at column already exists
+      ℹ️  updated_at column already exists
+      ✅ Table 'inventory_item' timestamp columns up to date
+   Checking table: permission
+      ✅ Added created_at column
+      ✅ Added updated_at column
+   Checking table: pricing_snapshot
+      ✅ Added created_at column
+      ✅ Added updated_at column
+   Checking table: product
+      ℹ️  created_at column already exists
+      ℹ️  updated_at column already exists
+      ✅ Table 'product' timestamp columns up to date
+   Checking table: product_sku
+      ℹ️  created_at column already exists
+      ℹ️  updated_at column already exists
+      ✅ Table 'product_sku' timestamp columns up to date
+   Checking table: product_sku_history
+      ✅ Added created_at column
+      ✅ Added updated_at column
+   Checking table: product_variant
+      ℹ️  created_at column already exists
+      ℹ️  updated_at column already exists
+      ✅ Table 'product_variant' timestamp columns up to date
+   Checking table: recipe
+      ℹ️  created_at column already exists
+      ℹ️  updated_at column already exists
+      ✅ Table 'recipe' timestamp columns up to date
+   Checking table: recipe_ingredient
+      ✅ Added created_at column
+      ✅ Added updated_at column
+   Checking table: reservation
+      ℹ️  created_at column already exists
+      ✅ Added updated_at column
+   Checking table: role
+      ℹ️  created_at column already exists
+      ℹ️  updated_at column already exists
+      ✅ Table 'role' timestamp columns up to date
+   ⚠️  Table 'statistics' doesn't exist, skipping
+   Checking table: subscription_tier
+      ℹ️  created_at column already exists
+      ℹ️  updated_at column already exists
+      ✅ Table 'subscription_tier' timestamp columns up to date
+   Checking table: user_role_assignment
+      ✅ Added created_at column
+      ✅ Added updated_at column
+   Checking table: developer_role
+      ✅ Added created_at column
+      ✅ Added updated_at column
+   Checking table: organization
+      ℹ️  created_at column already exists
+      ℹ️  updated_at column already exists
+      ✅ Table 'organization' timestamp columns up to date
+   Checking table: user
+      ℹ️  created_at column already exists
+      ℹ️  updated_at column already exists
+      ✅ Table 'user' timestamp columns up to date
+   Checking table: custom_unit_mapping
+      ℹ️  created_at column already exists
+      ℹ️  updated_at column already exists
+      ✅ Table 'custom_unit_mapping' timestamp columns up to date
+   Checking table: conversion_log
+      ℹ️  created_at column already exists
+      ℹ️  updated_at column already exists
+      ✅ Table 'conversion_log' timestamp columns up to date
+   Checking table: tag
+      ✅ Added created_at column
+      ✅ Added updated_at column
+✅ Migration completed: Added 19 timestamp columns across all tables
+⚠️  All timestamp columns added as nullable for safety
+INFO  [alembic.runtime.migration] Running upgrade add_missing_created_at_columns -> add_missing_table_schemas, add missing table schemas for billing_snapshot, pricing_snapshot, and statistics
+=== Adding missing table schemas ===
+   Creating billing_snapshots table...
+   Creating pricing_snapshots table...
+   statistics table already exists - skipping
+   Adding timestamps to existing organization_stats table...
+✅ Missing table schemas processed successfully
+⚠️  Note: Skipping ingredient_category as requested
+INFO  [alembic.runtime.migration] Running upgrade add_missing_table_schemas -> fix_password_hash_length, fix password_hash column length
+=== Fixing password_hash column length ===
+   Updating user.password_hash column length from 120 to 255...
+   ✅ Updated password_hash column to varchar(255)
+✅ Migration completed: password_hash column can now store longer hashes
+INFO  [alembic.runtime.migration] Running upgrade fix_password_hash_length -> 8b7aa70df87d, fix user_role_assignment constraints to allow NULL role_id for developer roles
+=== Fixing user_role_assignment constraints ===
+   Updating user_role_assignment.role_id to allow NULL...
+   ✅ Updated role_id column to allow NULL values
+   ✅ Added check constraint to ensure either role_id or developer_role_id is set
+✅ User role assignment constraints fixed successfully
+INFO  [alembic.runtime.migration] Running upgrade 8b7aa70df87d -> 9d2a5c7f8b1e, fix inventory history constraints
+=== Fixing inventory history constraints ===
+   ✅ inventory_history table already exists
+   Dropping unwanted quantity_before column...
+   ✅ Dropped quantity_before column using direct SQL
+   Adding missing column: remaining_quantity
+   Adding missing column: fifo_code
+   Adding missing column: expiration_date
+   Adding missing column: fifo_reference_id
+   Adding missing column: quantity_used
+   Adding missing column: is_perishable
+   Adding missing column: shelf_life_days
+   Updating remaining_quantity for existing records...
+   ✅ Updated remaining_quantity values
+   Cleaning up invalid data...
+   ✅ Cleaned up invalid data
+   ✅ Added constraint: ck_inventory_history_remaining_quantity_non_negative
+   ✅ Created index: idx_inventory_history_item_remaining
+   ✅ Created index: idx_inventory_history_fifo_code
+   ✅ Created index: idx_inventory_history_timestamp
+✅ Inventory history constraints fixed successfully
+INFO  [alembic.runtime.migration] Running upgrade 9d2a5c7f8b1e -> 1a2b3c4d5e6f, force drop unwanted columns
+=== Force dropping unwanted columns ===
+   Database type detected: postgresql
+   ℹ️  Column quantity_before does not exist
+   Attempting to drop column: quantity_after
+   ✅ Dropped constraints for quantity_after (PostgreSQL)
+   ✅ Dropped column: quantity_after (PostgreSQL)
+   Attempting to drop column: reason
+   ✅ Dropped constraints for reason (PostgreSQL)
+   ✅ Dropped column: reason (PostgreSQL)
+   Attempting to drop column: user_id
+   ✅ Dropped constraints for user_id (PostgreSQL)
+   ✅ Dropped column: user_id (PostgreSQL)
+   ✅ Added required column: created_by
+   ✅ Added required column: unit_cost
+=== Force drop completed ===
+INFO  [alembic.runtime.migration] Running upgrade 1a2b3c4d5e6f -> add_billing_columns_org, add billing columns to organization
+=== Adding billing columns to organization table ===
+   ✅ Organization table exists
+   ✅ Column subscription_tier_id already exists
+   Adding column: stripe_subscription_id
+   ✅ Added stripe_subscription_id
+   ✅ Column stripe_customer_id already exists
+   Adding column: billing_info
+   ✅ Added billing_info
+   Adding column: next_billing_date
+   ✅ Added next_billing_date
+   ✅ Column subscription_status already exists
+   Adding column: signup_source
+   ✅ Added signup_source
+   Adding column: promo_code
+   ✅ Added promo_code
+   Adding column: referral_code
+   ✅ Added referral_code
+   ✅ Column contact_email already exists
+   Adding foreign key constraint for subscription_tier_id...
+   ✅ Added foreign key constraint
+   Updating default subscription_status for existing records...
+   ✅ Updated subscription_status defaults
+✅ Billing columns migration completed
+INFO  [alembic.runtime.migration] Running upgrade add_billing_columns_org -> whop_integration, Add Whop integration fields to Organization
+INFO  [alembic.runtime.migration] Running upgrade whop_integration -> a1b2c3d4e5f6789012345678901234ab, Add Whop integration fields to SubscriptionTier
+INFO  [alembic.runtime.migration] Running upgrade a1b2c3d4e5f6789012345678901234ab -> 0e15af770cb3, simplify subscription tier model - remove billing fields
+=== Simplifying subscription tier model - removing billing fields ===
+   Checking developer_permission table...
+   ⚠️  developer_permission.updated_at does not exist - skipping
+   ⚠️  developer_permission.created_at does not exist - skipping
+   Checking developer_role table...
+   Dropping developer_role.updated_at
+   Dropping developer_role.created_at
+   Checking subscription_tier table...
+   ⚠️  subscription_tier.whop_plan_id does not exist - skipping
+   ⚠️  subscription_tier.stripe_price_id does not exist - skipping
+   ⚠️  subscription_tier.billing_cycle does not exist - skipping
+✅ Migration completed: Simplified subscription tier model
+INFO  [alembic.runtime.migration] Running upgrade 0e15af770cb3 -> f4e5d6c7b8a9, remove nonexistent billing columns
+=== Removing nonexistent billing columns ===
+   ✅ Column billing_cycle already doesn't exist
+   ✅ Column pricing_category already doesn't exist
+   ✅ Column price_amount already doesn't exist
+   ✅ Column currency already doesn't exist
+=== Migration completed ===
+INFO  [alembic.runtime.migration] Running upgrade f4e5d6c7b8a9 -> drop_deprecated_billing_columns, drop deprecated billing columns
+=== Dropping deprecated billing columns ===
+   ✅ Column billing_cycle doesn't exist (already clean)
+   ✅ Column pricing_category doesn't exist (already clean)
+   ✅ Column price_amount doesn't exist (already clean)
+   ✅ Column currency doesn't exist (already clean)
+=== Migration completed ===
+INFO  [alembic.runtime.migration] Running upgrade drop_deprecated_billing_columns -> add_offline_billing_support, Add offline billing support
+=== Mock migration: add_offline_billing_support ===
+   No changes to apply - this is a mock revision for production sync
+✅ Mock migration completed
+INFO  [alembic.runtime.migration] Running upgrade add_offline_billing_support -> 3f7a8b9c2d5e, Add offline billing support and missing billing fields
+=== Adding offline billing support and missing billing fields ===
+   Adding offline support to subscription_tier...
+   ✅ Added last_billing_sync
+   ✅ Added grace_period_days
+   Adding fields to organization...
+   Adding column: last_online_sync
+   ✅ Added last_online_sync
+   Adding column: offline_tier_cache
+   ✅ Added offline_tier_cache
+   Adding column: billing_status
+   ✅ Added billing_status
+   ✅ Column stripe_customer_id already exists
+   ✅ Column stripe_subscription_id already exists
+   ✅ Column whop_license_key already exists
+   ✅ Column whop_product_tier already exists
+   ✅ Column whop_verified already exists
+   Updating default values for existing records...
+   ✅ Updated default values
+✅ Offline billing and missing fields migration completed
+INFO  [alembic.runtime.migration] Running upgrade 3f7a8b9c2d5e -> 4246268c4e7c, add_oauth_and_email_verification_fields
+=== Adding OAuth and email verification fields ===
+   Adding created_at column to developer_permission...
+   Adding created_at column to developer_role...
+   ⚠️  email_verified column already exists, skipping
+   ⚠️  email_verification_token column already exists, skipping
+   Adding email_verification_sent_at column...
+   Adding oauth_provider column...
+   Adding oauth_provider_id column...
+   ⚠️  password_reset_token column already exists, skipping
+   Adding password_reset_sent_at column...
+   Adding google_id column...
+✅ Migration completed: OAuth and email verification fields
+INFO  [alembic.runtime.migration] Running upgrade 4246268c4e7c -> fix_missing_email_verification, fix missing email verification columns
+🔧 Fixing missing email verification columns...
+   ✅ email_verification_sent_at column already exists
+   ✅ password_reset_sent_at column already exists
+✅ Email verification columns fix completed
+INFO  [alembic.runtime.migration] Running upgrade fix_missing_email_verification -> add_fallback_price_column, add_fallback_price_column
+=== Adding fallback_price column to subscription_tier ===
+   Adding fallback_price column...
+✅ fallback_price column added successfully
+INFO  [alembic.runtime.migration] Running upgrade add_fallback_price_column -> 9a2b8c4d5e6f, fix missing oauth columns postgresql
+=== OAuth Column Fix (SQLite/PostgreSQL compatible) ===
+   ⚠️  oauth_provider column already exists, skipping
+   ⚠️  oauth_provider_id column already exists, skipping
+   ⚠️  password_reset_token column already exists, skipping
+   ⚠️  password_reset_sent_at column already exists, skipping
+   ⚠️  email_verification_sent_at column already exists, skipping
+   No columns to add - all OAuth columns already exist
+✅ OAuth columns migration completed
+INFO  [alembic.runtime.migration] Running upgrade 9a2b8c4d5e6f -> b5c7d8e9f1a2, replace billing provider booleans with enum fields
+=== Replacing billing provider booleans with enum fields ===
+   Adding tier_type column...
+   Adding billing_provider column...
+   ℹ️  subscription_tier table is empty - skipping data migration
+   Dropping legacy boolean columns...
+   ✅ Dropped requires_whop_billing
+✅ Billing provider enum migration completed
+INFO  [alembic.runtime.migration] Running upgrade b5c7d8e9f1a2 -> fix_unit_symbol_nullable, make unit symbol nullable for custom units
+=== Making unit symbol nullable ===
+   ℹ️  Index ix_unit_standard_unique doesn't exist, skipping
+   ✅ Made symbol column nullable
+   ✅ Created new ix_unit_symbol index
+✅ Migration completed: Unit symbol is now nullable
+INFO  [alembic.runtime.migration] Running upgrade fix_unit_symbol_nullable -> c8f2e5a9b1d4, fix fallback_price column type from Numeric to String
+=== Fixing fallback_price column type ===
+   Converting fallback_price from Numeric to String...
+✅ fallback_price column type fixed
+INFO  [alembic.runtime.migration] Running upgrade c8f2e5a9b1d4 -> fix_product_sku_name_column, fix product_sku name column mismatch
+=== Fixing product_sku name/sku_name column mismatch ===
+   name column exists: True
+   sku_name column exists: True
+   Both columns exist - migrating data and dropping 'name'
+   ✅ Migrated name data to sku_name
+   ✅ Dropped old 'name' column
+INFO  [alembic.runtime.migration] Running upgrade fix_product_sku_name_column -> add_unique_constraint_stripe, add unique constraint on stripe event id
+Creating stripe_event table...
+✅ Created stripe_event table
+INFO  [alembic.runtime.migration] Running upgrade add_unique_constraint_stripe -> add_tier_key_column, add tier_key column to subscription_tier
+=== Adding missing columns to subscription_tier ===
+   Adding tier_key column...
+✅ tier_key column added successfully
+   ⚠️  max_users column already exists, skipping
+   Adding max_monthly_batches column...
+✅ max_monthly_batches column added successfully
+   Setting default values for max_monthly_batches...
+   Populating tier_key values from key column...
+=== Migration completed ===
+INFO  [alembic.runtime.migration] Running upgrade add_tier_key_column -> add_legacy_compatibility_fields, add legacy compatibility fields to subscription tier
+=== No-op migration: add_legacy_compatibility_fields ===
+✅ This is a placeholder migration with no changes
+INFO  [alembic.runtime.migration] Running upgrade add_legacy_compatibility_fields -> 39e309ff02d1, add legacy compatibility fields to subscription tier
+=== Adding legacy compatibility fields to subscription_tier ===
+   Adding stripe_product_id column...
+✅ stripe_product_id column added successfully
+   Adding stripe_price_id column...
+✅ stripe_price_id column added successfully
+   ⚠️  stripe_price_id_monthly column already exists, skipping
+   ⚠️  stripe_price_id_yearly column already exists, skipping
+=== Legacy compatibility fields migration completed ===
+INFO  [alembic.runtime.migration] Running upgrade 39e309ff02d1 -> add_is_verified_to_user, add is_verified field to user table
+=== Adding is_verified field to user table ===
+   Adding is_verified column...
+✅ is_verified column added successfully
+=== Migration completed ===
+INFO  [alembic.runtime.migration] Running upgrade add_is_verified_to_user -> add_email_verified_at_column, add email_verified_at column
+=== Adding email_verified_at column (no-op) ===
+   Column already exists in current schema
+✅ Migration completed
+INFO  [alembic.runtime.migration] Running upgrade add_email_verified_at_column -> 6f9bc65166b3, Create unified inventory history and merge data
+=== Creating UnifiedInventoryHistory and migrating data ===
+   Creating unified_inventory_history table...
+   Creating indexes...
+   Migrating data from inventory_history...
+   ✅ Successfully migrated inventory_history data
+   Migrating data from product_sku_history...
+   ✅ Successfully migrated product_sku_history data
+   ✅ Unified inventory history migration completed
+INFO  [alembic.runtime.migration] Running upgrade 6f9bc65166b3 -> 57d6ce45a761, empty message
+INFO  [alembic.runtime.migration] Running upgrade 57d6ce45a761 -> clean_subscription_tier_billing, clean subscription tier billing structure
+✅ Billing provider cleanup completed
+INFO  [alembic.runtime.migration] Running upgrade clean_subscription_tier_billing -> 758a11548815, clean subscription tier model use lookup keys
+=== Final Subscription Tier Structure Migration ===
+   Found subscription_tier table, cleaning structure...
+   Adding user_limit column...
+   Adding is_customer_facing column...
+   Adding is_billing_exempt column...
+   Adding stripe_lookup_key column...
+   Adding max_recipes column...
+   Adding max_batches column...
+   Adding max_products column...
+   Adding max_batchbot_requests column...
+   Updating billing_provider defaults...
+   Removing pricing column: fallback_price
+   Removing pricing column: stripe_price_id
+   Removing pricing column: stripe_price_id_monthly
+   Removing pricing column: stripe_price_id_yearly
+   Removing pricing column: stripe_product_id
+   Removing pricing column: whop_last_synced
+   Removing pricing column: tier_type
+   Removing pricing column: grace_period_days
+   Removing pricing column: max_users
+   Removing pricing column: max_monthly_batches
+   Removing pricing column: last_billing_sync
+   Removing pricing column: tier_key
+   Ensuring proper column types...
+   ✅ Created indexes and constraints
+   Removing legacy subscription_tier column from organization...
+✅ Final subscription tier structure migration completed
+INFO  [alembic.runtime.migration] Running upgrade 758a11548815 -> fix_missing_max_users_column, fix missing max_users column
+=== Fixing missing max_users column ===
+   Adding missing max_users column...
+   ✅ max_users column added successfully
+✅ Fix migration completed
+INFO  [alembic.runtime.migration] Running upgrade fix_missing_max_users_column -> fix_all_missing_tier_columns, fix all missing tier columns
+=== Adding ALL missing subscription tier columns ===
+   ⚠️  max_recipes column already exists
+   ⚠️  max_batches column already exists
+   ⚠️  max_products column already exists
+   ⚠️  max_batchbot_requests column already exists
+   Adding missing max_monthly_batches column...
+   ✅ max_monthly_batches column added successfully
+✅ All missing tier columns migration completed
+INFO  [alembic.runtime.migration] Running upgrade fix_all_missing_tier_columns -> simplify_tiers_add_tier_type, simplify tiers add tier_type
+✅ Simplified subscription tier structure with tier_type
+INFO  [alembic.runtime.migration] Running upgrade simplify_tiers_add_tier_type -> fix_product_sku_id_autoincrement, fix product sku id autoincrement
+   Fixing ProductSKU id column autoincrement...
+   ⚠️  Error fixing ProductSKU id column: (psycopg2.errors.DependentObjectsStillExist) cannot drop table product_sku because other objects depend on it
+DETAIL:  constraint batch_sku_id_fkey on table batch depends on table product_sku
+constraint product_sku_history_sku_id_fkey on table product_sku_history depends on table product_sku
+HINT:  Use DROP ... CASCADE to drop the dependent objects too.
+
+[SQL: DROP TABLE product_sku]
+(Background on this error at: https://sqlalche.me/e/20/2j85)
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
+    cursor.execute(statement, parameters)
+psycopg2.errors.DependentObjectsStillExist: cannot drop table product_sku because other objects depend on it
+DETAIL:  constraint batch_sku_id_fkey on table batch depends on table product_sku
+constraint product_sku_history_sku_id_fkey on table product_sku_history depends on table product_sku
+HINT:  Use DROP ... CASCADE to drop the dependent objects too.
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/bin/flask", line 8, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/cli.py", line 1131, in main
+    cli.main()
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/click/core.py", line 1363, in main
+    rv = self.invoke(ctx)
+         ^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/click/core.py", line 1830, in invoke
+    return _process_result(sub_ctx.command.invoke(sub_ctx))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/click/core.py", line 1830, in invoke
+    return _process_result(sub_ctx.command.invoke(sub_ctx))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/click/core.py", line 1226, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/click/core.py", line 794, in invoke
+    return callback(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/click/decorators.py", line 34, in new_func
+    return f(get_current_context(), *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/cli.py", line 400, in decorator
+    return ctx.invoke(f, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/click/core.py", line 794, in invoke
+    return callback(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_migrate/cli.py", line 150, in upgrade
+    _upgrade(directory, revision, sql, tag, x_arg)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_migrate/__init__.py", line 111, in wrapped
+    f(*args, **kwargs)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_migrate/__init__.py", line 200, in upgrade
+    command.upgrade(config, revision, sql=sql, tag=tag)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/alembic/command.py", line 408, in upgrade
+    script.run_env()
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/alembic/script/base.py", line 586, in run_env
+    util.load_python_file(self.dir, "env.py")
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/alembic/util/pyfiles.py", line 95, in load_python_file
+    module = load_module_py(module_id, path)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/alembic/util/pyfiles.py", line 113, in load_module_py
+    spec.loader.exec_module(module)  # type: ignore
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap_external>", line 940, in exec_module
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "/home/runner/workspace/migrations/env.py", line 145, in <module>
+    run_migrations_online()
+  File "/home/runner/workspace/migrations/env.py", line 139, in run_migrations_online
+    context.run_migrations()
+  File "<string>", line 8, in run_migrations
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/alembic/runtime/environment.py", line 946, in run_migrations
+    self.get_context().run_migrations(**kw)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/alembic/runtime/migration.py", line 623, in run_migrations
+    step.migration_fn(**kw)
+  File "/home/runner/workspace/migrations/versions/fix_product_sku_id_autoincrement.py", line 124, in upgrade
+    connection.execute(text("DROP TABLE product_sku"))
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1416, in execute
+    return meth(
+           ^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/elements.py", line 523, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1638, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1843, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1983, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 2352, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.InternalError: (psycopg2.errors.DependentObjectsStillExist) cannot drop table product_sku because other objects depend on it
+DETAIL:  constraint batch_sku_id_fkey on table batch depends on table product_sku
+constraint product_sku_history_sku_id_fkey on table product_sku_history depends on table product_sku
+HINT:  Use DROP ... CASCADE to drop the dependent objects too.
+
+[SQL: DROP TABLE product_sku]
+(Background on this error at: https://sqlalche.me/e/20/2j85)
