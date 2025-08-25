@@ -1,0 +1,257 @@
+   Converting fallback_price from Numeric to String...
+✅ fallback_price column type fixed
+INFO  [alembic.runtime.migration] Running upgrade c8f2e5a9b1d4 -> fix_product_sku_name_column, fix product_sku name column mismatch
+=== Fixing product_sku name/sku_name column mismatch ===
+   name column exists: True
+   sku_name column exists: True
+   Both columns exist - migrating data and dropping 'name'
+   ✅ Migrated name data to sku_name
+   ✅ Dropped old 'name' column
+INFO  [alembic.runtime.migration] Running upgrade fix_product_sku_name_column -> add_unique_constraint_stripe, add unique constraint on stripe event id
+Creating stripe_event table...
+✅ Created stripe_event table
+INFO  [alembic.runtime.migration] Running upgrade add_unique_constraint_stripe -> add_tier_key_column, add tier_key column to subscription_tier
+=== Adding missing columns to subscription_tier ===
+   Adding tier_key column...
+✅ tier_key column added successfully
+   ⚠️  max_users column already exists, skipping
+   Adding max_monthly_batches column...
+✅ max_monthly_batches column added successfully
+   Setting default values for max_monthly_batches...
+   Populating tier_key values from key column...
+=== Migration completed ===
+INFO  [alembic.runtime.migration] Running upgrade add_tier_key_column -> add_legacy_compatibility_fields, add legacy compatibility fields to subscription tier
+=== No-op migration: add_legacy_compatibility_fields ===
+✅ This is a placeholder migration with no changes
+INFO  [alembic.runtime.migration] Running upgrade add_legacy_compatibility_fields -> 39e309ff02d1, add legacy compatibility fields to subscription tier
+=== Adding legacy compatibility fields to subscription_tier ===
+   Adding stripe_product_id column...
+✅ stripe_product_id column added successfully
+   Adding stripe_price_id column...
+✅ stripe_price_id column added successfully
+   ⚠️  stripe_price_id_monthly column already exists, skipping
+   ⚠️  stripe_price_id_yearly column already exists, skipping
+=== Legacy compatibility fields migration completed ===
+INFO  [alembic.runtime.migration] Running upgrade 39e309ff02d1 -> add_is_verified_to_user, add is_verified field to user table
+=== Adding is_verified field to user table ===
+   Adding is_verified column...
+✅ is_verified column added successfully
+=== Migration completed ===
+INFO  [alembic.runtime.migration] Running upgrade add_is_verified_to_user -> add_email_verified_at_column, add email_verified_at column
+=== Adding email_verified_at column (no-op) ===
+   Column already exists in current schema
+✅ Migration completed
+INFO  [alembic.runtime.migration] Running upgrade add_email_verified_at_column -> 6f9bc65166b3, Create unified inventory history and merge data
+=== Creating UnifiedInventoryHistory and migrating data ===
+   Creating unified_inventory_history table...
+   Creating indexes...
+   Migrating data from inventory_history...
+   ✅ Successfully migrated inventory_history data
+   Migrating data from product_sku_history...
+   ✅ Successfully migrated product_sku_history data
+   ✅ Unified inventory history migration completed
+INFO  [alembic.runtime.migration] Running upgrade 6f9bc65166b3 -> 57d6ce45a761, empty message
+INFO  [alembic.runtime.migration] Running upgrade 57d6ce45a761 -> clean_subscription_tier_billing, clean subscription tier billing structure
+✅ Billing provider cleanup completed
+INFO  [alembic.runtime.migration] Running upgrade clean_subscription_tier_billing -> 758a11548815, clean subscription tier model use lookup keys
+=== Final Subscription Tier Structure Migration ===
+   Found subscription_tier table, cleaning structure...
+   Adding user_limit column...
+   Adding is_customer_facing column...
+   Adding is_billing_exempt column...
+   Adding stripe_lookup_key column...
+   Adding max_recipes column...
+   Adding max_batches column...
+   Adding max_products column...
+   Adding max_batchbot_requests column...
+   Updating billing_provider defaults...
+   Removing pricing column: fallback_price
+   Removing pricing column: stripe_price_id
+   Removing pricing column: stripe_price_id_monthly
+   Removing pricing column: stripe_price_id_yearly
+   Removing pricing column: stripe_product_id
+   Removing pricing column: whop_last_synced
+   Removing pricing column: tier_type
+   Removing pricing column: grace_period_days
+   Removing pricing column: max_users
+   Removing pricing column: max_monthly_batches
+   Removing pricing column: last_billing_sync
+   Removing pricing column: tier_key
+   Ensuring proper column types...
+   ✅ Created indexes and constraints
+   Removing legacy subscription_tier column from organization...
+✅ Final subscription tier structure migration completed
+INFO  [alembic.runtime.migration] Running upgrade 758a11548815 -> fix_missing_max_users_column, fix missing max_users column
+=== Fixing missing max_users column ===
+   Adding missing max_users column...
+   ✅ max_users column added successfully
+✅ Fix migration completed
+INFO  [alembic.runtime.migration] Running upgrade fix_missing_max_users_column -> fix_all_missing_tier_columns, fix all missing tier columns
+=== Adding ALL missing subscription tier columns ===
+   ⚠️  max_recipes column already exists
+   ⚠️  max_batches column already exists
+   ⚠️  max_products column already exists
+   ⚠️  max_batchbot_requests column already exists
+   Adding missing max_monthly_batches column...
+   ✅ max_monthly_batches column added successfully
+✅ All missing tier columns migration completed
+INFO  [alembic.runtime.migration] Running upgrade fix_all_missing_tier_columns -> simplify_tiers_add_tier_type, simplify tiers add tier_type
+✅ Simplified subscription tier structure with tier_type
+INFO  [alembic.runtime.migration] Running upgrade simplify_tiers_add_tier_type -> fix_product_sku_id_autoincrement, fix product sku id autoincrement
+   Fixing ProductSKU id column autoincrement...
+   ⚠️  Error fixing ProductSKU id column: (psycopg2.errors.UndefinedColumn) column "sku" does not exist
+LINE 15: ...id, product_id, variant_id, size_label, sku_code, sku, sku_n...
+                                                              ^
+DETAIL:  There is a column named "sku" in table "product_sku_temp", but it cannot be referenced from this part of the query.
+
+[SQL: 
+            INSERT INTO product_sku_temp (
+                inventory_item_id, product_id, variant_id, size_label, sku_code, sku, sku_name,
+                quantity_override, unit, low_stock_threshold, fifo_id, batch_id, container_id,
+                retail_price, wholesale_price, profit_margin_target, category, subcategory,
+                tags, description, is_active, is_product_active, is_discontinued,
+                created_at, updated_at, created_by, supplier_name, supplier_sku, supplier_cost,
+                weight, weight_unit, dimensions, barcode, upc, quality_status, compliance_status,
+                quality_checked_by, quality_checked_at, location_id, location_name,
+                temperature_at_time, shopify_product_id, shopify_variant_id, etsy_listing_id,
+                amazon_asin, marketplace_sync_status, marketplace_last_sync, expiration_date,
+                is_perishable, shelf_life_days, organization_id
+            )
+            SELECT 
+                inventory_item_id, product_id, variant_id, size_label, sku_code, sku, sku_name,
+                quantity_override, unit, low_stock_threshold, fifo_id, batch_id, container_id,
+                retail_price, wholesale_price, profit_margin_target, category, subcategory,
+                tags, description, is_active, is_product_active, is_discontinued,
+                created_at, updated_at, created_by, supplier_name, supplier_sku, supplier_cost,
+                weight, weight_unit, dimensions, barcode, upc, quality_status, compliance_status,
+                quality_checked_by, quality_checked_at, location_id, location_name,
+                temperature_at_time, shopify_product_id, shopify_variant_id, etsy_listing_id,
+                amazon_asin, marketplace_sync_status, marketplace_last_sync, expiration_date,
+                is_perishable, shelf_life_days, organization_id
+            FROM product_sku
+        ]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
+    cursor.execute(statement, parameters)
+psycopg2.errors.UndefinedColumn: column "sku" does not exist
+LINE 15: ...id, product_id, variant_id, size_label, sku_code, sku, sku_n...
+                                                              ^
+DETAIL:  There is a column named "sku" in table "product_sku_temp", but it cannot be referenced from this part of the query.
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/bin/flask", line 8, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/cli.py", line 1131, in main
+    cli.main()
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/click/core.py", line 1363, in main
+    rv = self.invoke(ctx)
+         ^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/click/core.py", line 1830, in invoke
+    return _process_result(sub_ctx.command.invoke(sub_ctx))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/click/core.py", line 1830, in invoke
+    return _process_result(sub_ctx.command.invoke(sub_ctx))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/click/core.py", line 1226, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/click/core.py", line 794, in invoke
+    return callback(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/click/decorators.py", line 34, in new_func
+    return f(get_current_context(), *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/cli.py", line 400, in decorator
+    return ctx.invoke(f, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/click/core.py", line 794, in invoke
+    return callback(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_migrate/cli.py", line 150, in upgrade
+    _upgrade(directory, revision, sql, tag, x_arg)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_migrate/__init__.py", line 111, in wrapped
+    f(*args, **kwargs)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_migrate/__init__.py", line 200, in upgrade
+    command.upgrade(config, revision, sql=sql, tag=tag)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/alembic/command.py", line 408, in upgrade
+    script.run_env()
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/alembic/script/base.py", line 586, in run_env
+    util.load_python_file(self.dir, "env.py")
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/alembic/util/pyfiles.py", line 95, in load_python_file
+    module = load_module_py(module_id, path)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/alembic/util/pyfiles.py", line 113, in load_module_py
+    spec.loader.exec_module(module)  # type: ignore
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap_external>", line 940, in exec_module
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "/home/runner/workspace/migrations/env.py", line 145, in <module>
+    run_migrations_online()
+  File "/home/runner/workspace/migrations/env.py", line 139, in run_migrations_online
+    context.run_migrations()
+  File "<string>", line 8, in run_migrations
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/alembic/runtime/environment.py", line 946, in run_migrations
+    self.get_context().run_migrations(**kw)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/alembic/runtime/migration.py", line 623, in run_migrations
+    step.migration_fn(**kw)
+  File "/home/runner/workspace/migrations/versions/fix_product_sku_id_autoincrement.py", line 96, in upgrade
+    connection.execute(text("""
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1416, in execute
+    return meth(
+           ^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/elements.py", line 523, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1638, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1843, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1983, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 2352, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.ProgrammingError: (psycopg2.errors.UndefinedColumn) column "sku" does not exist
+LINE 15: ...id, product_id, variant_id, size_label, sku_code, sku, sku_n...
+                                                              ^
+DETAIL:  There is a column named "sku" in table "product_sku_temp", but it cannot be referenced from this part of the query.
+
+[SQL: 
+            INSERT INTO product_sku_temp (
+                inventory_item_id, product_id, variant_id, size_label, sku_code, sku, sku_name,
+                quantity_override, unit, low_stock_threshold, fifo_id, batch_id, container_id,
+                retail_price, wholesale_price, profit_margin_target, category, subcategory,
+                tags, description, is_active, is_product_active, is_discontinued,
+                created_at, updated_at, created_by, supplier_name, supplier_sku, supplier_cost,
+                weight, weight_unit, dimensions, barcode, upc, quality_status, compliance_status,
+                quality_checked_by, quality_checked_at, location_id, location_name,
+                temperature_at_time, shopify_product_id, shopify_variant_id, etsy_listing_id,
+                amazon_asin, marketplace_sync_status, marketplace_last_sync, expiration_date,
+                is_perishable, shelf_life_days, organization_id
+            )
+            SELECT 
+                inventory_item_id, product_id, variant_id, size_label, sku_code, sku, sku_name,
+                quantity_override, unit, low_stock_threshold, fifo_id, batch_id, container_id,
+                retail_price, wholesale_price, profit_margin_target, category, subcategory,
+                tags, description, is_active, is_product_active, is_discontinued,
+                created_at, updated_at, created_by, supplier_name, supplier_sku, supplier_cost,
+                weight, weight_unit, dimensions, barcode, upc, quality_status, compliance_status,
+                quality_checked_by, quality_checked_at, location_id, location_name,
+                temperature_at_time, shopify_product_id, shopify_variant_id, etsy_listing_id,
+                amazon_asin, marketplace_sync_status, marketplace_last_sync, expiration_date,
+                is_perishable, shelf_life_days, organization_id
+            FROM product_sku
+        ]
+(Background on this error at: https://sqlalche.me/e/20/f405)
