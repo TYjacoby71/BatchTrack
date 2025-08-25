@@ -48,7 +48,6 @@ def upgrade():
                 name,
                 "key",
                 description,
-                user_limit,
                 is_customer_facing,
                 is_available,
                 stripe_lookup_key,
