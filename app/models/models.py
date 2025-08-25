@@ -233,7 +233,6 @@ class User(UserMixin, db.Model):
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
     last_login = db.Column(db.DateTime, nullable=True)
-    timezone = db.Column(db.String(64), default='UTC')
     # role_id removed - using UserRoleAssignment table instead
 
     # Email verification fields
@@ -282,6 +281,29 @@ class User(UserMixin, db.Model):
         elif self.last_name:
             return self.last_name
         return self.username
+
+    @property
+    def timezone(self):
+        """Get user's timezone from preferences, default to UTC"""
+        if self.preferences:
+            return self.preferences.timezone or 'UTC'
+        return 'UTC'
+
+    @timezone.setter
+    def timezone(self, value):
+        """Set user's timezone in preferences"""
+        from .user_preferences import UserPreferences
+        if not self.preferences:
+            # Create preferences if they don't exist
+            if self.organization_id:
+                self.preferences = UserPreferences(
+                    user_id=self.id,
+                    organization_id=self.organization_id,
+                    timezone=value or 'UTC'
+                )
+                db.session.add(self.preferences)
+        else:
+            self.preferences.timezone = value or 'UTC'
 
     def ensure_organization_owner_role(self):
         """Ensure organization owner has the proper role assigned"""
