@@ -1,4 +1,3 @@
-
 """fix product sku id autoincrement
 
 Revision ID: fix_product_sku_id_autoincrement
@@ -18,7 +17,7 @@ depends_on = None
 
 
 def upgrade():
-    """Fix ProductSKU id column to properly handle autoincrement"""
+    """Fix ProductSKU id column autoincrement"""
 
     connection = op.get_bind()
 
@@ -120,9 +119,62 @@ def upgrade():
             FROM product_sku
         """))
 
+        # First, identify and handle all foreign key constraints that reference product_sku
+        print("   🔍 Checking for dependent foreign key constraints...")
+
+        # Get all foreign keys that reference product_sku
+        fk_result = connection.execute(text("""
+            SELECT 
+                tc.constraint_name,
+                tc.table_name,
+                kcu.column_name,
+                ccu.table_name AS foreign_table_name,
+                ccu.column_name AS foreign_column_name
+            FROM 
+                information_schema.table_constraints AS tc 
+                JOIN information_schema.key_column_usage AS kcu
+                  ON tc.constraint_name = kcu.constraint_name
+                JOIN information_schema.constraint_column_usage AS ccu
+                  ON ccu.constraint_name = tc.constraint_name
+            WHERE tc.constraint_type = 'FOREIGN KEY' 
+                AND ccu.table_name = 'product_sku'
+        """))
+
+        foreign_keys = fk_result.fetchall()
+
+        # Drop all foreign key constraints that reference product_sku
+        for fk in foreign_keys:
+            try:
+                constraint_name = fk.constraint_name
+                table_name = fk.table_name
+                connection.execute(text(f"ALTER TABLE {table_name} DROP CONSTRAINT IF EXISTS {constraint_name}"))
+                print(f"   ✅ Dropped constraint {constraint_name} from {table_name}")
+            except Exception as e:
+                print(f"   ⚠️  Warning dropping constraint {constraint_name}: {e}")
+
         # Drop old table and rename new one
-        connection.execute(text("DROP TABLE product_sku"))
+        connection.execute(text("DROP TABLE product_sku CASCADE"))
         connection.execute(text("ALTER TABLE product_sku_temp RENAME TO product_sku"))
+
+        # Add primary key constraint to the new table
+        connection.execute(text("ALTER TABLE product_sku ADD PRIMARY KEY (id)"))
+
+        # Recreate foreign key constraints based on what we found
+        for fk in foreign_keys:
+            try:
+                table_name = fk.table_name
+                column_name = fk.column_name
+                foreign_column = fk.foreign_column_name
+                constraint_name = fk.constraint_name
+
+                connection.execute(text(f"""
+                    ALTER TABLE {table_name} 
+                    ADD CONSTRAINT {constraint_name}
+                    FOREIGN KEY ({column_name}) REFERENCES product_sku({foreign_column})
+                """))
+                print(f"   ✅ Recreated constraint {constraint_name} on {table_name}")
+            except Exception as e:
+                print(f"   ⚠️  Warning recreating constraint {constraint_name}: {e}")
 
         print("   ✅ Successfully fixed ProductSKU id column autoincrement")
 
