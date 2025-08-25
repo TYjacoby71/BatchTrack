@@ -265,6 +265,10 @@ def seed_test_data(organization_id=None):
         # Set default quantity to 0 (will be updated by lots)
         item_data['quantity'] = 0.0
 
+        # Add storage fields - set reasonable defaults based on item type
+        item_data['storage_amount'] = 1.0  # Default storage capacity
+        item_data['storage_unit'] = item_data['unit']  # Use same unit as item unit
+
         inventory_item = InventoryItem(**item_data)
         db.session.add(inventory_item)
         db.session.flush()  # Get the ID
@@ -300,6 +304,24 @@ def seed_test_data(organization_id=None):
                 fifo_code=f"TEST-{inventory_item.id}-{len(lots_data)}-{lot_data['days_ago']}"
             )
             db.session.add(lot)
+            db.session.flush()  # Get lot ID
+
+            # Create history entry for this lot creation
+            from app.models.unified_inventory_history import UnifiedInventoryHistory
+            from datetime import datetime
+
+            history_entry = UnifiedInventoryHistory(
+                inventory_item_id=inventory_item.id,
+                affected_lot_id=lot.id,
+                action_type='lot_created',
+                quantity_change=lot_data['quantity'],
+                quantity_after=lot_data['quantity'],
+                unit=inventory_item.unit,
+                notes=f"Test data lot creation - {lot.batch_id}",
+                created_at=datetime.utcnow(),
+                organization_id=organization_id
+            )
+            db.session.add(history_entry)
             total_quantity += lot_data['quantity']
             total_lots += 1
 
@@ -385,10 +407,10 @@ def seed_test_data(organization_id=None):
         # Create recipe
         recipe = Recipe(
             name=recipe_data['name'],
+            instructions=recipe_data['instructions'],
             predicted_yield=recipe_data['predicted_yield'],
             predicted_yield_unit=recipe_data['predicted_yield_unit'],
-            organization_id=organization_id,
-            created_by=admin_user.id
+            organization_id=organization_id  # Add organization_id
         )
         db.session.add(recipe)
         db.session.flush()  # Get the ID

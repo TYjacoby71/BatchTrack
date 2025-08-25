@@ -360,6 +360,30 @@ def edit_inventory(id):
         if recount_performed:
             update_form_data.pop('quantity', None)
 
+        # Update basic fields
+        item.name = form_data.get('name', item.name)
+        item.unit = form_data.get('unit', item.unit)
+        item.cost_per_unit = float(form_data.get('cost_per_unit', item.cost_per_unit or 0))
+        item.low_stock_threshold = float(form_data.get('low_stock_threshold', item.low_stock_threshold or 0))
+        item.type = form_data.get('type', item.type)
+
+        # Handle category (only for ingredients)
+        if item.type == 'ingredient':
+            category_id = form_data.get('category_id')
+            if category_id:
+                item.category_id = int(category_id)
+        else:
+            item.category_id = None
+
+        # Handle container-specific fields
+        if item.type == 'container':
+            storage_amount = form_data.get('storage_amount')
+            storage_unit = form_data.get('storage_unit')
+            if storage_amount:
+                item.storage_amount = float(storage_amount)
+            if storage_unit:
+                item.storage_unit = storage_unit
+
         success, message = update_inventory_item(id, update_form_data)
         flash(message, 'success' if success else 'error')
         return redirect(url_for('inventory.view_inventory', id=id))

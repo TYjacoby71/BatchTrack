@@ -171,6 +171,54 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Form submission handler
+    const editForm = document.getElementById('editDetailsForm');
+    if (editForm) {
+        editForm.addEventListener('submit', function(e) {
+            // Basic form validation
+            const name = this.querySelector('input[name="name"]');
+            const unit = this.querySelector('select[name="unit"]');
+            const type = this.querySelector('select[name="type"]');
+            
+            if (!name.value.trim()) {
+                e.preventDefault();
+                alert('Name is required');
+                name.focus();
+                return false;
+            }
+            
+            if (!unit.value) {
+                e.preventDefault();
+                alert('Unit is required');
+                unit.focus();
+                return false;
+            }
+            
+            // For containers, validate storage fields
+            if (type.value === 'container') {
+                const storageAmount = this.querySelector('input[name="storage_amount"]');
+                const storageUnit = this.querySelector('select[name="storage_unit"]');
+                
+                if (storageAmount && !storageAmount.value) {
+                    e.preventDefault();
+                    alert('Storage amount is required for containers');
+                    storageAmount.focus();
+                    return false;
+                }
+                
+                if (storageUnit && !storageUnit.value) {
+                    e.preventDefault();
+                    alert('Storage unit is required for containers');
+                    storageUnit.focus();
+                    return false;
+                }
+            }
+            
+            // Form is valid, allow submission
+            return true;
+        });
+    }
+
     // Handle pending unit change from session
     {% if session.get('pending_unit_change') %}
     const pendingChange = {{ session['pending_unit_change']|tojson }};
@@ -185,12 +233,23 @@ document.addEventListener('DOMContentLoaded', function() {
     {% endif %}
 
     // Type change handler
-    document.querySelector('select[name="type"]').addEventListener('change', function() {
-        document.getElementById('categorySection').style.display = 
-            this.value === 'ingredient' ? 'block' : 'none';
-        document.getElementById('perishableSection').style.display = 
-            this.value === 'container' ? 'none' : 'block';
-    });
+    const typeSelect = document.querySelector('select[name="type"]');
+    if (typeSelect) {
+        typeSelect.addEventListener('change', function() {
+            const categorySection = document.getElementById('categorySection');
+            const perishableSection = document.getElementById('perishableSection');
+            
+            if (categorySection) {
+                categorySection.style.display = this.value === 'ingredient' ? 'block' : 'none';
+            }
+            if (perishableSection) {
+                perishableSection.style.display = this.value === 'container' ? 'none' : 'block';
+            }
+        });
+        
+        // Trigger change event on page load to set initial state
+        typeSelect.dispatchEvent(new Event('change'));
+    }
     
     // Perishable checkbox handler
     const perishableCheckbox = document.getElementById('is_perishable');
