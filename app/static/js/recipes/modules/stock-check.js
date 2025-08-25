@@ -40,16 +40,16 @@ export class StockCheckManager {
         stockCheckBtn.disabled = true;
 
         try {
-            // Use the recipe plan route which includes stock checking
-            const response = await fetch(`/recipes/${this.main.recipe.id}/plan`, {
+            // Use the dedicated stock check API endpoint
+            const response = await fetch('/api/check-stock', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': this.main.getCSRFToken()
                 },
                 body: JSON.stringify({
-                    scale: this.main.scale,
-                    check_containers: false
+                    recipe_id: this.main.recipe.id,
+                    scale: this.main.scale
                 })
             });
 
@@ -87,16 +87,15 @@ export class StockCheckManager {
 
         console.log('🔍 STOCK CHECK: Full results object:', this.stockCheckResults);
 
-        // Handle the actual structure from the production planning service
-        const stockData = this.stockCheckResults.stock_results || [];
-        const allAvailable = this.stockCheckResults.all_available || this.stockCheckResults.feasible || false;
+        // Handle the USCS response structure
+        const stockData = this.stockCheckResults.stock_check || [];
+        const allAvailable = this.stockCheckResults.status === 'ok';
 
         console.log('🔍 STOCK CHECK: Stock data:', stockData);
         console.log('🔍 STOCK CHECK: All available:', allAvailable);
 
-        // Filter for ingredients only
-        const ingredientData = stockData.filter(item =>
-            !item.category || item.category === 'ingredient' || item.category === 'INGREDIENT'
+        // All items from USCS are ingredients by default
+        const ingredientData = stockData;nt' || item.category === 'INGREDIENT'
         );
 
         if (!ingredientData || ingredientData.length === 0) {
