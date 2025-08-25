@@ -14,13 +14,13 @@ stock_api_bp = Blueprint('stock_api', __name__)
 
 @stock_api_bp.route('/check-stock', methods=['POST'])
 @login_required
-@permission_required('batch_production.create')
+@permission_required('inventory.view')
 def check_stock():
-    """Check ingredient stock availability for a recipe at given scale."""
+    """Check stock availability for ingredients"""
     try:
         data = request.get_json()
         if not data:
-            return jsonify({'error': 'No JSON data provided'}), 400
+            return jsonify({'error': 'No data provided'}), 400
 
         recipe_id = data.get('recipe_id')
         scale = data.get('scale', 1.0)
@@ -28,27 +28,20 @@ def check_stock():
         if not recipe_id:
             return jsonify({'error': 'Recipe ID is required'}), 400
 
-        # Get the recipe object
-        from app.models import Recipe
-        recipe = Recipe.query.get(recipe_id)
-        if not recipe:
-            return jsonify({'error': 'Recipe not found'}), 404
-
         # Use the Universal Stock Check Service
-        uscs = UniversalStockCheckService()
-        result = uscs.check_recipe_stock(recipe, scale)
+        from app.services.stock_check import UniversalStockCheckService
 
-        # Ensure we always return a valid response structure
-        if not isinstance(result, dict):
-            result = {'stock_check': [], 'status': 'error', 'message': 'Invalid result format'}
+        result = UniversalStockCheckService.check_recipe_ingredients(
+            recipe_id=recipe_id,
+            scale=scale,
+            organization_id=get_effective_organization_id()
+        )
 
-        # Always return 200 OK for successful stock checks, even if ingredients are insufficient
-        # The frontend will handle displaying the results appropriately
-        return jsonify(result), 200
+        return jsonify(result)
 
     except Exception as e:
-        current_app.logger.error(f"Stock check error: {e}")
-        return jsonify({'error': 'Failed to check stock'}), 500
+        logger.error(f"Error in stock check endpoint: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
 
 
 @stock_api_bp.route('/check-containers', methods=['POST'])

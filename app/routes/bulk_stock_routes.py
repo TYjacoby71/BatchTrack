@@ -35,14 +35,14 @@ def bulk_stock_check():
             session['bulk_recipe_ids'] = selected_ids
             session['bulk_scale'] = scale
 
-            for rid in selected_ids:
-                recipe = Recipe.scoped().filter_by(id=int(rid)).first()
-                if not recipe:
-                    continue
-                from app.services.stock_check.core import UniversalStockCheckService
-                service = UniversalStockCheckService()
-                result = service.check_recipe_stock(recipe, scale)
-                results = result['stock_check']
+            from app.services.bulk_stock_service import BulkStockCheckService
+            bulk_service = BulkStockCheckService()
+            bulk_results = bulk_service.check_multiple_recipes([int(rid) for rid in selected_ids], scale)
+            
+            if bulk_results['success']:
+                for rid, result in bulk_results['results'].items():
+                    if result['success']:
+                        results = result.get('stock_check', [])
 
                 for row in results:
                     name = row['name']

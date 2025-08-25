@@ -110,17 +110,28 @@ def _determine_availability_status(stock_result) -> str:
 
 def validate_ingredient_availability(recipe_id: int, scale: float = 1.0):
     """
-    Legacy compatibility function for ingredient availability checking.
+    Production planning specific ingredient validation.
+    Uses recipe service for stock checking and adds production-specific logic.
     """
     try:
+        from ..recipe_service import check_recipe_stock
+        from ...models import Recipe
+        
         recipe = Recipe.query.get(recipe_id)
         if not recipe:
             return {'success': False, 'error': 'Recipe not found'}
 
+        # Use recipe service for stock checking
+        result = check_recipe_stock(recipe, scale)
+        
+        if not result['success']:
+            return {'success': False, 'error': result.get('error', 'Stock check failed')}
+
+        # Convert to production planning format with cost information
         organization_id = current_user.organization_id if current_user.is_authenticated else None
         requirements = validate_ingredients_with_uscs(recipe, scale, organization_id)
 
-        # Convert to legacy format
+        # Convert to legacy format for compatibility
         ingredients = []
         for req in requirements:
             ingredients.append({
