@@ -77,14 +77,14 @@ def get_dashboard_alerts():
 # All stock check requests should use /api/check-stock endpoint
 
 # Import sub-blueprints to register their routes
-from .stock_routes import stock_api_bp
+
 from .ingredient_routes import ingredient_api_bp
 from .container_routes import container_api_bp
 from .fifo_routes import fifo_api_bp
 from .reservation_routes import reservation_api_bp
 
 # Register sub-blueprints
-api_bp.register_blueprint(stock_api_bp)
+
 api_bp.register_blueprint(ingredient_api_bp)
 api_bp.register_blueprint(container_api_bp)
 api_bp.register_blueprint(fifo_api_bp)
