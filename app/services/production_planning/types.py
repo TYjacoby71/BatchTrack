@@ -4,7 +4,7 @@ Production Planning Types
 Defines the data structures used throughout the production planning process.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import List, Dict, Any, Optional
 from enum import Enum
 
@@ -47,6 +47,26 @@ class IngredientRequirement:
     total_cost: float
     status: str  # 'available', 'low', 'insufficient'
 
+    # Placeholder attributes for frontend compatibility
+    item_id: int = field(init=False, repr=False)
+    item_name: str = field(init=False, repr=False)
+    needed_quantity: float = field(init=False, repr=False)
+    needed_unit: str = field(init=False, repr=False)
+    available_unit: str = field(init=False, repr=False)
+    formatted_needed: str = field(init=False, repr=False)
+    formatted_available: str = field(init=False, repr=False)
+
+    def __post_init__(self):
+        # Initialize placeholder attributes
+        self.item_id = self.ingredient_id
+        self.item_name = self.ingredient_name
+        self.needed_quantity = self.scaled_quantity
+        self.needed_unit = self.unit
+        self.available_unit = self.unit # Assuming same unit for availability
+        self.formatted_needed = f"{self.scaled_quantity} {self.unit}"
+        self.formatted_available = f"{self.available_quantity} {self.unit}"
+
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization"""
         return {
@@ -73,6 +93,21 @@ class ContainerOption:
     cost_each: float
     fill_percentage: float  # How full this container would be
     containers_needed: int
+
+    # Placeholder attributes for frontend compatibility
+    name: str = field(init=False, repr=False)
+    quantity: int = field(init=False, repr=False)
+    capacity: float = field(init=False, repr=False)
+    stock_qty: int = field(init=False, repr=False)
+
+
+    def __post_init__(self):
+        # Initialize placeholder attributes
+        self.name = self.container_name
+        self.quantity = self.containers_needed
+        self.capacity = self.storage_capacity
+        self.stock_qty = self.available_quantity
+
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization"""
@@ -136,62 +171,69 @@ class CostBreakdown:
 
 @dataclass
 class ProductionPlan:
-    """Complete production plan result"""
+    """Complete production plan with all analysis results"""
     request: ProductionRequest
     status: ProductionStatus
     feasible: bool
-
-    # Requirements
     ingredient_requirements: List[IngredientRequirement]
     projected_yield: Dict[str, Any]
-
-    # Container analysis
-    container_strategy: Optional[ContainerStrategy]
-    container_options: List[ContainerOption]
-
-    # Cost analysis
-    cost_breakdown: CostBreakdown
-
-    # Issues and recommendations
-    issues: List[str]
-    recommendations: List[str]
-
-    # Batch preparation data
-    batch_ready_data: Optional[Dict[str, Any]] = None
+    container_strategy: Optional[ContainerStrategy] = None
+    container_options: List[ContainerOption] = field(default_factory=list)
+    cost_breakdown: Optional[CostBreakdown] = None
+    issues: List[str] = field(default_factory=list)
+    recommendations: List[str] = field(default_factory=list)
 
     def to_dict(self) -> Dict[str, Any]:
-        """Convert to dictionary format for API responses"""
-        # Transform ingredient requirements to stock_results format expected by frontend
-        stock_results = []
-        all_available = True
+        """Convert production plan to dictionary for API responses"""
+        ingredient_list = []
+        if self.ingredient_requirements:
+            for req in self.ingredient_requirements:
+                ingredient_list.append({
+                    'item_id': req.item_id,
+                    'item_name': req.item_name,
+                    'ingredient_name': req.item_name,  # For backwards compatibility
+                    'needed_quantity': req.needed_quantity,
+                    'needed_amount': req.needed_quantity,  # For backwards compatibility
+                    'quantity_needed': req.needed_quantity,  # Alternative format
+                    'needed_unit': req.needed_unit,
+                    'unit': req.needed_unit,  # For backwards compatibility
+                    'available_quantity': req.available_quantity,
+                    'available_unit': req.available_unit,
+                    'status': req.status,
+                    'is_available': req.status not in ['insufficient', 'unavailable', 'NEEDED', 'OUT_OF_STOCK'],
+                    'formatted_needed': req.formatted_needed if hasattr(req, 'formatted_needed') else f"{req.needed_quantity} {req.needed_unit}",
+                    'formatted_available': req.formatted_available if hasattr(req, 'formatted_available') else f"{req.available_quantity} {req.available_unit}",
+                    'category': 'ingredient'
+                })
 
-        for req in self.ingredient_requirements:
-            req_dict = req.to_dict()
-            stock_result = {
-                'ingredient_id': req_dict.get('item_id'),
-                'ingredient_name': req_dict.get('item_name', ''),
-                'needed_amount': req_dict.get('needed_quantity', 0),
-                'unit': req_dict.get('unit', ''),
-                'available': req_dict.get('status') == 'available',
-                'available_quantity': req_dict.get('available_quantity', 0),
-                'shortage': max(0, req_dict.get('needed_quantity', 0) - req_dict.get('available_quantity', 0))
-            }
-            stock_results.append(stock_result)
+        container_list = []
+        if self.container_strategy and hasattr(self.container_strategy, 'selected_containers') and self.container_strategy.selected_containers:
+            for container in self.container_strategy.selected_containers:
+                container_list.append({
+                    'item_id': container.get('container_id'),
+                    'item_name': container.get('name', ''),
+                    'quantity_needed': container.get('quantity', 0),
+                    'available_quantity': container.get('stock_qty', 0),
+                    'capacity': container.get('capacity', 0),
+                    'category': 'container'
+                })
 
-            if req_dict.get('status') != 'available':
-                all_available = False
+        # Determine if all ingredients are available
+        all_ingredients_available = all(
+            req.status not in ['insufficient', 'unavailable', 'NEEDED', 'OUT_OF_STOCK'] 
+            for req in (self.ingredient_requirements or [])
+        )
 
         return {
-            'success': self.feasible,
-            'status': self.status.value,
+            'success': True,
             'feasible': self.feasible,
-            'stock_results': stock_results,
-            'all_available': all_available,
-            'ingredient_requirements': [req.to_dict() for req in self.ingredient_requirements],
+            'status': self.status.value,
+            'all_available': all_ingredients_available,
+            'stock_results': ingredient_list + container_list,
+            'ingredient_requirements': ingredient_list,
+            'container_options': container_list,
             'projected_yield': self.projected_yield,
-            'container_strategy': self.container_strategy.to_dict() if self.container_strategy else None,
-            'container_options': [opt.to_dict() for opt in self.container_options],
-            'cost_breakdown': self.cost_breakdown.to_dict() if self.cost_breakdown else None,
+            'cost_breakdown': self.cost_breakdown.to_dict() if self.cost_breakdown and hasattr(self.cost_breakdown, 'to_dict') else {},
             'issues': self.issues,
             'recommendations': self.recommendations
         }
