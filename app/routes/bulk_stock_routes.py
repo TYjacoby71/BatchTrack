@@ -35,9 +35,8 @@ def bulk_stock_check():
             session['bulk_recipe_ids'] = selected_ids
             session['bulk_scale'] = scale
 
-            from app.services.bulk_stock_service import BulkStockCheckService
-            bulk_service = BulkStockCheckService()
-            bulk_results = bulk_service.check_multiple_recipes([int(rid) for rid in selected_ids], scale)
+            from app.services.bulk_stock_service import check_multiple_recipes
+            bulk_results = check_multiple_recipes([int(rid) for rid in selected_ids], scale)
             
             if bulk_results['success']:
                 for rid, result in bulk_results['results'].items():

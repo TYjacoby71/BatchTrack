@@ -78,4 +78,90 @@ class UniversalStockCheckService:
 
         return results
 
+    def check_multiple_recipes(self, recipe_configs: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Check stock for multiple recipes at different scales.
+        
+        Args:
+            recipe_configs: List of dicts with keys: recipe_id, scale, organization_id
+            
+        Returns:
+            Dictionary with results for each recipe
+        """
+        try:
+            from ...models import Recipe
+            from ..recipe_service._stock_checking import get_recipe_ingredients_for_stock_check
+            
+            results = {}
+            
+            for config in recipe_configs:
+                recipe_id = config.get('recipe_id')
+                scale = config.get('scale', 1.0)
+                organization_id = config.get('organization_id')
+                
+                recipe = Recipe.query.get(recipe_id)
+                if not recipe:
+                    results[str(recipe_id)] = {
+                        'success': False,
+                        'error': 'Recipe not found'
+                    }
+                    continue
+                
+                # Get stock check requests for this recipe
+                requests = get_recipe_ingredients_for_stock_check(recipe_id, scale)
+                
+                if not requests:
+                    results[str(recipe_id)] = {
+                        'success': True,
+                        'status': 'no_ingredients',
+                        'stock_check': [],
+                        'recipe_name': recipe.name
+                    }
+                    continue
+                
+                # Check stock using USCS
+                stock_results = self.check_bulk_items(requests)
+                
+                # Format results
+                stock_check_data = []
+                has_insufficient = False
+                
+                for result in stock_results:
+                    result_dict = {
+                        'item_id': result.item_id,
+                        'item_name': result.item_name,
+                        'needed_quantity': result.needed_quantity,
+                        'needed_unit': result.needed_unit,
+                        'available_quantity': result.available_quantity,
+                        'available_unit': result.available_unit,
+                        'status': result.status.value,
+                        'formatted_needed': result.formatted_needed,
+                        'formatted_available': result.formatted_available
+                    }
+                    
+                    stock_check_data.append(result_dict)
+                    
+                    if result.status.value in ['NEEDED', 'OUT_OF_STOCK']:
+                        has_insufficient = True
+                
+                results[str(recipe_id)] = {
+                    'success': True,
+                    'status': 'insufficient_ingredients' if has_insufficient else 'ok',
+                    'stock_check': stock_check_data,
+                    'recipe_name': recipe.name,
+                    'scale': scale
+                }
+            
+            return {
+                'success': True,
+                'results': results
+            }
+            
+        except Exception as e:
+            logger.error(f"Error in bulk recipe check: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+
     
