@@ -122,14 +122,14 @@ def downgrade():
         if col_name not in cols:
             op.add_column('subscription_tier', sa.Column(col_name, sa.Boolean(), nullable=True, default=False))
 
-    # Migrate data back from enum to booleans
+    # Migrate data back to boolean columns (PostgreSQL-compatible)
     if "billing_provider" in cols:
         try:
-            bind.execute(text("""
+            bind.execute(text(f"""
                 UPDATE subscription_tier SET
-                  requires_stripe_billing = CASE WHEN billing_provider = 'stripe' THEN 1 ELSE 0 END,
-                  requires_google_billing = CASE WHEN billing_provider = 'google' THEN 1 ELSE 0 END,
-                  requires_whop_billing = CASE WHEN billing_provider = 'whop' THEN 1 ELSE 0 END
+                  requires_stripe_billing = CASE WHEN billing_provider = 'stripe' THEN TRUE ELSE FALSE END,
+                  requires_google_billing = CASE WHEN billing_provider = 'google' THEN TRUE ELSE FALSE END,
+                  requires_whop_billing = CASE WHEN billing_provider = 'whop' THEN TRUE ELSE FALSE END
             """))
         except Exception as e:
             print(f"   ⚠️  Could not migrate data back: {e}")
