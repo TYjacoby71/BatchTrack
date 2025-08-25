@@ -259,18 +259,19 @@ def seed_sub_tiers_command():
 @click.command('seed-categories')
 @with_appcontext
 def seed_categories_command():
-    """Seed ingredient categories for first organization"""
+    """Seed ingredient categories"""
     try:
-        print("🔄 Seeding categories...")
+        print("🔧 Seeding categories...")
         from .models import Organization
         from .seeders.ingredient_category_seeder import seed_categories
 
         org = Organization.query.first()
-        if org:
-            seed_categories(organization_id=org.id)
-            print('✅ Categories seeded successfully!')
-        else:
-            print('❌ No organization found - seed users first')
+        if not org:
+            print("❌ No organization found. Run 'flask seed-production' first.")
+            return
+
+        seed_categories(organization_id=org.id)
+        print("✅ Categories seeded successfully")
     except Exception as e:
         print(f'❌ Category seeding failed: {str(e)}')
         db.session.rollback()
@@ -705,14 +706,9 @@ def sync_schema_command():
 
         print(f"✅ {models_imported} models imported dynamically")
 
-        # Get current database state
-        from sqlalchemy import inspect, text
-        inspector = inspect(db.engine)
-        existing_tables = set(inspector.get_table_names())
-        print(f"📊 Found {len(existing_tables)} existing tables")
-
         # Create only missing tables (safe operation)
         print("🏗️  Creating any missing tables...")
+        existing_tables = set(inspect(db.engine).get_table_names())
         tables_before = len(existing_tables)
 
         # This only creates tables that don't exist - safe operation
@@ -820,6 +816,27 @@ def sync_schema_command():
         db.session.rollback()
         raise
 
+@click.command('seed-test-data')
+@with_appcontext
+def seed_test_data_command():
+    """Seed comprehensive test data for system testing"""
+    try:
+        print("🧪 Seeding test data...")
+        from .models import Organization
+        from .seeders.test_data_seeder import seed_test_data
+
+        org = Organization.query.first()
+        if not org:
+            print("❌ No organization found. Run 'flask seed-production' first.")
+            return
+
+        seed_test_data(organization_id=org.id)
+        print("✅ Test data seeded successfully")
+    except Exception as e:
+        print(f'❌ Test data seeding failed: {str(e)}')
+        db.session.rollback()
+        raise
+
 def register_commands(app):
     """Register CLI commands"""
     # Database initialization
@@ -841,6 +858,7 @@ def register_commands(app):
     app.cli.add_command(seed_units_command)
     app.cli.add_command(seed_sub_tiers_command)
     app.cli.add_command(seed_categories_command)
+    app.cli.add_command(seed_test_data_command)
     app.cli.add_command(seed_permission_categories_command)
 
     # Production maintenance commands
