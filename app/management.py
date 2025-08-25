@@ -15,9 +15,8 @@ from .seeders import (
 from .seeders.consolidated_permission_seeder import seed_consolidated_permissions
 from .seeders.user_seeder import seed_users_and_organization
 
-
-
-
+# Import text from sqlalchemy for raw SQL execution
+from sqlalchemy import text
 
 @click.command('activate-users')
 @with_appcontext
@@ -823,19 +822,52 @@ def seed_test_data_command():
     try:
         print("🧪 Seeding test data...")
         from .models import Organization
-        from .seeders.test_data_seeder import seed_test_data
 
-        org = Organization.query.first()
-        if not org:
-            print("❌ No organization found. Run 'flask seed-production' first.")
+        # Check if organizations exist
+        orgs = Organization.query.all()
+        if not orgs:
+            print("❌ No organizations found! Run production seeding first.")
             return
 
-        seed_test_data(organization_id=org.id)
-        print("✅ Test data seeded successfully")
+        # Show available organizations
+        print(f"\n📋 Available Organizations ({len(orgs)}):")
+        for i, org in enumerate(orgs, 1):
+            tier_info = f" (Tier: {org.tier.name})" if org.tier else " (No tier)"
+            print(f"   {i}. {org.name}{tier_info}")
+
+        # Get user selection
+        while True:
+            try:
+                choice = input(f"\nSelect organization (1-{len(orgs)}) or press Enter for first: ").strip()
+
+                if not choice:  # Default to first organization
+                    selected_org = orgs[0]
+                    break
+
+                choice_num = int(choice)
+                if 1 <= choice_num <= len(orgs):
+                    selected_org = orgs[choice_num - 1]
+                    break
+                else:
+                    print(f"❌ Please enter a number between 1 and {len(orgs)}")
+            except ValueError:
+                print("❌ Please enter a valid number")
+            except KeyboardInterrupt:
+                print("\n❌ Operation cancelled")
+                return
+
+        print(f"\n✅ Selected: {selected_org.name} (ID: {selected_org.id})")
+
+        from .seeders import seed_test_data
+        seed_test_data(organization_id=selected_org.id)
+        print("✅ Test data seeded successfully!")
+
     except Exception as e:
         print(f'❌ Test data seeding failed: {str(e)}')
+        import traceback
+        traceback.print_exc()
         db.session.rollback()
-        raise
+
 
 def register_commands(app):
     """Register CLI commands"""
