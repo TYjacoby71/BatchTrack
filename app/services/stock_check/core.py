@@ -99,17 +99,12 @@ class UniversalStockCheckService:
                 }
 
             requests = []
-            # Get organization context from current user
-            from flask_login import current_user
-            organization_id = current_user.organization_id if current_user.is_authenticated else None
-            
             for recipe_ingredient in recipe.recipe_ingredients:
                 requests.append(StockCheckRequest(
                     item_id=recipe_ingredient.inventory_item_id,
                     quantity_needed=recipe_ingredient.quantity * scale,
                     unit=recipe_ingredient.unit,
-                    category=InventoryCategory.INGREDIENT,
-                    organization_id=organization_id
+                    category=InventoryCategory.INGREDIENT
                 ))
 
             results = self.check_bulk_items(requests)

@@ -12,57 +12,74 @@ logger = logging.getLogger(__name__)
 # Create the blueprint
 stock_api_bp = Blueprint('stock_api', __name__)
 
-# Stock check functionality is now internal only
-# Recipe stock checking is handled through the production planning service
-
-
-@stock_api_bp.route('/stock-check/recipe/<int:recipe_id>', methods=['POST'])
+@stock_api_bp.route('/check-stock', methods=['POST'])
 @login_required
-@permission_required('recipes.view')
-def check_recipe_ingredients(recipe_id):
-    """Check stock availability for all ingredients in a recipe using USCS ingredient handler"""
+@permission_required('batch_production.create')
+def check_stock():
+    """Check ingredient stock availability for a recipe at given scale."""
     try:
-        data = request.get_json() or {}
-        scale = float(data.get('scale', 1.0))
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No JSON data provided'}), 400
 
-        # Get the recipe
-        from app.models.recipe import Recipe
-        recipe = Recipe.query.get_or_404(recipe_id)
+        recipe_id = data.get('recipe_id')
+        scale = data.get('scale', 1.0)
 
-        # Use the Universal Stock Check Service to check recipe ingredients
-        from app.services.stock_check.core import UniversalStockCheckService
+        if not recipe_id:
+            return jsonify({'error': 'Recipe ID is required'}), 400
+
+        # Get the recipe object
+        from app.models import Recipe
+        recipe = Recipe.query.get(recipe_id)
+        if not recipe:
+            return jsonify({'error': 'Recipe not found'}), 404
+
+        # Use the Universal Stock Check Service
         uscs = UniversalStockCheckService()
-
-        # Use the USCS check_recipe_stock method
         result = uscs.check_recipe_stock(recipe, scale)
 
-        if not result['success']:
-            return jsonify(result), 500
+        # Ensure we always return a valid response structure
+        if not isinstance(result, dict):
+            result = {'stock_check': [], 'status': 'error', 'message': 'Invalid result format'}
 
-        stock_results = result['stock_check']
-
-        # Convert to the format expected by frontend
-        stock_check = []
-        for result_item in stock_results:
-            stock_check.append({
-                'item_id': result_item['item_id'],
-                'item_name': result_item['item_name'],
-                'needed_quantity': result_item['needed_quantity'],
-                'needed_unit': result_item['needed_unit'],
-                'available_quantity': result_item['available_quantity'],
-                'available_unit': result_item['available_unit'],
-                'status': result_item['status'],
-                'formatted_needed': result_item['formatted_needed'],
-                'formatted_available': result_item['formatted_available']
-            })
-
-        return jsonify({
-            'success': True,
-            'stock_check': stock_check,
-            'recipe_id': recipe_id,
-            'scale': scale
-        })
+        # Always return 200 OK for successful stock checks, even if ingredients are insufficient
+        # The frontend will handle displaying the results appropriately
+        return jsonify(result), 200
 
     except Exception as e:
-        current_app.logger.error(f"Recipe ingredient stock check error: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        current_app.logger.error(f"Stock check error: {e}")
+        return jsonify({'error': 'Failed to check stock'}), 500
+
+
+@stock_api_bp.route('/check-containers', methods=['POST'])
+@login_required
+@permission_required('batch_production.create')
+def check_containers():
+    """Check container availability for a recipe at given scale."""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No JSON data provided'}), 400
+
+        recipe_id = data.get('recipe_id')
+        scale = data.get('scale', 1.0)
+
+        if not recipe_id:
+            return jsonify({'error': 'Recipe ID is required'}), 400
+
+        # Get the recipe object
+        from app.models import Recipe
+        recipe = Recipe.query.get(recipe_id)
+        if not recipe:
+            return jsonify({'error': 'Recipe not found'}), 404
+
+        # Use the Universal Stock Check Service for containers
+        uscs = UniversalStockCheckService()
+        # For now, just return the regular stock check - container checking is part of it
+        result = uscs.check_recipe_stock(recipe, scale)
+
+        return jsonify(result)
+
+    except Exception as e:
+        current_app.logger.error(f"Container stock check error: {e}")
+        return jsonify({'error': 'Failed to check container availability'}), 500

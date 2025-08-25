@@ -61,7 +61,7 @@ class ProductHandler(BaseInventoryHandler):
             type='product'
         ).first()
 
-        if not product:
+        if not product or not self._check_organization_access(product):
             return None
 
         return {

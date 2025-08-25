@@ -1,12 +1,28 @@
 """
-Internal Stock Check Service
+Universal Stock Check System (USCS)
 
-This service is for internal system use only. 
-External applications should not access this directly.
+A modular system for checking availability across different inventory categories.
+Supports ingredients, containers, products, and future categories like consumables.
 """
 
-# Internal imports only - no public API
 from .core import UniversalStockCheckService
-from .types import StockCheckRequest, StockCheckResult, InventoryCategory, StockStatus
+from .handlers import IngredientHandler, ContainerHandler, ProductHandler
+from .types import StockCheckRequest, StockCheckResult, InventoryCategory
 
-__all__ = []  # No public exports
+# Stock check service package
+from .core import UniversalStockCheckService
+
+# Backward compatibility alias
+StockCheckService = UniversalStockCheckService
+
+
+__all__ = [
+    'UniversalStockCheckService',
+    'StockCheckService', # Added this for backward compatibility
+    'IngredientHandler', 
+    'ContainerHandler',
+    'ProductHandler',
+    'StockCheckRequest',
+    'StockCheckResult', 
+    'InventoryCategory'
+]

@@ -63,20 +63,3 @@ class BaseInventoryHandler(ABC):
             return StockStatus.LOW  
         else:
             return StockStatus.NEEDED
-
-    def _create_error_result(self, request: StockCheckRequest, error_message: str) -> StockCheckResult:
-        """Create an error result for any handler"""
-        from ..types import StockCheckResult, InventoryCategory
-        return StockCheckResult(
-            item_id=request.item_id,
-            item_name='Error',
-            category=request.category,
-            needed_quantity=request.quantity_needed,
-            needed_unit=request.unit,
-            available_quantity=0,
-            available_unit=request.unit,
-            status=StockStatus.ERROR,
-            error_message=error_message,
-            formatted_needed=self._format_quantity_display(request.quantity_needed, request.unit),
-            formatted_available="0"
-        )

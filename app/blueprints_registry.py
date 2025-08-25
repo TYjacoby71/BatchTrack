@@ -63,18 +63,6 @@ def register_blueprints(app):
     # Fixed stock API blueprint reference
     safe_register_blueprint('app.blueprints.api.stock_routes.stock_api_bp', 'stock_api_bp', '/api/stock', 'Stock API')
 
-    # Register API blueprints
-    app.register_blueprint(api_bp, url_prefix='/api')
-    app.register_blueprint(stock_api_bp, url_prefix='/api')
-    app.register_blueprint(production_api_bp, url_prefix='/api')
-    app.register_blueprint(container_api_bp, url_prefix='/api')
-    app.register_blueprint(ingredient_api_bp, url_prefix='/api')
-    app.register_blueprint(reservation_api_bp, url_prefix='/api')
-    app.register_blueprint(unit_api_bp, url_prefix='/api')
-    app.register_blueprint(dashboard_api_bp, url_prefix='/api')
-    app.register_blueprint(fifo_api_bp, url_prefix='/api')
-
-
     # Register standalone route modules
     route_modules = [
         ('app.routes.app_routes.app_routes_bp', 'app_routes_bp', None, 'App Routes'),
