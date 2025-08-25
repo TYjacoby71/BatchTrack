@@ -258,10 +258,10 @@ def seed_test_data(organization_id=None):
             created_items[item_data['name']] = existing_item
             continue
         
-        # Add organization_id and unit_id
+        # Add organization_id and unit (keep as string, not unit_id)
         item_data['organization_id'] = organization_id
-        item_data['unit_id'] = units[item_data['unit']].id
-        item_data.pop('unit')  # Remove string unit reference
+        unit_name = item_data['unit']
+        # Keep unit as string since InventoryItem expects unit field, not unit_id
         
         # Set default quantity to 0 (will be updated by lots)
         item_data['quantity'] = 0.0
@@ -290,7 +290,7 @@ def seed_test_data(organization_id=None):
                 inventory_item_id=inventory_item.id,
                 remaining_quantity=lot_data['quantity'],
                 original_quantity=lot_data['quantity'],
-                unit=inventory_item.unit.name,
+                unit=inventory_item.unit,  # Use unit string directly
                 unit_cost=lot_data['unit_cost'],
                 received_date=received_date,
                 expiration_date=expiration_date,
