@@ -37,7 +37,7 @@ def upgrade():
         # First, create a temporary table with correct structure
         connection.execute(text("""
             CREATE TABLE product_sku_temp (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                id SERIAL PRIMARY KEY,
                 inventory_item_id INTEGER,
                 product_id INTEGER,
                 variant_id INTEGER,
