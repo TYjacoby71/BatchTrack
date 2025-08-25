@@ -409,7 +409,7 @@ def seed_test_data(organization_id=None):
                 recipe_id=recipe.id,
                 inventory_item_id=inventory_item.id,
                 quantity=ingredient_data['quantity'],
-                unit_id=unit.id,
+                unit=ingredient_data['unit'],  # Use unit string instead of unit_id
                 organization_id=organization_id
             )
             db.session.add(recipe_ingredient)
