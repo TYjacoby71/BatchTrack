@@ -63,7 +63,7 @@ def init_production_command():
 
         # Essential system setup (STRICT DEPENDENCY ORDER)
         print("=== Step 1: System foundations (Organization Independent) ===")
-        
+
         # CRITICAL: Seed permissions and developer roles FIRST
         try:
             seed_consolidated_permissions()  # Must be FIRST - creates permissions, org roles, AND developer roles
@@ -128,8 +128,6 @@ def init_production_command():
         db.session.rollback()
         raise
 
-
-
 @click.command('update-permissions')
 @with_appcontext  
 def update_permissions_command():
@@ -157,8 +155,8 @@ def update_subscription_tiers_command():
     try:
         print("🔄 Updating subscription tiers...")
 
-        from .seeders.subscription_seeder import seed_subscriptions
-        seed_subscriptions()  # This should be update-safe
+        from .seeders.subscription_seeder import seed_subscription_tiers
+        seed_subscription_tiers()  # This should be update-safe
 
         print('✅ Subscription tiers updated!')
 
@@ -250,8 +248,8 @@ def seed_sub_tiers_command():
     """Seed subscription tiers"""
     try:
         print("🔄 Seeding subscription tiers...")
-        from .seeders.subscription_seeder import seed_subscriptions
-        seed_subscriptions()
+        from .seeders.subscription_seeder import seed_subscription_tiers
+        seed_subscription_tiers()
         print('✅ Subscription tiers seeded successfully!')
     except Exception as e:
         print(f'❌ Subscription tier seeding failed: {str(e)}')
@@ -377,59 +375,59 @@ def clear_all_users_command():
         print("🚨 DANGER: This will clear ALL user data!")
         print("⚠️  This removes all users, organizations, and related data")
         print("✅ Schema (permissions, roles, tiers) will be preserved")
-        
+
         confirmation = input("Type 'CLEAR ALL USERS' to confirm: ")
         if confirmation != 'CLEAR ALL USERS':
             print("❌ Operation cancelled")
             return
-        
+
         from .models import (
             User, Organization, UserRoleAssignment, 
             UserStats, OrganizationStats, BillingSnapshot
         )
         from .models.user_preferences import UserPreferences
-        
+
         # Get organization IDs for bulk operations
         org_ids = [o.id for o in Organization.query.all()]
         user_ids = [u.id for u in User.query.all()]
-        
+
         # Clear in proper dependency order to handle all PostgreSQL constraints
         print("🗑️  Clearing user role assignments...")
         if user_ids:
             db.session.execute(db.text("DELETE FROM user_role_assignment WHERE user_id = ANY(:user_ids)"), {"user_ids": user_ids})
-        
+
         print("🗑️  Clearing user statistics...")
         if user_ids:
             db.session.execute(db.text("DELETE FROM user_stats WHERE user_id = ANY(:user_ids)"), {"user_ids": user_ids})
-        
+
         print("🗑️  Clearing organization statistics...")
         if org_ids:
             db.session.execute(db.text("DELETE FROM organization_stats WHERE organization_id = ANY(:org_ids)"), {"org_ids": org_ids})
-        
+
         print("🗑️  Clearing billing snapshots...")
         if org_ids:
             db.session.execute(db.text("DELETE FROM billing_snapshots WHERE organization_id = ANY(:org_ids)"), {"org_ids": org_ids})
-        
+
         print("🗑️  Clearing user preferences...")
         if user_ids:
             db.session.execute(db.text("DELETE FROM user_preferences WHERE user_id = ANY(:user_ids)"), {"user_ids": user_ids})
-        
+
         # Clear organization-dependent tables that reference organization_id
         print("🗑️  Clearing ingredient categories...")
         if org_ids:
             db.session.execute(db.text("DELETE FROM ingredient_category WHERE organization_id = ANY(:org_ids)"), {"org_ids": org_ids})
-        
+
         print("🗑️  Clearing custom unit mappings...")
         if org_ids:
             db.session.execute(db.text("DELETE FROM custom_unit_mapping WHERE organization_id = ANY(:org_ids)"), {"org_ids": org_ids})
-        
+
         # Clear other organization-scoped data
         organization_tables = [
             'recipe', 'batch', 'inventory_item', 'inventory_history',
             'product', 'product_sku', 'product_variant', 'batch_inventory_log',
             'reservation', 'conversion_log'
         ]
-        
+
         for table in organization_tables:
             print(f"🗑️  Clearing {table}...")
             try:
@@ -440,7 +438,7 @@ def clear_all_users_command():
                         WHERE table_name = :table_name 
                         AND column_name = 'organization_id'
                     """), {"table_name": table}).fetchone()
-                    
+
                     if result:
                         db.session.execute(db.text(f"DELETE FROM {table} WHERE organization_id = ANY(:org_ids)"), {"org_ids": org_ids})
                     else:
@@ -448,22 +446,22 @@ def clear_all_users_command():
             except Exception as table_error:
                 print(f"   ⚠️  Could not clear {table}: {table_error}")
                 # Continue with other tables
-        
+
         print("🗑️  Clearing all users...")
         user_count = len(user_ids)
         db.session.execute(db.text("DELETE FROM \"user\""))
-        
+
         print("🗑️  Clearing all organizations...")
         org_count = len(org_ids)
         db.session.execute(db.text("DELETE FROM organization"))
-        
+
         db.session.commit()
-        
+
         print("✅ All user data cleared successfully!")
         print(f"   - Removed {user_count} users")
         print(f"   - Removed {org_count} organizations")
         print("🔄 Run 'flask init-production' to recreate default data")
-        
+
     except Exception as e:
         print(f'❌ Error clearing user data: {str(e)}')
         db.session.rollback()
@@ -476,52 +474,52 @@ def clear_dev_users_command():
     try:
         print("🧹 Clearing developer users only...")
         print("👥 Customer users and organizations will be preserved")
-        
+
         from .models import User, UserRoleAssignment
         from .models.user_preferences import UserPreferences
-        
+
         # Show current developer users
         dev_users = User.query.filter_by(user_type='developer').all()
         if not dev_users:
             print("ℹ️  No developer users found")
             return
-        
+
         print(f"📋 Found {len(dev_users)} developer users:")
         for user in dev_users:
             print(f"   - {user.username} ({user.email})")
-        
+
         confirmation = input("Type 'CLEAR DEVS' to confirm: ")
         if confirmation != 'CLEAR DEVS':
             print("❌ Operation cancelled")
             return
-        
+
         # Get developer user IDs for role assignment cleanup
         dev_user_ids = [user.id for user in dev_users]
-        
+
         # Clear developer role assignments
         print("🗑️  Clearing developer role assignments...")
         assignments_deleted = UserRoleAssignment.query.filter(
             UserRoleAssignment.user_id.in_(dev_user_ids)
         ).delete(synchronize_session=False)
-        
+
         # Clear developer user preferences  
         print("🗑️  Clearing developer user preferences...")
         prefs_deleted = UserPreferences.query.filter(
             UserPreferences.user_id.in_(dev_user_ids)
         ).delete(synchronize_session=False)
-        
+
         # Clear developer users
         print("🗑️  Clearing developer users...")
         users_deleted = User.query.filter_by(user_type='developer').delete()
-        
+
         db.session.commit()
-        
+
         print("✅ Developer users cleared successfully!")
         print(f"   - Removed {users_deleted} developer users")
         print(f"   - Removed {assignments_deleted} role assignments")
         print(f"   - Removed {prefs_deleted} user preferences")
         print("🔄 Run 'flask seed-users' to recreate developer user")
-        
+
     except Exception as e:
         print(f'❌ Error clearing developer users: {str(e)}')
         db.session.rollback()
@@ -535,7 +533,7 @@ def clear_customer_users_command():
         print("⚠️  This removes all CUSTOMER users and organizations")
         print("✅ Developer users will be preserved")
         print("✅ Schema (permissions, roles, tiers) will be preserved")
-        
+
         confirmation = input("Type 'CLEAR CUSTOMER USERS' to confirm: ")
         if confirmation != 'CLEAR CUSTOMER USERS':
             print("❌ Operation cancelled")
@@ -546,48 +544,48 @@ def clear_customer_users_command():
         from .models.statistics import UserStats, OrganizationStats
         from .models.billing_snapshot import BillingSnapshot
         from .models.user_preferences import UserPreferences
-        
+
         # Get IDs for bulk operations
         customer_user_ids = [u.id for u in User.query.filter_by(user_type='customer').all()]
         org_ids = [o.id for o in Organization.query.all()]
-        
+
         # Clear in proper dependency order to handle all PostgreSQL constraints
         print("🗑️  Clearing customer user role assignments...")
         if customer_user_ids:
             db.session.execute(db.text("DELETE FROM user_role_assignment WHERE user_id = ANY(:user_ids)"), {"user_ids": customer_user_ids})
-        
+
         print("🗑️  Clearing customer user statistics...")
         if customer_user_ids:
             db.session.execute(db.text("DELETE FROM user_stats WHERE user_id = ANY(:user_ids)"), {"user_ids": customer_user_ids})
-        
+
         print("🗑️  Clearing organization statistics...")
         if org_ids:
             db.session.execute(db.text("DELETE FROM organization_stats WHERE organization_id = ANY(:org_ids)"), {"org_ids": org_ids})
-        
+
         print("🗑️  Clearing billing snapshots...")
         if org_ids:
             db.session.execute(db.text("DELETE FROM billing_snapshots WHERE organization_id = ANY(:org_ids)"), {"org_ids": org_ids})
-        
+
         print("🗑️  Clearing customer user preferences...")
         if customer_user_ids:
             db.session.execute(db.text("DELETE FROM user_preferences WHERE user_id = ANY(:user_ids)"), {"user_ids": customer_user_ids})
-        
+
         # Clear organization-dependent tables that reference organization_id
         print("🗑️  Clearing ingredient categories...")
         if org_ids:
             db.session.execute(db.text("DELETE FROM ingredient_category WHERE organization_id = ANY(:org_ids)"), {"org_ids": org_ids})
-        
+
         print("🗑️  Clearing custom unit mappings...")
         if org_ids:
             db.session.execute(db.text("DELETE FROM custom_unit_mapping WHERE organization_id = ANY(:org_ids)"), {"org_ids": org_ids})
-        
+
         # Clear other organization-scoped data
         organization_tables = [
             'recipe', 'batch', 'inventory_item', 'inventory_history',
             'product', 'product_sku', 'product_variant', 'batch_inventory_log',
             'reservation', 'conversion_log'
         ]
-        
+
         for table in organization_tables:
             print(f"🗑️  Clearing {table}...")
             try:
@@ -598,7 +596,7 @@ def clear_customer_users_command():
                         WHERE table_name = :table_name 
                         AND column_name = 'organization_id'
                     """), {"table_name": table}).fetchone()
-                    
+
                     if result:
                         db.session.execute(db.text(f"DELETE FROM {table} WHERE organization_id = ANY(:org_ids)"), {"org_ids": org_ids})
                     else:
@@ -606,7 +604,7 @@ def clear_customer_users_command():
             except Exception as table_error:
                 print(f"   ⚠️  Could not clear {table}: {table_error}")
                 # Continue with other tables
-        
+
         # Handle user-referenced columns by setting them to NULL (preserve data but remove user references)
         print("🗑️  Clearing user references in organization data...")
         user_reference_tables = [
@@ -618,7 +616,7 @@ def clear_customer_users_command():
             ('product_sku', ['created_by', 'updated_by', 'deleted_by']),
             ('reservation', ['created_by', 'updated_by'])
         ]
-        
+
         for table, columns in user_reference_tables:
             try:
                 if customer_user_ids:
@@ -629,7 +627,7 @@ def clear_customer_users_command():
                             WHERE table_name = :table_name 
                             AND column_name = :column_name
                         """), {"table_name": table, "column_name": column}).fetchone()
-                        
+
                         if result:
                             db.session.execute(db.text(f"UPDATE {table} SET {column} = NULL WHERE {column} = ANY(:user_ids)"), {"user_ids": customer_user_ids})
                             print(f"   ✅ Cleared {column} references in {table}")
@@ -638,26 +636,26 @@ def clear_customer_users_command():
             except Exception as table_error:
                 print(f"   ⚠️  Could not clear user references in {table}: {table_error}")
                 # Continue with other tables
-        
+
         # Clear all customer users
         print("🗑️  Clearing customer users...")
         db.session.execute(db.text("DELETE FROM \"user\" WHERE user_type = 'customer'"))
-        
+
         # Clear all organizations
         print("🗑️  Clearing organizations...")
         db.session.execute(db.text("DELETE FROM organization"))
-        
+
         # Commit all changes
         db.session.commit()
         print("✅ Customer users and organizations cleared successfully")
-        
+
         # Summary
         remaining_users = User.query.count()
         remaining_orgs = Organization.query.count()
         print(f"\n📊 Summary:")
         print(f"Remaining users: {remaining_users} (should be developers only)")
         print(f"Remaining organizations: {remaining_orgs} (should be 0)")
-        
+
     except Exception as e:
         db.session.rollback()
         print(f"❌ Error clearing customer user data: {e}")
@@ -830,7 +828,7 @@ def register_commands(app):
 
     # One-time initialization (fresh installs only)
     app.cli.add_command(init_production_command)
-    
+
     # Data clearing commands (DANGER ZONE)
     app.cli.add_command(clear_all_users_command)
     app.cli.add_command(clear_dev_users_command)
