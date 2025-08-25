@@ -1,4 +1,3 @@
-
 """Create unified inventory history and merge data
 
 Revision ID: 6f9bc65166b3
@@ -113,7 +112,7 @@ def upgrade():
             INSERT INTO unified_inventory_history (
                 inventory_item_id, timestamp, change_type, quantity_change, unit,
                 unit_cost, remaining_quantity, fifo_reference_id, fifo_code,
-                batch_id, created_by, notes, quantity_used, used_for_batch_id,
+                batch_id, created_by, notes, quantity_used,
                 is_perishable, shelf_life_days, expiration_date, organization_id
             )
             SELECT 
@@ -130,7 +129,6 @@ def upgrade():
                 ih.created_by,
                 '' as notes,
                 COALESCE(ih.quantity_used, 0.0) as quantity_used,
-                ih.used_for_batch_id,
                 COALESCE(ih.is_perishable, false) as is_perishable,
                 ih.shelf_life_days,
                 ih.expiration_date,
