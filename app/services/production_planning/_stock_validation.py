@@ -85,14 +85,13 @@ def validate_ingredients_with_uscs(recipe: Recipe, scale: float, organization_id
 def _determine_availability_status(stock_result) -> str:
     """Determine availability status from USCS result"""
     if hasattr(stock_result, 'status'):
-        uscs_status = stock_result.status.upper()
-
-        # Map USCS statuses to production planning statuses
-        if uscs_status in ['OK', 'AVAILABLE']:
+        # Convert status to standardized format
+        status_value = stock_result.status.value if hasattr(stock_result.status, 'value') else str(stock_result.status)
+        if status_value.upper() in ['AVAILABLE', 'OK']:
             return 'available'
-        elif uscs_status == 'LOW':
+        elif status_value.upper() in ['LOW', 'INSUFFICIENT']:
             return 'low'
-        elif uscs_status in ['INSUFFICIENT', 'UNAVAILABLE']:
+        elif status_value.upper() in ['NEEDED', 'MISSING']:
             return 'insufficient'
         else:
             return 'unknown'
