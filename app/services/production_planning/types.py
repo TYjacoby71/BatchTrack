@@ -1,4 +1,3 @@
-
 """
 Production Planning Types
 
@@ -48,6 +47,20 @@ class IngredientRequirement:
     total_cost: float
     status: str  # 'available', 'low', 'insufficient'
 
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for JSON serialization"""
+        return {
+            'item_id': self.ingredient_id,
+            'item_name': self.ingredient_name,
+            'needed_quantity': self.scaled_quantity,
+            'available_quantity': self.available_quantity,
+            'unit': self.unit,
+            'status': self.status,
+            'cost_per_unit': self.cost_per_unit,
+            'total_cost': self.total_cost,
+            'category': 'ingredient'
+        }
+
 
 @dataclass
 class ContainerOption:
@@ -61,6 +74,19 @@ class ContainerOption:
     fill_percentage: float  # How full this container would be
     containers_needed: int
 
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for JSON serialization"""
+        return {
+            'item_id': self.container_id,
+            'item_name': self.container_name,
+            'storage_capacity': self.storage_capacity,
+            'storage_unit': self.storage_unit,
+            'available': self.available_quantity,
+            'needed': self.containers_needed,
+            'cost_each': self.cost_each,
+            'fill_percentage': self.fill_percentage,
+            'category': 'container'
+        }
 
 @dataclass
 class ContainerStrategy:
@@ -72,18 +98,40 @@ class ContainerStrategy:
     average_fill_percentage: float
     waste_percentage: float
 
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for JSON serialization"""
+        return {
+            'strategy': self.strategy_type.value,
+            'containers': [opt.to_dict() for opt in self.selected_containers],
+            'total_containers_needed': self.total_containers_needed,
+            'total_container_cost': self.total_container_cost,
+            'average_fill_percentage': self.average_fill_percentage,
+            'waste_percentage': self.waste_percentage
+        }
+
 
 @dataclass
 class CostBreakdown:
     """Detailed cost analysis"""
     ingredient_costs: List[Dict[str, Any]]
-    container_costs: List[Dict[str, Any]] 
+    container_costs: List[Dict[str, Any]]
     total_ingredient_cost: float
     total_container_cost: float
     total_production_cost: float
     cost_per_unit: float
     yield_amount: float
     yield_unit: str
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for JSON serialization"""
+        return {
+            'total_cost': self.total_production_cost,
+            'cost_per_unit': self.cost_per_unit,
+            'ingredient_cost': self.total_ingredient_cost,
+            'container_cost': self.total_container_cost,
+            'yield_amount': self.yield_amount,
+            'yield_unit': self.yield_unit
+        }
 
 
 @dataclass
@@ -92,74 +140,58 @@ class ProductionPlan:
     request: ProductionRequest
     status: ProductionStatus
     feasible: bool
-    
+
     # Requirements
     ingredient_requirements: List[IngredientRequirement]
     projected_yield: Dict[str, Any]
-    
+
     # Container analysis
     container_strategy: Optional[ContainerStrategy]
     container_options: List[ContainerOption]
-    
+
     # Cost analysis
     cost_breakdown: CostBreakdown
-    
+
     # Issues and recommendations
     issues: List[str]
     recommendations: List[str]
-    
+
     # Batch preparation data
     batch_ready_data: Optional[Dict[str, Any]] = None
-    
+
     def to_dict(self) -> Dict[str, Any]:
-        """Convert to dictionary for JSON serialization"""
+        """Convert to dictionary format for API responses"""
+        # Transform ingredient requirements to stock_results format expected by frontend
+        stock_results = []
+        all_available = True
+
+        for req in self.ingredient_requirements:
+            req_dict = req.to_dict()
+            stock_result = {
+                'ingredient_id': req_dict.get('item_id'),
+                'ingredient_name': req_dict.get('item_name', ''),
+                'needed_amount': req_dict.get('needed_quantity', 0),
+                'unit': req_dict.get('unit', ''),
+                'available': req_dict.get('status') == 'available',
+                'available_quantity': req_dict.get('available_quantity', 0),
+                'shortage': max(0, req_dict.get('needed_quantity', 0) - req_dict.get('available_quantity', 0))
+            }
+            stock_results.append(stock_result)
+
+            if req_dict.get('status') != 'available':
+                all_available = False
+
         return {
             'success': self.feasible,
             'status': self.status.value,
             'feasible': self.feasible,
-            'recipe_id': self.request.recipe_id,
-            'scale': self.request.scale,
-            'ingredient_requirements': [
-                {
-                    'item_id': req.ingredient_id,
-                    'item_name': req.ingredient_name,
-                    'needed_quantity': req.scaled_quantity,
-                    'available_quantity': req.available_quantity,
-                    'unit': req.unit,
-                    'status': req.status,
-                    'cost_per_unit': req.cost_per_unit,
-                    'total_cost': req.total_cost,
-                    'category': 'ingredient'
-                }
-                for req in self.ingredient_requirements
-            ],
-            'container_strategy': {
-                'strategy': self.container_strategy.strategy_type.value if self.container_strategy else None,
-                'containers': [
-                    {
-                        'item_id': opt.container_id,
-                        'item_name': opt.container_name,
-                        'storage_capacity': opt.storage_capacity,
-                        'storage_unit': opt.storage_unit,
-                        'available': opt.available_quantity,
-                        'needed': opt.containers_needed,
-                        'cost_each': opt.cost_each,
-                        'fill_percentage': opt.fill_percentage,
-                        'category': 'container'
-                    }
-                    for opt in (self.container_strategy.selected_containers if self.container_strategy else [])
-                ]
-            } if self.container_strategy else None,
-            'cost_info': {
-                'total_cost': self.cost_breakdown.total_production_cost,
-                'cost_per_unit': self.cost_breakdown.cost_per_unit,
-                'ingredient_cost': self.cost_breakdown.total_ingredient_cost,
-                'container_cost': self.cost_breakdown.total_container_cost,
-                'yield_amount': self.cost_breakdown.yield_amount,
-                'yield_unit': self.cost_breakdown.yield_unit
-            },
+            'stock_results': stock_results,
+            'all_available': all_available,
+            'ingredient_requirements': [req.to_dict() for req in self.ingredient_requirements],
+            'projected_yield': self.projected_yield,
+            'container_strategy': self.container_strategy.to_dict() if self.container_strategy else None,
+            'container_options': [opt.to_dict() for opt in self.container_options],
+            'cost_breakdown': self.cost_breakdown.to_dict() if self.cost_breakdown else None,
             'issues': self.issues,
-            'recommendations': self.recommendations,
-            'all_available': self.status not in [ProductionStatus.INSUFFICIENT_INGREDIENTS, ProductionStatus.NO_CONTAINERS],
-            'all_ok': self.feasible  # Legacy compatibility
+            'recommendations': self.recommendations
         }

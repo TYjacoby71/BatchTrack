@@ -127,17 +127,18 @@ def plan_production_route(recipe_id):
             # Delegate to service - no business logic here
             planning_result = plan_production(recipe_id, scale, container_id)
 
-            if planning_result['success']:
+            if planning_result.get('success', False):
                 return jsonify({
                     'success': True,
-                    'stock_results': planning_result['stock_results'],
-                    'all_available': planning_result['all_available'],
+                    'stock_results': planning_result.get('stock_results', []),
+                    'all_available': planning_result.get('all_available', False),
                     'scale': scale,
                     'cost_info': planning_result.get('cost_info', {}),
-                    'all_ok': planning_result['all_available']  # For backwards compatibility
+                    'all_ok': planning_result.get('all_available', False)  # For backwards compatibility
                 })
             else:
-                return jsonify({'success': False, 'error': planning_result['error']}), 500
+                error_msg = planning_result.get('error') or planning_result.get('message') or 'Production planning failed'
+                return jsonify({'success': False, 'error': error_msg}), 500
 
         except Exception as e:
             logger.error(f"Error in production planning: {str(e)}")
