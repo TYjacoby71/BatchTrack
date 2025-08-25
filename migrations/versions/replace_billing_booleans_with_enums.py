@@ -1,4 +1,3 @@
-
 """replace billing provider booleans with enum fields
 
 Revision ID: b5c7d8e9f1a2
@@ -24,48 +23,79 @@ def _get_columns(table_name):
 
 def upgrade():
     print("=== Replacing billing provider booleans with enum fields ===")
-    
+
     bind = op.get_bind()
     cols = _get_columns("subscription_tier")
-    
+
     # 1) Add new columns if they don't exist
     if "tier_type" not in cols:
         print("   Adding tier_type column...")
         op.add_column('subscription_tier', sa.Column('tier_type', sa.String(32), nullable=True))
     else:
         print("   ✅ tier_type column already exists")
-        
+
     if "billing_provider" not in cols:
         print("   Adding billing_provider column...")
         op.add_column('subscription_tier', sa.Column('billing_provider', sa.String(32), nullable=True))
     else:
         print("   ✅ billing_provider column already exists")
 
-    # 2) Migrate data only if legacy boolean columns still exist
+    # 2) Migrate data only if legacy boolean columns still exist AND table has data
     legacy_cols = {"requires_stripe_billing", "requires_google_billing", "requires_whop_billing"}
     existing_legacy = legacy_cols & cols
-    
+
     if existing_legacy:
-        print("   Migrating existing data from legacy boolean columns...")
+        # Check if the table has any rows before attempting data migration
         try:
-            bind.execute(text("""
-                UPDATE subscription_tier
-                SET
-                  tier_type = CASE
-                    WHEN COALESCE(requires_stripe_billing, 0) = 1
-                      OR COALESCE(requires_google_billing, 0) = 1  
-                      OR COALESCE(requires_whop_billing, 0) = 1
-                    THEN 'paid' ELSE 'free' END,
-                  billing_provider = CASE
-                    WHEN COALESCE(requires_stripe_billing, 0) = 1 THEN 'stripe'
-                    WHEN COALESCE(requires_google_billing, 0) = 1 THEN 'google'
-                    WHEN COALESCE(requires_whop_billing, 0) = 1 THEN 'whop'
-                    ELSE NULL END
-            """))
-            print("   ✅ Data migration completed")
+            result = bind.execute(text("SELECT COUNT(*) FROM subscription_tier"))
+            row_count = result.scalar()
+
+            if row_count > 0:
+                print(f"   Found {row_count} existing subscription_tier rows - migrating data from legacy boolean columns...")
+
+                # Build dynamic SQL based on which columns actually exist
+                tier_type_conditions = []
+                billing_provider_conditions = []
+
+                if "requires_stripe_billing" in existing_legacy:
+                    tier_type_conditions.append("COALESCE(requires_stripe_billing, 0) = 1")
+                    billing_provider_conditions.append("WHEN COALESCE(requires_stripe_billing, 0) = 1 THEN 'stripe'")
+
+                if "requires_google_billing" in existing_legacy:
+                    tier_type_conditions.append("COALESCE(requires_google_billing, 0) = 1")
+                    billing_provider_conditions.append("WHEN COALESCE(requires_google_billing, 0) = 1 THEN 'google'")
+
+                if "requires_whop_billing" in existing_legacy:
+                    tier_type_conditions.append("COALESCE(requires_whop_billing, 0) = 1")
+                    billing_provider_conditions.append("WHEN COALESCE(requires_whop_billing, 0) = 1 THEN 'whop'")
+
+                # Only run migration if we have conditions to work with
+                if tier_type_conditions and billing_provider_conditions:
+                    tier_type_sql = " OR ".join(tier_type_conditions)
+                    billing_provider_sql = "\n                    ".join(billing_provider_conditions)
+
+                    migration_sql = f"""
+                        UPDATE subscription_tier
+                        SET
+                          tier_type = CASE
+                            WHEN {tier_type_sql}
+                            THEN 'paid' ELSE 'free' END,
+                          billing_provider = CASE
+                            {billing_provider_sql}
+                            ELSE NULL END
+                    """
+
+                    bind.execute(text(migration_sql))
+                    print("   ✅ Data migration completed")
+                else:
+                    print("   ⚠️  No valid legacy columns found for migration")
+            else:
+                print("   ℹ️  subscription_tier table is empty - skipping data migration")
+
         except Exception as e:
             print(f"   ⚠️  Data migration failed: {e}")
-            
+            print("   ℹ️  This is normal for fresh database builds - continuing...")
+
         # 3) Drop legacy columns if present (SQLite-safe)
         print("   Dropping legacy boolean columns...")
         with op.batch_alter_table("subscription_tier") as batch_op:
@@ -76,34 +106,22 @@ def upgrade():
                 except Exception as e:
                     print(f"   ⚠️  Could not drop {col_name}: {e}")
     else:
-        print("   Legacy boolean columns not found - setting safe defaults...")
-        # Legacy columns already gone; set safe defaults if still NULL
-        try:
-            bind.execute(text("""
-                UPDATE subscription_tier 
-                SET 
-                  tier_type = COALESCE(tier_type, 'free'),
-                  billing_provider = COALESCE(billing_provider, NULL)
-                WHERE tier_type IS NULL
-            """))
-            print("   ✅ Set default values")
-        except Exception as e:
-            print(f"   ⚠️  Could not set defaults: {e}")
+        print("   ℹ️  No legacy boolean columns found - skipping data migration")
 
     print("✅ Billing provider enum migration completed")
 
 def downgrade():
     """Downgrade - restore boolean columns (best effort)"""
     print("=== Restoring billing provider boolean columns ===")
-    
+
     bind = op.get_bind()
     cols = _get_columns("subscription_tier")
-    
+
     # Add boolean columns back if they don't exist
     for col_name in ["requires_stripe_billing", "requires_google_billing", "requires_whop_billing"]:
         if col_name not in cols:
             op.add_column('subscription_tier', sa.Column(col_name, sa.Boolean(), nullable=True, default=False))
-    
+
     # Migrate data back from enum to booleans
     if "billing_provider" in cols:
         try:
@@ -115,7 +133,7 @@ def downgrade():
             """))
         except Exception as e:
             print(f"   ⚠️  Could not migrate data back: {e}")
-    
+
     # Drop enum columns
     with op.batch_alter_table("subscription_tier") as batch_op:
         try:
@@ -125,5 +143,5 @@ def downgrade():
                 batch_op.drop_column('billing_provider')
         except Exception as e:
             print(f"   ⚠️  Could not drop enum columns: {e}")
-    
+
     print("✅ Downgrade completed")
