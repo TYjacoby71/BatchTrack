@@ -20,13 +20,14 @@ from ._production_planning import (
 )
 from ._scaling import scale_recipe
 from ._validation import validate_recipe_data
+from ._stock_checking import check_recipe_stock, get_recipe_ingredients_for_stock_check
 
 # Make sure all functions are available
 __all__ = [
     'create_recipe', 'update_recipe', 'delete_recipe', 'get_recipe_details',
     'duplicate_recipe', 'plan_production', 'calculate_recipe_requirements',
     'calculate_production_cost', 'check_ingredient_availability', 'scale_recipe',
-    'validate_recipe_data'
+    'validate_recipe_data', 'check_recipe_stock', 'get_recipe_ingredients_for_stock_check'
 ]
 
 # Backwards compatibility shim for tests and legacy code
@@ -56,3 +57,11 @@ class RecipeService:
     @staticmethod
     def validate_recipe_data(name, ingredients=None, yield_amount=None, recipe_id=None, notes=None, category=None, tags=None, batch_size=None):
         return validate_recipe_data(name, ingredients, yield_amount, recipe_id, notes, category, tags, batch_size)
+
+    @staticmethod
+    def check_recipe_stock(recipe_id, quantity_needed, organization_id=None):
+        return check_recipe_stock(recipe_id, quantity_needed, organization_id)
+
+    @staticmethod
+    def get_recipe_ingredients_for_stock_check(recipe_id, quantity_needed, organization_id=None):
+        return get_recipe_ingredients_for_stock_check(recipe_id, quantity_needed, organization_id)

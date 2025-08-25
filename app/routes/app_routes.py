@@ -119,12 +119,11 @@ def check_stock():
 
         recipe = Recipe.query.get_or_404(recipe_id)
 
-        # Use new UniversalStockCheckService
-        from app.services.stock_check.core import UniversalStockCheckService
-        service = UniversalStockCheckService()
-        result = service.check_recipe_stock(recipe, scale)
+        # Use recipe service for stock checking
+        from app.services.recipe_service import check_recipe_stock
+        result = check_recipe_stock(recipe, scale)
         stock_check = result['stock_check']
-        all_ok = result['all_ok']
+        all_ok = result['status'] == 'ok'
 
         status = "ok" if all_ok else "bad"
         for item in stock_check:

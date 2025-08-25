@@ -34,9 +34,9 @@ def check_stock():
         if not recipe:
             return jsonify({'error': 'Recipe not found'}), 404
 
-        # Use the Universal Stock Check Service
-        uscs = UniversalStockCheckService()
-        result = uscs.check_recipe_stock(recipe, scale)
+        # Use recipe service for stock checking
+        from app.services.recipe_service import check_recipe_stock
+        result = check_recipe_stock(recipe, scale)
 
         # Ensure we always return a valid response structure
         if not isinstance(result, dict):
