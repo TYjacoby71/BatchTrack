@@ -10,7 +10,7 @@ from alembic import op
 import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
-revision = 'add_missing_permission_category_column'
+revision = 'add_perm_category_col'
 down_revision = 'add_missing_user_columns'
 branch_labels = None
 depends_on = None
