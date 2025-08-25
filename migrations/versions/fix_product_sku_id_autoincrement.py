@@ -19,19 +19,19 @@ depends_on = None
 
 def upgrade():
     """Fix ProductSKU id column to properly handle autoincrement"""
-    
+
     connection = op.get_bind()
-    
+
     # Check if product_sku table exists
     inspector = sa.inspect(connection)
     tables = inspector.get_table_names()
-    
+
     if 'product_sku' not in tables:
         print("   ⚠️  product_sku table doesn't exist, skipping")
         return
-    
+
     print("   Fixing ProductSKU id column autoincrement...")
-    
+
     try:
         # For SQLite, we need to recreate the table to fix autoincrement
         # First, create a temporary table with correct structure
@@ -44,7 +44,6 @@ def upgrade():
                 size_label VARCHAR(32),
                 sku_code VARCHAR(64),
                 sku_name VARCHAR(128),
-                quantity_override FLOAT,
                 unit VARCHAR(32),
                 low_stock_threshold FLOAT,
                 fifo_id VARCHAR(64),
@@ -90,12 +89,12 @@ def upgrade():
                 organization_id INTEGER
             )
         """))
-        
+
         # Copy data from old table to new table (excluding id to let autoincrement work)
         connection.execute(text("""
             INSERT INTO product_sku_temp (
                 inventory_item_id, product_id, variant_id, size_label, sku_code, sku_name,
-                quantity_override, unit, low_stock_threshold, fifo_id, batch_id, container_id,
+                unit, low_stock_threshold, fifo_id, batch_id, container_id,
                 retail_price, wholesale_price, profit_margin_target, category, subcategory,
                 tags, description, is_active, is_product_active, is_discontinued,
                 created_at, updated_at, created_by, supplier_name, supplier_sku, supplier_cost,
@@ -107,7 +106,7 @@ def upgrade():
             )
             SELECT 
                 inventory_item_id, product_id, variant_id, size_label, sku_code, sku_name,
-                quantity_override, unit, low_stock_threshold, fifo_id, batch_id, container_id,
+                unit, low_stock_threshold, fifo_id, batch_id, container_id,
                 retail_price, wholesale_price, profit_margin_target, category, subcategory,
                 tags, description, is_active, is_product_active, is_discontinued,
                 created_at, updated_at, created_by, supplier_name, supplier_sku, supplier_cost,
@@ -118,13 +117,13 @@ def upgrade():
                 is_perishable, shelf_life_days, organization_id
             FROM product_sku
         """))
-        
+
         # Drop old table and rename new one
         connection.execute(text("DROP TABLE product_sku"))
         connection.execute(text("ALTER TABLE product_sku_temp RENAME TO product_sku"))
-        
+
         print("   ✅ Successfully fixed ProductSKU id column autoincrement")
-        
+
     except Exception as e:
         print(f"   ⚠️  Error fixing ProductSKU id column: {e}")
         # Try to clean up if something went wrong
