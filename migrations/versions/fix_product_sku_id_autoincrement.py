@@ -156,8 +156,7 @@ def upgrade():
         connection.execute(text("DROP TABLE product_sku CASCADE"))
         connection.execute(text("ALTER TABLE product_sku_temp RENAME TO product_sku"))
 
-        # Add primary key constraint to the new table
-        connection.execute(text("ALTER TABLE product_sku ADD PRIMARY KEY (id)"))
+        # SERIAL already creates a primary key constraint, so no need to add one
 
         # Recreate foreign key constraints based on what we found
         for fk in foreign_keys:
