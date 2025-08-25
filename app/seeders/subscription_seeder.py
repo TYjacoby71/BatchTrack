@@ -9,7 +9,7 @@ from datetime import datetime
 
 def create_exempt_tier():
     """Create the only hardcoded tier - exempt tier for system use"""
-    exempt_tier = SubscriptionTier.query.filter_by(key='exempt').first()
+    exempt_tier = SubscriptionTier.query.filter_by(name='Exempt Plan').first()
 
     if not exempt_tier:
         print("✅ Creating exempt tier")
@@ -81,7 +81,7 @@ def migrate_existing_organizations():
     for org in organizations:
         if not org.subscription_tier_id:
             # Assign exempt tier to any organization without a tier
-            exempt_tier = SubscriptionTier.query.filter_by(key='exempt').first()
+            exempt_tier = SubscriptionTier.query.filter_by(name='Exempt Plan').first()
             if exempt_tier:
                 org.subscription_tier_id = exempt_tier.id
                 print(f"✅ Assigned exempt tier to organization {org.name}")
