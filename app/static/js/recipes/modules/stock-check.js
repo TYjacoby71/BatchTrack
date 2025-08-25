@@ -40,16 +40,15 @@ export class StockCheckManager {
         stockCheckBtn.disabled = true;
 
         try {
-            // Use the recipe plan route which includes stock checking
-            const response = await fetch(`/recipes/${this.main.recipe.id}/plan`, {
+            // Use the dedicated stock check API endpoint that calls USCS ingredient handler
+            const response = await fetch(`/api/stock-check/recipe/${this.main.recipe.id}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': this.main.getCSRFToken()
                 },
                 body: JSON.stringify({
-                    scale: this.main.scale,
-                    check_containers: false
+                    scale: this.main.scale
                 })
             });
 
@@ -87,17 +86,8 @@ export class StockCheckManager {
 
         console.log('🔍 STOCK CHECK: Full results object:', this.stockCheckResults);
 
-        // Handle the actual structure from the production planning service
-        const stockData = this.stockCheckResults.stock_results || [];
-        const allAvailable = this.stockCheckResults.all_available || this.stockCheckResults.feasible || false;
-
-        console.log('🔍 STOCK CHECK: Stock data:', stockData);
-        console.log('🔍 STOCK CHECK: All available:', allAvailable);
-
-        // Filter for ingredients only
-        const ingredientData = stockData.filter(item =>
-            !item.category || item.category === 'ingredient' || item.category === 'INGREDIENT'
-        );
+        // Handle the USCS ingredient handler response format
+        const ingredientData = this.stockCheckResults.stock_check || [];
 
         if (!ingredientData || ingredientData.length === 0) {
             stockResults.innerHTML = '<div class="alert alert-info">No ingredients found for this recipe.</div>';
@@ -113,9 +103,9 @@ export class StockCheckManager {
         let allIngredientsAvailable = true;
 
         ingredientData.forEach(result => {
-            const needed = result.needed_amount || result.needed_quantity || result.quantity_needed || 0;
+            const needed = result.needed_quantity || 0;
             const available = result.available_quantity || 0;
-            const isAvailable = result.is_available !== false && available >= needed;
+            const isAvailable = result.status === 'available' || result.status === 'OK';
 
             if (!isAvailable) {
                 allIngredientsAvailable = false;
@@ -125,10 +115,10 @@ export class StockCheckManager {
             const statusClass = isAvailable ? 'bg-success' : 'bg-danger';
 
             html += `<tr>
-                <td>${result.ingredient_name || result.item_name || 'Unknown'}</td>
+                <td>${result.item_name || 'Unknown'}</td>
                 <td>${needed.toFixed(2)}</td>
                 <td>${available.toFixed(2)}</td>
-                <td>${result.unit || result.needed_unit || result.available_unit || ''}</td>
+                <td>${result.needed_unit || result.available_unit || ''}</td>
                 <td><span class="badge ${statusClass}">${status}</span></td>
             </tr>`;
         });
@@ -156,11 +146,11 @@ export class StockCheckManager {
 
         // Store processed results for CSV/shopping list
         this.processedResults = ingredientData.map(result => ({
-            ingredient: result.ingredient_name || result.item_name || 'Unknown',
-            needed: result.needed_amount || result.needed_quantity || result.quantity_needed || 0,
+            ingredient: result.item_name || 'Unknown',
+            needed: result.needed_quantity || 0,
             available: result.available_quantity || 0,
-            unit: result.unit || result.needed_unit || result.available_unit || '',
-            status: (result.is_available !== false && (result.available_quantity || 0) >= (result.needed_amount || result.needed_quantity || result.quantity_needed || 0)) ? 'OK' : 'NEEDED'
+            unit: result.needed_unit || result.available_unit || '',
+            status: (result.status === 'available' || result.status === 'OK') ? 'OK' : 'NEEDED'
         }));
     }
 
