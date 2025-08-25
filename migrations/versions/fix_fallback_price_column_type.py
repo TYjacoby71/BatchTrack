@@ -1,4 +1,3 @@
-
 """fix fallback_price column type from Numeric to String
 
 Revision ID: fix_fallback_price_type
@@ -18,11 +17,11 @@ depends_on = None
 
 def upgrade():
     """Fix fallback_price column type from Numeric to String to match model"""
-    
+
     # Get database connection and inspector
     connection = op.get_bind()
     inspector = inspect(connection)
-    
+
     def column_exists(table_name, column_name):
         """Check if a column exists in a table"""
         try:
@@ -30,9 +29,9 @@ def upgrade():
             return column_name in columns
         except Exception:
             return False
-    
+
     print("=== Fixing fallback_price column type ===")
-    
+
     if column_exists('subscription_tier', 'fallback_price'):
         print("   Converting fallback_price from Numeric to String...")
         with op.batch_alter_table('subscription_tier', schema=None) as batch_op:
@@ -46,14 +45,27 @@ def upgrade():
         print("   ⚠️  fallback_price column doesn't exist, skipping")
 
 def downgrade():
-    """Revert fallback_price column type back to Numeric"""
-    
+    """Revert fallback_price column type from String to Numeric"""
     print("=== Reverting fallback_price column type ===")
-    
-    with op.batch_alter_table('subscription_tier', schema=None) as batch_op:
-        batch_op.alter_column('fallback_price',
-               existing_type=sa.String(32),
-               type_=sa.Numeric(precision=10, scale=2),
-               existing_nullable=True)
-    
-    print("✅ fallback_price column type reverted to Numeric")
+
+    # Check if the column exists before trying to alter it
+    from sqlalchemy import inspect
+    connection = op.get_bind()
+    inspector = inspect(connection)
+
+    def column_exists(table_name, column_name):
+        columns = [col['name'] for col in inspector.get_columns(table_name)]
+        return column_name in columns
+
+    if column_exists('subscription_tier', 'fallback_price'):
+        print("   Reverting fallback_price column type from String to Numeric...")
+        with op.batch_alter_table('subscription_tier', schema=None) as batch_op:
+            batch_op.alter_column('fallback_price',
+                                existing_type=sa.String(length=16),
+                                type_=sa.Numeric(precision=10, scale=2),
+                                existing_nullable=True)
+        print("   ✅ Reverted fallback_price column type to Numeric(10,2)")
+    else:
+        print("   ⚠️  fallback_price column does not exist - skipping")
+
+    print("✅ Fallback price column type reversion completed")
