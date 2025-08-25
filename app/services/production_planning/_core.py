@@ -57,7 +57,13 @@ def plan_production_comprehensive(
 
     except Exception as e:
         logger.error(f"Error in comprehensive production planning: {e}")
-        return {'success': False, 'error': str(e)}
+        return {
+            'success': False,
+            'status': 'error',
+            'feasible': False,
+            'error': f'Production planning failed: {str(e)}',
+            'message': f'Production planning failed: {str(e)}'
+        }
 
 
 def execute_production_planning(request: ProductionRequest) -> ProductionPlan:
