@@ -3,13 +3,14 @@ export class StockCheckManager {
     constructor(mainManager) {
         this.main = mainManager;
         this.stockCheckResults = null;
+        this.processedResults = null; // Added to store processed data for downloads
     }
 
     bindEvents() {
         console.log('🔍 STOCK CHECK DEBUG: Binding events...');
         const stockCheckBtn = document.getElementById('stockCheckBtn');
         console.log('🔍 STOCK CHECK DEBUG: Stock check button found:', !!stockCheckBtn);
-        
+
         if (stockCheckBtn) {
             stockCheckBtn.addEventListener('click', () => {
                 console.log('🔍 STOCK CHECK DEBUG: Button clicked!');
@@ -23,7 +24,7 @@ export class StockCheckManager {
 
     async performStockCheck() {
         console.log('🔍 STOCK CHECK DEBUG: performStockCheck called');
-        
+
         if (!this.main.recipe) {
             console.warn('🔍 STOCK CHECK: No recipe available');
             alert('No recipe loaded');
@@ -53,7 +54,7 @@ export class StockCheckManager {
             });
 
             console.log('🔍 STOCK CHECK: Response status:', response.status);
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
@@ -79,8 +80,8 @@ export class StockCheckManager {
     displayStockResults() {
         console.log('🔍 STOCK CHECK: Displaying results');
         const stockResults = document.getElementById('stockCheckResults');
-        if (!stockResults || !this.stockCheckResults?.success) {
-            console.warn('🔍 STOCK CHECK: No results element or unsuccessful result');
+        if (!stockResults) {
+            console.warn('🔍 STOCK CHECK: No results element found');
             return;
         }
 
@@ -88,69 +89,90 @@ export class StockCheckManager {
 
         // Handle the actual structure from the production planning service
         const stockData = this.stockCheckResults.stock_results || [];
-        const allAvailable = this.stockCheckResults.all_available || false;
+        const allAvailable = this.stockCheckResults.all_available || this.stockCheckResults.feasible || false;
 
         console.log('🔍 STOCK CHECK: Stock data:', stockData);
         console.log('🔍 STOCK CHECK: All available:', allAvailable);
 
-        if (!stockData || stockData.length === 0) {
+        // Filter for ingredients only
+        const ingredientData = stockData.filter(item =>
+            !item.category || item.category === 'ingredient' || item.category === 'INGREDIENT'
+        );
+
+        if (!ingredientData || ingredientData.length === 0) {
             stockResults.innerHTML = '<div class="alert alert-info">No ingredients found for this recipe.</div>';
+            this.main.stockChecked = true;
+            this.main.stockCheckPassed = true;  // No ingredients means no stock issues
+            this.main.updateValidation();
             return;
         }
 
-        let html = '<div class="table-responsive"><table class="table table-sm">';
-        html += '<thead><tr><th>Ingredient</th><th>Required</th><th>Available</th><th>Status</th></tr></thead><tbody>';
+        let html = '<div class="table-responsive"><table class="table table-sm table-striped">';
+        html += '<thead><tr><th>Ingredient</th><th>Required</th><th>Available</th><th>Unit</th><th>Status</th></tr></thead><tbody>';
 
-        stockData.forEach(ingredient => {
-            console.log('🔍 STOCK CHECK: Processing ingredient:', ingredient);
-            
-            const needed = ingredient.needed_amount || ingredient.required_quantity || 0;
-            const available = ingredient.available_quantity || 0;
-            const unit = ingredient.unit || ingredient.needed_unit || '';
-            const name = ingredient.ingredient_name || ingredient.name || 'Unknown';
-            const isAvailable = ingredient.available !== false && available >= needed;
-            
-            const status = isAvailable ? 'Available' : 'Insufficient';
-            const statusClass = isAvailable ? 'text-success' : 'text-warning';
+        let allIngredientsAvailable = true;
 
-            html += `
-                <tr>
-                    <td>${name}</td>
-                    <td>${needed.toFixed(2)} ${unit}</td>
-                    <td>${available.toFixed(2)} ${unit}</td>
-                    <td class="${statusClass}"><i class="fas fa-${isAvailable ? 'check' : 'exclamation-triangle'}"></i> ${status}</td>
-                </tr>
-            `;
+        ingredientData.forEach(result => {
+            const needed = result.needed_amount || result.needed_quantity || result.quantity_needed || 0;
+            const available = result.available_quantity || 0;
+            const isAvailable = result.is_available !== false && available >= needed;
+
+            if (!isAvailable) {
+                allIngredientsAvailable = false;
+            }
+
+            const status = isAvailable ? 'OK' : 'NEEDED';
+            const statusClass = isAvailable ? 'bg-success' : 'bg-danger';
+
+            html += `<tr>
+                <td>${result.ingredient_name || result.item_name || 'Unknown'}</td>
+                <td>${needed.toFixed(2)}</td>
+                <td>${available.toFixed(2)}</td>
+                <td>${result.unit || result.needed_unit || result.available_unit || ''}</td>
+                <td><span class="badge ${statusClass}">${status}</span></td>
+            </tr>`;
         });
 
         html += '</tbody></table></div>';
+
+        // Add action buttons
+        html += `
+            <div class="d-flex gap-2 mt-3">
+                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="stockChecker.downloadCSV()">
+                    <i class="fas fa-download"></i> Download CSV
+                </button>
+                <button type="button" class="btn btn-outline-primary btn-sm" onclick="stockChecker.downloadShoppingList()">
+                    <i class="fas fa-shopping-cart"></i> Shopping List
+                </button>
+            </div>
+        `;
+
         stockResults.innerHTML = html;
 
-        const statusElement = document.getElementById('stockCheckStatus');
-        if (statusElement) {
-            statusElement.className = `alert ${allAvailable ? 'alert-success' : 'alert-warning'}`;
-            statusElement.innerHTML = allAvailable
-                ? '<i class="fas fa-check-circle"></i> All ingredients available for production'
-                : '<i class="fas fa-exclamation-triangle"></i> Some ingredients have insufficient stock';
-        }
+        // Update the main status
+        this.main.stockChecked = true;
+        this.main.stockCheckPassed = allIngredientsAvailable;
+        this.main.updateValidation();
 
-        // Update validation
-        if (this.main && this.main.validationManager && typeof this.main.validationManager.updateValidation === 'function') {
-            this.main.validationManager.updateValidation();
-        } else {
-            console.warn("🔍 STOCK CHECK: ValidationManager or updateValidation method not available");
-        }
+        // Store processed results for CSV/shopping list
+        this.processedResults = ingredientData.map(result => ({
+            ingredient: result.ingredient_name || result.item_name || 'Unknown',
+            needed: result.needed_amount || result.needed_quantity || result.quantity_needed || 0,
+            available: result.available_quantity || 0,
+            unit: result.unit || result.needed_unit || result.available_unit || '',
+            status: (result.is_available !== false && (result.available_quantity || 0) >= (result.needed_amount || result.needed_quantity || result.quantity_needed || 0)) ? 'OK' : 'NEEDED'
+        }));
     }
 
     displayStockError(message) {
         console.error('🚨 STOCK CHECK ERROR: Displaying error:', message);
-        
+
         const stockResults = document.getElementById('stockCheckResults');
         if (!stockResults) {
             console.error('🚨 STOCK CHECK ERROR: stockCheckResults element not found');
             return;
         }
-        
+
         const statusElement = document.getElementById('stockCheckStatus');
         if (!statusElement) {
             console.error('🚨 STOCK CHECK ERROR: stockCheckStatus element not found');
@@ -168,6 +190,43 @@ export class StockCheckManager {
                 <i class="fas fa-exclamation-circle"></i> Stock check failed: ${message}
             </div>
         `;
+    }
+
+    downloadCSV() {
+        if (!this.processedResults?.length) return;
+
+        let csv = "Ingredient,Required,Available,Unit,Status\n";
+        this.processedResults.forEach(row => {
+            csv += `${row.ingredient},${row.needed.toFixed(2)},${row.available.toFixed(2)},${row.unit},${row.status}\n`;
+        });
+
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'stock_check_report.csv';
+        link.click();
+    }
+
+    downloadShoppingList() {
+        if (!this.processedResults?.length) return;
+
+        const needed = this.processedResults.filter(item => item.status === 'NEEDED');
+        if (!needed.length) {
+            alert('No items need restocking!');
+            return;
+        }
+
+        let text = "Shopping List\n=============\n\n";
+        needed.forEach(item => {
+            const missing = Math.max(0, item.needed - item.available);
+            text += `${item.ingredient}: ${missing.toFixed(2)} ${item.unit}\n`;
+        });
+
+        const blob = new Blob([text], { type: 'text/plain' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'shopping_list.txt';
+        link.click();
     }
 }
 
