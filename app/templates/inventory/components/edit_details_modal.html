@@ -172,48 +172,49 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Form submission handler
-    const editForm = document.getElementById('editDetailsForm');
+    const editForm = document.getElementById('editModalForm');
     if (editForm) {
         editForm.addEventListener('submit', function(e) {
             // Basic form validation
             const name = this.querySelector('input[name="name"]');
-            const unit = this.querySelector('select[name="unit"]');
             const type = this.querySelector('select[name="type"]');
-            
+
             if (!name.value.trim()) {
                 e.preventDefault();
                 alert('Name is required');
                 name.focus();
                 return false;
             }
-            
-            if (!unit.value) {
-                e.preventDefault();
-                alert('Unit is required');
-                unit.focus();
-                return false;
-            }
-            
-            // For containers, validate storage fields
+
+            // For containers, validate storage fields only (unit is always 'count')
             if (type.value === 'container') {
                 const storageAmount = this.querySelector('input[name="storage_amount"]');
                 const storageUnit = this.querySelector('select[name="storage_unit"]');
-                
+
                 if (storageAmount && !storageAmount.value) {
                     e.preventDefault();
                     alert('Storage amount is required for containers');
                     storageAmount.focus();
                     return false;
                 }
-                
+
                 if (storageUnit && !storageUnit.value) {
                     e.preventDefault();
                     alert('Storage unit is required for containers');
                     storageUnit.focus();
                     return false;
                 }
+            } else {
+                // For non-containers, validate unit field
+                const unit = this.querySelector('select[name="unit"]');
+                if (!unit || !unit.value) {
+                    e.preventDefault();
+                    alert('Unit is required');
+                    if (unit) unit.focus();
+                    return false;
+                }
             }
-            
+
             // Form is valid, allow submission
             return true;
         });
@@ -238,7 +239,7 @@ document.addEventListener('DOMContentLoaded', function() {
         typeSelect.addEventListener('change', function() {
             const categorySection = document.getElementById('categorySection');
             const perishableSection = document.getElementById('perishableSection');
-            
+
             if (categorySection) {
                 categorySection.style.display = this.value === 'ingredient' ? 'block' : 'none';
             }
@@ -246,16 +247,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 perishableSection.style.display = this.value === 'container' ? 'none' : 'block';
             }
         });
-        
+
         // Trigger change event on page load to set initial state
         typeSelect.dispatchEvent(new Event('change'));
     }
-    
+
     // Perishable checkbox handler
     const perishableCheckbox = document.getElementById('is_perishable');
     const shelfLifeField = document.getElementById('shelfLifeField');
     const shelfLifeInput = document.getElementById('shelf_life_days');
-    
+
     if (perishableCheckbox && shelfLifeField) {
         perishableCheckbox.addEventListener('change', function() {
             if (this.checked) {

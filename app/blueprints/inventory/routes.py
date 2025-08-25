@@ -379,10 +379,19 @@ def edit_inventory(id):
         if item.type == 'container':
             storage_amount = form_data.get('storage_amount')
             storage_unit = form_data.get('storage_unit')
+            logger.info(f"Container update - storage_amount: {storage_amount}, storage_unit: {storage_unit}")
             if storage_amount:
+                old_storage_amount = item.storage_amount
                 item.storage_amount = float(storage_amount)
+                logger.info(f"Updated storage_amount: {old_storage_amount} -> {item.storage_amount}")
             if storage_unit:
+                old_storage_unit = item.storage_unit
                 item.storage_unit = storage_unit
+                logger.info(f"Updated storage_unit: {old_storage_unit} -> {item.storage_unit}")
+
+            # Containers are always counted by "count" - never use storage_unit as the item unit
+            item.unit = 'count'
+            logger.info(f"Container unit set to 'count' (storage unit is {item.storage_unit})")
 
         success, message = update_inventory_item(id, update_form_data)
         flash(message, 'success' if success else 'error')
