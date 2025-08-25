@@ -28,14 +28,15 @@ def check_stock():
         if not recipe_id:
             return jsonify({'error': 'Recipe ID is required'}), 400
 
-        # Use the Universal Stock Check Service
-        from app.services.stock_check import UniversalStockCheckService
+        # Get the recipe first
+        from app.models import Recipe
+        recipe = Recipe.query.get(recipe_id)
+        if not recipe:
+            return jsonify({'error': 'Recipe not found'}), 404
 
-        result = UniversalStockCheckService.check_recipe_ingredients(
-            recipe_id=recipe_id,
-            scale=scale,
-            organization_id=get_effective_organization_id()
-        )
+        # Use the recipe service for stock checking (it integrates with USCS)
+        from app.services.recipe_service import check_recipe_stock
+        result = check_recipe_stock(recipe, scale)
 
         return jsonify(result)
 
