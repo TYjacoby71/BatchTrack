@@ -104,7 +104,7 @@ class ContainerHandler(BaseInventoryHandler):
     def get_item_details(self, item_id: int) -> Optional[dict]:
         """Get container details"""
         container = InventoryItem.query.get(item_id)
-        if not container or not self._check_organization_access(container):
+        if not container:
             return None
 
         return {

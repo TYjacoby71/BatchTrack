@@ -48,40 +48,37 @@ def check_recipe_ingredients(recipe_id):
     """Check stock availability for all ingredients in a recipe using USCS ingredient handler"""
     try:
         data = request.get_json() or {}
-        scale = data.get('scale', 1.0)
+        scale = float(data.get('scale', 1.0))
 
-        # Load recipe
-        from ...models import Recipe
-        recipe = Recipe.query.get(recipe_id)
-        if not recipe:
-            return jsonify({'success': False, 'error': 'Recipe not found'}), 404
+        # Get the recipe
+        from app.models.recipe import Recipe
+        recipe = Recipe.query.get_or_404(recipe_id)
 
-        # Check organization access
-        if recipe.organization_id != current_user.organization_id:
-            return jsonify({'success': False, 'error': 'Access denied'}), 403
+        # Use the Universal Stock Check Service to check recipe ingredients
+        from app.services.stock_check.core import UniversalStockCheckService
+        uscs = UniversalStockCheckService()
 
-        # Use USCS ingredient handler directly
-        from ...services.stock_check.handlers.ingredient_handler import IngredientHandler
+        # Use the USCS check_recipe_stock method
+        result = uscs.check_recipe_stock(recipe, scale)
 
-        organization_id = current_user.organization_id if current_user.is_authenticated else None
-        ingredient_handler = IngredientHandler(organization_id=organization_id)
+        if not result['success']:
+            return jsonify(result), 500
 
-        # Get ingredient stock check results
-        stock_results = ingredient_handler.check_recipe_ingredients(recipe, scale)
+        stock_results = result['stock_check']
 
         # Convert to the format expected by frontend
         stock_check = []
-        for result in stock_results:
+        for result_item in stock_results:
             stock_check.append({
-                'item_id': result['inventory_item_id'],
-                'item_name': result['item_name'],
-                'needed_quantity': result['needed_quantity'],
-                'needed_unit': result['needed_unit'],
-                'available_quantity': result['available_quantity'],
-                'available_unit': result['available_unit'],
-                'status': result['status'],
-                'formatted_needed': result['formatted_needed'],
-                'formatted_available': result['formatted_available']
+                'item_id': result_item['item_id'],
+                'item_name': result_item['item_name'],
+                'needed_quantity': result_item['needed_quantity'],
+                'needed_unit': result_item['needed_unit'],
+                'available_quantity': result_item['available_quantity'],
+                'available_unit': result_item['available_unit'],
+                'status': result_item['status'],
+                'formatted_needed': result_item['formatted_needed'],
+                'formatted_available': result_item['formatted_available']
             })
 
         return jsonify({
