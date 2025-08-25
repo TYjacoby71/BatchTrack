@@ -1,50 +1,87 @@
-2025-08-23 03:49:56,778 INFO: CONTAINER_FILL: Container 8 (Glass Jar) attributes: ['available_quantity', 'batch_usages', 'category', 'category_id', 'cost_per_unit', 'created_at', 'created_by', 'density', 'expiration_date', 'expired_quantity', 'extra_batch_usages', 'history', 'id', 'intermediate', 'is_active', 'is_archived', 'is_perishable', 'lots', 'low_stock_threshold', 'metadata', 'name', 'organization', 'organization_id', 'product_history_entries', 'product_sku', 'quantity', 'query', 'recipe_usages', 'registry', 'shelf_life_days', 'storage_amount', 'storage_unit', 'type', 'unified_history', 'unit'] [in /home/runner/workspace/app/services/production_planning/_container_management.py:267]
-2025-08-23 03:49:56,786 INFO: CONTAINER_FILL: Container Glass Jar - capacity: 4.0 floz, stock: 20.0 [in /home/runner/workspace/app/services/production_planning/_container_management.py:287]
-2025-08-23 03:49:56,786 INFO: CONTAINER_FILL: 1 containers available with stock [in /home/runner/workspace/app/services/production_planning/_container_management.py:300]
-2025-08-23 03:49:56,787 INFO: CONTAINER_FILL: Starting auto-fill for 8.0 floz [in /home/runner/workspace/app/services/production_planning/_container_management.py:316]
-2025-08-23 03:49:56,787 INFO: CONTAINER_FILL: Glass Jar - capacity: 4.0, max_needed: 2, stock: 20.0, using: 2 [in /home/runner/workspace/app/services/production_planning/_container_management.py:331]
-2025-08-23 03:49:56,787 INFO: CONTAINER_FILL: Added 2x Glass Jar, remaining: 0.0 [in /home/runner/workspace/app/services/production_planning/_container_management.py:344]
-2025-08-23 03:49:56,787 INFO: CONTAINER_FILL: Final selection: 1 containers, total capacity: 8.0, containment: 100.0% [in /home/runner/workspace/app/services/production_planning/_container_management.py:373]
-2025-08-23 03:49:56,943 INFO: CONTAINER_FILL: Calculating strategy for recipe 1, scale 25.0, yield 100.0 floz [in /home/runner/workspace/app/services/production_planning/_container_management.py:242]
-2025-08-23 03:49:56,944 INFO: CONTAINER_FILL: Recipe allowed containers: [8] [in /home/runner/workspace/app/services/production_planning/_container_management.py:248]
-2025-08-23 03:49:56,945 INFO: CONTAINER_FILL: Found 1 allowed containers [in /home/runner/workspace/app/services/production_planning/_container_management.py:257]
-2025-08-23 03:49:56,948 INFO: CONTAINER_FILL: Container 8 (Glass Jar) attributes: ['available_quantity', 'batch_usages', 'category', 'category_id', 'cost_per_unit', 'created_at', 'created_by', 'density', 'expiration_date', 'expired_quantity', 'extra_batch_usages', 'history', 'id', 'intermediate', 'is_active', 'is_archived', 'is_perishable', 'lots', 'low_stock_threshold', 'metadata', 'name', 'organization', 'organization_id', 'product_history_entries', 'product_sku', 'quantity', 'query', 'recipe_usages', 'registry', 'shelf_life_days', 'storage_amount', 'storage_unit', 'type', 'unified_history', 'unit'] [in /home/runner/workspace/app/services/production_planning/_container_management.py:267]
-2025-08-23 03:49:56,948 INFO: CONTAINER_FILL: Container Glass Jar - capacity: 4.0 floz, stock: 20.0 [in /home/runner/workspace/app/services/production_planning/_container_management.py:287]
-2025-08-23 03:49:56,949 INFO: CONTAINER_FILL: 1 containers available with stock [in /home/runner/workspace/app/services/production_planning/_container_management.py:300]
-2025-08-23 03:49:56,949 INFO: CONTAINER_FILL: Starting auto-fill for 100.0 floz [in /home/runner/workspace/app/services/production_planning/_container_management.py:316]
-2025-08-23 03:49:56,949 INFO: CONTAINER_FILL: Glass Jar - capacity: 4.0, max_needed: 25, stock: 20.0, using: 20.0 [in /home/runner/workspace/app/services/production_planning/_container_management.py:331]
-2025-08-23 03:49:56,949 INFO: CONTAINER_FILL: Added 20.0x Glass Jar, remaining: 20.0 [in /home/runner/workspace/app/services/production_planning/_container_management.py:344]
-2025-08-23 03:49:56,949 INFO: CONTAINER_FILL: Need partial fill for remaining 20.0 floz [in /home/runner/workspace/app/services/production_planning/_container_management.py:348]
-2025-08-23 03:49:56,950 INFO: CONTAINER_FILL: Final selection: 1 containers, total capacity: 80.0, containment: 80.0% [in /home/runner/workspace/app/services/production_planning/_container_management.py:373]
-2025-08-23 03:50:03,238 INFO: CONTAINER_FILL: Calculating strategy for recipe 1, scale 25.0, yield 100.0 floz [in /home/runner/workspace/app/services/production_planning/_container_management.py:242]
-2025-08-23 03:50:03,241 INFO: CONTAINER_FILL: Recipe allowed containers: [8] [in /home/runner/workspace/app/services/production_planning/_container_management.py:248]
-2025-08-23 03:50:03,242 INFO: CONTAINER_FILL: Found 1 allowed containers [in /home/runner/workspace/app/services/production_planning/_container_management.py:257]
-2025-08-23 03:50:03,245 INFO: CONTAINER_FILL: Container 8 (Glass Jar) attributes: ['available_quantity', 'batch_usages', 'category', 'category_id', 'cost_per_unit', 'created_at', 'created_by', 'density', 'expiration_date', 'expired_quantity', 'extra_batch_usages', 'history', 'id', 'intermediate', 'is_active', 'is_archived', 'is_perishable', 'lots', 'low_stock_threshold', 'metadata', 'name', 'organization', 'organization_id', 'product_history_entries', 'product_sku', 'quantity', 'query', 'recipe_usages', 'registry', 'shelf_life_days', 'storage_amount', 'storage_unit', 'type', 'unified_history', 'unit'] [in /home/runner/workspace/app/services/production_planning/_container_management.py:267]
-2025-08-23 03:50:03,245 INFO: CONTAINER_FILL: Container Glass Jar - capacity: 4.0 floz, stock: 20.0 [in /home/runner/workspace/app/services/production_planning/_container_management.py:287]
-2025-08-23 03:50:03,246 INFO: CONTAINER_FILL: 1 containers available with stock [in /home/runner/workspace/app/services/production_planning/_container_management.py:300]
-2025-08-23 03:50:03,246 INFO: CONTAINER_FILL: Starting auto-fill for 100.0 floz [in /home/runner/workspace/app/services/production_planning/_container_management.py:316]
-2025-08-23 03:50:03,246 INFO: CONTAINER_FILL: Glass Jar - capacity: 4.0, max_needed: 25, stock: 20.0, using: 20.0 [in /home/runner/workspace/app/services/production_planning/_container_management.py:331]
-2025-08-23 03:50:03,246 INFO: CONTAINER_FILL: Added 20.0x Glass Jar, remaining: 20.0 [in /home/runner/workspace/app/services/production_planning/_container_management.py:344]
-2025-08-23 03:50:03,246 INFO: CONTAINER_FILL: Need partial fill for remaining 20.0 floz [in /home/runner/workspace/app/services/production_planning/_container_management.py:348]
-2025-08-23 03:50:03,246 INFO: CONTAINER_FILL: Final selection: 1 containers, total capacity: 80.0, containment: 80.0% [in /home/runner/workspace/app/services/production_planning/_container_management.py:373]
-2025-08-23 03:50:47,547 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
-2025-08-23 03:50:50,310 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
-2025-08-23 03:50:50,838 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
-2025-08-23 03:50:53,740 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
-2025-08-23 03:50:53,910 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
-2025-08-23 03:50:53,915 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
-2025-08-23 03:50:53,923 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
-2025-08-23 03:50:53,925 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
-2025-08-23 03:50:53,927 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
-2025-08-23 03:50:53,930 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
-2025-08-23 03:50:53,933 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
-2025-08-23 03:50:53,952 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
-2025-08-23 03:50:56,051 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
-2025-08-23 03:51:02,045 INFO: CONTAINER_FILL: Calculating strategy for recipe 1, scale 1.0, yield 4.0 floz [in /home/runner/workspace/app/services/production_planning/_container_management.py:242]
-2025-08-23 03:51:02,052 INFO: CONTAINER_FILL: Recipe allowed containers: [8] [in /home/runner/workspace/app/services/production_planning/_container_management.py:248]
-2025-08-23 03:51:02,059 INFO: CONTAINER_FILL: Found 1 allowed containers [in /home/runner/workspace/app/services/production_planning/_container_management.py:257]
-2025-08-23 03:51:02,088 INFO: CONTAINER_FILL: Container 8 (Glass Jar) attributes: ['available_quantity', 'batch_usages', 'category', 'category_id', 'cost_per_unit', 'created_at', 'created_by', 'density', 'expiration_date', 'expired_quantity', 'extra_batch_usages', 'history', 'id', 'intermediate', 'is_active', 'is_archived', 'is_perishable', 'lots', 'low_stock_threshold', 'metadata', 'name', 'organization', 'organization_id', 'product_history_entries', 'product_sku', 'quantity', 'query', 'recipe_usages', 'registry', 'shelf_life_days', 'storage_amount', 'storage_unit', 'type', 'unified_history', 'unit'] [in /home/runner/workspace/app/services/production_planning/_container_management.py:267]
-2025-08-23 03:51:02,089 INFO: CONTAINER_FILL: Container Glass Jar - capacity: 4.0 floz, stock: 20.0 [in /home/runner/workspace/app/services/production_planning/_container_management.py:287]
-2025-08-23 03:51:02,089 INFO: CONTAINER_FILL: 1 containers available with stock [in /home/runner/workspace/app/services/production_planning/_container_management.py:300]
-2025-08-23 03:51:02,089 INFO: CONTAINER_FILL: Starting auto-fill for 4.0 floz [in /home/runner/workspace/app/services/production_planning/_container_management.py:316]
-2025-08-23 03:51:02,089 INFO: CONTAINER_FILL: Glass Jar - capacity: 4.0, max_needed: 1, stock: 20.0, using: 1 [in /home/runner/workspace/app/services/production_planning/_container_management.py:331]
+2025-08-25 16:47:36,231 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-08-25 16:47:38,333 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-08-25 16:47:58,615 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-08-25 16:48:39,280 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-08-25 16:48:47,742 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-08-25 16:48:49,813 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-08-25 17:08:54,655 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-08-25 17:09:12,636 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-08-25 17:09:21,127 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-08-25 17:20:52,172 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-08-25 17:20:58,392 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-08-25 17:21:05,216 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-08-25 17:21:20,742 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-08-25 17:21:22,757 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-08-25 17:21:58,273 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-08-25 17:22:06,547 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-08-25 17:22:13,630 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-08-25 17:22:26,846 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-08-25 17:22:29,177 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-08-25 17:29:54,071 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-08-25 17:30:03,073 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-08-25 17:30:05,568 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-08-25 17:32:59,722 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-08-25 17:33:20,264 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-08-25 17:33:23,005 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-08-25 17:33:23,362 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-08-25 17:33:23,376 ERROR: Error getting global unit list: (psycopg2.errors.UndefinedColumn) column unit.base_unit does not exist
+LINE 1: ...AS unit_symbol, unit.unit_type AS unit_unit_type, unit.base_...
+                                                             ^
+HINT:  Perhaps you meant to reference the column "unit.is_base_unit".
+
+[SQL: SELECT unit.id AS unit_id, unit.name AS unit_name, unit.symbol AS unit_symbol, unit.unit_type AS unit_unit_type, unit.base_unit AS unit_base_unit, unit.conversion_factor AS unit_conversion_factor, unit.is_active AS unit_is_active, unit.is_custom AS unit_is_custom, unit.is_mapped AS unit_is_mapped, unit.created_by AS unit_created_by, unit.organization_id AS unit_organization_id, unit.created_at AS unit_created_at, unit.updated_at AS unit_updated_at 
+FROM unit 
+WHERE unit.is_active = true AND unit.is_custom = false ORDER BY unit.unit_type, unit.name]
+(Background on this error at: https://sqlalche.me/e/20/f405) [in /home/runner/workspace/app/utils/unit_utils.py:85]
+2025-08-25 17:35:37,728 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-08-25 17:37:05,515 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-08-25 17:37:10,139 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-08-25 17:37:27,392 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-08-25 17:37:29,672 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-08-25 17:37:30,122 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-08-25 17:37:30,130 ERROR: Error getting global unit list: (psycopg2.errors.UndefinedColumn) column unit.base_unit does not exist
+LINE 1: ...AS unit_symbol, unit.unit_type AS unit_unit_type, unit.base_...
+                                                             ^
+HINT:  Perhaps you meant to reference the column "unit.is_base_unit".
+
+[SQL: SELECT unit.id AS unit_id, unit.name AS unit_name, unit.symbol AS unit_symbol, unit.unit_type AS unit_unit_type, unit.base_unit AS unit_base_unit, unit.conversion_factor AS unit_conversion_factor, unit.is_active AS unit_is_active, unit.is_custom AS unit_is_custom, unit.is_mapped AS unit_is_mapped, unit.created_by AS unit_created_by, unit.organization_id AS unit_organization_id, unit.created_at AS unit_created_at, unit.updated_at AS unit_updated_at 
+FROM unit 
+WHERE unit.is_active = true AND unit.is_custom = false ORDER BY unit.unit_type, unit.name]
+(Background on this error at: https://sqlalche.me/e/20/f405) [in /home/runner/workspace/app/utils/unit_utils.py:85]
+2025-08-25 17:37:59,147 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-08-25 17:37:59,152 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-08-25 17:38:18,395 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-08-25 17:38:20,469 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-08-25 17:38:20,820 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-08-25 17:38:20,826 ERROR: Error getting global unit list: (psycopg2.errors.UndefinedColumn) column unit.base_unit does not exist
+LINE 1: ...AS unit_symbol, unit.unit_type AS unit_unit_type, unit.base_...
+                                                             ^
+HINT:  Perhaps you meant to reference the column "unit.is_base_unit".
+
+[SQL: SELECT unit.id AS unit_id, unit.name AS unit_name, unit.symbol AS unit_symbol, unit.unit_type AS unit_unit_type, unit.base_unit AS unit_base_unit, unit.conversion_factor AS unit_conversion_factor, unit.is_active AS unit_is_active, unit.is_custom AS unit_is_custom, unit.is_mapped AS unit_is_mapped, unit.created_by AS unit_created_by, unit.organization_id AS unit_organization_id, unit.created_at AS unit_created_at, unit.updated_at AS unit_updated_at 
+FROM unit 
+WHERE unit.is_active = true AND unit.is_custom = false ORDER BY unit.unit_type, unit.name]
+(Background on this error at: https://sqlalche.me/e/20/f405) [in /home/runner/workspace/app/utils/unit_utils.py:85]
+2025-08-25 17:38:31,039 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-08-25 17:39:30,910 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-08-25 17:39:35,874 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-08-25 17:40:24,152 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-08-25 17:42:53,618 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-08-25 17:42:58,251 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-08-25 17:43:14,812 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-08-25 17:43:16,877 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-08-25 17:43:17,186 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-08-25 17:43:17,195 ERROR: Error getting global unit list: (psycopg2.errors.UndefinedColumn) column unit.base_unit does not exist
+LINE 1: ...AS unit_symbol, unit.unit_type AS unit_unit_type, unit.base_...
+                                                             ^
+HINT:  Perhaps you meant to reference the column "unit.is_base_unit".
+
+[SQL: SELECT unit.id AS unit_id, unit.name AS unit_name, unit.symbol AS unit_symbol, unit.unit_type AS unit_unit_type, unit.base_unit AS unit_base_unit, unit.conversion_factor AS unit_conversion_factor, unit.is_active AS unit_is_active, unit.is_custom AS unit_is_custom, unit.is_mapped AS unit_is_mapped, unit.created_by AS unit_created_by, unit.organization_id AS unit_organization_id, unit.created_at AS unit_created_at, unit.updated_at AS unit_updated_at 
+FROM unit 
+WHERE unit.is_active = true AND unit.is_custom = false ORDER BY unit.unit_type, unit.name]
+(Background on this error at: https://sqlalche.me/e/20/f405) [in /home/runner/workspace/app/utils/unit_utils.py:85]
+2025-08-25 17:46:25,490 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-08-25 17:46:33,188 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-08-25 17:47:29,504 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-08-25 17:47:32,355 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-08-25 17:47:32,689 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
