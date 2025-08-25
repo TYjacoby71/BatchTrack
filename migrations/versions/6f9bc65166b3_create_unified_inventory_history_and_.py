@@ -118,7 +118,7 @@ def upgrade():
             )
             SELECT 
                 ih.inventory_item_id,
-                COALESCE(ih.timestamp, datetime('now')) as timestamp,
+                COALESCE(ih.timestamp, now()) as timestamp,
                 COALESCE(ih.change_type, 'unknown') as change_type,
                 COALESCE(ih.quantity_change, 0.0) as quantity_change,
                 COALESCE(ih.unit, 'g') as unit,
@@ -131,7 +131,7 @@ def upgrade():
                 COALESCE(ih.note, ih.reason) as notes,
                 COALESCE(ih.quantity_used, 0.0) as quantity_used,
                 ih.used_for_batch_id,
-                COALESCE(ih.is_perishable, 0) as is_perishable,
+                COALESCE(ih.is_perishable, false) as is_perishable,
                 ih.shelf_life_days,
                 ih.expiration_date,
                 COALESCE(ii.organization_id, 1) as organization_id
@@ -161,7 +161,7 @@ def upgrade():
             )
             SELECT 
                 COALESCE(psh.inventory_item_id, ps.inventory_item_id) as inventory_item_id,
-                COALESCE(psh.timestamp, datetime('now')) as timestamp,
+                COALESCE(psh.timestamp, now()) as timestamp,
                 COALESCE(psh.change_type, 'unknown') as change_type,
                 COALESCE(psh.quantity_change, 0.0) as quantity_change,
                 COALESCE(psh.unit, 'count') as unit,
@@ -173,7 +173,7 @@ def upgrade():
                 COALESCE(psh.created_by, psh.user_id) as created_by,
                 COALESCE(psh.notes, psh.note, psh.reason) as notes,
                 COALESCE(psh.quantity_used, 0.0) as quantity_used,
-                COALESCE(psh.is_perishable, 0) as is_perishable,
+                COALESCE(psh.is_perishable, false) as is_perishable,
                 psh.shelf_life_days,
                 psh.expiration_date,
                 psh.customer,
