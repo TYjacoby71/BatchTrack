@@ -95,8 +95,7 @@ export class StockCheckManager {
         console.log('🔍 STOCK CHECK: All available:', allAvailable);
 
         // All items from USCS are ingredients by default
-        const ingredientData = stockData;nt' || item.category === 'INGREDIENT'
-        );
+        const ingredientData = stockData;
 
         if (!ingredientData || ingredientData.length === 0) {
             stockResults.innerHTML = '<div class="alert alert-info">No ingredients found for this recipe.</div>';
