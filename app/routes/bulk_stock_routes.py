@@ -35,7 +35,7 @@ def bulk_stock_check():
             session['bulk_recipe_ids'] = selected_ids
             session['bulk_scale'] = scale
 
-            from app.services.bulk_stock_service import check_multiple_recipes
+            from app.services.stock_check.bulk_operations import check_multiple_recipes
             bulk_results = check_multiple_recipes([int(rid) for rid in selected_ids], scale)
             
             if bulk_results['success']:
