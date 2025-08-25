@@ -1,0 +1,241 @@
+ [alembic.env] Imported model module: app.models.user_role_assignment
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade add_perm_category_col -> edb302e17958, empty message
+INFO  [alembic.runtime.migration] Running upgrade edb302e17958 -> fix_perm_unit_schema, fix permission and unit schema mismatch
+=== Fixing Permission and Unit Schema Mismatches ===
+   ✅ is_active column already exists in permission table
+   ✅ created_at column already exists in permission table
+   ✅ base_unit column already exists in unit table
+✅ Schema mismatch fixes completed
+~/workspace$ flask init-production
+/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_limiter/extension.py:333: UserWarning: Using the in-memory storage for tracking rate limits as no storage was explicitly specified. This is not recommended for production use. See: https://flask-limiter.readthedocs.io#configuring-a-storage-backend for documentation about configuring the storage backend.
+  warnings.warn(
+
+=== Blueprint Registration Summary ===
+✅ Successful: 27
+   - Authentication
+   - Admin
+   - Developer
+   - Inventory
+   - Recipes
+   - Batches
+   - Organization
+   - Billing
+   - Settings
+   - Timers
+   - Expiration
+   - Conversion
+   - Products Main
+   - Product Inventory
+   - Reservations
+   - SKU Management
+   - Product Variants
+   - Product Alerts
+   - Public API
+   - Main API
+   - Stock API
+   - App Routes
+   - Legal Routes
+   - Bulk Stock
+   - Fault Log
+   - Tag Manager
+   - Waitlist
+
+🎉 All blueprints registered successfully!
+[2025-08-25 17:50:39,807] INFO in unit_utils: BatchTrack startup
+🚀 BatchTrack Production Seeding Starting...
+⚠️  Assumes database schema is already migrated (flask db upgrade)
+=== Step 1: System foundations (Organization Independent) ===
+=== Seeding Consolidated Permissions System ===
+Seeding organization permissions...
+Processing category: Main dashboard and overview features
+  Created: dashboard.view
+Processing category: All inventory tracking, adjustments, and stock management
+  Created: inventory.view
+  Created: inventory.edit
+  Created: inventory.adjust
+  Created: inventory.reserve
+  Created: inventory.delete
+  Created: inventory.view_costs
+Processing category: Recipe creation, editing, and production planning
+  Created: recipes.view
+  Created: recipes.create
+  Created: recipes.edit
+  Created: recipes.delete
+  Created: recipes.scale
+  Created: recipes.plan_production
+Processing category: Production batch tracking from start to finish
+  Created: batches.view
+  Created: batches.create
+  Created: batches.edit
+  Created: batches.finish
+  Created: batches.cancel
+  Created: batches.view_costs
+Processing category: Product catalog, SKUs, and sales tracking
+  Created: products.view
+  Created: products.create
+  Created: products.edit
+  Created: products.delete
+  Created: products.manage_variants
+  Created: products.sales_tracking
+Processing category: Organization settings, users, and roles management
+  Created: organization.view
+  Created: organization.edit
+  Created: organization.manage_users
+  Created: organization.manage_roles
+  Created: organization.manage_billing
+  Created: organization.view_audit_logs
+Processing category: Alert management and notification preferences
+  Created: alerts.view
+  Created: alerts.manage
+  Created: alerts.dismiss
+Processing category: Reporting, analytics, and business insights
+  Created: reports.view
+  Created: reports.export
+  Created: reports.advanced
+  Created: reports.custom
+Processing category: Third-party integrations and marketplace connections
+  Created: integrations.shopify
+  Created: integrations.marketplace
+  Created: integrations.api_access
+Processing category: AI-powered features and automation
+  Created: ai.recipe_optimization
+  Created: ai.demand_forecasting
+  Created: ai.quality_insights
+✅ Organization permissions seeded successfully!
+Seeding developer permissions...
+Processing category: Core system administration and management
+  Created: dev.system_admin
+  Created: dev.dashboard
+  Created: dev.debug_mode
+  Created: dev.access_logs
+  Created: dev.system_settings
+Processing category: Database management and migration operations
+  Created: dev.run_migrations
+  Created: dev.seed_data
+  Created: dev.backup_restore
+Processing category: Cross-organization management and oversight
+  Created: dev.all_organizations
+  Created: dev.create_organizations
+  Created: dev.modify_any_organization
+  Created: dev.delete_organizations
+Processing category: Global user and permission management
+  Created: dev.manage_users
+  Created: dev.manage_roles
+  Created: dev.assign_permissions
+Processing category: Subscription tiers and billing oversight
+  Created: dev.manage_tiers
+  Created: dev.billing_override
+  Created: dev.view_all_billing
+Processing category: All organization-level permissions available to developers
+  Created: app.dashboard.view
+  Created: app.inventory.view
+  Created: app.inventory.edit
+  Created: app.inventory.adjust
+  Created: app.inventory.reserve
+  Created: app.inventory.delete
+  Created: app.inventory.view_costs
+  Created: app.recipes.view
+  Created: app.recipes.create
+  Created: app.recipes.edit
+  Created: app.recipes.delete
+  Created: app.recipes.scale
+  Created: app.recipes.plan_production
+  Created: app.batches.view
+  Created: app.batches.create
+  Created: app.batches.edit
+  Created: app.batches.finish
+  Created: app.batches.cancel
+  Created: app.batches.view_costs
+  Created: app.products.view
+  Created: app.products.create
+  Created: app.products.edit
+  Created: app.products.delete
+  Created: app.products.manage_variants
+  Created: app.products.sales_tracking
+  Created: app.organization.view
+  Created: app.organization.edit
+  Created: app.organization.manage_users
+  Created: app.organization.manage_roles
+  Created: app.organization.manage_billing
+  Created: app.organization.view_audit_logs
+  Created: app.alerts.view
+  Created: app.alerts.manage
+  Created: app.alerts.dismiss
+  Created: app.reports.view
+  Created: app.reports.export
+  Created: app.reports.advanced
+  Created: app.reports.custom
+  Created: app.integrations.shopify
+  Created: app.integrations.marketplace
+  Created: app.integrations.api_access
+  Created: app.ai.recipe_optimization
+  Created: app.ai.demand_forecasting
+  Created: app.ai.quality_insights
+✅ Developer permissions seeded successfully!
+🔧 Seeding developer roles...
+   Current developer roles in DB: 0
+✅ Created/updated system_admin role with 62 permissions
+✅ Created/updated developer role with 7 permissions
+✅ Created/updated support role with 8 permissions
+✅ Developer roles seeded successfully! (Total: 3)
+   ✅ system_admin role confirmed (ID: 1)
+=== Seeding Organization System Roles ===
+✅ Created organization_owner system role with 0 permissions
+✅ Organization system roles seeded successfully!
+✅ Assigned 0 permissions to fresh organization owner role
+✅ Cleaned up old permissions
+✅ Consolidated permissions system seeded successfully!
+
+📊 Summary:
+Organization permissions: 44
+Developer permissions: 62
+✅ Permissions, organization roles, and developer roles seeded
+=== Seeding Exempt Subscription Tier Only ===
+=== Seeding Subscription Tiers (Exempt Only) ===
+✅ Creating exempt tier
+⚠️  Subscription seeding issue: property 'key' of 'SubscriptionTier' object has no setter
+   Continuing with remaining steps...
+=== Seeding 45 standard units ===
+⚠️  Unit seeding issue: (psycopg2.errors.UndefinedColumn) column unit.is_base_unit does not exist
+LINE 1: ...unit.conversion_factor AS unit_conversion_factor, unit.is_ba...
+                                                             ^
+HINT:  Perhaps you meant to reference the column "unit.base_unit".
+
+[SQL: SELECT unit.id AS unit_id, unit.name AS unit_name, unit.symbol AS unit_symbol, unit.unit_type AS unit_unit_type, unit.conversion_factor AS unit_conversion_factor, unit.is_base_unit AS unit_is_base_unit, unit.is_active AS unit_is_active, unit.is_custom AS unit_is_custom, unit.is_mapped AS unit_is_mapped, unit.created_by AS unit_created_by, unit.organization_id AS unit_organization_id, unit.created_at AS unit_created_at, unit.updated_at AS unit_updated_at 
+FROM unit 
+WHERE unit.name = %(name_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'name_1': 'gram', 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+   Continuing with remaining steps...
+=== Step 2: Organization-dependent setup ===
+ℹ️  Developer roles should now exist for user assignment...
+=== Creating Default Organization with Essential Users ===
+⚠️  User/organization seeding issue: (psycopg2.errors.InFailedSqlTransaction) current transaction is aborted, commands ignored until end of transaction block
+
+[SQL: SELECT count(*) AS count_1 
+FROM (SELECT organization.id AS organization_id, organization.name AS organization_name, organization.contact_email AS organization_contact_email, organization.created_at AS organization_created_at, organization.is_active AS organization_is_active, organization.signup_source AS organization_signup_source, organization.promo_code AS organization_promo_code, organization.referral_code AS organization_referral_code, organization.subscription_tier_id AS organization_subscription_tier_id, organization.whop_license_key AS organization_whop_license_key, organization.whop_product_tier AS organization_whop_product_tier, organization.whop_verified AS organization_whop_verified, organization.stripe_subscription_id AS organization_stripe_subscription_id, organization.stripe_customer_id AS organization_stripe_customer_id, organization.billing_info AS organization_billing_info, organization.next_billing_date AS organization_next_billing_date, organization.subscription_status AS organization_subscription_status, organization.billing_status AS organization_billing_status, organization.last_online_sync AS organization_last_online_sync, organization.offline_tier_cache AS organization_offline_tier_cache 
+FROM organization) AS anon_1]
+(Background on this error at: https://sqlalche.me/e/20/2j85)
+   Continuing with remaining steps...
+=== Step 3: Organization-specific data ===
+⚠️  Category seeding issue: (psycopg2.errors.InFailedSqlTransaction) current transaction is aborted, commands ignored until end of transaction block
+
+[SQL: SELECT organization.id AS organization_id, organization.name AS organization_name, organization.contact_email AS organization_contact_email, organization.created_at AS organization_created_at, organization.is_active AS organization_is_active, organization.signup_source AS organization_signup_source, organization.promo_code AS organization_promo_code, organization.referral_code AS organization_referral_code, organization.subscription_tier_id AS organization_subscription_tier_id, organization.whop_license_key AS organization_whop_license_key, organization.whop_product_tier AS organization_whop_product_tier, organization.whop_verified AS organization_whop_verified, organization.stripe_subscription_id AS organization_stripe_subscription_id, organization.stripe_customer_id AS organization_stripe_customer_id, organization.billing_info AS organization_billing_info, organization.next_billing_date AS organization_next_billing_date, organization.subscription_status AS organization_subscription_status, organization.billing_status AS organization_billing_status, organization.last_online_sync AS organization_last_online_sync, organization.offline_tier_cache AS organization_offline_tier_cache 
+FROM organization 
+ LIMIT %(param_1)s]
+[parameters: {'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/2j85)
+✅ Production seeding complete!
+🔒 Login: admin/admin (CHANGE IMMEDIATELY)
+📝 Note: This command can be run multiple times safely
+📊 Database status:
+   - Status check failed: (psycopg2.errors.InFailedSqlTransaction) current transaction is aborted, commands ignored until end of transaction block
+
+[SQL: SELECT count(*) AS count_1 
+FROM (SELECT organization.id AS organization_id, organization.name AS organization_name, organization.contact_email AS organization_contact_email, organization.created_at AS organization_created_at, organization.is_active AS organization_is_active, organization.signup_source AS organization_signup_source, organization.promo_code AS organization_promo_code, organization.referral_code AS organization_referral_code, organization.subscription_tier_id AS organization_subscription_tier_id, organization.whop_license_key AS organization_whop_license_key, organization.whop_product_tier AS organization_whop_product_tier, organization.whop_verified AS organization_whop_verified, organization.stripe_subscription_id AS organization_stripe_subscription_id, organization.stripe_customer_id AS organization_stripe_customer_id, organization.billing_info AS organization_billing_info, organization.next_billing_date AS organization_next_billing_date, organization.subscription_status AS organization_subscription_status, organization.billing_status AS organization_billing_status, organization.last_online_sync AS organization_last_online_sync, organization.offline_tier_cache AS organization_offline_tier_cache 
+FROM organization) AS anon_1]
+(Background on this error at: https://sqlalche.me/e/20/2j85)
+~/workspace$ 
