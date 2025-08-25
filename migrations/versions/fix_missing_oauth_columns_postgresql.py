@@ -42,7 +42,8 @@ def upgrade():
         ('oauth_provider_id', sa.String(length=255)),
         ('password_reset_token', sa.String(length=255)),
         ('password_reset_sent_at', sa.DateTime()),
-        ('email_verification_sent_at', sa.DateTime())
+        ('email_verification_sent_at', sa.DateTime()),
+        ('last_login', sa.DateTime())
     ]
 
     columns_to_add = []
@@ -84,6 +85,7 @@ def downgrade():
     print("=== OAuth Column Removal ===")
 
     oauth_columns = [
+        'last_login',
         'password_reset_sent_at',
         'password_reset_token', 
         'oauth_provider_id',
