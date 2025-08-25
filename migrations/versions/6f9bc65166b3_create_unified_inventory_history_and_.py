@@ -28,9 +28,9 @@ def table_exists(table_name):
 def upgrade():
     """Create unified inventory history table and migrate existing data"""
     print("=== Creating UnifiedInventoryHistory and migrating data ===")
-    
+
     bind = op.get_bind()
-    
+
     # 1. Create the new unified table
     print("   Creating unified_inventory_history table...")
     op.create_table('unified_inventory_history',
@@ -42,23 +42,23 @@ def upgrade():
         sa.Column('unit', sa.String(50), nullable=False),
         sa.Column('unit_cost', sa.Float(), nullable=True),
         sa.Column('remaining_quantity', sa.Float(), nullable=False, default=0.0),
-        
+
         # FIFO Tracking
         sa.Column('fifo_reference_id', sa.Integer(), nullable=True),
         sa.Column('fifo_code', sa.String(64), nullable=True),
-        
+
         # Contextual Information
         sa.Column('batch_id', sa.Integer(), nullable=True),
         sa.Column('created_by', sa.Integer(), nullable=True),
         sa.Column('notes', sa.Text(), nullable=True),
         sa.Column('quantity_used', sa.Float(), nullable=False, default=0.0),
         sa.Column('used_for_batch_id', sa.Integer(), nullable=True),
-        
+
         # Perishability
         sa.Column('is_perishable', sa.Boolean(), nullable=False, default=False),
         sa.Column('shelf_life_days', sa.Integer(), nullable=True),
         sa.Column('expiration_date', sa.DateTime(), nullable=True),
-        
+
         # Location and Quality
         sa.Column('location_id', sa.String(128), nullable=True),
         sa.Column('location_name', sa.String(128), nullable=True),
@@ -66,7 +66,7 @@ def upgrade():
         sa.Column('quality_status', sa.String(32), nullable=True),
         sa.Column('compliance_status', sa.String(32), nullable=True),
         sa.Column('quality_checked_by', sa.Integer(), nullable=True),
-        
+
         # Product-Specific Fields (Nullable for ingredient entries)
         sa.Column('customer', sa.String(255), nullable=True),
         sa.Column('sale_price', sa.Float(), nullable=True),
@@ -76,14 +76,14 @@ def upgrade():
         sa.Column('sale_location', sa.String(64), nullable=True),
         sa.Column('marketplace_order_id', sa.String(128), nullable=True),
         sa.Column('marketplace_source', sa.String(32), nullable=True),
-        
+
         # Additional tracking
         sa.Column('batch_number', sa.String(128), nullable=True),
         sa.Column('lot_number', sa.String(128), nullable=True),
         sa.Column('container_id', sa.Integer(), nullable=True),
         sa.Column('fifo_source', sa.String(128), nullable=True),
         sa.Column('organization_id', sa.Integer(), nullable=False),
-        
+
         # Constraints
         sa.PrimaryKeyConstraint('id'),
         sa.ForeignKeyConstraint(['inventory_item_id'], ['inventory_item.id']),
@@ -95,7 +95,7 @@ def upgrade():
         sa.ForeignKeyConstraint(['organization_id'], ['organization.id']),
         sa.ForeignKeyConstraint(['fifo_reference_id'], ['unified_inventory_history.id'])
     )
-    
+
     # 2. Create indexes for performance
     print("   Creating indexes...")
     op.create_index('idx_unified_item_remaining', 'unified_inventory_history', ['inventory_item_id', 'remaining_quantity'])
@@ -103,11 +103,11 @@ def upgrade():
     op.create_index('idx_unified_fifo_code', 'unified_inventory_history', ['fifo_code'])
     op.create_index('idx_unified_change_type', 'unified_inventory_history', ['change_type'])
     op.create_index('idx_unified_expiration', 'unified_inventory_history', ['expiration_date'])
-    
+
     # 3. Migrate data from inventory_history if it exists
     if table_exists('inventory_history'):
         print("   Migrating data from inventory_history...")
-        
+
         # Get organization_id from inventory_item for each record
         migrate_inventory_sql = text("""
             INSERT INTO unified_inventory_history (
@@ -128,7 +128,7 @@ def upgrade():
                 ih.fifo_code,
                 ih.batch_id,
                 ih.created_by,
-                COALESCE(ih.note, ih.reason) as notes,
+                '' as notes,
                 COALESCE(ih.quantity_used, 0.0) as quantity_used,
                 ih.used_for_batch_id,
                 COALESCE(ih.is_perishable, false) as is_perishable,
@@ -138,18 +138,18 @@ def upgrade():
             FROM inventory_history ih
             LEFT JOIN inventory_item ii ON ih.inventory_item_id = ii.id
         """)
-        
+
         try:
             bind.execute(migrate_inventory_sql)
             print("   ✅ Successfully migrated inventory_history data")
         except Exception as e:
             print(f"   ⚠️  Error migrating inventory_history: {e}")
             # Continue with migration even if this fails
-    
+
     # 4. Migrate data from product_sku_history if it exists
     if table_exists('product_sku_history'):
         print("   Migrating data from product_sku_history...")
-        
+
         # Map product_sku_history to unified format
         migrate_product_sql = text("""
             INSERT INTO unified_inventory_history (
@@ -171,7 +171,7 @@ def upgrade():
                 psh.fifo_code,
                 psh.batch_id,
                 COALESCE(psh.created_by, psh.user_id) as created_by,
-                COALESCE(psh.notes, psh.note, psh.reason) as notes,
+                COALESCE(psh.notes, '') as notes,
                 COALESCE(psh.quantity_used, 0.0) as quantity_used,
                 COALESCE(psh.is_perishable, false) as is_perishable,
                 psh.shelf_life_days,
@@ -185,28 +185,28 @@ def upgrade():
             LEFT JOIN inventory_item ii ON COALESCE(psh.inventory_item_id, ps.inventory_item_id) = ii.id
             WHERE COALESCE(psh.inventory_item_id, ps.inventory_item_id) IS NOT NULL
         """)
-        
+
         try:
             bind.execute(migrate_product_sql)
             print("   ✅ Successfully migrated product_sku_history data")
         except Exception as e:
             print(f"   ⚠️  Error migrating product_sku_history: {e}")
             # Continue with migration even if this fails
-    
+
     print("   ✅ Unified inventory history migration completed")
 
 
 def downgrade():
     """Reverse the migration - restore original tables"""
     print("=== Reverting unified inventory history migration ===")
-    
+
     # This is a destructive operation - we'll recreate the old tables
     # but data migration back would be complex
     print("   WARNING: Downgrade will lose unified history data!")
-    
+
     # Drop the unified table
     op.drop_table('unified_inventory_history')
-    
+
     print("   ✅ Unified inventory history table dropped")
     print("   NOTE: Original inventory_history and product_sku_history tables")
     print("         should be restored from backup if needed")
