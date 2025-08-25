@@ -1,4 +1,3 @@
-
 from datetime import datetime
 from flask_login import current_user
 from ..extensions import db
@@ -8,19 +7,19 @@ from ..utils.timezone_utils import TimezoneUtils
 class Unit(TimestampMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), nullable=False)
-    symbol = db.Column(db.String(16), nullable=True)  # Nullable for custom units to avoid conflicts
-    unit_type = db.Column(db.String(32), nullable=False)  # weight, volume, count, etc.
-    base_unit = db.Column(db.String(64), nullable=True)  # For conversions
-    conversion_factor = db.Column(db.Float, nullable=True)  # To base unit
+    symbol = db.Column(db.String(16))
+    unit_type = db.Column(db.String(32), nullable=False)  # weight, volume, length, count, etc.
+    conversion_factor = db.Column(db.Float, nullable=False, default=1.0)  # To base unit
+    is_base_unit = db.Column(db.Boolean, default=False)  # Whether this is the base unit for its type
     is_active = db.Column(db.Boolean, default=True)
-    is_custom = db.Column(db.Boolean, default=False)
-    is_mapped = db.Column(db.Boolean, default=True)
-    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
-    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)  # Only for custom units
+    is_custom = db.Column(db.Boolean, default=False)  # User-created units
+    is_mapped = db.Column(db.Boolean, default=False)  # Has conversion mapping
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'))
+    created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
+    updated_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now, onupdate=TimezoneUtils.utc_now)
 
-    # Add unique constraints
     __table_args__ = (
-        # Custom units must have unique names within organization  
         db.UniqueConstraint('name', 'organization_id', name='_unit_name_org_uc'),
     )
 
@@ -31,7 +30,7 @@ class Unit(TimestampMixin, db.Model):
             return cls.query.filter(False)  # Return empty query if no user
         # Return all standard units + user's custom units
         return cls.query.filter(
-            (cls.is_custom == False) | 
+            (cls.is_custom == False) |
             (cls.organization_id == current_user.organization_id)
         )
 

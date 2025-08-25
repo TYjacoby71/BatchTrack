@@ -104,7 +104,7 @@ class ProductSKU(db.Model, ScopedModelMixin):
     name = synonym("sku")
 
     # INVENTORY ITEM REFERENCE - unified inventory control (PRIMARY KEY)
-    inventory_item_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'), nullable=True, index=True)
+    inventory_item_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'), nullable=False, index=True)
 
     # CORE PRODUCT IDENTIFICATION
     product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=True)
@@ -216,7 +216,7 @@ class ProductSKU(db.Model, ScopedModelMixin):
         # Get quantity directly from inventory item
         if self.inventory_item:
             return float(self.inventory_item.quantity or 0.0)
-        
+
         return 0.0
 
     @quantity.setter
@@ -331,7 +331,7 @@ class ProductSKU(db.Model, ScopedModelMixin):
         # Don't pass id=None to avoid SQLite autoincrement issues
         if id is not None:
             self.id = id
-        
+
         # Set explicit attributes
         self.product_id = product_id
         self.variant_id = variant_id
@@ -344,10 +344,10 @@ class ProductSKU(db.Model, ScopedModelMixin):
         self.inventory_item_id = inventory_item_id
         self.organization_id = organization_id
         self.created_by = created_by
-        
+
         # Call parent with remaining kwargs for any additional fields
         super().__init__(**remaining_kwargs)
-        
+
         if qty is not None:
             self._quantity = qty
 
