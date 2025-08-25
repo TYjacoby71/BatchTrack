@@ -10,7 +10,7 @@ from typing import Dict, Any, List
 from flask_login import current_user
 
 from ...models import Recipe, RecipeIngredient
-from ..stock_check import UniversalStockCheckService
+from ..stock_check.core import UniversalStockCheckService
 from ..stock_check.types import StockCheckRequest, InventoryCategory, StockStatus
 
 logger = logging.getLogger(__name__)

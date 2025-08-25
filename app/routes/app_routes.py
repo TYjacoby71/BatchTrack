@@ -4,8 +4,11 @@ from app.services.stock_check.core import UniversalStockCheckService
 from flask_login import login_required, current_user
 from app.utils.permissions import require_permission, get_effective_organization_id, permission_required, any_permission_required
 from app.services.combined_inventory_alerts import CombinedInventoryAlertService
-from app.blueprints.expiration.services import ExpirationService
 from app.services.dashboard_alerts import DashboardAlertService
+from app.services.expiration.services import ExpirationService # Corrected import
+import logging
+
+logger = logging.getLogger(__name__)
 
 app_routes_bp = Blueprint('app_routes', __name__)
 
@@ -100,55 +103,50 @@ def dashboard():
 
 @app_routes_bp.route('/stock/check', methods=['POST'])
 @login_required
+@permission_required('inventory.view')
 def check_stock():
+    """Check stock for a recipe using the recipe service (internally uses USCS)"""
     try:
         data = request.get_json()
         if not data:
             return jsonify({"error": "No data provided"}), 400
 
         recipe_id = data.get('recipe_id')
+        scale = data.get('scale', 1.0)
+
         if not recipe_id:
             return jsonify({"error": "Recipe ID is required"}), 400
 
-        try:
-            scale = float(data.get('scale', 1.0))
-            if scale <= 0:
-                return jsonify({"error": "Scale must be greater than 0"}), 400
-        except (TypeError, ValueError):
-            return jsonify({"error": "Invalid scale value"}), 400
+        # Get recipe
+        recipe = Recipe.scoped().filter_by(id=recipe_id).first()
+        if not recipe:
+            return jsonify({"error": "Recipe not found"}), 404
 
-        recipe = Recipe.query.get_or_404(recipe_id)
-
-        # Use recipe service for stock checking
+        # Use recipe service (which internally uses USCS)
         from app.services.recipe_service import check_recipe_stock
         result = check_recipe_stock(recipe, scale)
-        stock_check = result['stock_check']
-        all_ok = result['status'] == 'ok'
 
-        status = "ok" if all_ok else "bad"
-        for item in stock_check:
-            if item.get("status") == "LOW" and status != "bad":
-                status = "low"
-                break
-
-        # Format the response to match template expectations
-        results = [{
-            'name': item['name'],
-            'needed': item['needed'],
-            'available': item['available'],
-            'unit': item['unit'],
-            'status': item['status'],
-            'type': item.get('type', 'ingredient')
-        } for item in stock_check]
+        # Process results for frontend
+        if result.get('success'):
+            stock_check = result.get('stock_check', [])
+            all_ok = all(item.get('status') not in ['NEEDED', 'INSUFFICIENT'] for item in stock_check)
+            status = 'ok' if all_ok else 'insufficient'
+        else:
+            stock_check = []
+            all_ok = False
+            status = 'error'
 
         return jsonify({
-            "stock_check": results,
+            "stock_check": stock_check,
             "status": status,
             "all_ok": all_ok,
-            "recipe_name": recipe.name
+            "recipe_name": recipe.name,
+            "success": result.get('success', False),
+            "error": result.get('error')
         }), 200
     except Exception as e:
-        return jsonify({"error": str(e)}), 400
+        logger.error(f"Error in recipe stock check: {e}")
+        return jsonify({"error": str(e)}), 500
 
 @app_routes_bp.route('/unit-manager')
 @login_required
