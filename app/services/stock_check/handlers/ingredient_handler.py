@@ -34,13 +34,25 @@ class IngredientHandler(BaseInventoryHandler):
 
         # Organization scoping should be handled by caller
 
-        # Get available FIFO entries (excludes expired automatically)
-        from app.models import InventoryHistory
-        available_entries = InventoryHistory.query.filter_by(
-            inventory_item_id=ingredient.id,
-            remaining_quantity__gt=0
-        ).order_by(InventoryHistory.timestamp.asc()).all()
-        total_available = sum(entry.remaining_quantity for entry in available_entries)
+        # Get available FIFO lots (excludes expired automatically)
+        from app.models.inventory_lot import InventoryLot
+        from datetime import datetime
+        
+        available_lots = InventoryLot.query.filter(
+            InventoryLot.inventory_item_id == ingredient.id,
+            InventoryLot.remaining_quantity > 0
+        )
+        
+        # Filter out expired lots if item is perishable
+        if ingredient.is_perishable:
+            today = datetime.now().date()
+            available_lots = available_lots.filter(
+                (InventoryLot.expiration_date == None) | 
+                (InventoryLot.expiration_date >= today)
+            )
+            
+        available_lots = available_lots.order_by(InventoryLot.received_date.asc()).all()
+        total_available = sum(lot.remaining_quantity for lot in available_lots)
 
         stock_unit = ingredient.unit
         recipe_unit = request.unit
