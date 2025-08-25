@@ -14,18 +14,11 @@ def create_exempt_tier():
     if not exempt_tier:
         print("✅ Creating exempt tier")
         exempt_tier = SubscriptionTier(
-            key='exempt',
             name='Exempt Plan',
             description='System tier for exempt accounts - unlimited access',
             user_limit=-1,  # Unlimited users
             is_customer_facing=False,
-            is_available=True,
-            requires_stripe_billing=False,  # Exempt from billing
-            stripe_lookup_key='',
-            fallback_price_monthly='$0',
-            fallback_price_yearly='$0',
-            stripe_price_monthly='Exempt',
-            stripe_price_yearly='Exempt'
+            billing_provider='exempt'
         )
         db.session.add(exempt_tier)
 

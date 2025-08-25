@@ -27,7 +27,7 @@ def seed_users_and_organization():
         print("ℹ️  No organizations found - creating default organization")
 
         # Get the exempt tier (must exist from subscription seeder)
-        exempt_tier = SubscriptionTier.query.filter_by(key='exempt').first()
+        exempt_tier = SubscriptionTier.query.filter_by(name='Exempt Plan').first()
         if not exempt_tier:
             print("❌ Exempt tier not found! Run subscription seeder first.")
             return
