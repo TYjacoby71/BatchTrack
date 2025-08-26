@@ -400,7 +400,7 @@ export class ContainerManager {
         let containment_percentage = 0;
 
         if (!autoFillEnabled) {
-            // Calculate from manual container rows
+            // Calculate from manual container rows using converted capacity
             const projectedYield = this.main.baseYield * this.main.scale;
             let totalContained = 0;
 
@@ -412,7 +412,11 @@ export class ContainerManager {
                     const container = this.containerPlan?.container_selection?.find(c => c.id == select.value);
                     if (container) {
                         const quantity = parseInt(quantityInput.value) || 0;
-                        totalContained += container.capacity * quantity;
+                        // Use converted capacity if available, otherwise original capacity
+                        const capacityToUse = container.conversion_successful && container.capacity_in_yield_unit 
+                            ? container.capacity_in_yield_unit 
+                            : container.capacity;
+                        totalContained += capacityToUse * quantity;
                     }
                 }
             });

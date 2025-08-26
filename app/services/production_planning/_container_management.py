@@ -5,6 +5,7 @@ Handles container selection, optimization, and fill strategies for production ba
 """
 
 import logging
+import math
 from typing import Dict, List, Any, Optional, Tuple
 from ...models import Recipe, InventoryItem
 from flask_login import current_user
@@ -134,7 +135,10 @@ def analyze_container_options(
                         conversion_successful = False
 
                 # Calculate containers needed based on converted capacity
-                containers_needed = max(1, int((total_yield / container_capacity_in_yield_units) + 0.99))
+                if container_capacity_in_yield_units > 0:
+                    containers_needed = max(1, int(math.ceil(total_yield / container_capacity_in_yield_units)))
+                else:
+                    containers_needed = 1
 
                 container_option = {
                     'id': container_id,
@@ -146,7 +150,8 @@ def analyze_container_options(
                     'conversion_successful': conversion_successful,
                     'available_quantity': int(available_qty),
                     'quantity': containers_needed,
-                    'stock_qty': int(available_qty)
+                    'stock_qty': int(available_qty),
+                    'total_yield_needed': total_yield  # Add this for containment calculations
                 }
 
                 container_options.append(container_option)
@@ -171,7 +176,10 @@ def analyze_container_options(
             logger.warning(f"No containers have sufficient stock for recipe {recipe.id}")
             return None, container_options
 
-        # Create strategy
+        # Create strategy using converted capacity for proper containment calculation
+        total_capacity_in_yield_units = selected_container['capacity_in_yield_unit'] * selected_container['quantity']
+        containment_percentage = min(100.0, (total_capacity_in_yield_units / total_yield) * 100) if total_yield > 0 else 100.0
+        
         container_strategy = ContainerStrategy(
             selected_containers=[ContainerOption(
                 container_id=selected_container['id'],
@@ -181,12 +189,12 @@ def analyze_container_options(
                 containers_needed=selected_container['quantity'],
                 cost_each=0.0  # TODO: Add cost calculation
             )],
-            total_capacity=selected_container['capacity'] * selected_container['quantity'],
-            containment_percentage=100.0,  # Full containment achieved
+            total_capacity=total_capacity_in_yield_units,  # Use converted capacity
+            containment_percentage=containment_percentage,  # Proper containment calculation
             fill_strategy=ContainerFillStrategy(
                 selected_containers=[selected_container],
-                total_capacity=selected_container['capacity'] * selected_container['quantity'],
-                containment_percentage=100.0,
+                total_capacity=total_capacity_in_yield_units,  # Use converted capacity
+                containment_percentage=containment_percentage,  # Proper containment calculation
                 strategy_type="auto"
             )
         )
