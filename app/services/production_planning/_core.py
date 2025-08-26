@@ -60,6 +60,7 @@ def plan_production_comprehensive(
 
 def execute_production_planning(request: ProductionRequest, include_containers: bool = True) -> ProductionPlan:
     """Execute the production planning workflow"""
+    from ._stock_validation import validate_ingredients_with_uscs
 
     # 1. Load recipe
     recipe = Recipe.query.get(request.recipe_id)
@@ -68,48 +69,40 @@ def execute_production_planning(request: ProductionRequest, include_containers: 
 
     logger.info(f"PRODUCTION_PLANNING: Starting analysis for recipe {recipe.name} at scale {request.scale}")
 
-    # 2. Get stock check from USCS
-    uscs = UniversalStockCheckService()
-    stock_results = uscs.check_recipe_stock(recipe.id, request.scale)
+    # 2. Validate ingredients using stock validation service
+    ingredient_requirements = validate_ingredients_with_uscs(
+        recipe, request.scale, request.organization_id or (current_user.organization_id if current_user.is_authenticated else None)
+    )
 
-    if not stock_results.get('success'):
-        logger.error(f"USCS stock check failed: {stock_results.get('error')}")
+    if not ingredient_requirements:
         return ProductionPlan(
             request=request,
             feasible=False,
             ingredient_requirements=[],
             projected_yield={'amount': 0, 'unit': 'count'},
-            issues=[stock_results.get('error', 'Stock check failed')]
+            issues=['Stock validation failed - no ingredients found']
         )
 
-    # 3. Convert USCS results to ingredient requirements
-    ingredient_requirements = []
-    for stock_item in stock_results.get('stock_check', []):
-        recipe_ingredient = next(
-            (ri for ri in recipe.recipe_ingredients if ri.inventory_item_id == stock_item['item_id']),
-            None
-        )
-
-        if recipe_ingredient:
-            requirement = IngredientRequirement(
-                ingredient_id=stock_item['item_id'],
-                ingredient_name=stock_item['item_name'],
-                scale=request.scale,
-                unit=stock_item['needed_unit'],
-                total_cost=(stock_item['needed_quantity']) * (getattr(recipe_ingredient.inventory_item, 'cost_per_unit', 0) or 0),
-                status=stock_item.get('status', 'unknown')
-            )
-            ingredient_requirements.append(requirement)
-
-    # 4. Analyze containers if requested
+    # 3. Analyze containers if requested
     container_strategy = None
     container_options = []
     if include_containers:
-        container_strategy, container_options = analyze_container_options(
+        container_strategy, raw_container_options = analyze_container_options(
             recipe, request.scale, None, request.organization_id
         )
+        # Convert raw options to ContainerOption objects
+        container_options = []
+        for opt in raw_container_options:
+            container_options.append(ContainerOption(
+                container_id=opt['container_id'],
+                container_name=opt['container_name'],
+                capacity=opt['capacity'],
+                available_quantity=opt['available_quantity'],
+                containers_needed=opt['containers_needed'],
+                cost_each=opt.get('cost_each', 0.0)
+            ))
 
-    # 5. Calculate costs
+    # 4. Calculate costs
     cost_breakdown = calculate_comprehensive_costs(
         ingredient_requirements,
         container_strategy,
@@ -117,8 +110,8 @@ def execute_production_planning(request: ProductionRequest, include_containers: 
         request.scale
     )
 
-    # 6. Determine feasibility based on USCS results
-    feasible = stock_results.get('all_ok', False)
+    # 5. Determine feasibility
+    feasible = all(req.status in ['available', 'OK'] for req in ingredient_requirements)
     issues = []
     if not feasible:
         issues.append("Insufficient ingredients available")
@@ -126,7 +119,7 @@ def execute_production_planning(request: ProductionRequest, include_containers: 
         issues.append("No suitable containers found")
         feasible = False
 
-    # 7. Create production plan
+    # 6. Create production plan
     plan = ProductionPlan(
         request=request,
         feasible=feasible,

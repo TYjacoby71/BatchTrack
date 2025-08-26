@@ -21,10 +21,15 @@ class IngredientRequirement:
     """Individual ingredient requirement from USCS stock check"""
     ingredient_id: int
     ingredient_name: str
-    scale: float  # The scale factor applied
+    scale: float
     unit: str
     total_cost: float
-    status: str  # From USCS
+    status: str
+    # Additional fields needed for integration
+    base_quantity: float = 0.0
+    scaled_quantity: float = 0.0
+    available_quantity: float = 0.0
+    cost_per_unit: float = 0.0
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization"""
@@ -35,7 +40,11 @@ class IngredientRequirement:
             'unit': self.unit,
             'total_cost': self.total_cost,
             'status': self.status,
-            'category': 'ingredient'
+            'category': 'ingredient',
+            'base_quantity': self.base_quantity,
+            'scaled_quantity': self.scaled_quantity,
+            'available_quantity': self.available_quantity,
+            'cost_per_unit': self.cost_per_unit
         }
 
 
@@ -67,6 +76,18 @@ class ContainerOption:
     containers_needed: int
     cost_each: float = 0.0
 
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for JSON serialization"""
+        return {
+            'container_id': self.container_id,
+            'container_name': self.container_name,
+            'capacity': self.capacity,
+            'available_quantity': self.available_quantity,
+            'containers_needed': self.containers_needed,
+            'cost_each': self.cost_each,
+            'category': 'container'
+        }
+
 
 @dataclass
 class ContainerStrategy:
@@ -91,12 +112,14 @@ class ContainerStrategy:
 @dataclass
 class CostBreakdown:
     """Simple cost analysis"""
-    total_ingredient_cost: float
-    total_container_cost: float
-    total_production_cost: float
-    cost_per_unit: float
-    yield_amount: float
-    yield_unit: str
+    ingredient_costs: List[Dict[str, Any]] = field(default_factory=list)
+    container_costs: List[Dict[str, Any]] = field(default_factory=list)
+    total_ingredient_cost: float = 0.0
+    total_container_cost: float = 0.0
+    total_production_cost: float = 0.0
+    cost_per_unit: float = 0.0
+    yield_amount: float = 0.0
+    yield_unit: str = 'count'
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization"""
@@ -105,6 +128,8 @@ class CostBreakdown:
             'cost_per_unit': self.cost_per_unit,
             'ingredient_cost': self.total_ingredient_cost,
             'container_cost': self.total_container_cost,
+            'ingredient_costs': self.ingredient_costs,
+            'container_costs': self.container_costs,
             'yield_amount': self.yield_amount,
             'yield_unit': self.yield_unit
         }

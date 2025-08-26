@@ -47,17 +47,20 @@ def validate_ingredients_with_uscs(recipe: Recipe, scale: float, organization_id
 
             # Convert USCS status to production planning status
             status = _convert_uscs_status(stock_item.get('status', 'unknown'))
+            cost_per_unit = getattr(recipe_ingredient.inventory_item, 'cost_per_unit', 0) or 0
+            scaled_quantity = stock_item['needed_quantity']
 
             requirement = IngredientRequirement(
                 ingredient_id=stock_item['item_id'],
                 ingredient_name=stock_item['item_name'],
-                base_quantity=recipe_ingredient.quantity,
-                scaled_quantity=stock_item['needed_quantity'],
+                scale=scale,
                 unit=stock_item['needed_unit'],
+                total_cost=scaled_quantity * cost_per_unit,
+                status=status,
+                base_quantity=recipe_ingredient.quantity,
+                scaled_quantity=scaled_quantity,
                 available_quantity=stock_item['available_quantity'],
-                cost_per_unit=getattr(recipe_ingredient.inventory_item, 'cost_per_unit', 0) or 0,
-                total_cost=(stock_item['needed_quantity']) * (getattr(recipe_ingredient.inventory_item, 'cost_per_unit', 0) or 0),
-                status=status
+                cost_per_unit=cost_per_unit
             )
 
             ingredient_requirements.append(requirement)
