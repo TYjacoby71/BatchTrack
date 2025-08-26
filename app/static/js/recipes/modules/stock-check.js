@@ -41,7 +41,7 @@ export class StockCheckManager {
 
         try {
             // Use the recipe stock check endpoint (internally uses USCS)
-            const response = await fetch('/stock/check', {
+            const response = await fetch('/recipes/stock/check', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

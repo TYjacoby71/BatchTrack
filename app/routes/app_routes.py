@@ -5,7 +5,7 @@ from flask_login import login_required, current_user
 from app.utils.permissions import require_permission, get_effective_organization_id, permission_required, any_permission_required
 from app.services.combined_inventory_alerts import CombinedInventoryAlertService
 from app.services.dashboard_alerts import DashboardAlertService
-from app.blueprints.expiration.services import ExpirationService
+from app.services.expiration.services import ExpirationService
 import logging
 
 logger = logging.getLogger(__name__)
@@ -101,53 +101,6 @@ def dashboard():
                          low_stock_ingredients=low_stock_ingredients,
                          expiration_summary=expiration_summary)
 
-@app_routes_bp.route('/stock/check', methods=['POST'])
-@login_required
-@permission_required('inventory.view')
-def check_stock():
-    """Check stock for a recipe using the recipe service (internally uses USCS)"""
-    try:
-        data = request.get_json()
-        if not data:
-            return jsonify({"error": "No data provided"}), 400
-
-        recipe_id = data.get('recipe_id')
-        scale = data.get('scale', 1.0)
-
-        if not recipe_id:
-            return jsonify({"error": "Recipe ID is required"}), 400
-
-        # Get recipe
-        recipe = Recipe.scoped().filter_by(id=recipe_id).first()
-        if not recipe:
-            return jsonify({"error": "Recipe not found"}), 404
-
-        # Use USCS directly
-        from app.services.stock_check.core import UniversalStockCheckService
-        uscs = UniversalStockCheckService()
-        result = uscs.check_recipe_stock(recipe_id, scale)
-
-        # Process results for frontend
-        if result.get('success'):
-            stock_check = result.get('stock_check', [])
-            all_ok = all(item.get('status') not in ['NEEDED', 'INSUFFICIENT'] for item in stock_check)
-            status = 'ok' if all_ok else 'insufficient'
-        else:
-            stock_check = []
-            all_ok = False
-            status = 'error'
-
-        return jsonify({
-            "stock_check": stock_check,
-            "status": status,
-            "all_ok": all_ok,
-            "recipe_name": recipe.name,
-            "success": result.get('success', False),
-            "error": result.get('error')
-        }), 200
-    except Exception as e:
-        logger.error(f"Error in recipe stock check: {e}")
-        return jsonify({"error": str(e)}), 500
 
 @app_routes_bp.route('/unit-manager')
 @login_required
