@@ -60,11 +60,10 @@ class TestInventoryFIFOCharacterization:
                 created_by=test_user.id
             )
 
-            # Verify available quantity matches
-            from app.services.stock_check import UniversalStockCheckService
-            stock_service = UniversalStockCheckService()
-            result = stock_service.check_ingredient_availability(item.id, 75.0, test_org.id)
-            assert result.get('status') == 'OK', f"Expected sufficient stock, got {result}"
+            # Verify available quantity matches expected after FIFO deduction
+            db_session.commit()
+            fresh_item_after = db_session.get(InventoryItem, item.id)
+            assert fresh_item_after.quantity == 75.0, f"Expected 75.0 remaining after FIFO deduction, got {fresh_item_after.quantity}"
 
     def test_inventory_adjustment_delegates_properly(self, app, db_session, test_user, test_org):
         """Verify inventory adjustment service delegates to proper internal systems."""
