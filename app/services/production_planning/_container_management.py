@@ -47,7 +47,7 @@ def analyze_container_options(
             item_id=None,  # Bulk query for all containers
             quantity_needed=yield_amount,
             unit=yield_unit,
-            inventory_category=InventoryCategory.CONTAINER,
+            category=InventoryCategory.CONTAINER,
             organization_id=organization_id,
             recipe_scoping=_get_recipe_allowed_containers(recipe)  # Pass recipe constraints
         )
