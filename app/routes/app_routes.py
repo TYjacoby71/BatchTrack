@@ -1,6 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, url_for, session, jsonify, flash
 from app.models import Recipe, InventoryItem, Batch
-from app.services.stock_check.core import UniversalStockCheckService
 from flask_login import login_required, current_user
 from app.utils.permissions import require_permission, get_effective_organization_id, permission_required, any_permission_required
 from app.services.combined_inventory_alerts import CombinedInventoryAlertService
@@ -12,20 +11,7 @@ logger = logging.getLogger(__name__)
 
 app_routes_bp = Blueprint('app_routes', __name__)
 
-# Helper functions for stock checking
-def check_stock_for_recipe(recipe, scale=1):
-    """Check stock availability for a recipe"""
-    try:
-        service = UniversalStockCheckService()
-        result = service.check_recipe_stock(recipe, scale)
-        return result['stock_check'], result['all_ok']
-    except Exception as e:
-        return [], False
-
-def check_container_availability(container_ids, scale=1):
-    """Check container availability - placeholder implementation"""
-    # This function needs to be implemented based on your container model
-    return [], True
+# Dashboard no longer performs stock checks - this is handled by production planning
 
 @app_routes_bp.route('/dashboard')
 @app_routes_bp.route('/user_dashboard')
@@ -69,32 +55,10 @@ def dashboard():
     low_stock_ingredients = CombinedInventoryAlertService.get_low_stock_ingredients()
     expiration_summary = ExpirationService.get_expiration_summary()
 
-    stock_check = None
-    selected_recipe = None
-    scale = 1
-    status = None
-
-    if request.method == "POST":
-        recipe_id = request.form.get("recipe_id")
-        try:
-            scale = float(request.form.get("scale", 1))
-            selected_recipe = Recipe.scoped().filter_by(id=recipe_id).first()
-            if selected_recipe:
-                stock_check, all_ok = check_stock_for_recipe(selected_recipe, scale)
-                status = "ok" if all_ok else "bad"
-                for item in stock_check:
-                    if item["status"] == "LOW" and status != "bad":
-                        status = "low"
-                        break
-        except ValueError as e:
-            flash("Invalid scale value")
+    # Dashboard stock checking removed - users should use recipe planning page
 
     return render_template("dashboard.html",
                          recipes=recipes,
-                         stock_check=stock_check,
-                         selected_recipe=selected_recipe,
-                         scale=scale,
-                         status=status,
                          active_batch=active_batch,
                          current_user=current_user,
                          alert_data=alert_data,

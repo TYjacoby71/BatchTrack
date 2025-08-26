@@ -41,46 +41,42 @@ def bulk_stock_check():
             bulk_results = uscs.check_bulk_recipes(recipe_configs)
             
             if bulk_results['success']:
+                # Aggregate results from USCS
+                ingredient_totals = {}
+                
                 for rid, result in bulk_results['results'].items():
                     if result['success']:
-                        results = result.get('stock_check', [])
-
-                for row in results:
-                    name = row['name']
-                    needed = row['needed']
-                    from_unit = row.get('unit') or 'ml'
-                    ingredient = InventoryItem.scoped().filter_by(name=name).first()
-
-                    if not ingredient:
-                        continue
-
-                    to_unit = ingredient.unit
-                    try:
-                        needed_converted = ConversionEngine.convert_units(needed, from_unit, to_unit)
-                    except (KeyError, ValueError) as e:
-                        flash(f"Invalid stock check input: {e}", "warning")
-                        return redirect(request.referrer or url_for('stock.bulk_check'))
-
-                    key = (name, to_unit)
-                    if key not in summary:
-                        summary[key] = {
-                            'name': name,
-                            'unit': to_unit,
-                            'needed': 0,
-                            'available': ingredient.quantity if ingredient else 0
-                        }
-                    summary[key]['needed'] += needed_converted
-
-            for val in summary.values():
-                if val['available'] >= val['needed']:
-                    val['status'] = 'OK'
-                elif val['available'] > 0:
-                    val['status'] = 'LOW'
-                else:
-                    val['status'] = 'NEEDED'
-
-            summary = list(summary.values())
-            session['bulk_summary'] = summary
+                        stock_data = result.get('stock_check', [])
+                        
+                        for item in stock_data:
+                            name = item.get('name', item.get('item_name', 'Unknown'))
+                            needed = item.get('needed', item.get('needed_quantity', 0))
+                            unit = item.get('unit', item.get('needed_unit', 'ml'))
+                            available = item.get('available', item.get('available_quantity', 0))
+                            
+                            key = (name, unit)
+                            if key not in ingredient_totals:
+                                ingredient_totals[key] = {
+                                    'name': name,
+                                    'unit': unit,
+                                    'needed': 0,
+                                    'available': available
+                                }
+                            ingredient_totals[key]['needed'] += needed
+                
+                # Determine status for each ingredient
+                for item in ingredient_totals.values():
+                    if item['available'] >= item['needed']:
+                        item['status'] = 'OK'
+                    elif item['available'] > 0:
+                        item['status'] = 'LOW'
+                    else:
+                        item['status'] = 'NEEDED'
+                
+                summary = list(ingredient_totals.values())
+                session['bulk_summary'] = summary
+            else:
+                flash('Bulk stock check failed', 'error')
 
         return render_template('bulk_stock_check.html', recipes=recipes, summary=summary)
     except Exception as e:
