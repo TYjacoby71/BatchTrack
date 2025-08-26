@@ -36,28 +36,27 @@ class ContainerHandler(BaseInventoryHandler):
         logger.debug(f"Container {container.name}: {available_containers} units, capacity {storage_capacity} {storage_unit}")
 
         try:
-            # Calculate how many containers are needed
-            # Convert product yield to container storage unit first
+            # Convert container storage capacity to recipe yield unit for proper comparison
             if request.unit != storage_unit:
                 conversion_result = ConversionEngine.convert_units(
-                    request.quantity_needed,
-                    request.unit,
+                    storage_capacity,
                     storage_unit,
+                    request.unit,
                     ingredient_id=request.item_id
                 )
 
                 if isinstance(conversion_result, dict):
-                    yield_in_container_units = conversion_result['converted_value']
+                    storage_capacity_in_recipe_units = conversion_result['converted_value']
                     conversion_details = conversion_result
                 else:
-                    yield_in_container_units = float(conversion_result)
+                    storage_capacity_in_recipe_units = float(conversion_result)
                     conversion_details = None
             else:
-                yield_in_container_units = request.quantity_needed
+                storage_capacity_in_recipe_units = storage_capacity
                 conversion_details = None
 
-            # Calculate containers needed
-            containers_needed = yield_in_container_units / storage_capacity if storage_capacity > 0 else 1
+            # Calculate containers needed based on recipe yield unit
+            containers_needed = request.quantity_needed / storage_capacity_in_recipe_units if storage_capacity_in_recipe_units > 0 else 1
             containers_needed = max(1, int(containers_needed))  # At least 1 container
 
             # For container management, we always return OK if any containers exist
@@ -84,7 +83,9 @@ class ContainerHandler(BaseInventoryHandler):
                     **(conversion_details or {}),
                     'storage_capacity': storage_capacity,
                     'storage_unit': storage_unit,
-                    'yield_in_storage_units': yield_in_container_units
+                    'storage_capacity_in_recipe_units': storage_capacity_in_recipe_units,
+                    'recipe_yield_needed': request.quantity_needed,
+                    'recipe_yield_unit': request.unit
                 }
             )
 
