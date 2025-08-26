@@ -93,18 +93,19 @@ class ContainerHandler(BaseInventoryHandler):
                 needed_unit="count",
                 available_quantity=available_containers,
                 available_unit="count",
-                raw_stock=available_containers,
-                stock_unit="count",
                 status=StockStatus.ERROR,
                 error_message=f"Container calculation error: {str(e)}",
                 formatted_needed="1 count",
                 formatted_available=self._format_quantity_display(available_containers, "count")
             )
 
-    def get_item_details(self, item_id: int) -> Optional[dict]:
+    def get_item_details(self, item_id: int, organization_id: int) -> Optional[dict]:
         """Get container details"""
-        container = InventoryItem.query.get(item_id)
-        if not container or not self._check_organization_access(container):
+        container = InventoryItem.query.filter_by(
+            id=item_id,
+            organization_id=organization_id
+        ).first()
+        if not container:
             return None
 
         return {
