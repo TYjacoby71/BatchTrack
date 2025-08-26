@@ -101,21 +101,25 @@ def create_inventory_item(form_data, organization_id, created_by):
             # Extract custom expiration data for initial stock
             custom_expiration_date = form_data.get('custom_expiration_date')
             custom_shelf_life_days = form_data.get('custom_shelf_life_days')
-            
-            # Use the central inventory adjustment service for initial stock
-            success, adjustment_message = process_inventory_adjustment(
-                item_id=new_item.id,
+
+            # Use the local initial stock handler (no circular dependency)
+            success, adjustment_message, quantity_delta = handle_initial_stock(
+                item=new_item,
                 quantity=initial_quantity,
                 change_type='initial',
                 notes='Initial inventory entry',
                 created_by=created_by,
                 custom_expiration_date=custom_expiration_date,
-                custom_shelf_life_days=custom_shelf_life_days
+                custom_shelf_life_days=custom_shelf_life_days,
+                unit=final_unit
             )
 
             if not success:
                 db.session.rollback()
                 return False, f"Item created but initial stock failed: {adjustment_message}", None
+
+            # Apply the quantity delta to the item
+            new_item.quantity = float(quantity_delta)
 
         # Commit the transaction
         db.session.commit()
