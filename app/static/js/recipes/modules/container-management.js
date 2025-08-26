@@ -172,24 +172,39 @@ export class ContainerManager {
             const containerUnit = container.unit || 'ml';
             const quantityNeeded = container.quantity || 0;
             
-            // Build capacity display with both units
+            // CORRECTED: Always show converted capacity prominently if conversion successful
             let capacityDisplay = `${containerCapacity} ${containerUnit}`;
             
-            // If we have converted capacity info, show both
             if (container.capacity_in_yield_unit && container.yield_unit && container.conversion_successful) {
-                if (containerUnit !== container.yield_unit) {
-                    capacityDisplay = `
-                        <div>
-                            <strong>${container.capacity_in_yield_unit} ${container.yield_unit}</strong>
-                            <br><small class="text-muted">(${containerCapacity} ${containerUnit})</small>
-                        </div>
-                    `;
-                }
+                // Show converted capacity as primary, original as secondary
+                capacityDisplay = `
+                    <div>
+                        <strong>${container.capacity_in_yield_unit} ${container.yield_unit}</strong>
+                        <br><small class="text-muted">(${containerCapacity} ${containerUnit} storage)</small>
+                    </div>
+                `;
+            } else if (container.capacity_in_yield_unit && container.yield_unit) {
+                // Even if conversion not marked successful, show both if we have converted value
+                capacityDisplay = `
+                    <div>
+                        <strong>${container.capacity_in_yield_unit} ${container.yield_unit}</strong>
+                        <br><small class="text-muted">(${containerCapacity} ${containerUnit} storage)</small>
+                    </div>
+                `;
+            }
+            
+            // Calculate fill percentage for visual indicator
+            let fillIndicator = '';
+            if (container.total_yield_needed && container.capacity_in_yield_unit) {
+                const totalCapacity = container.capacity_in_yield_unit * quantityNeeded;
+                const fillPercentage = (container.total_yield_needed / totalCapacity) * 100;
+                const fillColor = fillPercentage < 50 ? 'warning' : fillPercentage > 95 ? 'success' : 'info';
+                fillIndicator = `<div class="mt-1"><span class="badge bg-${fillColor}">${fillPercentage.toFixed(1)}% fill</span></div>`;
             }
             
             html += `
                 <div class="row align-items-center mb-3 p-3 border rounded ${containerClass}" data-${isAutoFill ? 'auto' : 'manual'}-container="${index}">
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label class="form-label small">Container Type</label>
                         <div class="form-control form-control-sm bg-light border-0">
                             <strong>${containerName}</strong>
@@ -205,11 +220,17 @@ export class ContainerManager {
                         <label class="form-label small">Capacity Each</label>
                         <div class="form-control form-control-sm bg-light border-0">
                             ${capacityDisplay}
+                            ${fillIndicator}
                         </div>
                     </div>
                     <div class="col-md-2">
                         <label class="form-label small">Available Stock</label>
                         <div class="badge ${stockQuantity >= quantityNeeded ? 'bg-success' : 'bg-warning'} fs-6">${stockQuantity}</div>
+                    </div>
+                    <div class="col-md-1">
+                        <div class="text-center">
+                            <i class="fas fa-check-circle text-success" title="Optimal selection"></i>
+                        </div>
                     </div>
                 </div>
             `;
@@ -219,7 +240,15 @@ export class ContainerManager {
         
         if (isAutoFill) {
             const efficiency = this.containerPlan.containment_percentage || 0;
-            html += `<div class="mt-2"><small class="text-muted"><i class="fas fa-info-circle"></i> Auto-fill efficiency: ${efficiency.toFixed(1)}%</small></div>`;
+            const warnings = this.containerPlan.warnings || [];
+            html += `
+                <div class="mt-2">
+                    <small class="text-muted">
+                        <i class="fas fa-info-circle"></i> Auto-fill efficiency: ${efficiency.toFixed(1)}%
+                    </small>
+                    ${warnings.length > 0 ? `<div class="alert alert-warning mt-2"><small>${warnings.join(', ')}</small></div>` : ''}
+                </div>
+            `;
         }
         
         console.log('🔍 RENDER CONTAINERS: Setting HTML for', resultClass);
@@ -400,7 +429,7 @@ export class ContainerManager {
         let containment_percentage = 0;
 
         if (!autoFillEnabled) {
-            // Calculate from manual container rows using converted capacity
+            // Calculate from manual container rows using ALWAYS converted capacity
             const projectedYield = this.main.baseYield * this.main.scale;
             let totalContained = 0;
 
@@ -412,16 +441,16 @@ export class ContainerManager {
                     const container = this.containerPlan?.container_selection?.find(c => c.id == select.value);
                     if (container) {
                         const quantity = parseInt(quantityInput.value) || 0;
-                        // Use converted capacity if available, otherwise original capacity
-                        const capacityToUse = container.conversion_successful && container.capacity_in_yield_unit 
-                            ? container.capacity_in_yield_unit 
-                            : container.capacity;
+                        // ALWAYS use converted capacity - this is the key fix
+                        const capacityToUse = container.capacity_in_yield_unit || container.capacity;
                         totalContained += capacityToUse * quantity;
+                        console.log(`🔍 PROGRESS DEBUG: Container ${container.name} x${quantity} = ${capacityToUse * quantity} ${container.yield_unit || 'units'}`);
                     }
                 }
             });
 
             containment_percentage = projectedYield > 0 ? Math.min((totalContained / projectedYield) * 100, 100) : 0;
+            console.log(`🔍 PROGRESS DEBUG: Total contained: ${totalContained}, Yield needed: ${projectedYield}, Percentage: ${containment_percentage.toFixed(1)}%`);
         } else {
             containment_percentage = this.containerPlan.containment_percentage || 0;
         }
