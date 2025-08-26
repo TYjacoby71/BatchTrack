@@ -28,7 +28,8 @@ export class ContainerManager {
                     console.log('🔍 AUTO-FILL TOGGLE: Fetching container plan...');
                     this.fetchContainerPlan();
                 } else if (!e.target.checked) {
-                    // Clear auto-fill results when switching to manual
+                    // When switching to manual, preserve containers as editable rows
+                    console.log('🔍 AUTO-FILL TOGGLE: Switching to manual mode, preserving container selection');
                     this.clearAutoFillResults();
                 }
             });
@@ -47,24 +48,57 @@ export class ContainerManager {
             manualSection.style.display = autoFillEnabled ? 'none' : 'block';
         }
 
+        // When switching to manual mode, populate manual rows from auto-fill results
+        if (!autoFillEnabled && this.containerPlan?.success && this.containerPlan.container_selection) {
+            this.populateManualRowsFromAutoFill();
+        }
+
         // Update progress bar when switching modes
         this.updateContainerProgress();
     }
 
+    populateManualRowsFromAutoFill() {
+        const containerRows = document.getElementById('containerSelectionRows');
+        if (!containerRows || !this.containerPlan?.container_selection) return;
+
+        // Clear existing manual rows first
+        containerRows.innerHTML = '';
+
+        // Add a row for each container from the auto-fill selection
+        this.containerPlan.container_selection.forEach((container, index) => {
+            const rowHtml = this.createContainerRowHTML(index);
+            const rowDiv = document.createElement('div');
+            rowDiv.innerHTML = rowHtml;
+            const newRow = rowDiv.firstElementChild;
+            
+            if (newRow) {
+                containerRows.appendChild(newRow);
+                this.bindContainerRowEvents(index);
+                
+                // Pre-populate the row with auto-fill data
+                const select = newRow.querySelector('.container-select');
+                const quantityInput = newRow.querySelector('.container-quantity');
+                
+                if (select && quantityInput) {
+                    select.value = container.id;
+                    quantityInput.value = container.quantity || container.containers_needed || 1;
+                    this.updateContainerRow(index);
+                }
+            }
+        });
+
+        console.log('🔍 MANUAL POPULATE: Pre-populated', this.containerPlan.container_selection.length, 'container rows from auto-fill');
+    }
+
     clearAutoFillResults() {
         const containerResults = document.getElementById('containerResults');
-        const containerRows = document.getElementById('containerSelectionRows');
         
         if (containerResults) {
             containerResults.innerHTML = '<p class="text-muted">Switch to manual container selection mode</p>';
         }
         
-        if (containerRows) {
-            containerRows.innerHTML = '';
-        }
-        
-        // Clear progress bar when switching to manual
-        this.updateContainerProgress();
+        // Don't clear manual rows anymore - let them persist
+        // this.updateContainerProgress();
     }
 
     onContainerRequirementChange() {
