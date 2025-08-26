@@ -19,97 +19,149 @@ logger = logging.getLogger(__name__)
 def analyze_container_options(
     recipe: Recipe,
     scale: float,
-    preferred_container_id: Optional[int],
-    organization_id: int
+    preferred_container_id: Optional[int] = None,
+    organization_id: int = None
 ) -> Tuple[Optional[ContainerStrategy], List[ContainerOption]]:
     """
-    Analyze all container options for a recipe using USCS bulk query with recipe scoping.
+    Analyze available containers and determine the best strategy for production.
 
-    Returns (selected_strategy, all_options)
+    Returns:
+        Tuple of (container_strategy, container_options_list)
     """
+    logger.info(f"CONTAINER_ANALYSIS: Starting analysis for recipe {recipe.id}, scale {scale}, org {organization_id}")
+
+    # Calculate total recipe yield in the recipe's yield unit
+    total_yield = (recipe.predicted_yield or 0) * scale
+    yield_unit = recipe.predicted_yield_unit or 'ml'
+
+    logger.info(f"CONTAINER_ANALYSIS: Recipe yield {total_yield} {yield_unit}")
+
+    if total_yield <= 0:
+        logger.warning(f"CONTAINER_ANALYSIS: Invalid recipe yield {total_yield}")
+        return None, []
+
     try:
-        logger.info(f"CONTAINER_ANALYSIS: Analyzing containers for recipe {recipe.id} using USCS bulk query")
+        # Get all containers for this organization
+        from ...models import InventoryItem
+        all_containers = InventoryItem.query.filter_by(
+            type='container',
+            organization_id=organization_id
+        ).filter(InventoryItem.quantity > 0).all()
 
-        # Calculate fill requirements
-        yield_amount = (recipe.predicted_yield or 0) * scale
-        yield_unit = recipe.predicted_yield_unit or 'ml'
+        logger.info(f"CONTAINER_ANALYSIS: Found {len(all_containers)} containers in database")
+        for container in all_containers:
+            logger.info(f"CONTAINER_ANALYSIS: - DB Container: {container.name} (ID: {container.id})")
+            logger.info(f"CONTAINER_ANALYSIS: - Quantity: {container.quantity}")
+            logger.info(f"CONTAINER_ANALYSIS: - Storage: {getattr(container, 'storage_amount', 'None')} {getattr(container, 'storage_unit', 'None')}")
 
-        logger.info(f"CONTAINER_ANALYSIS: Recipe yield {yield_amount} {yield_unit}")
-
-        # Get allowed containers for this recipe
-        allowed_container_ids = _get_recipe_allowed_containers(recipe)
-
-        if not allowed_container_ids:
-            logger.warning("CONTAINER_ANALYSIS: No allowed containers found for recipe")
-            return None, []
-
-        # Use USCS single item checks for each allowed container
+        # Use USCS to check each container
         uscs = UniversalStockCheckService()
         container_results = []
 
-        for container_id in allowed_container_ids:
-            result = uscs.check_single_item(
-                item_id=container_id,
-                quantity_needed=1,  # Check for at least 1 container
-                unit="count",
-                category=InventoryCategory.CONTAINER
-            )
-            container_results.append(result)
+        for container in all_containers:
+            logger.info(f"CONTAINER_ANALYSIS: Checking container {container.name} via USCS...")
+
+            try:
+                # Use USCS to check this container
+                result = uscs.check_single_item(
+                    item_id=container.id,
+                    quantity_needed=total_yield, 
+                    unit=yield_unit,
+                    category=InventoryCategory.CONTAINER
+                )
+
+                logger.info(f"CONTAINER_ANALYSIS: USCS result for {container.name}:")
+                logger.info(f"CONTAINER_ANALYSIS: - Status: {result.status}")
+                logger.info(f"CONTAINER_ANALYSIS: - Item ID: {result.item_id}")
+                logger.info(f"CONTAINER_ANALYSIS: - Available quantity: {result.available_quantity}")
+                logger.info(f"CONTAINER_ANALYSIS: - Error message: {getattr(result, 'error_message', 'None')}")
+                logger.info(f"CONTAINER_ANALYSIS: - Conversion details: {getattr(result, 'conversion_details', 'None')}")
+
+                container_results.append(result)
+
+            except Exception as e:
+                logger.error(f"CONTAINER_ANALYSIS: Error checking container {container.name}: {e}")
 
         logger.info(f"CONTAINER_ANALYSIS: USCS returned {len(container_results)} container results")
 
-        if not container_results:
-            logger.warning("CONTAINER_ANALYSIS: No containers found by USCS")
-            return None, []
+        container_options = []
 
-        # Convert USCS results to ContainerOptions
-        analyzed_options = []
-        
         for result in container_results:
-            logger.info(f"CONTAINER_ANALYSIS: Processing {result.item_name}")
+            logger.info(f"CONTAINER_ANALYSIS: Processing result for {result.item_name}")
             logger.info(f"CONTAINER_ANALYSIS: - Status: {result.status} (type: {type(result.status)})")
-            logger.info(f"CONTAINER_ANALYSIS: - Has conversion_details: {bool(result.conversion_details)}")
-            
-            # Check for successful status using enum comparison
-            if result.status in [StockStatus.OK, StockStatus.LOW, StockStatus.AVAILABLE] and result.conversion_details:
-                storage_capacity = result.conversion_details.get('storage_capacity', 0)
-                storage_unit = result.conversion_details.get('storage_unit', 'ml')
-                yield_in_storage_units = result.conversion_details.get('yield_in_storage_units', 0)
-                containers_needed = result.needed_quantity
+            logger.info(f"CONTAINER_ANALYSIS: - Status value: {result.status.value if hasattr(result.status, 'value') else 'no value'}")
+            logger.info(f"CONTAINER_ANALYSIS: - Has conversion_details: {hasattr(result, 'conversion_details') and result.conversion_details is not None}")
 
-                # Calculate fill percentage
-                total_capacity = storage_capacity * containers_needed
-                fill_percentage = (yield_in_storage_units / total_capacity * 100) if total_capacity > 0 else 0
+            # Check for StockStatus.OK (our new status for available containers)
+            if result.status == StockStatus.OK and hasattr(result, 'conversion_details') and result.conversion_details:
+                logger.info(f"CONTAINER_ANALYSIS: Container {result.item_name} passed initial checks")
 
-                option = ContainerOption(
-                    container_id=result.item_id,
-                    container_name=result.item_name,
-                    storage_capacity=storage_capacity,
-                    storage_unit=storage_unit,
-                    available_quantity=result.available_quantity,
-                    cost_each=result.conversion_details.get('cost_per_unit', 0) or 0,
+                conversion_details = result.conversion_details
+                logger.info(f"CONTAINER_ANALYSIS: Conversion details: {conversion_details}")
+
+                # Extract container properties from conversion details
+                capacity = conversion_details.get('storage_capacity', 0)
+                capacity_unit = conversion_details.get('storage_unit', 'ml')
+                capacity_in_recipe_units = conversion_details.get('storage_capacity_in_recipe_units', capacity)
+
+                logger.info(f"CONTAINER_ANALYSIS: Capacity: {capacity} {capacity_unit}, Recipe units: {capacity_in_recipe_units}")
+
+                # Calculate fill analysis
+                containers_needed = max(1, int(total_yield / capacity_in_recipe_units)) if capacity_in_recipe_units > 0 else 1
+                total_capacity_needed = containers_needed * capacity_in_recipe_units
+                fill_percentage = (total_yield / total_capacity_needed * 100) if total_capacity_needed > 0 else 0
+                waste_percentage = max(0, 100 - fill_percentage)
+
+                logger.info(f"CONTAINER_ANALYSIS: Calculated - Containers needed: {containers_needed}, Fill %: {fill_percentage:.1f}")
+
+                container_option = ContainerOption(
+                    id=result.item_id,
+                    name=result.item_name,
+                    capacity=capacity,
+                    unit=capacity_unit,
+                    available_quantity=int(result.available_quantity),
+                    quantity=containers_needed,
+                    stock_qty=int(result.available_quantity),  # For JS compatibility
                     fill_percentage=fill_percentage,
-                    containers_needed=int(containers_needed)
+                    waste_percentage=waste_percentage,
+                    total_capacity=total_capacity_needed,
+                    cost_per_unit=0  # TODO: Get from inventory item
                 )
 
-                analyzed_options.append(option)
-                logger.info(f"CONTAINER_ANALYSIS: {result.item_name} - needs {containers_needed} containers, fill: {fill_percentage:.1f}%")
+                container_options.append(container_option)
+                logger.info(f"CONTAINER_ANALYSIS: Added container option: {container_option.name}")
+            else:
+                logger.warning(f"CONTAINER_ANALYSIS: Skipping {result.item_name}")
+                logger.warning(f"CONTAINER_ANALYSIS: - Status: {result.status}")
+                logger.warning(f"CONTAINER_ANALYSIS: - Has conversion details: {hasattr(result, 'conversion_details') and result.conversion_details is not None}")
+                logger.warning(f"CONTAINER_ANALYSIS: - Error: {getattr(result, 'error_message', 'No error message')}")
 
-        if not analyzed_options:
-            logger.warning("No suitable container options found after USCS bulk analysis")
+        logger.info(f"CONTAINER_ANALYSIS: Final container options count: {len(container_options)}")
+
+        if not container_options:
+            logger.warning(f"CONTAINER_ANALYSIS: No suitable containers found after processing {len(container_results)} results")
             return None, []
 
-        # Select best strategy
-        if preferred_container_id:
-            strategy = _create_user_specified_strategy(analyzed_options, preferred_container_id)
-        else:
-            strategy = _select_optimal_strategy(analyzed_options)
+        # Create container strategy using the best option
+        best_option = min(container_options, key=lambda x: x.waste_percentage)
 
-        logger.info(f"CONTAINER_ANALYSIS: Selected strategy {strategy.strategy_type.value}")
-        return strategy, analyzed_options
+        strategy = ContainerStrategy(
+            selected_containers=[best_option],
+            total_containers_needed=best_option.quantity,
+            total_capacity=best_option.total_capacity,
+            average_fill_percentage=best_option.fill_percentage,
+            waste_percentage=best_option.waste_percentage,
+            estimated_cost=0,  # TODO: Calculate cost
+            fill_strategy=ContainerFillStrategy.MINIMIZE_WASTE
+        )
+
+        logger.info(f"CONTAINER_ANALYSIS: Strategy created with {len(strategy.selected_containers)} containers")
+        return strategy, container_options
 
     except Exception as e:
-        logger.error(f"Error analyzing container options: {e}")
+        logger.error(f"CONTAINER_ANALYSIS: Exception in analyze_container_options: {e}")
+        import traceback
+        logger.error(f"CONTAINER_ANALYSIS: Traceback: {traceback.format_exc()}")
         return None, []
 
 
