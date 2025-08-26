@@ -1,4 +1,3 @@
-
 """
 Production Planning Service Package
 
@@ -17,7 +16,7 @@ from ._core import (
     plan_production_comprehensive
 )
 from ._container_management import (
-    calculate_container_fill_strategy
+    analyze_container_options
 )
 from ._cost_calculation import (
     calculate_production_costs,
@@ -37,7 +36,7 @@ from .types import (
 # Main public interface
 __all__ = [
     'plan_production_comprehensive',
-    'calculate_container_fill_strategy',
+    'analyze_container_options',
     'calculate_production_costs',
     'analyze_cost_breakdown',
     'prepare_batch_data',

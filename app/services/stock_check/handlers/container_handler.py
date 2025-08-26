@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 class ContainerHandler(BaseInventoryHandler):
     """Handler for container stock checking with storage capacity logic"""
 
-    def check_availability(self, request: StockCheckRequest) -> StockCheckResult:
+    def check_availability(self, request: StockCheckRequest, organization_id: int = None) -> StockCheckResult:
         """Check container availability"""
         # Query-level organization filtering - never load unauthorized data
         container = InventoryItem.query.filter_by(
