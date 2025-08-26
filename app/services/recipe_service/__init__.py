@@ -14,10 +14,8 @@ from ._core import (
     create_recipe, update_recipe, delete_recipe, get_recipe_details,
     duplicate_recipe
 )
-from ._production_planning import (
-    plan_production, calculate_recipe_requirements,
-    calculate_production_cost, check_ingredient_availability
-)
+# Production planning moved to dedicated service package
+from ..production_planning import plan_production_comprehensive as plan_production
 from ._scaling import scale_recipe
 from ._validation import validate_recipe_data
 from ..stock_check.core import UniversalStockCheckService
@@ -30,9 +28,8 @@ def check_recipe_stock(recipe, scale: float = 1.0):
 # Make sure all functions are available
 __all__ = [
     'create_recipe', 'update_recipe', 'delete_recipe', 'get_recipe_details',
-    'duplicate_recipe', 'plan_production', 'calculate_recipe_requirements',
-    'calculate_production_cost', 'check_ingredient_availability', 'scale_recipe',
-    'validate_recipe_data', 'check_recipe_stock', 'get_recipe_ingredients_for_stock_check'
+    'duplicate_recipe', 'plan_production', 'scale_recipe',
+    'validate_recipe_data', 'check_recipe_stock'
 ]
 
 # Backwards compatibility shim for tests and legacy code
@@ -52,8 +49,8 @@ class RecipeService:
         return delete_recipe(recipe_id)
 
     @staticmethod
-    def plan_production(recipe_id, quantity_needed, organization_id=None, check_availability=True):
-        return plan_production(recipe_id, quantity_needed, organization_id, check_availability)
+    def plan_production(recipe_id, scale=1.0, container_id=None, check_containers=False):
+        return plan_production(recipe_id, scale, container_id, check_containers)
 
     @staticmethod
     def scale_recipe(recipe_id, scale_factor):
@@ -64,9 +61,7 @@ class RecipeService:
         return validate_recipe_data(name, ingredients, yield_amount, recipe_id, notes, category, tags, batch_size)
 
     @staticmethod
-    def check_recipe_stock(recipe_id, quantity_needed, organization_id=None):
-        return check_recipe_stock(recipe_id, quantity_needed, organization_id)
-
-    @staticmethod
-    def get_recipe_ingredients_for_stock_check(recipe_id, quantity_needed, organization_id=None):
-        return get_recipe_ingredients_for_stock_check(recipe_id, quantity_needed, organization_id)
+    def check_recipe_stock(recipe_id, scale=1.0):
+        from ..stock_check.core import UniversalStockCheckService
+        uscs = UniversalStockCheckService()
+        return uscs.check_recipe_stock(recipe_id, scale)
