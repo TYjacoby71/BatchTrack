@@ -495,20 +495,21 @@ export class ContainerManager {
             let className = 'form-text mt-1';
             
             if (percentage >= 100) {
-                message = 'Full containment achieved';
+                message = '✅ Batch fully contained';
                 className += ' text-success';
             } else if (percentage > 0) {
-                message = 'Partial containment (batch can still proceed)';
+                message = '⚠️ Partial containment - consider adding more containers';
                 className += ' text-warning';
             } else {
-                message = 'No containers - manual containment required (batch can still proceed)';
-                className += ' text-warning';
+                message = '❌ No containment - add containers to proceed';
+                className += ' text-danger';
             }
             
-            // Add efficiency warnings from container plan
+            // Add fill efficiency warnings separately (these are just optimization suggestions)
             const warnings = this.containerPlan?.warnings || [];
-            if (warnings.length > 0) {
-                message += '. ' + warnings.join('. ');
+            const fillWarnings = warnings.filter(w => w.includes('fill efficiency'));
+            if (fillWarnings.length > 0) {
+                message += ` (Fill efficiency note: ${fillWarnings.join('. ')})`;
             }
             
             messageSpan.textContent = message;

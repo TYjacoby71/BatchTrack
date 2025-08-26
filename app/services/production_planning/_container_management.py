@@ -188,7 +188,12 @@ class ContainerPlanner:
             next(o.converted_capacity for o in self.options if o.id == cid) * qty
             for cid, qty in containers_to_use.items()
         )
-        efficiency = (self.total_yield / total_capacity) * 100 if total_capacity > 0 else 0
+        
+        # Containment: Can we fit the batch? (goal: 100%)
+        containment_percentage = min(100.0, (self.total_yield / total_capacity) * 100) if total_capacity > 0 else 0
+        
+        # Fill efficiency: How well are we using container space? (warning only)
+        fill_efficiency = (self.total_yield / total_capacity) * 100 if total_capacity > 0 else 0
         
         warnings = []
         if not containers_to_use:
@@ -196,13 +201,13 @@ class ContainerPlanner:
             if self.options:
                 available_units = list(set(opt.original_unit for opt in self.options))
                 warnings.append(f"Available container units: {', '.join(available_units)}. Recipe yield unit: {self.yield_unit}")
-        elif efficiency < 90 and efficiency > 0:
-            warnings.append(f"Low fill efficiency: {efficiency:.1f}%. Consider different container sizes.")
+        elif fill_efficiency < 50 and fill_efficiency > 0:
+            warnings.append(f"Low fill efficiency: {fill_efficiency:.1f}%. Consider different container sizes.")
 
         return FillStrategy(
             containers_to_use=containers_to_use,
             total_capacity=total_capacity,
-            efficiency=efficiency,
+            efficiency=containment_percentage,  # This should be containment, not fill efficiency
             warnings=warnings
         )
 
@@ -248,14 +253,17 @@ def analyze_container_options(recipe: Recipe, scale: float, preferred_container_
                     cost_each=0.0
                 ))
 
+        # Calculate proper containment percentage
+        containment_percentage = min(100.0, (planner.total_yield / strategy.total_capacity) * 100) if strategy.total_capacity > 0 else 0
+        
         container_strategy = ContainerStrategy(
             selected_containers=selected_containers,
             total_capacity=strategy.total_capacity,
-            containment_percentage=min(100.0, strategy.efficiency),
+            containment_percentage=containment_percentage,
             fill_strategy=ContainerFillStrategy(
                 selected_containers=[],
                 total_capacity=strategy.total_capacity,
-                containment_percentage=min(100.0, strategy.efficiency),
+                containment_percentage=containment_percentage,
                 strategy_type="greedy_optimized"
             ),
             warnings=strategy.warnings
@@ -305,11 +313,14 @@ def get_container_plan_for_api(recipe_id: int, scale: float) -> Dict[str, Any]:
                     'total_yield_needed': planner.total_yield
                 })
 
+        # Calculate proper containment percentage
+        containment_percentage = min(100.0, (planner.total_yield / strategy.total_capacity) * 100) if strategy.total_capacity > 0 else 0
+        
         return {
             'success': True,
             'container_selection': container_selection,
             'total_capacity': strategy.total_capacity,
-            'containment_percentage': min(100.0, strategy.efficiency),
+            'containment_percentage': containment_percentage,
             'warnings': strategy.warnings
         }
 
