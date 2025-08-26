@@ -23,6 +23,7 @@ def analyze_container_options(
 ) -> Tuple[Optional[ContainerStrategy], List[Dict[str, Any]]]:
     """
     Analyze container options for a recipe at given scale.
+    Only considers containers specifically allowed by the recipe.
 
     Returns:
         Tuple of (container_strategy, container_options_list)
@@ -34,8 +35,7 @@ def analyze_container_options(
             logger.warning(f"No yield calculated for recipe {recipe.id} at scale {scale}")
             return None, []
 
-        # Get allowed containers for this recipe
-        # First try the recipe's allowed_containers field, then fall back to all containers
+        # Get ONLY allowed containers for this recipe - no fallback to all containers
         allowed_containers = []
         
         # Check if recipe has allowed_containers relationship or field
@@ -44,72 +44,74 @@ def analyze_container_options(
         elif hasattr(recipe, 'container_ids') and recipe.container_ids:
             allowed_containers = recipe.container_ids
         
-        # If no specific containers are allowed, get all available containers
         if not allowed_containers:
-            logger.info(f"No specific allowed containers for recipe {recipe.id}, checking all available containers")
-            # Get all container inventory items for the organization
-            from ...models import InventoryItem, IngredientCategory
-            org_id = organization_id or (current_user.organization_id if current_user.is_authenticated else None)
-            if org_id:
-                container_category = IngredientCategory.query.filter_by(name='Container', organization_id=org_id).first()
-                if container_category:
-                    container_items = InventoryItem.query.filter_by(
-                        organization_id=org_id,
-                        category_id=container_category.id
-                    ).all()
-                    allowed_containers = [item.id for item in container_items]
-        
-        if not allowed_containers:
-            logger.warning(f"No containers available for recipe {recipe.id}")
+            logger.warning(f"Recipe {recipe.id} has no allowed containers defined")
             return None, []
 
-        # Use USCS to check container availability
-        uscs = UniversalStockCheckService()
+        logger.info(f"Recipe {recipe.id} has {len(allowed_containers)} allowed containers: {allowed_containers}")
+
+        # Get container details and filter for proper storage capacity
         container_options = []
+        org_id = organization_id or (current_user.organization_id if current_user.is_authenticated else None)
 
         for container_id in allowed_containers:
             try:
-                # Check container stock via USCS
-                result = uscs.check_single_item(
-                    item_id=container_id,
-                    quantity_needed=1.0,  # We'll calculate needed quantity separately
-                    unit='count',
-                    category=InventoryCategory.CONTAINER
-                )
+                # Get container details directly
+                container = InventoryItem.query.filter_by(
+                    id=container_id,
+                    organization_id=org_id
+                ).first()
 
-                if result.status != StockStatus.ERROR:
-                    # Get container details
-                    container = InventoryItem.query.get(container_id)
-                    if container and hasattr(container, 'capacity') and container.capacity:
+                if not container:
+                    logger.warning(f"Container {container_id} not found in organization {org_id}")
+                    continue
 
-                        # Calculate containers needed
-                        container_capacity = container.capacity
-                        containers_needed = int((total_yield / container_capacity) + 0.99)  # Round up
+                # REQUIRE proper storage capacity - skip containers without it
+                storage_capacity = getattr(container, 'storage_amount', None)
+                storage_unit = getattr(container, 'storage_unit', None)
+                
+                if not storage_capacity or not storage_unit:
+                    logger.warning(f"Container {container.name} (ID: {container_id}) has no storage capacity - skipping")
+                    continue
 
-                        # Check if we have enough containers
-                        available_qty = result.available_quantity
+                # Check if we have stock
+                available_qty = container.quantity or 0
+                if available_qty <= 0:
+                    logger.warning(f"Container {container.name} has no stock - skipping")
+                    continue
 
-                        container_option = {
-                            'id': container_id,
-                            'name': container.name,
-                            'capacity': container_capacity,
-                            'available_quantity': int(available_qty),
-                            'quantity': containers_needed,
-                            'stock_qty': int(available_qty),
-                            'unit': getattr(container, 'unit', 'ml')  # Default to ml for volume containers
-                        }
+                # Convert storage capacity to recipe yield unit if needed
+                container_capacity_in_yield_units = storage_capacity
+                if storage_unit != recipe.predicted_yield_unit:
+                    # TODO: Add unit conversion here if needed
+                    # For now, assume they match or use storage_capacity as-is
+                    pass
 
-                        container_options.append(container_option)
+                # Calculate containers needed
+                containers_needed = max(1, int((total_yield / container_capacity_in_yield_units) + 0.99))
+
+                container_option = {
+                    'id': container_id,
+                    'name': container.name,
+                    'capacity': storage_capacity,
+                    'unit': storage_unit,
+                    'available_quantity': int(available_qty),
+                    'quantity': containers_needed,
+                    'stock_qty': int(available_qty)
+                }
+
+                container_options.append(container_option)
+                logger.info(f"Added container option: {container.name} - capacity: {storage_capacity} {storage_unit}, need: {containers_needed}")
 
             except Exception as e:
-                logger.error(f"Error checking container {container_id}: {e}")
+                logger.error(f"Error processing container {container_id}: {e}")
                 continue
 
         if not container_options:
+            logger.warning(f"No valid containers found for recipe {recipe.id}")
             return None, []
 
-        # Create container strategy
-        # For now, use the first available container that has enough stock
+        # Create container strategy - use the first container that has enough stock
         selected_container = None
         for option in container_options:
             if option['available_quantity'] >= option['quantity']:
@@ -117,7 +119,7 @@ def analyze_container_options(
                 break
 
         if not selected_container:
-            # No single container type has enough stock
+            logger.warning(f"No containers have sufficient stock for recipe {recipe.id}")
             return None, container_options
 
         # Create strategy
@@ -140,6 +142,7 @@ def analyze_container_options(
             )
         )
 
+        logger.info(f"Created container strategy for recipe {recipe.id} using {selected_container['name']}")
         return container_strategy, container_options
 
     except Exception as e:
@@ -165,25 +168,35 @@ def get_container_plan_for_api(recipe_id: int, scale: float) -> Dict[str, Any]:
         if not strategy and not options:
             return {
                 'success': False,
-                'error': 'No suitable containers found for this recipe'
+                'error': 'No suitable containers found for this recipe. Please check that containers are assigned to this recipe and have proper storage capacity.'
             }
 
-        # Calculate total capacity and containment
-        total_yield = (recipe.predicted_yield or 0) * scale
-
         if strategy:
+            # Format the response to match frontend expectations
+            container_selection = []
+            for opt in strategy.selected_containers:
+                container_selection.append({
+                    'id': opt.container_id,
+                    'name': opt.container_name,
+                    'capacity': opt.capacity,
+                    'unit': getattr(opt, 'storage_unit', 'ml'),
+                    'quantity': opt.containers_needed,
+                    'stock_qty': opt.available_quantity,
+                    'available_quantity': opt.available_quantity
+                })
+
             return {
                 'success': True,
-                'container_selection': strategy.fill_strategy.selected_containers,
+                'container_selection': container_selection,
                 'total_capacity': strategy.total_capacity,
                 'containment_percentage': strategy.containment_percentage
             }
         else:
             return {
                 'success': False,
-                'error': 'Insufficient container stock',
+                'error': 'Insufficient container stock for required yield',
                 'available_options': options,
-                'required_yield': total_yield
+                'required_yield': (recipe.predicted_yield or 0) * scale
             }
 
     except Exception as e:
