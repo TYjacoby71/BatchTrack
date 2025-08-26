@@ -165,18 +165,28 @@ export class ContainerManager {
         
         let html = `<div class="${resultClass}">`;
         
+        // Add header for multi-container selections
+        if (isAutoFill && containers.length > 1) {
+            html += `
+                <div class="alert alert-info mb-3">
+                    <i class="fas fa-puzzle-piece"></i> 
+                    <strong>Multi-Container Optimization:</strong> 
+                    Using ${containers.length} container types for optimal efficiency
+                </div>
+            `;
+        }
+        
         containers.forEach((container, index) => {
             const stockQuantity = container.stock_qty || container.available_quantity || container.quantity || 0;
             const containerName = container.name || 'Unknown Container';
             const containerCapacity = container.capacity || 0;
             const containerUnit = container.unit || 'ml';
-            const quantityNeeded = container.quantity || 0;
+            const quantityNeeded = container.quantity || container.containers_needed || 0;
             
-            // CORRECTED: Always show converted capacity prominently if conversion successful
+            // Always show converted capacity prominently if conversion successful
             let capacityDisplay = `${containerCapacity} ${containerUnit}`;
             
             if (container.capacity_in_yield_unit && container.yield_unit && container.conversion_successful) {
-                // Show converted capacity as primary, original as secondary
                 capacityDisplay = `
                     <div>
                         <strong>${container.capacity_in_yield_unit} ${container.yield_unit}</strong>
@@ -184,7 +194,6 @@ export class ContainerManager {
                     </div>
                 `;
             } else if (container.capacity_in_yield_unit && container.yield_unit) {
-                // Even if conversion not marked successful, show both if we have converted value
                 capacityDisplay = `
                     <div>
                         <strong>${container.capacity_in_yield_unit} ${container.yield_unit}</strong>
@@ -193,13 +202,24 @@ export class ContainerManager {
                 `;
             }
             
-            // Calculate fill percentage for visual indicator
+            // Calculate individual container fill for this specific container in the combination
             let fillIndicator = '';
-            if (container.total_yield_needed && container.capacity_in_yield_unit) {
-                const totalCapacity = container.capacity_in_yield_unit * quantityNeeded;
-                const fillPercentage = (container.total_yield_needed / totalCapacity) * 100;
-                const fillColor = fillPercentage < 50 ? 'warning' : fillPercentage > 95 ? 'success' : 'info';
-                fillIndicator = `<div class="mt-1"><span class="badge bg-${fillColor}">${fillPercentage.toFixed(1)}% fill</span></div>`;
+            if (container.total_yield_needed && container.capacity_in_yield_unit && quantityNeeded > 0) {
+                // For multi-container: show per-container utilization
+                const individualCapacity = container.capacity_in_yield_unit * quantityNeeded;
+                // Estimate this container's portion (simplified - actual distribution would be more complex)
+                const estimatedFill = containers.length > 1 ? 
+                    (individualCapacity / containers.reduce((sum, c) => sum + (c.capacity_in_yield_unit || 0) * (c.quantity || c.containers_needed || 0), 0)) * 100 :
+                    (container.total_yield_needed / individualCapacity) * 100;
+                
+                const fillColor = estimatedFill < 50 ? 'warning' : estimatedFill > 95 ? 'success' : 'info';
+                fillIndicator = `<div class="mt-1"><span class="badge bg-${fillColor}">${Math.min(100, estimatedFill).toFixed(1)}% utilized</span></div>`;
+            }
+            
+            // Add optimization badge for multi-container selections
+            let optimizationBadge = '';
+            if (isAutoFill && containers.length > 1) {
+                optimizationBadge = `<div class="mt-1"><span class="badge bg-primary"><i class="fas fa-cog"></i> Optimized</span></div>`;
             }
             
             html += `
@@ -208,6 +228,7 @@ export class ContainerManager {
                         <label class="form-label small">Container Type</label>
                         <div class="form-control form-control-sm bg-light border-0">
                             <strong>${containerName}</strong>
+                            ${optimizationBadge}
                         </div>
                     </div>
                     <div class="col-md-2">
@@ -229,7 +250,10 @@ export class ContainerManager {
                     </div>
                     <div class="col-md-1">
                         <div class="text-center">
-                            <i class="fas fa-check-circle text-success" title="Optimal selection"></i>
+                            ${containers.length > 1 ? 
+                                '<i class="fas fa-puzzle-piece text-primary" title="Multi-container optimization"></i>' :
+                                '<i class="fas fa-check-circle text-success" title="Optimal selection"></i>'
+                            }
                         </div>
                     </div>
                 </div>
@@ -241,12 +265,20 @@ export class ContainerManager {
         if (isAutoFill) {
             const efficiency = this.containerPlan.containment_percentage || 0;
             const warnings = this.containerPlan.warnings || [];
+            
+            // Enhanced summary for multi-container
+            let summaryText = `Auto-fill efficiency: ${efficiency.toFixed(1)}%`;
+            if (containers.length > 1) {
+                const totalContainers = containers.reduce((sum, c) => sum + (c.quantity || c.containers_needed || 0), 0);
+                summaryText = `Multi-container optimization: ${totalContainers} total containers, ${efficiency.toFixed(1)}% efficiency`;
+            }
+            
             html += `
                 <div class="mt-2">
                     <small class="text-muted">
-                        <i class="fas fa-info-circle"></i> Auto-fill efficiency: ${efficiency.toFixed(1)}%
+                        <i class="fas fa-info-circle"></i> ${summaryText}
                     </small>
-                    ${warnings.length > 0 ? `<div class="alert alert-warning mt-2"><small>${warnings.join(', ')}</small></div>` : ''}
+                    ${warnings.length > 0 ? `<div class="alert alert-info mt-2"><small><i class="fas fa-lightbulb"></i> ${warnings.join('<br>')}</small></div>` : ''}
                 </div>
             `;
         }
