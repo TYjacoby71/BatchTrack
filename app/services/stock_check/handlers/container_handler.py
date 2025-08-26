@@ -89,7 +89,7 @@ class ContainerHandler(BaseInventoryHandler):
 
             # For container management, we always return OK if any containers exist
             # The container management system will handle its own logic about quantities needed
-            if available_containers > 0:
+            if len(available_containers) > 0:
                 status = StockStatus.OK
             else:
                 status = StockStatus.OUT_OF_STOCK
@@ -100,13 +100,13 @@ class ContainerHandler(BaseInventoryHandler):
                 category=InventoryCategory.CONTAINER,
                 needed_quantity=containers_needed,
                 needed_unit="count",
-                available_quantity=available_containers,
+                available_quantity=len(available_containers),
                 available_unit="count",
-                raw_stock=available_containers,
+                raw_stock=len(available_containers),
                 stock_unit="count",
                 status=status,
                 formatted_needed=self._format_quantity_display(containers_needed, "count"),
-                formatted_available=self._format_quantity_display(available_containers, "count"),
+                formatted_available=self._format_quantity_display(len(available_containers), "count"),
                 conversion_details={
                     **(conversion_details or {}),
                     'storage_capacity': storage_capacity,
