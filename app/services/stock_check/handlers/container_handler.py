@@ -17,16 +17,23 @@ class ContainerHandler(BaseInventoryHandler):
     """Handler for container stock checking with storage capacity logic"""
 
     def check_availability(self, request: StockCheckRequest, organization_id: int = None) -> StockCheckResult:
-        """Check container availability"""
-        # Query-level organization filtering - never load unauthorized data
-        container = InventoryItem.query.filter_by(
-            id=request.item_id,
+        """Check container availability for a recipe yield"""
+        # For containers, we need to find containers that can hold the recipe yield
+        # request.item_id is NOT a container ID - it's the recipe or ingredient context
+        # We need to find available containers based on the yield requirements
+        
+        # Get all available containers for this organization
+        available_containers = InventoryItem.query.filter_by(
             type='container',
-            organization_id=request.organization_id
-        ).first()
+            organization_id=request.organization_id or organization_id
+        ).filter(InventoryItem.quantity > 0).all()
 
-        if not container:
+        if not available_containers:
             return self._create_not_found_result(request)
+        
+        # For now, return the first suitable container
+        # TODO: This should be enhanced to return the best container option
+        container = available_containers[0]
 
         # Containers have storage_amount and storage_unit fields
         storage_capacity = getattr(container, 'storage_amount', 0)
@@ -42,7 +49,7 @@ class ContainerHandler(BaseInventoryHandler):
                     storage_capacity,
                     storage_unit,
                     request.unit,
-                    ingredient_id=request.item_id
+                    ingredient_id=None  # Containers don't need ingredient context for volume conversions
                 )
 
                 if isinstance(conversion_result, dict):
