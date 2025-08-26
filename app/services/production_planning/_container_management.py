@@ -35,8 +35,9 @@ def analyze_container_options(
             logger.warning(f"No yield calculated for recipe {recipe.id} at scale {scale}")
             return None, []
 
-        # Get ONLY allowed containers for this recipe - no fallback to all containers
+        # Get allowed containers for this recipe, with fallback to all org containers
         allowed_containers = []
+        use_fallback = False
         
         # Check if recipe has allowed_containers relationship or field
         if hasattr(recipe, 'allowed_containers') and recipe.allowed_containers:
@@ -45,22 +46,47 @@ def analyze_container_options(
             allowed_containers = recipe.container_ids
         
         if not allowed_containers:
-            logger.warning(f"Recipe {recipe.id} has no allowed containers defined - this recipe needs containers assigned to it")
-            return None, []
+            # FALLBACK: If no containers assigned to recipe, show all organization containers
+            logger.info(f"Recipe {recipe.id} has no allowed containers defined - showing all organization containers as fallback")
+            use_fallback = True
+            
+            # Get all containers in organization in a single query
+            from ...models import IngredientCategory
+            container_category = IngredientCategory.query.filter_by(
+                name='Container',
+                organization_id=org_id
+            ).first()
+            
+            if container_category:
+                org_containers = InventoryItem.query.filter_by(
+                    organization_id=org_id,
+                    category_id=container_category.id
+                ).all()
+                allowed_containers = [c.id for c in org_containers]
+                logger.info(f"Fallback: Found {len(allowed_containers)} containers in organization")
+            
+            if not allowed_containers:
+                logger.warning(f"No containers found in organization {org_id}")
+                return None, []
 
-        logger.info(f"Recipe {recipe.id} has {len(allowed_containers)} allowed containers: {allowed_containers}")
+        fallback_msg = " (using fallback - all org containers)" if use_fallback else ""
+        logger.info(f"Recipe {recipe.id} has {len(allowed_containers)} allowed containers{fallback_msg}: {allowed_containers}")
 
-        # Get container details and filter for proper storage capacity
-        container_options = []
+        # SINGLE QUERY: Get all container details at once to avoid N+1
         org_id = organization_id or (current_user.organization_id if current_user.is_authenticated else None)
-
+        containers = InventoryItem.query.filter(
+            InventoryItem.id.in_(allowed_containers),
+            InventoryItem.organization_id == org_id
+        ).all()
+        
+        # Create lookup dict for O(1) access
+        containers_by_id = {c.id: c for c in containers}
+        
+        container_options = []
+        
         for container_id in allowed_containers:
             try:
-                # Get container details directly
-                container = InventoryItem.query.filter_by(
-                    id=container_id,
-                    organization_id=org_id
-                ).first()
+                container = containers_by_id.get(container_id)
 
                 if not container:
                     logger.warning(f"Container {container_id} not found in organization {org_id}")
@@ -83,9 +109,24 @@ def analyze_container_options(
                 # Convert storage capacity to recipe yield unit if needed
                 container_capacity_in_yield_units = storage_capacity
                 if storage_unit != recipe.predicted_yield_unit:
-                    # TODO: Add unit conversion here if needed
-                    # For now, assume they match or use storage_capacity as-is
-                    pass
+                    try:
+                        from ...services.unit_conversion import ConversionEngine
+                        conversion_result = ConversionEngine.convert_units(
+                            storage_capacity,
+                            storage_unit,
+                            recipe.predicted_yield_unit,
+                            ingredient_id=None  # Containers don't need ingredient context for volume conversions
+                        )
+                        
+                        if isinstance(conversion_result, dict):
+                            container_capacity_in_yield_units = conversion_result['converted_value']
+                            logger.info(f"Converted container {container.name} capacity: {storage_capacity} {storage_unit} → {container_capacity_in_yield_units} {recipe.predicted_yield_unit}")
+                        else:
+                            container_capacity_in_yield_units = float(conversion_result)
+                            logger.info(f"Converted container {container.name} capacity: {storage_capacity} {storage_unit} → {container_capacity_in_yield_units} {recipe.predicted_yield_unit}")
+                    except Exception as e:
+                        logger.warning(f"Unit conversion failed for container {container.name}: {e}. Using original capacity.")
+                        container_capacity_in_yield_units = storage_capacity
 
                 # Calculate containers needed
                 containers_needed = max(1, int((total_yield / container_capacity_in_yield_units) + 0.99))

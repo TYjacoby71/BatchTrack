@@ -1,77 +1,11 @@
 from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
-from app.services.stock_check.core import UniversalStockCheckService
-from app.services.stock_check.types import StockCheckRequest, InventoryCategory
+
 from app.services.batch_integration_service import BatchIntegrationService
 
 container_api_bp = Blueprint('container_api', __name__)
 
-@container_api_bp.route('/available-containers/<int:recipe_id>')
-@login_required
-def available_containers(recipe_id):
-    """Get available containers for recipe using USCS"""
-    try:
-        scale = float(request.args.get('scale', '1.0'))
 
-        # Use USCS to get container stock check
-        uscs = UniversalStockCheckService()
-
-        # Get all containers for the organization
-        container_request = StockCheckRequest(
-            inventory_category=InventoryCategory.CONTAINER,
-            organization_id=current_user.organization_id
-        )
-
-        results = uscs.check_stock([container_request])
-
-        available_containers = []
-        for result in results:
-            if result.status in ['AVAILABLE', 'OK']:
-                available_containers.append({
-                    "id": result.item_id,
-                    "name": result.name,
-                    "storage_amount": result.conversion_details.get('storage_capacity', 0),
-                    "storage_unit": result.conversion_details.get('storage_unit', 'ml'),
-                    "stock_qty": result.available
-                })
-
-        # Sort by storage capacity descending
-        sorted_containers = sorted(available_containers, key=lambda c: c['storage_amount'], reverse=True)
-
-        return jsonify({"available": sorted_containers})
-
-    except Exception as e:
-        return jsonify({"error": f"Container lookup failed: {str(e)}"}), 500
-
-@container_api_bp.route('/containers/available')
-@login_required
-def get_available_containers():
-    """Get all available containers using USCS"""
-    try:
-        uscs = UniversalStockCheckService()
-
-        container_request = StockCheckRequest(
-            inventory_category=InventoryCategory.CONTAINER,
-            organization_id=current_user.organization_id
-        )
-
-        results = uscs.check_stock([container_request])
-
-        container_data = []
-        for result in results:
-            container_data.append({
-                'id': result.item_id,
-                'name': result.name,
-                'size': result.conversion_details.get('storage_capacity', 0),
-                'unit': result.conversion_details.get('storage_unit', 'ml'),
-                'cost_per_unit': float(result.conversion_details.get('cost_per_unit', 0)),
-                'stock_amount': float(result.available)
-            })
-
-        return jsonify(container_data)
-
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
 
 @container_api_bp.route('/batches/<int:batch_id>/containers', methods=['GET'])
 @login_required
