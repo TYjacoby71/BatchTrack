@@ -1,14 +1,17 @@
+
 """
 Ingredient-specific stock checking handler
+
+Integrates with FIFO operations and unit conversion engine.
 """
 
 import logging
-from typing import Optional, List, Dict, Any
+from typing import Optional
+from datetime import datetime
 
 from app.models import InventoryItem
+from app.models.inventory_lot import InventoryLot
 from app.services.unit_conversion import ConversionEngine
-# Import moved to avoid circular dependency - use direct model access
-# from ...blueprints.fifo.services import FIFOService
 from ..types import StockCheckRequest, StockCheckResult, StockStatus, InventoryCategory
 from .base_handler import BaseInventoryHandler
 
@@ -20,13 +23,14 @@ class IngredientHandler(BaseInventoryHandler):
 
     def check_availability(self, request: StockCheckRequest, organization_id: int) -> StockCheckResult:
         """
-        Check ingredient availability using FIFO entries.
-
-        Args:
-            request: Stock check request
-
-        Returns:
-            Stock check result
+        Check ingredient availability using FIFO entries and unit conversion.
+        
+        Process:
+        1. Find ingredient in organization
+        2. Get available FIFO lots (excludes expired)
+        3. Convert between recipe unit and storage unit  
+        4. Check if enough stock for planned deduction
+        5. Determine status based on availability and low stock settings
         """
         ingredient = InventoryItem.query.filter_by(
             id=request.item_id,
@@ -37,9 +41,6 @@ class IngredientHandler(BaseInventoryHandler):
             return self._create_not_found_result(request)
 
         # Get available FIFO lots (excludes expired automatically)
-        from app.models.inventory_lot import InventoryLot
-        from datetime import datetime
-        
         available_lots = InventoryLot.query.filter(
             InventoryLot.inventory_item_id == ingredient.id,
             InventoryLot.remaining_quantity > 0
@@ -62,7 +63,7 @@ class IngredientHandler(BaseInventoryHandler):
         logger.debug(f"Ingredient {ingredient.name}: {total_available} {stock_unit} available, need {request.quantity_needed} {recipe_unit}")
 
         try:
-            # Convert available stock to recipe unit
+            # Convert available stock to recipe unit using conversion engine
             conversion_result = ConversionEngine.convert_units(
                 total_available,
                 stock_unit,
@@ -73,11 +74,21 @@ class IngredientHandler(BaseInventoryHandler):
             if isinstance(conversion_result, dict):
                 available_converted = conversion_result['converted_value']
                 conversion_details = conversion_result
+                
+                # Add alerts for custom mappings or density conversions
+                if conversion_result.get('conversion_type') in ['custom', 'density']:
+                    conversion_details['requires_attention'] = True
+                    
             else:
                 available_converted = float(conversion_result)
                 conversion_details = None
 
-            status = self._determine_status(available_converted, request.quantity_needed)
+            # Check if enough stock (planned deduction check)
+            status = self._determine_status_with_thresholds(
+                available_converted, 
+                request.quantity_needed,
+                ingredient
+            )
 
             return StockCheckResult(
                 item_id=ingredient.id,
@@ -97,7 +108,24 @@ class IngredientHandler(BaseInventoryHandler):
 
         except ValueError as e:
             error_msg = str(e)
-            status = StockStatus.DENSITY_MISSING if "density" in error_msg.lower() else StockStatus.ERROR
+            
+            # Check for missing custom mapping
+            if "custom mapping" in error_msg.lower():
+                conversion_details = {
+                    'needs_unit_mapping': True,
+                    'unit_manager_link': '/conversion/units',
+                    'error_type': 'missing_custom_mapping'
+                }
+                status = StockStatus.ERROR
+            elif "density" in error_msg.lower():
+                status = StockStatus.DENSITY_MISSING
+                conversion_details = {
+                    'error_type': 'missing_density',
+                    'density_help_link': '/conversion/units'
+                }
+            else:
+                status = StockStatus.ERROR
+                conversion_details = None
 
             return StockCheckResult(
                 item_id=ingredient.id,
@@ -112,8 +140,22 @@ class IngredientHandler(BaseInventoryHandler):
                 status=status,
                 error_message=error_msg,
                 formatted_needed=self._format_quantity_display(request.quantity_needed, recipe_unit),
-                formatted_available="N/A"
+                formatted_available="N/A",
+                conversion_details=conversion_details
             )
+
+    def _determine_status_with_thresholds(self, available: float, needed: float, 
+                                        ingredient: InventoryItem) -> StockStatus:
+        """Determine status considering low stock thresholds"""
+        if available >= needed:
+            # Have enough, but check if low stock
+            if ingredient.low_stock_threshold and available <= ingredient.low_stock_threshold:
+                return StockStatus.LOW
+            return StockStatus.OK
+        elif available > 0:
+            return StockStatus.LOW  
+        else:
+            return StockStatus.NEEDED
 
     def get_item_details(self, item_id: int, organization_id: int) -> Optional[dict]:
         """Get ingredient details"""
@@ -131,7 +173,8 @@ class IngredientHandler(BaseInventoryHandler):
             'quantity': ingredient.quantity,
             'cost_per_unit': ingredient.cost_per_unit,
             'density': getattr(ingredient, 'density', None),
-            'type': ingredient.type
+            'type': ingredient.type,
+            'low_stock_threshold': ingredient.low_stock_threshold
         }
 
     def _create_not_found_result(self, request: StockCheckRequest) -> StockCheckResult:
@@ -149,5 +192,3 @@ class IngredientHandler(BaseInventoryHandler):
             formatted_needed=self._format_quantity_display(request.quantity_needed, request.unit),
             formatted_available="0"
         )
-
-    # All recipe logic should go through the core service layer

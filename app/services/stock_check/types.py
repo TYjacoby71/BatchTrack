@@ -1,28 +1,30 @@
+
 """
-Type definitions for the Universal Stock Check System
+Stock Check Types
+
+Core data structures for the Universal Stock Check Service.
 """
 
 from dataclasses import dataclass
-from typing import List, Dict, Any, Optional
 from enum import Enum
+from typing import Optional, Dict, Any
 
 
 class InventoryCategory(Enum):
-    """Supported inventory categories"""
+    """Categories of inventory items"""
     INGREDIENT = "ingredient"
-    CONTAINER = "container"
+    CONTAINER = "container" 
     PRODUCT = "product"
-    CONSUMABLE = "consumable"  # Future category
 
 
 class StockStatus(Enum):
     """Stock availability status"""
-    AVAILABLE = "AVAILABLE"
-    OK = "OK"  # Alias for AVAILABLE
-    LOW = "LOW"
-    NEEDED = "NEEDED"
-    ERROR = "ERROR"
-    DENSITY_MISSING = "DENSITY_MISSING"
+    OK = "OK"                    # Sufficient stock available
+    LOW = "LOW"                  # Stock below low threshold but available
+    NEEDED = "NEEDED"            # Insufficient stock 
+    OUT_OF_STOCK = "OUT_OF_STOCK"  # No stock available
+    ERROR = "ERROR"              # Error checking stock
+    DENSITY_MISSING = "DENSITY_MISSING"  # Missing density for conversion
 
 
 @dataclass
@@ -32,11 +34,10 @@ class StockCheckRequest:
     quantity_needed: float
     unit: str
     category: InventoryCategory
-    organization_id: int  # Explicit organization context
-    scale_factor: float = 1.0
+    organization_id: Optional[int] = None
 
 
-@dataclass
+@dataclass  
 class StockCheckResult:
     """Result of stock availability check"""
     item_id: int
