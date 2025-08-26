@@ -136,47 +136,68 @@ export class ContainerManager {
         }
 
         if (autoFillEnabled) {
-            this.displayAutoFillResults(containerResults, container_selection);
+            this.renderContainerResults(containerResults, container_selection, true);
         } else {
             containerResults.innerHTML = '<p class="text-muted">Manual container selection mode</p>';
         }
     }
 
-    displayAutoFillResults(containerResults, containers) {
-        let html = '<div class="auto-fill-results">';
+    renderContainerResults(containerResults, containers, isAutoFill = false) {
+        console.log('🔍 RENDER CONTAINERS: Containers data:', containers, 'Auto-fill:', isAutoFill);
+        
+        if (!containers || containers.length === 0) {
+            containerResults.innerHTML = '<div class="alert alert-warning"><i class="fas fa-exclamation-triangle"></i> No containers found</div>';
+            return;
+        }
+        
+        const containerClass = isAutoFill ? 'bg-success bg-opacity-10' : 'bg-light';
+        const resultClass = isAutoFill ? 'auto-fill-results' : 'manual-results';
+        
+        let html = `<div class="${resultClass}">`;
         
         containers.forEach((container, index) => {
-            const stockQuantity = container.stock_qty || container.quantity || container.available_quantity || 0;
+            const stockQuantity = container.stock_qty || container.available_quantity || container.quantity || 0;
+            const containerName = container.name || 'Unknown Container';
+            const containerCapacity = container.capacity || 0;
+            const containerUnit = container.unit || 'ml';
+            const quantityNeeded = container.quantity || 0;
+            
             html += `
-                <div class="row align-items-center mb-3 p-3 border rounded bg-success bg-opacity-10" data-auto-container="${index}">
+                <div class="row align-items-center mb-3 p-3 border rounded ${containerClass}" data-${isAutoFill ? 'auto' : 'manual'}-container="${index}">
                     <div class="col-md-5">
                         <label class="form-label small">Container Type</label>
                         <div class="form-control form-control-sm bg-light border-0">
-                            <strong>${container.name || 'Unknown Container'}</strong>
+                            <strong>${containerName}</strong>
                         </div>
                     </div>
                     <div class="col-md-3">
-                        <label class="form-label small">Quantity</label>
+                        <label class="form-label small">Quantity Needed</label>
                         <div class="form-control form-control-sm bg-light border-0">
-                            <strong>${container.quantity || 0}</strong>
+                            <strong>${quantityNeeded}</strong>
                         </div>
                     </div>
                     <div class="col-md-3">
                         <label class="form-label small">Capacity Each</label>
                         <div class="form-control form-control-sm bg-light border-0">
-                            ${container.capacity || 0} ${container.unit || 'ml'}
+                            ${containerCapacity} ${containerUnit}
                         </div>
                     </div>
                     <div class="col-md-1">
                         <label class="form-label small">Available Stock</label>
-                        <div class="badge bg-success fs-6">${stockQuantity}</div>
+                        <div class="badge ${stockQuantity >= quantityNeeded ? 'bg-success' : 'bg-warning'} fs-6">${stockQuantity}</div>
                     </div>
                 </div>
             `;
         });
 
         html += '</div>';
-        html += `<div class="mt-2"><small class="text-muted"><i class="fas fa-info-circle"></i> Auto-fill efficiency: ${(this.containerPlan.containment_percentage || 0).toFixed(1)}%</small></div>`;
+        
+        if (isAutoFill) {
+            const efficiency = this.containerPlan.containment_percentage || 0;
+            html += `<div class="mt-2"><small class="text-muted"><i class="fas fa-info-circle"></i> Auto-fill efficiency: ${efficiency.toFixed(1)}%</small></div>`;
+        }
+        
+        console.log('🔍 RENDER CONTAINERS: Setting HTML for', resultClass);
         containerResults.innerHTML = html;
     }
 

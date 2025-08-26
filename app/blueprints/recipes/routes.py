@@ -90,8 +90,13 @@ def auto_fill_containers(recipe_id):
         yield_amount = float(data.get('yield_amount'))
         yield_unit = data.get('yield_unit')
 
-        # Get recipe first
-        recipe = get_recipe_details(recipe_id)
+        # Get recipe with all relationships loaded
+        from app.models import Recipe, InventoryCategory
+        from sqlalchemy.orm import joinedload
+        recipe = Recipe.query.options(
+            db.joinedload(Recipe.recipe_ingredients).joinedload('inventory_item')
+        ).get(recipe_id)
+
         if not recipe:
             return jsonify({'success': False, 'error': 'Recipe not found'}), 404
 
@@ -172,6 +177,48 @@ def plan_production_route(recipe_id):
 
     # GET request - show planning form
     return render_template('pages/recipes/plan_production.html', recipe=recipe)
+
+@recipes_bp.route('/<int:recipe_id>/debug/containers')
+@login_required
+@require_permission('recipes.plan_production')
+def debug_recipe_containers(recipe_id):
+    """Debug endpoint to check available containers for recipe"""
+    try:
+        from app.models import Recipe, InventoryItem, IngredientCategory
+
+        recipe = Recipe.query.get(recipe_id)
+        if not recipe:
+            return jsonify({'error': 'Recipe not found'}), 404
+
+        # Check for allowed containers
+        allowed = []
+        if hasattr(recipe, 'allowed_containers'):
+            allowed = [str(c) for c in recipe.allowed_containers] if recipe.allowed_containers else []
+
+        # Get all available containers in org
+        container_category = IngredientCategory.query.filter_by(
+            name='Container',
+            organization_id=current_user.organization_id
+        ).first()
+
+        all_containers = []
+        if container_category:
+            containers = InventoryItem.query.filter_by(
+                organization_id=current_user.organization_id,
+                category_id=container_category.id
+            ).all()
+            all_containers = [{'id': c.id, 'name': c.name, 'capacity': getattr(c, 'capacity', 0)} for c in containers]
+
+        return jsonify({
+            'recipe_id': recipe_id,
+            'recipe_name': recipe.name,
+            'allowed_containers': allowed,
+            'all_containers': all_containers,
+            'container_category_found': container_category is not None
+        })
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @recipes_bp.route('/<int:recipe_id>/plan/container', methods=['POST'])
 @login_required
@@ -424,12 +471,12 @@ def quick_add_ingredient():
             organization_id=current_user.organization_id,
             created_by=current_user.id
         )
-        
+
         db.session.add(ingredient)
         db.session.commit()
-        
+
         logger.info(f"Quick-added ingredient: {name} (ID: {ingredient.id})")
-        
+
         return jsonify({
             'id': ingredient.id,
             'name': ingredient.name,
@@ -534,12 +581,12 @@ def check_stock():
         # Use USCS directly
         from app.services.stock_check.core import UniversalStockCheckService
         uscs = UniversalStockCheckService()
-        
+
         # Debug: Check if recipe has ingredients
         logger.info(f"STOCK_CHECK: Recipe {recipe_id} has {len(recipe.recipe_ingredients)} ingredients")
         for ri in recipe.recipe_ingredients:
             logger.info(f"STOCK_CHECK: - Ingredient {ri.inventory_item.name} (ID: {ri.inventory_item_id}), qty: {ri.quantity}, unit: {ri.unit}")
-        
+
         result = uscs.check_recipe_stock(recipe_id, scale)
 
         # Process results for frontend

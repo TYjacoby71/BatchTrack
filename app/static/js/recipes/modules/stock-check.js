@@ -98,7 +98,7 @@ export class StockCheckManager {
         const ingredientData = stockData;
 
         if (!ingredientData || ingredientData.length === 0) {
-            stockResults.innerHTML = '<div class="alert alert-info">No ingredients found for this recipe.</div>';
+            stockResults.innerHTML = '<div class="alert alert-warning"><i class="fas fa-exclamation-triangle"></i> There are no ingredients selected in this recipe. Please edit your recipe and add ingredients.</div>';
             this.main.stockChecked = true;
             this.main.stockCheckPassed = true;  // No ingredients means no stock issues
             this.main.updateValidation();
