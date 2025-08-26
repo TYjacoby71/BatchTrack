@@ -89,7 +89,7 @@ class UniversalStockCheckService:
             )
 
             # Handler performs category-specific stock checking
-            result = handler.check_availability(request, org_id)
+            result = handler.check_availability(request)
             
             # Add conversion alerts if needed
             if hasattr(result, 'conversion_details') and result.conversion_details:

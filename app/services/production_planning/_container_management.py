@@ -23,17 +23,17 @@ def analyze_container_options(
     organization_id: int
 ) -> Tuple[Optional[ContainerStrategy], List[ContainerOption]]:
     """
-    Analyze all container options for a recipe and recommend the best strategy.
+    Analyze all container options for a recipe using USCS container handler.
 
     Returns (selected_strategy, all_options)
     """
     try:
-        logger.info(f"CONTAINER_ANALYSIS: Analyzing containers for recipe {recipe.id}")
+        logger.info(f"CONTAINER_ANALYSIS: Analyzing containers for recipe {recipe.id} using USCS")
 
         # Get available containers
-        container_options = _get_available_containers(recipe, organization_id)
+        container_items = _get_available_containers(recipe, organization_id)
 
-        if not container_options:
+        if not container_items:
             logger.warning(f"No containers available for recipe {recipe.id}")
             return None, []
 
@@ -41,16 +41,56 @@ def analyze_container_options(
         yield_amount = (recipe.predicted_yield or 0) * scale
         yield_unit = recipe.predicted_yield_unit or 'ml'
 
-        # Analyze each container option
+        logger.info(f"CONTAINER_ANALYSIS: Recipe yield {yield_amount} {yield_unit}")
+
+        # Use USCS to analyze each container option with proper unit conversion
+        from ..stock_check import UniversalStockCheckService
+        from ..stock_check.types import InventoryCategory
+
+        uscs = UniversalStockCheckService()
         analyzed_options = []
-        for container in container_options:
-            option = _analyze_container_option(container, yield_amount, yield_unit)
-            if option:
+
+        for container in container_items:
+            logger.info(f"CONTAINER_ANALYSIS: Checking container {container.name} via USCS")
+
+            # Use USCS to check container capacity vs yield requirements
+            result = uscs.check_single_item(
+                item_id=container.id,
+                quantity_needed=yield_amount,  # Recipe yield amount
+                unit=yield_unit,  # Recipe yield unit
+                category=InventoryCategory.CONTAINER
+            )
+
+            # Convert USCS result to ContainerOption
+            if result.conversion_details:
+                storage_capacity = result.conversion_details.get('storage_capacity', 0)
+                storage_unit = result.conversion_details.get('storage_unit', 'ml')
+                yield_in_storage_units = result.conversion_details.get('yield_in_storage_units', 0)
+                containers_needed = result.needed_quantity  # USCS calculates containers needed
+
+                # Calculate fill percentage
+                total_capacity = storage_capacity * containers_needed
+                fill_percentage = (yield_in_storage_units / total_capacity * 100) if total_capacity > 0 else 0
+
+                option = ContainerOption(
+                    container_id=container.id,
+                    container_name=container.name,
+                    storage_capacity=storage_capacity,
+                    storage_unit=storage_unit,
+                    available_quantity=result.available_quantity,
+                    cost_each=getattr(container, 'cost_per_unit', 0) or 0,
+                    fill_percentage=fill_percentage,
+                    containers_needed=int(containers_needed)
+                )
+
                 analyzed_options.append(option)
+                logger.info(f"CONTAINER_ANALYSIS: {container.name} - needs {containers_needed} containers, fill: {fill_percentage:.1f}%")
+            else:
+                logger.warning(f"CONTAINER_ANALYSIS: No conversion details for {container.name}")
 
         if not analyzed_options:
-            logger.warning("No suitable container options found after analysis")
-            return None, container_options
+            logger.warning("No suitable container options found after USCS analysis")
+            return None, []
 
         # Select best strategy
         if preferred_container_id:
@@ -98,18 +138,18 @@ def _analyze_container_option(container: InventoryItem, yield_amount: float, yie
     """Analyze a single container option"""
     try:
         logger.info(f"CONTAINER_ANALYSIS: Analyzing container {container.id} - {container.name}")
-        
+
         # Get container capacity - check multiple possible attribute names
         storage_capacity = 0
         storage_unit = 'ml'
-        
+
         # Try different attribute names that might exist
         for attr_name in ['storage_amount', 'storage_capacity', 'capacity', 'volume']:
             if hasattr(container, attr_name):
                 storage_capacity = getattr(container, attr_name, 0) or 0
                 logger.info(f"CONTAINER_ANALYSIS: Found capacity {storage_capacity} via {attr_name}")
                 break
-                
+
         for attr_name in ['storage_unit', 'capacity_unit', 'unit']:
             if hasattr(container, attr_name):
                 storage_unit = getattr(container, attr_name, 'ml') or 'ml'
@@ -205,7 +245,7 @@ def _create_user_specified_strategy(options: List[ContainerOption], container_id
         selected_containers=[selected_option],
         total_containers_needed=selected_option.containers_needed,
         total_container_cost=total_cost,
-        average_fill_percentage=selected_option.fill_percentage,
+        average_fill_percentage=selected.fill_percentage,
         waste_percentage=waste_percentage
     )
 
@@ -215,142 +255,116 @@ def _create_user_specified_strategy(options: List[ContainerOption], container_id
 
 def calculate_container_fill_strategy(recipe_id: int, scale: float, yield_amount: float, yield_unit: str) -> Dict[str, Any]:
     """
-    Calculate optimal container selection for given yield.
-    This contains the business logic that was previously in the template.
+    Calculate optimal container selection using USCS for proper unit conversion.
     """
     try:
-        logger.info(f"CONTAINER_FILL: Calculating strategy for recipe {recipe_id}, scale {scale}, yield {yield_amount} {yield_unit}")
-        
+        logger.info(f"CONTAINER_FILL: Using USCS for recipe {recipe_id}, scale {scale}, yield {yield_amount} {yield_unit}")
+
         recipe = Recipe.query.get(recipe_id)
         if not recipe:
             return {'success': False, 'error': 'Recipe not found'}
 
-        logger.info(f"CONTAINER_FILL: Recipe allowed containers: {recipe.allowed_containers}")
-
-        # Get available containers for this recipe
+        # Get available containers using existing logic
         if recipe.allowed_containers:
             containers = InventoryItem.query.filter(
                 InventoryItem.id.in_(recipe.allowed_containers),
                 InventoryItem.type == 'container',
                 InventoryItem.organization_id == current_user.organization_id
             ).all()
-            logger.info(f"CONTAINER_FILL: Found {len(containers)} allowed containers")
         else:
             containers = InventoryItem.query.filter_by(
                 type='container',
                 organization_id=current_user.organization_id
             ).all()
-            logger.info(f"CONTAINER_FILL: Found {len(containers)} total containers (no restrictions)")
 
-        # Debug container attributes
-        for c in containers:
-            logger.info(f"CONTAINER_FILL: Container {c.id} ({c.name}) attributes: {[attr for attr in dir(c) if not attr.startswith('_') and not callable(getattr(c, attr))]}")
-
-        # Filter to containers with stock and sort by capacity (largest first)
-        available_containers = []
-        for c in containers:
-            if (c.quantity or 0) > 0:
-                # Try different attribute names for capacity
-                capacity = 0
-                unit = 'ml'
-                
-                for attr_name in ['storage_amount', 'storage_capacity', 'capacity', 'volume']:
-                    if hasattr(c, attr_name):
-                        capacity = getattr(c, attr_name, 0) or 0
-                        break
-                        
-                for attr_name in ['storage_unit', 'capacity_unit', 'unit']:
-                    if hasattr(c, attr_name):
-                        unit = getattr(c, attr_name, 'ml') or 'ml'
-                        break
-                
-                logger.info(f"CONTAINER_FILL: Container {c.name} - capacity: {capacity} {unit}, stock: {c.quantity}")
-                
-                available_containers.append({
-                    'id': c.id,
-                    'name': c.name,
-                    'capacity': capacity,
-                    'quantity': c.quantity or 0,  # Keep this for backward compatibility
-                    'stock_qty': c.quantity or 0,  # Explicit stock quantity
-                    'available_quantity': c.quantity or 0,  # Alternative property name
-                    'unit': unit
-                })
-        
-        available_containers.sort(key=lambda x: x['capacity'], reverse=True)
-        logger.info(f"CONTAINER_FILL: {len(available_containers)} containers available with stock")
+        # Filter to containers with stock
+        available_containers = [c for c in containers if (c.quantity or 0) > 0]
 
         if not available_containers:
-            logger.warning("CONTAINER_FILL: No containers available")
             return {
-                'success': False, 
+                'success': False,
                 'error': 'No containers available. Please add containers to inventory or check recipe configuration.',
                 'container_selection': [],
                 'total_capacity': 0,
                 'containment_percentage': 0
             }
 
-        # Execute auto-fill algorithm
-        remaining_volume = yield_amount
-        selected_containers = []
+        # Use USCS to analyze each container with proper unit conversion
+        from ..stock_check import UniversalStockCheckService
+        from ..stock_check.types import InventoryCategory
 
-        logger.info(f"CONTAINER_FILL: Starting auto-fill for {yield_amount} {yield_unit}")
+        uscs = UniversalStockCheckService()
+        container_analyses = []
 
-        # First pass: Fill with largest containers
         for container in available_containers:
-            if remaining_volume <= 0:
+            logger.info(f"CONTAINER_FILL: Analyzing {container.name} with USCS")
+
+            result = uscs.check_single_item(
+                item_id=container.id,
+                quantity_needed=yield_amount,
+                unit=yield_unit,
+                category=InventoryCategory.CONTAINER
+            )
+
+            if result.conversion_details:
+                storage_capacity = result.conversion_details.get('storage_capacity', 0)
+                storage_unit = result.conversion_details.get('storage_unit', 'ml')
+                containers_needed = result.needed_quantity
+
+                container_analyses.append({
+                    'id': container.id,
+                    'name': container.name,
+                    'capacity': storage_capacity,
+                    'unit': storage_unit,
+                    'containers_needed': int(containers_needed),
+                    'stock_qty': container.quantity or 0,
+                    'available_quantity': container.quantity or 0
+                })
+
+                logger.info(f"CONTAINER_FILL: {container.name} - {storage_capacity} {storage_unit}, needs {containers_needed} containers")
+
+        if not container_analyses:
+            return {'success': False, 'error': 'No suitable containers found after analysis'}
+
+        # Sort by efficiency (containers with largest capacity first)
+        container_analyses.sort(key=lambda x: x['capacity'], reverse=True)
+
+        # Auto-fill algorithm using USCS-analyzed containers
+        selected_containers = []
+        total_yield_covered = 0
+
+        for container in container_analyses:
+            if total_yield_covered >= yield_amount:
                 break
 
-            capacity = container['capacity']
-            if capacity <= 0:
-                logger.warning(f"CONTAINER_FILL: Skipping {container['name']} - zero capacity")
-                continue
+            containers_needed = container['containers_needed']
+            available_stock = container['stock_qty']
 
-            max_needed = int(remaining_volume // capacity)
-            qty_to_use = min(max_needed, container['stock_qty'])
-
-            logger.info(f"CONTAINER_FILL: {container['name']} - capacity: {capacity}, max_needed: {max_needed}, stock: {container['stock_qty']}, using: {qty_to_use}")
+            # Use as many as available, up to what's needed
+            qty_to_use = min(containers_needed, available_stock)
 
             if qty_to_use > 0:
                 selected_containers.append({
                     'id': container['id'],
                     'name': container['name'],
-                    'capacity': capacity,
+                    'capacity': container['capacity'],
+                    'unit': container['unit'],
                     'quantity': qty_to_use,
-                    'stock_qty': container['stock_qty'],  # Include available stock
-                    'available_quantity': container['stock_qty'],  # Alternative property
-                    'unit': container['unit']
+                    'stock_qty': container['stock_qty'],
+                    'available_quantity': container['available_quantity']
                 })
-                remaining_volume -= qty_to_use * capacity
-                logger.info(f"CONTAINER_FILL: Added {qty_to_use}x {container['name']}, remaining: {remaining_volume}")
 
-        # Second pass: Add one more container for partial fill if needed
-        if remaining_volume > 0:
-            logger.info(f"CONTAINER_FILL: Need partial fill for remaining {remaining_volume} {yield_unit}")
-            for container in available_containers:
-                already_used = next((s for s in selected_containers if s['id'] == container['id']), None)
-                remaining_stock = container['stock_qty'] - (already_used['quantity'] if already_used else 0)
+                # Calculate how much yield this covers
+                yield_covered = qty_to_use * container['capacity']
+                total_yield_covered += yield_covered
 
-                if remaining_stock > 0:
-                    if already_used:
-                        already_used['quantity'] += 1
-                        logger.info(f"CONTAINER_FILL: Added 1 more {container['name']} for partial fill")
-                    else:
-                        selected_containers.append({
-                            'id': container['id'],
-                            'name': container['name'],
-                            'capacity': container['capacity'],
-                            'quantity': 1,
-                            'stock_qty': container['stock_qty'],  # Include available stock
-                            'available_quantity': container['stock_qty'],  # Alternative property
-                            'unit': container['unit']
-                        })
-                        logger.info(f"CONTAINER_FILL: Added 1x {container['name']} for partial fill")
-                    break
+                logger.info(f"CONTAINER_FILL: Selected {qty_to_use}x {container['name']}, covers {yield_covered} units")
 
+        # Calculate final metrics
         total_capacity = sum(s['capacity'] * s['quantity'] for s in selected_containers)
         containment_percentage = min(100, (total_capacity / yield_amount) * 100) if yield_amount > 0 else 0
 
-        logger.info(f"CONTAINER_FILL: Final selection: {len(selected_containers)} containers, total capacity: {total_capacity}, containment: {containment_percentage:.1f}%")
+        logger.info(f"CONTAINER_FILL: Final selection: {len(selected_containers)} types, total capacity: {total_capacity}, containment: {containment_percentage:.1f}%")
 
         return {
             'success': True,
@@ -360,7 +374,7 @@ def calculate_container_fill_strategy(recipe_id: int, scale: float, yield_amount
         }
 
     except Exception as e:
-        logger.error(f"Error calculating container fill strategy: {e}")
+        logger.error(f"Error in USCS container fill strategy: {e}")
         import traceback
         logger.error(f"Stack trace: {traceback.format_exc()}")
         return {'success': False, 'error': f'Container calculation failed: {str(e)}'}
