@@ -96,37 +96,58 @@ def check_recipe_stock(recipe: Recipe, scale: float = 1.0) -> Dict[str, Any]:
         }
 
 
-def get_recipe_ingredients_for_stock_check(recipe_id: int, scale: float = 1.0) -> List[StockCheckRequest]:
+def get_recipe_ingredients_for_stock_check(recipe_id: int, scale: float = 1.0, organization_id: int = None) -> List[StockCheckRequest]:
     """
-    Get recipe ingredients formatted as stock check requests.
-    This is used by bulk stock checking systems.
+    Get stock check requests for all ingredients in a recipe.
 
     Args:
         recipe_id: Recipe ID
-        scale: Scale factor
+        scale: Scale factor for the recipe
+        organization_id: Organization ID for scoping
 
     Returns:
-        List of StockCheckRequest objects
+        List of stock check requests
     """
     try:
-        recipe = Recipe.query.get(recipe_id)
-        if not recipe or not recipe.recipe_ingredients:
+        from ...models import Recipe
+
+        # Get organization ID from current user if not provided
+        if organization_id is None:
+            if current_user and current_user.is_authenticated:
+                organization_id = current_user.organization_id
+            else:
+                logger.error("No organization context available for stock check")
+                return []
+
+        recipe = Recipe.query.filter_by(
+            id=recipe_id,
+            organization_id=organization_id
+        ).first()
+
+        if not recipe:
+            logger.error(f"Recipe {recipe_id} not found in organization {organization_id}")
+            return []
+
+        if not recipe.recipe_ingredients:
+            logger.warning(f"Recipe {recipe_id} has no ingredients")
             return []
 
         requests = []
-        organization_id = current_user.organization_id if current_user.is_authenticated else None
 
         for recipe_ingredient in recipe.recipe_ingredients:
-            requests.append(StockCheckRequest(
+            # Create stock check request for this ingredient with organization context
+            request = StockCheckRequest(
                 item_id=recipe_ingredient.inventory_item_id,
                 quantity_needed=recipe_ingredient.quantity * scale,
                 unit=recipe_ingredient.unit,
                 category=InventoryCategory.INGREDIENT,
                 organization_id=organization_id
-            ))
+            )
+            requests.append(request)
 
+        logger.debug(f"Created {len(requests)} stock check requests for recipe {recipe_id}")
         return requests
 
     except Exception as e:
-        logger.error(f"Error getting recipe ingredients for stock check: {e}")
+        logger.error(f"Error creating stock check requests for recipe {recipe_id}: {e}")
         return []
