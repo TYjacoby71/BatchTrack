@@ -20,7 +20,12 @@ from ._production_planning import (
 )
 from ._scaling import scale_recipe
 from ._validation import validate_recipe_data
-from ._stock_checking import check_recipe_stock, get_recipe_ingredients_for_stock_check
+from ..stock_check.core import UniversalStockCheckService
+
+def check_recipe_stock(recipe, scale: float = 1.0):
+    """Check stock for recipe using USCS directly"""
+    uscs = UniversalStockCheckService()
+    return uscs.check_recipe_stock(recipe.id, scale)
 
 # Make sure all functions are available
 __all__ = [
