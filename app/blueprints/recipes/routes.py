@@ -88,14 +88,38 @@ def auto_fill_containers(recipe_id):
         yield_amount = float(data.get('yield_amount'))
         yield_unit = data.get('yield_unit')
 
+        # Get recipe first
+        recipe = get_recipe_details(recipe_id)
+        if not recipe:
+            return jsonify({'success': False, 'error': 'Recipe not found'}), 404
+            
         # Delegate to production planning service
         from app.services.production_planning._container_management import analyze_container_options
-        result = analyze_container_options( # Changed from calculate_container_fill_strategy to analyze_container_options
-            recipe_id=recipe_id,
+        strategy, options = analyze_container_options(
+            recipe=recipe,
             scale=scale,
-            yield_amount=yield_amount,
-            yield_unit=yield_unit
+            preferred_container_id=None,
+            organization_id=current_user.organization_id
         )
+        
+        # Format result to match expected frontend format
+        if strategy and options:
+            result = {
+                'success': True,
+                'container_selection': [{
+                    'id': opt.container_id,
+                    'name': opt.container_name,
+                    'capacity': opt.storage_capacity,
+                    'unit': opt.storage_unit,
+                    'quantity': opt.containers_needed,
+                    'stock_qty': opt.available_quantity,
+                    'available_quantity': opt.available_quantity
+                } for opt in options],
+                'total_capacity': sum(opt.storage_capacity * opt.containers_needed for opt in options),
+                'containment_percentage': strategy.average_fill_percentage if strategy else 0
+            }
+        else:
+            result = {'success': False, 'error': 'No suitable containers found'}
 
         return jsonify(result)
 
