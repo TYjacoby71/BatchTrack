@@ -36,27 +36,30 @@ def analyze_container_options(
 
         logger.info(f"CONTAINER_ANALYSIS: Recipe yield {yield_amount} {yield_unit}")
 
-        # Use USCS bulk query with recipe scoping
-        from ..stock_check import UniversalStockCheckService
-        from ..stock_check.types import StockCheckRequest, InventoryCategory
+        # Get allowed containers for this recipe
+        allowed_container_ids = _get_recipe_allowed_containers(recipe)
 
+        if not allowed_container_ids:
+            logger.warning("CONTAINER_ANALYSIS: No allowed containers found for recipe")
+            return None, []
+
+        # Use USCS single item checks for each allowed container
         uscs = UniversalStockCheckService()
+        container_results = []
 
-        # Create bulk request with recipe scoping
-        container_request = StockCheckRequest(
-            item_id=None,  # Bulk query for all containers
-            quantity_needed=yield_amount,
-            unit=yield_unit,
-            category=InventoryCategory.CONTAINER,
-            organization_id=organization_id,
-            recipe_scoping=_get_recipe_allowed_containers(recipe)  # Pass recipe constraints
-        )
+        for container_id in allowed_container_ids:
+            result = uscs.check_single_item(
+                item_id=container_id,
+                quantity_needed=1,  # Check for at least 1 container
+                unit="count",
+                category=InventoryCategory.CONTAINER
+            )
+            container_results.append(result)
 
-        # Execute bulk container check
-        container_results = uscs.check_stock([container_request])
+        logger.info(f"CONTAINER_ANALYSIS: USCS returned {len(container_results)} container results")
 
         if not container_results:
-            logger.warning(f"No containers found for recipe {recipe.id}")
+            logger.warning("CONTAINER_ANALYSIS: No containers found by USCS")
             return None, []
 
         # Convert USCS results to ContainerOptions
@@ -171,6 +174,6 @@ def _create_user_specified_strategy(options: List[ContainerOption], container_id
         selected_containers=[selected_option],
         total_containers_needed=selected_option.containers_needed,
         total_container_cost=total_cost,
-        average_fill_percentage=selected_option.fill_percentage,
+        average_fill_percentage=selected.fill_percentage,
         waste_percentage=waste_percentage
     )

@@ -302,7 +302,7 @@ class UniversalStockCheckService:
                 return []
 
             # Build query for items in category
-            category_name = request.inventory_category.value
+            category_name = request.category.value
             query = InventoryItem.query.filter_by(
                 type=category_name,
                 organization_id=request.organization_id
@@ -322,7 +322,7 @@ class UniversalStockCheckService:
                     item_id=item.id,
                     quantity_needed=request.quantity_needed,
                     unit=request.unit,
-                    inventory_category=request.inventory_category,
+                    category=request.category,
                     organization_id=request.organization_id
                 )
                 result = handler.check_availability(item_request, request.organization_id)
