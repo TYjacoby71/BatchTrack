@@ -61,14 +61,10 @@ class TestInventoryFIFOCharacterization:
             )
 
             # Verify available quantity matches
-            from app.services.stock_check import check_stock_availability
-            result = check_stock_availability([{
-                'item_id': item.id,
-                'quantity_needed': 5.0,
-                'unit': 'g'  # Use matching unit to avoid conversion issues
-            }])
-
-            assert result['can_make'] is True
+            from app.services.stock_check import UniversalStockCheckService
+            stock_service = UniversalStockCheckService()
+            result = stock_service.check_ingredient_availability(item.id, 75.0, test_org.id)
+            assert result.get('status') == 'OK', f"Expected sufficient stock, got {result}"
 
     def test_inventory_adjustment_delegates_properly(self, app, db_session, test_user, test_org):
         """Verify inventory adjustment service delegates to proper internal systems."""
@@ -98,7 +94,7 @@ class TestInventoryFIFOCharacterization:
             # The function should return success even if it's a tuple
             if isinstance(success, tuple):
                 success = success[0]
-            
+
             assert success is True, f"Expected success but got: {success}, message: {message}"
             db_session.commit()
             fresh_item = db_session.get(InventoryItem, item.id)
