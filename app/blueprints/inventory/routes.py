@@ -115,7 +115,11 @@ def view_inventory(id):
     query = InventoryItem.query
     if current_user.organization_id:
         query = query.filter_by(organization_id=current_user.organization_id)
-    item = query.filter_by(id=id).first_or_404()
+    item = query.filter_by(id=id).first()
+    
+    if not item:
+        flash('Inventory item not found or access denied.', 'error')
+        return redirect(url_for('inventory.list_inventory'))
 
     # Calculate freshness and expired quantities for this item (same as list_inventory)
     from ...blueprints.expiration.services import ExpirationService
@@ -221,6 +225,8 @@ def add_inventory():
         )
 
         if success:
+            # Ensure database transaction is committed
+            db.session.commit()
             flash(f'New inventory item created: {message}', 'success')
             if item_id:
                 return redirect(url_for('inventory.view_inventory', id=item_id))

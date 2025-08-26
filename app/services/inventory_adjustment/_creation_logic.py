@@ -81,11 +81,39 @@ def create_inventory_item(form_data, organization_id, created_by):
             category_id=category_id
         )
 
+        # Save the new item
         db.session.add(new_item)
-        db.session.flush()  # Get the ID
+        db.session.flush()  # Get the ID without committing
 
-        logger.info(f"CREATED: New inventory item {new_item.id} - {name}")
-        return True, f"New inventory item '{name}' created successfully", new_item.id
+        logger.info(f"CREATED: New inventory item {new_item.id} - {new_item.name}")
+
+        # Handle initial stock if quantity > 0
+        if initial_quantity > 0:
+            # Use the central inventory adjustment service for initial stock
+            success, adjustment_message = process_inventory_adjustment(
+                item_id=new_item.id,
+                quantity=initial_quantity,
+                change_type='initial',
+                notes='Initial inventory entry',
+                created_by=created_by,
+                custom_expiration_date=custom_expiration_date,
+                custom_shelf_life_days=custom_shelf_life_days
+            )
+
+            if not success:
+                db.session.rollback()
+                return False, f"Item created but initial stock failed: {adjustment_message}", None
+
+        # Commit the transaction
+        db.session.commit()
+
+        # Double-check the item was created
+        created_item = InventoryItem.query.get(new_item.id)
+        if not created_item:
+            logger.error(f"Item {new_item.id} not found after creation")
+            return False, "Item creation failed - not found after commit", None
+
+        return True, f"Created {new_item.name}", new_item.id
 
     except Exception as e:
         db.session.rollback()
