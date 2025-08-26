@@ -223,50 +223,262 @@ def _create_auto_fill_strategy(
     yield_unit: str
 ) -> Optional[ContainerStrategy]:
     """
-    Create intelligent auto-fill strategy selecting optimal containers.
+    Create intelligent multi-container auto-fill strategy using bin packing optimization.
     
     Strategy:
-    1. Try largest container that has sufficient stock
-    2. Check if fill percentage is reasonable (±3% tolerance for 100%)
-    3. If overfilled by more than tolerance, try smaller containers
-    4. Select container with best fill efficiency
+    1. Find optimal combination of containers that minimizes waste
+    2. Use bin packing algorithm to try different combinations
+    3. Prefer combinations that get closest to 100% efficiency
+    4. Fall back to single container if multi-container doesn't improve efficiency
     """
     
     if not container_options:
         return None
 
+    # Filter containers with sufficient stock
+    available_containers = []
+    for option in container_options:
+        if option['available_quantity'] > 0 and option['capacity_in_yield_unit'] > 0:
+            available_containers.append(option)
+    
+    if not available_containers:
+        logger.warning("No containers have sufficient stock")
+        return None
+
+    # Try multi-container optimization first
+    best_combination = _find_optimal_container_combination(available_containers, total_yield)
+    
+    if best_combination:
+        logger.info(f"Multi-container optimization found: {len(best_combination['containers'])} container types")
+        return _create_strategy_from_combination(best_combination, total_yield, yield_unit)
+    
+    # Fall back to single container approach
+    logger.info("Falling back to single container selection")
+    return _create_single_container_strategy(available_containers, total_yield, yield_unit)
+
+
+def _find_optimal_container_combination(
+    containers: List[Dict[str, Any]], 
+    target_yield: float
+) -> Optional[Dict[str, Any]]:
+    """
+    Find optimal combination of containers using bin packing algorithm.
+    
+    Returns best combination that minimizes waste while staying within stock limits.
+    """
+    
+    # Sort containers by capacity (largest first for efficiency)
+    sorted_containers = sorted(containers, key=lambda x: x['capacity_in_yield_unit'], reverse=True)
+    
+    best_combination = None
+    best_efficiency = 0
+    best_waste = float('inf')
+    
+    # Try different combinations using recursive bin packing
+    for max_types in range(1, min(4, len(sorted_containers) + 1)):  # Limit to 3 container types max
+        combination = _bin_pack_containers(sorted_containers, target_yield, max_types)
+        
+        if combination:
+            total_capacity = sum(c['capacity_in_yield_unit'] * c['quantity_used'] for c in combination)
+            efficiency = (target_yield / total_capacity) * 100 if total_capacity > 0 else 0
+            waste = total_capacity - target_yield
+            
+            # Prefer combinations with efficiency >= 97% or minimal waste
+            if (efficiency >= 97.0 or 
+                (efficiency > best_efficiency and waste < best_waste) or
+                (abs(efficiency - 100) < abs(best_efficiency - 100))):
+                
+                best_combination = {
+                    'containers': combination,
+                    'total_capacity': total_capacity,
+                    'efficiency': efficiency,
+                    'waste': waste
+                }
+                best_efficiency = efficiency
+                best_waste = waste
+                
+                # If we found near-perfect efficiency, use it
+                if efficiency >= 99.0:
+                    break
+    
+    return best_combination
+
+
+def _bin_pack_containers(
+    containers: List[Dict[str, Any]], 
+    remaining_yield: float, 
+    max_types: int,
+    current_combination: Optional[List[Dict[str, Any]]] = None
+) -> Optional[List[Dict[str, Any]]]:
+    """
+    Recursive bin packing to find optimal container combination.
+    """
+    
+    if current_combination is None:
+        current_combination = []
+    
+    if remaining_yield <= 0:
+        return current_combination
+    
+    if len(current_combination) >= max_types:
+        return None
+    
+    best_solution = None
+    best_waste = float('inf')
+    
+    for i, container in enumerate(containers):
+        # Skip if already used this container type
+        if any(c['id'] == container['id'] for c in current_combination):
+            continue
+            
+        capacity = container['capacity_in_yield_unit']
+        stock_limit = container['available_quantity']
+        
+        # Try different quantities of this container
+        for qty in range(1, min(stock_limit + 1, int(remaining_yield / capacity) + 2)):
+            container_contribution = capacity * qty
+            
+            # Add this container to combination
+            new_combination = current_combination + [{
+                'id': container['id'],
+                'name': container['name'],
+                'capacity': container['capacity'],
+                'unit': container['unit'],
+                'capacity_in_yield_unit': capacity,
+                'yield_unit': container.get('yield_unit', 'ml'),
+                'available_quantity': container['available_quantity'],
+                'quantity_used': qty,
+                'conversion_successful': container.get('conversion_successful', True)
+            }]
+            
+            new_remaining = remaining_yield - container_contribution
+            
+            if new_remaining <= 0:
+                # This combination covers the yield
+                waste = abs(new_remaining)
+                if waste < best_waste:
+                    best_solution = new_combination
+                    best_waste = waste
+            else:
+                # Try to fill remaining with other containers
+                remaining_containers = containers[i+1:]
+                if remaining_containers:
+                    recursive_solution = _bin_pack_containers(
+                        remaining_containers, new_remaining, max_types, new_combination
+                    )
+                    if recursive_solution:
+                        total_capacity = sum(c['capacity_in_yield_unit'] * c['quantity_used'] for c in recursive_solution)
+                        waste = total_capacity - remaining_yield
+                        if waste >= 0 and waste < best_waste:
+                            best_solution = recursive_solution
+                            best_waste = waste
+    
+    return best_solution
+
+
+def _create_strategy_from_combination(
+    combination: Dict[str, Any], 
+    total_yield: float, 
+    yield_unit: str
+) -> ContainerStrategy:
+    """Create strategy from optimal container combination."""
+    
+    selected_containers = []
+    total_capacity = combination['total_capacity']
+    efficiency = combination['efficiency']
+    
+    for container_data in combination['containers']:
+        selected_containers.append(ContainerOption(
+            container_id=container_data['id'],
+            container_name=container_data['name'],
+            capacity=container_data['capacity'],
+            available_quantity=container_data['available_quantity'],
+            containers_needed=container_data['quantity_used'],
+            cost_each=0.0  # TODO: Add cost calculation
+        ))
+    
+    containment_percentage = min(100.0, efficiency)
+    
+    # Generate optimization messages
+    warnings = []
+    if len(combination['containers']) > 1:
+        container_summary = ", ".join([
+            f"{c['name']} x{c['quantity_used']}" for c in combination['containers']
+        ])
+        warnings.append(f"Multi-container optimization: {container_summary}")
+    
+    if efficiency < 90:
+        warnings.append(f"Fill efficiency: {efficiency:.1f}% - consider smaller containers if available")
+    
+    # Format selected containers for API response
+    formatted_containers = []
+    for container_data in combination['containers']:
+        formatted_containers.append({
+            'id': container_data['id'],
+            'name': container_data['name'],
+            'capacity': container_data['capacity'],
+            'unit': container_data['unit'],
+            'capacity_in_yield_unit': container_data['capacity_in_yield_unit'],
+            'yield_unit': container_data['yield_unit'],
+            'quantity': container_data['quantity_used'],
+            'available_quantity': container_data['available_quantity'],
+            'conversion_successful': container_data['conversion_successful'],
+            'containers_needed': container_data['quantity_used'],
+            'total_yield_needed': total_yield
+        })
+    
+    container_strategy = ContainerStrategy(
+        selected_containers=selected_containers,
+        total_capacity=total_capacity,
+        containment_percentage=containment_percentage,
+        fill_strategy=ContainerFillStrategy(
+            selected_containers=formatted_containers,
+            total_capacity=total_capacity,
+            containment_percentage=containment_percentage,
+            strategy_type="auto_optimized"
+        ),
+        warnings=warnings
+    )
+
+    logger.info(f"Created optimized strategy: {efficiency:.1f}% efficiency with {len(combination['containers'])} container types")
+    return container_strategy
+
+
+def _create_single_container_strategy(
+    containers: List[Dict[str, Any]], 
+    total_yield: float, 
+    yield_unit: str
+) -> Optional[ContainerStrategy]:
+    """Fallback to single container selection."""
+    
     best_option = None
     best_efficiency = 0
     
-    for option in container_options:
-        # Check if we have enough stock
-        if option['available_quantity'] < option['containers_needed']:
-            logger.info(f"Skipping {option['name']} - insufficient stock ({option['available_quantity']} < {option['containers_needed']})")
+    for option in containers:
+        containers_needed = max(1, int(math.ceil(total_yield / option['capacity_in_yield_unit'])))
+        
+        if option['available_quantity'] < containers_needed:
             continue
         
-        # Calculate efficiency for this option
-        total_container_capacity = option['capacity_in_yield_unit'] * option['containers_needed']
+        total_container_capacity = option['capacity_in_yield_unit'] * containers_needed
         efficiency = (total_yield / total_container_capacity) * 100 if total_container_capacity > 0 else 0
         
-        # Apply efficiency tolerance - prefer containers within ±3% of 100% fill
         if efficiency >= (100 - EFFICIENCY_TOLERANCE * 100):  # 97% or better
             best_option = option
+            best_option['containers_needed'] = containers_needed
             best_efficiency = efficiency
-            logger.info(f"Selected {option['name']} for optimal efficiency: {efficiency:.1f}%")
             break
         elif efficiency > best_efficiency:
             best_option = option
+            best_option['containers_needed'] = containers_needed
             best_efficiency = efficiency
 
     if not best_option:
-        logger.warning(f"No containers have sufficient stock")
         return None
 
-    # Create strategy with proper containment calculation
     total_capacity = best_option['capacity_in_yield_unit'] * best_option['containers_needed']
     containment_percentage = min(100.0, (total_yield / total_capacity) * 100) if total_capacity > 0 else 0
 
-    # Issue partial fill warning if significantly under-filled
     warnings = []
     if containment_percentage < 50:
         warnings.append(f"Low fill efficiency: {containment_percentage:.1f}% - consider smaller containers")
@@ -278,20 +490,32 @@ def _create_auto_fill_strategy(
             capacity=best_option['capacity'],
             available_quantity=best_option['available_quantity'],
             containers_needed=best_option['containers_needed'],
-            cost_each=0.0  # TODO: Add cost calculation
+            cost_each=0.0
         )],
         total_capacity=total_capacity,
         containment_percentage=containment_percentage,
         fill_strategy=ContainerFillStrategy(
-            selected_containers=[best_option],
+            selected_containers=[{
+                'id': best_option['id'],
+                'name': best_option['name'],
+                'capacity': best_option['capacity'],
+                'unit': best_option['unit'],
+                'capacity_in_yield_unit': best_option['capacity_in_yield_unit'],
+                'yield_unit': best_option.get('yield_unit', yield_unit),
+                'quantity': best_option['containers_needed'],
+                'available_quantity': best_option['available_quantity'],
+                'conversion_successful': best_option.get('conversion_successful', True),
+                'containers_needed': best_option['containers_needed'],
+                'total_yield_needed': total_yield
+            }],
             total_capacity=total_capacity,
             containment_percentage=containment_percentage,
-            strategy_type="auto"
+            strategy_type="auto_single"
         ),
         warnings=warnings
     )
 
-    logger.info(f"Created auto-fill strategy: {best_option['name']} x{best_option['containers_needed']} = {containment_percentage:.1f}% fill")
+    logger.info(f"Single container strategy: {best_option['name']} x{best_option['containers_needed']} = {containment_percentage:.1f}% fill")
     return container_strategy
 
 
