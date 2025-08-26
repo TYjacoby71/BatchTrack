@@ -89,8 +89,8 @@ def auto_fill_containers(recipe_id):
         yield_unit = data.get('yield_unit')
 
         # Delegate to production planning service
-        from app.services.production_planning import calculate_container_fill_strategy
-        result = calculate_container_fill_strategy(
+        from app.services.production_planning._container_management import analyze_container_options
+        result = analyze_container_options( # Changed from calculate_container_fill_strategy to analyze_container_options
             recipe_id=recipe_id,
             scale=scale,
             yield_amount=yield_amount,
