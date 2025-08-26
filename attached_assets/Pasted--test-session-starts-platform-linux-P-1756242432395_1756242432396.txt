@@ -1,0 +1,302 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.13, pytest-8.3.5, pluggy-1.5.0 -- /home/runner/workspace/.pythonlibs/bin/python
+cachedir: .pytest_cache
+rootdir: /home/runner/workspace
+collected 31 items                                                             
+
+tests/test_inventory_routes_canonicalization.py::TestInventoryCanonicalService::test_batch_integration_uses_canonical_service PASSED [  3%]
+tests/test_inventory_routes_canonicalization.py::TestInventoryCanonicalService::test_reservation_service_uses_canonical_service PASSED [  6%]
+tests/test_inventory_routes_canonicalization.py::TestInventoryCanonicalService::test_pos_integration_uses_canonical_service PASSED [  9%]
+tests/test_inventory_routes_canonicalization.py::TestInventoryCanonicalService::test_production_planning_service_integration PASSED [ 12%]
+tests/test_inventory_routes_canonicalization.py::TestInventoryCanonicalService::test_stock_check_service_integration PASSED [ 16%]
+tests/test_inventory_routes_canonicalization.py::TestInventoryCanonicalService::test_inventory_adjustment_canonical_interface PASSED [ 19%]
+tests/test_inventory_routes_canonicalization.py::TestBatchServiceCanonicalIntegration::test_batch_service_uses_canonical_adjustments PASSED [ 22%]
+tests/test_inventory_routes_canonicalization.py::TestBatchServiceCanonicalIntegration::test_production_planning_batch_handoff PASSED [ 25%]
+tests/test_inventory_routes_canonicalization.py::TestContainerManagementIntegration::test_container_analysis_integration PASSED [ 29%]
+tests/test_inventory_routes_canonicalization.py::test_service_import_compatibility PASSED [ 32%]
+tests/test_inventory_routes_canonicalization.py::test_canonical_service_consistency PASSED [ 35%]
+tests/test_reservation_canonicalization.py::TestReservationCanonicalService::test_reservation_service_imports_canonical_service PASSED [ 38%]
+tests/test_reservation_canonicalization.py::TestReservationCanonicalService::test_reservation_service_structure PASSED [ 41%]
+tests/test_reservation_canonicalization.py::TestReservationCanonicalService::test_create_reservation_uses_canonical_service PASSED [ 45%]
+tests/test_reservation_canonicalization.py::TestReservationCanonicalService::test_release_reservation_uses_canonical_service PASSED [ 48%]
+tests/test_reservation_canonicalization.py::TestReservationCanonicalService::test_reservation_model_integration PASSED [ 51%]
+tests/test_reservation_canonicalization.py::TestReservationCanonicalService::test_reservation_status_management PASSED [ 54%]
+tests/test_reservation_canonicalization.py::TestReservationCanonicalService::test_reservation_canonical_dependency PASSED [ 58%]
+tests/test_reservation_canonicalization.py::TestReservationServiceErrorHandling::test_invalid_reservation_handling PASSED [ 61%]
+tests/test_reservation_canonicalization.py::TestReservationServiceErrorHandling::test_service_initialization PASSED [ 64%]
+tests/test_reservation_canonicalization.py::TestReservationServiceErrorHandling::test_canonical_service_availability PASSED [ 67%]
+tests/test_reservation_canonicalization.py::test_reservation_service_module_imports PASSED [ 70%]
+tests/test_pos_integration_canonicalization.py::test_pos_sale_uses_canonical_service PASSED [ 74%]
+tests/test_pos_integration_canonicalization.py::test_pos_reservation_uses_canonical_service FAILED [ 77%]
+tests/test_pos_integration_canonicalization.py::test_pos_confirm_sale_uses_canonical_service PASSED [ 80%]
+tests/test_pos_integration_canonicalization.py::TestPOSIntegrationStructure::test_pos_service_has_expected_methods PASSED [ 83%]
+tests/test_pos_integration_canonicalization.py::TestPOSIntegrationStructure::test_pos_service_canonical_integration PASSED [ 87%]
+tests/test_pos_integration_canonicalization.py::TestPOSIntegrationStructure::test_pos_service_reservation_integration PASSED [ 90%]
+tests/test_pos_integration_canonicalization.py::TestPOSIntegrationStructure::test_pos_service_error_handling PASSED [ 93%]
+tests/test_pos_integration_canonicalization.py::test_pos_integration_canonical_dependency PASSED [ 96%]
+tests/test_inventory_fifo.py::TestInventoryFIFOCharacterization::test_fifo_deduction_order FAILED [100%]
+
+=================================== FAILURES ===================================
+_________________ test_pos_reservation_uses_canonical_service __________________
+
+app = <Flask 'app'>
+db_session = <sqlalchemy.orm.scoping.scoped_session object at 0x7f2d41555050>
+
+    def test_pos_reservation_uses_canonical_service(app, db_session):
+        """Test that POS reservations use the canonical inventory adjustment service"""
+    
+        # Create test data
+        from app.models import Organization, User, SubscriptionTier, InventoryItem
+    
+        import time
+        unique_suffix = str(int(time.time() * 1000))[-6:]
+    
+        tier = SubscriptionTier(name=f"Test Tier Res {unique_suffix}", tier_type="monthly", user_limit=5)
+        db_session.add(tier)
+        db_session.flush()
+    
+        org = Organization(name=f"Test Org Res {unique_suffix}", billing_status="active", subscription_tier_id=tier.id)
+        db_session.add(org)
+        db_session.flush()
+    
+        user = User(username=f"testuser_res_{unique_suffix}", email=f"res{unique_suffix}@example.com", organization_id=org.id)
+        db_session.add(user)
+        db_session.flush()
+    
+        item = InventoryItem(
+            name=f"Test Product Res {unique_suffix}",
+            type="product",
+            unit="piece",
+            quantity=50.0,
+            cost_per_unit=10.0,
+            organization_id=org.id
+        )
+        db_session.add(item)
+        db_session.commit()
+    
+        # Mock the canonical service call
+        with patch('app.services.pos_integration.process_inventory_adjustment') as mock_process:
+            mock_process.return_value = True
+    
+            with patch('app.services.pos_integration.current_user') as mock_user:
+                mock_user.id = user.id
+                mock_user.is_authenticated = True
+                mock_user.organization_id = org.id
+    
+                # Check if the method exists
+                if hasattr(POSIntegrationService, 'reserve_inventory'):
+                    # Call the service method
+                    success, message = POSIntegrationService.reserve_inventory(
+                        item_id=item.id,
+                        quantity=5.0,
+                        order_id=f"ORD-{unique_suffix}",
+                        source="shopify",
+                        notes="Test reservation"
+                    )
+    
+                    # Verify canonical service was called
+>                   assert mock_process.called, "process_inventory_adjustment should be called"
+E                   AssertionError: process_inventory_adjustment should be called
+E                   assert False
+E                    +  where False = <MagicMock name='process_inventory_adjustment' id='139832209044176'>.called
+
+tests/test_pos_integration_canonicalization.py:126: AssertionError
+---------------------------- Captured stdout setup -----------------------------
+
+=== Blueprint Registration Summary ===
+✅ Successful: 26
+   - Authentication
+   - Admin
+   - Developer
+   - Inventory
+   - Recipes
+   - Batches
+   - Organization
+   - Billing
+   - Settings
+   - Timers
+   - Expiration
+   - Conversion
+   - Products Main
+   - Product Inventory
+   - Reservations
+   - SKU Management
+   - Product Variants
+   - Product Alerts
+   - Public API
+   - Main API
+   - App Routes
+   - Legal Routes
+   - Bulk Stock
+   - Fault Log
+   - Tag Manager
+   - Waitlist
+
+🎉 All blueprints registered successfully!
+------------------------------ Captured log setup ------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+_________ TestInventoryFIFOCharacterization.test_fifo_deduction_order __________
+
+self = <tests.test_inventory_fifo.TestInventoryFIFOCharacterization object at 0x7f2d40db5850>
+app = <Flask 'app'>
+db_session = <sqlalchemy.orm.scoping.scoped_session object at 0x7f2d41555050>
+test_user = <User testuser_1756242356639714>, test_org = <Organization 3>
+
+    def test_fifo_deduction_order(self, app, db_session, test_user, test_org):
+        """Test FIFO deduction follows first-in-first-out order."""
+        with app.test_request_context():
+            login_user(test_user)
+    
+            # Create inventory item
+            item = InventoryItem(
+                name="Test Ingredient",
+                type="ingredient",
+                unit="g",
+                quantity=0.0,
+                organization_id=test_org.id,
+                created_by=test_user.id
+            )
+            db_session.add(item)
+            db_session.flush()
+    
+            # Add stock in layers (oldest first)
+            assert process_inventory_adjustment(
+                item_id=item.id,
+                quantity=100.0,
+                change_type="restock",
+                notes="First batch",
+                created_by=test_user.id
+            )
+    
+            assert process_inventory_adjustment(
+                item_id=item.id,
+                quantity=50.0,
+                change_type="restock",
+                notes="Second batch",
+                created_by=test_user.id
+            )
+    
+            # Verify total by querying fresh data
+            db_session.commit()
+            fresh_item = db_session.get(InventoryItem, item.id)
+            assert fresh_item.quantity == 150.0
+    
+            # Deduct and verify FIFO order
+            assert process_inventory_adjustment(
+                item_id=item.id,
+                quantity=-75.0,
+                change_type="batch",
+                notes="FIFO test deduction",
+                created_by=test_user.id
+            )
+    
+            # Verify available quantity matches
+            from app.services.stock_check import UniversalStockCheckService
+            stock_service = UniversalStockCheckService()
+>           result = stock_service.check_ingredient_availability(item.id, 75.0, test_org.id)
+E           AttributeError: 'UniversalStockCheckService' object has no attribute 'check_ingredient_availability'
+
+tests/test_inventory_fifo.py:66: AttributeError
+---------------------------- Captured stdout setup -----------------------------
+
+=== Blueprint Registration Summary ===
+✅ Successful: 26
+   - Authentication
+   - Admin
+   - Developer
+   - Inventory
+   - Recipes
+   - Batches
+   - Organization
+   - Billing
+   - Settings
+   - Timers
+   - Expiration
+   - Conversion
+   - Products Main
+   - Product Inventory
+   - Reservations
+   - SKU Management
+   - Product Variants
+   - Product Alerts
+   - Public API
+   - Main API
+   - App Routes
+   - Legal Routes
+   - Bulk Stock
+   - Fault Log
+   - Tag Manager
+   - Waitlist
+
+🎉 All blueprints registered successfully!
+------------------------------ Captured log setup ------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+------------------------------ Captured log call -------------------------------
+INFO     app.services.inventory_adjustment._core:_core.py:26 CENTRAL DELEGATOR: item_id=1, qty=100.0, type=restock
+INFO     app.services.inventory_adjustment._core:_core.py:138 DELEGATING: initial_stock -> routing to operation module
+INFO     app.services.inventory_adjustment._core:_core.py:207 ROUTING: initial_stock -> INITIAL_STOCK (additive special case)
+INFO     app.services.inventory_adjustment._additive_ops:_additive_ops.py:43 RESTOCK: Processing 100.0 for item 1
+INFO     app.services.inventory_adjustment._additive_ops:_additive_ops.py:50 RESTOCK: Classified as lot_creation operation
+INFO     app.services.inventory_adjustment._additive_ops:_additive_ops.py:114 LOT_CREATION: Adding 100.0 to item 1
+INFO     app.services.inventory_adjustment._fifo_ops:_fifo_ops.py:159 FIFO: Created lot LOT-7N9R147 with 100.0 g for item 1 (perishable: False)
+INFO     app.services.inventory_adjustment._additive_ops:_additive_ops.py:137 LOT_CREATION SUCCESS: Will add 100.0 to item 1
+INFO     app.services.inventory_adjustment._additive_ops:_additive_ops.py:99 RESTOCK SUCCESS: Will increase item 1 by 100.0
+INFO     app.services.inventory_adjustment._core:_core.py:96 QUANTITY UPDATE: Item 1 quantity 0.0 + 100.0 = 100.0
+INFO     app.services.inventory_adjustment._core:_core.py:120 SUCCESS: restock completed for item 1 (FIFO validated)
+INFO     app.services.inventory_adjustment._core:_core.py:26 CENTRAL DELEGATOR: item_id=1, qty=50.0, type=restock
+INFO     app.services.inventory_adjustment._core:_core.py:138 DELEGATING: restock -> routing to operation module
+INFO     app.services.inventory_adjustment._core:_core.py:143 ROUTING: restock -> ADDITIVE (lot_creation)
+INFO     app.services.inventory_adjustment._additive_ops:_additive_ops.py:43 RESTOCK: Processing 50.0 for item 1
+INFO     app.services.inventory_adjustment._additive_ops:_additive_ops.py:50 RESTOCK: Classified as lot_creation operation
+INFO     app.services.inventory_adjustment._additive_ops:_additive_ops.py:114 LOT_CREATION: Adding 50.0 to item 1
+INFO     app.services.inventory_adjustment._fifo_ops:_fifo_ops.py:159 FIFO: Created lot LOT-7NCE1KS with 50.0 g for item 1 (perishable: False)
+INFO     app.services.inventory_adjustment._additive_ops:_additive_ops.py:137 LOT_CREATION SUCCESS: Will add 50.0 to item 1
+INFO     app.services.inventory_adjustment._additive_ops:_additive_ops.py:99 RESTOCK SUCCESS: Will increase item 1 by 50.0
+INFO     app.services.inventory_adjustment._core:_core.py:96 QUANTITY UPDATE: Item 1 quantity 100.0 + 50.0 = 150.0
+INFO     app.services.inventory_adjustment._core:_core.py:120 SUCCESS: restock completed for item 1 (FIFO validated)
+INFO     app.services.inventory_adjustment._core:_core.py:26 CENTRAL DELEGATOR: item_id=1, qty=-75.0, type=batch
+INFO     app.services.inventory_adjustment._core:_core.py:138 DELEGATING: batch -> routing to operation module
+INFO     app.services.inventory_adjustment._core:_core.py:159 ROUTING: batch -> DEDUCTIVE (consumption)
+INFO     app.services.inventory_adjustment._deductive_ops:_deductive_ops.py:64 DEDUCTIVE: Processing batch for item 1, quantity=-75.0
+INFO     app.services.inventory_adjustment._deductive_ops:_deductive_ops.py:72 DEDUCTIVE: batch -> consumption group
+INFO     app.services.inventory_adjustment._fifo_ops:_fifo_ops.py:195 FIFO DEDUCT: Need 75.0, have 150.0 from 2 active lots
+INFO     app.services.inventory_adjustment._fifo_ops:_fifo_ops.py:239 FIFO DEDUCT: Consumed 75.0 from lot 1 (LOT-7N9R147), remaining: 25.0
+INFO     app.services.inventory_adjustment._fifo_ops:_fifo_ops.py:241 FIFO DEDUCT SUCCESS: Affected 1 lots
+INFO     app.services.inventory_adjustment._deductive_ops:_deductive_ops.py:106 DEDUCTIVE SUCCESS: batch will decrease item 1 by 75.0
+INFO     app.services.inventory_adjustment._core:_core.py:96 QUANTITY UPDATE: Item 1 quantity 150.0 + 75.0 = 225.0
+ERROR    app.services.inventory_adjustment._validation:_validation.py:38 FIFO SYNC MISMATCH for item 1 (Test Ingredient):
+ERROR    app.services.inventory_adjustment._validation:_validation.py:39   Item quantity: 225.0
+ERROR    app.services.inventory_adjustment._validation:_validation.py:40   FIFO total: 75.0
+ERROR    app.services.inventory_adjustment._validation:_validation.py:41   Difference: 150.0
+ERROR    app.services.inventory_adjustment._validation:_validation.py:42   Active FIFO lots: 2
+ERROR    app.services.inventory_adjustment._validation:_validation.py:46     Lot 1: 25.0 (restock, 2025-08-26 21:05:56.751774)
+ERROR    app.services.inventory_adjustment._validation:_validation.py:46     Lot 2: 50.0 (restock, 2025-08-26 21:05:56.846924)
+ERROR    app.services.inventory_adjustment._core:_core.py:108 FIFO VALIDATION FAILED before commit for item 1: FIFO sync error: inventory=225.0, fifo_total=75.0, diff=150.0
+=============================== warnings summary ===============================
+tests/test_inventory_routes_canonicalization.py: 11 warnings
+tests/test_reservation_canonicalization.py: 6 warnings
+tests/test_pos_integration_canonicalization.py: 3 warnings
+tests/test_inventory_fifo.py: 1 warning
+  /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_limiter/extension.py:333: UserWarning: Using the in-memory storage for tracking rate limits as no storage was explicitly specified. This is not recommended for production use. See: https://flask-limiter.readthedocs.io#configuring-a-storage-backend for documentation about configuring the storage backend.
+    warnings.warn(
+
+tests/test_inventory_routes_canonicalization.py: 11 warnings
+tests/test_reservation_canonicalization.py: 6 warnings
+tests/test_pos_integration_canonicalization.py: 3 warnings
+tests/test_inventory_fifo.py: 1 warning
+  /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_sqlalchemy/extension.py:881: SAWarning: Can't sort tables for DROP; an unresolvable foreign key dependency exists between tables: batch, product_sku; and backend does not support ALTER.  To restore at least a partial sort, apply use_alter=True to ForeignKey and ForeignKeyConstraint objects involved in the cycle to mark these as known cycles that will be ignored.
+    getattr(metadata, op_name)(bind=engine)
+
+tests/test_reservation_canonicalization.py::TestReservationCanonicalService::test_release_reservation_uses_canonical_service
+  /home/runner/workspace/app/services/reservation_service.py:106: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    source_entry = ProductSKUHistory.query.get(reservation.source_fifo_id)
+
+tests/test_reservation_canonicalization.py::TestReservationCanonicalService::test_release_reservation_uses_canonical_service
+  /home/runner/workspace/app/services/reservation_service.py:106: SAWarning: fully NULL primary key identity cannot load any object.  This condition may raise an error in a future release.
+    source_entry = ProductSKUHistory.query.get(reservation.source_fifo_id)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/test_pos_integration_canonicalization.py::test_pos_reservation_uses_canonical_service - AssertionError: process_inventory_adjustment should be called
+FAILED tests/test_inventory_fifo.py::TestInventoryFIFOCharacterization::test_fifo_deduction_order - AttributeError: 'UniversalStockCheckService' object has no attribute 'check...
+================== 2 failed, 29 passed, 44 warnings in 30.71s ==================

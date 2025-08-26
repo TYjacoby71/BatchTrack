@@ -1,4 +1,3 @@
-
 import pytest
 from unittest.mock import patch, MagicMock
 from app.services.pos_integration import POSIntegrationService
@@ -6,7 +5,7 @@ from app.services.pos_integration import POSIntegrationService
 
 def test_pos_sale_uses_canonical_service(app, db_session):
     """Test that POS sales use the canonical inventory adjustment service"""
-    
+
     # Create test data
     from app.models import Organization, User, SubscriptionTier, InventoryItem, ProductSKU
 
@@ -73,13 +72,13 @@ def test_pos_sale_uses_canonical_service(app, db_session):
 
 def test_pos_reservation_uses_canonical_service(app, db_session):
     """Test that POS reservations use the canonical inventory adjustment service"""
-    
+
     # Create test data
     from app.models import Organization, User, SubscriptionTier, InventoryItem
 
     import time
     unique_suffix = str(int(time.time() * 1000))[-6:]
-    
+
     tier = SubscriptionTier(name=f"Test Tier Res {unique_suffix}", tier_type="monthly", user_limit=5)
     db_session.add(tier)
     db_session.flush()
@@ -125,11 +124,11 @@ def test_pos_reservation_uses_canonical_service(app, db_session):
 
                 # Verify canonical service was called
                 assert mock_process.called, "process_inventory_adjustment should be called"
-                
+
                 # Verify the call pattern (deduction from original item)
                 calls = mock_process.call_args_list
                 assert len(calls) >= 1, "Should have at least one call to canonical service"
-                
+
                 # Check that the first call is a deduction (reservation)
                 first_call = calls[0]
                 assert first_call[1]['item_id'] == item.id
@@ -143,13 +142,13 @@ def test_pos_reservation_uses_canonical_service(app, db_session):
 
 def test_pos_confirm_sale_uses_canonical_service(app, db_session):
     """Test that POS sale confirmation uses canonical service"""
-    
+
     # Create test data
     from app.models import Organization, User, SubscriptionTier, InventoryItem, Reservation
 
     import time
     unique_suffix = str(int(time.time() * 1000))[-6:]
-    
+
     tier = SubscriptionTier(name=f"Test Tier Sale {unique_suffix}", tier_type="monthly", user_limit=5)
     db_session.add(tier)
     db_session.flush()
@@ -173,10 +172,11 @@ def test_pos_confirm_sale_uses_canonical_service(app, db_session):
     db_session.add(item)
     db_session.flush()
 
-    # Create a mock reservation
+    # Create a mock reservation with required reserved_item_id
     reservation = Reservation(
         order_id=f"TEST-ORDER-{unique_suffix}",
         product_item_id=item.id,
+        reserved_item_id=item.id,  # Add required field
         quantity=5.0,
         unit=item.unit,
         unit_cost=item.cost_per_unit,
@@ -207,7 +207,7 @@ def test_pos_confirm_sale_uses_canonical_service(app, db_session):
                     if call[1].get('change_type') == 'sale':
                         sale_call = call
                         break
-                
+
                 if sale_call:
                     assert sale_call[1]['item_id'] == item.id
                     assert sale_call[1]['quantity'] == -5.0  # Negative for deduction
@@ -231,7 +231,7 @@ class TestPOSIntegrationStructure:
             'process_sale',
             'get_available_quantity'
         ]
-        
+
         for method_name in expected_methods:
             if hasattr(POSIntegrationService, method_name):
                 method = getattr(POSIntegrationService, method_name)
@@ -276,11 +276,11 @@ class TestPOSIntegrationStructure:
 
 def test_pos_integration_canonical_dependency():
     """Test that POS integration properly depends on canonical services"""
-    
+
     # Test that the canonical service can be imported
     from app.services.inventory_adjustment import process_inventory_adjustment
     assert callable(process_inventory_adjustment)
-    
+
     # Test that POS service imports the canonical service
     import app.services.pos_integration as pos_module
     assert hasattr(pos_module, 'process_inventory_adjustment')
