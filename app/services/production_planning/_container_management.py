@@ -50,7 +50,7 @@ def analyze_container_options(
             logger.info(f"Recipe {recipe.id} has no allowed containers defined - showing all organization containers as fallback")
             use_fallback = True
             
-            # Get all containers in organization
+            # Get all containers in organization in a single query
             from ...models import IngredientCategory
             container_category = IngredientCategory.query.filter_by(
                 name='Container',
@@ -72,17 +72,21 @@ def analyze_container_options(
         fallback_msg = " (using fallback - all org containers)" if use_fallback else ""
         logger.info(f"Recipe {recipe.id} has {len(allowed_containers)} allowed containers{fallback_msg}: {allowed_containers}")
 
-        # Get container details and filter for proper storage capacity
-        container_options = []
+        # SINGLE QUERY: Get all container details at once to avoid N+1
         org_id = organization_id or (current_user.organization_id if current_user.is_authenticated else None)
-
+        containers = InventoryItem.query.filter(
+            InventoryItem.id.in_(allowed_containers),
+            InventoryItem.organization_id == org_id
+        ).all()
+        
+        # Create lookup dict for O(1) access
+        containers_by_id = {c.id: c for c in containers}
+        
+        container_options = []
+        
         for container_id in allowed_containers:
             try:
-                # Get container details directly
-                container = InventoryItem.query.filter_by(
-                    id=container_id,
-                    organization_id=org_id
-                ).first()
+                container = containers_by_id.get(container_id)
 
                 if not container:
                     logger.warning(f"Container {container_id} not found in organization {org_id}")
