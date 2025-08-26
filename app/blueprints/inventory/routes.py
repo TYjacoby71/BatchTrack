@@ -32,7 +32,10 @@ def can_edit_inventory_item(item):
 @login_required
 def list_inventory():
     inventory_type = request.args.get('type')
+    search = request.args.get('search', '').strip()
+    category_filter = request.args.get('category')
     show_archived = request.args.get('show_archived') == 'true'
+    show_zero_qty = request.args.get('show_zero_qty', 'true') == 'true'  # Show zero quantity by default
     query = InventoryItem.query
 
     # Add organization scoping - regular users only see their org's inventory
@@ -49,19 +52,20 @@ def list_inventory():
     if inventory_type:
         query = query.filter_by(type=inventory_type)
 
-    # Order by archived status (active items first) then by name
-    query = query.order_by(InventoryItem.is_archived.asc(), InventoryItem.name.asc())
-    inventory_items = query.all()
+    if not show_zero_qty:
+        query = query.filter(InventoryItem.quantity > 0)
+
+    ingredients = query.all()
     units = get_global_unit_list()
     categories = IngredientCategory.query.all()
-    total_value = sum(item.quantity * item.cost_per_unit for item in inventory_items)
+    total_value = sum(item.quantity * item.cost_per_unit for item in ingredients)
 
     # Calculate freshness and expired quantities for each item
     from ...blueprints.expiration.services import ExpirationService
     from datetime import datetime
     from sqlalchemy import and_
 
-    for item in inventory_items:
+    for item in ingredients:
         item.freshness_percent = ExpirationService.get_weighted_average_freshness(item.id)
 
         # Calculate expired quantity using only InventoryLot (lots handle FIFO tracking now)
@@ -84,12 +88,13 @@ def list_inventory():
             item.temp_available_quantity = item.quantity
 
     return render_template('inventory_list.html',
-                         inventory_items=inventory_items,
-                         items=inventory_items,  # Template expects 'items'
+                         inventory_items=ingredients,
+                         items=ingredients,  # Template expects 'items'
                          categories=categories,
                          total_value=total_value,
                          units=units,
                          show_archived=show_archived,
+                         show_zero_qty=show_zero_qty,
                          get_global_unit_list=get_global_unit_list)
 
 @inventory_bp.route('/set-columns', methods=['POST'])
@@ -110,7 +115,11 @@ def view_inventory(id):
     query = InventoryItem.query
     if current_user.organization_id:
         query = query.filter_by(organization_id=current_user.organization_id)
-    item = query.filter_by(id=id).first_or_404()
+    item = query.filter_by(id=id).first()
+    
+    if not item:
+        flash('Inventory item not found or access denied.', 'error')
+        return redirect(url_for('inventory.list_inventory'))
 
     # Calculate freshness and expired quantities for this item (same as list_inventory)
     from ...blueprints.expiration.services import ExpirationService
@@ -216,6 +225,8 @@ def add_inventory():
         )
 
         if success:
+            # Ensure database transaction is committed
+            db.session.commit()
             flash(f'New inventory item created: {message}', 'success')
             if item_id:
                 return redirect(url_for('inventory.view_inventory', id=item_id))
