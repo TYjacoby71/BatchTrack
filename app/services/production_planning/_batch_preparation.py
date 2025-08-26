@@ -8,6 +8,7 @@ Acts as a bridge between production planning and the batch service.
 
 import logging
 from typing import Dict, Any, Optional
+from flask_login import current_user
 
 from .types import ProductionPlan
 
@@ -40,9 +41,9 @@ def prepare_batch_data(production_plan: ProductionPlan) -> Dict[str, Any]:
         for ingredient in production_plan.ingredient_requirements:
             batch_data['planned_ingredients'].append({
                 'inventory_item_id': ingredient.ingredient_id,
-                'quantity_needed': ingredient.scaled_quantity,
+                'quantity_needed': getattr(ingredient, 'scaled_quantity', 0),
                 'unit': ingredient.unit,
-                'estimated_cost_per_unit': ingredient.cost_per_unit
+                'estimated_cost_per_unit': getattr(ingredient, 'cost_per_unit', 0)
             })
         
         # Prepare container data
@@ -77,7 +78,7 @@ def generate_batch_plan(recipe_id: int, scale: float = 1.0) -> Dict[str, Any]:
         request = ProductionRequest(
             recipe_id=recipe_id,
             scale=scale,
-            include_container_analysis=True
+            organization_id=current_user.organization_id if current_user.is_authenticated else None
         )
         
         # Execute planning

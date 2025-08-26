@@ -91,9 +91,15 @@ class ContainerPlanner:
             storage_unit = getattr(container, 'storage_unit', None)
 
             if not storage_capacity or not storage_unit:
+                logger.warning(f"⚠️  CONTAINER SKIPPED: {container.name} - missing capacity or unit")
                 continue
 
             converted_capacity, success = self._convert_capacity(storage_capacity, storage_unit)
+            
+            # Only include containers with successful conversions
+            if not success or converted_capacity <= 0:
+                logger.warning(f"⚠️  CONTAINER FILTERED: {container.name} - conversion failed or zero capacity")
+                continue
             
             processed_options.append(
                 ContainerOptionData(
@@ -106,6 +112,7 @@ class ContainerPlanner:
                     is_conversion_successful=success
                 )
             )
+            logger.info(f"✅ CONTAINER INCLUDED: {container.name} - {converted_capacity} {self.yield_unit}")
         
         # Sort options by largest converted capacity first for the greedy algorithm
         self.options = sorted(processed_options, key=lambda o: o.converted_capacity, reverse=True)
@@ -140,11 +147,11 @@ class ContainerPlanner:
             result = ConversionEngine.convert_units(capacity, unit, self.yield_unit)
             
             converted_value = result['converted_value'] if isinstance(result, dict) else float(result)
-            logger.info(f"Converted {capacity} {unit} -> {converted_value} {self.yield_unit}")
+            logger.info(f"✅ CONVERSION: {capacity} {unit} -> {converted_value} {self.yield_unit}")
             return converted_value, True
         except Exception as e:
-            logger.error(f"Unit conversion failed for {capacity} {unit} to {self.yield_unit}: {e}")
-            return capacity, False
+            logger.warning(f"❌ CONVERSION FAILED: Cannot convert {capacity} {unit} to {self.yield_unit}: {e}")
+            return 0.0, False  # Return 0 capacity for failed conversions
 
     def _create_greedy_fill_strategy(self) -> FillStrategy:
         """
@@ -185,7 +192,10 @@ class ContainerPlanner:
         
         warnings = []
         if not containers_to_use:
-            warnings.append("Could not find any combination of containers to hold the yield.")
+            warnings.append("No suitable containers found. Check that containers have compatible units that can be converted to the recipe's yield unit.")
+            if self.options:
+                available_units = list(set(opt.original_unit for opt in self.options))
+                warnings.append(f"Available container units: {', '.join(available_units)}. Recipe yield unit: {self.yield_unit}")
         elif efficiency < 90 and efficiency > 0:
             warnings.append(f"Low fill efficiency: {efficiency:.1f}%. Consider different container sizes.")
 
