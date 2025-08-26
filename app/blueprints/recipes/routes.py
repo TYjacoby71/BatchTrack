@@ -83,51 +83,15 @@ def view_recipe(recipe_id):
 @login_required
 @require_permission('recipes.plan_production')
 def auto_fill_containers(recipe_id):
-    """Auto-fill container selection for recipe"""
+    """Auto-fill container selection for recipe - delegates to container management service"""
     try:
         data = request.get_json()
         scale = float(data.get('scale', 1.0))
-        yield_amount = float(data.get('yield_amount'))
-        yield_unit = data.get('yield_unit')
 
-        # Get recipe with all relationships loaded
-        from app.models import Recipe, RecipeIngredient
-        from sqlalchemy.orm import joinedload
-        recipe = Recipe.query.options(
-            joinedload(Recipe.recipe_ingredients).joinedload(RecipeIngredient.inventory_item)
-        ).get(recipe_id)
-
-        if not recipe:
-            return jsonify({'success': False, 'error': 'Recipe not found'}), 404
-
-        # Delegate to production planning service
-        from app.services.production_planning._container_management import analyze_container_options
-        strategy, options = analyze_container_options(
-            recipe=recipe,
-            scale=scale,
-            preferred_container_id=None,
-            organization_id=current_user.organization_id
-        )
-
-        # Format result to match expected frontend format
-        if strategy and options:
-            result = {
-                'success': True,
-                'container_selection': [{
-                    'id': opt.container_id,
-                    'name': opt.container_name,
-                    'capacity': opt.storage_capacity,
-                    'unit': opt.storage_unit,
-                    'quantity': opt.containers_needed,
-                    'stock_qty': opt.available_quantity,
-                    'available_quantity': opt.available_quantity
-                } for opt in options],
-                'total_capacity': sum(opt.storage_capacity * opt.containers_needed for opt in options),
-                'containment_percentage': strategy.average_fill_percentage if strategy else 0
-            }
-        else:
-            result = {'success': False, 'error': 'No suitable containers found'}
-
+        # Delegate entirely to container management service
+        from app.services.production_planning._container_management import get_container_plan_for_api
+        result = get_container_plan_for_api(recipe_id, scale)
+        
         return jsonify(result)
 
     except Exception as e:
