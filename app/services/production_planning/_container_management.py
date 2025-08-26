@@ -108,6 +108,8 @@ def analyze_container_options(
 
                 # Convert storage capacity to recipe yield unit if needed
                 container_capacity_in_yield_units = storage_capacity
+                conversion_successful = False
+                
                 if storage_unit != recipe.predicted_yield_unit:
                     try:
                         from ...services.unit_conversion import ConversionEngine
@@ -120,22 +122,28 @@ def analyze_container_options(
                         
                         if isinstance(conversion_result, dict):
                             container_capacity_in_yield_units = conversion_result['converted_value']
+                            conversion_successful = True
                             logger.info(f"Converted container {container.name} capacity: {storage_capacity} {storage_unit} → {container_capacity_in_yield_units} {recipe.predicted_yield_unit}")
                         else:
                             container_capacity_in_yield_units = float(conversion_result)
+                            conversion_successful = True
                             logger.info(f"Converted container {container.name} capacity: {storage_capacity} {storage_unit} → {container_capacity_in_yield_units} {recipe.predicted_yield_unit}")
                     except Exception as e:
                         logger.warning(f"Unit conversion failed for container {container.name}: {e}. Using original capacity.")
                         container_capacity_in_yield_units = storage_capacity
+                        conversion_successful = False
 
-                # Calculate containers needed
+                # Calculate containers needed based on converted capacity
                 containers_needed = max(1, int((total_yield / container_capacity_in_yield_units) + 0.99))
 
                 container_option = {
                     'id': container_id,
                     'name': container.name,
-                    'capacity': storage_capacity,
-                    'unit': storage_unit,
+                    'capacity': storage_capacity,  # Original storage capacity
+                    'unit': storage_unit,  # Original storage unit
+                    'capacity_in_yield_unit': round(container_capacity_in_yield_units, 3),  # Converted capacity
+                    'yield_unit': recipe.predicted_yield_unit,  # Recipe yield unit
+                    'conversion_successful': conversion_successful,
                     'available_quantity': int(available_qty),
                     'quantity': containers_needed,
                     'stock_qty': int(available_qty)
@@ -215,8 +223,11 @@ def get_container_plan_for_api(recipe_id: int, scale: float) -> Dict[str, Any]:
         if strategy:
             # Format the response to match frontend expectations
             container_selection = []
-            for opt in strategy.selected_containers:
-                container_selection.append({
+            for i, opt in enumerate(strategy.selected_containers):
+                # Get the original container option data for capacity details
+                original_option = next((o for o in options if o['id'] == opt.container_id), None)
+                
+                container_data = {
                     'id': opt.container_id,
                     'name': opt.container_name,
                     'capacity': opt.capacity,
@@ -224,7 +235,17 @@ def get_container_plan_for_api(recipe_id: int, scale: float) -> Dict[str, Any]:
                     'quantity': opt.containers_needed,
                     'stock_qty': opt.available_quantity,
                     'available_quantity': opt.available_quantity
-                })
+                }
+                
+                # Add converted capacity info if available
+                if original_option:
+                    container_data.update({
+                        'capacity_in_yield_unit': original_option.get('capacity_in_yield_unit'),
+                        'yield_unit': original_option.get('yield_unit'),
+                        'conversion_successful': original_option.get('conversion_successful', False)
+                    })
+                
+                container_selection.append(container_data)
 
             return {
                 'success': True,

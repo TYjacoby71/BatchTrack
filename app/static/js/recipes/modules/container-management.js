@@ -172,27 +172,42 @@ export class ContainerManager {
             const containerUnit = container.unit || 'ml';
             const quantityNeeded = container.quantity || 0;
             
+            // Build capacity display with both units
+            let capacityDisplay = `${containerCapacity} ${containerUnit}`;
+            
+            // If we have converted capacity info, show both
+            if (container.capacity_in_yield_unit && container.yield_unit && container.conversion_successful) {
+                if (containerUnit !== container.yield_unit) {
+                    capacityDisplay = `
+                        <div>
+                            <strong>${container.capacity_in_yield_unit} ${container.yield_unit}</strong>
+                            <br><small class="text-muted">(${containerCapacity} ${containerUnit})</small>
+                        </div>
+                    `;
+                }
+            }
+            
             html += `
                 <div class="row align-items-center mb-3 p-3 border rounded ${containerClass}" data-${isAutoFill ? 'auto' : 'manual'}-container="${index}">
-                    <div class="col-md-5">
+                    <div class="col-md-4">
                         <label class="form-label small">Container Type</label>
                         <div class="form-control form-control-sm bg-light border-0">
                             <strong>${containerName}</strong>
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <label class="form-label small">Quantity Needed</label>
                         <div class="form-control form-control-sm bg-light border-0">
                             <strong>${quantityNeeded}</strong>
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-4">
                         <label class="form-label small">Capacity Each</label>
                         <div class="form-control form-control-sm bg-light border-0">
-                            ${containerCapacity} ${containerUnit}
+                            ${capacityDisplay}
                         </div>
                     </div>
-                    <div class="col-md-1">
+                    <div class="col-md-2">
                         <label class="form-label small">Available Stock</label>
                         <div class="badge ${stockQuantity >= quantityNeeded ? 'bg-success' : 'bg-warning'} fs-6">${stockQuantity}</div>
                     </div>
@@ -265,22 +280,22 @@ export class ContainerManager {
 
         return `
             <div class="row align-items-center mb-3 p-3 border rounded bg-light" data-container-row="${index}">
-                <div class="col-md-5">
+                <div class="col-md-4">
                     <label class="form-label small">Container Type</label>
                     <select class="form-select form-select-sm container-select" data-row="${index}">
                         ${optionsHTML}
                     </select>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label class="form-label small">Quantity</label>
                     <input type="number" min="1" class="form-control form-control-sm container-quantity" 
                            data-row="${index}" value="1">
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-4">
                     <label class="form-label small">Capacity Each</label>
                     <div class="form-control form-control-sm bg-light border-0 container-capacity" data-row="${index}">-</div>
                 </div>
-                <div class="col-md-1">
+                <div class="col-md-2">
                     <label class="form-label small">Available Stock</label>
                     <div class="badge bg-info fs-6 available-stock" data-row="${index}">-</div>
                 </div>
@@ -348,9 +363,23 @@ export class ContainerManager {
         console.log('🔍 STOCK DISPLAY DEBUG: Container:', container.name, 'Stock:', stockQuantity);
         stockBadge.textContent = stockQuantity;
 
-        // Update capacity display
+        // Update capacity display with both units if available
         if (capacityDiv) {
-            capacityDiv.textContent = `${container.capacity || 0} ${container.unit || 'ml'}`;
+            let capacityDisplay = `${container.capacity || 0} ${container.unit || 'ml'}`;
+            
+            // If we have converted capacity info, show both
+            if (container.capacity_in_yield_unit && container.yield_unit && container.conversion_successful) {
+                if ((container.unit || 'ml') !== container.yield_unit) {
+                    capacityDisplay = `
+                        <div>
+                            <strong>${container.capacity_in_yield_unit} ${container.yield_unit}</strong>
+                            <br><small class="text-muted">(${container.capacity} ${container.unit})</small>
+                        </div>
+                    `;
+                }
+            }
+            
+            capacityDiv.innerHTML = capacityDisplay;
         }
 
         this.updateContainerProgress();
