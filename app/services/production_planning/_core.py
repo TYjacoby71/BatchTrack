@@ -1,25 +1,20 @@
 """
 Production Planning Core
 
-Main orchestration logic that coordinates all aspects of production planning:
-- Recipe requirements calculation
-- Stock validation via USCS
-- Container strategy selection
-- Cost analysis
-- Issue identification and recommendations
+Main orchestration logic that coordinates:
+- Recipe requirements via USCS
+- Container analysis  
+- Cost calculation
+- Data prep for batch handoff
 """
 
 import logging
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional
 from flask_login import current_user
 
 from ...models import Recipe
 from ..stock_check import UniversalStockCheckService
-from .types import (
-    ProductionRequest, ProductionPlan, ProductionStatus,
-    IngredientRequirement, CostBreakdown
-)
-from ._stock_validation import validate_ingredients_with_uscs
+from .types import ProductionRequest, ProductionPlan, IngredientRequirement, CostBreakdown
 from ._container_management import analyze_container_options
 from ._cost_calculation import calculate_comprehensive_costs
 
@@ -34,60 +29,87 @@ def plan_production_comprehensive(
     max_cost_per_unit: Optional[float] = None
 ) -> Dict[str, Any]:
     """
-    Comprehensive production planning with full analysis.
+    Main production planning orchestration.
 
-    This is the main entry point that orchestrates all production planning logic.
+    Coordinates: Recipe → USCS stock check → Container analysis → Batch prep
     """
     try:
         # Create production request
         request = ProductionRequest(
             recipe_id=recipe_id,
             scale=scale,
-            preferred_container_id=preferred_container_id,
-            include_container_analysis=include_container_analysis,
-            max_cost_per_unit=max_cost_per_unit,
             organization_id=current_user.organization_id if current_user.is_authenticated else None
         )
 
         # Execute planning
-        plan = execute_production_planning(request)
+        plan = execute_production_planning(request, include_container_analysis)
 
         # Return as dictionary for API compatibility
         return plan.to_dict()
 
     except Exception as e:
-        logger.error(f"Error in comprehensive production planning: {e}")
+        logger.error(f"Error in production planning: {e}")
         return {
             'success': False,
-            'status': 'error',
             'feasible': False,
             'error': f'Production planning failed: {str(e)}',
-            'message': f'Production planning failed: {str(e)}'
+            'stock_results': [],
+            'issues': [f'Production planning failed: {str(e)}']
         }
 
 
-def execute_production_planning(request: ProductionRequest) -> ProductionPlan:
-    """Execute the complete production planning workflow"""
+def execute_production_planning(request: ProductionRequest, include_containers: bool = True) -> ProductionPlan:
+    """Execute the production planning workflow"""
 
-    # 1. Load and validate recipe
+    # 1. Load recipe
     recipe = Recipe.query.get(request.recipe_id)
     if not recipe:
         raise ValueError(f"Recipe {request.recipe_id} not found")
 
     logger.info(f"PRODUCTION_PLANNING: Starting analysis for recipe {recipe.name} at scale {request.scale}")
 
-    # 2. Calculate ingredient requirements and validate availability
-    ingredient_requirements = validate_ingredients_with_uscs(recipe, request.scale, request.organization_id)
+    # 2. Get stock check from USCS
+    uscs = UniversalStockCheckService()
+    stock_results = uscs.check_recipe_stock(recipe.id, request.scale)
 
-    # 3. Analyze container options if requested
-    container_strategy = None
-    container_options = []
-    if request.include_container_analysis:
-        container_strategy, container_options = analyze_container_options(
-            recipe, request.scale, request.preferred_container_id, request.organization_id
+    if not stock_results.get('success'):
+        logger.error(f"USCS stock check failed: {stock_results.get('error')}")
+        return ProductionPlan(
+            request=request,
+            feasible=False,
+            ingredient_requirements=[],
+            projected_yield={'amount': 0, 'unit': 'count'},
+            issues=[stock_results.get('error', 'Stock check failed')]
         )
 
-    # 4. Calculate comprehensive costs
+    # 3. Convert USCS results to ingredient requirements
+    ingredient_requirements = []
+    for stock_item in stock_results.get('stock_check', []):
+        recipe_ingredient = next(
+            (ri for ri in recipe.recipe_ingredients if ri.inventory_item_id == stock_item['item_id']),
+            None
+        )
+
+        if recipe_ingredient:
+            requirement = IngredientRequirement(
+                ingredient_id=stock_item['item_id'],
+                ingredient_name=stock_item['item_name'],
+                scale=request.scale,
+                unit=stock_item['needed_unit'],
+                total_cost=(stock_item['needed_quantity']) * (getattr(recipe_ingredient.inventory_item, 'cost_per_unit', 0) or 0),
+                status=stock_item.get('status', 'unknown')
+            )
+            ingredient_requirements.append(requirement)
+
+    # 4. Analyze containers if requested
+    container_strategy = None
+    container_options = []
+    if include_containers:
+        container_strategy, container_options = analyze_container_options(
+            recipe, request.scale, None, request.organization_id
+        )
+
+    # 5. Calculate costs
     cost_breakdown = calculate_comprehensive_costs(
         ingredient_requirements,
         container_strategy,
@@ -95,16 +117,19 @@ def execute_production_planning(request: ProductionRequest) -> ProductionPlan:
         request.scale
     )
 
-    # 5. Determine overall feasibility status
-    status, issues, recommendations = analyze_production_feasibility(
-        ingredient_requirements, container_strategy, cost_breakdown, request
-    )
+    # 6. Determine feasibility based on USCS results
+    feasible = stock_results.get('all_ok', False)
+    issues = []
+    if not feasible:
+        issues.append("Insufficient ingredients available")
+    if include_containers and not container_strategy:
+        issues.append("No suitable containers found")
+        feasible = False
 
-    # 6. Create final production plan
+    # 7. Create production plan
     plan = ProductionPlan(
         request=request,
-        status=status,
-        feasible=status == ProductionStatus.FEASIBLE,
+        feasible=feasible,
         ingredient_requirements=ingredient_requirements,
         projected_yield={
             'amount': (recipe.predicted_yield or 0) * request.scale,
@@ -113,63 +138,8 @@ def execute_production_planning(request: ProductionRequest) -> ProductionPlan:
         container_strategy=container_strategy,
         container_options=container_options,
         cost_breakdown=cost_breakdown,
-        issues=issues,
-        recommendations=recommendations
+        issues=issues
     )
 
-    logger.info(f"PRODUCTION_PLANNING: Analysis complete - Status: {status.value}, Feasible: {plan.feasible}")
-
+    logger.info(f"PRODUCTION_PLANNING: Analysis complete - Feasible: {plan.feasible}")
     return plan
-
-
-def analyze_production_feasibility(
-    ingredients: list,
-    container_strategy,
-    cost_breakdown: CostBreakdown,
-    request: ProductionRequest
-) -> tuple:
-    """Analyze overall production feasibility and generate recommendations"""
-
-    issues = []
-    recommendations = []
-
-    # Check ingredient availability
-    insufficient_ingredients = [ing for ing in ingredients if ing.status in ['insufficient', 'unavailable']]
-    if insufficient_ingredients:
-        issues.append(f"{len(insufficient_ingredients)} ingredients have insufficient stock")
-        recommendations.append("Restock insufficient ingredients before production")
-        # If we have insufficient ingredients, we can't proceed
-        # We still want to return the stock check results, so we don't raise an error here.
-        # The status will reflect the insufficient ingredients.
-        return ProductionStatus.INSUFFICIENT_INGREDIENTS, issues, recommendations
-
-
-    # Check container availability  
-    if request.include_container_analysis and (not container_strategy or not container_strategy.selected_containers):
-        issues.append("No suitable containers available for production")
-        if not container_strategy:
-            recommendations.append("Add containers to inventory or specify allowed containers for this recipe")
-        return ProductionStatus.NO_CONTAINERS, issues, recommendations
-
-    # Check cost constraints
-    if request.max_cost_per_unit and cost_breakdown.cost_per_unit > request.max_cost_per_unit:
-        issues.append(f"Cost per unit (${cost_breakdown.cost_per_unit:.2f}) exceeds maximum (${request.max_cost_per_unit:.2f})")
-        recommendations.append("Consider scaling up production or finding lower-cost ingredients")
-        return ProductionStatus.COST_PROHIBITIVE, issues, recommendations
-
-    # Check for low stock warnings
-    low_stock_ingredients = [ing for ing in ingredients if ing.status == 'low']
-    if low_stock_ingredients:
-        issues.append(f"{len(low_stock_ingredients)} ingredients are running low")
-        recommendations.append("Consider restocking low inventory items after production")
-
-    # Container efficiency recommendations
-    if container_strategy and container_strategy.average_fill_percentage < 60:
-        recommendations.append(f"Container fill efficiency is {container_strategy.average_fill_percentage:.0f}% - consider different container sizes")
-
-    if container_strategy and container_strategy.waste_percentage > 20:
-        recommendations.append(f"High container waste ({container_strategy.waste_percentage:.0f}%) - consider scaling recipe or using different containers")
-
-    return ProductionStatus.FEASIBLE, issues, recommendations
-
-
