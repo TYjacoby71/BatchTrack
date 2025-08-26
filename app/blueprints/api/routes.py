@@ -80,12 +80,10 @@ def get_dashboard_alerts():
 
 from .ingredient_routes import ingredient_api_bp
 from .container_routes import container_api_bp
-from .fifo_routes import fifo_api_bp
 from .reservation_routes import reservation_api_bp
 
 # Register sub-blueprints
 
 api_bp.register_blueprint(ingredient_api_bp)
 api_bp.register_blueprint(container_api_bp)
-api_bp.register_blueprint(fifo_api_bp)
 api_bp.register_blueprint(reservation_api_bp)

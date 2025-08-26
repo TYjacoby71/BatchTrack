@@ -17,7 +17,7 @@ from flask_login import current_user
 from .types import StockCheckRequest, StockCheckResult, InventoryCategory, StockStatus
 from .handlers import IngredientHandler, ContainerHandler, ProductHandler
 from ..unit_conversion import ConversionEngine
-from ...blueprints.fifo.services import FIFOService
+# FIFOService functionality moved to inventory_adjustment service
 
 logger = logging.getLogger(__name__)
 
