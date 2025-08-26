@@ -40,19 +40,19 @@ def analyze_container_options(
         # Calculate fill requirements
         yield_amount = (recipe.predicted_yield or 0) * scale
         yield_unit = recipe.predicted_yield_unit or 'ml'
-        
+
         logger.info(f"CONTAINER_ANALYSIS: Recipe yield {yield_amount} {yield_unit}")
 
         # Use USCS to analyze each container option with proper unit conversion
         from ..stock_check import UniversalStockCheckService
         from ..stock_check.types import InventoryCategory
-        
+
         uscs = UniversalStockCheckService()
         analyzed_options = []
 
         for container in container_items:
             logger.info(f"CONTAINER_ANALYSIS: Checking container {container.name} via USCS")
-            
+
             # Use USCS to check container capacity vs yield requirements
             result = uscs.check_single_item(
                 item_id=container.id,
@@ -60,18 +60,18 @@ def analyze_container_options(
                 unit=yield_unit,  # Recipe yield unit
                 category=InventoryCategory.CONTAINER
             )
-            
+
             # Convert USCS result to ContainerOption
             if result.conversion_details:
                 storage_capacity = result.conversion_details.get('storage_capacity', 0)
                 storage_unit = result.conversion_details.get('storage_unit', 'ml')
                 yield_in_storage_units = result.conversion_details.get('yield_in_storage_units', 0)
                 containers_needed = result.needed_quantity  # USCS calculates containers needed
-                
+
                 # Calculate fill percentage
                 total_capacity = storage_capacity * containers_needed
                 fill_percentage = (yield_in_storage_units / total_capacity * 100) if total_capacity > 0 else 0
-                
+
                 option = ContainerOption(
                     container_id=container.id,
                     container_name=container.name,
@@ -82,7 +82,7 @@ def analyze_container_options(
                     fill_percentage=fill_percentage,
                     containers_needed=int(containers_needed)
                 )
-                
+
                 analyzed_options.append(option)
                 logger.info(f"CONTAINER_ANALYSIS: {container.name} - needs {containers_needed} containers, fill: {fill_percentage:.1f}%")
             else:
@@ -138,18 +138,18 @@ def _analyze_container_option(container: InventoryItem, yield_amount: float, yie
     """Analyze a single container option"""
     try:
         logger.info(f"CONTAINER_ANALYSIS: Analyzing container {container.id} - {container.name}")
-        
+
         # Get container capacity - check multiple possible attribute names
         storage_capacity = 0
         storage_unit = 'ml'
-        
+
         # Try different attribute names that might exist
         for attr_name in ['storage_amount', 'storage_capacity', 'capacity', 'volume']:
             if hasattr(container, attr_name):
                 storage_capacity = getattr(container, attr_name, 0) or 0
                 logger.info(f"CONTAINER_ANALYSIS: Found capacity {storage_capacity} via {attr_name}")
                 break
-                
+
         for attr_name in ['storage_unit', 'capacity_unit', 'unit']:
             if hasattr(container, attr_name):
                 storage_unit = getattr(container, attr_name, 'ml') or 'ml'
@@ -245,7 +245,7 @@ def _create_user_specified_strategy(options: List[ContainerOption], container_id
         selected_containers=[selected_option],
         total_containers_needed=selected_option.containers_needed,
         total_container_cost=total_cost,
-        average_fill_percentage=selected_option.fill_percentage,
+        average_fill_percentage=selected.fill_percentage,
         waste_percentage=waste_percentage
     )
 
@@ -259,7 +259,7 @@ def calculate_container_fill_strategy(recipe_id: int, scale: float, yield_amount
     """
     try:
         logger.info(f"CONTAINER_FILL: Using USCS for recipe {recipe_id}, scale {scale}, yield {yield_amount} {yield_unit}")
-        
+
         recipe = Recipe.query.get(recipe_id)
         if not recipe:
             return {'success': False, 'error': 'Recipe not found'}
@@ -279,10 +279,10 @@ def calculate_container_fill_strategy(recipe_id: int, scale: float, yield_amount
 
         # Filter to containers with stock
         available_containers = [c for c in containers if (c.quantity or 0) > 0]
-        
+
         if not available_containers:
             return {
-                'success': False, 
+                'success': False,
                 'error': 'No containers available. Please add containers to inventory or check recipe configuration.',
                 'container_selection': [],
                 'total_capacity': 0,
@@ -292,25 +292,25 @@ def calculate_container_fill_strategy(recipe_id: int, scale: float, yield_amount
         # Use USCS to analyze each container with proper unit conversion
         from ..stock_check import UniversalStockCheckService
         from ..stock_check.types import InventoryCategory
-        
+
         uscs = UniversalStockCheckService()
         container_analyses = []
-        
+
         for container in available_containers:
             logger.info(f"CONTAINER_FILL: Analyzing {container.name} with USCS")
-            
+
             result = uscs.check_single_item(
                 item_id=container.id,
                 quantity_needed=yield_amount,
                 unit=yield_unit,
                 category=InventoryCategory.CONTAINER
             )
-            
+
             if result.conversion_details:
                 storage_capacity = result.conversion_details.get('storage_capacity', 0)
                 storage_unit = result.conversion_details.get('storage_unit', 'ml')
                 containers_needed = result.needed_quantity
-                
+
                 container_analyses.append({
                     'id': container.id,
                     'name': container.name,
@@ -320,7 +320,7 @@ def calculate_container_fill_strategy(recipe_id: int, scale: float, yield_amount
                     'stock_qty': container.quantity or 0,
                     'available_quantity': container.quantity or 0
                 })
-                
+
                 logger.info(f"CONTAINER_FILL: {container.name} - {storage_capacity} {storage_unit}, needs {containers_needed} containers")
 
         if not container_analyses:
@@ -336,13 +336,13 @@ def calculate_container_fill_strategy(recipe_id: int, scale: float, yield_amount
         for container in container_analyses:
             if total_yield_covered >= yield_amount:
                 break
-                
+
             containers_needed = container['containers_needed']
             available_stock = container['stock_qty']
-            
+
             # Use as many as available, up to what's needed
             qty_to_use = min(containers_needed, available_stock)
-            
+
             if qty_to_use > 0:
                 selected_containers.append({
                     'id': container['id'],
@@ -353,11 +353,11 @@ def calculate_container_fill_strategy(recipe_id: int, scale: float, yield_amount
                     'stock_qty': container['stock_qty'],
                     'available_quantity': container['available_quantity']
                 })
-                
+
                 # Calculate how much yield this covers
                 yield_covered = qty_to_use * container['capacity']
                 total_yield_covered += yield_covered
-                
+
                 logger.info(f"CONTAINER_FILL: Selected {qty_to_use}x {container['name']}, covers {yield_covered} units")
 
         # Calculate final metrics
