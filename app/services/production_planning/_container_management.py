@@ -10,6 +10,7 @@ from ...models import Recipe, InventoryItem
 from flask_login import current_user
 from ..stock_check import UniversalStockCheckService
 from ..stock_check.types import StockCheckRequest, InventoryCategory
+from .types import ContainerStrategy, ContainerOption, ContainerFillStrategy
 
 
 logger = logging.getLogger(__name__)
