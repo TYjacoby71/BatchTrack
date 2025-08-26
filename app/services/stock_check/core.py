@@ -268,71 +268,7 @@ class UniversalStockCheckService:
                 'error': str(e)
             }
 
-    def check_stock(self, requests: List[StockCheckRequest]) -> List[StockCheckResult]:
-        """Check stock for multiple items"""
-        results = []
-
-        for request in requests:
-            if request.item_id:
-                # Single item check
-                result = self.check_single_item(
-                    item_id=request.item_id,
-                    quantity_needed=request.quantity_needed,
-                    unit=request.unit,
-                    category=request.inventory_category
-                )
-                results.append(result)
-            else:
-                # Bulk category check with optional recipe scoping
-                bulk_results = self._check_category_bulk(request)
-                results.extend(bulk_results)
-
-        return results
-
-    def _check_category_bulk(self, request: StockCheckRequest) -> List[StockCheckResult]:
-        """Check all items in a category with optional recipe scoping"""
-        if not request.inventory_category or not request.organization_id:
-            return []
-
-        try:
-            # Get appropriate handler
-            handler = self._get_handler(request.inventory_category)
-            if not handler:
-                logger.error(f"No handler for category {request.inventory_category}")
-                return []
-
-            # Build query for items in category
-            category_name = request.category.value
-            query = InventoryItem.query.filter_by(
-                type=category_name,
-                organization_id=request.organization_id
-            )
-
-            # Apply recipe scoping if provided
-            if request.recipe_scoping:
-                query = query.filter(InventoryItem.id.in_(request.recipe_scoping))
-                logger.info(f"USCS_BULK: Applied recipe scoping to {len(request.recipe_scoping)} allowed items")
-
-            items = query.all()
-            logger.info(f"USCS_BULK: Found {len(items)} items in category {category_name}")
-
-            results = []
-            for item in items:
-                item_request = StockCheckRequest(
-                    item_id=item.id,
-                    quantity_needed=request.quantity_needed,
-                    unit=request.unit,
-                    category=request.category,
-                    organization_id=request.organization_id
-                )
-                result = handler.check_availability(item_request, request.organization_id)
-                results.append(result)
-
-            return results
-
-        except Exception as e:
-            logger.error(f"Error in bulk category check: {e}")
-            return []
+    
 
     def _create_error_result(self, item_id: int, error_message: str, 
                            quantity_needed: float, unit: str) -> StockCheckResult:
