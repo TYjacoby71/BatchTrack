@@ -102,9 +102,7 @@ def analyze_container_options(
                     available_quantity=int(container.quantity),
                     containers_needed=containers_needed,
                     cost_each=getattr(container, 'cost_per_unit', 0) or 0,
-                    fill_percentage=fill_percentage,
-                    waste_percentage=waste_percentage,
-                    total_capacity=total_capacity_needed
+                    fill_percentage=fill_percentage
                 )
 
                 container_options.append(container_option)
