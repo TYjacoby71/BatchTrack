@@ -1,0 +1,1198 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.13, pytest-8.3.5, pluggy-1.5.0 -- /home/runner/workspace/.pythonlibs/bin/python
+cachedir: .pytest_cache
+rootdir: /home/runner/workspace
+collected 71 items                                                             
+
+tests/test_auth_permissions.py::TestAuthPermissions::test_permission_required_decorator_allows_with_permission PASSED [  1%]
+tests/test_auth_permissions.py::TestAuthPermissions::test_permission_required_returns_json_for_api PASSED [  2%]
+tests/test_auth_permissions.py::TestAuthPermissions::test_any_permission_required_decorator PASSED [  4%]
+tests/test_auth_permissions.py::TestAuthPermissions::test_tier_required_decorator PASSED [  5%]
+tests/test_auth_permissions.py::TestAuthPermissions::test_user_has_any_permission_method PASSED [  7%]
+tests/test_auth_permissions.py::TestAuthPermissions::test_api_unauth_returns_json_401 PASSED [  8%]
+tests/test_auth_permissions.py::TestAuthPermissions::test_web_unauth_redirects_to_login PASSED [  9%]
+tests/test_auth_permissions.py::TestAuthPermissions::test_csrf_token_available_in_templates PASSED [ 11%]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_tier_permission_is_the_hard_ceiling PASSED [ 12%]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[active-200] PASSED [ 14%]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[past_due-302] PASSED [ 15%]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[suspended-302] PASSED [ 16%]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_billing_status_enforcement[canceled-302] PASSED [ 18%]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_developer_can_masquerade_regardless_of_billing PASSED [ 19%]
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_complete_security_cascade PASSED [ 21%]
+tests/test_expiration_canonicalization.py::test_expiration_service_uses_canonical_adjustment PASSED [ 22%]
+tests/test_expiration_canonicalization.py::TestExpirationCanonicalService::test_mark_fifo_expired_calls_canonical_service PASSED [ 23%]
+tests/test_expiration_canonicalization.py::TestExpirationCanonicalService::test_mark_product_expired_calls_canonical_service PASSED [ 25%]
+tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_oauth_service_exists PASSED [ 26%]
+tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_auth_login_endpoint_exists PASSED [ 28%]
+tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_auth_callback_endpoint_exists PASSED [ 29%]
+tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_oauth_state_validation_path PASSED [ 30%]
+tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_oauth_service_methods_exist PASSED [ 32%]
+tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_oauth_configuration_status PASSED [ 33%]
+tests/test_google_oauth.py::TestGoogleOAuthCharacterization::test_oauth_callback_invalid_state PASSED [ 35%]
+tests/test_inventory_fifo.py::TestInventoryFIFOCharacterization::test_single_entry_point_exists PASSED [ 36%]
+tests/test_inventory_fifo.py::TestInventoryFIFOCharacterization::test_fifo_deduction_order FAILED [ 38%]
+tests/test_inventory_fifo.py::TestInventoryFIFOCharacterization::test_inventory_adjustment_delegates_properly PASSED [ 39%]
+tests/test_inventory_routes_canonicalization.py::TestInventoryCanonicalService::test_batch_integration_uses_canonical_service ERROR [ 40%]
+tests/test_inventory_routes_canonicalization.py::TestInventoryCanonicalService::test_reservation_service_uses_canonical_service ERROR [ 42%]
+tests/test_inventory_routes_canonicalization.py::TestInventoryCanonicalService::test_pos_integration_uses_canonical_service ERROR [ 43%]
+tests/test_inventory_routes_canonicalization.py::TestInventoryCanonicalService::test_production_planning_service_integration ERROR [ 45%]
+tests/test_inventory_routes_canonicalization.py::TestInventoryCanonicalService::test_stock_check_service_integration ERROR [ 46%]
+tests/test_inventory_routes_canonicalization.py::TestInventoryCanonicalService::test_inventory_adjustment_canonical_interface ERROR [ 47%]
+tests/test_inventory_routes_canonicalization.py::TestBatchServiceCanonicalIntegration::test_batch_service_uses_canonical_adjustments ERROR [ 49%]
+tests/test_inventory_routes_canonicalization.py::TestBatchServiceCanonicalIntegration::test_production_planning_batch_handoff ERROR [ 50%]
+tests/test_inventory_routes_canonicalization.py::TestContainerManagementIntegration::test_container_analysis_integration ERROR [ 52%]
+tests/test_inventory_routes_canonicalization.py::test_service_import_compatibility ERROR [ 53%]
+tests/test_inventory_routes_canonicalization.py::test_canonical_service_consistency ERROR [ 54%]
+tests/test_pos_integration_canonicalization.py::test_pos_sale_uses_canonical_service PASSED [ 56%]
+tests/test_pos_integration_canonicalization.py::test_pos_reservation_uses_canonical_service FAILED [ 57%]
+tests/test_pos_integration_canonicalization.py::test_pos_confirm_sale_uses_canonical_service FAILED [ 59%]
+tests/test_pos_integration_canonicalization.py::TestPOSIntegrationStructure::test_pos_service_has_expected_methods PASSED [ 60%]
+tests/test_pos_integration_canonicalization.py::TestPOSIntegrationStructure::test_pos_service_canonical_integration PASSED [ 61%]
+tests/test_pos_integration_canonicalization.py::TestPOSIntegrationStructure::test_pos_service_reservation_integration PASSED [ 63%]
+tests/test_pos_integration_canonicalization.py::TestPOSIntegrationStructure::test_pos_service_error_handling PASSED [ 64%]
+tests/test_pos_integration_canonicalization.py::test_pos_integration_canonical_dependency PASSED [ 66%]
+tests/test_product_sku.py::TestProductSKUCharacterization::test_product_creation_flow PASSED [ 67%]
+tests/test_product_sku.py::TestProductSKUCharacterization::test_sku_generation_constraints PASSED [ 69%]
+tests/test_product_sku.py::TestProductSKUCharacterization::test_product_service_exists PASSED [ 70%]
+tests/test_product_sku.py::TestProductSKUCharacterization::test_sku_creation_validation PASSED [ 71%]
+tests/test_reservation_canonicalization.py::TestReservationCanonicalService::test_reservation_service_imports_canonical_service PASSED [ 73%]
+tests/test_reservation_canonicalization.py::TestReservationCanonicalService::test_reservation_service_structure ERROR [ 74%]
+tests/test_reservation_canonicalization.py::TestReservationCanonicalService::test_create_reservation_uses_canonical_service FAILED [ 76%]
+tests/test_reservation_canonicalization.py::TestReservationCanonicalService::test_release_reservation_uses_canonical_service FAILED [ 77%]
+tests/test_reservation_canonicalization.py::TestReservationCanonicalService::test_reservation_model_integration ERROR [ 78%]
+tests/test_reservation_canonicalization.py::TestReservationCanonicalService::test_reservation_status_management ERROR [ 80%]
+tests/test_reservation_canonicalization.py::TestReservationCanonicalService::test_reservation_canonical_dependency PASSED [ 81%]
+tests/test_reservation_canonicalization.py::TestReservationServiceErrorHandling::test_invalid_reservation_handling FAILED [ 83%]
+tests/test_reservation_canonicalization.py::TestReservationServiceErrorHandling::test_service_initialization PASSED [ 84%]
+tests/test_reservation_canonicalization.py::TestReservationServiceErrorHandling::test_canonical_service_availability PASSED [ 85%]
+tests/test_reservation_canonicalization.py::test_reservation_service_module_imports PASSED [ 87%]
+tests/test_signup_tiers.py::TestSignupTierCharacterization::test_signup_endpoint_exists PASSED [ 88%]
+tests/test_signup_tiers.py::TestSignupTierCharacterization::test_tier_bypass_behavior PASSED [ 90%]
+tests/test_signup_tiers.py::TestSignupTierCharacterization::test_organization_tier_assignment PASSED [ 91%]
+tests/test_signup_tiers.py::TestSignupTierCharacterization::test_permission_gating_exists PASSED [ 92%]
+tests/test_signup_tiers.py::TestSignupTierCharacterization::test_signup_service_delegation PASSED [ 94%]
+tests/test_stripe_webhooks.py::TestStripeWebhookCharacterization::test_stripe_service_exists PASSED [ 95%]
+tests/test_stripe_webhooks.py::TestStripeWebhookCharacterization::test_webhook_signature_verification_path_exists PASSED [ 97%]
+tests/test_stripe_webhooks.py::TestStripeWebhookCharacterization::test_webhook_idempotency_behavior PASSED [ 98%]
+tests/test_stripe_webhooks.py::TestStripeWebhookCharacterization::test_stripe_service_methods_exist PASSED [100%]
+
+======================================== ERRORS ========================================
+_ ERROR at setup of TestInventoryCanonicalService.test_batch_integration_uses_canonical_service _
+file /home/runner/workspace/tests/test_inventory_routes_canonicalization.py, line 11
+      def test_batch_integration_uses_canonical_service(self, app_context):
+E       fixture 'app_context' not found
+>       available fixtures: app, auth_headers, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, client, db_session, developer_user, doctest_namespace, monkeypatch, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, runner, test_org, test_user, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory
+>       use 'pytest --fixtures [testpath]' for help on them.
+
+/home/runner/workspace/tests/test_inventory_routes_canonicalization.py:11
+_ ERROR at setup of TestInventoryCanonicalService.test_reservation_service_uses_canonical_service _
+file /home/runner/workspace/tests/test_inventory_routes_canonicalization.py, line 24
+      def test_reservation_service_uses_canonical_service(self, app_context):
+E       fixture 'app_context' not found
+>       available fixtures: app, auth_headers, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, client, db_session, developer_user, doctest_namespace, monkeypatch, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, runner, test_org, test_user, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory
+>       use 'pytest --fixtures [testpath]' for help on them.
+
+/home/runner/workspace/tests/test_inventory_routes_canonicalization.py:24
+_ ERROR at setup of TestInventoryCanonicalService.test_pos_integration_uses_canonical_service _
+file /home/runner/workspace/tests/test_inventory_routes_canonicalization.py, line 37
+      def test_pos_integration_uses_canonical_service(self, app_context):
+E       fixture 'app_context' not found
+>       available fixtures: app, auth_headers, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, client, db_session, developer_user, doctest_namespace, monkeypatch, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, runner, test_org, test_user, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory
+>       use 'pytest --fixtures [testpath]' for help on them.
+
+/home/runner/workspace/tests/test_inventory_routes_canonicalization.py:37
+_ ERROR at setup of TestInventoryCanonicalService.test_production_planning_service_integration _
+file /home/runner/workspace/tests/test_inventory_routes_canonicalization.py, line 54
+      def test_production_planning_service_integration(self, app_context):
+E       fixture 'app_context' not found
+>       available fixtures: app, auth_headers, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, client, db_session, developer_user, doctest_namespace, monkeypatch, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, runner, test_org, test_user, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory
+>       use 'pytest --fixtures [testpath]' for help on them.
+
+/home/runner/workspace/tests/test_inventory_routes_canonicalization.py:54
+_ ERROR at setup of TestInventoryCanonicalService.test_stock_check_service_integration _
+file /home/runner/workspace/tests/test_inventory_routes_canonicalization.py, line 71
+      def test_stock_check_service_integration(self, app_context):
+E       fixture 'app_context' not found
+>       available fixtures: app, auth_headers, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, client, db_session, developer_user, doctest_namespace, monkeypatch, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, runner, test_org, test_user, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory
+>       use 'pytest --fixtures [testpath]' for help on them.
+
+/home/runner/workspace/tests/test_inventory_routes_canonicalization.py:71
+_ ERROR at setup of TestInventoryCanonicalService.test_inventory_adjustment_canonical_interface _
+file /home/runner/workspace/tests/test_inventory_routes_canonicalization.py, line 86
+      def test_inventory_adjustment_canonical_interface(self, app_context):
+E       fixture 'app_context' not found
+>       available fixtures: app, auth_headers, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, client, db_session, developer_user, doctest_namespace, monkeypatch, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, runner, test_org, test_user, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory
+>       use 'pytest --fixtures [testpath]' for help on them.
+
+/home/runner/workspace/tests/test_inventory_routes_canonicalization.py:86
+_ ERROR at setup of TestBatchServiceCanonicalIntegration.test_batch_service_uses_canonical_adjustments _
+file /home/runner/workspace/tests/test_inventory_routes_canonicalization.py, line 111
+      def test_batch_service_uses_canonical_adjustments(self, app_context):
+E       fixture 'app_context' not found
+>       available fixtures: app, auth_headers, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, client, db_session, developer_user, doctest_namespace, monkeypatch, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, runner, test_org, test_user, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory
+>       use 'pytest --fixtures [testpath]' for help on them.
+
+/home/runner/workspace/tests/test_inventory_routes_canonicalization.py:111
+_ ERROR at setup of TestBatchServiceCanonicalIntegration.test_production_planning_batch_handoff _
+file /home/runner/workspace/tests/test_inventory_routes_canonicalization.py, line 124
+      def test_production_planning_batch_handoff(self, app_context):
+E       fixture 'app_context' not found
+>       available fixtures: app, auth_headers, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, client, db_session, developer_user, doctest_namespace, monkeypatch, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, runner, test_org, test_user, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory
+>       use 'pytest --fixtures [testpath]' for help on them.
+
+/home/runner/workspace/tests/test_inventory_routes_canonicalization.py:124
+_ ERROR at setup of TestContainerManagementIntegration.test_container_analysis_integration _
+file /home/runner/workspace/tests/test_inventory_routes_canonicalization.py, line 156
+      def test_container_analysis_integration(self, app_context):
+E       fixture 'app_context' not found
+>       available fixtures: app, auth_headers, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, client, db_session, developer_user, doctest_namespace, monkeypatch, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, runner, test_org, test_user, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory
+>       use 'pytest --fixtures [testpath]' for help on them.
+
+/home/runner/workspace/tests/test_inventory_routes_canonicalization.py:156
+_________________ ERROR at setup of test_service_import_compatibility __________________
+file /home/runner/workspace/tests/test_inventory_routes_canonicalization.py, line 178
+  def test_service_import_compatibility(app_context):
+E       fixture 'app_context' not found
+>       available fixtures: app, auth_headers, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, client, db_session, developer_user, doctest_namespace, monkeypatch, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, runner, test_org, test_user, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory
+>       use 'pytest --fixtures [testpath]' for help on them.
+
+/home/runner/workspace/tests/test_inventory_routes_canonicalization.py:178
+_________________ ERROR at setup of test_canonical_service_consistency _________________
+file /home/runner/workspace/tests/test_inventory_routes_canonicalization.py, line 198
+  def test_canonical_service_consistency(app_context):
+E       fixture 'app_context' not found
+>       available fixtures: app, auth_headers, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, client, db_session, developer_user, doctest_namespace, monkeypatch, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, runner, test_org, test_user, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory
+>       use 'pytest --fixtures [testpath]' for help on them.
+
+/home/runner/workspace/tests/test_inventory_routes_canonicalization.py:198
+_ ERROR at setup of TestReservationCanonicalService.test_reservation_service_structure _
+file /home/runner/workspace/tests/test_reservation_canonicalization.py, line 25
+      def test_reservation_service_structure(self, app_context):
+E       fixture 'app_context' not found
+>       available fixtures: app, auth_headers, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, client, db_session, developer_user, doctest_namespace, monkeypatch, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, runner, test_org, test_user, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory
+>       use 'pytest --fixtures [testpath]' for help on them.
+
+/home/runner/workspace/tests/test_reservation_canonicalization.py:25
+_ ERROR at setup of TestReservationCanonicalService.test_reservation_model_integration _
+file /home/runner/workspace/tests/test_reservation_canonicalization.py, line 169
+      def test_reservation_model_integration(self, app_context):
+E       fixture 'app_context' not found
+>       available fixtures: app, auth_headers, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, client, db_session, developer_user, doctest_namespace, monkeypatch, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, runner, test_org, test_user, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory
+>       use 'pytest --fixtures [testpath]' for help on them.
+
+/home/runner/workspace/tests/test_reservation_canonicalization.py:169
+_ ERROR at setup of TestReservationCanonicalService.test_reservation_status_management _
+file /home/runner/workspace/tests/test_reservation_canonicalization.py, line 189
+      def test_reservation_status_management(self, app_context):
+E       fixture 'app_context' not found
+>       available fixtures: app, auth_headers, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, client, db_session, developer_user, doctest_namespace, monkeypatch, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, runner, test_org, test_user, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory
+>       use 'pytest --fixtures [testpath]' for help on them.
+
+/home/runner/workspace/tests/test_reservation_canonicalization.py:189
+======================================= FAILURES =======================================
+_____________ TestInventoryFIFOCharacterization.test_fifo_deduction_order ______________
+
+self = <tests.test_inventory_fifo.TestInventoryFIFOCharacterization object at 0x7f5dbf560fd0>
+app = <Flask 'app'>
+db_session = <sqlalchemy.orm.scoping.scoped_session object at 0x7f5dc028d410>
+test_user = <User testuser_1756240301327926>, test_org = <Organization 3>
+
+    def test_fifo_deduction_order(self, app, db_session, test_user, test_org):
+        """Test FIFO deduction follows first-in-first-out order."""
+        with app.test_request_context():
+            login_user(test_user)
+    
+            # Create inventory item
+            item = InventoryItem(
+                name="Test Ingredient",
+                type="ingredient",
+                unit="g",
+                quantity=0.0,
+                organization_id=test_org.id,
+                created_by=test_user.id
+            )
+            db_session.add(item)
+            db_session.flush()
+    
+            # Add stock in layers (oldest first)
+            assert process_inventory_adjustment(
+                item_id=item.id,
+                quantity=100.0,
+                change_type="restock",
+                notes="First batch",
+                created_by=test_user.id
+            )
+    
+            assert process_inventory_adjustment(
+                item_id=item.id,
+                quantity=50.0,
+                change_type="restock",
+                notes="Second batch",
+                created_by=test_user.id
+            )
+    
+            # Verify total by querying fresh data
+            db_session.commit()
+            fresh_item = db_session.get(InventoryItem, item.id)
+            assert fresh_item.quantity == 150.0
+    
+            # Deduct and verify FIFO order
+            assert process_inventory_adjustment(
+                item_id=item.id,
+                quantity=-75.0,
+                change_type="batch",
+                notes="FIFO test deduction",
+                created_by=test_user.id
+            )
+    
+            # Verify available quantity matches
+>           from app.services.stock_check import check_stock_availability
+E           ImportError: cannot import name 'check_stock_availability' from 'app.services.stock_check' (/home/runner/workspace/app/services/stock_check/__init__.py)
+
+tests/test_inventory_fifo.py:64: ImportError
+-------------------------------- Captured stdout setup ---------------------------------
+
+=== Blueprint Registration Summary ===
+✅ Successful: 26
+   - Authentication
+   - Admin
+   - Developer
+   - Inventory
+   - Recipes
+   - Batches
+   - Organization
+   - Billing
+   - Settings
+   - Timers
+   - Expiration
+   - Conversion
+   - Products Main
+   - Product Inventory
+   - Reservations
+   - SKU Management
+   - Product Variants
+   - Product Alerts
+   - Public API
+   - Main API
+   - App Routes
+   - Legal Routes
+   - Bulk Stock
+   - Fault Log
+   - Tag Manager
+   - Waitlist
+
+🎉 All blueprints registered successfully!
+---------------------------------- Captured log setup ----------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+---------------------------------- Captured log call -----------------------------------
+INFO     app.services.inventory_adjustment._core:_core.py:26 CENTRAL DELEGATOR: item_id=1, qty=100.0, type=restock
+INFO     app.services.inventory_adjustment._core:_core.py:138 DELEGATING: initial_stock -> routing to operation module
+INFO     app.services.inventory_adjustment._core:_core.py:207 ROUTING: initial_stock -> INITIAL_STOCK (additive special case)
+INFO     app.services.inventory_adjustment._additive_ops:_additive_ops.py:43 RESTOCK: Processing 100.0 for item 1
+INFO     app.services.inventory_adjustment._additive_ops:_additive_ops.py:50 RESTOCK: Classified as lot_creation operation
+INFO     app.services.inventory_adjustment._additive_ops:_additive_ops.py:114 LOT_CREATION: Adding 100.0 to item 1
+INFO     app.services.inventory_adjustment._fifo_ops:_fifo_ops.py:159 FIFO: Created lot LOT-6GL21PM with 100.0 g for item 1 (perishable: False)
+INFO     app.services.inventory_adjustment._additive_ops:_additive_ops.py:137 LOT_CREATION SUCCESS: Will add 100.0 to item 1
+INFO     app.services.inventory_adjustment._additive_ops:_additive_ops.py:99 RESTOCK SUCCESS: Will increase item 1 by 100.0
+INFO     app.services.inventory_adjustment._core:_core.py:96 QUANTITY UPDATE: Item 1 quantity 0.0 + 100.0 = 100.0
+INFO     app.services.inventory_adjustment._core:_core.py:120 SUCCESS: restock completed for item 1 (FIFO validated)
+INFO     app.services.inventory_adjustment._core:_core.py:26 CENTRAL DELEGATOR: item_id=1, qty=50.0, type=restock
+INFO     app.services.inventory_adjustment._core:_core.py:138 DELEGATING: restock -> routing to operation module
+INFO     app.services.inventory_adjustment._core:_core.py:143 ROUTING: restock -> ADDITIVE (lot_creation)
+INFO     app.services.inventory_adjustment._additive_ops:_additive_ops.py:43 RESTOCK: Processing 50.0 for item 1
+INFO     app.services.inventory_adjustment._additive_ops:_additive_ops.py:50 RESTOCK: Classified as lot_creation operation
+INFO     app.services.inventory_adjustment._additive_ops:_additive_ops.py:114 LOT_CREATION: Adding 50.0 to item 1
+INFO     app.services.inventory_adjustment._fifo_ops:_fifo_ops.py:159 FIFO: Created lot LOT-6GOZ1RB with 50.0 g for item 1 (perishable: False)
+INFO     app.services.inventory_adjustment._additive_ops:_additive_ops.py:137 LOT_CREATION SUCCESS: Will add 50.0 to item 1
+INFO     app.services.inventory_adjustment._additive_ops:_additive_ops.py:99 RESTOCK SUCCESS: Will increase item 1 by 50.0
+INFO     app.services.inventory_adjustment._core:_core.py:96 QUANTITY UPDATE: Item 1 quantity 100.0 + 50.0 = 150.0
+INFO     app.services.inventory_adjustment._core:_core.py:120 SUCCESS: restock completed for item 1 (FIFO validated)
+INFO     app.services.inventory_adjustment._core:_core.py:26 CENTRAL DELEGATOR: item_id=1, qty=-75.0, type=batch
+INFO     app.services.inventory_adjustment._core:_core.py:138 DELEGATING: batch -> routing to operation module
+INFO     app.services.inventory_adjustment._core:_core.py:159 ROUTING: batch -> DEDUCTIVE (consumption)
+INFO     app.services.inventory_adjustment._deductive_ops:_deductive_ops.py:64 DEDUCTIVE: Processing batch for item 1, quantity=-75.0
+INFO     app.services.inventory_adjustment._deductive_ops:_deductive_ops.py:72 DEDUCTIVE: batch -> consumption group
+INFO     app.services.inventory_adjustment._fifo_ops:_fifo_ops.py:195 FIFO DEDUCT: Need 75.0, have 150.0 from 2 active lots
+INFO     app.services.inventory_adjustment._fifo_ops:_fifo_ops.py:239 FIFO DEDUCT: Consumed 75.0 from lot 1 (LOT-6GL21PM), remaining: 25.0
+INFO     app.services.inventory_adjustment._fifo_ops:_fifo_ops.py:241 FIFO DEDUCT SUCCESS: Affected 1 lots
+INFO     app.services.inventory_adjustment._deductive_ops:_deductive_ops.py:106 DEDUCTIVE SUCCESS: batch will decrease item 1 by 75.0
+INFO     app.services.inventory_adjustment._core:_core.py:96 QUANTITY UPDATE: Item 1 quantity 150.0 + 75.0 = 225.0
+ERROR    app.services.inventory_adjustment._validation:_validation.py:38 FIFO SYNC MISMATCH for item 1 (Test Ingredient):
+ERROR    app.services.inventory_adjustment._validation:_validation.py:39   Item quantity: 225.0
+ERROR    app.services.inventory_adjustment._validation:_validation.py:40   FIFO total: 75.0
+ERROR    app.services.inventory_adjustment._validation:_validation.py:41   Difference: 150.0
+ERROR    app.services.inventory_adjustment._validation:_validation.py:42   Active FIFO lots: 2
+ERROR    app.services.inventory_adjustment._validation:_validation.py:46     Lot 1: 25.0 (restock, 2025-08-26 20:31:41.430888)
+ERROR    app.services.inventory_adjustment._validation:_validation.py:46     Lot 2: 50.0 (restock, 2025-08-26 20:31:41.571995)
+ERROR    app.services.inventory_adjustment._core:_core.py:108 FIFO VALIDATION FAILED before commit for item 1: FIFO sync error: inventory=225.0, fifo_total=75.0, diff=150.0
+_____________________ test_pos_reservation_uses_canonical_service ______________________
+
+app = <Flask 'app'>
+db_session = <sqlalchemy.orm.scoping.scoped_session object at 0x7f5dc028d410>
+
+    def test_pos_reservation_uses_canonical_service(app, db_session):
+        """Test that POS reservations use the canonical inventory adjustment service"""
+    
+        # Create test data
+        from app.models import Organization, User, SubscriptionTier, InventoryItem
+    
+        import time
+        unique_suffix = str(int(time.time() * 1000))[-6:]
+    
+        tier = SubscriptionTier(name=f"Test Tier Res {unique_suffix}", tier_type="monthly", user_limit=5)
+        db_session.add(tier)
+        db_session.flush()
+    
+        org = Organization(name=f"Test Org Res {unique_suffix}", billing_status="active", subscription_tier_id=tier.id)
+        db_session.add(org)
+        db_session.flush()
+    
+        user = User(username=f"testuser_res_{unique_suffix}", email=f"res{unique_suffix}@example.com", organization_id=org.id)
+        db_session.add(user)
+        db_session.flush()
+    
+        item = InventoryItem(
+            name=f"Test Product Res {unique_suffix}",
+            type="product",
+            unit="piece",
+            quantity=50.0,
+            cost_per_unit=10.0,
+            organization_id=org.id
+        )
+        db_session.add(item)
+        db_session.commit()
+    
+        # Mock the canonical service call
+        with patch('app.services.pos_integration.process_inventory_adjustment') as mock_process:
+            mock_process.return_value = True
+    
+            with patch('app.services.pos_integration.current_user') as mock_user:
+                mock_user.id = user.id
+                mock_user.is_authenticated = True
+                mock_user.organization_id = org.id
+    
+                # Check if the method exists
+                if hasattr(POSIntegrationService, 'reserve_inventory'):
+                    # Call the service method
+                    success, message = POSIntegrationService.reserve_inventory(
+                        item_id=item.id,
+                        quantity=5.0,
+                        order_id=f"ORD-{unique_suffix}",
+                        source="shopify",
+                        notes="Test reservation"
+                    )
+    
+                    # Verify canonical service was called
+>                   assert mock_process.called, "process_inventory_adjustment should be called"
+E                   AssertionError: process_inventory_adjustment should be called
+E                   assert False
+E                    +  where False = <MagicMock name='process_inventory_adjustment' id='140040574734032'>.called
+
+tests/test_pos_integration_canonicalization.py:127: AssertionError
+-------------------------------- Captured stdout setup ---------------------------------
+
+=== Blueprint Registration Summary ===
+✅ Successful: 26
+   - Authentication
+   - Admin
+   - Developer
+   - Inventory
+   - Recipes
+   - Batches
+   - Organization
+   - Billing
+   - Settings
+   - Timers
+   - Expiration
+   - Conversion
+   - Products Main
+   - Product Inventory
+   - Reservations
+   - SKU Management
+   - Product Variants
+   - Product Alerts
+   - Public API
+   - Main API
+   - App Routes
+   - Legal Routes
+   - Bulk Stock
+   - Fault Log
+   - Tag Manager
+   - Waitlist
+
+🎉 All blueprints registered successfully!
+---------------------------------- Captured log setup ----------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+_____________________ test_pos_confirm_sale_uses_canonical_service _____________________
+
+self = <sqlalchemy.engine.base.Connection object at 0x7f5db76c6890>
+dialect = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x7f5dbc46cd10>
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x7f5dbc6c5ed0>
+statement = <sqlalchemy.dialects.sqlite.base.SQLiteCompiler object at 0x7f5dbc6c41d0>
+parameters = [('TEST-ORDER-308327', None, 1, None, 5.0, 'piece', ...)]
+
+    def _exec_single_context(
+        self,
+        dialect: Dialect,
+        context: ExecutionContext,
+        statement: Union[str, Compiled],
+        parameters: Optional[_AnyMultiExecuteParams],
+    ) -> CursorResult[Any]:
+        """continue the _execute_context() method for a single DBAPI
+        cursor.execute() or cursor.executemany() call.
+    
+        """
+        if dialect.bind_typing is BindTyping.SETINPUTSIZES:
+            generic_setinputsizes = context._prepare_set_input_sizes()
+    
+            if generic_setinputsizes:
+                try:
+                    dialect.do_set_input_sizes(
+                        context.cursor, generic_setinputsizes, context
+                    )
+                except BaseException as e:
+                    self._handle_dbapi_exception(
+                        e, str(statement), parameters, None, context
+                    )
+    
+        cursor, str_statement, parameters = (
+            context.cursor,
+            context.statement,
+            context.parameters,
+        )
+    
+        effective_parameters: Optional[_AnyExecuteParams]
+    
+        if not context.executemany:
+            effective_parameters = parameters[0]
+        else:
+            effective_parameters = parameters
+    
+        if self._has_events or self.engine._has_events:
+            for fn in self.dispatch.before_cursor_execute:
+                str_statement, effective_parameters = fn(
+                    self,
+                    cursor,
+                    str_statement,
+                    effective_parameters,
+                    context,
+                    context.executemany,
+                )
+    
+        if self._echo:
+            self._log_info(str_statement)
+    
+            stats = context._get_cache_stats()
+    
+            if not self.engine.hide_parameters:
+                self._log_info(
+                    "[%s] %r",
+                    stats,
+                    sql_util._repr_params(
+                        effective_parameters,
+                        batches=10,
+                        ismulti=context.executemany,
+                    ),
+                )
+            else:
+                self._log_info(
+                    "[%s] [SQL parameters hidden due to hide_parameters=True]",
+                    stats,
+                )
+    
+        evt_handled: bool = False
+        try:
+            if context.execute_style is ExecuteStyle.EXECUTEMANY:
+                effective_parameters = cast(
+                    "_CoreMultiExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_executemany:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_executemany(
+                        cursor,
+                        str_statement,
+                        effective_parameters,
+                        context,
+                    )
+            elif not effective_parameters and context.no_parameters:
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute_no_params:
+                        if fn(cursor, str_statement, context):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_execute_no_params(
+                        cursor, str_statement, context
+                    )
+            else:
+                effective_parameters = cast(
+                    "_CoreSingleExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+>                   self.dialect.do_execute(
+                        cursor, str_statement, effective_parameters, context
+                    )
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:1964: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x7f5dbc46cd10>
+cursor = <sqlite3.Cursor object at 0x7f5dbc8aed40>
+statement = 'INSERT INTO reservation (order_id, reservation_id, product_item_id, reserved_item_id, quantity, unit, unit_cost, sale... converted_at, notes, created_by, organization_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+parameters = ('TEST-ORDER-308327', None, 1, None, 5.0, 'piece', ...)
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x7f5dbc6c5ed0>
+
+    def do_execute(self, cursor, statement, parameters, context=None):
+>       cursor.execute(statement, parameters)
+E       sqlite3.IntegrityError: NOT NULL constraint failed: reservation.reserved_item_id
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py:945: IntegrityError
+
+The above exception was the direct cause of the following exception:
+
+app = <Flask 'app'>
+db_session = <sqlalchemy.orm.scoping.scoped_session object at 0x7f5dc028d410>
+
+    def test_pos_confirm_sale_uses_canonical_service(app, db_session):
+        """Test that POS sale confirmation uses canonical service"""
+    
+        # Create test data
+        from app.models import Organization, User, SubscriptionTier, InventoryItem, Reservation
+    
+        import time
+        unique_suffix = str(int(time.time() * 1000))[-6:]
+    
+        tier = SubscriptionTier(name=f"Test Tier Sale {unique_suffix}", tier_type="monthly", user_limit=5)
+        db_session.add(tier)
+        db_session.flush()
+    
+        org = Organization(name=f"Test Org Sale {unique_suffix}", billing_status="active", subscription_tier_id=tier.id)
+        db_session.add(org)
+        db_session.flush()
+    
+        user = User(username=f"testuser_sale_{unique_suffix}", email=f"sale{unique_suffix}@example.com", organization_id=org.id)
+        db_session.add(user)
+        db_session.flush()
+    
+        item = InventoryItem(
+            name=f"Test Product Sale {unique_suffix}",
+            type="product",
+            unit="piece",
+            quantity=50.0,
+            cost_per_unit=10.0,
+            organization_id=org.id
+        )
+        db_session.add(item)
+        db_session.flush()
+    
+        # Create a mock reservation
+        reservation = Reservation(
+            order_id=f"TEST-ORDER-{unique_suffix}",
+            product_item_id=item.id,
+            quantity=5.0,
+            unit=item.unit,
+            unit_cost=item.cost_per_unit,
+            organization_id=org.id,
+            status='active'
+        )
+        db_session.add(reservation)
+>       db_session.commit()
+
+tests/test_pos_integration_canonicalization.py:187: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/scoping.py:599: in commit
+    return self._proxied.commit()
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py:2032: in commit
+    trans.commit(_to_root=True)
+<string>:2: in commit
+    ???
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state_changes.py:139: in _go
+    ret_value = fn(self, *arg, **kw)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py:1313: in commit
+    self._prepare_impl()
+<string>:2: in _prepare_impl
+    ???
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state_changes.py:139: in _go
+    ret_value = fn(self, *arg, **kw)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py:1288: in _prepare_impl
+    self.session.flush()
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py:4353: in flush
+    self._flush(objects)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py:4488: in _flush
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py:4449: in _flush
+    flush_context.execute()
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/unitofwork.py:466: in execute
+    rec.execute(self)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/unitofwork.py:642: in execute
+    util.preloaded.orm_persistence.save_obj(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/persistence.py:93: in save_obj
+    _emit_insert_statements(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/persistence.py:1233: in _emit_insert_statements
+    result = connection.execute(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:1416: in execute
+    return meth(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/elements.py:523: in _execute_on_connection
+    return connection._execute_clauseelement(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:1638: in _execute_clauseelement
+    ret = self._execute_context(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:1843: in _execute_context
+    return self._exec_single_context(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:1983: in _exec_single_context
+    self._handle_dbapi_exception(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:2352: in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:1964: in _exec_single_context
+    self.dialect.do_execute(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x7f5dbc46cd10>
+cursor = <sqlite3.Cursor object at 0x7f5dbc8aed40>
+statement = 'INSERT INTO reservation (order_id, reservation_id, product_item_id, reserved_item_id, quantity, unit, unit_cost, sale... converted_at, notes, created_by, organization_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+parameters = ('TEST-ORDER-308327', None, 1, None, 5.0, 'piece', ...)
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x7f5dbc6c5ed0>
+
+    def do_execute(self, cursor, statement, parameters, context=None):
+>       cursor.execute(statement, parameters)
+E       sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) NOT NULL constraint failed: reservation.reserved_item_id
+E       [SQL: INSERT INTO reservation (order_id, reservation_id, product_item_id, reserved_item_id, quantity, unit, unit_cost, sale_price, customer, source_fifo_id, source_batch_id, status, source, created_at, expires_at, released_at, converted_at, notes, created_by, organization_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
+E       [parameters: ('TEST-ORDER-308327', None, 1, None, 5.0, 'piece', 10.0, None, None, None, None, 'active', 'shopify', '2025-08-26 20:31:48.336939', None, None, None, None, None, 2)]
+E       (Background on this error at: https://sqlalche.me/e/20/gkpj)
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py:945: IntegrityError
+-------------------------------- Captured stdout setup ---------------------------------
+
+=== Blueprint Registration Summary ===
+✅ Successful: 26
+   - Authentication
+   - Admin
+   - Developer
+   - Inventory
+   - Recipes
+   - Batches
+   - Organization
+   - Billing
+   - Settings
+   - Timers
+   - Expiration
+   - Conversion
+   - Products Main
+   - Product Inventory
+   - Reservations
+   - SKU Management
+   - Product Variants
+   - Product Alerts
+   - Public API
+   - Main API
+   - App Routes
+   - Legal Routes
+   - Bulk Stock
+   - Fault Log
+   - Tag Manager
+   - Waitlist
+
+🎉 All blueprints registered successfully!
+---------------------------------- Captured log setup ----------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+____ TestReservationCanonicalService.test_create_reservation_uses_canonical_service ____
+
+self = <tests.test_reservation_canonicalization.TestReservationCanonicalService object at 0x7f5dbf4492d0>
+app = <Flask 'app'>
+db_session = <sqlalchemy.orm.scoping.scoped_session object at 0x7f5dc028d410>
+
+    def test_create_reservation_uses_canonical_service(self, app, db_session):
+        """Test that creating reservations uses canonical inventory adjustment"""
+    
+        # Create test data
+        from app.models import Organization, User, SubscriptionTier, InventoryItem
+    
+        import time
+        unique_suffix = str(int(time.time() * 1000))[-6:]
+    
+        tier = SubscriptionTier(name=f"Test Tier Res {unique_suffix}", tier_type="monthly", user_limit=5)
+        db_session.add(tier)
+        db_session.flush()
+    
+        org = Organization(name=f"Test Org Res {unique_suffix}", billing_status="active", subscription_tier_id=tier.id)
+        db_session.add(org)
+        db_session.flush()
+    
+        user = User(username=f"testuser_res_{unique_suffix}", email=f"res{unique_suffix}@example.com", organization_id=org.id)
+        db_session.add(user)
+        db_session.flush()
+    
+        item = InventoryItem(
+            name=f"Test Product Res {unique_suffix}",
+            type="product",
+            unit="piece",
+            quantity=50.0,
+            cost_per_unit=10.0,
+            organization_id=org.id
+        )
+        db_session.add(item)
+        db_session.commit()
+    
+        # Mock the canonical service
+        with patch('app.services.inventory_adjustment.process_inventory_adjustment') as mock_process:
+            mock_process.return_value = True
+    
+            service = ReservationService()
+    
+            # Check if create_reservation method exists
+            if hasattr(service, 'create_reservation'):
+                # Test creating a reservation
+>               result = service.create_reservation(
+                    item_id=item.id,
+                    quantity=5.0,
+                    order_id=f"TEST-ORDER-{unique_suffix}",
+                    notes="Test reservation"
+                )
+E               TypeError: ReservationService.create_reservation() got an unexpected keyword argument 'item_id'
+
+tests/test_reservation_canonicalization.py:84: TypeError
+-------------------------------- Captured stdout setup ---------------------------------
+
+=== Blueprint Registration Summary ===
+✅ Successful: 26
+   - Authentication
+   - Admin
+   - Developer
+   - Inventory
+   - Recipes
+   - Batches
+   - Organization
+   - Billing
+   - Settings
+   - Timers
+   - Expiration
+   - Conversion
+   - Products Main
+   - Product Inventory
+   - Reservations
+   - SKU Management
+   - Product Variants
+   - Product Alerts
+   - Public API
+   - Main API
+   - App Routes
+   - Legal Routes
+   - Bulk Stock
+   - Fault Log
+   - Tag Manager
+   - Waitlist
+
+🎉 All blueprints registered successfully!
+---------------------------------- Captured log setup ----------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+___ TestReservationCanonicalService.test_release_reservation_uses_canonical_service ____
+
+self = <sqlalchemy.engine.base.Connection object at 0x7f5dbc572710>
+dialect = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x7f5dbc280d50>
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x7f5dbc2a1d90>
+statement = <sqlalchemy.dialects.sqlite.base.SQLiteCompiler object at 0x7f5dbc2a3910>
+parameters = [('TEST-ORDER-REL-317113', None, 1, None, 5.0, 'piece', ...)]
+
+    def _exec_single_context(
+        self,
+        dialect: Dialect,
+        context: ExecutionContext,
+        statement: Union[str, Compiled],
+        parameters: Optional[_AnyMultiExecuteParams],
+    ) -> CursorResult[Any]:
+        """continue the _execute_context() method for a single DBAPI
+        cursor.execute() or cursor.executemany() call.
+    
+        """
+        if dialect.bind_typing is BindTyping.SETINPUTSIZES:
+            generic_setinputsizes = context._prepare_set_input_sizes()
+    
+            if generic_setinputsizes:
+                try:
+                    dialect.do_set_input_sizes(
+                        context.cursor, generic_setinputsizes, context
+                    )
+                except BaseException as e:
+                    self._handle_dbapi_exception(
+                        e, str(statement), parameters, None, context
+                    )
+    
+        cursor, str_statement, parameters = (
+            context.cursor,
+            context.statement,
+            context.parameters,
+        )
+    
+        effective_parameters: Optional[_AnyExecuteParams]
+    
+        if not context.executemany:
+            effective_parameters = parameters[0]
+        else:
+            effective_parameters = parameters
+    
+        if self._has_events or self.engine._has_events:
+            for fn in self.dispatch.before_cursor_execute:
+                str_statement, effective_parameters = fn(
+                    self,
+                    cursor,
+                    str_statement,
+                    effective_parameters,
+                    context,
+                    context.executemany,
+                )
+    
+        if self._echo:
+            self._log_info(str_statement)
+    
+            stats = context._get_cache_stats()
+    
+            if not self.engine.hide_parameters:
+                self._log_info(
+                    "[%s] %r",
+                    stats,
+                    sql_util._repr_params(
+                        effective_parameters,
+                        batches=10,
+                        ismulti=context.executemany,
+                    ),
+                )
+            else:
+                self._log_info(
+                    "[%s] [SQL parameters hidden due to hide_parameters=True]",
+                    stats,
+                )
+    
+        evt_handled: bool = False
+        try:
+            if context.execute_style is ExecuteStyle.EXECUTEMANY:
+                effective_parameters = cast(
+                    "_CoreMultiExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_executemany:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_executemany(
+                        cursor,
+                        str_statement,
+                        effective_parameters,
+                        context,
+                    )
+            elif not effective_parameters and context.no_parameters:
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute_no_params:
+                        if fn(cursor, str_statement, context):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_execute_no_params(
+                        cursor, str_statement, context
+                    )
+            else:
+                effective_parameters = cast(
+                    "_CoreSingleExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+>                   self.dialect.do_execute(
+                        cursor, str_statement, effective_parameters, context
+                    )
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:1964: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x7f5dbc280d50>
+cursor = <sqlite3.Cursor object at 0x7f5dbc5d5cc0>
+statement = 'INSERT INTO reservation (order_id, reservation_id, product_item_id, reserved_item_id, quantity, unit, unit_cost, sale... converted_at, notes, created_by, organization_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+parameters = ('TEST-ORDER-REL-317113', None, 1, None, 5.0, 'piece', ...)
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x7f5dbc2a1d90>
+
+    def do_execute(self, cursor, statement, parameters, context=None):
+>       cursor.execute(statement, parameters)
+E       sqlite3.IntegrityError: NOT NULL constraint failed: reservation.reserved_item_id
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py:945: IntegrityError
+
+The above exception was the direct cause of the following exception:
+
+self = <tests.test_reservation_canonicalization.TestReservationCanonicalService object at 0x7f5dbf448450>
+app = <Flask 'app'>
+db_session = <sqlalchemy.orm.scoping.scoped_session object at 0x7f5dc028d410>
+
+    def test_release_reservation_uses_canonical_service(self, app, db_session):
+        """Test that releasing reservations uses canonical inventory adjustment"""
+    
+        # Create test data
+        from app.models import Organization, User, SubscriptionTier, InventoryItem, Reservation
+    
+        import time
+        unique_suffix = str(int(time.time() * 1000))[-6:]
+    
+        tier = SubscriptionTier(name=f"Test Tier Rel {unique_suffix}", tier_type="monthly", user_limit=5)
+        db_session.add(tier)
+        db_session.flush()
+    
+        org = Organization(name=f"Test Org Rel {unique_suffix}", billing_status="active", subscription_tier_id=tier.id)
+        db_session.add(org)
+        db_session.flush()
+    
+        user = User(username=f"testuser_rel_{unique_suffix}", email=f"rel{unique_suffix}@example.com", organization_id=org.id)
+        db_session.add(user)
+        db_session.flush()
+    
+        item = InventoryItem(
+            name=f"Test Product Rel {unique_suffix}",
+            type="product",
+            unit="piece",
+            quantity=50.0,
+            cost_per_unit=10.0,
+            organization_id=org.id
+        )
+        db_session.add(item)
+        db_session.flush()
+    
+        # Create a test reservation
+        reservation = Reservation(
+            order_id=f"TEST-ORDER-REL-{unique_suffix}",
+            product_item_id=item.id,
+            quantity=5.0,
+            unit=item.unit,
+            unit_cost=item.cost_per_unit,
+            organization_id=org.id,
+            status='active'
+        )
+        db_session.add(reservation)
+>       db_session.commit()
+
+tests/test_reservation_canonicalization.py:146: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/scoping.py:599: in commit
+    return self._proxied.commit()
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py:2032: in commit
+    trans.commit(_to_root=True)
+<string>:2: in commit
+    ???
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state_changes.py:139: in _go
+    ret_value = fn(self, *arg, **kw)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py:1313: in commit
+    self._prepare_impl()
+<string>:2: in _prepare_impl
+    ???
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state_changes.py:139: in _go
+    ret_value = fn(self, *arg, **kw)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py:1288: in _prepare_impl
+    self.session.flush()
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py:4353: in flush
+    self._flush(objects)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py:4488: in _flush
+    with util.safe_reraise():
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:146: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py:4449: in _flush
+    flush_context.execute()
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/unitofwork.py:466: in execute
+    rec.execute(self)
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/unitofwork.py:642: in execute
+    util.preloaded.orm_persistence.save_obj(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/persistence.py:93: in save_obj
+    _emit_insert_statements(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/persistence.py:1233: in _emit_insert_statements
+    result = connection.execute(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:1416: in execute
+    return meth(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/elements.py:523: in _execute_on_connection
+    return connection._execute_clauseelement(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:1638: in _execute_clauseelement
+    ret = self._execute_context(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:1843: in _execute_context
+    return self._exec_single_context(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:1983: in _exec_single_context
+    self._handle_dbapi_exception(
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:2352: in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py:1964: in _exec_single_context
+    self.dialect.do_execute(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x7f5dbc280d50>
+cursor = <sqlite3.Cursor object at 0x7f5dbc5d5cc0>
+statement = 'INSERT INTO reservation (order_id, reservation_id, product_item_id, reserved_item_id, quantity, unit, unit_cost, sale... converted_at, notes, created_by, organization_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+parameters = ('TEST-ORDER-REL-317113', None, 1, None, 5.0, 'piece', ...)
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x7f5dbc2a1d90>
+
+    def do_execute(self, cursor, statement, parameters, context=None):
+>       cursor.execute(statement, parameters)
+E       sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) NOT NULL constraint failed: reservation.reserved_item_id
+E       [SQL: INSERT INTO reservation (order_id, reservation_id, product_item_id, reserved_item_id, quantity, unit, unit_cost, sale_price, customer, source_fifo_id, source_batch_id, status, source, created_at, expires_at, released_at, converted_at, notes, created_by, organization_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
+E       [parameters: ('TEST-ORDER-REL-317113', None, 1, None, 5.0, 'piece', 10.0, None, None, None, None, 'active', 'shopify', '2025-08-26 20:31:57.124444', None, None, None, None, None, 2)]
+E       (Background on this error at: https://sqlalche.me/e/20/gkpj)
+
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py:945: IntegrityError
+-------------------------------- Captured stdout setup ---------------------------------
+
+=== Blueprint Registration Summary ===
+✅ Successful: 26
+   - Authentication
+   - Admin
+   - Developer
+   - Inventory
+   - Recipes
+   - Batches
+   - Organization
+   - Billing
+   - Settings
+   - Timers
+   - Expiration
+   - Conversion
+   - Products Main
+   - Product Inventory
+   - Reservations
+   - SKU Management
+   - Product Variants
+   - Product Alerts
+   - Public API
+   - Main API
+   - App Routes
+   - Legal Routes
+   - Bulk Stock
+   - Fault Log
+   - Tag Manager
+   - Waitlist
+
+🎉 All blueprints registered successfully!
+---------------------------------- Captured log setup ----------------------------------
+INFO     app:unit_utils.py:28 BatchTrack startup
+________ TestReservationServiceErrorHandling.test_invalid_reservation_handling _________
+
+self = <tests.test_reservation_canonicalization.TestReservationServiceErrorHandling object at 0x7f5dbf419010>
+
+    def test_invalid_reservation_handling(self):
+        """Test that invalid reservations are handled gracefully"""
+    
+        service = ReservationService()
+    
+        if hasattr(service, 'release_reservation'):
+            # Test with invalid order ID
+>           result = service.release_reservation("INVALID-ORDER-ID")
+
+tests/test_reservation_canonicalization.py:230: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+app/services/reservation_service.py:90: in release_reservation
+    reservations = Reservation.query.filter_by(
+.pythonlibs/lib/python3.11/site-packages/flask_sqlalchemy/model.py:23: in __get__
+    cls, session=cls.__fsa__.session()  # type: ignore[arg-type]
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/scoping.py:220: in __call__
+    sess = self.registry()
+.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/_collections.py:634: in __call__
+    key = self.scopefunc()
+.pythonlibs/lib/python3.11/site-packages/flask_sqlalchemy/session.py:111: in _app_ctx_id
+    return id(app_ctx._get_current_object())  # type: ignore[attr-defined]
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _get_current_object() -> T:
+        try:
+            obj = local.get()
+        except LookupError:
+>           raise RuntimeError(unbound_message) from None
+E           RuntimeError: Working outside of application context.
+E           
+E           This typically means that you attempted to use functionality that needed
+E           the current application. To solve this, set up an application context
+E           with app.app_context(). See the documentation for more information.
+
+.pythonlibs/lib/python3.11/site-packages/werkzeug/local.py:519: RuntimeError
+=================================== warnings summary ===================================
+tests/test_auth_permissions.py: 8 warnings
+tests/test_billing_and_tier_enforcement.py: 7 warnings
+tests/test_expiration_canonicalization.py: 3 warnings
+tests/test_google_oauth.py: 7 warnings
+tests/test_inventory_fifo.py: 3 warnings
+tests/test_pos_integration_canonicalization.py: 3 warnings
+tests/test_product_sku.py: 4 warnings
+tests/test_reservation_canonicalization.py: 2 warnings
+tests/test_signup_tiers.py: 5 warnings
+tests/test_stripe_webhooks.py: 4 warnings
+  /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_limiter/extension.py:333: UserWarning: Using the in-memory storage for tracking rate limits as no storage was explicitly specified. This is not recommended for production use. See: https://flask-limiter.readthedocs.io#configuring-a-storage-backend for documentation about configuring the storage backend.
+    warnings.warn(
+
+tests/test_auth_permissions.py: 8 warnings
+tests/test_billing_and_tier_enforcement.py: 7 warnings
+tests/test_expiration_canonicalization.py: 1 warning
+tests/test_google_oauth.py: 7 warnings
+tests/test_inventory_fifo.py: 3 warnings
+tests/test_pos_integration_canonicalization.py: 3 warnings
+tests/test_product_sku.py: 4 warnings
+tests/test_reservation_canonicalization.py: 2 warnings
+tests/test_signup_tiers.py: 5 warnings
+tests/test_stripe_webhooks.py: 4 warnings
+  /home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_sqlalchemy/extension.py:881: SAWarning: Can't sort tables for DROP; an unresolvable foreign key dependency exists between tables: batch, product_sku; and backend does not support ALTER.  To restore at least a partial sort, apply use_alter=True to ForeignKey and ForeignKeyConstraint objects involved in the cycle to mark these as known cycles that will be ignored.
+    getattr(metadata, op_name)(bind=engine)
+
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_tier_permission_is_the_hard_ceiling
+tests/test_billing_and_tier_enforcement.py::TestBillingAndTierEnforcement::test_tier_permission_is_the_hard_ceiling
+  /home/runner/workspace/app/models/models.py:345: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    role = Role.query.get(assignment.role_id)
+
+tests/test_expiration_canonicalization.py::test_expiration_service_uses_canonical_adjustment
+  /home/runner/workspace/app/blueprints/expiration/services.py:545: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    entry = InventoryHistory.query.get(entry_id)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=============================== short test summary info ================================
+FAILED tests/test_inventory_fifo.py::TestInventoryFIFOCharacterization::test_fifo_deduction_order - ImportError: cannot import name 'check_stock_availability' from 'app.services.stock...
+FAILED tests/test_pos_integration_canonicalization.py::test_pos_reservation_uses_canonical_service - AssertionError: process_inventory_adjustment should be called
+FAILED tests/test_pos_integration_canonicalization.py::test_pos_confirm_sale_uses_canonical_service - sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) NOT NULL constraint failed:...
+FAILED tests/test_reservation_canonicalization.py::TestReservationCanonicalService::test_create_reservation_uses_canonical_service - TypeError: ReservationService.create_reservation() got an unexpected keyword argume...
+FAILED tests/test_reservation_canonicalization.py::TestReservationCanonicalService::test_release_reservation_uses_canonical_service - sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) NOT NULL constraint failed:...
+FAILED tests/test_reservation_canonicalization.py::TestReservationServiceErrorHandling::test_invalid_reservation_handling - RuntimeError: Working outside of application context.
+ERROR tests/test_inventory_routes_canonicalization.py::TestInventoryCanonicalService::test_batch_integration_uses_canonical_service
+ERROR tests/test_inventory_routes_canonicalization.py::TestInventoryCanonicalService::test_reservation_service_uses_canonical_service
+ERROR tests/test_inventory_routes_canonicalization.py::TestInventoryCanonicalService::test_pos_integration_uses_canonical_service
+ERROR tests/test_inventory_routes_canonicalization.py::TestInventoryCanonicalService::test_production_planning_service_integration
+ERROR tests/test_inventory_routes_canonicalization.py::TestInventoryCanonicalService::test_stock_check_service_integration
+ERROR tests/test_inventory_routes_canonicalization.py::TestInventoryCanonicalService::test_inventory_adjustment_canonical_interface
+ERROR tests/test_inventory_routes_canonicalization.py::TestBatchServiceCanonicalIntegration::test_batch_service_uses_canonical_adjustments
+ERROR tests/test_inventory_routes_canonicalization.py::TestBatchServiceCanonicalIntegration::test_production_planning_batch_handoff
+ERROR tests/test_inventory_routes_canonicalization.py::TestContainerManagementIntegration::test_container_analysis_integration
+ERROR tests/test_inventory_routes_canonicalization.py::test_service_import_compatibility
+ERROR tests/test_inventory_routes_canonicalization.py::test_canonical_service_consistency
+ERROR tests/test_reservation_canonicalization.py::TestReservationCanonicalService::test_reservation_service_structure
+ERROR tests/test_reservation_canonicalization.py::TestReservationCanonicalService::test_reservation_model_integration
+ERROR tests/test_reservation_canonicalization.py::TestReservationCanonicalService::test_reservation_status_management
+=========== 6 failed, 51 passed, 93 warnings, 14 errors in 69.93s (0:01:09) ============
