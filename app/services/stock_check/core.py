@@ -137,6 +137,7 @@ class UniversalStockCheckService:
                 }
 
             if not recipe.recipe_ingredients:
+                logger.warning(f"USCS: Recipe {recipe_id} has no ingredients defined")
                 return {
                     'success': True,
                     'status': 'no_ingredients', 
@@ -268,7 +269,7 @@ class UniversalStockCheckService:
                 'error': str(e)
             }
 
-    
+
 
     def _create_error_result(self, item_id: int, error_message: str, 
                            quantity_needed: float, unit: str) -> StockCheckResult:

@@ -478,6 +478,12 @@ def check_stock():
         # Use USCS directly
         from app.services.stock_check.core import UniversalStockCheckService
         uscs = UniversalStockCheckService()
+        
+        # Debug: Check if recipe has ingredients
+        logger.info(f"STOCK_CHECK: Recipe {recipe_id} has {len(recipe.recipe_ingredients)} ingredients")
+        for ri in recipe.recipe_ingredients:
+            logger.info(f"STOCK_CHECK: - Ingredient {ri.inventory_item.name} (ID: {ri.inventory_item_id}), qty: {ri.quantity}, unit: {ri.unit}")
+        
         result = uscs.check_recipe_stock(recipe_id, scale)
 
         # Process results for frontend

@@ -136,12 +136,12 @@ class ContainerHandler(BaseInventoryHandler):
                 category=InventoryCategory.CONTAINER,
                 needed_quantity=1,
                 needed_unit="count",
-                available_quantity=available_containers,
+                available_quantity=len(available_containers),
                 available_unit="count",
                 status=StockStatus.ERROR,
                 error_message=f"Container calculation error: {str(e)}",
                 formatted_needed="1 count",
-                formatted_available=self._format_quantity_display(available_containers, "count")
+                formatted_available=self._format_quantity_display(len(available_containers), "count")
             )
 
     def get_item_details(self, item_id: int, organization_id: int) -> Optional[dict]:
