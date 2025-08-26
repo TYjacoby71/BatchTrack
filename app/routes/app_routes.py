@@ -122,9 +122,10 @@ def check_stock():
         if not recipe:
             return jsonify({"error": "Recipe not found"}), 404
 
-        # Use recipe service (which internally uses USCS)
-        from app.services.recipe_service import check_recipe_stock
-        result = check_recipe_stock(recipe, scale)
+        # Use USCS directly
+        from app.services.stock_check.core import UniversalStockCheckService
+        uscs = UniversalStockCheckService()
+        result = uscs.check_recipe_stock(recipe_id, scale)
 
         # Process results for frontend
         if result.get('success'):

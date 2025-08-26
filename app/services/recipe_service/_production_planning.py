@@ -279,17 +279,3 @@ def _process_stock_results(stock_results: List) -> List[Dict[str, Any]]:
 
     return processed
 
-def check_stock_for_recipe(recipe_id: int, scale: float = 1.0) -> Dict[str, Any]:
-    """
-    Check stock availability for a recipe.
-
-    This function now delegates to the UniversalStockCheckService.
-    """
-    try:
-        from ..stock_check.core import UniversalStockCheckService
-        uscs = UniversalStockCheckService()
-        stock_results = uscs.check_recipe_stock(recipe_id, scale)
-        return _process_stock_results(stock_results)
-    except Exception as e:
-        logger.error(f"Error checking stock for recipe {recipe_id}: {e}")
-        return {'error': str(e)}
