@@ -7,6 +7,7 @@ Recipe logic should be handled by calling services.
 
 import logging
 from typing import List, Dict, Any
+from flask_login import current_user
 
 from .types import StockCheckRequest, StockCheckResult, InventoryCategory, StockStatus
 from .handlers import IngredientHandler, ContainerHandler, ProductHandler
@@ -20,6 +21,7 @@ class UniversalStockCheckService:
 
     Provides unified interface for checking stock availability of individual
     inventory items. Recipe logic is handled by calling services.
+    Handles organization scoping and standardizes all results.
     """
 
     def __init__(self):
@@ -29,21 +31,43 @@ class UniversalStockCheckService:
             InventoryCategory.PRODUCT: ProductHandler(),
         }
 
+    def _get_organization_id(self, request: StockCheckRequest) -> int:
+        """Get organization ID from request or current user"""
+        if hasattr(request, 'organization_id') and request.organization_id:
+            return request.organization_id
+        elif current_user and current_user.is_authenticated and current_user.organization_id:
+            return current_user.organization_id
+        else:
+            raise ValueError("No organization context available for stock check")
+
     def check_single_item(self, request: StockCheckRequest) -> StockCheckResult:
         """
-        Check stock for a single inventory item.
+        Check stock for a single inventory item with organization scoping.
 
         Args:
             request: Stock check request
 
         Returns:
-            Stock check result
+            Standardized stock check result
         """
-        handler = self.handlers.get(request.category)
-        if not handler:
-            raise ValueError(f"No handler for category: {request.category}")
+        try:
+            # Ensure organization context
+            org_id = self._get_organization_id(request)
+            
+            # Get appropriate handler
+            handler = self.handlers.get(request.category)
+            if not handler:
+                return self._create_error_result(request, f"No handler for category: {request.category}")
 
-        return handler.check_availability(request)
+            # Handler does the category-specific work
+            result = handler.check_availability(request, org_id)
+            
+            # Standardize the result format
+            return self._standardize_result(result)
+            
+        except Exception as e:
+            logger.error(f"Error in check_single_item: {e}")
+            return self._create_error_result(request, str(e))
 
     def check_bulk_items(self, requests: List[StockCheckRequest]) -> List[StockCheckResult]:
         """
@@ -77,6 +101,64 @@ class UniversalStockCheckService:
                         # Continue with other items
 
         return results
+
+    def _standardize_result(self, result: StockCheckResult) -> StockCheckResult:
+        """Ensure all results have consistent format and required fields"""
+        # All results should have these standard fields
+        standardized = StockCheckResult(
+            item_id=result.item_id,
+            item_name=result.item_name,
+            category=result.category,
+            needed_quantity=result.needed_quantity,
+            needed_unit=result.needed_unit,
+            available_quantity=result.available_quantity,
+            available_unit=result.available_unit,
+            status=self._determine_final_status(result),
+            raw_stock=getattr(result, 'raw_stock', result.available_quantity),
+            stock_unit=getattr(result, 'stock_unit', result.available_unit),
+            formatted_needed=getattr(result, 'formatted_needed', f"{result.needed_quantity} {result.needed_unit}"),
+            formatted_available=getattr(result, 'formatted_available', f"{result.available_quantity} {result.available_unit}"),
+            error_message=getattr(result, 'error_message', None),
+            conversion_details=getattr(result, 'conversion_details', None)
+        )
+        
+        return standardized
+
+    def _determine_final_status(self, result: StockCheckResult) -> StockStatus:
+        """Determine final status with low stock alert integration"""
+        if result.status == StockStatus.ERROR:
+            return StockStatus.ERROR
+            
+        # Check if we have enough
+        if result.available_quantity >= result.needed_quantity:
+            # Check if this item has low stock alerts set
+            from ...models import InventoryItem
+            item = InventoryItem.query.get(result.item_id)
+            if item and item.low_stock_threshold and result.available_quantity <= item.low_stock_threshold:
+                return StockStatus.LOW
+            return StockStatus.OK
+        
+        # Not enough available
+        if result.available_quantity > 0:
+            return StockStatus.LOW
+        else:
+            return StockStatus.NEEDED
+
+    def _create_error_result(self, request: StockCheckRequest, error_message: str) -> StockCheckResult:
+        """Create standardized error result"""
+        return StockCheckResult(
+            item_id=request.item_id,
+            item_name='Unknown Item',
+            category=request.category,
+            needed_quantity=request.quantity_needed,
+            needed_unit=request.unit,
+            available_quantity=0,
+            available_unit=request.unit,
+            status=StockStatus.ERROR,
+            error_message=error_message,
+            formatted_needed=f"{request.quantity_needed} {request.unit}",
+            formatted_available="0"
+        )
 
     def check_multiple_recipes(self, recipe_configs: List[Dict[str, Any]]) -> Dict[str, Any]:
         """

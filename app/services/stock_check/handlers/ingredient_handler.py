@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 class IngredientHandler(BaseInventoryHandler):
     """Handler for ingredient stock checking with FIFO support"""
 
-    def check_availability(self, request: StockCheckRequest) -> StockCheckResult:
+    def check_availability(self, request: StockCheckRequest, organization_id: int) -> StockCheckResult:
         """
         Check ingredient availability using FIFO entries.
 
@@ -28,11 +28,13 @@ class IngredientHandler(BaseInventoryHandler):
         Returns:
             Stock check result
         """
-        ingredient = InventoryItem.query.get(request.item_id)
+        ingredient = InventoryItem.query.filter_by(
+            id=request.item_id,
+            organization_id=organization_id
+        ).first()
+        
         if not ingredient:
             return self._create_not_found_result(request)
-
-        # Organization scoping should be handled by caller
 
         # Get available FIFO lots (excludes expired automatically)
         from app.models.inventory_lot import InventoryLot
@@ -113,10 +115,13 @@ class IngredientHandler(BaseInventoryHandler):
                 formatted_available="N/A"
             )
 
-    def get_item_details(self, item_id: int) -> Optional[dict]:
+    def get_item_details(self, item_id: int, organization_id: int) -> Optional[dict]:
         """Get ingredient details"""
-        ingredient = InventoryItem.query.get(item_id)
-        if not ingredient: # Removed organization access check
+        ingredient = InventoryItem.query.filter_by(
+            id=item_id,
+            organization_id=organization_id
+        ).first()
+        if not ingredient:
             return None
 
         return {
