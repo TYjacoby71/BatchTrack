@@ -60,8 +60,12 @@ class ContainerHandler(BaseInventoryHandler):
             containers_needed = yield_in_container_units / storage_capacity if storage_capacity > 0 else 1
             containers_needed = max(1, int(containers_needed))  # At least 1 container
 
-            # Check availability
-            status = self._determine_status(available_containers, containers_needed)
+            # For container management, we always return OK if any containers exist
+            # The container management system will handle its own logic about quantities needed
+            if available_containers > 0:
+                status = StockStatus.OK
+            else:
+                status = StockStatus.OUT_OF_STOCK
 
             return StockCheckResult(
                 item_id=container.id,

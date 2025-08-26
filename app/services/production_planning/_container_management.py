@@ -9,7 +9,7 @@ from typing import Dict, List, Any, Optional, Tuple
 from ...models import Recipe, InventoryItem
 from flask_login import current_user
 from ..stock_check import UniversalStockCheckService
-from ..stock_check.types import StockCheckRequest, InventoryCategory
+from ..stock_check.types import StockCheckRequest, InventoryCategory, StockStatus
 from .types import ContainerStrategy, ContainerOption, ContainerFillStrategy
 
 
@@ -64,8 +64,14 @@ def analyze_container_options(
 
         # Convert USCS results to ContainerOptions
         analyzed_options = []
+        
         for result in container_results:
-            if result.status in ['available', 'sufficient', 'ok'] and result.conversion_details:
+            logger.info(f"CONTAINER_ANALYSIS: Processing {result.item_name}")
+            logger.info(f"CONTAINER_ANALYSIS: - Status: {result.status} (type: {type(result.status)})")
+            logger.info(f"CONTAINER_ANALYSIS: - Has conversion_details: {bool(result.conversion_details)}")
+            
+            # Check for successful status using enum comparison
+            if result.status in [StockStatus.OK, StockStatus.LOW, StockStatus.AVAILABLE] and result.conversion_details:
                 storage_capacity = result.conversion_details.get('storage_capacity', 0)
                 storage_unit = result.conversion_details.get('storage_unit', 'ml')
                 yield_in_storage_units = result.conversion_details.get('yield_in_storage_units', 0)
