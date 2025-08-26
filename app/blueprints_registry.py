@@ -59,7 +59,7 @@ def register_blueprints(app):
     # API blueprints - these are often problematic
     safe_register_blueprint('app.blueprints.api.public.public_api_bp', 'public_api_bp', '/api/public', 'Public API')
     safe_register_blueprint('app.blueprints.api.routes.api_bp', 'api_bp', '/api', 'Main API')
-    
+
     # Note: FIFO blueprint removed - functionality moved to inventory_adjustment service
 
     # Register standalone route modules

@@ -1,6 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, url_for, session, jsonify, flash
 from app.models import Recipe, InventoryItem, Batch
-from app.services.stock_check.core import UniversalStockCheckService
 from flask_login import login_required, current_user
 from app.utils.permissions import require_permission, get_effective_organization_id, permission_required, any_permission_required
 from app.services.combined_inventory_alerts import CombinedInventoryAlertService
@@ -12,20 +11,7 @@ logger = logging.getLogger(__name__)
 
 app_routes_bp = Blueprint('app_routes', __name__)
 
-# Helper functions for stock checking
-def check_stock_for_recipe(recipe, scale=1):
-    """Check stock availability for a recipe"""
-    try:
-        service = UniversalStockCheckService()
-        result = service.check_recipe_stock(recipe, scale)
-        return result['stock_check'], result['all_ok']
-    except Exception as e:
-        return [], False
-
-def check_container_availability(container_ids, scale=1):
-    """Check container availability - placeholder implementation"""
-    # This function needs to be implemented based on your container model
-    return [], True
+# Dashboard no longer performs stock checks - this is handled by production planning
 
 @app_routes_bp.route('/dashboard')
 @app_routes_bp.route('/user_dashboard')
@@ -69,85 +55,16 @@ def dashboard():
     low_stock_ingredients = CombinedInventoryAlertService.get_low_stock_ingredients()
     expiration_summary = ExpirationService.get_expiration_summary()
 
-    stock_check = None
-    selected_recipe = None
-    scale = 1
-    status = None
-
-    if request.method == "POST":
-        recipe_id = request.form.get("recipe_id")
-        try:
-            scale = float(request.form.get("scale", 1))
-            selected_recipe = Recipe.scoped().filter_by(id=recipe_id).first()
-            if selected_recipe:
-                stock_check, all_ok = check_stock_for_recipe(selected_recipe, scale)
-                status = "ok" if all_ok else "bad"
-                for item in stock_check:
-                    if item["status"] == "LOW" and status != "bad":
-                        status = "low"
-                        break
-        except ValueError as e:
-            flash("Invalid scale value")
+    # Dashboard stock checking removed - users should use recipe planning page
 
     return render_template("dashboard.html",
                          recipes=recipes,
-                         stock_check=stock_check,
-                         selected_recipe=selected_recipe,
-                         scale=scale,
-                         status=status,
                          active_batch=active_batch,
                          current_user=current_user,
                          alert_data=alert_data,
                          low_stock_ingredients=low_stock_ingredients,
                          expiration_summary=expiration_summary)
 
-@app_routes_bp.route('/stock/check', methods=['POST'])
-@login_required
-@permission_required('inventory.view')
-def check_stock():
-    """Check stock for a recipe using the recipe service (internally uses USCS)"""
-    try:
-        data = request.get_json()
-        if not data:
-            return jsonify({"error": "No data provided"}), 400
-
-        recipe_id = data.get('recipe_id')
-        scale = data.get('scale', 1.0)
-
-        if not recipe_id:
-            return jsonify({"error": "Recipe ID is required"}), 400
-
-        # Get recipe
-        recipe = Recipe.scoped().filter_by(id=recipe_id).first()
-        if not recipe:
-            return jsonify({"error": "Recipe not found"}), 404
-
-        # Use USCS directly
-        from app.services.stock_check.core import UniversalStockCheckService
-        uscs = UniversalStockCheckService()
-        result = uscs.check_recipe_stock(recipe_id, scale)
-
-        # Process results for frontend
-        if result.get('success'):
-            stock_check = result.get('stock_check', [])
-            all_ok = all(item.get('status') not in ['NEEDED', 'INSUFFICIENT'] for item in stock_check)
-            status = 'ok' if all_ok else 'insufficient'
-        else:
-            stock_check = []
-            all_ok = False
-            status = 'error'
-
-        return jsonify({
-            "stock_check": stock_check,
-            "status": status,
-            "all_ok": all_ok,
-            "recipe_name": recipe.name,
-            "success": result.get('success', False),
-            "error": result.get('error')
-        }), 200
-    except Exception as e:
-        logger.error(f"Error in recipe stock check: {e}")
-        return jsonify({"error": str(e)}), 500
 
 @app_routes_bp.route('/unit-manager')
 @login_required
