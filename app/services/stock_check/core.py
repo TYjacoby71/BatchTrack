@@ -38,7 +38,6 @@ class UniversalStockCheckService:
             InventoryCategory.CONTAINER: ContainerHandler(), 
             InventoryCategory.PRODUCT: ProductHandler(),
         }
-        self.fifo_service = FIFOService()
 
     def _get_organization_id(self) -> int:
         """Get organization ID from current user"""
