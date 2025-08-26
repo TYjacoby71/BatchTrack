@@ -387,6 +387,62 @@ def quick_add_unit():
         db.session.rollback()
         return jsonify({'error': str(e)}), 400
 
+@recipes_bp.route('/ingredients/quick-add', methods=['POST'])
+@login_required
+def quick_add_ingredient():
+    """Quick add ingredient for recipes"""
+    try:
+        data = request.get_json()
+        name = data.get('name')
+        unit = data.get('unit', 'each')
+        ingredient_type = data.get('type', 'ingredient')
+
+        if not name:
+            return jsonify({'error': 'Ingredient name is required'}), 400
+
+        # Check if ingredient already exists
+        existing = InventoryItem.query.filter_by(
+            name=name,
+            organization_id=current_user.organization_id
+        ).first()
+
+        if existing:
+            return jsonify({
+                'id': existing.id,
+                'name': existing.name,
+                'unit': existing.unit,
+                'type': existing.type,
+                'exists': True
+            })
+
+        # Create new ingredient
+        ingredient = InventoryItem(
+            name=name,
+            unit=unit,
+            type=ingredient_type,
+            quantity=0.0,  # Start with zero quantity
+            organization_id=current_user.organization_id,
+            created_by=current_user.id
+        )
+        
+        db.session.add(ingredient)
+        db.session.commit()
+        
+        logger.info(f"Quick-added ingredient: {name} (ID: {ingredient.id})")
+        
+        return jsonify({
+            'id': ingredient.id,
+            'name': ingredient.name,
+            'unit': ingredient.unit,
+            'type': ingredient.type,
+            'exists': False
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error quick-adding ingredient: {e}")
+        return jsonify({'error': str(e)}), 500
+
 # Helper functions to keep controllers clean
 def _extract_ingredients_from_form(form):
     """Extract ingredient data from form submission"""
