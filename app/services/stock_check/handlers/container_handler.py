@@ -24,25 +24,25 @@ class ContainerHandler(BaseInventoryHandler):
         logger.info(f"CONTAINER_HANDLER: - request.unit: {request.unit}")
         logger.info(f"CONTAINER_HANDLER: - request.organization_id: {request.organization_id}")
         logger.info(f"CONTAINER_HANDLER: - organization_id param: {organization_id}")
-        
+
         # For containers, we need to find containers that can hold the recipe yield
         # request.item_id is NOT a container ID - it's the recipe or ingredient context
         # We need to find available containers based on the yield requirements
-        
+
         org_id_to_use = request.organization_id or organization_id
         logger.info(f"CONTAINER_HANDLER: Using organization_id: {org_id_to_use}")
-        
+
         # Get all available containers for this organization
         available_containers_query = InventoryItem.query.filter_by(
             type='container',
             organization_id=org_id_to_use
         ).filter(InventoryItem.quantity > 0)
-        
+
         logger.info(f"CONTAINER_HANDLER: Query SQL would be looking for type='container', organization_id={org_id_to_use}, quantity > 0")
-        
+
         available_containers = available_containers_query.all()
         logger.info(f"CONTAINER_HANDLER: Found {len(available_containers)} containers in database")
-        
+
         for cont in available_containers:
             logger.info(f"CONTAINER_HANDLER: - {cont.name} (ID: {cont.id}, qty: {cont.quantity})")
             logger.info(f"CONTAINER_HANDLER: - Storage: {getattr(cont, 'storage_amount', 'None')} {getattr(cont, 'storage_unit', 'None')}")
@@ -50,7 +50,7 @@ class ContainerHandler(BaseInventoryHandler):
         if not available_containers:
             logger.warning(f"CONTAINER_HANDLER: No containers found, returning not_found_result")
             return self._create_not_found_result(request)
-        
+
         # For now, return the first suitable container
         # TODO: This should be enhanced to return the best container option
         container = available_containers[0]
@@ -118,6 +118,18 @@ class ContainerHandler(BaseInventoryHandler):
             )
 
         except (ValueError, ZeroDivisionError) as e:
+            # Build the result - ensure we handle quantity properly
+            available_qty = container.quantity
+            if isinstance(available_qty, (list, tuple)):
+                available_qty = available_qty[0] if available_qty else 0
+            elif available_qty is None:
+                available_qty = 0
+
+            # Get storage capacity, fallback to capacity attribute
+            storage_capacity = getattr(container, 'storage_capacity', None)
+            if storage_capacity is None:
+                storage_capacity = getattr(container, 'capacity', None)
+
             return StockCheckResult(
                 item_id=container.id,
                 item_name=container.name,
