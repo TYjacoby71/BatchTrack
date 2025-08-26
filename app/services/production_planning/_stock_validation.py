@@ -81,46 +81,4 @@ def _convert_uscs_status(uscs_status: str) -> str:
     return status_map.get(uscs_status.upper(), 'unknown')
 
 
-def validate_ingredient_availability(recipe_id: int, scale: float = 1.0):
-    """
-    Legacy compatibility function - delegates to USCS
-    """
-    try:
-        uscs = UniversalStockCheckService()
-        return uscs.check_recipe_stock(recipe_id, scale)
-
-    except Exception as e:
-        logger.error(f"Error in ingredient availability check: {e}")
-        return {'success': False, 'error': str(e)}
-
-
-def check_container_availability(recipe_id: int, scale: float = 1.0) -> Dict[str, Any]:
-    """
-    Check container availability - delegates to container management
-    """
-    try:
-        from ._container_management import select_optimal_containers
-        from ...models import Recipe
-
-        recipe = Recipe.query.get(recipe_id)
-        if not recipe:
-            return {'success': False, 'error': 'Recipe not found'}
-
-        yield_amount = recipe.predicted_yield * scale
-        yield_unit = recipe.predicted_yield_unit
-
-        container_result = select_optimal_containers(
-            recipe_id=recipe_id,
-            yield_amount=yield_amount,
-            yield_unit=yield_unit
-        )
-
-        return {
-            'success': True,
-            'containers': container_result.get('available_containers', []),
-            'can_contain': container_result.get('can_contain_full_batch', False)
-        }
-
-    except Exception as e:
-        logger.error(f"Error checking container availability: {e}")
-        return {'success': False, 'error': str(e)}
+# Legacy wrapper functions removed - use USCS and container management directly

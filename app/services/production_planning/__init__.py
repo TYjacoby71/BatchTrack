@@ -14,16 +14,9 @@ the flow from recipe → stock check → container selection → batch creation.
 """
 
 from ._core import (
-    plan_production_comprehensive,
-    calculate_production_requirements,
-    validate_production_feasibility
-)
-from ._stock_validation import (
-    validate_ingredient_availability,
-    check_container_availability
+    plan_production_comprehensive
 )
 from ._container_management import (
-    select_optimal_containers,
     calculate_container_fill_strategy
 )
 from ._cost_calculation import (
@@ -44,11 +37,6 @@ from .types import (
 # Main public interface
 __all__ = [
     'plan_production_comprehensive',
-    'calculate_production_requirements', 
-    'validate_production_feasibility',
-    'validate_ingredient_availability',
-    'check_container_availability',
-    'select_optimal_containers',
     'calculate_container_fill_strategy',
     'calculate_production_costs',
     'analyze_cost_breakdown',

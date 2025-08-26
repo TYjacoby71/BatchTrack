@@ -210,27 +210,7 @@ def _create_user_specified_strategy(options: List[ContainerOption], container_id
     )
 
 
-def select_optimal_containers(recipe_id: int, scale: float = 1.0) -> dict:
-    """Legacy compatibility function for container selection"""
-    try:
-        from ...models import Recipe
-        recipe = Recipe.query.get(recipe_id)
-        if not recipe:
-            return {'success': False, 'error': 'Recipe not found'}
-
-        organization_id = current_user.organization_id if current_user.is_authenticated else None
-        strategy, options = analyze_container_options(recipe, scale, None, organization_id)
-
-        return {
-            'success': True,
-            'strategy': strategy.strategy_type.value if strategy else None,
-            'selected_containers': [opt.__dict__ for opt in (strategy.selected_containers if strategy else [])],
-            'all_options': [opt.__dict__ for opt in options]
-        }
-
-    except Exception as e:
-        logger.error(f"Error selecting optimal containers: {e}")
-        return {'success': False, 'error': str(e)}
+# Legacy wrapper function removed - use analyze_container_options() directly
 
 
 def calculate_container_fill_strategy(recipe_id: int, scale: float, yield_amount: float, yield_unit: str) -> Dict[str, Any]:
