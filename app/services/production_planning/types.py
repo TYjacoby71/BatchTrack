@@ -1,4 +1,3 @@
-
 """
 Production Planning Types
 
@@ -41,51 +40,51 @@ class IngredientRequirement:
 
 
 @dataclass
-class ContainerOption:
-    """Available container option for recipe"""
-    container_id: int
-    container_name: str
-    storage_capacity: float
-    storage_unit: str
-    available_quantity: int
-    containers_needed: int
-    cost_each: float
-    fill_percentage: float
+class ContainerFillStrategy:
+    """Container fill strategy for production batches"""
+    selected_containers: List[Dict[str, Any]] = field(default_factory=list)
+    total_capacity: float = 0.0
+    containment_percentage: float = 0.0
+    strategy_type: str = "auto"  # auto, manual, bulk
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization"""
         return {
-            'item_id': self.container_id,
-            'item_name': self.container_name,
-            'storage_capacity': self.storage_capacity,
-            'storage_unit': self.storage_unit,
-            'available': self.available_quantity,
-            'needed': self.containers_needed,
-            'cost_each': self.cost_each,
-            'fill_percentage': self.fill_percentage,
-            'category': 'container'
+            'selected_containers': self.selected_containers,
+            'total_capacity': self.total_capacity,
+            'containment_percentage': self.containment_percentage,
+            'strategy_type': self.strategy_type
         }
 
 
 @dataclass
+class ContainerOption:
+    """Individual container option for selection"""
+    container_id: int
+    container_name: str
+    capacity: float
+    available_quantity: int
+    containers_needed: int
+    cost_each: float = 0.0
+
+
+@dataclass
 class ContainerStrategy:
-    """Simple container selection result"""
-    selected_containers: List[ContainerOption]
-    total_containers_needed: int
-    total_capacity: float
-    average_fill_percentage: float
-    waste_percentage: float
-    estimated_cost: float
+    """Complete container strategy for production"""
+    selected_containers: List[ContainerOption] = field(default_factory=list)
+    total_capacity: float = 0.0
+    containment_percentage: float = 0.0
+    fill_strategy: Optional[ContainerFillStrategy] = None
+    warnings: List[str] = field(default_factory=list)
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization"""
         return {
-            'containers': [opt.to_dict() for opt in self.selected_containers],
-            'total_containers_needed': self.total_containers_needed,
+            'selected_containers': [c.__dict__ for c in self.selected_containers],
             'total_capacity': self.total_capacity,
-            'average_fill_percentage': self.average_fill_percentage,
-            'waste_percentage': self.waste_percentage,
-            'estimated_cost': self.estimated_cost
+            'containment_percentage': self.containment_percentage,
+            'fill_strategy': self.fill_strategy.to_dict() if self.fill_strategy else None,
+            'warnings': self.warnings
         }
 
 
@@ -127,11 +126,11 @@ class ProductionPlan:
         """Convert production plan to dictionary for API responses"""
         # Build stock results from USCS data (ingredients) + container analysis
         stock_results = []
-        
+
         # Add ingredients from USCS
         for req in self.ingredient_requirements:
             stock_results.append(req.to_dict())
-        
+
         # Add containers from analysis
         for container in self.container_options:
             stock_results.append(container.to_dict())

@@ -7,8 +7,10 @@ from app.utils.permissions import require_permission
 
 from app.services.recipe_service import (
     create_recipe, update_recipe, delete_recipe, get_recipe_details,
-    plan_production, scale_recipe, validate_recipe_data, duplicate_recipe
+    duplicate_recipe
 )
+from app.services.production_planning import plan_production_comprehensive
+from app.services.production_planning._container_management import get_container_plan_for_api
 from app.utils.unit_utils import get_global_unit_list
 from app.models.unit import Unit
 import logging
@@ -92,7 +94,7 @@ def auto_fill_containers(recipe_id):
         recipe = get_recipe_details(recipe_id)
         if not recipe:
             return jsonify({'success': False, 'error': 'Recipe not found'}), 404
-            
+
         # Delegate to production planning service
         from app.services.production_planning._container_management import analyze_container_options
         strategy, options = analyze_container_options(
@@ -101,7 +103,7 @@ def auto_fill_containers(recipe_id):
             preferred_container_id=None,
             organization_id=current_user.organization_id
         )
-        
+
         # Format result to match expected frontend format
         if strategy and options:
             result = {
@@ -149,7 +151,7 @@ def plan_production_route(recipe_id):
             container_id = data.get('container_id')
 
             # Delegate to service - no business logic here
-            planning_result = plan_production(recipe_id, scale, container_id)
+            planning_result = plan_production_comprehensive(recipe_id, scale, container_id)
 
             if planning_result.get('success', False):
                 return jsonify({
@@ -170,6 +172,40 @@ def plan_production_route(recipe_id):
 
     # GET request - show planning form
     return render_template('pages/recipes/plan_production.html', recipe=recipe)
+
+@recipes_bp.route('/<int:recipe_id>/plan/container', methods=['POST'])
+@login_required
+@require_permission('recipes.plan_production')
+def plan_container_route(recipe_id):
+    """API route to get container plan for a recipe"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+
+        scale = float(data.get('scale', 1.0))
+        yield_amount = float(data.get('yield_amount'))
+        yield_unit = data.get('yield_unit')
+        preferred_container_id = data.get('preferred_container_id')
+
+        if not scale or not yield_amount or not yield_unit:
+            return jsonify({"error": "Scale, yield amount, and yield unit are required"}), 400
+
+        # Delegate to service
+        container_plan = get_container_plan_for_api(
+            recipe_id=recipe_id,
+            scale=scale,
+            yield_amount=yield_amount,
+            yield_unit=yield_unit,
+            preferred_container_id=preferred_container_id,
+            organization_id=current_user.organization_id
+        )
+
+        return jsonify(container_plan)
+
+    except Exception as e:
+        logger.error(f"Error in container planning API: {e}")
+        return jsonify({"error": str(e)}), 500
 
 @recipes_bp.route('/<int:recipe_id>/variation', methods=['GET', 'POST'])
 @login_required

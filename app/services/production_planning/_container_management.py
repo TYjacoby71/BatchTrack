@@ -12,7 +12,6 @@ from ..stock_check import UniversalStockCheckService
 from ..stock_check.types import StockCheckRequest, InventoryCategory, StockStatus
 from .types import ContainerStrategy, ContainerOption, ContainerFillStrategy
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -20,193 +19,150 @@ def analyze_container_options(
     recipe: Recipe,
     scale: float,
     preferred_container_id: Optional[int] = None,
-    organization_id: int = None
-) -> Tuple[Optional[ContainerStrategy], List[ContainerOption]]:
+    organization_id: Optional[int] = None
+) -> Tuple[Optional[ContainerStrategy], List[Dict[str, Any]]]:
     """
-    Analyze available containers and determine the best strategy for production.
+    Analyze container options for a recipe at given scale.
 
     Returns:
         Tuple of (container_strategy, container_options_list)
     """
-    logger.info(f"CONTAINER_ANALYSIS: Starting analysis for recipe {recipe.id}, scale {scale}, org {organization_id}")
-
-    # Calculate total recipe yield in the recipe's yield unit
-    total_yield = (recipe.predicted_yield or 0) * scale
-    yield_unit = recipe.predicted_yield_unit or 'ml'
-
-    logger.info(f"CONTAINER_ANALYSIS: Recipe yield {total_yield} {yield_unit}")
-
-    if total_yield <= 0:
-        logger.warning(f"CONTAINER_ANALYSIS: Invalid recipe yield {total_yield}")
-        return None, []
-
     try:
-        # Get all containers for this organization
-        from ...models import InventoryItem
-        all_containers = InventoryItem.query.filter_by(
-            type='container',
-            organization_id=organization_id
-        ).filter(InventoryItem.quantity > 0).all()
-
-        logger.info(f"CONTAINER_ANALYSIS: Found {len(all_containers)} containers in database")
-        for container in all_containers:
-            logger.info(f"CONTAINER_ANALYSIS: - DB Container: {container.name} (ID: {container.id})")
-            logger.info(f"CONTAINER_ANALYSIS: - Quantity: {container.quantity}")
-            logger.info(f"CONTAINER_ANALYSIS: - Storage: {getattr(container, 'storage_amount', 'None')} {getattr(container, 'storage_unit', 'None')}")
-
-        # Analyze containers directly (no USCS needed)
-        from ..unit_conversion import ConversionEngine
-        container_options = []
-
-        for container in all_containers:
-            logger.info(f"CONTAINER_ANALYSIS: Analyzing container {container.name}...")
-
-            # Skip containers without storage capacity
-            storage_capacity = getattr(container, 'storage_amount', 0)
-            storage_unit = getattr(container, 'storage_unit', 'ml')
-            
-            if not storage_capacity or storage_capacity <= 0:
-                logger.info(f"CONTAINER_ANALYSIS: Skipping {container.name} - no storage capacity")
-                continue
-
-            try:
-                # Convert container storage capacity to recipe yield unit
-                if yield_unit != storage_unit:
-                    conversion_result = ConversionEngine.convert_units(
-                        storage_capacity,
-                        storage_unit,
-                        yield_unit,
-                        ingredient_id=None  # Containers don't need ingredient context
-                    )
-                    
-                    if isinstance(conversion_result, dict):
-                        capacity_in_recipe_units = conversion_result['converted_value']
-                    else:
-                        capacity_in_recipe_units = float(conversion_result)
-                else:
-                    capacity_in_recipe_units = storage_capacity
-
-                # Calculate fill analysis
-                containers_needed = max(1, int(total_yield / capacity_in_recipe_units)) if capacity_in_recipe_units > 0 else 1
-                total_capacity_needed = containers_needed * capacity_in_recipe_units
-                fill_percentage = (total_yield / total_capacity_needed * 100) if total_capacity_needed > 0 else 0
-                waste_percentage = max(0, 100 - fill_percentage)
-
-                logger.info(f"CONTAINER_ANALYSIS: {container.name} - Need {containers_needed} containers, Fill: {fill_percentage:.1f}%")
-
-                container_option = ContainerOption(
-                    container_id=container.id,
-                    container_name=container.name,
-                    storage_capacity=storage_capacity,
-                    storage_unit=storage_unit,
-                    available_quantity=int(container.quantity),
-                    containers_needed=containers_needed,
-                    cost_each=getattr(container, 'cost_per_unit', 0) or 0,
-                    fill_percentage=fill_percentage
-                )
-
-                container_options.append(container_option)
-                logger.info(f"CONTAINER_ANALYSIS: Added container option: {container_option.name}")
-
-            except Exception as e:
-                logger.error(f"CONTAINER_ANALYSIS: Error analyzing container {container.name}: {e}")
-
-        logger.info(f"CONTAINER_ANALYSIS: Final container options count: {len(container_options)}")
-
-        if not container_options:
-            logger.warning(f"CONTAINER_ANALYSIS: No suitable containers found after processing {len(all_containers)} containers")
+        # Get yield requirements
+        total_yield = (recipe.predicted_yield or 0) * scale
+        if total_yield <= 0:
+            logger.warning(f"No yield calculated for recipe {recipe.id} at scale {scale}")
             return None, []
 
-        # Create container strategy using the best option
-        best_option = min(container_options, key=lambda x: x.waste_percentage)
+        # Get allowed containers for this recipe
+        allowed_containers = getattr(recipe, 'allowed_containers', [])
+        if not allowed_containers:
+            logger.info(f"No allowed containers specified for recipe {recipe.id}")
+            return None, []
 
-        strategy = ContainerStrategy(
-            selected_containers=[best_option],
-            total_containers_needed=best_option.quantity,
-            total_capacity=best_option.total_capacity,
-            average_fill_percentage=best_option.fill_percentage,
-            waste_percentage=best_option.waste_percentage,
-            estimated_cost=0,  # TODO: Calculate cost
-            fill_strategy=ContainerFillStrategy.MINIMIZE_WASTE
+        # Use USCS to check container availability
+        uscs = UniversalStockCheckService()
+        container_options = []
+
+        for container_id in allowed_containers:
+            try:
+                # Check container stock via USCS
+                result = uscs.check_single_item(
+                    item_id=container_id,
+                    quantity_needed=1.0,  # We'll calculate needed quantity separately
+                    unit='count',
+                    category=InventoryCategory.CONTAINER
+                )
+
+                if result.status != StockStatus.ERROR:
+                    # Get container details
+                    container = InventoryItem.query.get(container_id)
+                    if container and hasattr(container, 'capacity') and container.capacity:
+
+                        # Calculate containers needed
+                        container_capacity = container.capacity
+                        containers_needed = int((total_yield / container_capacity) + 0.99)  # Round up
+
+                        # Check if we have enough containers
+                        available_qty = result.available_quantity
+
+                        container_option = {
+                            'id': container_id,
+                            'name': container.name,
+                            'capacity': container_capacity,
+                            'available_quantity': int(available_qty),
+                            'quantity': containers_needed,
+                            'stock_qty': int(available_qty),
+                            'unit': getattr(container, 'unit', 'count')
+                        }
+
+                        container_options.append(container_option)
+
+            except Exception as e:
+                logger.error(f"Error checking container {container_id}: {e}")
+                continue
+
+        if not container_options:
+            return None, []
+
+        # Create container strategy
+        # For now, use the first available container that has enough stock
+        selected_container = None
+        for option in container_options:
+            if option['available_quantity'] >= option['quantity']:
+                selected_container = option
+                break
+
+        if not selected_container:
+            # No single container type has enough stock
+            return None, container_options
+
+        # Create strategy
+        container_strategy = ContainerStrategy(
+            selected_containers=[ContainerOption(
+                container_id=selected_container['id'],
+                container_name=selected_container['name'],
+                capacity=selected_container['capacity'],
+                available_quantity=selected_container['available_quantity'],
+                containers_needed=selected_container['quantity'],
+                cost_each=0.0  # TODO: Add cost calculation
+            )],
+            total_capacity=selected_container['capacity'] * selected_container['quantity'],
+            containment_percentage=100.0,  # Full containment achieved
+            fill_strategy=ContainerFillStrategy(
+                selected_containers=[selected_container],
+                total_capacity=selected_container['capacity'] * selected_container['quantity'],
+                containment_percentage=100.0,
+                strategy_type="auto"
+            )
         )
 
-        logger.info(f"CONTAINER_ANALYSIS: Strategy created with {len(strategy.selected_containers)} containers")
-        return strategy, container_options
+        return container_strategy, container_options
 
     except Exception as e:
-        logger.error(f"CONTAINER_ANALYSIS: Exception in analyze_container_options: {e}")
-        import traceback
-        logger.error(f"CONTAINER_ANALYSIS: Traceback: {traceback.format_exc()}")
+        logger.error(f"Error in analyze_container_options: {e}")
         return None, []
 
 
-def _get_recipe_allowed_containers(recipe: Recipe) -> Optional[List[int]]:
-    """Get recipe-specific container constraints for USCS scoping"""
+def get_container_plan_for_api(recipe_id: int, scale: float) -> Dict[str, Any]:
+    """
+    API endpoint for container planning - returns JSON-ready data.
+    """
     try:
-        if hasattr(recipe, 'allowed_containers') and recipe.allowed_containers:
-            return recipe.allowed_containers
-        return None  # No scoping - allow all containers
+        from ...models import Recipe
+
+        recipe = Recipe.query.get(recipe_id)
+        if not recipe:
+            return {'success': False, 'error': 'Recipe not found'}
+
+        org_id = current_user.organization_id if current_user.is_authenticated else None
+
+        strategy, options = analyze_container_options(recipe, scale, None, org_id)
+
+        if not strategy and not options:
+            return {
+                'success': False,
+                'error': 'No suitable containers found for this recipe'
+            }
+
+        # Calculate total capacity and containment
+        total_yield = (recipe.predicted_yield or 0) * scale
+
+        if strategy:
+            return {
+                'success': True,
+                'container_selection': strategy.fill_strategy.selected_containers,
+                'total_capacity': strategy.total_capacity,
+                'containment_percentage': strategy.containment_percentage
+            }
+        else:
+            return {
+                'success': False,
+                'error': 'Insufficient container stock',
+                'available_options': options,
+                'required_yield': total_yield
+            }
+
     except Exception as e:
-        logger.error(f"Error getting recipe container constraints: {e}")
-        return None
-
-
-
-
-
-def _select_optimal_strategy(options: List[ContainerOption]) -> ContainerStrategy:
-    """Select the optimal container strategy from available options"""
-
-    # Sort by efficiency (fill percentage) and then by total cost
-    viable_options = [opt for opt in options if opt.available_quantity >= opt.containers_needed]
-
-    if not viable_options:
-        # No perfect options, find best available
-        viable_options = sorted(options, key=lambda x: (x.available_quantity, -x.fill_percentage))
-        viable_options = viable_options[:1] if viable_options else []
-
-    if not viable_options:
-        raise ValueError("No viable container options")
-
-    # Select strategy based on options
-    if len(viable_options) == 1:
-        selected = viable_options[0]
-        strategy_type = ContainerFillStrategy.SINGLE_LARGE
-    else:
-        # Select highest efficiency option
-        selected = max(viable_options, key=lambda x: x.fill_percentage)
-        strategy_type = ContainerFillStrategy.SINGLE_LARGE
-
-    total_cost = selected.cost_each * selected.containers_needed
-    waste_percentage = max(0, 100 - selected.fill_percentage)
-
-    return ContainerStrategy(
-        strategy_type=strategy_type,
-        selected_containers=[selected],
-        total_containers_needed=selected.containers_needed,
-        total_container_cost=total_cost,
-        average_fill_percentage=selected.fill_percentage,
-        waste_percentage=waste_percentage
-    )
-
-
-def _create_user_specified_strategy(options: List[ContainerOption], container_id: int) -> Optional[ContainerStrategy]:
-    """Create strategy for user-specified container"""
-
-    selected_option = next((opt for opt in options if opt.container_id == container_id), None)
-
-    if not selected_option:
-        # Fall back to optimal strategy
-        return _select_optimal_strategy(options)
-
-    total_cost = selected_option.cost_each * selected_option.containers_needed
-    waste_percentage = max(0, 100 - selected_option.fill_percentage)
-
-    return ContainerStrategy(
-        strategy_type=ContainerFillStrategy.USER_SPECIFIED,
-        selected_containers=[selected_option],
-        total_containers_needed=selected_option.containers_needed,
-        total_container_cost=total_cost,
-        average_fill_percentage=selected.fill_percentage,
-        waste_percentage=waste_percentage
-    )
+        logger.error(f"Error in get_container_plan_for_api: {e}")
+        return {'success': False, 'error': str(e)}
