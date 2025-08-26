@@ -45,7 +45,7 @@ def analyze_container_options(
             allowed_containers = recipe.container_ids
         
         if not allowed_containers:
-            logger.warning(f"Recipe {recipe.id} has no allowed containers defined")
+            logger.warning(f"Recipe {recipe.id} has no allowed containers defined - this recipe needs containers assigned to it")
             return None, []
 
         logger.info(f"Recipe {recipe.id} has {len(allowed_containers)} allowed containers: {allowed_containers}")
