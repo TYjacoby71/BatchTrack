@@ -91,7 +91,7 @@ def auto_fill_containers(recipe_id):
         yield_unit = data.get('yield_unit')
 
         # Get recipe with all relationships loaded
-        from app.models import Recipe, InventoryCategory
+        from app.models import Recipe
         from sqlalchemy.orm import joinedload
         recipe = Recipe.query.options(
             db.joinedload(Recipe.recipe_ingredients).joinedload('inventory_item')
