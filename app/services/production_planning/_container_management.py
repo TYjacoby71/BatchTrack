@@ -205,12 +205,12 @@ def _create_user_specified_strategy(options: List[ContainerOption], container_id
         selected_containers=[selected_option],
         total_containers_needed=selected_option.containers_needed,
         total_container_cost=total_cost,
-        average_fill_percentage=selected.fill_percentage,
+        average_fill_percentage=selected_option.fill_percentage,
         waste_percentage=waste_percentage
     )
 
 
-# Legacy wrapper function removed - use analyze_container_options() directly
+
 
 
 def calculate_container_fill_strategy(recipe_id: int, scale: float, yield_amount: float, yield_unit: str) -> Dict[str, Any]:

@@ -173,4 +173,3 @@ def analyze_production_feasibility(
     return ProductionStatus.FEASIBLE, issues, recommendations
 
 
-# Legacy wrapper functions removed - use plan_production_comprehensive() directly

@@ -81,4 +81,3 @@ def _convert_uscs_status(uscs_status: str) -> str:
     return status_map.get(uscs_status.upper(), 'unknown')
 
 
-# Legacy wrapper functions removed - use USCS and container management directly
