@@ -10,7 +10,6 @@ from ...models import Recipe, InventoryItem
 from flask_login import current_user
 from ..stock_check import UniversalStockCheckService
 from ..stock_check.types import StockCheckRequest, InventoryCategory
-from .types import ContainerOption, ContainerStrategy, ContainerFillStrategy
 
 
 logger = logging.getLogger(__name__)
@@ -174,8 +173,3 @@ def _create_user_specified_strategy(options: List[ContainerOption], container_id
         average_fill_percentage=selected_option.fill_percentage,
         waste_percentage=waste_percentage
     )
-
-
-
-
-
