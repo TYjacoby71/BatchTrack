@@ -217,37 +217,13 @@ export class ContainerManager {
             const containerUnit = container.unit || 'ml';
             const quantityNeeded = container.quantity || container.containers_needed || 0;
             
-            // Always show converted capacity prominently if conversion successful
+            // Show capacity with both units side by side if conversion available
             let capacityDisplay = `${containerCapacity} ${containerUnit}`;
             
             if (container.capacity_in_yield_unit && container.yield_unit && container.conversion_successful) {
-                capacityDisplay = `
-                    <div>
-                        <strong>${container.capacity_in_yield_unit} ${container.yield_unit}</strong>
-                        <br><small class="text-muted">(${containerCapacity} ${containerUnit} storage)</small>
-                    </div>
-                `;
+                capacityDisplay = `<strong>${container.capacity_in_yield_unit} ${container.yield_unit}</strong> (${containerCapacity} ${containerUnit})`;
             } else if (container.capacity_in_yield_unit && container.yield_unit) {
-                capacityDisplay = `
-                    <div>
-                        <strong>${container.capacity_in_yield_unit} ${container.yield_unit}</strong>
-                        <br><small class="text-muted">(${containerCapacity} ${containerUnit} storage)</small>
-                    </div>
-                `;
-            }
-            
-            // Calculate individual container fill for this specific container in the combination
-            let fillIndicator = '';
-            if (container.total_yield_needed && container.capacity_in_yield_unit && quantityNeeded > 0) {
-                // For multi-container: show per-container utilization
-                const individualCapacity = container.capacity_in_yield_unit * quantityNeeded;
-                // Estimate this container's portion (simplified - actual distribution would be more complex)
-                const estimatedFill = containers.length > 1 ? 
-                    (individualCapacity / containers.reduce((sum, c) => sum + (c.capacity_in_yield_unit || 0) * (c.quantity || c.containers_needed || 0), 0)) * 100 :
-                    (container.total_yield_needed / individualCapacity) * 100;
-                
-                const fillColor = estimatedFill < 50 ? 'warning' : estimatedFill > 95 ? 'success' : 'info';
-                fillIndicator = `<div class="mt-1"><span class="badge bg-${fillColor}">${Math.min(100, estimatedFill).toFixed(1)}% utilized</span></div>`;
+                capacityDisplay = `<strong>${container.capacity_in_yield_unit} ${container.yield_unit}</strong> (${containerCapacity} ${containerUnit})`;
             }
             
             // Add optimization badge for multi-container selections
@@ -275,7 +251,6 @@ export class ContainerManager {
                         <label class="form-label small">Capacity Each</label>
                         <div class="form-control form-control-sm bg-light border-0">
                             ${capacityDisplay}
-                            ${fillIndicator}
                         </div>
                     </div>
                     <div class="col-md-2">
@@ -296,26 +271,7 @@ export class ContainerManager {
 
         html += '</div>';
         
-        if (isAutoFill) {
-            const efficiency = this.containerPlan.containment_percentage || 0;
-            const warnings = this.containerPlan.warnings || [];
-            
-            // Enhanced summary for multi-container
-            let summaryText = `Auto-fill efficiency: ${efficiency.toFixed(1)}%`;
-            if (containers.length > 1) {
-                const totalContainers = containers.reduce((sum, c) => sum + (c.quantity || c.containers_needed || 0), 0);
-                summaryText = `Multi-container optimization: ${totalContainers} total containers, ${efficiency.toFixed(1)}% efficiency`;
-            }
-            
-            html += `
-                <div class="mt-2">
-                    <small class="text-muted">
-                        <i class="fas fa-info-circle"></i> ${summaryText}
-                    </small>
-                    ${warnings.length > 0 ? `<div class="alert alert-info mt-2"><small><i class="fas fa-lightbulb"></i> ${warnings.join('<br>')}</small></div>` : ''}
-                </div>
-            `;
-        }
+        
         
         console.log('🔍 RENDER CONTAINERS: Setting HTML for', resultClass);
         containerResults.innerHTML = html;
@@ -462,15 +418,10 @@ export class ContainerManager {
         if (capacityDiv) {
             let capacityDisplay = `${container.capacity || 0} ${container.unit || 'ml'}`;
             
-            // If we have converted capacity info, show both
+            // If we have converted capacity info, show both side by side
             if (container.capacity_in_yield_unit && container.yield_unit && container.conversion_successful) {
                 if ((container.unit || 'ml') !== container.yield_unit) {
-                    capacityDisplay = `
-                        <div>
-                            <strong>${container.capacity_in_yield_unit} ${container.yield_unit}</strong>
-                            <br><small class="text-muted">(${container.capacity} ${container.unit})</small>
-                        </div>
-                    `;
+                    capacityDisplay = `<strong>${container.capacity_in_yield_unit} ${container.yield_unit}</strong> (${container.capacity} ${container.unit})`;
                 }
             }
             
@@ -540,16 +491,28 @@ export class ContainerManager {
         }
 
         if (messageSpan) {
+            let message = '';
+            let className = 'form-text mt-1';
+            
             if (percentage >= 100) {
-                messageSpan.textContent = 'Full containment achieved';
-                messageSpan.className = 'form-text text-success mt-1';
+                message = 'Full containment achieved';
+                className += ' text-success';
             } else if (percentage > 0) {
-                messageSpan.textContent = 'Partial containment (batch can still proceed)';
-                messageSpan.className = 'form-text text-warning mt-1';
+                message = 'Partial containment (batch can still proceed)';
+                className += ' text-warning';
             } else {
-                messageSpan.textContent = 'No containers - manual containment required (batch can still proceed)';
-                messageSpan.className = 'form-text text-warning mt-1';
+                message = 'No containers - manual containment required (batch can still proceed)';
+                className += ' text-warning';
             }
+            
+            // Add efficiency warnings from container plan
+            const warnings = this.containerPlan?.warnings || [];
+            if (warnings.length > 0) {
+                message += '. ' + warnings.join('. ');
+            }
+            
+            messageSpan.textContent = message;
+            messageSpan.className = className;
         }
     }
 
