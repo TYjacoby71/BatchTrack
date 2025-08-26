@@ -64,6 +64,15 @@ def create_inventory_item(form_data, organization_id, created_by):
         except (ValueError, TypeError):
             pass
 
+        # Extract initial quantity from form
+        initial_quantity = 0.0
+        try:
+            quantity_input = form_data.get('quantity')
+            if quantity_input:
+                initial_quantity = float(quantity_input)
+        except (ValueError, TypeError):
+            pass
+
         # Determine if item is perishable
         is_perishable = bool(shelf_life_days) or form_data.get('is_perishable') == 'on'
 
@@ -89,6 +98,10 @@ def create_inventory_item(form_data, organization_id, created_by):
 
         # Handle initial stock if quantity > 0
         if initial_quantity > 0:
+            # Extract custom expiration data for initial stock
+            custom_expiration_date = form_data.get('custom_expiration_date')
+            custom_shelf_life_days = form_data.get('custom_shelf_life_days')
+            
             # Use the central inventory adjustment service for initial stock
             success, adjustment_message = process_inventory_adjustment(
                 item_id=new_item.id,
