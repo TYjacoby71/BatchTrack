@@ -19,11 +19,20 @@ export class ValidationManager {
             issues.push('Select batch type');
         }
 
-        // Check container requirements if enabled
-        if (this.main.requiresContainers && this.main.containerManager.containerPlan) {
-            const containmentPercentage = this.main.containerManager.containerPlan.containment_percentage || 0;
-            if (containmentPercentage < 50) {
-                warnings.push('Low container coverage');
+        // Container requirements validation
+        if (this.main.requiresContainers) {
+            if (!this.main.containerManager.containerPlan || !this.main.containerManager.containerPlan.success) {
+                issues.push('Container analysis required');
+            } else {
+                // Check for partial fill acknowledgment
+                const containmentPercentage = this.main.containerManager.containerPlan.containment_percentage || 0;
+                if (containmentPercentage < 100) {
+                    const partialFillAcknowledged = document.getElementById('partialFillAcknowledged')?.checked;
+                    if (!partialFillAcknowledged) {
+                        warnings.push('Partial container fill requires acknowledgment');
+                        // Don't set valid = false, but show as warning that needs user action
+                    }
+                }
             }
         }
 

@@ -1,4 +1,3 @@
-
 // Container Management Module
 export class ContainerManager {
     constructor(mainManager) {
@@ -8,7 +7,7 @@ export class ContainerManager {
 
     bindEvents() {
         console.log('🔍 CONTAINER MANAGER DEBUG: Binding events');
-        
+
         // Add container button
         const addContainerBtn = document.getElementById('addContainerBtn');
         console.log('🔍 CONTAINER MANAGER DEBUG: Add container button found:', !!addContainerBtn);
@@ -23,7 +22,7 @@ export class ContainerManager {
             autoFillToggle.addEventListener('change', (e) => {
                 console.log('🔍 AUTO-FILL TOGGLE:', e.target.checked);
                 this.toggleContainerSections(e.target.checked);
-                
+
                 if (e.target.checked && this.main.requiresContainers) {
                     console.log('🔍 AUTO-FILL TOGGLE: Fetching container plan...');
                     this.fetchContainerPlan();
@@ -38,11 +37,11 @@ export class ContainerManager {
     toggleContainerSections(autoFillEnabled) {
         const autoFillResults = document.getElementById('autoFillResults');
         const manualSection = document.getElementById('manualContainerSection');
-        
+
         if (autoFillResults) {
             autoFillResults.style.display = autoFillEnabled ? 'block' : 'none';
         }
-        
+
         if (manualSection) {
             manualSection.style.display = autoFillEnabled ? 'none' : 'block';
         }
@@ -54,15 +53,15 @@ export class ContainerManager {
     clearAutoFillResults() {
         const containerResults = document.getElementById('containerResults');
         const containerRows = document.getElementById('containerSelectionRows');
-        
+
         if (containerResults) {
             containerResults.innerHTML = '<p class="text-muted">Switch to manual container selection mode</p>';
         }
-        
+
         if (containerRows) {
             containerRows.innerHTML = '';
         }
-        
+
         // Clear progress bar when switching to manual
         this.updateContainerProgress();
     }
@@ -73,7 +72,7 @@ export class ContainerManager {
             // Initialize section visibility
             const autoFillEnabled = document.getElementById('autoFillEnabled')?.checked ?? true;
             this.toggleContainerSections(autoFillEnabled);
-            
+
             this.fetchContainerPlan();
         } else {
             this.containerPlan = null;
@@ -85,7 +84,7 @@ export class ContainerManager {
         console.log('🔍 CONTAINER DEBUG: fetchContainerPlan called');
         console.log('🔍 CONTAINER DEBUG: Recipe exists:', !!this.main.recipe);
         console.log('🔍 CONTAINER DEBUG: Requires containers:', this.main.requiresContainers);
-        
+
         if (!this.main.recipe || !this.main.requiresContainers) {
             console.log('🔍 CONTAINER DEBUG: Skipping fetch - recipe or requirement missing');
             return;
@@ -144,11 +143,36 @@ export class ContainerManager {
 
     displayAutoFillResults(containerResults, containers) {
         let html = '<div class="auto-fill-results">';
-        
+
+        // Add partial fill alerts if containment is less than 100%
+        const containmentPercentage = this.containerPlan.containment_percentage || 0;
+        if (containmentPercentage < 100 && containmentPercentage > 0) {
+            html += `
+                <div class="alert alert-warning mb-3">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>Partial Fill Warning:</strong> Container will be ${containmentPercentage.toFixed(1)}% filled. 
+                    ${(100 - containmentPercentage).toFixed(1)}% of the recipe yield will remain as bulk product.
+                    <div class="mt-2">
+                        <small>Acknowledge this partial fill to proceed with batch creation.</small>
+                    </div>
+                </div>
+            `;
+        } else if (containmentPercentage === 0) {
+            html += `
+                <div class="alert alert-danger mb-3">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <strong>No Containment:</strong> No suitable containers available. All product will be bulk stored.
+                </div>
+            `;
+        }
+
         containers.forEach((container, index) => {
             const stockQuantity = container.stock_qty || container.quantity || container.available_quantity || 0;
+            const bgClass = containmentPercentage >= 100 ? 'bg-success bg-opacity-10' : 
+                           containmentPercentage > 0 ? 'bg-warning bg-opacity-10' : 'bg-danger bg-opacity-10';
+
             html += `
-                <div class="row align-items-center mb-3 p-3 border rounded bg-success bg-opacity-10" data-auto-container="${index}">
+                <div class="row align-items-center mb-3 p-3 border rounded ${bgClass}" data-auto-container="${index}">
                     <div class="col-md-5">
                         <label class="form-label small">Container Type</label>
                         <div class="form-control form-control-sm bg-light border-0">
@@ -167,25 +191,34 @@ export class ContainerManager {
                             ${container.capacity || 0} ${container.unit || 'ml'}
                         </div>
                     </div>
-                    <div class="col-md-1">
-                        <label class="form-label small">Available Stock</label>
-                        <div class="badge bg-success fs-6">${stockQuantity}</div>
-                    </div>
                 </div>
             `;
         });
 
         html += '</div>';
-        html += `<div class="mt-2"><small class="text-muted"><i class="fas fa-info-circle"></i> Auto-fill efficiency: ${(this.containerPlan.containment_percentage || 0).toFixed(1)}%</small></div>`;
+
+        // Enhanced efficiency display with context
+        const efficiencyClass = containmentPercentage >= 100 ? 'text-success' : 
+                              containmentPercentage >= 80 ? 'text-warning' : 'text-danger';
+        html += `
+            <div class="mt-2">
+                <small class="${efficiencyClass}">
+                    <i class="fas fa-info-circle"></i> 
+                    Container efficiency: ${containmentPercentage.toFixed(1)}%
+                    ${containmentPercentage < 100 ? `(${(100 - containmentPercentage).toFixed(1)}% bulk storage)` : '(Full containment)'}
+                </small>
+            </div>
+        `;
+
         containerResults.innerHTML = html;
     }
 
     addContainerRow() {
         console.log('🔍 ADD CONTAINER DEBUG: Add container row called');
-        
+
         const autoFillEnabled = document.getElementById('autoFillEnabled')?.checked;
         console.log('🔍 ADD CONTAINER DEBUG: Auto-fill enabled:', autoFillEnabled);
-        
+
         if (autoFillEnabled) {
             alert('Please uncheck Auto-Fill to add containers manually.');
             return;
@@ -199,7 +232,7 @@ export class ContainerManager {
 
         const rowsContainer = document.getElementById('containerSelectionRows');
         console.log('🔍 ADD CONTAINER DEBUG: Rows container found:', !!rowsContainer);
-        
+
         if (!rowsContainer) {
             console.error('🚨 Container rows container not found!');
             return;
@@ -207,14 +240,14 @@ export class ContainerManager {
 
         const rowIndex = rowsContainer.children.length;
         console.log('🔍 ADD CONTAINER DEBUG: Creating row index:', rowIndex);
-        
+
         const rowHtml = this.createContainerRowHTML(rowIndex);
         console.log('🔍 ADD CONTAINER DEBUG: Row HTML created:', rowHtml.substring(0, 100) + '...');
-        
+
         const rowDiv = document.createElement('div');
         rowDiv.innerHTML = rowHtml;
         const newRow = rowDiv.firstElementChild;
-        
+
         if (newRow) {
             rowsContainer.appendChild(newRow);
             console.log('🔍 ADD CONTAINER DEBUG: Row appended successfully');
@@ -226,7 +259,7 @@ export class ContainerManager {
 
     createContainerRowHTML(index) {
         const availableContainers = this.containerPlan?.container_selection || [];
-        
+
         let optionsHTML = '<option value="">Select Container</option>';
         availableContainers.forEach(container => {
             optionsHTML += `<option value="${container.id}">${container.name} (${container.capacity} ${container.unit})</option>`;
@@ -347,7 +380,7 @@ export class ContainerManager {
             document.querySelectorAll('[data-container-row]').forEach(row => {
                 const select = row.querySelector('.container-select');
                 const quantityInput = row.querySelector('.container-quantity');
-                
+
                 if (select && quantityInput && select.value) {
                     const container = this.containerPlan?.container_selection?.find(c => c.id == select.value);
                     if (container) {
@@ -361,7 +394,7 @@ export class ContainerManager {
         } else {
             containment_percentage = this.containerPlan.containment_percentage || 0;
         }
-        
+
         this.updateProgressBar(containment_percentage);
     }
 
@@ -380,16 +413,20 @@ export class ContainerManager {
             percentSpan.textContent = `${percentage.toFixed(1)}%`;
         }
 
+        // Update progress message with more specific warnings
         if (messageSpan) {
             if (percentage >= 100) {
-                messageSpan.textContent = 'Full containment achieved';
+                messageSpan.textContent = 'Full containment achieved - all product will be containerized';
                 messageSpan.className = 'form-text text-success mt-1';
+            } else if (percentage >= 80) {
+                messageSpan.textContent = `Partial containment (${percentage.toFixed(1)}%) - ${(100 - percentage).toFixed(1)}% will be bulk storage`;
+                messageSpan.className = 'form-text text-warning mt-1';
             } else if (percentage > 0) {
-                messageSpan.textContent = 'Partial containment (batch can still proceed)';
-                messageSpan.className = 'form-text text-warning mt-1';
+                messageSpan.textContent = `Low containment (${percentage.toFixed(1)}%) - most product will be bulk storage. Consider larger containers.`;
+                messageSpan.className = 'form-text text-danger mt-1';
             } else {
-                messageSpan.textContent = 'No containers - manual containment required (batch can still proceed)';
-                messageSpan.className = 'form-text text-warning mt-1';
+                messageSpan.textContent = 'No containers available - all product will be bulk storage';
+                messageSpan.className = 'form-text text-danger mt-1';
             }
         }
     }
@@ -397,15 +434,15 @@ export class ContainerManager {
     clearContainerResults() {
         const containerResults = document.getElementById('containerResults');
         const containerRows = document.getElementById('containerSelectionRows');
-        
+
         if (containerResults) {
             containerResults.innerHTML = '<p class="text-muted">Container management disabled</p>';
         }
-        
+
         if (containerRows) {
             containerRows.innerHTML = '';
         }
-        
+
         this.clearProgressBar();
     }
 

@@ -329,36 +329,49 @@ def calculate_container_fill_strategy(recipe_id: int, scale: float, yield_amount
         # Sort by efficiency (containers with largest capacity first)
         container_analyses.sort(key=lambda x: x['capacity'], reverse=True)
 
-        # Auto-fill algorithm using USCS-analyzed containers
+        # Auto-fill algorithm - prioritize fill efficiency over multiple containers
         selected_containers = []
-        total_yield_covered = 0
-
+        
+        # Calculate fill efficiency for each container option
         for container in container_analyses:
-            if total_yield_covered >= yield_amount:
-                break
-
             containers_needed = container['containers_needed']
             available_stock = container['stock_qty']
+            
+            if available_stock >= containers_needed:
+                # Can fully satisfy with this container type
+                total_capacity = containers_needed * container['capacity']
+                fill_efficiency = (yield_amount / total_capacity * 100) if total_capacity > 0 else 0
+                container['fill_efficiency'] = fill_efficiency
+                container['can_fulfill'] = True
+            else:
+                # Partial fulfillment possible
+                total_capacity = available_stock * container['capacity']
+                fill_efficiency = (min(yield_amount, total_capacity) / total_capacity * 100) if total_capacity > 0 else 0
+                container['fill_efficiency'] = fill_efficiency
+                container['can_fulfill'] = False
 
-            # Use as many as available, up to what's needed
+        # Sort by: 1) can fulfill completely, 2) fill efficiency, 3) larger capacity
+        container_analyses.sort(key=lambda x: (x['can_fulfill'], x['fill_efficiency'], x['capacity']), reverse=True)
+
+        # Select the best option (highest priority container)
+        if container_analyses:
+            best_container = container_analyses[0]
+            containers_needed = best_container['containers_needed']
+            available_stock = best_container['stock_qty']
             qty_to_use = min(containers_needed, available_stock)
 
             if qty_to_use > 0:
                 selected_containers.append({
-                    'id': container['id'],
-                    'name': container['name'],
-                    'capacity': container['capacity'],
-                    'unit': container['unit'],
+                    'id': best_container['id'],
+                    'name': best_container['name'],
+                    'capacity': best_container['capacity'],
+                    'unit': best_container['unit'],
                     'quantity': qty_to_use,
-                    'stock_qty': container['stock_qty'],
-                    'available_quantity': container['available_quantity']
+                    'stock_qty': best_container['stock_qty'],
+                    'available_quantity': best_container['available_quantity']
                 })
 
-                # Calculate how much yield this covers
-                yield_covered = qty_to_use * container['capacity']
-                total_yield_covered += yield_covered
-
-                logger.info(f"CONTAINER_FILL: Selected {qty_to_use}x {container['name']}, covers {yield_covered} units")
+                logger.info(f"CONTAINER_FILL: Selected {qty_to_use}x {best_container['name']} (efficiency: {best_container['fill_efficiency']:.1f}%)")
 
         # Calculate final metrics
         total_capacity = sum(s['capacity'] * s['quantity'] for s in selected_containers)
