@@ -1,158 +1,93 @@
 """
 Stock Validation via USCS
 
-Handles all stock checking logic by integrating with the Universal Stock Check Service.
-Validates ingredient availability and formats results for production planning.
+Simplified interface that delegates all stock checking to USCS.
+Production planning focuses on its unique value: cost analysis and container strategy.
 """
 
 import logging
 from typing import List, Dict, Any
 from flask_login import current_user
 
-from ...models import Recipe, RecipeIngredient
+from ...models import Recipe
 from ..stock_check import UniversalStockCheckService
-from ..stock_check.types import StockCheckRequest, InventoryCategory
-from .types import IngredientRequirement, ProductionRequest, ProductionPlan
+from .types import IngredientRequirement
 
 logger = logging.getLogger(__name__)
 
 
 def validate_ingredients_with_uscs(recipe: Recipe, scale: float, organization_id: int) -> List[IngredientRequirement]:
     """
-    Use USCS to validate all ingredient availability for a recipe.
+    Use USCS to validate ingredients and convert to production planning format.
 
-    Returns list of IngredientRequirement objects with availability status.
+    This is now a thin wrapper around USCS that converts results to IngredientRequirement objects
+    for compatibility with production planning cost calculations.
     """
     try:
-        logger.info(f"STOCK_VALIDATION: Checking ingredients for recipe {recipe.id} at scale {scale}")
-
-        # Build USCS requests for all recipe ingredients
-        stock_requests = []
-        for recipe_ingredient in recipe.recipe_ingredients:
-            request = StockCheckRequest(
-                item_id=recipe_ingredient.inventory_item_id,
-                quantity_needed=recipe_ingredient.quantity * scale,
-                unit=recipe_ingredient.unit,
-                category=InventoryCategory.INGREDIENT,
-                organization_id=organization_id,
-                scale_factor=scale
-            )
-            stock_requests.append(request)
-
-        # Execute bulk stock check
+        # Use USCS directly - no duplication of stock check logic
         uscs = UniversalStockCheckService()
-        stock_results = uscs.check_bulk_items(stock_requests)
+        stock_results = uscs.check_recipe_stock(recipe.id, scale)
 
-        # Convert results to IngredientRequirement objects
+        if not stock_results.get('success'):
+            logger.error(f"USCS stock check failed: {stock_results.get('error')}")
+            return []
+
+        # Convert USCS results to IngredientRequirement objects for cost calculation
         ingredient_requirements = []
 
-        for result in stock_results:
-            # Find corresponding recipe ingredient for base quantity
+        for stock_item in stock_results.get('stock_check', []):
+            # Find recipe ingredient for cost data
             recipe_ingredient = next(
-                (ri for ri in recipe.recipe_ingredients if ri.inventory_item_id == result.item_id),
+                (ri for ri in recipe.recipe_ingredients if ri.inventory_item_id == stock_item['item_id']),
                 None
             )
 
             if not recipe_ingredient:
-                logger.warning(f"Could not find recipe ingredient for item {result.item_id}")
                 continue
 
-            # Determine availability status
-            status = _determine_availability_status(result)
+            # Convert USCS status to production planning status
+            status = _convert_uscs_status(stock_item.get('status', 'unknown'))
 
             requirement = IngredientRequirement(
-                ingredient_id=result.item_id,
-                ingredient_name=result.item_name or 'Unknown',
+                ingredient_id=stock_item['item_id'],
+                ingredient_name=stock_item['item_name'],
                 base_quantity=recipe_ingredient.quantity,
-                scaled_quantity=recipe_ingredient.quantity * scale,
-                unit=recipe_ingredient.unit,
-                available_quantity=result.available_quantity or 0,
+                scaled_quantity=stock_item['needed_quantity'],
+                unit=stock_item['needed_unit'],
+                available_quantity=stock_item['available_quantity'],
                 cost_per_unit=getattr(recipe_ingredient.inventory_item, 'cost_per_unit', 0) or 0,
-                total_cost=(recipe_ingredient.quantity * scale) * (getattr(recipe_ingredient.inventory_item, 'cost_per_unit', 0) or 0),
+                total_cost=(stock_item['needed_quantity']) * (getattr(recipe_ingredient.inventory_item, 'cost_per_unit', 0) or 0),
                 status=status
             )
 
             ingredient_requirements.append(requirement)
 
-        logger.info(f"STOCK_VALIDATION: Validated {len(ingredient_requirements)} ingredients")
         return ingredient_requirements
 
     except Exception as e:
-        logger.error(f"Error validating ingredients with USCS: {e}")
-        raise
+        logger.error(f"Error in validate_ingredients_with_uscs: {e}")
+        return []
 
 
-def _determine_availability_status(stock_result) -> str:
-    """Determine availability status from USCS result"""
-    if hasattr(stock_result, 'status'):
-        # Convert status to standardized format
-        status_value = stock_result.status.value if hasattr(stock_result.status, 'value') else str(stock_result.status)
-        if status_value.upper() in ['AVAILABLE', 'OK']:
-            return 'available'
-        elif status_value.upper() in ['LOW', 'INSUFFICIENT']:
-            return 'low'
-        elif status_value.upper() in ['NEEDED', 'MISSING']:
-            return 'insufficient'
-        else:
-            return 'unknown'
-
-    # Fallback to quantity comparison
-    needed = getattr(stock_result, 'needed_quantity', 0) or 0
-    available = getattr(stock_result, 'available_quantity', 0) or 0
-
-    if available >= needed:
-        return 'available'
-    elif available > 0:
-        return 'insufficient'  # Some available but not enough
-    else:
-        return 'unavailable'  # None available
+def _convert_uscs_status(uscs_status: str) -> str:
+    """Convert USCS status to production planning status"""
+    status_map = {
+        'OK': 'available',
+        'LOW': 'low', 
+        'NEEDED': 'insufficient',
+        'OUT_OF_STOCK': 'unavailable',
+        'ERROR': 'unknown'
+    }
+    return status_map.get(uscs_status.upper(), 'unknown')
 
 
 def validate_ingredient_availability(recipe_id: int, scale: float = 1.0):
     """
-    Production planning specific ingredient validation.
-    Uses recipe service for stock checking and adds production-specific logic.
+    Legacy compatibility function - delegates to USCS
     """
     try:
-        from ..recipe_service import check_recipe_stock
-        from ...models import Recipe
-        
-        recipe = Recipe.query.get(recipe_id)
-        if not recipe:
-            return {'success': False, 'error': 'Recipe not found'}
-
-        # Use recipe service for stock checking
-        result = check_recipe_stock(recipe, scale)
-        
-        if not result['success']:
-            return {'success': False, 'error': result.get('error', 'Stock check failed')}
-
-        # Convert to production planning format with cost information
-        organization_id = current_user.organization_id if current_user.is_authenticated else None
-        requirements = validate_ingredients_with_uscs(recipe, scale, organization_id)
-
-        # Convert to legacy format for compatibility
-        ingredients = []
-        for req in requirements:
-            ingredients.append({
-                'item_id': req.ingredient_id,
-                'item_name': req.ingredient_name,
-                'needed_quantity': req.scaled_quantity,
-                'available_quantity': req.available_quantity,
-                'unit': req.unit,
-                'status': req.status,
-                'category': 'ingredient'
-            })
-
-        all_available = all(req.status in ['available', 'low'] for req in requirements)
-
-        return {
-            'success': True,
-            'all_available': all_available,
-            'ingredients': ingredients,
-            'recipe_id': recipe_id,
-            'scale': scale
-        }
+        uscs = UniversalStockCheckService()
+        return uscs.check_recipe_stock(recipe_id, scale)
 
     except Exception as e:
         logger.error(f"Error in ingredient availability check: {e}")
@@ -161,15 +96,13 @@ def validate_ingredient_availability(recipe_id: int, scale: float = 1.0):
 
 def check_container_availability(recipe_id: int, scale: float = 1.0) -> Dict[str, Any]:
     """
-    Check container availability for a recipe at given scale.
-    This is a compatibility function for the container management system.
+    Check container availability - delegates to container management
     """
     try:
-        # Use the existing container management functionality
         from ._container_management import select_optimal_containers
-        from ..recipe_service import get_recipe_details
+        from ...models import Recipe
 
-        recipe = get_recipe_details(recipe_id)
+        recipe = Recipe.query.get(recipe_id)
         if not recipe:
             return {'success': False, 'error': 'Recipe not found'}
 
