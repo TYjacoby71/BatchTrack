@@ -123,22 +123,32 @@ export class ContainerManager {
         const containerResults = document.getElementById('containerResults');
         const autoFillEnabled = document.getElementById('autoFillEnabled')?.checked;
 
+        console.log('🔍 DISPLAY PLAN DEBUG: Container results element found:', !!containerResults);
+        console.log('🔍 DISPLAY PLAN DEBUG: Container plan success:', this.containerPlan?.success);
+        console.log('🔍 DISPLAY PLAN DEBUG: Auto-fill enabled:', autoFillEnabled);
+
         if (!containerResults || !this.containerPlan?.success) {
+            console.log('🔍 DISPLAY PLAN DEBUG: Clearing results - no element or failed plan');
             this.clearContainerResults();
             return;
         }
 
         const { container_selection } = this.containerPlan;
+        console.log('🔍 DISPLAY PLAN DEBUG: Container selection data:', container_selection);
 
         if (!container_selection || container_selection.length === 0) {
+            console.log('🔍 DISPLAY PLAN DEBUG: No containers in selection');
             containerResults.innerHTML = '<div class="alert alert-warning"><i class="fas fa-exclamation-triangle"></i> No suitable containers found</div>';
             return;
         }
 
+        console.log('🔍 DISPLAY PLAN DEBUG: Rendering', container_selection.length, 'containers, auto-fill:', autoFillEnabled);
+        
         if (autoFillEnabled) {
             this.renderContainerResults(containerResults, container_selection, true);
         } else {
-            containerResults.innerHTML = '<p class="text-muted">Manual container selection mode</p>';
+            // Still show available containers in manual mode, just don't auto-fill
+            containerResults.innerHTML = '<p class="text-muted">Switch to auto-fill mode to see container recommendations, or add containers manually below.</p>';
         }
     }
 
