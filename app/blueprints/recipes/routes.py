@@ -405,7 +405,7 @@ def check_stock():
             return jsonify({"error": "No data provided"}), 400
 
         recipe_id = data.get('recipe_id')
-        scale = data.get('scale', 1.0)
+        scale = float(data.get('scale', 1.0))
 
         if not recipe_id:
             return jsonify({"error": "Recipe ID is required"}), 400
@@ -431,13 +431,13 @@ def check_stock():
                     item['status'] = 'LOW'
                 elif item.get('status') == 'good':
                     item['status'] = 'OK'
-                
+
                 # Ensure frontend expected fields exist
                 item['ingredient_name'] = item.get('item_name', item.get('ingredient_name', 'Unknown'))
                 item['needed_amount'] = item.get('needed_quantity', 0)
                 item['available_quantity'] = item.get('available_quantity', 0)
                 item['unit'] = item.get('needed_unit', item.get('unit', ''))
-            
+
             all_ok = all(item.get('status') not in ['NEEDED', 'INSUFFICIENT'] for item in stock_check)
             status = 'ok' if all_ok else 'insufficient'
         else:
@@ -456,4 +456,3 @@ def check_stock():
     except Exception as e:
         logger.error(f"Error in recipe stock check: {e}")
         return jsonify({"error": str(e)}), 500
-
