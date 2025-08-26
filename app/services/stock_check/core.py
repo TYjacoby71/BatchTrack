@@ -71,7 +71,7 @@ class UniversalStockCheckService:
 
     def check_bulk_items(self, requests: List[StockCheckRequest]) -> List[StockCheckResult]:
         """
-        Check stock for multiple items efficiently.
+        Check stock for multiple items efficiently with organization scoping.
 
         Args:
             requests: List of stock check requests
@@ -81,24 +81,30 @@ class UniversalStockCheckService:
         """
         results = []
 
-        # Group requests by category for efficient batch processing
-        by_category = {}
+        # Process each request individually to ensure proper scoping
         for request in requests:
-            if request.category not in by_category:
-                by_category[request.category] = []
-            by_category[request.category].append(request)
+            try:
+                # Ensure organization context for each request
+                org_id = self._get_organization_id(request)
+                
+                # Get appropriate handler
+                handler = self.handlers.get(request.category)
+                if not handler:
+                    error_result = self._create_error_result(request, f"No handler for category: {request.category}")
+                    results.append(error_result)
+                    continue
 
-        # Process each category
-        for category, category_requests in by_category.items():
-            handler = self.handlers.get(category)
-            if handler:
-                for request in category_requests:
-                    try:
-                        result = handler.check_availability(request)
-                        results.append(result)
-                    except Exception as e:
-                        logger.error(f"Error in bulk check for {category}: {e}")
-                        # Continue with other items
+                # Handler does the category-specific work with organization scoping
+                result = handler.check_availability(request, org_id)
+                
+                # Standardize the result format
+                standardized_result = self._standardize_result(result)
+                results.append(standardized_result)
+                
+            except Exception as e:
+                logger.error(f"Error in bulk check for {request.category}: {e}")
+                error_result = self._create_error_result(request, str(e))
+                results.append(error_result)
 
         return results
 
@@ -190,7 +196,7 @@ class UniversalStockCheckService:
                     continue
                 
                 # Get stock check requests for this recipe
-                requests = get_recipe_ingredients_for_stock_check(recipe_id, scale)
+                requests = get_recipe_ingredients_for_stock_check(recipe_id, scale, organization_id)
                 
                 if not requests:
                     results[str(recipe_id)] = {

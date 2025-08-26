@@ -150,36 +150,4 @@ class IngredientHandler(BaseInventoryHandler):
             formatted_available="0"
         )
 
-    # Authorization logic removed - should be handled at service/route layer
-
-    def check_recipe_ingredients(self, recipe, scale: float = 1.0) -> List[Dict[str, Any]]:
-        """Check stock availability for all recipe ingredients"""
-        results = []
-
-        if not hasattr(recipe, 'recipe_ingredients') or not recipe.recipe_ingredients:
-            logger.warning(f"Recipe {recipe.id} has no ingredients to check")
-            return results
-
-        for recipe_ingredient in recipe.recipe_ingredients:
-            item_id = recipe_ingredient.inventory_item_id
-            quantity_needed = recipe_ingredient.quantity * scale
-            unit = recipe_ingredient.unit
-
-            request = StockCheckRequest(item_id=item_id, quantity_needed=quantity_needed, unit=unit)
-            result = self.check_availability(request)
-
-            results.append({
-                'recipe_ingredient_id': recipe_ingredient.id,
-                'inventory_item_id': item_id,
-                'item_name': result.item_name,
-                'needed_quantity': quantity_needed,
-                'needed_unit': unit,
-                'available_quantity': result.available_quantity,
-                'available_unit': result.available_unit,
-                'status': result.status,
-                'formatted_needed': result.formatted_needed,
-                'formatted_available': result.formatted_available,
-                'conversion_details': result.conversion_details
-            })
-
-        return results
+    # All recipe logic should go through the core service layer
