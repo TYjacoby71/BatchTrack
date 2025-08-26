@@ -172,29 +172,65 @@ export class ContainerManager {
             const containerUnit = container.unit || 'ml';
             const quantityNeeded = container.quantity || 0;
             
+            // CORRECTED: Always show converted capacity prominently if conversion successful
+            let capacityDisplay = `${containerCapacity} ${containerUnit}`;
+            
+            if (container.capacity_in_yield_unit && container.yield_unit && container.conversion_successful) {
+                // Show converted capacity as primary, original as secondary
+                capacityDisplay = `
+                    <div>
+                        <strong>${container.capacity_in_yield_unit} ${container.yield_unit}</strong>
+                        <br><small class="text-muted">(${containerCapacity} ${containerUnit} storage)</small>
+                    </div>
+                `;
+            } else if (container.capacity_in_yield_unit && container.yield_unit) {
+                // Even if conversion not marked successful, show both if we have converted value
+                capacityDisplay = `
+                    <div>
+                        <strong>${container.capacity_in_yield_unit} ${container.yield_unit}</strong>
+                        <br><small class="text-muted">(${containerCapacity} ${containerUnit} storage)</small>
+                    </div>
+                `;
+            }
+            
+            // Calculate fill percentage for visual indicator
+            let fillIndicator = '';
+            if (container.total_yield_needed && container.capacity_in_yield_unit) {
+                const totalCapacity = container.capacity_in_yield_unit * quantityNeeded;
+                const fillPercentage = (container.total_yield_needed / totalCapacity) * 100;
+                const fillColor = fillPercentage < 50 ? 'warning' : fillPercentage > 95 ? 'success' : 'info';
+                fillIndicator = `<div class="mt-1"><span class="badge bg-${fillColor}">${fillPercentage.toFixed(1)}% fill</span></div>`;
+            }
+            
             html += `
                 <div class="row align-items-center mb-3 p-3 border rounded ${containerClass}" data-${isAutoFill ? 'auto' : 'manual'}-container="${index}">
-                    <div class="col-md-5">
+                    <div class="col-md-3">
                         <label class="form-label small">Container Type</label>
                         <div class="form-control form-control-sm bg-light border-0">
                             <strong>${containerName}</strong>
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <label class="form-label small">Quantity Needed</label>
                         <div class="form-control form-control-sm bg-light border-0">
                             <strong>${quantityNeeded}</strong>
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-4">
                         <label class="form-label small">Capacity Each</label>
                         <div class="form-control form-control-sm bg-light border-0">
-                            ${containerCapacity} ${containerUnit}
+                            ${capacityDisplay}
+                            ${fillIndicator}
                         </div>
                     </div>
-                    <div class="col-md-1">
+                    <div class="col-md-2">
                         <label class="form-label small">Available Stock</label>
                         <div class="badge ${stockQuantity >= quantityNeeded ? 'bg-success' : 'bg-warning'} fs-6">${stockQuantity}</div>
+                    </div>
+                    <div class="col-md-1">
+                        <div class="text-center">
+                            <i class="fas fa-check-circle text-success" title="Optimal selection"></i>
+                        </div>
                     </div>
                 </div>
             `;
@@ -204,7 +240,15 @@ export class ContainerManager {
         
         if (isAutoFill) {
             const efficiency = this.containerPlan.containment_percentage || 0;
-            html += `<div class="mt-2"><small class="text-muted"><i class="fas fa-info-circle"></i> Auto-fill efficiency: ${efficiency.toFixed(1)}%</small></div>`;
+            const warnings = this.containerPlan.warnings || [];
+            html += `
+                <div class="mt-2">
+                    <small class="text-muted">
+                        <i class="fas fa-info-circle"></i> Auto-fill efficiency: ${efficiency.toFixed(1)}%
+                    </small>
+                    ${warnings.length > 0 ? `<div class="alert alert-warning mt-2"><small>${warnings.join(', ')}</small></div>` : ''}
+                </div>
+            `;
         }
         
         console.log('🔍 RENDER CONTAINERS: Setting HTML for', resultClass);
@@ -265,22 +309,22 @@ export class ContainerManager {
 
         return `
             <div class="row align-items-center mb-3 p-3 border rounded bg-light" data-container-row="${index}">
-                <div class="col-md-5">
+                <div class="col-md-4">
                     <label class="form-label small">Container Type</label>
                     <select class="form-select form-select-sm container-select" data-row="${index}">
                         ${optionsHTML}
                     </select>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label class="form-label small">Quantity</label>
                     <input type="number" min="1" class="form-control form-control-sm container-quantity" 
                            data-row="${index}" value="1">
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-4">
                     <label class="form-label small">Capacity Each</label>
                     <div class="form-control form-control-sm bg-light border-0 container-capacity" data-row="${index}">-</div>
                 </div>
-                <div class="col-md-1">
+                <div class="col-md-2">
                     <label class="form-label small">Available Stock</label>
                     <div class="badge bg-info fs-6 available-stock" data-row="${index}">-</div>
                 </div>
@@ -348,9 +392,23 @@ export class ContainerManager {
         console.log('🔍 STOCK DISPLAY DEBUG: Container:', container.name, 'Stock:', stockQuantity);
         stockBadge.textContent = stockQuantity;
 
-        // Update capacity display
+        // Update capacity display with both units if available
         if (capacityDiv) {
-            capacityDiv.textContent = `${container.capacity || 0} ${container.unit || 'ml'}`;
+            let capacityDisplay = `${container.capacity || 0} ${container.unit || 'ml'}`;
+            
+            // If we have converted capacity info, show both
+            if (container.capacity_in_yield_unit && container.yield_unit && container.conversion_successful) {
+                if ((container.unit || 'ml') !== container.yield_unit) {
+                    capacityDisplay = `
+                        <div>
+                            <strong>${container.capacity_in_yield_unit} ${container.yield_unit}</strong>
+                            <br><small class="text-muted">(${container.capacity} ${container.unit})</small>
+                        </div>
+                    `;
+                }
+            }
+            
+            capacityDiv.innerHTML = capacityDisplay;
         }
 
         this.updateContainerProgress();
@@ -371,7 +429,7 @@ export class ContainerManager {
         let containment_percentage = 0;
 
         if (!autoFillEnabled) {
-            // Calculate from manual container rows
+            // Calculate from manual container rows using ALWAYS converted capacity
             const projectedYield = this.main.baseYield * this.main.scale;
             let totalContained = 0;
 
@@ -383,12 +441,16 @@ export class ContainerManager {
                     const container = this.containerPlan?.container_selection?.find(c => c.id == select.value);
                     if (container) {
                         const quantity = parseInt(quantityInput.value) || 0;
-                        totalContained += container.capacity * quantity;
+                        // ALWAYS use converted capacity - this is the key fix
+                        const capacityToUse = container.capacity_in_yield_unit || container.capacity;
+                        totalContained += capacityToUse * quantity;
+                        console.log(`🔍 PROGRESS DEBUG: Container ${container.name} x${quantity} = ${capacityToUse * quantity} ${container.yield_unit || 'units'}`);
                     }
                 }
             });
 
             containment_percentage = projectedYield > 0 ? Math.min((totalContained / projectedYield) * 100, 100) : 0;
+            console.log(`🔍 PROGRESS DEBUG: Total contained: ${totalContained}, Yield needed: ${projectedYield}, Percentage: ${containment_percentage.toFixed(1)}%`);
         } else {
             containment_percentage = this.containerPlan.containment_percentage || 0;
         }
