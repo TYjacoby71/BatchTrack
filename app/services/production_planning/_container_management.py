@@ -23,19 +23,12 @@ def analyze_container_options(
     organization_id: int
 ) -> Tuple[Optional[ContainerStrategy], List[ContainerOption]]:
     """
-    Analyze all container options for a recipe using USCS container handler.
+    Analyze all container options for a recipe using USCS bulk query with recipe scoping.
 
     Returns (selected_strategy, all_options)
     """
     try:
-        logger.info(f"CONTAINER_ANALYSIS: Analyzing containers for recipe {recipe.id} using USCS")
-
-        # Get available containers
-        container_items = _get_available_containers(recipe, organization_id)
-
-        if not container_items:
-            logger.warning(f"No containers available for recipe {recipe.id}")
-            return None, []
+        logger.info(f"CONTAINER_ANALYSIS: Analyzing containers for recipe {recipe.id} using USCS bulk query")
 
         # Calculate fill requirements
         yield_amount = (recipe.predicted_yield or 0) * scale
@@ -43,53 +36,58 @@ def analyze_container_options(
 
         logger.info(f"CONTAINER_ANALYSIS: Recipe yield {yield_amount} {yield_unit}")
 
-        # Use USCS to analyze each container option with proper unit conversion
+        # Use USCS bulk query with recipe scoping
         from ..stock_check import UniversalStockCheckService
-        from ..stock_check.types import InventoryCategory
+        from ..stock_check.types import StockCheckRequest, InventoryCategory
 
         uscs = UniversalStockCheckService()
+
+        # Create bulk request with recipe scoping
+        container_request = StockCheckRequest(
+            item_id=None,  # Bulk query for all containers
+            quantity_needed=yield_amount,
+            unit=yield_unit,
+            inventory_category=InventoryCategory.CONTAINER,
+            organization_id=organization_id,
+            recipe_scoping=_get_recipe_allowed_containers(recipe)  # Pass recipe constraints
+        )
+
+        # Execute bulk container check
+        container_results = uscs.check_stock([container_request])
+
+        if not container_results:
+            logger.warning(f"No containers found for recipe {recipe.id}")
+            return None, []
+
+        # Convert USCS results to ContainerOptions
         analyzed_options = []
-
-        for container in container_items:
-            logger.info(f"CONTAINER_ANALYSIS: Checking container {container.name} via USCS")
-
-            # Use USCS to check container capacity vs yield requirements
-            result = uscs.check_single_item(
-                item_id=container.id,
-                quantity_needed=yield_amount,  # Recipe yield amount
-                unit=yield_unit,  # Recipe yield unit
-                category=InventoryCategory.CONTAINER
-            )
-
-            # Convert USCS result to ContainerOption
-            if result.conversion_details:
+        for result in container_results:
+            if result.status in ['available', 'sufficient', 'ok'] and result.conversion_details:
                 storage_capacity = result.conversion_details.get('storage_capacity', 0)
                 storage_unit = result.conversion_details.get('storage_unit', 'ml')
                 yield_in_storage_units = result.conversion_details.get('yield_in_storage_units', 0)
-                containers_needed = result.needed_quantity  # USCS calculates containers needed
+                containers_needed = result.needed_quantity
 
                 # Calculate fill percentage
                 total_capacity = storage_capacity * containers_needed
                 fill_percentage = (yield_in_storage_units / total_capacity * 100) if total_capacity > 0 else 0
 
                 option = ContainerOption(
-                    container_id=container.id,
-                    container_name=container.name,
+                    container_id=result.item_id,
+                    container_name=result.item_name,
                     storage_capacity=storage_capacity,
                     storage_unit=storage_unit,
                     available_quantity=result.available_quantity,
-                    cost_each=getattr(container, 'cost_per_unit', 0) or 0,
+                    cost_each=result.conversion_details.get('cost_per_unit', 0) or 0,
                     fill_percentage=fill_percentage,
                     containers_needed=int(containers_needed)
                 )
 
                 analyzed_options.append(option)
-                logger.info(f"CONTAINER_ANALYSIS: {container.name} - needs {containers_needed} containers, fill: {fill_percentage:.1f}%")
-            else:
-                logger.warning(f"CONTAINER_ANALYSIS: No conversion details for {container.name}")
+                logger.info(f"CONTAINER_ANALYSIS: {result.item_name} - needs {containers_needed} containers, fill: {fill_percentage:.1f}%")
 
         if not analyzed_options:
-            logger.warning("No suitable container options found after USCS analysis")
+            logger.warning("No suitable container options found after USCS bulk analysis")
             return None, []
 
         # Select best strategy
@@ -106,32 +104,15 @@ def analyze_container_options(
         return None, []
 
 
-def _get_available_containers(recipe: Recipe, organization_id: int) -> List[InventoryItem]:
-    """Get containers available for this recipe"""
+def _get_recipe_allowed_containers(recipe: Recipe) -> Optional[List[int]]:
+    """Get recipe-specific container constraints for USCS scoping"""
     try:
-        # Check if recipe has specific allowed containers
         if hasattr(recipe, 'allowed_containers') and recipe.allowed_containers:
-            containers = InventoryItem.query.filter(
-                InventoryItem.id.in_(recipe.allowed_containers),
-                InventoryItem.type == 'container',
-                InventoryItem.organization_id == organization_id
-            ).all()
-        else:
-            # Get all available containers for this organization
-            containers = InventoryItem.query.filter_by(
-                type='container',
-                organization_id=organization_id
-            ).all()
-
-        # Filter to only containers with stock
-        available_containers = [c for c in containers if hasattr(c, 'quantity') and (c.quantity or 0) > 0]
-
-        logger.info(f"Found {len(available_containers)} available containers")
-        return available_containers
-
+            return recipe.allowed_containers
+        return None  # No scoping - allow all containers
     except Exception as e:
-        logger.error(f"Error getting available containers: {e}")
-        return []
+        logger.error(f"Error getting recipe container constraints: {e}")
+        return None
 
 
 

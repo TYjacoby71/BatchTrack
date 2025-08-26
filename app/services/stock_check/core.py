@@ -1,4 +1,3 @@
-
 """
 Universal Stock Check Service (USCS)
 
@@ -25,7 +24,7 @@ logger = logging.getLogger(__name__)
 class UniversalStockCheckService:
     """
     Universal Stock Check Service (USCS)
-    
+
     Provides three levels of stock checking:
     1. check_single_item() - Core function for individual inventory items
     2. check_recipe_stock() - Groups single item checks for a recipe
@@ -50,7 +49,7 @@ class UniversalStockCheckService:
                          category: InventoryCategory) -> StockCheckResult:
         """
         Core function: Check stock for a single inventory item.
-        
+
         Process:
         1. Find the item in the requested category
         2. Match item with inventory 
@@ -58,19 +57,19 @@ class UniversalStockCheckService:
         4. Process planned deduction (check if enough stock)
         5. Convert results back to recipe units
         6. Determine stock status (good/low/needed)
-        
+
         Args:
             item_id: Inventory item ID
             quantity_needed: Amount needed
             unit: Unit of the needed amount
             category: Item category (ingredient/container/product)
-            
+
         Returns:
             Stock check result with availability status
         """
         try:
             org_id = self._get_organization_id()
-            
+
             # Get appropriate handler for the category
             handler = self.handlers.get(category)
             if not handler:
@@ -90,20 +89,20 @@ class UniversalStockCheckService:
 
             # Handler performs category-specific stock checking
             result = handler.check_availability(request)
-            
+
             # Add conversion alerts if needed
             if hasattr(result, 'conversion_details') and result.conversion_details:
                 conversion_type = result.conversion_details.get('conversion_type')
                 if conversion_type in ['custom', 'density'] and not result.conversion_details.get('requires_attention'):
                     result.conversion_details['requires_attention'] = True
-                    
+
                 # Alert for missing custom mappings
                 if 'custom mapping' in str(result.error_message or '').lower():
                     result.conversion_details['needs_unit_mapping'] = True
                     result.conversion_details['unit_manager_link'] = '/conversion/units'
-            
+
             return result
-            
+
         except Exception as e:
             logger.error(f"Error in check_single_item: {e}")
             return self._create_error_result(item_id, str(e), quantity_needed, unit)
@@ -111,24 +110,24 @@ class UniversalStockCheckService:
     def check_recipe_stock(self, recipe_id: int, scale: float = 1.0) -> Dict[str, Any]:
         """
         Recipe-level stock check: Groups single item checks for all recipe ingredients.
-        
+
         Args:
             recipe_id: Recipe ID to check
             scale: Scale factor for the recipe (batch size multiplier)
-            
+
         Returns:
             Dictionary with overall recipe stock status and individual item results
         """
         try:
             from ...models import Recipe
-            
+
             org_id = self._get_organization_id()
-            
+
             recipe = Recipe.query.filter_by(
                 id=recipe_id,
                 organization_id=org_id
             ).first()
-            
+
             if not recipe:
                 return {
                     'success': False,
@@ -136,7 +135,7 @@ class UniversalStockCheckService:
                     'error': 'Recipe not found',
                     'stock_check': []
                 }
-            
+
             if not recipe.recipe_ingredients:
                 return {
                     'success': True,
@@ -154,7 +153,7 @@ class UniversalStockCheckService:
             for recipe_ingredient in recipe.recipe_ingredients:
                 # Scale the quantity needed
                 scaled_quantity = recipe_ingredient.quantity * scale
-                
+
                 # Check single item stock
                 result = self.check_single_item(
                     item_id=recipe_ingredient.inventory_item_id,
@@ -162,7 +161,7 @@ class UniversalStockCheckService:
                     unit=recipe_ingredient.unit,
                     category=InventoryCategory.INGREDIENT
                 )
-                
+
                 # Convert to dict for response
                 result_dict = {
                     'item_id': result.item_id,
@@ -175,13 +174,13 @@ class UniversalStockCheckService:
                     'formatted_needed': result.formatted_needed,
                     'formatted_available': result.formatted_available
                 }
-                
+
                 if hasattr(result, 'error_message') and result.error_message:
                     result_dict['error_message'] = result.error_message
-                    
+
                 if hasattr(result, 'conversion_details') and result.conversion_details:
                     result_dict['conversion_details'] = result.conversion_details
-                    
+
                     # Collect conversion alerts
                     if result.conversion_details.get('needs_unit_mapping'):
                         conversion_alerts.append({
@@ -189,9 +188,9 @@ class UniversalStockCheckService:
                             'message': f"Custom unit mapping needed for {result.item_name}",
                             'unit_manager_link': result.conversion_details.get('unit_manager_link')
                         })
-                
+
                 stock_results.append(result_dict)
-                
+
                 # Track overall status
                 if result.status in [StockStatus.NEEDED, StockStatus.OUT_OF_STOCK]:
                     has_insufficient = True
@@ -213,11 +212,11 @@ class UniversalStockCheckService:
                 'recipe_name': recipe.name,
                 'scale': scale
             }
-            
+
             # Add conversion alerts if any
             if conversion_alerts:
                 response['conversion_alerts'] = conversion_alerts
-                
+
             return response
 
         except Exception as e:
@@ -232,42 +231,108 @@ class UniversalStockCheckService:
     def check_bulk_recipes(self, recipe_configs: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
         Bulk-level stock check: Groups multiple recipe checks.
-        
+
         Args:
             recipe_configs: List of dicts with keys: recipe_id, scale
-            
+
         Returns:
             Dictionary with results for each recipe
         """
         try:
             results = {}
-            
+
             for config in recipe_configs:
                 recipe_id = config.get('recipe_id')
                 scale = config.get('scale', 1.0)
-                
+
                 if not recipe_id:
                     results[str(recipe_id)] = {
                         'success': False,
                         'error': 'Recipe ID missing'
                     }
                     continue
-                
+
                 # Use recipe-level check
                 recipe_result = self.check_recipe_stock(recipe_id, scale)
                 results[str(recipe_id)] = recipe_result
-                
+
             return {
                 'success': True,
                 'results': results
             }
-            
+
         except Exception as e:
             logger.error(f"Error in check_bulk_recipes: {e}")
             return {
                 'success': False,
                 'error': str(e)
             }
+
+    def check_stock(self, requests: List[StockCheckRequest]) -> List[StockCheckResult]:
+        """Check stock for multiple items"""
+        results = []
+
+        for request in requests:
+            if request.item_id:
+                # Single item check
+                result = self.check_single_item(
+                    item_id=request.item_id,
+                    quantity_needed=request.quantity_needed,
+                    unit=request.unit,
+                    category=request.inventory_category
+                )
+                results.append(result)
+            else:
+                # Bulk category check with optional recipe scoping
+                bulk_results = self._check_category_bulk(request)
+                results.extend(bulk_results)
+
+        return results
+
+    def _check_category_bulk(self, request: StockCheckRequest) -> List[StockCheckResult]:
+        """Check all items in a category with optional recipe scoping"""
+        if not request.inventory_category or not request.organization_id:
+            return []
+
+        try:
+            # Get appropriate handler
+            handler = self._get_handler(request.inventory_category)
+            if not handler:
+                logger.error(f"No handler for category {request.inventory_category}")
+                return []
+
+            # Build query for items in category
+            category_name = request.inventory_category.value
+            query = InventoryItem.query.filter_by(
+                type=category_name,
+                organization_id=request.organization_id
+            )
+
+            # Apply recipe scoping if provided
+            if request.recipe_scoping:
+                query = query.filter(InventoryItem.id.in_(request.recipe_scoping))
+                logger.info(f"USCS_BULK: Applied recipe scoping to {len(request.recipe_scoping)} allowed items")
+
+            items = query.all()
+            logger.info(f"USCS_BULK: Found {len(items)} items in category {category_name}")
+
+            results = []
+            for item in items:
+                item_request = StockCheckRequest(
+                    item_id=item.id,
+                    quantity_needed=request.quantity_needed,
+                    unit=request.unit,
+                    inventory_category=request.inventory_category,
+                    organization_id=request.organization_id
+                )
+                result = handler.check_availability(item_request)
+                results.append(result)
+
+            return results
+
+        except Exception as e:
+            logger.error(f"Error in bulk category check: {e}")
+            return []
 
     def _create_error_result(self, item_id: int, error_message: str, 
                            quantity_needed: float, unit: str) -> StockCheckResult:
