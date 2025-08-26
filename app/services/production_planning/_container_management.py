@@ -35,9 +35,32 @@ def analyze_container_options(
             return None, []
 
         # Get allowed containers for this recipe
-        allowed_containers = getattr(recipe, 'allowed_containers', [])
+        # First try the recipe's allowed_containers field, then fall back to all containers
+        allowed_containers = []
+        
+        # Check if recipe has allowed_containers relationship or field
+        if hasattr(recipe, 'allowed_containers') and recipe.allowed_containers:
+            allowed_containers = [c.id if hasattr(c, 'id') else c for c in recipe.allowed_containers]
+        elif hasattr(recipe, 'container_ids') and recipe.container_ids:
+            allowed_containers = recipe.container_ids
+        
+        # If no specific containers are allowed, get all available containers
         if not allowed_containers:
-            logger.info(f"No allowed containers specified for recipe {recipe.id}")
+            logger.info(f"No specific allowed containers for recipe {recipe.id}, checking all available containers")
+            # Get all container inventory items for the organization
+            from ...models import InventoryItem, IngredientCategory
+            org_id = organization_id or (current_user.organization_id if current_user.is_authenticated else None)
+            if org_id:
+                container_category = IngredientCategory.query.filter_by(name='Container', organization_id=org_id).first()
+                if container_category:
+                    container_items = InventoryItem.query.filter_by(
+                        organization_id=org_id,
+                        category_id=container_category.id
+                    ).all()
+                    allowed_containers = [item.id for item in container_items]
+        
+        if not allowed_containers:
+            logger.warning(f"No containers available for recipe {recipe.id}")
             return None, []
 
         # Use USCS to check container availability
@@ -73,7 +96,7 @@ def analyze_container_options(
                             'available_quantity': int(available_qty),
                             'quantity': containers_needed,
                             'stock_qty': int(available_qty),
-                            'unit': getattr(container, 'unit', 'count')
+                            'unit': getattr(container, 'unit', 'ml')  # Default to ml for volume containers
                         }
 
                         container_options.append(container_option)
