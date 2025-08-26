@@ -457,23 +457,3 @@ def check_stock():
         logger.error(f"Error in recipe stock check: {e}")
         return jsonify({"error": str(e)}), 500
 
-# This is the API endpoint for production planning which has been updated
-@recipes_bp.route('/<int:recipe_id>/plan', methods=['POST'])
-@login_required
-@require_permission('batch_production.create')
-def plan_production_api(recipe_id):
-    """API endpoint for production planning"""
-    try:
-        data = request.get_json() or {}
-        scale = float(data.get('scale', 1.0))
-        container_id = data.get('container_id')
-        check_containers = data.get('check_containers', False)
-
-        from app.services.recipe_service import plan_production
-        result = plan_production(recipe_id, scale, container_id, check_containers)
-
-        return jsonify(result)
-
-    except Exception as e:
-        logger.error(f"Error in plan production API: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500

@@ -9,7 +9,7 @@ from flask import make_response
 
 bulk_stock_bp = Blueprint('bulk_stock', __name__)
 
-@bulk_stock_bp.route('/stock/bulk-check', methods=['GET', 'POST'])
+@bulk_stock_bp.route('/bulk-check', methods=['GET', 'POST'])
 @login_required
 def bulk_stock_check():
     try:
@@ -87,7 +87,7 @@ def bulk_stock_check():
         flash(f'Error checking stock: {str(e)}')
         return redirect(url_for('bulk_stock.bulk_stock_check'))
 
-@bulk_stock_bp.route('/stock/bulk-check/csv')
+@bulk_stock_bp.route('/bulk-check/csv')
 @login_required
 def export_shopping_list_csv():
     try:
