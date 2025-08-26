@@ -95,17 +95,16 @@ def analyze_container_options(
                 logger.info(f"CONTAINER_ANALYSIS: {container.name} - Need {containers_needed} containers, Fill: {fill_percentage:.1f}%")
 
                 container_option = ContainerOption(
-                    id=container.id,
-                    name=container.name,
-                    capacity=storage_capacity,
-                    unit=storage_unit,
+                    container_id=container.id,
+                    container_name=container.name,
+                    storage_capacity=storage_capacity,
+                    storage_unit=storage_unit,
                     available_quantity=int(container.quantity),
-                    quantity=containers_needed,
-                    stock_qty=int(container.quantity),  # For JS compatibility
+                    containers_needed=containers_needed,
+                    cost_each=getattr(container, 'cost_per_unit', 0) or 0,
                     fill_percentage=fill_percentage,
                     waste_percentage=waste_percentage,
-                    total_capacity=total_capacity_needed,
-                    cost_per_unit=getattr(container, 'cost_per_unit', 0) or 0
+                    total_capacity=total_capacity_needed
                 )
 
                 container_options.append(container_option)
@@ -117,7 +116,7 @@ def analyze_container_options(
         logger.info(f"CONTAINER_ANALYSIS: Final container options count: {len(container_options)}")
 
         if not container_options:
-            logger.warning(f"CONTAINER_ANALYSIS: No suitable containers found after processing {len(container_results)} results")
+            logger.warning(f"CONTAINER_ANALYSIS: No suitable containers found after processing {len(all_containers)} containers")
             return None, []
 
         # Create container strategy using the best option

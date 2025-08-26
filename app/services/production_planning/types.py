@@ -220,7 +220,7 @@ class ProductionPlan:
 
         # Determine if all ingredients are available
         all_ingredients_available = all(
-            req.status not in ['insufficient', 'unavailable', 'NEEDED', 'OUT_OF_STOCK'] 
+            req.status not in ['insufficient', 'unavailable', 'NEEDED', 'OUT_OF_STOCK']
             for req in (self.ingredient_requirements or [])
         )
 
