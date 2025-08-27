@@ -106,10 +106,15 @@ class IngredientHandler(BaseInventoryHandler):
                 error_code = conversion_result['error_code']
                 error_data = conversion_result['error_data']
 
+                # For conversion errors, we still show a table row but mark it as needing attention
+                # The drawer protocol will handle fixing the conversion issue
+                conversion_details = {
+                    'error_code': error_code,
+                    'needs_user_attention': True
+                }
+
                 if error_code == 'MISSING_DENSITY':
-                    status = StockStatus.DENSITY_MISSING
-                    conversion_details = {
-                        'error_code': 'MISSING_DENSITY',
+                    conversion_details.update({
                         'error_type': 'missing_density',
                         'ingredient_id': error_data.get('ingredient_id'),
                         'ingredient_name': ingredient.name,
@@ -117,65 +122,55 @@ class IngredientHandler(BaseInventoryHandler):
                         'to_unit': error_data.get('to_unit'),
                         'drawer_action': 'open_density_modal',
                         'density_help_link': '/conversion/units'
-                    }
+                    })
                     # Suggest density if available
                     suggested_density = self._get_suggested_density(ingredient.name)
                     if suggested_density:
                         conversion_details['suggested_density'] = suggested_density
 
                 elif error_code == 'MISSING_CUSTOM_MAPPING':
-                    status = StockStatus.ERROR
-                    conversion_details = {
-                        'error_code': 'MISSING_CUSTOM_MAPPING',
+                    conversion_details.update({
                         'error_type': 'missing_custom_mapping',
                         'from_unit': error_data.get('from_unit'),
                         'to_unit': error_data.get('to_unit'),
                         'drawer_action': 'open_unit_mapping_modal',
                         'unit_manager_link': '/conversion/units'
-                    }
+                    })
 
                 elif error_code in ['UNKNOWN_SOURCE_UNIT', 'UNKNOWN_TARGET_UNIT']:
-                    status = StockStatus.ERROR
-                    conversion_details = {
-                        'error_code': error_code,
+                    conversion_details.update({
                         'error_type': 'unknown_unit',
                         'unknown_unit': error_data.get('unit'),
                         'drawer_action': 'open_unit_creation_modal'
-                    }
+                    })
 
                 elif error_code == 'SYSTEM_ERROR':
-                    status = StockStatus.ERROR
-                    conversion_details = {
-                        'error_code': 'SYSTEM_ERROR',
+                    conversion_details.update({
                         'error_type': 'system_error',
                         'message': 'Unit conversion is not available at the moment, please try again'
-                    }
+                    })
 
                 else:
-                    status = StockStatus.ERROR
-                    conversion_details = {
-                        'error_code': error_code,
+                    conversion_details.update({
                         'error_type': 'conversion_error',
                         'message': error_data.get('message', 'Conversion failed')
-                    }
-                
-                # If conversion failed, available quantity is considered 0 for stock check purposes
-                available_converted = 0.0 
+                    })
 
+                # Return a result that shows in the table but indicates conversion error
                 return StockCheckResult(
                     item_id=ingredient.id,
                     item_name=ingredient.name,
                     category=InventoryCategory.INGREDIENT,
                     needed_quantity=request.quantity_needed,
                     needed_unit=recipe_unit,
-                    available_quantity=available_converted,
+                    available_quantity=0,
                     available_unit=recipe_unit,
                     raw_stock=total_available,
                     stock_unit=stock_unit,
-                    status=status,
-                    error_message=conversion_result.get('error_message', 'Conversion failed'),
+                    status=StockStatus.ERROR,  # Shows as an error status in table
+                    error_message=f"Fix conversion: {error_code}",
                     formatted_needed=self._format_quantity_display(request.quantity_needed, recipe_unit),
-                    formatted_available="N/A",
+                    formatted_available="Fix Conversion",
                     conversion_details=conversion_details
                 )
 
