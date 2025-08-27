@@ -1,360 +1,225 @@
 // Stock Check Management Module
 export class StockCheckManager {
-    constructor(mainManager) {
-        this.main = mainManager;
+    constructor() {
         this.stockCheckResults = null;
-        this.processedResults = null; // Added to store processed data for downloads
+        this.bindEvents();
     }
 
     bindEvents() {
         console.log('🔍 STOCK CHECK DEBUG: Binding events...');
         const stockCheckBtn = document.getElementById('stockCheckBtn');
-        console.log('🔍 STOCK CHECK DEBUG: Stock check button found:', !!stockCheckBtn);
-
         if (stockCheckBtn) {
-            stockCheckBtn.addEventListener('click', () => {
-                console.log('🔍 STOCK CHECK DEBUG: Button clicked!');
-                this.performStockCheck();
-            });
+            console.log('🔍 STOCK CHECK DEBUG: Stock check button found:', true);
+            stockCheckBtn.addEventListener('click', () => this.performStockCheck());
             console.log('🔍 STOCK CHECK DEBUG: Event listener added successfully');
         } else {
-            console.error('🚨 STOCK CHECK ERROR: Stock check button not found in DOM');
+            console.log('🔍 STOCK CHECK DEBUG: Stock check button not found');
         }
     }
 
     async performStockCheck() {
-        console.log('🔍 STOCK CHECK DEBUG: performStockCheck called');
-
-        if (!this.main.recipe) {
-            console.warn('🔍 STOCK CHECK: No recipe available');
-            alert('No recipe loaded');
-            return;
-        }
-
-        console.log('🔍 STOCK CHECK: Starting stock check for recipe', this.main.recipe.id, 'scale:', this.main.scale);
-
-        // Show loading state
+        console.log('🔍 STOCK CHECK: Starting stock check...');
         const stockCheckBtn = document.getElementById('stockCheckBtn');
-        const originalText = stockCheckBtn.innerHTML;
-        stockCheckBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking...';
-        stockCheckBtn.disabled = true;
+        const originalText = stockCheckBtn ? stockCheckBtn.innerHTML : '';
 
         try {
-            // Use the recipe stock check endpoint (internally uses USCS)
-            const response = await fetch('/recipes/stock/check', {
+            // Show loading state
+            if (stockCheckBtn) {
+                stockCheckBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking...';
+                stockCheckBtn.disabled = true;
+            }
+
+            // Get recipe and scale data
+            const recipeData = window.planProductionApp?.recipeData;
+            const scaleInput = document.getElementById('scale');
+            const scale = scaleInput ? parseFloat(scaleInput.value) || 1 : 1;
+
+            if (!recipeData) {
+                throw new Error('Recipe data not available');
+            }
+
+            console.log('🔍 STOCK CHECK: Recipe ID:', recipeData.id, 'Scale:', scale);
+
+            // Make API call
+            const response = await fetch('/api/stock-check', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRFToken': this.main.getCSRFToken()
+                    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
                 },
                 body: JSON.stringify({
-                    recipe_id: this.main.recipe.id,
-                    scale: this.main.scale
+                    recipe_id: recipeData.id,
+                    scale: scale
                 })
             });
 
-            console.log('🔍 STOCK CHECK: Response status:', response.status);
+            const data = await response.json();
+            console.log('🔍 STOCK CHECK: Response received:', data);
 
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-
-            this.stockCheckResults = await response.json();
-            console.log('🔍 STOCK CHECK: Results received:', this.stockCheckResults);
-
-            this.displayStockResults(this.stockCheckResults);
-
-            // Handle any conversion errors that need drawer intervention
-            if (this.stockCheckResults.stock_check) {
-                this.handleConversionErrors(this.stockCheckResults.stock_check);
-            }
-        } catch (error) {
-            console.error('🚨 STOCK CHECK ERROR:', error);
-
-            // More specific error handling
-            let errorMessage = 'Stock check failed';
-            if (error.message.includes('Cannot read properties of undefined')) {
-                errorMessage = 'Stock check failed: Missing required components. Please refresh the page.';
-            } else if (error.name === 'TypeError') {
-                errorMessage = `Stock check failed: ${error.message}`;
+            if (data.success) {
+                this.stockCheckResults = data;
+                this.displayStockResults(data);
             } else {
-                errorMessage = `Stock check failed: ${error.message}`;
+                this.displayStockError(data.error || 'Stock check failed');
             }
 
-            this.displayStockError(errorMessage);
+        } catch (error) {
+            console.error('🔍 STOCK CHECK ERROR:', error);
+            this.displayStockError(`Network error during stock check: ${error.message}`);
         } finally {
             // Restore button state
-            stockCheckBtn.innerHTML = originalText;
-            stockCheckBtn.disabled = false;
+            if (stockCheckBtn) {
+                stockCheckBtn.innerHTML = originalText;
+                stockCheckBtn.disabled = false;
+            }
         }
     }
 
-    displayStockResults() {
-        console.log('🔍 STOCK CHECK: Displaying results');
-        const stockResults = document.getElementById('stockCheckResults');
-        if (!stockResults) {
-            console.warn('🔍 STOCK CHECK: No results element found');
+    displayStockResults(stockCheckResults) {
+        console.log('🔍 DISPLAY RESULTS: Starting with:', stockCheckResults);
+
+        const resultsContainer = document.getElementById('stockCheckResults');
+        if (!resultsContainer) {
+            console.error('🔍 DISPLAY RESULTS: Results container not found');
             return;
         }
 
-        console.log('🔍 STOCK CHECK: Full results object:', this.stockCheckResults);
+        if (stockCheckResults.stock_check) {
+            this.handleConversionErrors(stockCheckResults.stock_check);
+        }
 
-        // Handle the USCS response structure
-        const stockData = this.stockCheckResults.stock_check || [];
-        const allAvailable = this.stockCheckResults.status === 'ok';
+        // Check if there are missing ingredients or insufficient stock
+        const hasMissing = stockCheckResults.missing_ingredients && stockCheckResults.missing_ingredients.length > 0;
+        const hasInsufficient = stockCheckResults.insufficient_stock && stockCheckResults.insufficient_stock.length > 0;
 
-        console.log('🔍 STOCK CHECK: Stock data:', stockData);
-        console.log('🔍 STOCK CHECK: All available:', allAvailable);
-
-        // All items from USCS are ingredients by default
-        const ingredientData = stockData;
-
-        if (!ingredientData || ingredientData.length === 0) {
-            stockResults.innerHTML = '<div class="alert alert-warning"><i class="fas fa-exclamation-triangle"></i> There are no ingredients selected in this recipe. Please edit your recipe and add ingredients.</div>';
-            this.main.stockChecked = true;
-            this.main.stockCheckPassed = true;  // No ingredients means no stock issues
-            this.main.updateValidation();
+        if (!hasMissing && !hasInsufficient) {
+            resultsContainer.innerHTML = `
+                <div class="alert alert-success">
+                    <i class="fas fa-check-circle"></i>
+                    <strong>Stock Check Passed!</strong> All ingredients are available in sufficient quantities.
+                </div>
+            `;
             return;
         }
 
-        let html = '<div class="table-responsive"><table class="table table-sm table-striped">';
-        html += '<thead><tr><th>Ingredient</th><th>Required</th><th>Available</th><th>Unit</th><th>Status</th></tr></thead><tbody>';
+        let html = '<div class="stock-check-results">';
 
-        let allIngredientsAvailable = true;
+        if (hasMissing) {
+            html += this.renderMissingIngredients(stockCheckResults.missing_ingredients);
+        }
 
-        ingredientData.forEach(result => {
-            const needed = result.needed_amount || result.needed_quantity || result.quantity_needed || 0;
-            const available = result.available_quantity || 0;
+        if (hasInsufficient) {
+            html += this.renderInsufficientStock(stockCheckResults.insufficient_stock);
+        }
 
-            let status, statusClass, displayAvailable = available.toFixed(2);
+        html += '</div>';
+        resultsContainer.innerHTML = html;
+    }
 
-            // Check for conversion errors first
-            if (result.conversion_details?.error_code) {
-                status = 'CONVERSION ERROR';
-                statusClass = 'bg-warning';
-                displayAvailable = 'Fix Conversion';
-                allIngredientsAvailable = false;
-            } else {
-                // Normal stock check logic
-                const isAvailable = result.is_available !== false && available >= needed;
-                if (!isAvailable) {
-                    allIngredientsAvailable = false;
+    handleConversionErrors(stockCheckData) {
+        if (!stockCheckData) return;
+
+        const conversionErrors = [];
+
+        // Check for conversion errors in ingredients
+        if (stockCheckData.ingredients) {
+            stockCheckData.ingredients.forEach(ingredient => {
+                if (ingredient.conversion_details && !ingredient.conversion_details.success) {
+                    conversionErrors.push({
+                        name: ingredient.name,
+                        error: ingredient.conversion_details.error_code || 'Unknown conversion error',
+                        details: ingredient.conversion_details.error_data
+                    });
                 }
-                status = isAvailable ? 'OK' : 'NEEDED';
-                statusClass = isAvailable ? 'bg-success' : 'bg-danger';
-            }
-
-            html += `<tr>
-                <td>${result.ingredient_name || result.item_name || 'Unknown'}</td>
-                <td>${needed.toFixed(2)}</td>
-                <td>${displayAvailable}</td>
-                <td>${result.unit || result.needed_unit || result.available_unit || ''}</td>
-                <td><span class="badge ${statusClass}">${status}</span></td>
-            </tr>`;
-        });
-
-        html += '</tbody></table></div>';
-
-        // Add action buttons
-        html += `
-            <div class="d-flex gap-2 mt-3">
-                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="stockChecker.downloadCSV()">
-                    <i class="fas fa-download"></i> Download CSV
-                </button>
-                <button type="button" class="btn btn-outline-primary btn-sm" onclick="stockChecker.downloadShoppingList()">
-                    <i class="fas fa-shopping-cart"></i> Shopping List
-                </button>
-            </div>
-        `;
-
-        stockResults.innerHTML = html;
-
-        // Check for conversion errors that need wall of drawers treatment
-        this.handleConversionErrors(this.stockCheckResults.stock_check || []);
-
-        // Update the main status
-        this.main.stockChecked = true;
-        this.main.stockCheckPassed = allIngredientsAvailable;
-        this.main.updateValidation();
-
-        // Store processed results for CSV/shopping list
-        this.processedResults = ingredientData.map(result => ({
-            ingredient: result.ingredient_name || result.item_name || 'Unknown',
-            needed: result.needed_amount || result.needed_quantity || result.quantity_needed || 0,
-            available: result.available_quantity || 0,
-            unit: result.unit || result.needed_unit || result.available_unit || '',
-            status: (result.is_available !== false && (result.available_quantity || 0) >= (result.needed_amount || result.needed_quantity || result.quantity_needed || 0)) ? 'OK' : 'NEEDED'
-        }));
-    }
-
-    displayStockError(message) {
-        console.error('🚨 STOCK CHECK ERROR: Displaying error:', message);
-
-        const stockResults = document.getElementById('stockCheckResults');
-        if (!stockResults) {
-            console.error('🚨 STOCK CHECK ERROR: stockCheckResults element not found');
-            return;
-        }
-
-        const statusElement = document.getElementById('stockCheckStatus');
-        if (!statusElement) {
-            console.error('🚨 STOCK CHECK ERROR: stockCheckStatus element not found');
-            return;
-        }
-
-        stockResults.innerHTML = `
-            <div class="alert alert-danger">
-                <i class="fas fa-exclamation-circle"></i> ${message}
-            </div>
-        `;
-
-        statusElement.innerHTML = `
-            <div class="alert alert-danger">
-                <i class="fas fa-exclamation-circle"></i> Stock check failed: ${message}
-            </div>
-        `;
-    }
-
-    downloadCSV() {
-        if (!this.processedResults?.length) return;
-
-        let csv = "Ingredient,Required,Available,Unit,Status\n";
-        this.processedResults.forEach(row => {
-            csv += `${row.ingredient},${row.needed.toFixed(2)},${row.available.toFixed(2)},${row.unit},${row.status}\n`;
-        });
-
-        const blob = new Blob([csv], { type: 'text/csv' });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = 'stock_check_report.csv';
-        link.click();
-    }
-
-    downloadShoppingList() {
-        if (!this.processedResults?.length) return;
-
-        const needed = this.processedResults.filter(item => item.status === 'NEEDED');
-        if (!needed.length) {
-            alert('No items need restocking!');
-            return;
-        }
-
-        let text = "Shopping List\n=============\n\n";
-        needed.forEach(item => {
-            const missing = Math.max(0, item.needed - item.available);
-            text += `${item.ingredient}: ${missing.toFixed(2)} ${item.unit}\n`;
-        });
-
-        const blob = new Blob([text], { type: 'text/plain' });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = 'shopping_list.txt';
-        link.click();
-    }
-
-    handleConversionErrors(stockResults) {
-        for (const item of stockResults) {
-            if (item.conversion_details?.error_code && item.conversion_details?.requires_drawer) {
-                const errorCode = item.conversion_details.error_code;
-                const errorData = item.conversion_details;
-
-                console.log(`🔍 STOCK CHECK: Conversion error ${errorCode} requires drawer intervention`);
-
-                // Use universal drawer protocol
-                if (typeof window !== 'undefined' && window.DrawerProtocol && typeof window.DrawerProtocol.handleError === 'function') {
-                    try {
-                        window.DrawerProtocol.handleError('conversion', errorCode, errorData, () => {
-                            console.log('🔍 RETRYING STOCK CHECK after fixing conversion error...');
-                            this.performStockCheck();
-                        });
-                    } catch (e) {
-                        console.warn('DrawerProtocol error handling failed:', e);
-                    }
-                }
-            } else if (item.conversion_details?.error_code) {
-                // Log non-drawer errors for debugging
-                console.log(`🔍 STOCK CHECK: Conversion error ${item.conversion_details.error_code} - no drawer needed`);
-            }
-        }
-    }
-
-    async openDensityModal(errorDetails) {
-        try {
-            const response = await fetch(`/api/drawer-actions/density-modal/${errorDetails.ingredient_id}`);
-            const data = await response.json();
-
-            if (data.success) {
-                // Inject modal HTML into page
-                document.body.insertAdjacentHTML('beforeend', data.modal_html);
-
-                // Show modal
-                const modal = new bootstrap.Modal(document.getElementById('densityFixModal'));
-                modal.show();
-
-                // Listen for density update
-                window.addEventListener('densityUpdated', (event) => {
-                    console.log('🔍 DENSITY UPDATED:', event.detail);
-                    // Retry stock check automatically
-                    this.retryStockCheck();
-                }, { once: true });
-
-                // Clean up modal when closed
-                document.getElementById('densityFixModal').addEventListener('hidden.bs.modal', function() {
-                    this.remove();
-                }, { once: true });
-            }
-        } catch (error) {
-            console.error('🔍 DENSITY MODAL ERROR:', error);
-        }
-    }
-
-    async openUnitMappingModal(errorDetails) {
-        try {
-            const params = new URLSearchParams({
-                from_unit: errorDetails.from_unit,
-                to_unit: errorDetails.to_unit
             });
+        }
 
-            const response = await fetch(`/api/drawer-actions/unit-mapping-modal?${params}`);
-            const data = await response.json();
-
-            if (data.success) {
-                // Inject modal HTML into page
-                document.body.insertAdjacentHTML('beforeend', data.modal_html);
-
-                // Show modal
-                const modal = new bootstrap.Modal(document.getElementById('unitMappingFixModal'));
-                modal.show();
-
-                // Listen for mapping creation
-                window.addEventListener('unitMappingCreated', (event) => {
-                    console.log('🔍 UNIT MAPPING CREATED:', event.detail);
-                    // Retry stock check automatically
-                    this.retryStockCheck();
-                }, { once: true });
-
-                // Clean up modal when closed
-                document.getElementById('unitMappingFixModal').addEventListener('hidden.bs.modal', function() {
-                    this.remove();
-                }, { once: true });
-            }
-        } catch (error) {
-            console.error('🔍 UNIT MAPPING MODAL ERROR:', error);
+        if (conversionErrors.length > 0) {
+            console.warn('🔍 CONVERSION ERRORS:', conversionErrors);
+            this.displayConversionErrors(conversionErrors);
         }
     }
 
-    openUnitCreationModal(errorDetails) {
-        // For now, redirect to unit manager
-        // TODO: Implement inline unit creation modal
-        window.open('/conversion/units', '_blank');
+    displayConversionErrors(errors) {
+        const errorContainer = document.getElementById('stockCheckResults');
+        if (!errorContainer) return;
+
+        let html = '<div class="alert alert-warning mb-3">';
+        html += '<h6><i class="fas fa-exclamation-triangle"></i> Conversion Issues</h6>';
+        html += '<ul class="mb-0">';
+
+        errors.forEach(error => {
+            html += `<li><strong>${error.name}:</strong> ${error.error}`;
+            if (error.details && error.details.message) {
+                html += ` - ${error.details.message}`;
+            }
+            html += '</li>';
+        });
+
+        html += '</ul></div>';
+        errorContainer.innerHTML = html + errorContainer.innerHTML;
     }
 
-    retryStockCheck() {
-        console.log('🔍 RETRYING STOCK CHECK after fixing conversion error...');
-        // Trigger stock check again
-        this.performStockCheck();
+    renderMissingIngredients(missingIngredients) {
+        let html = `
+            <div class="alert alert-danger">
+                <h6><i class="fas fa-times-circle"></i> Missing Ingredients</h6>
+                <ul class="mb-0">
+        `;
+
+        missingIngredients.forEach(ingredient => {
+            html += `<li>${ingredient.name} (needed: ${ingredient.needed_amount} ${ingredient.needed_unit})</li>`;
+        });
+
+        html += '</ul></div>';
+        return html;
+    }
+
+    renderInsufficientStock(insufficientStock) {
+        let html = `
+            <div class="alert alert-warning">
+                <h6><i class="fas fa-exclamation-triangle"></i> Insufficient Stock</h6>
+                <div class="row">
+        `;
+
+        insufficientStock.forEach(ingredient => {
+            const needed = ingredient.needed_amount || 0;
+            const available = ingredient.available_quantity || 0;
+            const shortage = needed - available;
+
+            html += `
+                <div class="col-md-6 mb-2">
+                    <div class="card">
+                        <div class="card-body p-2">
+                            <h6 class="card-title mb-1">${ingredient.name}</h6>
+                            <div class="text-small">
+                                <div>Needed: <strong>${needed} ${ingredient.needed_unit}</strong></div>
+                                <div>Available: <span class="text-warning">${available} ${ingredient.available_unit || ingredient.needed_unit}</span></div>
+                                <div>Short: <span class="text-danger">${shortage.toFixed(2)} ${ingredient.needed_unit}</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+
+        html += '</div></div>';
+        return html;
+    }
+
+    displayStockError(errorMessage) {
+        console.error('🔍 STOCK ERROR:', errorMessage);
+        const resultsContainer = document.getElementById('stockCheckResults');
+        if (resultsContainer) {
+            resultsContainer.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>Stock Check Error:</strong> ${errorMessage}
+                </div>
+            `;
+        }
     }
 }
 
-// Export alias for backward compatibility
-export { StockCheckManager as StockChecker };
+// Export for use in other modules
+window.StockCheckManager = StockCheckManager;
