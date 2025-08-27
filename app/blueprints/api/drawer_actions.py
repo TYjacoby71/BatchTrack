@@ -12,7 +12,7 @@ drawer_actions_bp = Blueprint('drawer_actions', __name__, url_prefix='/api/drawe
 @drawer_actions_bp.route('/conversion/density-modal/<int:ingredient_id>', methods=['GET'])
 @login_required
 @require_permission('view_inventory')
-def density_modal(ingredient_id):
+def get_density_modal(ingredient_id):
     """Get density fix modal for ingredient"""
     ingredient = InventoryItem.query.get_or_404(ingredient_id)
 
