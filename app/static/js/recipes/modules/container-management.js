@@ -212,7 +212,7 @@ export class ContainerManager {
         
         containers.forEach((container, index) => {
             const stockQuantity = container.stock_qty || container.available_quantity || container.quantity || 0;
-            const containerName = container.name || 'Unknown Container';
+            const containerName = container.container_name || container.name || 'Unknown Container';
             const containerCapacity = container.capacity || 0;
             const containerUnit = container.unit || 'ml';
             const quantityNeeded = container.quantity || container.containers_needed || 0;
@@ -326,7 +326,8 @@ export class ContainerManager {
         
         let optionsHTML = '<option value="">Select Container</option>';
         availableContainers.forEach(container => {
-            optionsHTML += `<option value="${container.id}">${container.name} (${container.capacity} ${container.unit})</option>`;
+            const containerName = container.container_name || container.name || 'Unknown Container';
+            optionsHTML += `<option value="${container.id}">${containerName} (${container.capacity} ${container.unit})</option>`;
         });
 
         return `
