@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify, render_template
 from flask_login import login_required, current_user
-from app.models import db, InventoryItem, Unit, CustomUnitMapping, IngredientCategory, Recipe, Batch, Product
+from app.models import db, InventoryItem, CustomUnitMapping, Unit, IngredientCategory, Recipe, Batch, Product
 from app.services.unit_conversion.drawer_errors import prepare_density_error_context, prepare_unit_mapping_error_context
 from app.services.unit_conversion import ConversionEngine
 from app.utils.permissions import require_permission
@@ -12,19 +12,19 @@ drawer_actions_bp = Blueprint('drawer_actions', __name__, url_prefix='/api/drawe
 @drawer_actions_bp.route('/conversion/density-modal/<int:ingredient_id>', methods=['GET'])
 @login_required
 @require_permission('view_inventory')
-def density_modal(ingredient_id):
+def get_density_modal(ingredient_id):
     """Get density fix modal for ingredient"""
     ingredient = InventoryItem.query.get_or_404(ingredient_id)
-    
+
     try:
-        modal_html = render_template('components/shared/density_fix_modal.html', 
+        modal_html = render_template('components/shared/density_fix_modal.html',
                                    ingredient=ingredient)
-        
+
         return jsonify({
             'success': True,
             'modal_html': modal_html
         })
-    
+
     except Exception as e:
         return jsonify({'error': f'Failed to load modal: {str(e)}'}), 500
 
@@ -34,23 +34,23 @@ def density_modal(ingredient_id):
 def update_density(ingredient_id):
     """Update ingredient density from modal"""
     ingredient = InventoryItem.query.get_or_404(ingredient_id)
-    
+
     try:
         data = request.get_json()
         new_density = float(data.get('density', 0))
-        
+
         if new_density <= 0:
             return jsonify({'error': 'Density must be greater than 0'}), 400
-        
+
         ingredient.density = new_density
         db.session.commit()
-        
+
         return jsonify({
             'success': True,
             'message': f'Density updated to {new_density} g/ml',
             'new_density': new_density
         })
-    
+
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': f'Failed to update density: {str(e)}'}), 500
@@ -62,17 +62,17 @@ def unit_mapping_modal():
     """Get unit mapping creation modal"""
     from_unit = request.args.get('from_unit', '')
     to_unit = request.args.get('to_unit', '')
-    
+
     try:
         modal_html = render_template('components/shared/unit_mapping_fix_modal.html',
                                    from_unit=from_unit,
                                    to_unit=to_unit)
-        
+
         return jsonify({
             'success': True,
             'modal_html': modal_html
         })
-    
+
     except Exception as e:
         return jsonify({'error': f'Failed to load modal: {str(e)}'}), 500
 
@@ -86,23 +86,23 @@ def create_unit_mapping():
         from_unit = data.get('from_unit', '').strip()
         to_unit = data.get('to_unit', '').strip()
         conversion_factor = float(data.get('conversion_factor', 0))
-        
+
         if not from_unit or not to_unit:
             return jsonify({'error': 'Both units are required'}), 400
-        
+
         if conversion_factor <= 0:
             return jsonify({'error': 'Conversion factor must be greater than 0'}), 400
-        
+
         # Check if mapping already exists
         existing = CustomUnitMapping.query.filter_by(
             from_unit=from_unit,
             to_unit=to_unit,
             organization_id=current_user.organization_id
         ).first()
-        
+
         if existing:
             return jsonify({'error': 'Mapping already exists'}), 400
-        
+
         # Create new mapping
         mapping = CustomUnitMapping(
             from_unit=from_unit,
@@ -110,10 +110,10 @@ def create_unit_mapping():
             conversion_factor=conversion_factor,
             organization_id=current_user.organization_id
         )
-        
+
         db.session.add(mapping)
         db.session.commit()
-        
+
         return jsonify({
             'success': True,
             'message': f'Unit mapping created: {from_unit} → {to_unit}',
@@ -123,132 +123,12 @@ def create_unit_mapping():
                 'conversion_factor': conversion_factor
             }
         })
-    
+
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': f'Failed to create mapping: {str(e)}'}), 500
-def get_density_modal(ingredient_id):
-    """Get density modal for missing density error"""
-    ingredient = InventoryItem.query.get_or_404(ingredient_id)
 
-    if ingredient.organization_id != current_user.organization_id:
-        return jsonify({'error': 'Access denied'}), 403
 
-    suggested_density = None
-    if ingredient.category and ingredient.category.default_density:
-        suggested_density = ingredient.category.default_density
-
-    modal_html = render_template('components/shared/density_fix_modal.html',
-                               ingredient=ingredient,
-                               suggested_density=suggested_density)
-
-    return jsonify({
-        'success': True,
-        'modal_html': modal_html,
-        'ingredient_id': ingredient_id,
-        'ingredient_name': ingredient.name,
-        'current_density': ingredient.density,
-        'suggested_density': suggested_density
-    })
-
-@drawer_actions_bp.route('/conversion/density-modal/<int:ingredient_id>', methods=['POST'])
-@login_required
-@require_permission('edit_inventory')
-def update_density(ingredient_id):
-    """Update ingredient density from modal"""
-    ingredient = InventoryItem.query.get_or_404(ingredient_id)
-
-    if ingredient.organization_id != current_user.organization_id:
-        return jsonify({'error': 'Access denied'}), 403
-
-    try:
-        data = request.get_json()
-        new_density = float(data.get('density', 0))
-
-        if new_density <= 0:
-            return jsonify({'error': 'Density must be greater than 0'}), 400
-
-        ingredient.density = new_density
-        db.session.commit()
-
-        return jsonify({
-            'success': True,
-            'message': f'Density updated for {ingredient.name}',
-            'new_density': new_density
-        })
-
-    except ValueError:
-        return jsonify({'error': 'Invalid density value'}), 400
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': f'Failed to update density: {str(e)}'}), 500
-
-@drawer_actions_bp.route('/conversion/unit-mapping-modal', methods=['GET'])
-@login_required
-@require_permission('view_conversion')
-def get_unit_mapping_modal():
-    """Get unit mapping modal for missing custom mapping error"""
-    from_unit = request.args.get('from_unit')
-    to_unit = request.args.get('to_unit')
-
-    units = Unit.query.filter_by(is_active=True).order_by(Unit.name).all()
-
-    modal_html = render_template('components/shared/unit_mapping_fix_modal.html',
-                               from_unit=from_unit,
-                               to_unit=to_unit,
-                               units=units)
-
-    return jsonify({
-        'success': True,
-        'modal_html': modal_html,
-        'from_unit': from_unit,
-        'to_unit': to_unit
-    })
-
-@drawer_actions_bp.route('/conversion/create-unit-mapping', methods=['POST'])
-@login_required
-@require_permission('edit_conversion')
-def create_unit_mapping():
-    """Create custom unit mapping from modal"""
-    try:
-        data = request.get_json()
-        from_unit = data.get('from_unit')
-        to_unit = data.get('to_unit')
-        conversion_factor = float(data.get('conversion_factor', 1))
-
-        if conversion_factor <= 0:
-            return jsonify({'error': 'Conversion factor must be greater than 0'}), 400
-
-        existing = CustomUnitMapping.query.filter_by(
-            from_unit=from_unit,
-            to_unit=to_unit,
-            organization_id=current_user.organization_id
-        ).first()
-
-        if existing:
-            return jsonify({'error': 'Mapping already exists'}), 400
-
-        mapping = CustomUnitMapping(
-            from_unit=from_unit,
-            to_unit=to_unit,
-            conversion_factor=conversion_factor,
-            organization_id=current_user.organization_id,
-            created_by=current_user.id
-        )
-
-        db.session.add(mapping)
-        db.session.commit()
-
-        return jsonify({
-            'success': True,
-            'message': f'Custom mapping created: 1 {from_unit} = {conversion_factor} {to_unit}'
-        })
-
-    except ValueError:
-        return jsonify({'error': 'Invalid conversion factor'}), 400
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': f'Failed to create mapping: {str(e)}'}), 500
 
 # ==================== RECIPE ERRORS ====================
 
