@@ -79,7 +79,7 @@ export class ContainerManager {
                 const quantityInput = newRow.querySelector('.container-quantity');
 
                 if (select && quantityInput) {
-                    select.value = container.id;
+                    select.value = container.container_id;
                     quantityInput.value = container.quantity || container.containers_needed || 1;
                     this.updateContainerRow(index);
                 }
@@ -326,7 +326,8 @@ export class ContainerManager {
         let optionsHTML = '<option value="">Select Container</option>';
         availableContainers.forEach(container => {
             const containerName = container.container_name || 'Unknown Container';
-            optionsHTML += `<option value="${container.id}">${containerName} (${container.capacity} ${container.unit})</option>`;
+            // Show just the container name in the dropdown, not capacity details
+            optionsHTML += `<option value="${container.container_id}">${containerName}</option>`;
         });
 
         return `
@@ -402,7 +403,7 @@ export class ContainerManager {
             return;
         }
 
-        const container = this.containerPlan?.container_selection?.find(c => c.id == selectedId);
+        const container = this.containerPlan?.container_selection?.find(c => c.container_id == selectedId);
         if (!container) {
             stockBadge.textContent = '-';
             if (capacityDiv) capacityDiv.textContent = '-';
@@ -414,15 +415,16 @@ export class ContainerManager {
         console.log('🔍 STOCK DISPLAY DEBUG: Container:', container.name, 'Stock:', stockQuantity);
         stockBadge.textContent = stockQuantity;
 
-        // Update capacity display with both units if available
+        // Update capacity display to match auto-fill format exactly
         if (capacityDiv) {
-            let capacityDisplay = `${container.capacity || 0} ${container.unit || 'ml'}`;
+            // Always show the converted capacity first, then original in parentheses if different
+            let capacityDisplay = `${container.capacity || 0} ${container.original_unit || container.unit || 'ml'}`;
 
-            // If we have converted capacity info, show both side by side
+            // This matches the auto-fill display format from renderContainerResults
             if (container.capacity_in_yield_unit && container.yield_unit && container.conversion_successful) {
-                if ((container.unit || 'ml') !== container.yield_unit) {
-                    capacityDisplay = `<strong>${container.capacity_in_yield_unit} ${container.yield_unit}</strong> (${container.capacity} ${container.unit})`;
-                }
+                capacityDisplay = `<strong>${container.capacity_in_yield_unit} ${container.yield_unit}</strong> (${container.original_capacity || container.capacity} ${container.original_unit || container.unit})`;
+            } else if (container.capacity_in_yield_unit && container.yield_unit) {
+                capacityDisplay = `<strong>${container.capacity_in_yield_unit} ${container.yield_unit}</strong> (${container.original_capacity || container.capacity} ${container.original_unit || container.unit})`;
             }
 
             capacityDiv.innerHTML = capacityDisplay;
@@ -455,7 +457,7 @@ export class ContainerManager {
                 const quantityInput = row.querySelector('.container-quantity');
 
                 if (select && quantityInput && select.value) {
-                    const container = this.containerPlan?.container_selection?.find(c => c.id == select.value);
+                    const container = this.containerPlan?.container_selection?.find(c => c.container_id == select.value);
                     if (container) {
                         const quantity = parseInt(quantityInput.value) || 0;
                         // ALWAYS use converted capacity - this is the key fix
