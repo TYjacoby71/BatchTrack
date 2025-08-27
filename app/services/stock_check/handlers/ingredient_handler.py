@@ -11,6 +11,7 @@ from datetime import datetime
 from app.models import InventoryItem
 from app.models.inventory_lot import InventoryLot
 from app.services.unit_conversion.unit_conversion import ConversionEngine
+from app.services.unit_conversion import drawer_errors
 from ..types import StockCheckRequest, StockCheckResult, StockStatus, InventoryCategory
 from .base_handler import BaseInventoryHandler
 
@@ -62,8 +63,7 @@ class IngredientHandler(BaseInventoryHandler):
         logger.debug(f"Ingredient {ingredient.name}: {total_available} {stock_unit} available, need {request.quantity_needed} {recipe_unit}")
 
         try:
-            from app.services.unit_conversion.unit_conversion import ConversionEngine, drawer_errors as conversion_drawers
-
+            # Removed the duplicated import here
             conversion_result = ConversionEngine.convert_units(
                 amount=float(request.quantity_needed),
                 from_unit=recipe_unit,
@@ -105,7 +105,7 @@ class IngredientHandler(BaseInventoryHandler):
                 )
             else:
                 # Let the ConversionEngine service decide how to handle this error
-                drawer_response = conversion_drawers.handle_conversion_error(conversion_result)
+                drawer_response = drawer_errors.handle_conversion_error(conversion_result)
 
                 # Build conversion details from the specialist's decision
                 conversion_details = {
