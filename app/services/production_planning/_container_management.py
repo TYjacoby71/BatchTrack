@@ -151,7 +151,8 @@ def _create_greedy_strategy(container_options: List[Dict[str, Any]], total_yield
 
     # Calculate totals
     total_capacity = sum(c['capacity'] * c['containers_needed'] for c in selected_containers)
-    containment_percentage = min(100.0, (total_yield / total_capacity * 100) if total_capacity > 0 else 0)
+    # Containment = Can the total capacity hold the yield? (not fill efficiency)
+    containment_percentage = min(100.0, (total_capacity / total_yield * 100) if total_yield > 0 else 0)
 
     # Create warnings - separate containment from fill efficiency
     warnings = []
