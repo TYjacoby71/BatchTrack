@@ -113,6 +113,13 @@ class IngredientHandler(BaseInventoryHandler):
                     'needs_user_attention': True
                 }
 
+                # Import conversion service drawer logic
+                from app.services.conversion.drawer_errors import should_open_drawer, prepare_density_error_context, prepare_unit_mapping_error_context
+
+                # Check if this error needs a drawer solution
+                if should_open_drawer(error_code, error_data):
+                    conversion_details['requires_drawer'] = True
+
                 if error_code == 'MISSING_DENSITY':
                     conversion_details.update({
                         'error_type': 'missing_density',
