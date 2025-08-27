@@ -58,7 +58,7 @@ class PlanProductionApp {
                 console.log('🔍 SCALE DEBUG: Scale changed from', this.scale, 'to', newScale);
                 this.scale = newScale;
                 this.updateProjectedYield();
-                
+
                 // Update container plan if containers are required
                 if (this.requiresContainers) {
                     console.log('🔍 SCALE DEBUG: Updating container plan for new scale');
