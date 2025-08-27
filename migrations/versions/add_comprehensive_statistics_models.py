@@ -166,7 +166,7 @@ def upgrade():
         sa.Column('change_date', sa.DateTime()),
         sa.Column('created_at', sa.DateTime()),
         sa.ForeignKeyConstraint(['organization_id'], ['organization.id']),
-        sa.ForeignKeyConstraint(['inventory_item_id'], ['inventory.id']),
+        sa.ForeignKeyConstraint(['inventory_item_id'], ['inventory_item.id']),
         sa.ForeignKeyConstraint(['user_id'], ['user.id']),
         sa.ForeignKeyConstraint(['related_batch_id'], ['batch.id']),
         sa.ForeignKeyConstraint(['related_lot_id'], ['inventory_lot.id']),

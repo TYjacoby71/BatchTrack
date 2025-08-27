@@ -486,7 +486,7 @@ class InventoryEfficiencyStats(ScopedModelMixin, db.Model):
     __tablename__ = 'inventory_efficiency_stats'
 
     id = db.Column(db.Integer, primary_key=True)
-    inventory_item_id = db.Column(db.Integer, db.ForeignKey('inventory.id'), nullable=False, unique=True)
+    inventory_item_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'), nullable=False, unique=True)
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=False)
 
     # Usage Statistics
@@ -600,7 +600,7 @@ class InventoryChangeLog(ScopedModelMixin, db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=False)
-    inventory_item_id = db.Column(db.Integer, db.ForeignKey('inventory.id'), nullable=False)
+    inventory_item_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
 
     # Change Details
