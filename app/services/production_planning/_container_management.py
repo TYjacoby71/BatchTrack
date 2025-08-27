@@ -1,329 +1,181 @@
-
 """
 Container Management for Production Planning
 
-Clean, maintainable container selection using a greedy algorithm approach.
-Replaces the complex recursive bin-packing with an intuitive, efficient solution.
+Clean, direct container selection using a greedy algorithm.
+No legacy compatibility layers.
 """
 
 import logging
 import math
 from dataclasses import dataclass
-from typing import List, Optional, Tuple, Dict, Any
+from typing import List, Optional, Dict, Any
 from ...models import Recipe, InventoryItem, IngredientCategory
 from flask_login import current_user
-from .types import ContainerStrategy, ContainerOption, ContainerFillStrategy
+from .types import ContainerStrategy, ContainerOption
 
 logger = logging.getLogger(__name__)
 
-# --- Data Structures for Clarity ---
-
 @dataclass
-class ContainerOptionData:
-    """A structured class to hold all data about a potential container."""
+class ContainerCandidate:
+    """A container option with conversion data"""
     id: int
     name: str
     available_qty: int
+    capacity_in_recipe_units: float
     original_capacity: float
     original_unit: str
-    converted_capacity: float
-    is_conversion_successful: bool
-
-@dataclass
-class FillStrategy:
-    """The final result of the planning, detailing which containers to use."""
-    containers_to_use: Dict[int, int]  # {container_id: quantity_to_use}
-    total_capacity: float
-    efficiency: float
-    warnings: List[str]
-
-# --- Main Service Class ---
 
 class ContainerPlanner:
-    """
-    Encapsulates all logic for finding the optimal container strategy for a recipe.
-    """
+    """Container strategy planning for recipes"""
+
     def __init__(self, recipe: Recipe, scale: float):
         self.recipe = recipe
         self.scale = scale
         self.organization_id = current_user.organization_id if current_user.is_authenticated else None
         self.total_yield = (recipe.predicted_yield or 0) * self.scale
         self.yield_unit = recipe.predicted_yield_unit or 'ml'
-        self.options: List[ContainerOptionData] = []
+        self.candidates: List[ContainerCandidate] = []
 
-    def find_best_strategy(self) -> Optional[FillStrategy]:
-        """
-        Main entry point to find the best container fill strategy.
-        """
+    def plan_containers(self) -> Optional[ContainerStrategy]:
+        """Main entry point for container planning"""
         if self.total_yield <= 0:
-            logger.warning(f"No yield for recipe {self.recipe.id}, cannot plan containers.")
-            return None
+            raise ValueError(f"Recipe '{self.recipe.name}' has no predicted yield configured.")
 
-        self._fetch_and_process_options()
+        self._load_container_candidates()
 
-        if not self.options:
-            logger.warning(f"No valid container options found for recipe {self.recipe.id}.")
-            return None
+        if not self.candidates:
+            raise ValueError(f"No suitable containers found for recipe '{self.recipe.name}'. Check that containers have compatible units and sufficient stock.")
 
-        return self._create_greedy_fill_strategy()
+        return self._create_container_strategy()
 
-    def _fetch_and_process_options(self):
-        """
-        Fetches allowed containers from DB, processes them, and populates self.options.
-        This combines the old _get_allowed_containers and _process_container_capacities.
-        """
-        # 1. Get allowed container IDs from the recipe, with a fallback
+    def _load_container_candidates(self):
+        """Load and process container candidates"""
         container_ids = self._get_allowed_container_ids()
-        if not container_ids:
-            return
 
-        # 2. Fetch all container DB objects in a single query (N+1 safe)
         containers_from_db = InventoryItem.query.filter(
             InventoryItem.id.in_(container_ids),
             InventoryItem.organization_id == self.organization_id,
-            InventoryItem.quantity > 0  # Only fetch containers with stock
+            InventoryItem.quantity > 0
         ).all()
 
-        # 3. Process each container, converting units and creating ContainerOption objects
-        processed_options = []
         for container in containers_from_db:
             storage_capacity = getattr(container, 'storage_amount', None)
             storage_unit = getattr(container, 'storage_unit', None)
 
             if not storage_capacity or not storage_unit:
-                logger.warning(f"⚠️  CONTAINER SKIPPED: {container.name} - missing capacity or unit")
+                logger.warning(f"Container {container.name} missing capacity data - skipped")
                 continue
 
-            converted_capacity, success = self._convert_capacity(storage_capacity, storage_unit)
-            
-            # Only include containers with successful conversions
-            if not success or converted_capacity <= 0:
-                logger.warning(f"⚠️  CONTAINER FILTERED: {container.name} - conversion failed or zero capacity")
+            converted_capacity = self._convert_capacity(storage_capacity, storage_unit)
+            if converted_capacity <= 0:
+                logger.warning(f"Container {container.name} conversion failed - skipped")
                 continue
-            
-            processed_options.append(
-                ContainerOptionData(
-                    id=container.id,
-                    name=container.name,
-                    available_qty=int(container.quantity or 0),
-                    original_capacity=storage_capacity,
-                    original_unit=storage_unit,
-                    converted_capacity=round(converted_capacity, 3),
-                    is_conversion_successful=success
-                )
-            )
-            logger.info(f"✅ CONTAINER INCLUDED: {container.name} - {converted_capacity} {self.yield_unit}")
-        
-        # Sort options by largest converted capacity first for the greedy algorithm
-        self.options = sorted(processed_options, key=lambda o: o.converted_capacity, reverse=True)
+
+            self.candidates.append(ContainerCandidate(
+                id=container.id,
+                name=container.name,
+                available_qty=int(container.quantity or 0),
+                capacity_in_recipe_units=converted_capacity,
+                original_capacity=storage_capacity,
+                original_unit=storage_unit
+            ))
+
+        # Sort largest first for greedy algorithm
+        self.candidates.sort(key=lambda c: c.capacity_in_recipe_units, reverse=True)
 
     def _get_allowed_container_ids(self) -> List[int]:
-        """Gets container IDs from the recipe, falling back to all org containers if none are specified."""
+        """Gets container IDs from the recipe. Raises error if none are configured."""
         allowed_ids = getattr(self.recipe, 'container_ids', [])
         if allowed_ids:
             logger.info(f"Using recipe-defined containers for recipe {self.recipe.id}: {allowed_ids}")
             return allowed_ids
 
-        # Fallback logic
-        logger.warning(f"Recipe {self.recipe.id} has no allowed containers. Falling back to all org containers.")
-        container_category = IngredientCategory.query.filter_by(name='Container', organization_id=self.organization_id).first()
-        if not container_category:
-            return []
-        
-        all_org_containers = InventoryItem.query.filter_by(
-            organization_id=self.organization_id,
-            category_id=container_category.id
-        ).with_entities(InventoryItem.id).all()
+        # No fallback - this is a configuration error that should be fixed
+        raise ValueError(f"Recipe '{self.recipe.name}' (ID: {self.recipe.id}) has no containers configured. Please edit the recipe and select appropriate containers before running production planning.")
 
-        return [c_id for c_id, in all_org_containers]
-
-    def _convert_capacity(self, capacity: float, unit: str) -> Tuple[float, bool]:
-        """Converts a container's capacity to the recipe's yield unit."""
+    def _convert_capacity(self, capacity: float, unit: str) -> float:
+        """Convert container capacity to recipe yield units"""
         if unit == self.yield_unit:
-            return capacity, True
-        
+            return capacity
+
         try:
             from ...services.unit_conversion import ConversionEngine
             result = ConversionEngine.convert_units(capacity, unit, self.yield_unit)
-            
             converted_value = result['converted_value'] if isinstance(result, dict) else float(result)
-            logger.info(f"✅ CONVERSION: {capacity} {unit} -> {converted_value} {self.yield_unit}")
-            return converted_value, True
+            return converted_value
         except Exception as e:
-            logger.warning(f"❌ CONVERSION FAILED: Cannot convert {capacity} {unit} to {self.yield_unit}: {e}")
-            return 0.0, False  # Return 0 capacity for failed conversions
+            logger.warning(f"Cannot convert {capacity} {unit} to {self.yield_unit}: {e}")
+            return 0.0
 
-    def _create_greedy_fill_strategy(self) -> FillStrategy:
-        """
-        Uses a greedy algorithm to find the most efficient combination of containers.
-        This replaces the complex recursive bin-packing.
-        """
-        containers_to_use = {}
+    def _create_container_strategy(self) -> ContainerStrategy:
+        """Create container strategy using greedy selection"""
+        selected_containers = []
         remaining_yield = self.total_yield
-        
-        # Iterate through available containers, from largest to smallest
-        for option in self.options:
+
+        for candidate in self.candidates:
             if remaining_yield <= 0:
                 break
-            
-            # How many of this container can we use?
-            num_to_use = min(
-                option.available_qty,
-                math.floor(remaining_yield / option.converted_capacity)
+
+            containers_needed = min(
+                candidate.available_qty,
+                math.ceil(remaining_yield / candidate.capacity_in_recipe_units)
             )
 
-            if num_to_use > 0:
-                containers_to_use[option.id] = num_to_use
-                remaining_yield -= num_to_use * option.converted_capacity
+            if containers_needed > 0:
+                selected_containers.append(ContainerOption(
+                    container_id=candidate.id,
+                    container_name=candidate.name,
+                    capacity=candidate.capacity_in_recipe_units,
+                    available_quantity=candidate.available_qty,
+                    containers_needed=containers_needed,
+                    cost_each=0.0  # Cost calculated elsewhere
+                ))
+                remaining_yield -= containers_needed * candidate.capacity_in_recipe_units
 
-        # If there's still a small amount left, try to fill it with the smallest container
-        if remaining_yield > 0 and self.options:
-            smallest_option = self.options[-1]  # Last one is smallest
-            if (smallest_option.converted_capacity >= remaining_yield and 
-                smallest_option.available_qty > containers_to_use.get(smallest_option.id, 0)):
-                containers_to_use[smallest_option.id] = containers_to_use.get(smallest_option.id, 0) + 1
+        if not selected_containers:
+            raise ValueError(f"Cannot find suitable container combination for {self.total_yield} {self.yield_unit}")
 
-        # Calculate final metrics
-        total_capacity = sum(
-            next(o.converted_capacity for o in self.options if o.id == cid) * qty
-            for cid, qty in containers_to_use.items()
-        )
-        
-        # Containment: Can we fit the batch? (goal: 100%)
-        containment_percentage = min(100.0, (self.total_yield / total_capacity) * 100) if total_capacity > 0 else 0
-        
-        # Fill efficiency: How well are we using container space? (warning only)
-        fill_efficiency = (self.total_yield / total_capacity) * 100 if total_capacity > 0 else 0
-        
+        total_capacity = sum(c.capacity * c.containers_needed for c in selected_containers)
+        containment_percentage = (self.total_yield / total_capacity * 100) if total_capacity > 0 else 0
+
         warnings = []
-        if not containers_to_use:
-            warnings.append("No suitable containers found. Check that containers have compatible units that can be converted to the recipe's yield unit.")
-            if self.options:
-                available_units = list(set(opt.original_unit for opt in self.options))
-                warnings.append(f"Available container units: {', '.join(available_units)}. Recipe yield unit: {self.yield_unit}")
-        elif fill_efficiency < 50 and fill_efficiency > 0:
-            warnings.append(f"Low fill efficiency: {fill_efficiency:.1f}%. Consider different container sizes.")
+        if containment_percentage < 80:
+            warnings.append(f"Low container utilization: {containment_percentage:.1f}%. Consider different container sizes.")
 
-        return FillStrategy(
-            containers_to_use=containers_to_use,
+        return ContainerStrategy(
+            selected_containers=selected_containers,
             total_capacity=total_capacity,
-            efficiency=containment_percentage,  # This should be containment, not fill efficiency
+            containment_percentage=min(100.0, containment_percentage),
             warnings=warnings
         )
 
-# --- Legacy Interface Functions ---
-
-def analyze_container_options(recipe: Recipe, scale: float, preferred_container_id: Optional[int] = None, organization_id: Optional[int] = None) -> Tuple[Optional[ContainerStrategy], List[Dict[str, Any]]]:
-    """
-    Legacy interface that uses the new ContainerPlanner internally.
-    Returns the old format for compatibility.
-    """
+# Public interface - single clean function
+def analyze_container_options(recipe: Recipe, scale: float, preferred_container_id: Optional[int] = None, organization_id: Optional[int] = None):
+    """Analyze container options for a recipe at given scale"""
     try:
         planner = ContainerPlanner(recipe, scale)
-        strategy = planner.find_best_strategy()
+        strategy = planner.plan_containers()
 
-        if not strategy or not strategy.containers_to_use:
-            return None, []
-        
-        # Convert to legacy ContainerStrategy format
-        selected_containers = []
+        # Convert to expected format for container options
         container_options = []
-        
-        for option in planner.options:
-            containers_needed = strategy.containers_to_use.get(option.id, 0)
-            
-            # Add to options list
+        for container in planner.candidates:
+            containers_needed = 0
+            for selected in strategy.selected_containers:
+                if selected.container_id == container.id:
+                    containers_needed = selected.containers_needed
+                    break
+
             container_options.append({
-                'container_id': option.id,
-                'container_name': option.name,
-                'capacity': option.converted_capacity,
-                'available_quantity': option.available_qty,
+                'container_id': container.id,
+                'container_name': container.name,
+                'capacity': container.capacity_in_recipe_units,
+                'available_quantity': container.available_qty,
                 'containers_needed': containers_needed,
-                'cost_each': 0.0  # Cost calculation handled elsewhere
+                'cost_each': 0.0
             })
-            
-            # Add to selected if used
-            if containers_needed > 0:
-                selected_containers.append(ContainerOption(
-                    container_id=option.id,
-                    container_name=option.name,
-                    capacity=option.converted_capacity,
-                    available_quantity=option.available_qty,
-                    containers_needed=containers_needed,
-                    cost_each=0.0
-                ))
 
-        # Calculate proper containment percentage
-        containment_percentage = min(100.0, (planner.total_yield / strategy.total_capacity) * 100) if strategy.total_capacity > 0 else 0
-        
-        container_strategy = ContainerStrategy(
-            selected_containers=selected_containers,
-            total_capacity=strategy.total_capacity,
-            containment_percentage=containment_percentage,
-            fill_strategy=ContainerFillStrategy(
-                selected_containers=[],
-                total_capacity=strategy.total_capacity,
-                containment_percentage=containment_percentage,
-                strategy_type="greedy_optimized"
-            ),
-            warnings=strategy.warnings
-        )
-
-        return container_strategy, container_options
+        return strategy, container_options
 
     except Exception as e:
-        logger.error(f"Error in analyze_container_options: {e}")
+        logger.error(f"Container planning failed for recipe {recipe.id}: {e}")
         return None, []
-
-def get_container_plan_for_api(recipe_id: int, scale: float) -> Dict[str, Any]:
-    """
-    API wrapper that uses the ContainerPlanner and formats a JSON response.
-    """
-    try:
-        recipe = Recipe.query.get(recipe_id)
-        if not recipe:
-            return {'success': False, 'error': 'Recipe not found'}
-
-        planner = ContainerPlanner(recipe, scale)
-        strategy = planner.find_best_strategy()
-
-        if not strategy or not strategy.containers_to_use:
-            return {
-                'success': False, 
-                'error': 'No suitable container combination found.',
-                'available_options': [],
-                'required_yield': planner.total_yield
-            }
-        
-        # Format the selection for the frontend
-        container_selection = []
-        for option in planner.options:
-            if option.id in strategy.containers_to_use:
-                container_selection.append({
-                    'id': option.id,
-                    'name': option.name,
-                    'quantity': strategy.containers_to_use[option.id],
-                    'available_quantity': option.available_qty,
-                    'capacity': option.original_capacity,  # Original
-                    'unit': option.original_unit,
-                    'capacity_in_yield_unit': option.converted_capacity,  # Converted
-                    'yield_unit': planner.yield_unit,
-                    'conversion_successful': option.is_conversion_successful,
-                    'containers_needed': strategy.containers_to_use[option.id],
-                    'total_yield_needed': planner.total_yield
-                })
-
-        # Calculate proper containment percentage
-        containment_percentage = min(100.0, (planner.total_yield / strategy.total_capacity) * 100) if strategy.total_capacity > 0 else 0
-        
-        return {
-            'success': True,
-            'container_selection': container_selection,
-            'total_capacity': strategy.total_capacity,
-            'containment_percentage': containment_percentage,
-            'warnings': strategy.warnings
-        }
-
-    except Exception as e:
-        logger.error(f"Error in get_container_plan_for_api for recipe {recipe_id}: {e}")
-        return {'success': False, 'error': 'An unexpected error occurred during container planning.'}
