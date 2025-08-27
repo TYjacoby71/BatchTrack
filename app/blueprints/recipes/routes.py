@@ -81,21 +81,38 @@ def view_recipe(recipe_id):
 
 @recipes_bp.route('/<int:recipe_id>/auto-fill-containers', methods=['POST'])
 @login_required
-@require_permission('recipes.plan_production')
 def auto_fill_containers(recipe_id):
-    """Auto-fill container selection for recipe - delegates to container management service"""
+    """Auto-fill containers for recipe production planning"""
     try:
         data = request.get_json()
-        scale = float(data.get('scale', 1.0))
+        scale = data.get('scale', 1.0)
 
-        # Delegate entirely to container management service
-        result = analyze_container_options(recipe_id, scale)
+        recipe = Recipe.query.get_or_404(recipe_id)
 
-        return jsonify(result)
+        # Use the simplified container management
+        from app.services.production_planning._container_management import analyze_container_options
+
+        strategy, container_options = analyze_container_options(
+            recipe=recipe,
+            scale=scale,
+            organization_id=current_user.organization_id,
+            api_format=True
+        )
+
+        if strategy:
+            return jsonify(strategy)
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'No suitable container strategy found'
+            }), 400
 
     except Exception as e:
         logger.error(f"Error in auto-fill containers: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 @recipes_bp.route('/<int:recipe_id>/plan', methods=['GET', 'POST'])
 @login_required

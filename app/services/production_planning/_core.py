@@ -87,11 +87,29 @@ def execute_production_planning(request: ProductionRequest, include_containers: 
     container_strategy = None
     container_options = []
     if include_containers:
-        container_strategy, raw_container_options = analyze_container_options(
+        raw_strategy, raw_container_options = analyze_container_options(
             recipe, request.scale, None, request.organization_id, api_format=False
         )
-        # Convert raw options to ContainerOption objects
-        container_options = []
+        
+        if raw_strategy:
+            # Convert to typed objects
+            container_strategy = ContainerStrategy(
+                selected_containers=[
+                    ContainerOption(
+                        container_id=opt['container_id'],
+                        container_name=opt['container_name'],
+                        capacity=opt['capacity'],
+                        available_quantity=opt['available_quantity'],
+                        containers_needed=opt['containers_needed'],
+                        cost_each=opt.get('cost_each', 0.0)
+                    ) for opt in raw_strategy.get('container_selection', [])
+                ],
+                total_capacity=raw_strategy.get('total_capacity', 0),
+                containment_percentage=raw_strategy.get('containment_percentage', 0),
+                warnings=raw_strategy.get('warnings', [])
+            )
+        
+        # All available container options
         for opt in raw_container_options:
             container_options.append(ContainerOption(
                 container_id=opt['container_id'],
