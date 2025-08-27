@@ -87,10 +87,16 @@ def execute_production_planning(request: ProductionRequest, include_containers: 
     container_strategy = None
     container_options = []
     if include_containers:
+        from .types import ContainerStrategy, ContainerOption
+
         raw_strategy, raw_container_options = analyze_container_options(
-            recipe, request.scale, None, request.organization_id, api_format=False
+            recipe=recipe,
+            scale=request.scale, 
+            preferred_container_id=None,
+            organization_id=current_user.organization_id,
+            api_format=False
         )
-        
+
         if raw_strategy:
             # Convert to typed objects
             container_strategy = ContainerStrategy(
@@ -108,7 +114,7 @@ def execute_production_planning(request: ProductionRequest, include_containers: 
                 containment_percentage=raw_strategy.get('containment_percentage', 0),
                 warnings=raw_strategy.get('warnings', [])
             )
-        
+
         # All available container options
         for opt in raw_container_options:
             container_options.append(ContainerOption(
