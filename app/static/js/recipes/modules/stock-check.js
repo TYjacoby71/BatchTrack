@@ -147,6 +147,9 @@ export class StockCheckManager {
 
         stockResults.innerHTML = html;
 
+        // Check for conversion errors that need wall of drawers treatment
+        this.handleConversionErrors(this.stockCheckResults.stock_check || []);
+
         // Update the main status
         this.main.stockChecked = true;
         this.main.stockCheckPassed = allIngredientsAvailable;
@@ -225,6 +228,106 @@ export class StockCheckManager {
         link.href = URL.createObjectURL(blob);
         link.download = 'shopping_list.txt';
         link.click();
+    }
+
+    handleConversionErrors(stockResults) {
+        for (const item of stockResults) {
+            if (item.conversion_details?.error_code) {
+                const errorCode = item.conversion_details.error_code;
+
+                switch (errorCode) {
+                    case 'MISSING_DENSITY':
+                        this.openDensityModal(item.conversion_details);
+                        break;
+                    case 'MISSING_CUSTOM_MAPPING':
+                        this.openUnitMappingModal(item.conversion_details);
+                        break;
+                    case 'UNKNOWN_SOURCE_UNIT':
+                    case 'UNKNOWN_TARGET_UNIT':
+                        this.openUnitCreationModal(item.conversion_details);
+                        break;
+                    default:
+                        console.log('🔍 CONVERSION ERROR: Unhandled error code:', errorCode);
+                }
+            }
+        }
+    }
+
+    async openDensityModal(errorDetails) {
+        try {
+            const response = await fetch(`/api/drawer-actions/density-modal/${errorDetails.ingredient_id}`);
+            const data = await response.json();
+
+            if (data.success) {
+                // Inject modal HTML into page
+                document.body.insertAdjacentHTML('beforeend', data.modal_html);
+
+                // Show modal
+                const modal = new bootstrap.Modal(document.getElementById('densityFixModal'));
+                modal.show();
+
+                // Listen for density update
+                window.addEventListener('densityUpdated', (event) => {
+                    console.log('🔍 DENSITY UPDATED:', event.detail);
+                    // Retry stock check automatically
+                    this.retryStockCheck();
+                }, { once: true });
+
+                // Clean up modal when closed
+                document.getElementById('densityFixModal').addEventListener('hidden.bs.modal', function() {
+                    this.remove();
+                }, { once: true });
+            }
+        } catch (error) {
+            console.error('🔍 DENSITY MODAL ERROR:', error);
+        }
+    }
+
+    async openUnitMappingModal(errorDetails) {
+        try {
+            const params = new URLSearchParams({
+                from_unit: errorDetails.from_unit,
+                to_unit: errorDetails.to_unit
+            });
+
+            const response = await fetch(`/api/drawer-actions/unit-mapping-modal?${params}`);
+            const data = await response.json();
+
+            if (data.success) {
+                // Inject modal HTML into page
+                document.body.insertAdjacentHTML('beforeend', data.modal_html);
+
+                // Show modal
+                const modal = new bootstrap.Modal(document.getElementById('unitMappingFixModal'));
+                modal.show();
+
+                // Listen for mapping creation
+                window.addEventListener('unitMappingCreated', (event) => {
+                    console.log('🔍 UNIT MAPPING CREATED:', event.detail);
+                    // Retry stock check automatically
+                    this.retryStockCheck();
+                }, { once: true });
+
+                // Clean up modal when closed
+                document.getElementById('unitMappingFixModal').addEventListener('hidden.bs.modal', function() {
+                    this.remove();
+                }, { once: true });
+            }
+        } catch (error) {
+            console.error('🔍 UNIT MAPPING MODAL ERROR:', error);
+        }
+    }
+
+    openUnitCreationModal(errorDetails) {
+        // For now, redirect to unit manager
+        // TODO: Implement inline unit creation modal
+        window.open('/conversion/units', '_blank');
+    }
+
+    retryStockCheck() {
+        console.log('🔍 RETRYING STOCK CHECK after fixing conversion error...');
+        // Trigger stock check again
+        this.performStockCheck();
     }
 }
 

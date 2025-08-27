@@ -62,75 +62,131 @@ class IngredientHandler(BaseInventoryHandler):
         logger.debug(f"Ingredient {ingredient.name}: {total_available} {stock_unit} available, need {request.quantity_needed} {recipe_unit}")
 
         try:
-            # Convert available stock to recipe unit using conversion engine
             conversion_result = ConversionEngine.convert_units(
-                total_available,
-                stock_unit,
-                recipe_unit,
-                ingredient_id=ingredient.id
+                amount=float(request.quantity_needed),
+                from_unit=recipe_unit,
+                to_unit=stock_unit,
+                ingredient_id=ingredient.id,
+                density=ingredient.density
             )
 
-            if isinstance(conversion_result, dict):
+            if conversion_result['success']:
+                # Successful conversion
                 available_converted = conversion_result['converted_value']
-                conversion_details = conversion_result
+                conversion_details = {
+                    'conversion_type': conversion_result.get('conversion_type', 'unknown'),
+                    'density_used': conversion_result.get('density_used'),
+                    'requires_attention': conversion_result.get('requires_attention', False)
+                }
 
-                # Add alerts for custom mappings or density conversions
-                if conversion_result.get('conversion_type') in ['custom', 'density']:
-                    conversion_details['requires_attention'] = True
+                # Check if enough stock (planned deduction check)
+                status = self._determine_status_with_thresholds(
+                    available_converted, 
+                    request.quantity_needed,
+                    ingredient
+                )
 
+                return StockCheckResult(
+                    item_id=ingredient.id,
+                    item_name=ingredient.name,
+                    category=InventoryCategory.INGREDIENT,
+                    needed_quantity=request.quantity_needed,
+                    needed_unit=recipe_unit,
+                    available_quantity=available_converted,
+                    available_unit=recipe_unit,
+                    raw_stock=total_available,
+                    stock_unit=stock_unit,
+                    status=status,
+                    formatted_needed=self._format_quantity_display(request.quantity_needed, recipe_unit),
+                    formatted_available=self._format_quantity_display(available_converted, recipe_unit),
+                    conversion_details=conversion_details
+                )
             else:
-                available_converted = float(conversion_result)
-                conversion_details = None
+                # Handle specific error codes for wall of drawers protocol
+                error_code = conversion_result['error_code']
+                error_data = conversion_result['error_data']
 
-            # Check if enough stock (planned deduction check)
-            status = self._determine_status_with_thresholds(
-                available_converted, 
-                request.quantity_needed,
-                ingredient
-            )
-
-            return StockCheckResult(
-                item_id=ingredient.id,
-                item_name=ingredient.name,
-                category=InventoryCategory.INGREDIENT,
-                needed_quantity=request.quantity_needed,
-                needed_unit=recipe_unit,
-                available_quantity=available_converted,
-                available_unit=recipe_unit,
-                raw_stock=total_available,
-                stock_unit=stock_unit,
-                status=status,
-                formatted_needed=self._format_quantity_display(request.quantity_needed, recipe_unit),
-                formatted_available=self._format_quantity_display(available_converted, recipe_unit),
-                conversion_details=conversion_details
-            )
-
-        except ValueError as e:
-            error_msg = str(e)
-
-            # Check for missing custom mapping
-            if "custom mapping" in error_msg.lower():
-                conversion_details = {
-                    'needs_unit_mapping': True,
-                    'unit_manager_link': '/conversion/units',
-                    'error_type': 'missing_custom_mapping'
-                }
-                status = StockStatus.ERROR
-            elif "density" in error_msg.lower():
-                status = StockStatus.DENSITY_MISSING
-                conversion_details = {
-                    'error_type': 'missing_density',
-                    'density_help_link': '/conversion/units'
-                }
-                # Suggest density if not provided and ingredient is recognized
-                if ingredient.density is None:
+                if error_code == 'MISSING_DENSITY':
+                    status = StockStatus.DENSITY_MISSING
+                    conversion_details = {
+                        'error_code': 'MISSING_DENSITY',
+                        'error_type': 'missing_density',
+                        'ingredient_id': error_data.get('ingredient_id'),
+                        'ingredient_name': ingredient.name,
+                        'from_unit': error_data.get('from_unit'),
+                        'to_unit': error_data.get('to_unit'),
+                        'drawer_action': 'open_density_modal',
+                        'density_help_link': '/conversion/units'
+                    }
+                    # Suggest density if available
                     suggested_density = self._get_suggested_density(ingredient.name)
                     if suggested_density:
                         conversion_details['suggested_density'] = suggested_density
-                        conversion_details['requires_attention'] = True
-            else:
-                status = StockStatus.ERROR
-                conversion_details = None
+
+                elif error_code == 'MISSING_CUSTOM_MAPPING':
+                    status = StockStatus.ERROR
+                    conversion_details = {
+                        'error_code': 'MISSING_CUSTOM_MAPPING',
+                        'error_type': 'missing_custom_mapping',
+                        'from_unit': error_data.get('from_unit'),
+                        'to_unit': error_data.get('to_unit'),
+                        'drawer_action': 'open_unit_mapping_modal',
+                        'unit_manager_link': '/conversion/units'
+                    }
+
+                elif error_code in ['UNKNOWN_SOURCE_UNIT', 'UNKNOWN_TARGET_UNIT']:
+                    status = StockStatus.ERROR
+                    conversion_details = {
+                        'error_code': error_code,
+                        'error_type': 'unknown_unit',
+                        'unknown_unit': error_data.get('unit'),
+                        'drawer_action': 'open_unit_creation_modal'
+                    }
+
+                elif error_code == 'SYSTEM_ERROR':
+                    status = StockStatus.ERROR
+                    conversion_details = {
+                        'error_code': 'SYSTEM_ERROR',
+                        'error_type': 'system_error',
+                        'message': 'Unit conversion is not available at the moment, please try again'
+                    }
+
+                else:
+                    status = StockStatus.ERROR
+                    conversion_details = {
+                        'error_code': error_code,
+                        'error_type': 'conversion_error',
+                        'message': error_data.get('message', 'Conversion failed')
+                    }
+                
+                # If conversion failed, available quantity is considered 0 for stock check purposes
+                available_converted = 0.0 
+
+                return StockCheckResult(
+                    item_id=ingredient.id,
+                    item_name=ingredient.name,
+                    category=InventoryCategory.INGREDIENT,
+                    needed_quantity=request.quantity_needed,
+                    needed_unit=recipe_unit,
+                    available_quantity=available_converted,
+                    available_unit=recipe_unit,
+                    raw_stock=total_available,
+                    stock_unit=stock_unit,
+                    status=status,
+                    error_message=conversion_result.get('error_message', 'Conversion failed'),
+                    formatted_needed=self._format_quantity_display(request.quantity_needed, recipe_unit),
+                    formatted_available="N/A",
+                    conversion_details=conversion_details
+                )
+
+        except ValueError as e:
+            # This catch is for unexpected ValueErrors not handled by ConversionEngine's structured response
+            error_msg = str(e)
+            status = StockStatus.ERROR
+            conversion_details = {
+                'error_type': 'unexpected_value_error',
+                'message': error_msg
+            }
 
             return StockCheckResult(
                 item_id=ingredient.id,
@@ -143,11 +199,37 @@ class IngredientHandler(BaseInventoryHandler):
                 raw_stock=total_available,
                 stock_unit=stock_unit,
                 status=status,
-                error_message=error_msg,
+                error_message=f"Unexpected error during conversion: {error_msg}",
                 formatted_needed=self._format_quantity_display(request.quantity_needed, recipe_unit),
                 formatted_available="N/A",
                 conversion_details=conversion_details
             )
+        except Exception as e:
+            # Catch all other unexpected exceptions
+            logger.exception(f"An unexpected error occurred during stock check for item {ingredient.id}")
+            status = StockStatus.ERROR
+            conversion_details = {
+                'error_type': 'system_error',
+                'message': 'Unit conversion is not available at the moment, please try again'
+            }
+
+            return StockCheckResult(
+                item_id=ingredient.id,
+                item_name=ingredient.name,
+                category=InventoryCategory.INGREDIENT,
+                needed_quantity=request.quantity_needed,
+                needed_unit=recipe_unit,
+                available_quantity=0,
+                available_unit=recipe_unit,
+                raw_stock=total_available,
+                stock_unit=stock_unit,
+                status=status,
+                error_message=conversion_details['message'],
+                formatted_needed=self._format_quantity_display(request.quantity_needed, recipe_unit),
+                formatted_available="N/A",
+                conversion_details=conversion_details
+            )
+
 
     def _get_suggested_density(self, ingredient_name: str) -> Optional[float]:
         """Get suggested density for common ingredients based on name"""
@@ -199,7 +281,7 @@ class IngredientHandler(BaseInventoryHandler):
             'cost_per_unit': ingredient.cost_per_unit,
             'density': getattr(ingredient, 'density', None),
             'type': ingredient.type,
-            'low_stock_threshold': ingredient.low_stock_threshold
+            'low_stock_threshold': ingredient.low_stock__threshold
         }
 
     def _create_not_found_result(self, request: StockCheckRequest) -> StockCheckResult:

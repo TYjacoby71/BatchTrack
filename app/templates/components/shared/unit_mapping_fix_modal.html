@@ -1,0 +1,123 @@
+
+<div class="modal fade" id="unitMappingFixModal" tabindex="-1" aria-labelledby="unitMappingFixModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="unitMappingFixModalLabel">
+                    <i class="fas fa-exchange-alt"></i>
+                    Create Unit Mapping
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i>
+                    <strong>Custom Mapping Required:</strong> 
+                    No conversion exists between "{{ from_unit }}" and "{{ to_unit }}". 
+                    Create a custom mapping to define this relationship.
+                </div>
+                
+                <form id="unitMappingFixForm">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <label for="fromUnitInput" class="form-label">From Unit</label>
+                            <input type="text" class="form-control" id="fromUnitInput" value="{{ from_unit }}" readonly>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="conversionFactorInput" class="form-label">Equals</label>
+                            <input type="number" 
+                                   class="form-control" 
+                                   id="conversionFactorInput" 
+                                   step="0.001" 
+                                   min="0.001"
+                                   placeholder="1.0">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="toUnitInput" class="form-label">To Unit</label>
+                            <input type="text" class="form-control" id="toUnitInput" value="{{ to_unit }}" readonly>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <small class="text-muted">
+                            <i class="fas fa-lightbulb"></i>
+                            <strong>Example:</strong> If 1 bucket = 5 liters, enter "5" in the equals field.
+                        </small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    Cancel
+                </button>
+                <button type="button" class="btn btn-primary" id="createMappingBtn">
+                    <i class="fas fa-plus"></i>
+                    Create Mapping
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('unitMappingFixModal');
+    const form = document.getElementById('unitMappingFixForm');
+    const createBtn = document.getElementById('createMappingBtn');
+    const factorInput = document.getElementById('conversionFactorInput');
+    
+    if (createBtn) {
+        createBtn.addEventListener('click', function() {
+            const factor = parseFloat(factorInput.value);
+            
+            if (!factor || factor <= 0) {
+                alert('Please enter a valid conversion factor greater than 0');
+                return;
+            }
+            
+            // Create mapping via API
+            fetch('/api/drawer-actions/create-unit-mapping', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({
+                    from_unit: '{{ from_unit }}',
+                    to_unit: '{{ to_unit }}',
+                    conversion_factor: factor
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Close modal and trigger callback
+                    const modalInstance = bootstrap.Modal.getInstance(modal);
+                    modalInstance.hide();
+                    
+                    // Dispatch custom event for parent to handle
+                    window.dispatchEvent(new CustomEvent('unitMappingCreated', {
+                        detail: {
+                            fromUnit: '{{ from_unit }}',
+                            toUnit: '{{ to_unit }}',
+                            factor: factor
+                        }
+                    }));
+                    
+                    // Show success message
+                    if (typeof showToast === 'function') {
+                        showToast('success', data.message);
+                    }
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error creating mapping:', error);
+                alert('Failed to create mapping');
+            });
+        });
+    }
+});
+</script>
+</div>
