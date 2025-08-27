@@ -1,0 +1,190 @@
+
+"""
+Inventory Statistics Service
+
+Handles inventory efficiency tracking, spoilage monitoring,
+freshness analysis, and cost impact calculations.
+"""
+
+import logging
+from typing import Dict, Any, Optional
+from datetime import datetime, date
+from flask_login import current_user
+
+from ...extensions import db
+from ...models.statistics import InventoryEfficiencyStats, InventoryChangeLog
+from ...models import InventoryItem, InventoryLot
+from ...utils.timezone_utils import TimezoneUtils
+
+logger = logging.getLogger(__name__)
+
+
+class InventoryStatisticsService:
+    """Service for tracking inventory-level statistics"""
+    
+    @staticmethod
+    def log_inventory_change(inventory_item_id: int, change_type: str, quantity_change: float, **context):
+        """Log detailed inventory change with full context"""
+        try:
+            # Create change log entry
+            change_log = InventoryChangeLog.log_change(
+                inventory_item_id=inventory_item_id,
+                organization_id=current_user.organization_id if current_user.is_authenticated else context.get('organization_id'),
+                change_type=change_type,
+                quantity_change=quantity_change,
+                user_id=current_user.id if current_user.is_authenticated else None,
+                change_category=context.get('change_category', 'unknown'),
+                cost_impact=context.get('cost_impact', 0.0),
+                related_batch_id=context.get('batch_id'),
+                related_lot_id=context.get('lot_id'),
+                reason_code=context.get('reason_code'),
+                notes=context.get('notes'),
+                item_age_days=context.get('item_age_days'),
+                expiration_date=context.get('expiration_date'),
+                freshness_score=context.get('freshness_score', 100.0)
+            )
+            
+            # Update efficiency stats
+            InventoryStatisticsService._update_efficiency_stats(
+                inventory_item_id, change_type, quantity_change, context.get('cost_impact', 0.0)
+            )
+            
+            db.session.commit()
+            logger.info(f"Logged inventory change: {change_type} {quantity_change} for item {inventory_item_id}")
+            
+        except Exception as e:
+            logger.error(f"Error logging inventory change: {e}")
+            db.session.rollback()
+    
+    @staticmethod
+    def _update_efficiency_stats(inventory_item_id: int, change_type: str, quantity_change: float, cost_impact: float):
+        """Update efficiency statistics based on inventory change"""
+        try:
+            inventory_item = InventoryItem.query.get(inventory_item_id)
+            if not inventory_item:
+                return
+            
+            # Get or create efficiency stats
+            efficiency_stats = InventoryEfficiencyStats.query.filter_by(
+                inventory_item_id=inventory_item_id
+            ).first()
+            
+            if not efficiency_stats:
+                efficiency_stats = InventoryEfficiencyStats(
+                    inventory_item_id=inventory_item_id,
+                    organization_id=inventory_item.organization_id
+                )
+                db.session.add(efficiency_stats)
+            
+            # Update stats based on change type
+            if change_type in ['purchase', 'restock', 'adjustment_add']:
+                efficiency_stats.total_purchased_quantity += abs(quantity_change)
+                efficiency_stats.total_purchase_cost += abs(cost_impact)
+                
+            elif change_type in ['use', 'production', 'batch_consumption']:
+                efficiency_stats.total_used_quantity += abs(quantity_change)
+                
+            elif change_type in ['spoilage', 'expired']:
+                efficiency_stats.total_spoiled_quantity += abs(quantity_change)
+                efficiency_stats.total_spoilage_cost += abs(cost_impact)
+                
+            elif change_type in ['waste', 'damage', 'theft', 'loss']:
+                efficiency_stats.total_wasted_quantity += abs(quantity_change)
+                efficiency_stats.total_waste_cost += abs(cost_impact)
+            
+            # Recalculate efficiency metrics
+            efficiency_stats.recalculate_efficiency()
+            
+        except Exception as e:
+            logger.error(f"Error updating efficiency stats: {e}")
+    
+    @staticmethod
+    def calculate_freshness_impact(inventory_item_id: int) -> Dict[str, Any]:
+        """Calculate freshness impact on inventory efficiency"""
+        try:
+            # Get all change logs for this item
+            change_logs = InventoryChangeLog.query.filter_by(
+                inventory_item_id=inventory_item_id
+            ).order_by(InventoryChangeLog.change_date.desc()).all()
+            
+            if not change_logs:
+                return {}
+            
+            # Analyze freshness patterns
+            spoilage_events = [log for log in change_logs if log.change_type in ['spoilage', 'expired']]
+            usage_events = [log for log in change_logs if log.change_type in ['use', 'production']]
+            
+            freshness_analysis = {
+                'total_spoilage_events': len(spoilage_events),
+                'total_usage_events': len(usage_events),
+                'avg_days_to_spoilage': 0,
+                'avg_days_to_usage': 0,
+                'freshness_efficiency_score': 100.0
+            }
+            
+            # Calculate average days to spoilage
+            if spoilage_events:
+                spoilage_days = [log.item_age_days for log in spoilage_events if log.item_age_days]
+                if spoilage_days:
+                    freshness_analysis['avg_days_to_spoilage'] = sum(spoilage_days) / len(spoilage_days)
+            
+            # Calculate average days to usage
+            if usage_events:
+                usage_days = [log.item_age_days for log in usage_events if log.item_age_days]
+                if usage_days:
+                    freshness_analysis['avg_days_to_usage'] = sum(usage_days) / len(usage_days)
+            
+            # Calculate efficiency score (higher is better)
+            total_events = len(spoilage_events) + len(usage_events)
+            if total_events > 0:
+                freshness_analysis['freshness_efficiency_score'] = (len(usage_events) / total_events) * 100
+            
+            return freshness_analysis
+            
+        except Exception as e:
+            logger.error(f"Error calculating freshness impact: {e}")
+            return {}
+    
+    @staticmethod
+    def get_spoilage_report(organization_id: int, days: int = 30) -> Dict[str, Any]:
+        """Get spoilage report for organization"""
+        try:
+            from datetime import timedelta
+            
+            since_date = datetime.now() - timedelta(days=days)
+            
+            spoilage_logs = InventoryChangeLog.query.filter(
+                InventoryChangeLog.organization_id == organization_id,
+                InventoryChangeLog.change_type.in_(['spoilage', 'expired']),
+                InventoryChangeLog.change_date >= since_date
+            ).all()
+            
+            total_spoilage_cost = sum(log.cost_impact for log in spoilage_logs)
+            total_spoiled_quantity = sum(abs(log.quantity_change) for log in spoilage_logs)
+            
+            # Group by inventory item
+            spoilage_by_item = {}
+            for log in spoilage_logs:
+                item_name = log.inventory_item.name if log.inventory_item else 'Unknown'
+                if item_name not in spoilage_by_item:
+                    spoilage_by_item[item_name] = {
+                        'quantity': 0,
+                        'cost': 0,
+                        'events': 0
+                    }
+                spoilage_by_item[item_name]['quantity'] += abs(log.quantity_change)
+                spoilage_by_item[item_name]['cost'] += log.cost_impact
+                spoilage_by_item[item_name]['events'] += 1
+            
+            return {
+                'period_days': days,
+                'total_spoilage_cost': total_spoilage_cost,
+                'total_spoiled_quantity': total_spoiled_quantity,
+                'spoilage_events_count': len(spoilage_logs),
+                'spoilage_by_item': spoilage_by_item,
+                'avg_spoilage_per_event': total_spoilage_cost / len(spoilage_logs) if spoilage_logs else 0
+            }
+            
+        except Exception as e:
+            logger.error(f"Error generating spoilage report: {e}")
+            return {}

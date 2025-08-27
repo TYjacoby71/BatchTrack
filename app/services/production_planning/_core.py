@@ -158,5 +158,18 @@ def execute_production_planning(request: ProductionRequest, include_containers: 
         issues=issues
     )
 
+    # 7. Record planned efficiency statistics
+    if plan.feasible and container_strategy:
+        try:
+            from ...statistics_service import StatisticsService
+            StatisticsService.record_planned_efficiency(
+                recipe_id=request.recipe_id,
+                planned_efficiency=container_strategy.containment_percentage,
+                planned_yield=plan.projected_yield,
+                planned_costs=cost_breakdown.to_dict() if cost_breakdown else {}
+            )
+        except Exception as e:
+            logger.warning(f"Could not record planned efficiency statistics: {e}")
+
     logger.info(f"PRODUCTION_PLANNING: Analysis complete - Feasible: {plan.feasible}")
     return plan

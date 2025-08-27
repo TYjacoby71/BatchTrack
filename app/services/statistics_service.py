@@ -1,11 +1,36 @@
-
 from app.models.statistics import UserStats, OrganizationStats
 from app.extensions import db
 from flask_login import current_user
 
+# Import new modular services
+try:
+    from .statistics import StatisticsService as NewStatisticsService
+    from .statistics import BatchStatisticsService, InventoryStatisticsService
+    MODULAR_STATS_AVAILABLE = True
+except ImportError:
+    MODULAR_STATS_AVAILABLE = False
+
+
 class StatisticsService:
-    """Service for updating statistics in real-time"""
-    
+    """Legacy statistics service - now delegates to modular system"""
+
+    @staticmethod
+    def record_planned_efficiency(recipe_id: int, planned_efficiency: float, planned_yield: dict, planned_costs: dict = None):
+        """Record planned efficiency from production planning"""
+        if MODULAR_STATS_AVAILABLE:
+            return NewStatisticsService.record_planned_efficiency(
+                recipe_id, planned_efficiency, planned_yield, planned_costs
+            )
+
+    @staticmethod
+    def track_inventory_change(inventory_item_id: int, change_type: str, quantity_change: float, **context):
+        """Track inventory changes with detailed context"""
+        if MODULAR_STATS_AVAILABLE:
+            return InventoryStatisticsService.log_inventory_change(
+                inventory_item_id, change_type, quantity_change, **context
+            )
+
+    # Keep existing methods for backward compatibility
     @staticmethod
     def increment_user_batch_count(user_id, organization_id, status='started'):
         """Increment batch count for user and organization"""

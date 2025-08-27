@@ -301,3 +301,344 @@ class Leaderboard:
          .limit(limit).all()
 
         return monthly_stats
+
+
+class BatchStats(ScopedModelMixin, db.Model):
+    """Track detailed statistics for each batch"""
+    __tablename__ = 'batch_stats'
+
+    id = db.Column(db.Integer, primary_key=True)
+    batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'), nullable=False, unique=True)
+    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    recipe_id = db.Column(db.Integer, db.ForeignKey('recipe.id'), nullable=False)
+
+    # Planning vs Actual Efficiency
+    planned_fill_efficiency = db.Column(db.Float, default=0.0)  # From production planning
+    actual_fill_efficiency = db.Column(db.Float, default=0.0)   # From completed batch
+    efficiency_variance = db.Column(db.Float, default=0.0)      # Difference between planned/actual
+
+    # Yield Tracking
+    planned_yield_amount = db.Column(db.Float, default=0.0)
+    planned_yield_unit = db.Column(db.String(50))
+    actual_yield_amount = db.Column(db.Float, default=0.0)
+    actual_yield_unit = db.Column(db.String(50))
+    yield_variance_percentage = db.Column(db.Float, default=0.0)
+
+    # Cost Tracking
+    planned_ingredient_cost = db.Column(db.Float, default=0.0)
+    actual_ingredient_cost = db.Column(db.Float, default=0.0)
+    planned_container_cost = db.Column(db.Float, default=0.0)
+    actual_container_cost = db.Column(db.Float, default=0.0)
+    total_planned_cost = db.Column(db.Float, default=0.0)
+    total_actual_cost = db.Column(db.Float, default=0.0)
+    cost_variance_percentage = db.Column(db.Float, default=0.0)
+
+    # Spoilage & Waste Tracking
+    ingredient_spoilage_cost = db.Column(db.Float, default=0.0)
+    product_spoilage_cost = db.Column(db.Float, default=0.0)
+    waste_percentage = db.Column(db.Float, default=0.0)
+
+    # Time Tracking
+    planned_duration_minutes = db.Column(db.Integer, default=0)
+    actual_duration_minutes = db.Column(db.Integer, default=0)
+    duration_variance_percentage = db.Column(db.Float, default=0.0)
+
+    # Status & Timestamps
+    batch_status = db.Column(db.String(50))  # completed, failed, cancelled
+    created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
+    completed_at = db.Column(db.DateTime)
+    last_updated = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
+
+    # Relationships
+    batch = db.relationship('Batch', backref='stats')
+    user = db.relationship('User')
+    recipe = db.relationship('Recipe')
+
+    @classmethod
+    def create_from_planned_batch(cls, batch_id, planned_efficiency, planned_yield, planned_costs):
+        """Create batch stats from production planning data"""
+        from ..models import Batch
+        batch = Batch.query.get(batch_id)
+        if not batch:
+            return None
+
+        stats = cls(
+            batch_id=batch_id,
+            organization_id=batch.organization_id,
+            user_id=batch.created_by,
+            recipe_id=batch.recipe_id,
+            planned_fill_efficiency=planned_efficiency,
+            planned_yield_amount=planned_yield.get('amount', 0),
+            planned_yield_unit=planned_yield.get('unit', ''),
+            planned_ingredient_cost=planned_costs.get('ingredient_cost', 0),
+            planned_container_cost=planned_costs.get('container_cost', 0),
+            total_planned_cost=planned_costs.get('total_cost', 0),
+            batch_status='planned'
+        )
+        db.session.add(stats)
+        return stats
+
+    def update_actual_data(self, actual_efficiency, actual_yield, actual_costs):
+        """Update with actual completion data"""
+        self.actual_fill_efficiency = actual_efficiency
+        self.actual_yield_amount = actual_yield.get('amount', 0)
+        self.actual_yield_unit = actual_yield.get('unit', '')
+        self.actual_ingredient_cost = actual_costs.get('ingredient_cost', 0)
+        self.actual_container_cost = actual_costs.get('container_cost', 0)
+        self.total_actual_cost = actual_costs.get('total_cost', 0)
+        self.completed_at = TimezoneUtils.utc_now()
+
+        # Calculate variances
+        if self.planned_fill_efficiency > 0:
+            self.efficiency_variance = self.actual_fill_efficiency - self.planned_fill_efficiency
+        
+        if self.planned_yield_amount > 0:
+            self.yield_variance_percentage = ((self.actual_yield_amount - self.planned_yield_amount) / self.planned_yield_amount) * 100
+        
+        if self.total_planned_cost > 0:
+            self.cost_variance_percentage = ((self.total_actual_cost - self.total_planned_cost) / self.total_planned_cost) * 100
+
+        self.last_updated = TimezoneUtils.utc_now()
+
+
+class RecipeStats(ScopedModelMixin, db.Model):
+    """Track performance statistics for recipes across all batches"""
+    __tablename__ = 'recipe_stats'
+
+    id = db.Column(db.Integer, primary_key=True)
+    recipe_id = db.Column(db.Integer, db.ForeignKey('recipe.id'), nullable=False, unique=True)
+    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=False)
+
+    # Usage Statistics
+    total_batches_planned = db.Column(db.Integer, default=0)
+    total_batches_completed = db.Column(db.Integer, default=0)
+    total_batches_failed = db.Column(db.Integer, default=0)
+    success_rate_percentage = db.Column(db.Float, default=0.0)
+
+    # Efficiency Averages
+    avg_fill_efficiency = db.Column(db.Float, default=0.0)
+    avg_yield_variance = db.Column(db.Float, default=0.0)
+    avg_cost_variance = db.Column(db.Float, default=0.0)
+
+    # Cost Analysis
+    avg_cost_per_batch = db.Column(db.Float, default=0.0)
+    avg_cost_per_unit = db.Column(db.Float, default=0.0)
+    total_spoilage_cost = db.Column(db.Float, default=0.0)
+
+    # Container Usage
+    most_used_container_id = db.Column(db.Integer, db.ForeignKey('inventory.id'))
+    avg_containers_needed = db.Column(db.Float, default=0.0)
+
+    # Timestamps
+    created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
+    last_batch_date = db.Column(db.DateTime)
+    last_updated = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
+
+    # Relationships
+    recipe = db.relationship('Recipe', backref='stats')
+    most_used_container = db.relationship('InventoryItem', foreign_keys=[most_used_container_id])
+
+    @classmethod
+    def get_or_create(cls, recipe_id, organization_id):
+        """Get existing stats or create new ones"""
+        stats = cls.query.filter_by(recipe_id=recipe_id, organization_id=organization_id).first()
+        if not stats:
+            stats = cls(recipe_id=recipe_id, organization_id=organization_id)
+            db.session.add(stats)
+        return stats
+
+    def recalculate_from_batches(self):
+        """Recalculate all stats from completed batch data"""
+        completed_batches = BatchStats.query.filter(
+            BatchStats.recipe_id == self.recipe_id,
+            BatchStats.organization_id == self.organization_id,
+            BatchStats.batch_status == 'completed'
+        ).all()
+
+        if not completed_batches:
+            return
+
+        # Usage stats
+        self.total_batches_completed = len(completed_batches)
+        failed_batches = BatchStats.query.filter(
+            BatchStats.recipe_id == self.recipe_id,
+            BatchStats.batch_status == 'failed'
+        ).count()
+        
+        total = self.total_batches_completed + failed_batches
+        if total > 0:
+            self.success_rate_percentage = (self.total_batches_completed / total) * 100
+
+        # Averages
+        if completed_batches:
+            self.avg_fill_efficiency = sum(b.actual_fill_efficiency for b in completed_batches) / len(completed_batches)
+            self.avg_yield_variance = sum(b.yield_variance_percentage for b in completed_batches) / len(completed_batches)
+            self.avg_cost_variance = sum(b.cost_variance_percentage for b in completed_batches) / len(completed_batches)
+            self.avg_cost_per_batch = sum(b.total_actual_cost for b in completed_batches) / len(completed_batches)
+            self.total_spoilage_cost = sum(b.ingredient_spoilage_cost + b.product_spoilage_cost for b in completed_batches)
+
+        self.last_updated = TimezoneUtils.utc_now()
+
+
+class InventoryEfficiencyStats(ScopedModelMixin, db.Model):
+    """Track inventory usage efficiency and spoilage"""
+    __tablename__ = 'inventory_efficiency_stats'
+
+    id = db.Column(db.Integer, primary_key=True)
+    inventory_item_id = db.Column(db.Integer, db.ForeignKey('inventory.id'), nullable=False, unique=True)
+    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=False)
+
+    # Usage Statistics
+    total_purchased_quantity = db.Column(db.Float, default=0.0)
+    total_used_quantity = db.Column(db.Float, default=0.0)
+    total_spoiled_quantity = db.Column(db.Float, default=0.0)
+    total_wasted_quantity = db.Column(db.Float, default=0.0)  # damaged, trash, etc.
+
+    # Efficiency Metrics
+    utilization_percentage = db.Column(db.Float, default=0.0)  # used / purchased
+    spoilage_rate = db.Column(db.Float, default=0.0)          # spoiled / purchased
+    waste_rate = db.Column(db.Float, default=0.0)             # wasted / purchased
+
+    # Cost Impact
+    total_purchase_cost = db.Column(db.Float, default=0.0)
+    total_spoilage_cost = db.Column(db.Float, default=0.0)
+    total_waste_cost = db.Column(db.Float, default=0.0)
+    effective_cost_per_unit = db.Column(db.Float, default=0.0)  # Adjusted for spoilage/waste
+
+    # Freshness Tracking
+    avg_days_to_use = db.Column(db.Float, default=0.0)
+    avg_days_to_spoil = db.Column(db.Float, default=0.0)
+    freshness_score = db.Column(db.Float, default=100.0)  # 0-100 based on usage patterns
+
+    # Timestamps
+    created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
+    last_updated = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
+
+    # Relationships
+    inventory_item = db.relationship('InventoryItem', backref='efficiency_stats')
+
+    def recalculate_efficiency(self):
+        """Recalculate all efficiency metrics"""
+        if self.total_purchased_quantity > 0:
+            self.utilization_percentage = (self.total_used_quantity / self.total_purchased_quantity) * 100
+            self.spoilage_rate = (self.total_spoiled_quantity / self.total_purchased_quantity) * 100
+            self.waste_rate = (self.total_wasted_quantity / self.total_purchased_quantity) * 100
+            
+            # Effective cost includes spoilage and waste impact
+            if self.total_used_quantity > 0:
+                self.effective_cost_per_unit = self.total_purchase_cost / self.total_used_quantity
+        
+        self.last_updated = TimezoneUtils.utc_now()
+
+
+class OrganizationLeaderboardStats(db.Model):
+    """Track organization-level statistics for leaderboards"""
+    __tablename__ = 'organization_leaderboard_stats'
+
+    id = db.Column(db.Integer, primary_key=True)
+    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=False, unique=True)
+
+    # Recipe Stats
+    total_recipes = db.Column(db.Integer, default=0)
+    active_recipes_count = db.Column(db.Integer, default=0)  # Used in last 30 days
+    most_popular_recipe_id = db.Column(db.Integer, db.ForeignKey('recipe.id'))
+    avg_recipe_success_rate = db.Column(db.Float, default=0.0)
+
+    # Production Stats
+    total_batches_completed = db.Column(db.Integer, default=0)
+    avg_batch_completion_time = db.Column(db.Float, default=0.0)  # hours
+    avg_fill_efficiency = db.Column(db.Float, default=0.0)
+    highest_fill_efficiency = db.Column(db.Float, default=0.0)
+
+    # Team Stats
+    active_users_count = db.Column(db.Integer, default=0)
+    most_productive_user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    avg_batches_per_user = db.Column(db.Float, default=0.0)
+
+    # Container Usage
+    most_used_container_size = db.Column(db.Float, default=0.0)
+    most_used_container_id = db.Column(db.Integer, db.ForeignKey('inventory.id'))
+
+    # Cost Efficiency
+    avg_cost_per_batch = db.Column(db.Float, default=0.0)
+    lowest_cost_per_unit = db.Column(db.Float, default=0.0)
+    highest_cost_per_unit = db.Column(db.Float, default=0.0)
+
+    # Inventory Efficiency
+    avg_spoilage_rate = db.Column(db.Float, default=0.0)
+    inventory_turnover_rate = db.Column(db.Float, default=0.0)
+
+    # Community Stats (for future features)
+    recipes_shared_count = db.Column(db.Integer, default=0)
+    recipes_sold_count = db.Column(db.Integer, default=0)
+    community_rating = db.Column(db.Float, default=0.0)
+
+    # Timestamps
+    created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
+    last_updated = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
+
+    # Relationships
+    organization = db.relationship('Organization')
+    most_popular_recipe = db.relationship('Recipe', foreign_keys=[most_popular_recipe_id])
+    most_productive_user = db.relationship('User', foreign_keys=[most_productive_user_id])
+    most_used_container = db.relationship('InventoryItem', foreign_keys=[most_used_container_id])
+
+    @classmethod
+    def get_or_create(cls, organization_id):
+        """Get existing stats or create new ones"""
+        stats = cls.query.filter_by(organization_id=organization_id).first()
+        if not stats:
+            stats = cls(organization_id=organization_id)
+            db.session.add(stats)
+        return stats
+
+
+class InventoryChangeLog(ScopedModelMixin, db.Model):
+    """Log all inventory changes with detailed categorization"""
+    __tablename__ = 'inventory_change_log'
+
+    id = db.Column(db.Integer, primary_key=True)
+    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=False)
+    inventory_item_id = db.Column(db.Integer, db.ForeignKey('inventory.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+
+    # Change Details
+    change_type = db.Column(db.String(50), nullable=False)  # purchase, use, spoilage, waste, damage, theft, etc.
+    change_category = db.Column(db.String(50), nullable=False)  # additive, deductive, correction, transfer
+    quantity_change = db.Column(db.Float, nullable=False)
+    cost_impact = db.Column(db.Float, default=0.0)
+
+    # Context
+    related_batch_id = db.Column(db.Integer, db.ForeignKey('batch.id'))
+    related_lot_id = db.Column(db.Integer, db.ForeignKey('inventory_lot.id'))
+    reason_code = db.Column(db.String(100))  # expired, damaged, customer_complaint, etc.
+    notes = db.Column(db.Text)
+
+    # Freshness Context (if applicable)
+    item_age_days = db.Column(db.Integer)  # Age of item when changed
+    expiration_date = db.Column(db.Date)
+    freshness_score = db.Column(db.Float)  # 0-100
+
+    # Timestamps
+    change_date = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
+    created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
+
+    # Relationships
+    inventory_item = db.relationship('InventoryItem')
+    user = db.relationship('User')
+    related_batch = db.relationship('Batch')
+    related_lot = db.relationship('InventoryLot')
+
+    @classmethod
+    def log_change(cls, inventory_item_id, organization_id, change_type, quantity_change, **kwargs):
+        """Log an inventory change with context"""
+        log_entry = cls(
+            inventory_item_id=inventory_item_id,
+            organization_id=organization_id,
+            change_type=change_type,
+            quantity_change=quantity_change,
+            **kwargs
+        )
+        db.session.add(log_entry)
+        return log_entry
