@@ -1,4 +1,3 @@
-
 <div class="modal fade" id="densityFixModal" tabindex="-1" aria-labelledby="densityFixModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -14,7 +13,7 @@
                     <i class="fas fa-info-circle"></i>
                     <strong>Density Required:</strong> To convert between weight and volume units, we need the density of {{ ingredient.name }}.
                 </div>
-                
+
                 <form id="densityFixForm">
                     <div class="mb-3">
                         <label for="densityInput" class="form-label">
@@ -34,7 +33,7 @@
                             {% endif %}
                         </div>
                     </div>
-                    
+
                     {% if ingredient.category %}
                     <div class="mb-3">
                         <small class="text-muted">
@@ -67,18 +66,18 @@ document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('densityFixForm');
     const saveBtn = document.getElementById('saveDensityBtn');
     const densityInput = document.getElementById('densityInput');
-    
+
     if (saveBtn) {
         saveBtn.addEventListener('click', function() {
             const density = parseFloat(densityInput.value);
-            
+
             if (!density || density <= 0) {
                 alert('Please enter a valid density greater than 0');
                 return;
             }
-            
+
             // Save density via API
-            fetch(`/api/drawer-actions/update-density/{{ ingredient.id }}`, {
+            fetch(`/api/drawer-actions/conversion/density-modal/{{ ingredient.id }}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -94,7 +93,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Close modal and trigger callback if provided
                     const modalInstance = bootstrap.Modal.getInstance(modal);
                     modalInstance.hide();
-                    
+
                     // Dispatch custom event for parent to handle
                     window.dispatchEvent(new CustomEvent('densityUpdated', {
                         detail: {
@@ -103,7 +102,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             ingredientName: '{{ ingredient.name }}'
                         }
                     }));
-                    
+
                     // Show success message
                     if (typeof showToast === 'function') {
                         showToast('success', data.message);

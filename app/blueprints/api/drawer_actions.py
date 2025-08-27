@@ -36,7 +36,7 @@ def get_density_modal(ingredient_id):
         'suggested_density': suggested_density
     })
 
-@drawer_actions_bp.route('/conversion/update-density/<int:ingredient_id>', methods=['POST'])
+@drawer_actions_bp.route('/conversion/density-modal/<int:ingredient_id>', methods=['POST'])
 @login_required
 @require_permission('edit_inventory')
 def update_density(ingredient_id):
