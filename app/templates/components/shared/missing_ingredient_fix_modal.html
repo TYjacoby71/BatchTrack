@@ -1,0 +1,113 @@
+
+<div class="modal fade" id="missingIngredientFixModal" tabindex="-1" aria-labelledby="missingIngredientFixModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="missingIngredientFixModalLabel">
+          <i class="fas fa-exclamation-triangle text-warning"></i> Add Missing Ingredient
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-warning">
+          <i class="fas fa-info-circle"></i> 
+          Recipe "{{ recipe.name }}" is missing required ingredients for production planning.
+        </div>
+        
+        <form id="missingIngredientFixForm">
+          <div class="row">
+            <div class="col-md-6">
+              <label for="ingredientSelect" class="form-label">Select Ingredient</label>
+              <select class="form-select" id="ingredientSelect" required>
+                <option value="">Choose an ingredient...</option>
+                {% for ingredient in available_ingredients %}
+                <option value="{{ ingredient.id }}">{{ ingredient.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label for="quantityInput" class="form-label">Quantity</label>
+              <input type="number" class="form-control" id="quantityInput" step="0.01" min="0.01" required>
+            </div>
+            <div class="col-md-3">
+              <label for="unitSelect" class="form-label">Unit</label>
+              <select class="form-select" id="unitSelect" required>
+                <option value="gram">gram</option>
+                <option value="kg">kilogram</option>
+                <option value="ml">milliliter</option>
+                <option value="liter">liter</option>
+                <option value="cup">cup</option>
+                <option value="tbsp">tablespoon</option>
+                <option value="tsp">teaspoon</option>
+              </select>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-success" id="addIngredientBtn">
+          <i class="fas fa-plus"></i> Add Ingredient
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('missingIngredientFixModal');
+    const addBtn = document.getElementById('addIngredientBtn');
+    const ingredientSelect = document.getElementById('ingredientSelect');
+    const quantityInput = document.getElementById('quantityInput');
+    const unitSelect = document.getElementById('unitSelect');
+    
+    if (addBtn) {
+        addBtn.addEventListener('click', function() {
+            const ingredientId = parseInt(ingredientSelect.value);
+            const quantity = parseFloat(quantityInput.value);
+            const unit = unitSelect.value;
+            
+            if (!ingredientId || !quantity || !unit) {
+                alert('Please fill in all fields');
+                return;
+            }
+            
+            fetch(`/api/drawer-actions/recipe/add-ingredient/{{ recipe.id }}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({
+                    ingredient_id: ingredientId,
+                    quantity: quantity,
+                    unit: unit
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const modalInstance = bootstrap.Modal.getInstance(modal);
+                    modalInstance.hide();
+                    
+                    window.dispatchEvent(new CustomEvent('ingredientAdded', {
+                        detail: {
+                            recipe_id: {{ recipe.id }},
+                            ingredient_id: ingredientId,
+                            quantity: quantity,
+                            unit: unit
+                        }
+                    }));
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to add ingredient');
+            });
+        });
+    }
+});
+</script>

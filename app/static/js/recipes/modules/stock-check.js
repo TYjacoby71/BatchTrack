@@ -234,21 +234,13 @@ export class StockCheckManager {
         for (const item of stockResults) {
             if (item.conversion_details?.error_code) {
                 const errorCode = item.conversion_details.error_code;
+                const errorData = item.conversion_details;
 
-                switch (errorCode) {
-                    case 'MISSING_DENSITY':
-                        this.openDensityModal(item.conversion_details);
-                        break;
-                    case 'MISSING_CUSTOM_MAPPING':
-                        this.openUnitMappingModal(item.conversion_details);
-                        break;
-                    case 'UNKNOWN_SOURCE_UNIT':
-                    case 'UNKNOWN_TARGET_UNIT':
-                        this.openUnitCreationModal(item.conversion_details);
-                        break;
-                    default:
-                        console.log('🔍 CONVERSION ERROR: Unhandled error code:', errorCode);
-                }
+                // Use universal drawer protocol
+                window.drawerProtocol.handleError('conversion', errorCode, errorData, () => {
+                    console.log('🔍 RETRYING STOCK CHECK after fixing conversion error...');
+                    this.performStockCheck();
+                });
             }
         }
     }
