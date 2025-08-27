@@ -99,3 +99,26 @@ def _get_suggested_density(ingredient_name):
         if key in ingredient_lower:
             return density
     return None
+
+def prepare_density_error_context(ingredient, error_data=None):
+    """Prepare context for density error modal"""
+    suggested_density = None
+    if ingredient.category and ingredient.category.default_density:
+        suggested_density = ingredient.category.default_density
+    else:
+        suggested_density = _get_suggested_density(ingredient.name)
+    
+    return {
+        'ingredient': ingredient,
+        'suggested_density': suggested_density,
+        'current_density': ingredient.density,
+        'error_data': error_data or {}
+    }
+
+def prepare_unit_mapping_error_context(from_unit, to_unit, error_data=None):
+    """Prepare context for unit mapping error modal"""
+    return {
+        'from_unit': from_unit,
+        'to_unit': to_unit,
+        'error_data': error_data or {}
+    }
