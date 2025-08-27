@@ -10,7 +10,7 @@ from app.services.recipe_service import (
     duplicate_recipe
 )
 from app.services.production_planning import plan_production_comprehensive
-from app.services.production_planning._container_management import get_container_plan_for_api
+from app.services.production_planning._container_management import analyze_container_options
 from app.utils.unit_utils import get_global_unit_list
 from app.models.unit import Unit
 import logging
@@ -89,9 +89,8 @@ def auto_fill_containers(recipe_id):
         scale = float(data.get('scale', 1.0))
 
         # Delegate entirely to container management service
-        from app.services.production_planning._container_management import get_container_plan_for_api
-        result = get_container_plan_for_api(recipe_id, scale)
-        
+        result = analyze_container_options(recipe_id, scale)
+
         return jsonify(result)
 
     except Exception as e:
@@ -203,7 +202,7 @@ def plan_container_route(recipe_id):
             return jsonify({"error": "Scale, yield amount, and yield unit are required"}), 400
 
         # Delegate to service
-        container_plan = get_container_plan_for_api(
+        container_plan = analyze_container_options(
             recipe_id=recipe_id,
             scale=scale,
             yield_amount=yield_amount,
