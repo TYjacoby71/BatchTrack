@@ -12,15 +12,9 @@ drawer_actions_bp = Blueprint('drawer_actions', __name__, url_prefix='/api/drawe
 @drawer_actions_bp.route('/conversion/density-modal/<int:ingredient_id>', methods=['GET'])
 @login_required
 @require_permission('view_inventory')
-def conversion_density_modal_get(ingredient_id):
+def get_density_modal(ingredient_id):
     """Get density fix modal for ingredient"""
-    ingredient = InventoryItem.query.filter_by(
-        id=ingredient_id,
-        organization_id=current_user.organization_id
-    ).first()
-    
-    if not ingredient:
-        return jsonify({'error': 'Ingredient not found'}), 404
+    ingredient = InventoryItem.query.get_or_404(ingredient_id)
 
     try:
         modal_html = render_template('components/shared/density_fix_modal.html',
@@ -37,36 +31,6 @@ def conversion_density_modal_get(ingredient_id):
 @drawer_actions_bp.route('/conversion/density-modal/<int:ingredient_id>', methods=['POST'])
 @login_required
 @require_permission('edit_inventory')
-def conversion_density_modal_post(ingredient_id):
-    """Update ingredient density"""
-    ingredient = InventoryItem.query.filter_by(
-        id=ingredient_id,
-        organization_id=current_user.organization_id
-    ).first()
-    
-    if not ingredient:
-        return jsonify({'error': 'Ingredient not found'}), 404
-
-    try:
-        data = request.get_json()
-        density = float(data.get('density', 0))
-        
-        if density <= 0:
-            return jsonify({'error': 'Density must be greater than 0'}), 400
-        
-        ingredient.density = density
-        db.session.commit()
-        
-        return jsonify({
-            'success': True,
-            'message': f'Density updated to {density} g/ml for {ingredient.name}'
-        })
-        
-    except ValueError:
-        return jsonify({'error': 'Invalid density value'}), 400
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': f'Failed to update density: {str(e)}'}), 500
 def update_density(ingredient_id):
     """Update ingredient density from modal"""
     ingredient = InventoryItem.query.get_or_404(ingredient_id)
