@@ -1,0 +1,92 @@
+
+<div class="modal fade" id="stockShortageFixModal" tabindex="-1" aria-labelledby="stockShortageFixModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="stockShortageFixModalLabel">
+          <i class="fas fa-exclamation-triangle text-danger"></i> Stock Shortage
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-danger">
+          <i class="fas fa-warning"></i> 
+          Insufficient stock for "{{ item.name }}". Required: {{ required_amount }}, Available: {{ item.quantity }}
+        </div>
+        
+        <form id="stockShortageFixForm">
+          <div class="mb-3">
+            <label for="restockQuantity" class="form-label">Restock Quantity</label>
+            <input type="number" class="form-control" id="restockQuantity" step="0.01" min="0.01" required>
+            <div class="form-text">Enter the quantity to add to inventory</div>
+          </div>
+          <div class="mb-3">
+            <label for="unitCost" class="form-label">Unit Cost (optional)</label>
+            <input type="number" class="form-control" id="unitCost" step="0.01" min="0">
+            <div class="form-text">Cost per unit for this restock</div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-success" id="quickRestockBtn">
+          <i class="fas fa-plus"></i> Quick Restock
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('stockShortageFixModal');
+    const restockBtn = document.getElementById('quickRestockBtn');
+    const quantityInput = document.getElementById('restockQuantity');
+    const costInput = document.getElementById('unitCost');
+    
+    if (restockBtn) {
+        restockBtn.addEventListener('click', function() {
+            const quantity = parseFloat(quantityInput.value);
+            const unitCost = parseFloat(costInput.value) || 0;
+            
+            if (!quantity || quantity <= 0) {
+                alert('Please enter a valid quantity');
+                return;
+            }
+            
+            fetch(`/api/drawer-actions/inventory/quick-restock/{{ item.id }}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({
+                    quantity: quantity,
+                    unit_cost: unitCost
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const modalInstance = bootstrap.Modal.getInstance(modal);
+                    modalInstance.hide();
+                    
+                    window.dispatchEvent(new CustomEvent('inventoryRestocked', {
+                        detail: {
+                            item_id: {{ item.id }},
+                            quantity_added: quantity,
+                            new_quantity: data.new_quantity
+                        }
+                    }));
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to restock item');
+            });
+        });
+    }
+});
+</script>

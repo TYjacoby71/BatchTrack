@@ -16,21 +16,91 @@ class ConversionEngine:
 
             @staticmethod
             def convert_units(amount, from_unit, to_unit, ingredient_id=None, density=None):
-                # Validate input parameters
+                """
+                Convert units with structured error handling for wall of drawers protocol
+
+                Returns:
+                {
+                    'success': bool,
+                    'converted_value': float | None,
+                    'error_code': str | None,
+                    'error_data': dict | None,
+                    'conversion_type': str,
+                    'density_used': float | None,
+                    'from': str,
+                    'to': str,
+                    'requires_attention': bool
+                }
+                """
+
+                # Input validation
                 if not isinstance(amount, (int, float)) or amount < 0:
-                    raise ValueError(f"Invalid amount: {amount}. Must be a positive number.")
+                    return {
+                        'success': False,
+                        'converted_value': None,
+                        'error_code': 'INVALID_AMOUNT',
+                        'error_data': {'amount': amount, 'message': 'Amount must be a positive number'},
+                        'conversion_type': 'failed',
+                        'density_used': None,
+                        'from': from_unit,
+                        'to': to_unit,
+                        'requires_attention': False
+                    }
+
                 if not from_unit or not isinstance(from_unit, str):
-                    raise ValueError(f"Invalid from_unit: {from_unit}")
+                    return {
+                        'success': False,
+                        'converted_value': None,
+                        'error_code': 'INVALID_FROM_UNIT',
+                        'error_data': {'from_unit': from_unit, 'message': 'Invalid source unit'},
+                        'conversion_type': 'failed',
+                        'density_used': None,
+                        'from': from_unit,
+                        'to': to_unit,
+                        'requires_attention': False
+                    }
+
                 if not to_unit or not isinstance(to_unit, str):
-                    raise ValueError(f"Invalid to_unit: {to_unit}")
+                    return {
+                        'success': False,
+                        'converted_value': None,
+                        'error_code': 'INVALID_TO_UNIT',
+                        'error_data': {'to_unit': to_unit, 'message': 'Invalid target unit'},
+                        'conversion_type': 'failed',
+                        'density_used': None,
+                        'from': from_unit,
+                        'to': to_unit,
+                        'requires_attention': False
+                    }
 
                 from_u = Unit.query.filter_by(name=from_unit).first()
                 to_u = Unit.query.filter_by(name=to_unit).first()
 
                 if not from_u:
-                    raise ValueError(f"Unknown source unit: {from_unit}")
+                    return {
+                        'success': False,
+                        'converted_value': None,
+                        'error_code': 'UNKNOWN_SOURCE_UNIT',
+                        'error_data': {'unit': from_unit, 'message': f'Unit "{from_unit}" not found in system'},
+                        'conversion_type': 'failed',
+                        'density_used': None,
+                        'from': from_unit,
+                        'to': to_unit,
+                        'requires_attention': False
+                    }
+
                 if not to_u:
-                    raise ValueError(f"Unknown target unit: {to_unit}")
+                    return {
+                        'success': False,
+                        'converted_value': None,
+                        'error_code': 'UNKNOWN_TARGET_UNIT',
+                        'error_data': {'unit': to_unit, 'message': f'Unit "{to_unit}" not found in system'},
+                        'conversion_type': 'failed',
+                        'density_used': None,
+                        'from': from_unit,
+                        'to': to_unit,
+                        'requires_attention': False
+                    }
 
                 conversion_type = 'unknown'
                 used_density = None
@@ -113,7 +183,17 @@ class ConversionEngine:
                             base_amount = amount * from_multiplier
                             converted = base_amount / to_multiplier
                         except (ValueError, TypeError, ZeroDivisionError) as e:
-                            raise ValueError(f"Invalid conversion between {from_unit} and {to_unit}: {str(e)}")
+                            return {
+                                'success': False,
+                                'converted_value': None,
+                                'error_code': 'CONVERSION_ERROR',
+                                'error_data': {'from_unit': from_unit, 'to_unit': to_unit, 'message': str(e)},
+                                'conversion_type': 'failed',
+                                'density_used': None,
+                                'from': from_unit,
+                                'to': to_unit,
+                                'requires_attention': False
+                            }
                     conversion_type = 'direct'
 
                 # 4. Cross-type: volume ↔ weight
@@ -125,17 +205,44 @@ class ConversionEngine:
                             density = ingredient.density
                     if density is None:
                         # Improved error handling for missing density
-                        raise ValueError(f"Missing density for conversion from {from_unit} ({from_u.unit_type}) to {to_unit} ({to_u.unit_type}). Please set ingredient density or add a custom unit mapping.")
+                        return {
+                            'success': False,
+                            'converted_value': None,
+                            'error_code': 'MISSING_DENSITY',
+                            'error_data': {
+                                'from_unit': from_unit, 
+                                'to_unit': to_unit, 
+                                'ingredient_id': ingredient_id,
+                                'message': f"Missing density for conversion from {from_unit} ({from_u.unit_type}) to {to_unit} ({to_u.unit_type}). Please set ingredient density or add a custom unit mapping."
+                            },
+                            'conversion_type': 'density',
+                            'density_used': None,
+                            'from': from_unit,
+                            'to': to_unit,
+                            'requires_attention': True
+                        }
                     used_density = density
 
-                    if from_u.unit_type == 'volume':
-                        grams = amount * from_u.conversion_factor * density
-                        converted = grams / to_u.conversion_factor
-                    else:  # weight → volume
-                        ml = (amount * from_u.conversion_factor) / density
-                        converted = ml / to_u.conversion_factor
-
-                    conversion_type = 'density'
+                    try:
+                        if from_u.unit_type == 'volume':
+                            grams = amount * from_u.conversion_factor * density
+                            converted = grams / to_u.conversion_factor
+                        else:  # weight → volume
+                            ml = (amount * from_u.conversion_factor) / density
+                            converted = ml / to_u.conversion_factor
+                        conversion_type = 'density'
+                    except (ValueError, TypeError, ZeroDivisionError) as e:
+                        return {
+                            'success': False,
+                            'converted_value': None,
+                            'error_code': 'DENSITY_CONVERSION_ERROR',
+                            'error_data': {'from_unit': from_unit, 'to_unit': to_unit, 'message': str(e)},
+                            'conversion_type': 'density',
+                            'density_used': used_density,
+                            'from': from_unit,
+                            'to': to_unit,
+                            'requires_attention': True
+                        }
 
                 # 5. Check for custom cross-type mappings (e.g., count ↔ volume/weight)
                 elif from_u.is_custom or to_u.is_custom:
@@ -147,9 +254,29 @@ class ConversionEngine:
                             converted *= mapping.conversion_factor
                         conversion_type = 'custom_cross_type'
                     else:
-                        raise ValueError(f"Cannot convert {from_unit} ({from_u.unit_type}) to {to_unit} ({to_u.unit_type}) without a custom mapping. Go to Unit Manager to create a mapping.")
+                        return {
+                            'success': False,
+                            'converted_value': None,
+                            'error_code': 'NO_CUSTOM_MAPPING',
+                            'error_data': {'from_unit': from_unit, 'to_unit': to_unit, 'message': f"Cannot convert {from_unit} ({from_u.unit_type}) to {to_unit} ({to_u.unit_type}) without a custom mapping. Go to Unit Manager to create a mapping."},
+                            'conversion_type': 'custom',
+                            'density_used': None,
+                            'from': from_unit,
+                            'to': to_unit,
+                            'requires_attention': True
+                        }
                 else:
-                    raise ValueError(f"Cannot convert {from_unit} ({from_u.unit_type}) to {to_unit} ({to_u.unit_type}) without a custom mapping. Go to Unit Manager to create a mapping.")
+                    return {
+                        'success': False,
+                        'converted_value': None,
+                        'error_code': 'UNSUPPORTED_CONVERSION',
+                        'error_data': {'from_unit': from_unit, 'to_unit': to_unit, 'message': f"Cannot convert {from_unit} ({from_u.unit_type}) to {to_unit} ({to_u.unit_type}) without a custom mapping. Go to Unit Manager to create a mapping."},
+                        'conversion_type': 'unknown',
+                        'density_used': None,
+                        'from': from_unit,
+                        'to': to_unit,
+                        'requires_attention': True
+                    }
 
                 # Log it only if user is authenticated and has organization
                 if current_user and current_user.is_authenticated and current_user.organization_id:
@@ -168,13 +295,16 @@ class ConversionEngine:
                     except Exception as e:
                         print(f"Error logging conversion: {e}")
                         db.session.rollback()
+                        # Decide if this should be a user-facing error or logged internally
+                        # For now, we'll just print and continue if logging fails.
 
                 # Return structured metadata with consistent rounding
                 return {
+                    'success': True,
                     'converted_value': ConversionEngine.round_value(converted, 3),
                     'conversion_type': conversion_type,
                     'density_used': used_density,
                     'from': from_unit,
                     'to': to_unit,
-                    'requires_attention': conversion_type in ['custom', 'density']
+                    'requires_attention': conversion_type in ['custom', 'density'] # Adjust this based on desired attention flags
                 }
