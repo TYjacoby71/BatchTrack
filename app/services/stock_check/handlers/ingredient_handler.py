@@ -1,4 +1,3 @@
-
 """
 Ingredient-specific stock checking handler
 
@@ -24,7 +23,7 @@ class IngredientHandler(BaseInventoryHandler):
     def check_availability(self, request: StockCheckRequest, organization_id: int) -> StockCheckResult:
         """
         Check ingredient availability using FIFO entries and unit conversion.
-        
+
         Process:
         1. Find ingredient in organization
         2. Get available FIFO lots (excludes expired)
@@ -36,7 +35,7 @@ class IngredientHandler(BaseInventoryHandler):
             id=request.item_id,
             organization_id=organization_id
         ).first()
-        
+
         if not ingredient:
             return self._create_not_found_result(request)
 
@@ -45,7 +44,7 @@ class IngredientHandler(BaseInventoryHandler):
             InventoryLot.inventory_item_id == ingredient.id,
             InventoryLot.remaining_quantity > 0
         )
-        
+
         # Filter out expired lots if item is perishable
         if ingredient.is_perishable:
             today = datetime.now().date()
@@ -53,7 +52,7 @@ class IngredientHandler(BaseInventoryHandler):
                 (InventoryLot.expiration_date == None) | 
                 (InventoryLot.expiration_date >= today)
             )
-            
+
         available_lots = available_lots.order_by(InventoryLot.received_date.asc()).all()
         total_available = sum(lot.remaining_quantity for lot in available_lots)
 
@@ -74,11 +73,11 @@ class IngredientHandler(BaseInventoryHandler):
             if isinstance(conversion_result, dict):
                 available_converted = conversion_result['converted_value']
                 conversion_details = conversion_result
-                
+
                 # Add alerts for custom mappings or density conversions
                 if conversion_result.get('conversion_type') in ['custom', 'density']:
                     conversion_details['requires_attention'] = True
-                    
+
             else:
                 available_converted = float(conversion_result)
                 conversion_details = None
@@ -108,7 +107,7 @@ class IngredientHandler(BaseInventoryHandler):
 
         except ValueError as e:
             error_msg = str(e)
-            
+
             # Check for missing custom mapping
             if "custom mapping" in error_msg.lower():
                 conversion_details = {
@@ -123,6 +122,12 @@ class IngredientHandler(BaseInventoryHandler):
                     'error_type': 'missing_density',
                     'density_help_link': '/conversion/units'
                 }
+                # Suggest density if not provided and ingredient is recognized
+                if ingredient.density is None:
+                    suggested_density = self._get_suggested_density(ingredient.name)
+                    if suggested_density:
+                        conversion_details['suggested_density'] = suggested_density
+                        conversion_details['requires_attention'] = True
             else:
                 status = StockStatus.ERROR
                 conversion_details = None
@@ -143,6 +148,26 @@ class IngredientHandler(BaseInventoryHandler):
                 formatted_available="N/A",
                 conversion_details=conversion_details
             )
+
+    def _get_suggested_density(self, ingredient_name: str) -> Optional[float]:
+        """Get suggested density for common ingredients based on name"""
+        density_suggestions = {
+            'beeswax': 0.96,
+            'wax': 0.93,
+            'honey': 1.42,
+            'oil': 0.91,
+            'water': 1.0,
+            'milk': 1.03,
+            'butter': 0.92,
+            'cream': 0.994,
+            'syrup': 1.37
+        }
+
+        ingredient_lower = ingredient_name.lower()
+        for key, density in density_suggestions.items():
+            if key in ingredient_lower:
+                return density
+        return None
 
     def _determine_status_with_thresholds(self, available: float, needed: float, 
                                         ingredient: InventoryItem) -> StockStatus:

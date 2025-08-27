@@ -124,7 +124,8 @@ class ConversionEngine:
                         if ingredient and ingredient.density:
                             density = ingredient.density
                     if density is None:
-                        raise ValueError(f"Missing density for conversion from {from_u.name} to {to_u.name}")
+                        # Improved error handling for missing density
+                        raise ValueError(f"Missing density for conversion from {from_unit} ({from_u.unit_type}) to {to_unit} ({to_u.unit_type}). Please set ingredient density or add a custom unit mapping.")
                     used_density = density
 
                     if from_u.unit_type == 'volume':
