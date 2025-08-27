@@ -63,6 +63,12 @@ def _load_suitable_containers(recipe: Recipe, org_id: int, total_yield: float, y
     
     # Get recipe's allowed containers
     allowed_container_ids = getattr(recipe, 'container_ids', [])
+    
+    # Debug logging to understand what's available
+    logger.info(f"Recipe {recipe.id} container debug:")
+    logger.info(f"  - container_ids attr: {allowed_container_ids}")
+    logger.info(f"  - Recipe attributes: {[attr for attr in dir(recipe) if 'container' in attr.lower()]}")
+    
     if not allowed_container_ids:
         raise ValueError(f"Recipe '{recipe.name}' has no containers configured")
 
