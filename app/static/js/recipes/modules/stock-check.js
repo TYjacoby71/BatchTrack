@@ -62,14 +62,26 @@ export class StockCheckManager {
             this.stockCheckResults = await response.json();
             console.log('🔍 STOCK CHECK: Results received:', this.stockCheckResults);
 
-            if (this.stockCheckResults.success) {
-                this.displayStockResults();
-            } else {
-                this.displayStockError(this.stockCheckResults.error || 'Stock check failed');
+            this.displayStockResults(this.stockCheckResults);
+
+            // Handle any conversion errors that need drawer intervention
+            if (this.stockCheckResults.stock_check) {
+                this.handleConversionErrors(this.stockCheckResults.stock_check);
             }
         } catch (error) {
             console.error('🚨 STOCK CHECK ERROR:', error);
-            this.displayStockError(`Network error during stock check: ${error.message}`);
+
+            // More specific error handling
+            let errorMessage = 'Stock check failed';
+            if (error.message.includes('Cannot read properties of undefined')) {
+                errorMessage = 'Stock check failed: Missing required components. Please refresh the page.';
+            } else if (error.name === 'TypeError') {
+                errorMessage = `Stock check failed: ${error.message}`;
+            } else {
+                errorMessage = `Stock check failed: ${error.message}`;
+            }
+
+            this.displayStockError(errorMessage);
         } finally {
             // Restore button state
             stockCheckBtn.innerHTML = originalText;
@@ -113,9 +125,9 @@ export class StockCheckManager {
         ingredientData.forEach(result => {
             const needed = result.needed_amount || result.needed_quantity || result.quantity_needed || 0;
             const available = result.available_quantity || 0;
-            
+
             let status, statusClass, displayAvailable = available.toFixed(2);
-            
+
             // Check for conversion errors first
             if (result.conversion_details?.error_code) {
                 status = 'CONVERSION ERROR';
@@ -249,10 +261,16 @@ export class StockCheckManager {
                 console.log(`🔍 STOCK CHECK: Conversion error ${errorCode} requires drawer intervention`);
 
                 // Use universal drawer protocol
-                window.drawerProtocol.handleError('conversion', errorCode, errorData, () => {
-                    console.log('🔍 RETRYING STOCK CHECK after fixing conversion error...');
-                    this.performStockCheck();
-                });
+                if (typeof window !== 'undefined' && window.DrawerProtocol && typeof window.DrawerProtocol.handleError === 'function') {
+                    try {
+                        window.DrawerProtocol.handleError('conversion', errorCode, errorData, () => {
+                            console.log('🔍 RETRYING STOCK CHECK after fixing conversion error...');
+                            this.performStockCheck();
+                        });
+                    } catch (e) {
+                        console.warn('DrawerProtocol error handling failed:', e);
+                    }
+                }
             } else if (item.conversion_details?.error_code) {
                 // Log non-drawer errors for debugging
                 console.log(`🔍 STOCK CHECK: Conversion error ${item.conversion_details.error_code} - no drawer needed`);
