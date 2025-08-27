@@ -61,13 +61,13 @@ def analyze_container_options(
 def _load_suitable_containers(recipe: Recipe, org_id: int, total_yield: float, yield_unit: str) -> List[Dict[str, Any]]:
     """Load containers allowed for this recipe and convert capacities"""
     
-    # Get recipe's allowed containers
-    allowed_container_ids = getattr(recipe, 'container_ids', [])
+    # Get recipe's allowed containers - Recipe model uses 'allowed_containers' field
+    allowed_container_ids = getattr(recipe, 'allowed_containers', [])
     
     # Debug logging to understand what's available
     logger.info(f"Recipe {recipe.id} container debug:")
-    logger.info(f"  - container_ids attr: {allowed_container_ids}")
-    logger.info(f"  - Recipe attributes: {[attr for attr in dir(recipe) if 'container' in attr.lower()]}")
+    logger.info(f"  - allowed_containers: {allowed_container_ids}")
+    logger.info(f"  - Recipe has allowed_containers field: {hasattr(recipe, 'allowed_containers')}")
     
     if not allowed_container_ids:
         raise ValueError(f"Recipe '{recipe.name}' has no containers configured")
