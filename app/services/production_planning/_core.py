@@ -88,7 +88,7 @@ def execute_production_planning(request: ProductionRequest, include_containers: 
     container_options = []
     if include_containers:
         container_strategy, raw_container_options = analyze_container_options(
-            recipe, request.scale, None, request.organization_id
+            recipe, request.scale, None, request.organization_id, api_format=False
         )
         # Convert raw options to ContainerOption objects
         container_options = []
