@@ -26,6 +26,11 @@ def register_middleware(app):
             'billing.webhook'  # Stripe webhook is a critical public endpoint
         ]
 
+        # Define frequent endpoints that should have reduced logging
+        frequent_endpoints = [
+            'server_time.get_server_time' # Example: assuming 'server_time.get_server_time' is a frequent endpoint
+        ]
+
         # Pattern-based public paths for flexibility
         public_paths = [
             '/homepage',
@@ -38,17 +43,28 @@ def register_middleware(app):
 
         # Check endpoint names first
         if request.endpoint in public_endpoints:
-            print(f"MIDDLEWARE DEBUG: Allowing public endpoint: {request.endpoint}")
+            if request.endpoint not in frequent_endpoints:
+                print(f"MIDDLEWARE DEBUG: Allowing public endpoint: {request.endpoint}")
             return  # Stop processing, allow the request
 
-        # Check path patterns for public access
-        for public_path in public_paths:
-            if request.path.startswith(public_path):
-                print(f"MIDDLEWARE DEBUG: Allowing public path: {request.path}")
-                return  # Stop processing, allow the request
+        # Pattern-based checks for paths
+        for path in public_paths:
+            if request.path.startswith(path):
+                if request.endpoint not in frequent_endpoints:
+                    print(f"MIDDLEWARE DEBUG: Allowing public path: {request.path}")
+                return
 
-        # Debug: Track middleware execution
-        print(f"MIDDLEWARE DEBUG: Processing {request.method} {request.path}, endpoint={request.endpoint}")
+        # 2. Authentication check - if we get here, user must be authenticated
+        if not current_user.is_authenticated:
+            if request.endpoint not in frequent_endpoints:
+                print(f"MIDDLEWARE DEBUG: Unauthenticated request to {request.endpoint}")
+            return redirect(url_for('auth.login', next=request.url))
+
+        # Reduced logging for frequent endpoints
+        if request.endpoint not in frequent_endpoints:
+            print(f"MIDDLEWARE DEBUG: Processing {request.method} {request.path}, endpoint={request.endpoint}")
+            print(f"MIDDLEWARE DEBUG: User authenticated={current_user.is_authenticated}")
+
 
         # Force reload current_user to ensure fresh session data
         from flask_login import current_user as fresh_current_user
@@ -56,17 +72,6 @@ def register_middleware(app):
         # Check if user is authenticated
         user_authenticated = hasattr(fresh_current_user, 'is_authenticated') and fresh_current_user.is_authenticated
         print(f"MIDDLEWARE DEBUG: User authenticated={user_authenticated}")
-
-        # 2. Check for authentication. Everything from here on requires a logged-in user.
-        if not user_authenticated:
-            print(f"MIDDLEWARE DEBUG: User not authenticated, checking if API request")
-            # Check if this is an API request (inline to avoid circular imports)
-            if (request.is_json or
-                request.path.startswith('/api/') or
-                'application/json' in request.headers.get('Accept', '') or
-                'application/json' in request.headers.get('Content-Type', '')):
-                return jsonify(error="Authentication required"), 401
-            return redirect(url_for('auth.login', next=request.url))
 
         # 3. Handle developer "super admin" and masquerade logic.
         if getattr(fresh_current_user, 'user_type', None) == 'developer':

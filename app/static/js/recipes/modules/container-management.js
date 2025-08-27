@@ -3,6 +3,8 @@ export class ContainerManager {
     constructor(mainManager) {
         this.main = mainManager;
         this.containerPlan = null;
+        this.fetchingPlan = false;
+        this.lastPlanResult = null;
     }
 
     bindEvents() {
@@ -116,39 +118,62 @@ export class ContainerManager {
 
     async fetchContainerPlan() {
         console.log('🔍 CONTAINER DEBUG: fetchContainerPlan called');
+
+        // Debounce multiple rapid calls
+        if (this.fetchingPlan) {
+            console.log('🔍 CONTAINER DEBUG: Plan fetch already in progress, skipping');
+            return this.lastPlanResult;
+        }
+
+        this.fetchingPlan = true;
+
+        if (!this.main.recipe || !this.main.recipe.id) {
+            console.error('🚨 CONTAINER DEBUG: Recipe data not available');
+            this.fetchingPlan = false;
+            return null;
+        }
+
         console.log('🔍 CONTAINER DEBUG: Recipe exists:', !!this.main.recipe);
         console.log('🔍 CONTAINER DEBUG: Requires containers:', this.main.requiresContainers);
 
-        if (!this.main.recipe || !this.main.requiresContainers) {
-            console.log('🔍 CONTAINER DEBUG: Skipping fetch - recipe or requirement missing');
-            return;
+        if (!this.main.requiresContainers) {
+            console.log('🔍 CONTAINER DEBUG: Recipe does not require containers');
+            this.fetchingPlan = false;
+            return null;
         }
 
-        console.log('🔍 CONTAINER DEBUG: Fetching container plan for recipe', this.main.recipe.id, 'scale:', this.main.scale);
+        const scale = parseFloat(document.getElementById('scaleInput')?.value) || 1;
+        console.log('🔍 CONTAINER DEBUG: Fetching container plan for recipe', this.main.recipe.id, 'scale:', scale);
+
+        // Calculate yield amount
+        const yieldAmount = (this.main.recipe.yield_amount || 1) * scale;
+        console.log('🔍 CONTAINER DEBUG: Yield amount calculated:', yieldAmount);
 
         try {
-            const yieldAmount = this.main.baseYield * this.main.scale;
-            console.log('🔍 CONTAINER DEBUG: Yield amount calculated:', yieldAmount);
-
-            this.containerPlan = await this.main.apiCall(`/recipes/${this.main.recipe.id}/auto-fill-containers`, {
-                scale: this.main.scale,
+            const data = await this.main.apiCall(`/recipes/${this.main.recipe.id}/auto-fill-containers`, {
+                scale: scale,
                 yield_amount: yieldAmount,
                 yield_unit: this.main.unit
             });
 
-            console.log('🔍 CONTAINER DEBUG: Server response:', this.containerPlan);
-
-            if (this.containerPlan.success) {
+            if (data.success) {
                 console.log('🔍 CONTAINER DEBUG: Plan successful, displaying results');
-                this.displayContainerPlan();
-                this.updateContainerProgress();
+                this.containerPlan = data;
+                this.lastPlanResult = data;
+                this.displayContainerPlan(data);
+                this.fetchingPlan = false;
+                return data;
             } else {
-                console.log('🔍 CONTAINER DEBUG: Plan failed:', this.containerPlan.error);
-                this.displayContainerError(this.containerPlan.error || 'Failed to load containers');
+                console.log('🔍 CONTAINER DEBUG: Plan failed:', data.error);
+                this.displayContainerError(data.error);
+                this.fetchingPlan = false;
+                return null;
             }
         } catch (error) {
             console.error('🚨 CONTAINER NETWORK ERROR:', error);
             this.displayContainerError('Network error while loading containers');
+            this.fetchingPlan = false;
+            return null;
         }
     }
 

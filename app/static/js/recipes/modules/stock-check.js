@@ -256,21 +256,20 @@ export class StockCheckManager {
         for (const item of stockResults) {
             if (item.conversion_details?.error_code && item.conversion_details?.requires_drawer) {
                 const errorCode = item.conversion_details.error_code;
-                const errorData = item.conversion_details;
+                const errorData = {
+                    ...item.conversion_details,
+                    ingredient_id: item.item_id || item.ingredient_id || item.id,
+                    ingredient_name: item.item_name || item.ingredient_name || item.name,
+                    requires_drawer: true
+                };
 
-                console.log(`🔍 STOCK CHECK: Conversion error ${errorCode} requires drawer intervention`);
+                console.log(`🔍 STOCK CHECK: Conversion error ${errorCode} requires drawer intervention`, errorData);
 
                 // Use universal drawer protocol
-                if (typeof window !== 'undefined' && window.DrawerProtocol && typeof window.DrawerProtocol.handleError === 'function') {
-                    try {
-                        window.DrawerProtocol.handleError('conversion', errorCode, errorData, () => {
-                            console.log('🔍 RETRYING STOCK CHECK after fixing conversion error...');
-                            this.performStockCheck();
-                        });
-                    } catch (e) {
-                        console.warn('DrawerProtocol error handling failed:', e);
-                    }
-                }
+                window.drawerProtocol.handleError('conversion', errorCode, errorData, () => {
+                    console.log('🔍 RETRYING STOCK CHECK after fixing conversion error...');
+                    this.performStockCheck();
+                });
             } else if (item.conversion_details?.error_code) {
                 // Log non-drawer errors for debugging
                 console.log(`🔍 STOCK CHECK: Conversion error ${item.conversion_details.error_code} - no drawer needed`);

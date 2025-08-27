@@ -96,9 +96,9 @@ function showAlert(type, message) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-  // Initialize clock
+  // Initialize clock - reduce frequency to 1 minute
   updateClock();
-  setInterval(updateClock, 30000);
+  setInterval(updateClock, 60000);
 
   // Debug navigation clicks
   console.log('Page loaded:', window.location.pathname);
