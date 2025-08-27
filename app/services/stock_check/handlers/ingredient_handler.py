@@ -230,7 +230,7 @@ class IngredientHandler(BaseInventoryHandler):
             'cost_per_unit': ingredient.cost_per_unit,
             'density': getattr(ingredient, 'density', None),
             'type': ingredient.type,
-            'low_stock_threshold': ingredient.low_stock__threshold
+            'low_stock_threshold': ingredient.low_stock_threshold
         }
 
     def _create_not_found_result(self, request: StockCheckRequest) -> StockCheckResult:

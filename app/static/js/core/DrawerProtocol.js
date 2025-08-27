@@ -57,7 +57,7 @@ class DrawerProtocol {
             'product': ['SKU_CONFLICT', 'VARIANT_ERROR']
         };
 
-        return drawerErrors[errorType]?.includes(errorCode) || falsese;
+        return drawerErrors[errorType]?.includes(errorCode) || false;
     }
 
     async handleConversionError(errorCode, errorData) {
