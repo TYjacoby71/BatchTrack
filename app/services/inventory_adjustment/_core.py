@@ -1,4 +1,3 @@
-
 import logging
 from app.models import db, InventoryItem, UnifiedInventoryHistory
 from app.services.unit_conversion import ConversionEngine
@@ -14,10 +13,10 @@ logger = logging.getLogger(__name__)
 def process_inventory_adjustment(item_id, change_type, quantity, notes=None, created_by=None, cost_override=None, custom_expiration_date=None, custom_shelf_life_days=None, customer=None, sale_price=None, order_id=None, target_quantity=None, unit=None):
     """
     CENTRAL DELEGATOR - The single entry point for ALL inventory adjustments.
-    
+
     Flow:
     1. Receive request with change_type
-    2. Delegate to appropriate operation module  
+    2. Delegate to appropriate operation module
     3. Collect results (quantity_delta, messages)
     4. Apply quantity change (ONLY place that modifies item.quantity)
     5. Validate FIFO sync
@@ -92,9 +91,15 @@ def process_inventory_adjustment(item_id, change_type, quantity, notes=None, cre
 
         # CENTRAL QUANTITY CONTROL - Only this core function modifies item.quantity
         if quantity_delta is not None:
-            new_quantity = float(item.quantity) + float(quantity_delta)
-            logger.info(f"QUANTITY UPDATE: Item {item.id} quantity {item.quantity} + {quantity_delta} = {new_quantity}")
+            current_quantity = float(item.quantity)
+            new_quantity = current_quantity + quantity_delta
             item.quantity = new_quantity
+
+            # Log the operation correctly for readability
+            if quantity_delta >= 0:
+                logger.info(f"QUANTITY UPDATE: Item {item.id} quantity {current_quantity} + {quantity_delta} = {new_quantity}")
+            else:
+                logger.info(f"QUANTITY UPDATE: Item {item.id} quantity {current_quantity} - {abs(quantity_delta)} = {new_quantity}")
         elif change_type == 'recount' and target_quantity is not None:
             # Special case for recount - set absolute quantity
             logger.info(f"RECOUNT: Item {item.id} quantity {item.quantity} -> {target_quantity}")
@@ -136,7 +141,7 @@ def _delegate_to_operation_module(effective_change_type, original_change_type, i
     DELEGATION LOGIC - Routes to appropriate operation module based on change type
     """
     logger.info(f"DELEGATING: {effective_change_type} -> routing to operation module")
-    
+
     # Check if it's an additive operation
     for group_name, group_config in ADDITIVE_OPERATION_GROUPS.items():
         if effective_change_type in group_config['operations']:
@@ -152,7 +157,7 @@ def _delegate_to_operation_module(effective_change_type, original_change_type, i
                 custom_shelf_life_days=custom_shelf_life_days,
                 unit=unit
             )
-    
+
     # Check if it's a deductive operation
     for group_name, group_config in DEDUCTIVE_OPERATION_GROUPS.items():
         if effective_change_type in group_config['operations']:
@@ -167,7 +172,7 @@ def _delegate_to_operation_module(effective_change_type, original_change_type, i
                 sale_price=sale_price,
                 order_id=order_id
             )
-    
+
     # Check for special operations
     if effective_change_type == 'recount':
         logger.info(f"ROUTING: {effective_change_type} -> RECOUNT (special)")
@@ -201,7 +206,7 @@ def _delegate_to_operation_module(effective_change_type, original_change_type, i
             created_by=created_by,
             unit=unit
         )
-    
+
     # Handle initial_stock as special additive case
     if effective_change_type == 'initial_stock':
         logger.info(f"ROUTING: {effective_change_type} -> INITIAL_STOCK (additive special case)")
@@ -216,7 +221,7 @@ def _delegate_to_operation_module(effective_change_type, original_change_type, i
             custom_shelf_life_days=custom_shelf_life_days,
             unit=unit
         )
-    
+
     # Unknown operation type
     logger.error(f"ROUTING ERROR: Unknown change type '{effective_change_type}'")
     return False, f"Unknown inventory change type: '{effective_change_type}'"
