@@ -62,8 +62,6 @@ class IngredientHandler(BaseInventoryHandler):
         logger.debug(f"Ingredient {ingredient.name}: {total_available} {stock_unit} available, need {request.quantity_needed} {recipe_unit}")
 
         try:
-            from app.services.unit_conversion.unit_conversion import ConversionEngine, drawer_errors as conversion_drawers
-
             conversion_result = ConversionEngine.convert_units(
                 amount=float(request.quantity_needed),
                 from_unit=recipe_unit,
@@ -104,15 +102,13 @@ class IngredientHandler(BaseInventoryHandler):
                     conversion_details=conversion_details
                 )
             else:
-                # Let the ConversionEngine service decide how to handle this error
-                drawer_response = conversion_drawers.handle_conversion_error(conversion_result)
-
-                # Build conversion details from the specialist's decision
+                # Conversion failed - ConversionEngine handles its own drawer logic
+                # Stock check just reports the conversion error
                 conversion_details = {
                     'error_code': conversion_result['error_code'],
-                    'needs_user_attention': drawer_response.get('requires_drawer', False)
+                    'requires_drawer': conversion_result.get('requires_attention', False),
+                    'error_message': conversion_result.get('error_data', {}).get('message', 'Conversion failed')
                 }
-                conversion_details.update(drawer_response)
 
                 # Return a result that shows in the table but indicates conversion error
                 return StockCheckResult(
@@ -126,9 +122,9 @@ class IngredientHandler(BaseInventoryHandler):
                     raw_stock=total_available,
                     stock_unit=stock_unit,
                     status=StockStatus.ERROR,  # Shows as an error status in table
-                    error_message=drawer_response.get('error_message', f"Fix conversion: {conversion_result['error_code']}"),
+                    error_message=conversion_details['error_message'],
                     formatted_needed=self._format_quantity_display(request.quantity_needed, recipe_unit),
-                    formatted_available="Fix Conversion",
+                    formatted_available="Conversion Error",
                     conversion_details=conversion_details
                 )
 
