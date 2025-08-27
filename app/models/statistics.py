@@ -427,7 +427,7 @@ class RecipeStats(ScopedModelMixin, db.Model):
     total_spoilage_cost = db.Column(db.Float, default=0.0)
 
     # Container Usage
-    most_used_container_id = db.Column(db.Integer, db.ForeignKey('inventory.id'))
+    most_used_container_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'))
     avg_containers_needed = db.Column(db.Float, default=0.0)
 
     # Timestamps
@@ -558,7 +558,7 @@ class OrganizationLeaderboardStats(db.Model):
 
     # Container Usage
     most_used_container_size = db.Column(db.Float, default=0.0)
-    most_used_container_id = db.Column(db.Integer, db.ForeignKey('inventory.id'))
+    most_used_container_id = db.Column(db.Integer, db.ForeignKey('inventory_item.id'))
 
     # Cost Efficiency
     avg_cost_per_batch = db.Column(db.Float, default=0.0)

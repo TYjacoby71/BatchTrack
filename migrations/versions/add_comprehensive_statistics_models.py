@@ -1,4 +1,3 @@
-
 """Add comprehensive statistics models
 
 Revision ID: add_comprehensive_stats
@@ -17,7 +16,7 @@ depends_on = None
 
 def upgrade():
     """Create comprehensive statistics tables"""
-    
+
     # BatchStats table
     op.create_table('batch_stats',
         sa.Column('id', sa.Integer(), nullable=False),
@@ -80,7 +79,7 @@ def upgrade():
         sa.Column('last_updated', sa.DateTime()),
         sa.ForeignKeyConstraint(['recipe_id'], ['recipe.id']),
         sa.ForeignKeyConstraint(['organization_id'], ['organization.id']),
-        sa.ForeignKeyConstraint(['most_used_container_id'], ['inventory.id']),
+        sa.ForeignKeyConstraint(['most_used_container_id'], ['inventory_item.id']),
         sa.PrimaryKeyConstraint('id'),
         sa.UniqueConstraint('recipe_id')
     )
@@ -106,7 +105,7 @@ def upgrade():
         sa.Column('freshness_score', sa.Float(), default=100.0),
         sa.Column('created_at', sa.DateTime()),
         sa.Column('last_updated', sa.DateTime()),
-        sa.ForeignKeyConstraint(['inventory_item_id'], ['inventory.id']),
+        sa.ForeignKeyConstraint(['inventory_item_id'], ['inventory_item.id']),
         sa.ForeignKeyConstraint(['organization_id'], ['organization.id']),
         sa.PrimaryKeyConstraint('id'),
         sa.UniqueConstraint('inventory_item_id')
@@ -142,7 +141,7 @@ def upgrade():
         sa.ForeignKeyConstraint(['organization_id'], ['organization.id']),
         sa.ForeignKeyConstraint(['most_popular_recipe_id'], ['recipe.id']),
         sa.ForeignKeyConstraint(['most_productive_user_id'], ['user.id']),
-        sa.ForeignKeyConstraint(['most_used_container_id'], ['inventory.id']),
+        sa.ForeignKeyConstraint(['most_used_container_id'], ['inventory_item.id']),
         sa.PrimaryKeyConstraint('id'),
         sa.UniqueConstraint('organization_id')
     )
