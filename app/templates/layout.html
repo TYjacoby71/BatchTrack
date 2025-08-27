@@ -330,9 +330,9 @@
     <!-- Custom scripts - Load DrawerProtocol first -->
     <script src="{{ url_for('static', filename='js/core/DrawerProtocol.js') }}"></script>
     <script type="module" src="{{ url_for('static', filename='js/main.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/utils/utils.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/inventory/inventory_adjust.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/conversion/unit_converter.js') }}"></script>
+    <script type="module" src="{{ url_for('static', filename='js/utils/utils.js') }}"></script>
+    <script type="module" src="{{ url_for('static', filename='js/inventory/inventory_adjust.js') }}"></script>
+    <script type="module" src="{{ url_for('static', filename='js/conversion/unit_converter.js') }}"></script>
 {% block scripts %}{% endblock %}
     <script src="{{ url_for('static', filename='js/expiration_alerts.js') }}"></script>
     </body>
