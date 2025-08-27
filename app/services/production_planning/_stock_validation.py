@@ -12,6 +12,8 @@ from flask_login import current_user
 from ...models import Recipe
 from ..stock_check import UniversalStockCheckService
 from .types import IngredientRequirement
+from ..unit_conversion.unit_conversion import ConversionEngine
+
 
 logger = logging.getLogger(__name__)
 
@@ -82,5 +84,3 @@ def _convert_uscs_status(uscs_status: str) -> str:
         'ERROR': 'unknown'
     }
     return status_map.get(uscs_status.upper(), 'unknown')
-
-

@@ -3,7 +3,7 @@ from flask_wtf.csrf import validate_csrf
 from wtforms.validators import ValidationError
 from ...models import db, Unit, CustomUnitMapping, InventoryItem
 from flask_login import current_user
-from ...services.unit_conversion import ConversionEngine
+from app.services.unit_conversion.unit_conversion import ConversionEngine
 import logging
 from . import conversion_bp
 

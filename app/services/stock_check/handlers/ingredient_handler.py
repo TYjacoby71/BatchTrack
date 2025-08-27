@@ -10,7 +10,7 @@ from datetime import datetime
 
 from app.models import InventoryItem
 from app.models.inventory_lot import InventoryLot
-from app.services.unit_conversion import ConversionEngine
+from app.services.unit_conversion.unit_conversion import ConversionEngine
 from ..types import StockCheckRequest, StockCheckResult, StockStatus, InventoryCategory
 from .base_handler import BaseInventoryHandler
 
@@ -62,7 +62,7 @@ class IngredientHandler(BaseInventoryHandler):
         logger.debug(f"Ingredient {ingredient.name}: {total_available} {stock_unit} available, need {request.quantity_needed} {recipe_unit}")
 
         try:
-            from app.services.unit_conversion import ConversionEngine, drawer_errors as conversion_drawers
+            from app.services.unit_conversion.unit_conversion import ConversionEngine, drawer_errors as conversion_drawers
 
             conversion_result = ConversionEngine.convert_units(
                 amount=float(request.quantity_needed),
