@@ -1,4 +1,3 @@
-
 /**
  * Universal Wall of Drawers Protocol
  * Handles ANY type of error across the entire application
@@ -57,18 +56,23 @@ class DrawerProtocol {
             'inventory': ['STOCK_SHORTAGE', 'LOW_STOCK_ALERT'],
             'product': ['SKU_CONFLICT', 'VARIANT_ERROR']
         };
-        
+
         return drawerErrors[errorType]?.includes(errorCode) || false;
     }
 
     async handleConversionError(errorCode, errorData) {
         switch (errorCode) {
             case 'MISSING_DENSITY':
-                return this.openModal('/api/drawer-actions/conversion/density-modal/' + errorData.ingredient_id, 'densityUpdated');
+                const ingredientId = errorData.ingredient_id;
+                if (!ingredientId) {
+                    console.error('🚨 DRAWER PROTOCOL: Missing ingredient_id for density error:', errorData);
+                    return false;
+                }
+                return this.openModal('/api/drawer-actions/conversion/density-modal/' + ingredientId, 'densityUpdated');
             case 'MISSING_CUSTOM_MAPPING':
                 const params = new URLSearchParams({
-                    from_unit: errorData.from_unit,
-                    to_unit: errorData.to_unit
+                    from_unit: errorData.from_unit || '',
+                    to_unit: errorData.to_unit || ''
                 });
                 return this.openModal('/api/drawer-actions/conversion/unit-mapping-modal?' + params, 'unitMappingCreated');
             case 'UNKNOWN_SOURCE_UNIT':
@@ -142,7 +146,7 @@ class DrawerProtocol {
                 // Get modal element (assumes consistent naming)
                 const modalElement = document.body.lastElementChild.querySelector('.modal');
                 const modal = new bootstrap.Modal(modalElement);
-                
+
                 // Track active drawer
                 this.activeDrawers.add(modalElement.id);
 

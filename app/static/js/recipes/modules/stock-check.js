@@ -267,7 +267,8 @@ export class StockCheckManager {
 
                 // Use universal drawer protocol
                 window.drawerProtocol.handleError('conversion', errorCode, errorData, () => {
-</new_str>
+                    console.log('🔍 RETRYING STOCK CHECK after fixing conversion error...');
+                    this.performStockCheck();
                 });
             } else if (item.conversion_details?.error_code) {
                 // Log non-drawer errors for debugging
