@@ -1,7 +1,7 @@
 """Add comprehensive statistics models
 
 Revision ID: add_comprehensive_stats
-Revises: latest
+Revises: fix_perm_unit_schema
 Create Date: 2025-08-27 19:30:00.000000
 
 """
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 # revision identifiers
 revision = 'add_comprehensive_stats'
-down_revision = None  # Replace with actual latest revision
+down_revision = 'fix_perm_unit_schema'
 branch_labels = None
 depends_on = None
 
