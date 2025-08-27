@@ -10,7 +10,7 @@ from datetime import datetime
 
 from app.models import InventoryItem
 from app.models.inventory_lot import InventoryLot
-from app.services.unit_conversion import ConversionEngine
+from app.services.unit_conversion.unit_conversion import ConversionEngine
 from ..types import StockCheckRequest, StockCheckResult, StockStatus, InventoryCategory
 from .base_handler import BaseInventoryHandler
 
@@ -62,6 +62,8 @@ class IngredientHandler(BaseInventoryHandler):
         logger.debug(f"Ingredient {ingredient.name}: {total_available} {stock_unit} available, need {request.quantity_needed} {recipe_unit}")
 
         try:
+            from app.services.unit_conversion.unit_conversion import ConversionEngine, drawer_errors as conversion_drawers
+
             conversion_result = ConversionEngine.convert_units(
                 amount=float(request.quantity_needed),
                 from_unit=recipe_unit,
@@ -102,66 +104,15 @@ class IngredientHandler(BaseInventoryHandler):
                     conversion_details=conversion_details
                 )
             else:
-                # Handle specific error codes for wall of drawers protocol
-                error_code = conversion_result['error_code']
-                error_data = conversion_result['error_data']
+                # Let the ConversionEngine service decide how to handle this error
+                drawer_response = conversion_drawers.handle_conversion_error(conversion_result)
 
-                # For conversion errors, we still show a table row but mark it as needing attention
-                # The drawer protocol will handle fixing the conversion issue
+                # Build conversion details from the specialist's decision
                 conversion_details = {
-                    'error_code': error_code,
-                    'needs_user_attention': True
+                    'error_code': conversion_result['error_code'],
+                    'needs_user_attention': drawer_response.get('requires_drawer', False)
                 }
-
-                # Import conversion service drawer logic
-                from app.services.conversion.drawer_errors import should_open_drawer, prepare_density_error_context, prepare_unit_mapping_error_context
-
-                # Check if this error needs a drawer solution
-                if should_open_drawer(error_code, error_data):
-                    conversion_details['requires_drawer'] = True
-
-                if error_code == 'MISSING_DENSITY':
-                    conversion_details.update({
-                        'error_type': 'missing_density',
-                        'ingredient_id': error_data.get('ingredient_id'),
-                        'ingredient_name': ingredient.name,
-                        'from_unit': error_data.get('from_unit'),
-                        'to_unit': error_data.get('to_unit'),
-                        'drawer_action': 'open_density_modal',
-                        'density_help_link': '/conversion/units'
-                    })
-                    # Suggest density if available
-                    suggested_density = self._get_suggested_density(ingredient.name)
-                    if suggested_density:
-                        conversion_details['suggested_density'] = suggested_density
-
-                elif error_code == 'MISSING_CUSTOM_MAPPING':
-                    conversion_details.update({
-                        'error_type': 'missing_custom_mapping',
-                        'from_unit': error_data.get('from_unit'),
-                        'to_unit': error_data.get('to_unit'),
-                        'drawer_action': 'open_unit_mapping_modal',
-                        'unit_manager_link': '/conversion/units'
-                    })
-
-                elif error_code in ['UNKNOWN_SOURCE_UNIT', 'UNKNOWN_TARGET_UNIT']:
-                    conversion_details.update({
-                        'error_type': 'unknown_unit',
-                        'unknown_unit': error_data.get('unit'),
-                        'drawer_action': 'open_unit_creation_modal'
-                    })
-
-                elif error_code == 'SYSTEM_ERROR':
-                    conversion_details.update({
-                        'error_type': 'system_error',
-                        'message': 'Unit conversion is not available at the moment, please try again'
-                    })
-
-                else:
-                    conversion_details.update({
-                        'error_type': 'conversion_error',
-                        'message': error_data.get('message', 'Conversion failed')
-                    })
+                conversion_details.update(drawer_response)
 
                 # Return a result that shows in the table but indicates conversion error
                 return StockCheckResult(
@@ -175,7 +126,7 @@ class IngredientHandler(BaseInventoryHandler):
                     raw_stock=total_available,
                     stock_unit=stock_unit,
                     status=StockStatus.ERROR,  # Shows as an error status in table
-                    error_message=f"Fix conversion: {error_code}",
+                    error_message=drawer_response.get('error_message', f"Fix conversion: {conversion_result['error_code']}"),
                     formatted_needed=self._format_quantity_display(request.quantity_needed, recipe_unit),
                     formatted_available="Fix Conversion",
                     conversion_details=conversion_details
