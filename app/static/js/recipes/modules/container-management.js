@@ -448,9 +448,9 @@ export class ContainerManager {
         let containment_percentage = 0;
 
         if (!autoFillEnabled) {
-            // Calculate from manual container rows using ALWAYS converted capacity
+            // Calculate CONTAINMENT from manual container rows - can total capacity hold the yield?
             const projectedYield = this.main.baseYield * this.main.scale;
-            let totalContained = 0;
+            let totalCapacity = 0;
 
             document.querySelectorAll('[data-container-row]').forEach(row => {
                 const select = row.querySelector('.container-select');
@@ -460,17 +460,19 @@ export class ContainerManager {
                     const container = this.containerPlan?.container_selection?.find(c => c.container_id == select.value);
                     if (container) {
                         const quantity = parseInt(quantityInput.value) || 0;
-                        // ALWAYS use converted capacity - this is the key fix
+                        // Use converted capacity for containment calculation
                         const capacityToUse = container.capacity_in_yield_unit || container.capacity;
-                        totalContained += capacityToUse * quantity;
-                        console.log(`🔍 PROGRESS DEBUG: Container ${container.name} x${quantity} = ${capacityToUse * quantity} ${container.yield_unit || 'units'}`);
+                        totalCapacity += capacityToUse * quantity;
+                        console.log(`🔍 CONTAINMENT DEBUG: Container ${container.container_name} x${quantity} = ${capacityToUse * quantity} capacity`);
                     }
                 }
             });
 
-            containment_percentage = projectedYield > 0 ? Math.min((totalContained / projectedYield) * 100, 100) : 0;
-            console.log(`🔍 PROGRESS DEBUG: Total contained: ${totalContained}, Yield needed: ${projectedYield}, Percentage: ${containment_percentage.toFixed(1)}%`);
+            // Containment = Can the total capacity hold the yield? (not fill efficiency)
+            containment_percentage = projectedYield > 0 ? Math.min((projectedYield / totalCapacity) * 100, 100) : 0;
+            console.log(`🔍 CONTAINMENT DEBUG: Yield needed: ${projectedYield}, Total capacity: ${totalCapacity}, Containment: ${containment_percentage.toFixed(1)}%`);
         } else {
+            // Auto-fill should return proper containment percentage from server
             containment_percentage = this.containerPlan.containment_percentage || 0;
         }
 
@@ -496,22 +498,26 @@ export class ContainerManager {
             let message = '';
             let className = 'form-text mt-1';
 
+            // Containment message (primary concern)
             if (percentage >= 100) {
                 message = '✅ Batch fully contained';
                 className += ' text-success';
+            } else if (percentage >= 97) {
+                message = '✅ Batch contained within 3% tolerance';
+                className += ' text-success';
             } else if (percentage > 0) {
-                message = '⚠️ Partial containment - consider adding more containers';
+                message = '⚠️ Partial containment - add more containers';
                 className += ' text-warning';
             } else {
                 message = '❌ No containment - add containers to proceed';
                 className += ' text-danger';
             }
 
-            // Add fill efficiency warnings separately (these are just optimization suggestions)
+            // Add fill efficiency warnings separately (optimization suggestions only)
             const warnings = this.containerPlan?.warnings || [];
-            const fillWarnings = warnings.filter(w => w.includes('fill efficiency'));
+            const fillWarnings = warnings.filter(w => w.includes('partially filled') || w.includes('overfilled'));
             if (fillWarnings.length > 0) {
-                message += ` (Fill efficiency note: ${fillWarnings.join('. ')})`;
+                message += ` • ${fillWarnings.join(' • ')}`;
             }
 
             messageSpan.textContent = message;

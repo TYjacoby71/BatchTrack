@@ -151,15 +151,34 @@ def _create_greedy_strategy(container_options: List[Dict[str, Any]], total_yield
 
     # Calculate totals
     total_capacity = sum(c['capacity'] * c['containers_needed'] for c in selected_containers)
-    containment_percentage = min(100.0, (total_yield / total_capacity * 100) if total_capacity > 0 else 0)
+    # Containment = Can the total capacity hold the yield? (not fill efficiency)
+    containment_percentage = min(100.0, (total_capacity / total_yield * 100) if total_yield > 0 else 0)
 
-    # Create warnings
+    # Create warnings - separate containment from fill efficiency
     warnings = []
-    if containment_percentage < 80:
-        warnings.append(f"Low fill efficiency: {containment_percentage:.1f}%. Consider different container sizes.")
     
+    # Containment warnings (critical)
     if remaining_yield > 0:
         warnings.append(f"Insufficient capacity: {remaining_yield:.1f} {yield_unit} remaining")
+    
+    # Fill efficiency warnings (optimization suggestions)
+    if selected_containers and total_capacity > 0:
+        # Calculate fill efficiency of the last (smallest) container
+        last_container = selected_containers[-1]  # Smallest container used
+        last_container_fill = (total_yield % last_container['capacity']) / last_container['capacity'] if last_container['capacity'] > 0 else 0
+        
+        # If last container is used multiple times, check the final partial fill
+        if last_container['containers_needed'] > 1:
+            partial_fill_amount = total_yield - (sum(c['capacity'] * c['containers_needed'] for c in selected_containers[:-1]) + 
+                                               (last_container['containers_needed'] - 1) * last_container['capacity'])
+            last_container_fill = partial_fill_amount / last_container['capacity'] if last_container['capacity'] > 0 else 0
+        
+        # Only warn if fill efficiency is outside ±3% tolerance
+        if last_container_fill < 0.97:  # Less than 97% full
+            fill_percentage = last_container_fill * 100
+            warnings.append(f"Last container partially filled to {fill_percentage:.1f}%")
+        elif containment_percentage > 103:  # More than 103% (overfilled)
+            warnings.append(f"Containers slightly overfilled - consider larger container size")
 
     return {
         'success': True,
