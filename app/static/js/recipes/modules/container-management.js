@@ -1,4 +1,3 @@
-
 // Container Management Module
 export class ContainerManager {
     constructor(mainManager) {
@@ -8,7 +7,7 @@ export class ContainerManager {
 
     bindEvents() {
         console.log('🔍 CONTAINER MANAGER DEBUG: Binding events');
-        
+
         // Add container button
         const addContainerBtn = document.getElementById('addContainerBtn');
         console.log('🔍 CONTAINER MANAGER DEBUG: Add container button found:', !!addContainerBtn);
@@ -23,7 +22,7 @@ export class ContainerManager {
             autoFillToggle.addEventListener('change', (e) => {
                 console.log('🔍 AUTO-FILL TOGGLE:', e.target.checked);
                 this.toggleContainerSections(e.target.checked);
-                
+
                 if (e.target.checked && this.main.requiresContainers) {
                     console.log('🔍 AUTO-FILL TOGGLE: Fetching container plan...');
                     this.fetchContainerPlan();
@@ -39,11 +38,11 @@ export class ContainerManager {
     toggleContainerSections(autoFillEnabled) {
         const autoFillResults = document.getElementById('autoFillResults');
         const manualSection = document.getElementById('manualContainerSection');
-        
+
         if (autoFillResults) {
             autoFillResults.style.display = autoFillEnabled ? 'block' : 'none';
         }
-        
+
         if (manualSection) {
             manualSection.style.display = autoFillEnabled ? 'none' : 'block';
         }
@@ -70,15 +69,15 @@ export class ContainerManager {
             const rowDiv = document.createElement('div');
             rowDiv.innerHTML = rowHtml;
             const newRow = rowDiv.firstElementChild;
-            
+
             if (newRow) {
                 containerRows.appendChild(newRow);
                 this.bindContainerRowEvents(index);
-                
+
                 // Pre-populate the row with auto-fill data
                 const select = newRow.querySelector('.container-select');
                 const quantityInput = newRow.querySelector('.container-quantity');
-                
+
                 if (select && quantityInput) {
                     select.value = container.id;
                     quantityInput.value = container.quantity || container.containers_needed || 1;
@@ -92,11 +91,11 @@ export class ContainerManager {
 
     clearAutoFillResults() {
         const containerResults = document.getElementById('containerResults');
-        
+
         if (containerResults) {
             containerResults.innerHTML = '<p class="text-muted">Switch to manual container selection mode</p>';
         }
-        
+
         // Don't clear manual rows anymore - let them persist
         // this.updateContainerProgress();
     }
@@ -107,7 +106,7 @@ export class ContainerManager {
             // Initialize section visibility
             const autoFillEnabled = document.getElementById('autoFillEnabled')?.checked ?? true;
             this.toggleContainerSections(autoFillEnabled);
-            
+
             this.fetchContainerPlan();
         } else {
             this.containerPlan = null;
@@ -119,7 +118,7 @@ export class ContainerManager {
         console.log('🔍 CONTAINER DEBUG: fetchContainerPlan called');
         console.log('🔍 CONTAINER DEBUG: Recipe exists:', !!this.main.recipe);
         console.log('🔍 CONTAINER DEBUG: Requires containers:', this.main.requiresContainers);
-        
+
         if (!this.main.recipe || !this.main.requiresContainers) {
             console.log('🔍 CONTAINER DEBUG: Skipping fetch - recipe or requirement missing');
             return;
@@ -177,7 +176,7 @@ export class ContainerManager {
         }
 
         console.log('🔍 DISPLAY PLAN DEBUG: Rendering', container_selection.length, 'containers, auto-fill:', autoFillEnabled);
-        
+
         if (autoFillEnabled) {
             this.renderContainerResults(containerResults, container_selection, true);
         } else {
@@ -188,17 +187,17 @@ export class ContainerManager {
 
     renderContainerResults(containerResults, containers, isAutoFill = false) {
         console.log('🔍 RENDER CONTAINERS: Containers data:', containers, 'Auto-fill:', isAutoFill);
-        
+
         if (!containers || containers.length === 0) {
             containerResults.innerHTML = '<div class="alert alert-warning"><i class="fas fa-exclamation-triangle"></i> No containers found</div>';
             return;
         }
-        
+
         const containerClass = isAutoFill ? 'bg-success bg-opacity-10' : 'bg-light';
         const resultClass = isAutoFill ? 'auto-fill-results' : 'manual-results';
-        
+
         let html = `<div class="${resultClass}">`;
-        
+
         // Add header for multi-container selections
         if (isAutoFill && containers.length > 1) {
             html += `
@@ -209,29 +208,29 @@ export class ContainerManager {
                 </div>
             `;
         }
-        
+
         containers.forEach((container, index) => {
             const stockQuantity = container.stock_qty || container.available_quantity || container.quantity || 0;
-            const containerName = container.name || 'Unknown Container';
+            const containerName = container.container_name || 'Unknown Container';
             const containerCapacity = container.capacity || 0;
             const containerUnit = container.unit || 'ml';
             const quantityNeeded = container.quantity || container.containers_needed || 0;
-            
+
             // Show capacity with both units side by side if conversion available
             let capacityDisplay = `${containerCapacity} ${containerUnit}`;
-            
+
             if (container.capacity_in_yield_unit && container.yield_unit && container.conversion_successful) {
                 capacityDisplay = `<strong>${container.capacity_in_yield_unit} ${container.yield_unit}</strong> (${containerCapacity} ${containerUnit})`;
             } else if (container.capacity_in_yield_unit && container.yield_unit) {
                 capacityDisplay = `<strong>${container.capacity_in_yield_unit} ${container.yield_unit}</strong> (${containerCapacity} ${containerUnit})`;
             }
-            
+
             // Add optimization badge for multi-container selections
             let optimizationBadge = '';
             if (isAutoFill && containers.length > 1) {
                 optimizationBadge = `<div class="mt-1"><span class="badge bg-primary"><i class="fas fa-cog"></i> Optimized</span></div>`;
             }
-            
+
             html += `
                 <div class="row align-items-center mb-3 p-3 border rounded ${containerClass}" data-${isAutoFill ? 'auto' : 'manual'}-container="${index}">
                     <div class="col-md-3">
@@ -270,19 +269,19 @@ export class ContainerManager {
         });
 
         html += '</div>';
-        
-        
-        
+
+
+
         console.log('🔍 RENDER CONTAINERS: Setting HTML for', resultClass);
         containerResults.innerHTML = html;
     }
 
     addContainerRow() {
         console.log('🔍 ADD CONTAINER DEBUG: Add container row called');
-        
+
         const autoFillEnabled = document.getElementById('autoFillEnabled')?.checked;
         console.log('🔍 ADD CONTAINER DEBUG: Auto-fill enabled:', autoFillEnabled);
-        
+
         if (autoFillEnabled) {
             alert('Please uncheck Auto-Fill to add containers manually.');
             return;
@@ -296,7 +295,7 @@ export class ContainerManager {
 
         const rowsContainer = document.getElementById('containerSelectionRows');
         console.log('🔍 ADD CONTAINER DEBUG: Rows container found:', !!rowsContainer);
-        
+
         if (!rowsContainer) {
             console.error('🚨 Container rows container not found!');
             return;
@@ -304,14 +303,14 @@ export class ContainerManager {
 
         const rowIndex = rowsContainer.children.length;
         console.log('🔍 ADD CONTAINER DEBUG: Creating row index:', rowIndex);
-        
+
         const rowHtml = this.createContainerRowHTML(rowIndex);
         console.log('🔍 ADD CONTAINER DEBUG: Row HTML created:', rowHtml.substring(0, 100) + '...');
-        
+
         const rowDiv = document.createElement('div');
         rowDiv.innerHTML = rowHtml;
         const newRow = rowDiv.firstElementChild;
-        
+
         if (newRow) {
             rowsContainer.appendChild(newRow);
             console.log('🔍 ADD CONTAINER DEBUG: Row appended successfully');
@@ -323,10 +322,11 @@ export class ContainerManager {
 
     createContainerRowHTML(index) {
         const availableContainers = this.containerPlan?.container_selection || [];
-        
+
         let optionsHTML = '<option value="">Select Container</option>';
         availableContainers.forEach(container => {
-            optionsHTML += `<option value="${container.id}">${container.name} (${container.capacity} ${container.unit})</option>`;
+            const containerName = container.container_name || 'Unknown Container';
+            optionsHTML += `<option value="${container.id}">${containerName} (${container.capacity} ${container.unit})</option>`;
         });
 
         return `
@@ -417,14 +417,14 @@ export class ContainerManager {
         // Update capacity display with both units if available
         if (capacityDiv) {
             let capacityDisplay = `${container.capacity || 0} ${container.unit || 'ml'}`;
-            
+
             // If we have converted capacity info, show both side by side
             if (container.capacity_in_yield_unit && container.yield_unit && container.conversion_successful) {
                 if ((container.unit || 'ml') !== container.yield_unit) {
                     capacityDisplay = `<strong>${container.capacity_in_yield_unit} ${container.yield_unit}</strong> (${container.capacity} ${container.unit})`;
                 }
             }
-            
+
             capacityDiv.innerHTML = capacityDisplay;
         }
 
@@ -453,7 +453,7 @@ export class ContainerManager {
             document.querySelectorAll('[data-container-row]').forEach(row => {
                 const select = row.querySelector('.container-select');
                 const quantityInput = row.querySelector('.container-quantity');
-                
+
                 if (select && quantityInput && select.value) {
                     const container = this.containerPlan?.container_selection?.find(c => c.id == select.value);
                     if (container) {
@@ -471,7 +471,7 @@ export class ContainerManager {
         } else {
             containment_percentage = this.containerPlan.containment_percentage || 0;
         }
-        
+
         this.updateProgressBar(containment_percentage);
     }
 
@@ -493,7 +493,7 @@ export class ContainerManager {
         if (messageSpan) {
             let message = '';
             let className = 'form-text mt-1';
-            
+
             if (percentage >= 100) {
                 message = '✅ Batch fully contained';
                 className += ' text-success';
@@ -504,14 +504,14 @@ export class ContainerManager {
                 message = '❌ No containment - add containers to proceed';
                 className += ' text-danger';
             }
-            
+
             // Add fill efficiency warnings separately (these are just optimization suggestions)
             const warnings = this.containerPlan?.warnings || [];
             const fillWarnings = warnings.filter(w => w.includes('fill efficiency'));
             if (fillWarnings.length > 0) {
                 message += ` (Fill efficiency note: ${fillWarnings.join('. ')})`;
             }
-            
+
             messageSpan.textContent = message;
             messageSpan.className = className;
         }
@@ -520,15 +520,15 @@ export class ContainerManager {
     clearContainerResults() {
         const containerResults = document.getElementById('containerResults');
         const containerRows = document.getElementById('containerSelectionRows');
-        
+
         if (containerResults) {
             containerResults.innerHTML = '<p class="text-muted">Container management disabled</p>';
         }
-        
+
         if (containerRows) {
             containerRows.innerHTML = '';
         }
-        
+
         this.clearProgressBar();
     }
 
