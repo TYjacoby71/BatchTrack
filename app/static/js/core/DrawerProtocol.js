@@ -19,6 +19,12 @@ class DrawerProtocol {
     async handleError(errorType, errorCode, errorData, retryCallback = null) {
         console.log(`🔧 DRAWER PROTOCOL: Handling ${errorType}.${errorCode}`, errorData);
 
+        // Only handle errors that explicitly require drawers
+        if (!errorData.requires_drawer && !this.isKnownDrawerError(errorType, errorCode)) {
+            console.log(`🔧 DRAWER PROTOCOL: Error ${errorType}.${errorCode} does not require drawer`);
+            return false;
+        }
+
         if (retryCallback) {
             this.retryCallbacks.set(`${errorType}.${errorCode}`, retryCallback);
         }
@@ -38,6 +44,21 @@ class DrawerProtocol {
                 console.error(`🚨 DRAWER PROTOCOL: Unknown error type: ${errorType}`);
                 return false;
         }
+    }
+
+    /**
+     * Check if this is a known drawer-requiring error
+     */
+    isKnownDrawerError(errorType, errorCode) {
+        const drawerErrors = {
+            'conversion': ['MISSING_DENSITY', 'MISSING_CUSTOM_MAPPING', 'UNKNOWN_SOURCE_UNIT', 'UNKNOWN_TARGET_UNIT'],
+            'recipe': ['MISSING_INGREDIENT', 'SCALING_VALIDATION', 'INVALID_YIELD'],
+            'batch': ['CONTAINER_SHORTAGE', 'STUCK_BATCH', 'VALIDATION_FAILED'],
+            'inventory': ['STOCK_SHORTAGE', 'LOW_STOCK_ALERT'],
+            'product': ['SKU_CONFLICT', 'VARIANT_ERROR']
+        };
+        
+        return drawerErrors[errorType]?.includes(errorCode) || false;
     }
 
     async handleConversionError(errorCode, errorData) {

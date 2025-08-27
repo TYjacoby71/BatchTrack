@@ -1,8 +1,9 @@
-from datetime import datetime
-from flask_login import current_user
-from ..models import db, Unit, CustomUnitMapping, InventoryItem as Ingredient, ConversionLog
+# Redirect imports to the proper service package location
+from .unit_conversion.unit_conversion import ConversionEngine
+from .unit_conversion import drawer_errors
 
-class ConversionEngine:
+# Keep backward compatibility
+__all__ = ['ConversionEngine', 'drawer_errors']
             @staticmethod
             def round_value(value, decimals=3):
                 """Round value with protection against floating point precision issues"""

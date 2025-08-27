@@ -242,15 +242,20 @@ export class StockCheckManager {
 
     handleConversionErrors(stockResults) {
         for (const item of stockResults) {
-            if (item.conversion_details?.error_code) {
+            if (item.conversion_details?.error_code && item.conversion_details?.requires_drawer) {
                 const errorCode = item.conversion_details.error_code;
                 const errorData = item.conversion_details;
+
+                console.log(`🔍 STOCK CHECK: Conversion error ${errorCode} requires drawer intervention`);
 
                 // Use universal drawer protocol
                 window.drawerProtocol.handleError('conversion', errorCode, errorData, () => {
                     console.log('🔍 RETRYING STOCK CHECK after fixing conversion error...');
                     this.performStockCheck();
                 });
+            } else if (item.conversion_details?.error_code) {
+                // Log non-drawer errors for debugging
+                console.log(`🔍 STOCK CHECK: Conversion error ${item.conversion_details.error_code} - no drawer needed`);
             }
         }
     }
