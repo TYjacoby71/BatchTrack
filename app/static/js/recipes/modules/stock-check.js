@@ -144,7 +144,7 @@ export class StockCheckManager {
             const needed = result.needed_amount || result.needed_quantity || result.quantity_needed || 0;
             const available = result.available_quantity || 0;
 
-            let status, statusClass, displayAvailable = available.toFixed(2);
+            let status, statusClass, displayAvailable;
 
             // Check for conversion errors first
             if (result.conversion_details?.error_code) {
@@ -163,11 +163,13 @@ export class StockCheckManager {
                 displayAvailable = available.toFixed(2);
             }
 
+            const displayUnit = result.available_unit || result.needed_unit || result.unit || '';
+
             html += `<tr>
                 <td>${result.ingredient_name || result.item_name || 'Unknown'}</td>
-                <td>${needed.toFixed(2)}</td>
-                <td>${displayAvailable}</td>
-                <td>${result.unit || result.needed_unit || result.available_unit || ''}</td>
+                <td>${needed.toFixed(2)} ${result.needed_unit || ''}</td>
+                <td>${displayAvailable} ${displayUnit}</td>
+                <td>${displayUnit}</td>
                 <td><span class="badge ${statusClass}">${status}</span></td>
             </tr>`;
         });
