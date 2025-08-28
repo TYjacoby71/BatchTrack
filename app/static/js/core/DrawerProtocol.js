@@ -1,11 +1,26 @@
 /**
  * Universal Wall of Drawers Protocol
- * Handles ANY type of error across the entire application
+ * Handles ANY type of error across the entire application using modular handlers
  */
+import { ConversionDrawerHandler } from './drawer-handlers/conversion-handler.js';
+import { RecipeDrawerHandler } from './drawer-handlers/recipe-handler.js';
+import { BatchDrawerHandler } from './drawer-handlers/batch-handler.js';
+import { InventoryDrawerHandler } from './drawer-handlers/inventory-handler.js';
+import { ProductDrawerHandler } from './drawer-handlers/product-handler.js';
+
 class DrawerProtocol {
     constructor() {
         this.activeDrawers = new Set();
         this.retryCallbacks = new Map();
+
+        // Initialize domain-specific handlers
+        this.handlers = {
+            conversion: new ConversionDrawerHandler(this),
+            recipe: new RecipeDrawerHandler(this),
+            batch: new BatchDrawerHandler(this),
+            inventory: new InventoryDrawerHandler(this),
+            product: new ProductDrawerHandler(this)
+        };
     }
 
     /**
@@ -28,20 +43,13 @@ class DrawerProtocol {
             this.retryCallbacks.set(`${errorType}.${errorCode}`, retryCallback);
         }
 
-        switch (errorType) {
-            case 'conversion':
-                return this.handleConversionError(errorCode, errorData);
-            case 'recipe':
-                return this.handleRecipeError(errorCode, errorData);
-            case 'batch':
-                return this.handleBatchError(errorCode, errorData);
-            case 'inventory':
-                return this.handleInventoryError(errorCode, errorData);
-            case 'product':
-                return this.handleProductError(errorCode, errorData);
-            default:
-                console.error(`🚨 DRAWER PROTOCOL: Unknown error type: ${errorType}`);
-                return false;
+        // Delegate to appropriate handler
+        const handler = this.handlers[errorType];
+        if (handler) {
+            return handler.handleError(errorCode, errorData);
+        } else {
+            console.error(`🚨 DRAWER PROTOCOL: Unknown error type: ${errorType}`);
+            return false;
         }
     }
 
@@ -53,110 +61,11 @@ class DrawerProtocol {
             'conversion': ['MISSING_DENSITY', 'MISSING_CUSTOM_MAPPING', 'UNSUPPORTED_CONVERSION', 'UNKNOWN_SOURCE_UNIT', 'UNKNOWN_TARGET_UNIT'],
             'recipe': ['MISSING_INGREDIENT', 'SCALING_VALIDATION', 'INVALID_YIELD'],
             'batch': ['CONTAINER_SHORTAGE', 'STUCK_BATCH', 'VALIDATION_FAILED'],
-            'inventory': ['STOCK_SHORTAGE', 'LOW_STOCK_ALERT'],
-            'product': ['SKU_CONFLICT', 'VARIANT_ERROR']
+            'inventory': ['STOCK_SHORTAGE', 'LOW_STOCK_ALERT', 'LOT_EXPIRED', 'FIFO_CONFLICT'],
+            'product': ['SKU_CONFLICT', 'VARIANT_ERROR', 'PRICING_ERROR']
         };
 
         return drawerErrors[errorType]?.includes(errorCode) || false;
-    }
-
-    async handleConversionError(errorCode, errorData) {
-        try {
-            if (!errorData || typeof errorData !== 'object') {
-                console.error('🚨 DRAWER PROTOCOL: Invalid error data for conversion error:', errorData);
-                return false;
-            }
-
-            switch (errorCode) {
-                case 'MISSING_DENSITY':
-                    if (!errorData.ingredient_id) {
-                        console.error('🚨 DRAWER PROTOCOL: Missing ingredient_id for density error');
-                        return false;
-                    }
-                    console.log('🔧 DRAWER PROTOCOL: Opening density modal for ingredient', errorData.ingredient_id);
-                    return this.openModal('/api/drawer-actions/conversion/density-modal/' + errorData.ingredient_id, 'densityUpdated');
-
-                case 'MISSING_CUSTOM_MAPPING':
-                case 'UNSUPPORTED_CONVERSION':
-                    if (!errorData.from_unit || !errorData.to_unit) {
-                        console.error('🚨 DRAWER PROTOCOL: Missing unit data for mapping error:', errorData);
-                        return false;
-                    }
-                    const params = new URLSearchParams({
-                        from_unit: errorData.from_unit,
-                        to_unit: errorData.to_unit
-                    });
-                    return this.openModal('/api/drawer-actions/conversion/unit-mapping-modal?' + params, 'unitMappingCreated');
-
-                case 'UNKNOWN_SOURCE_UNIT':
-                case 'UNKNOWN_TARGET_UNIT':
-                    if (!errorData.unit) {
-                        console.error('🚨 DRAWER PROTOCOL: Missing unit for unit creation error:', errorData);
-                        return false;
-                    }
-                    window.open('/conversion/units', '_blank');
-                    return true;
-
-                default:
-                    console.warn(`🔧 DRAWER PROTOCOL: Unhandled conversion error code: ${errorCode}`);
-                    return false;
-            }
-        } catch (error) {
-            console.error('🚨 DRAWER PROTOCOL: Error in handleConversionError:', error);
-            return false;
-        }
-    }
-
-    async handleRecipeError(errorCode, errorData) {
-        switch (errorCode) {
-            case 'MISSING_INGREDIENT':
-                return this.openModal('/api/drawer-actions/recipe/missing-ingredient-modal/' + errorData.recipe_id, 'ingredientAdded');
-            case 'SCALING_VALIDATION':
-                const params = new URLSearchParams({
-                    scale: errorData.scale,
-                    error_details: errorData.error_details
-                });
-                return this.openModal('/api/drawer-actions/recipe/scaling-validation-modal/' + errorData.recipe_id + '?' + params, 'recipeScalingFixed');
-            case 'INVALID_YIELD':
-                return this.openModal('/api/drawer-actions/recipe/yield-validation-modal/' + errorData.recipe_id, 'recipeYieldFixed');
-        }
-    }
-
-    async handleBatchError(errorCode, errorData) {
-        switch (errorCode) {
-            case 'CONTAINER_SHORTAGE':
-                return this.openModal('/api/drawer-actions/batch/container-shortage-modal/' + errorData.batch_id, 'containersUpdated');
-            case 'STUCK_BATCH':
-                return this.openModal('/api/drawer-actions/batch/stuck-batch-modal/' + errorData.batch_id, 'batchUnstuck');
-            case 'VALIDATION_FAILED':
-                return this.openModal('/api/drawer-actions/batch/validation-error-modal/' + errorData.batch_id, 'batchValidationFixed');
-        }
-    }
-
-    async handleInventoryError(errorCode, errorData) {
-        switch (errorCode) {
-            case 'STOCK_SHORTAGE':
-                const params = new URLSearchParams({
-                    required_amount: errorData.required_amount
-                });
-                return this.openModal('/api/drawer-actions/inventory/stock-shortage-modal/' + errorData.item_id + '?' + params, 'inventoryRestocked');
-            case 'LOT_EXPIRED':
-                return this.openModal('/api/drawer-actions/inventory/expired-lot-modal/' + errorData.lot_id, 'expiredLotHandled');
-            case 'FIFO_CONFLICT':
-                return this.openModal('/api/drawer-actions/inventory/fifo-conflict-modal/' + errorData.item_id, 'fifoConflictResolved');
-        }
-    }
-
-    async handleProductError(errorCode, errorData) {
-        switch (errorCode) {
-            case 'SKU_CONFLICT':
-                const params = new URLSearchParams({
-                    conflicting_sku: errorData.conflicting_sku
-                });
-                return this.openModal('/api/drawer-actions/product/sku-conflict-modal/' + errorData.product_id + '?' + params, 'skuConflictResolved');
-            case 'PRICING_ERROR':
-                return this.openModal('/api/drawer-actions/product/pricing-error-modal/' + errorData.product_id, 'pricingFixed');
-        }
     }
 
     async openModal(url, successEvent) {
