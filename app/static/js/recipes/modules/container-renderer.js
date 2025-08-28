@@ -1,30 +1,35 @@
-
-// Container Renderer - Displays backend container results ONLY
+// Container Renderer - Handles all container display logic
 export class ContainerRenderer {
     constructor(containerManager) {
         this.container = containerManager;
-        this.containerSelectionDiv = document.getElementById('containerSelectionRows');
     }
 
     displayPlan() {
-        console.log('🔍 CONTAINER RENDER: Displaying plan, auto-fill:', this.container.autoFill);
+        const containerResults = document.getElementById('containerResults');
+        const autoFillEnabled = document.getElementById('autoFillEnabled')?.checked;
 
-        if (!this.container.containerPlan) {
-            this.displayError('No container plan available');
+        console.log('🔍 CONTAINER RENDER: Displaying plan, auto-fill:', autoFillEnabled);
+
+        if (!containerResults || !this.container.containerPlan?.success) {
+            this.clearResults();
             return;
         }
 
-        if (this.container.autoFill) {
-            this.renderAutoFillResults();
+        const { container_selection } = this.container.containerPlan;
+
+        if (!container_selection || container_selection.length === 0) {
+            containerResults.innerHTML = '<div class="alert alert-warning"><i class="fas fa-exclamation-triangle"></i> No suitable containers found</div>';
+            return;
+        }
+
+        if (autoFillEnabled) {
+            this.renderAutoFillResults(containerResults, container_selection);
         } else {
-            this.renderManualContainerOptions();
+            containerResults.innerHTML = '<p class="text-muted">Switch to auto-fill mode to see container recommendations, or add containers manually below.</p>';
         }
     }
 
-    renderAutoFillResults() {
-        const containerResults = document.getElementById('containerResults');
-        const containers = this.container.containerPlan.container_selection || [];
-        
+    renderAutoFillResults(containerResults, containers) {
         console.log('🔍 CONTAINER RENDER: Rendering auto-fill results for', containers.length, 'containers');
 
         let html = '<div class="auto-fill-results">';
@@ -48,9 +53,9 @@ export class ContainerRenderer {
     }
 
     renderContainerCard(container, index, isAutoFill = false) {
-        const stockQuantity = container.available_quantity || 0;
+        const stockQuantity = container.stock_qty || container.available_quantity || container.quantity || 0;
         const containerName = container.container_name || 'Unknown Container';
-        const quantityNeeded = container.containers_needed || 0;
+        const quantityNeeded = container.quantity || container.containers_needed || 0;
 
         const capacityDisplay = this.formatCapacityDisplay(container);
         const stockBadgeClass = stockQuantity >= quantityNeeded ? 'bg-success' : 'bg-warning';
@@ -90,110 +95,16 @@ export class ContainerRenderer {
     }
 
     formatCapacityDisplay(container) {
-        // Use backend-provided display format
-        if (container.capacity_in_yield_unit && container.yield_unit) {
-            return `<strong>${container.capacity_in_yield_unit} ${container.yield_unit}</strong>`;
-        }
-        return `${container.capacity || 0} ${container.unit || 'ml'}`;
-    }
+        const capacity = container.capacity || 0;
+        const unit = container.unit || 'ml';
 
-    renderManualContainerOptions() {
-        const containerPlan = this.container.containerPlan;
-        console.log('🔍 CONTAINER RENDER: Rendering manual options, plan:', containerPlan);
-
-        if (!this.containerSelectionDiv) {
-            this.containerSelectionDiv = document.getElementById('containerSelectionRows');
-        }
-        this.containerSelectionDiv.innerHTML = '';
-
-        // Use ALL available containers from backend
-        const availableContainers = containerPlan.available_containers || [];
-        
-        if (availableContainers.length === 0) {
-            this.displayError('No container options available');
-            return;
+        if (container.capacity_in_yield_unit && container.yield_unit && container.conversion_successful) {
+            return `<strong>${container.capacity_in_yield_unit} ${container.yield_unit}</strong> (${capacity} ${unit})`;
+        } else if (container.capacity_in_yield_unit && container.yield_unit) {
+            return `<strong>${container.capacity_in_yield_unit} ${container.yield_unit}</strong> (${capacity} ${unit})`;
         }
 
-        console.log('🔍 CONTAINER RENDER: Available containers:', availableContainers);
-        this.createManualContainerSelection(availableContainers);
-    }
-
-    createManualContainerSelection(availableContainers) {
-        const containerRow = document.createElement('div');
-        containerRow.className = 'container-selection-row mb-3';
-        containerRow.innerHTML = `
-            <div class="row align-items-center">
-                <div class="col-md-6">
-                    <label class="form-label">Select Container Type:</label>
-                    <select class="form-select container-type-select" data-row="0">
-                        <option value="">Choose a container...</option>
-                        ${availableContainers.map(container => 
-                            `<option value="${container.container_id}" 
-                                data-capacity="${container.capacity}" 
-                                data-name="${container.container_name}">
-                                ${container.container_name} (${container.capacity} ${container.yield_unit || 'ml'})
-                            </option>`
-                        ).join('')}
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">Quantity:</label>
-                    <input type="number" class="form-control container-quantity" 
-                           data-row="0" min="1" value="1">
-                </div>
-                <div class="col-md-3">
-                    <button type="button" class="btn btn-outline-secondary add-container-row">
-                        <i class="fas fa-plus"></i> Add Another
-                    </button>
-                </div>
-            </div>
-        `;
-
-        this.containerSelectionDiv.appendChild(containerRow);
-
-        // Add event listeners for manual mode only
-        containerRow.querySelector('.add-container-row').addEventListener('click', () => {
-            this.addContainerRow(availableContainers);
-        });
-    }
-
-    addContainerRow(availableContainers) {
-        const existingRows = this.containerSelectionDiv.querySelectorAll('.container-selection-row');
-        const newRowIndex = existingRows.length;
-
-        const containerRow = document.createElement('div');
-        containerRow.className = 'container-selection-row mb-3';
-        containerRow.innerHTML = `
-            <div class="row align-items-center">
-                <div class="col-md-6">
-                    <select class="form-select container-type-select" data-row="${newRowIndex}">
-                        <option value="">Choose a container...</option>
-                        ${availableContainers.map(container => 
-                            `<option value="${container.container_id}" 
-                                data-capacity="${container.capacity}" 
-                                data-name="${container.container_name}">
-                                ${container.container_name} (${container.capacity} ${container.yield_unit || 'ml'})
-                            </option>`
-                        ).join('')}
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <input type="number" class="form-control container-quantity" 
-                           data-row="${newRowIndex}" min="1" value="1">
-                </div>
-                <div class="col-md-3">
-                    <button type="button" class="btn btn-outline-danger remove-container-row">
-                        <i class="fas fa-trash"></i> Remove
-                    </button>
-                </div>
-            </div>
-        `;
-
-        this.containerSelectionDiv.appendChild(containerRow);
-
-        containerRow.querySelector('.remove-container-row').addEventListener('click', () => {
-            containerRow.remove();
-        });
+        return `${capacity} ${unit}`;
     }
 
     clearResults() {

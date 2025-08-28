@@ -154,66 +154,44 @@ def _create_greedy_strategy(container_options: List[Dict[str, Any]], total_yield
 
     # Calculate totals
     total_capacity = sum(c['capacity'] * c['containers_needed'] for c in selected_containers)
-    
     # Containment = Can the total capacity hold the yield? 
-    # Show 100% if within 3% tolerance (97% or above)
+    # This should max at 100% when capacity >= yield
     if total_yield > 0:
-        raw_containment = (total_capacity / total_yield) * 100
-        # If we have 97% or more capacity, show as 100% contained
-        if raw_containment >= 97.0:
-            containment_percentage = 100.0
-        else:
-            containment_percentage = raw_containment
+        containment_percentage = min(100.0, (total_capacity / total_yield) * 100)
     else:
         containment_percentage = 100.0 if total_capacity > 0 else 0.0
 
-    # Calculate container fill metrics for frontend
-    containment_metrics = {
-        'is_contained': remaining_yield <= 0,
-        'remaining_yield': remaining_yield if remaining_yield > 0 else 0,
-        'yield_unit': yield_unit
-    }
+    # Create warnings - separate containment from fill efficiency
+    warnings = []
     
-    # Calculate last container fill efficiency
-    last_container_fill_metrics = None
-    if selected_containers and total_capacity > 0 and remaining_yield <= 0:
-        # Calculate how much yield goes into each container type (greedy algorithm)
-        remaining_yield_to_allocate = total_yield
+    # Containment warnings (critical)
+    if remaining_yield > 0:
+        warnings.append(f"Insufficient capacity: {remaining_yield:.1f} {yield_unit} remaining")
+    
+    # Fill efficiency warnings (optimization suggestions)
+    if selected_containers and total_capacity > 0:
+        # Calculate fill efficiency of the last (smallest) container
+        last_container = selected_containers[-1]  # Smallest container used
+        last_container_fill = (total_yield % last_container['capacity']) / last_container['capacity'] if last_container['capacity'] > 0 else 0
         
-        for i, container in enumerate(selected_containers):
-            if i == len(selected_containers) - 1:  # Last container type
-                # For the last container type, calculate partial fill
-                full_containers_of_this_type = container['containers_needed'] - 1
-                yield_in_full_containers = full_containers_of_this_type * container['capacity']
-                remaining_yield_to_allocate -= yield_in_full_containers
-                
-                # The remaining yield goes into the final container
-                if remaining_yield_to_allocate > 0 and container['capacity'] > 0:
-                    last_container_fill_percentage = (remaining_yield_to_allocate / container['capacity']) * 100
-                    
-                    last_container_fill_metrics = {
-                        'container_name': container['container_name'],
-                        'fill_percentage': round(last_container_fill_percentage, 1),
-                        'is_partial': last_container_fill_percentage < 100,
-                        'is_low_efficiency': last_container_fill_percentage < 75
-                    }
-                
-                logger.info(f"Backend calculated last container fill: {last_container_fill_percentage:.1f}% for {container['container_name']}")
-                break
-            else:
-                # For non-last containers, all are filled completely
-                yield_in_this_container_type = container['containers_needed'] * container['capacity']
-                remaining_yield_to_allocate -= yield_in_this_container_type
+        # If last container is used multiple times, check the final partial fill
+        if last_container['containers_needed'] > 1:
+            partial_fill_amount = total_yield - (sum(c['capacity'] * c['containers_needed'] for c in selected_containers[:-1]) + 
+                                               (last_container['containers_needed'] - 1) * last_container['capacity'])
+            last_container_fill = partial_fill_amount / last_container['capacity'] if last_container['capacity'] > 0 else 0
+        
+        # Only warn if fill efficiency is outside ±3% tolerance
+        if last_container_fill < 0.97:  # Less than 97% full
+            fill_percentage = last_container_fill * 100
+            warnings.append(f"Last container partially filled to {fill_percentage:.1f}%")
+        elif containment_percentage > 103:  # More than 103% (overfilled)
+            warnings.append(f"Containers slightly overfilled - consider larger container size")
 
     return {
         'success': True,
         'container_selection': selected_containers,
-        'available_containers': container_options,  # Include all available containers for manual selection
         'total_capacity': total_capacity,
         'containment_percentage': containment_percentage,
-        'containment_metrics': containment_metrics,
-        'last_container_fill_metrics': last_container_fill_metrics,
-        'strategy_type': 'greedy_fill',
-        'uses_greedy_algorithm': True,  # Confirms it mixes/matches containers optimally
-        'warnings': []  # Empty - frontend will generate messages from metrics
+        'warnings': warnings,
+        'strategy_type': 'greedy_fill'
     }
