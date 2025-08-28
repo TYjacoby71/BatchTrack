@@ -142,7 +142,7 @@ export class ContainerManager {
             return null;
         }
 
-        const scale = parseFloat(document.getElementById('scaleInput')?.value) || 1;
+        const scale = this.main.scale || parseFloat(document.getElementById('scaleInput')?.value) || 1;
         console.log('🔍 CONTAINER DEBUG: Fetching container plan for recipe', this.main.recipe.id, 'scale:', scale);
 
         // Calculate yield amount
