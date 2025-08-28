@@ -1,4 +1,3 @@
-
 from datetime import datetime
 from flask_login import current_user
 from ...models import db, Unit, CustomUnitMapping, InventoryItem as Ingredient, ConversionLog
@@ -218,7 +217,7 @@ class ConversionEngine:
                     ingredient = Ingredient.query.get(ingredient_id)
                     if ingredient:
                         ingredient_name = ingredient.name
-                
+
                 # Create base error result
                 base_result = {
                     'success': False,
@@ -237,11 +236,16 @@ class ConversionEngine:
                     'to': to_unit,
                     'requires_attention': True
                 }
-                
+
                 # Use drawer error handler to add drawer-specific data
                 drawer_info = handle_conversion_error(base_result)
                 base_result.update(drawer_info)
-                
+
+                # If this error requires a drawer, dispatch it
+                if drawer_info.get('requires_drawer') and drawer_info.get('drawer_payload'):
+                    print(f"🔧 CONVERSION ENGINE: Dispatching drawer for {base_result['error_code']}")
+                    # The frontend will pick up this drawer_payload and trigger the drawer
+
                 return base_result
             used_density = density
 
@@ -292,11 +296,16 @@ class ConversionEngine:
                     'to': to_unit,
                     'requires_attention': True
                 }
-                
+
                 # Use drawer error handler to add drawer-specific data
                 drawer_info = handle_conversion_error(base_result)
                 base_result.update(drawer_info)
-                
+
+                # If this error requires a drawer, dispatch it
+                if drawer_info.get('requires_drawer') and drawer_info.get('drawer_payload'):
+                    print(f"🔧 CONVERSION ENGINE: Dispatching drawer for {base_result['error_code']}")
+                    # The frontend will pick up this drawer_payload and trigger the drawer
+
                 return base_result
         else:
             # Create base error result
@@ -315,11 +324,16 @@ class ConversionEngine:
                 'to': to_unit,
                 'requires_attention': True
             }
-            
+
             # Use drawer error handler to add drawer-specific data
             drawer_info = handle_conversion_error(base_result)
             base_result.update(drawer_info)
-            
+
+            # If this error requires a drawer, dispatch it
+            if drawer_info.get('requires_drawer') and drawer_info.get('drawer_payload'):
+                print(f"🔧 CONVERSION ENGINE: Dispatching drawer for {base_result['error_code']}")
+                # The frontend will pick up this drawer_payload and trigger the drawer
+
             return base_result
 
         # Log it only if user is authenticated and has organization

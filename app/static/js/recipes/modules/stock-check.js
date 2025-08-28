@@ -65,7 +65,7 @@ export class StockCheckManager {
             // Check for drawer payload in response (universal drawer protocol)
             if (this.stockCheckResults.drawer_payload) {
                 console.log('🔍 STOCK CHECK: Drawer payload detected, delegating to universal protocol');
-                
+
                 // Set up retry callback for this specific operation
                 const retryCallback = () => {
                     console.log('🔍 STOCK CHECK: Retrying after drawer resolution');
@@ -79,7 +79,7 @@ export class StockCheckManager {
                         retry_callback: retryCallback
                     }
                 }));
-                
+
                 // Still display the partial results we got
                 this.displayStockResults(this.stockCheckResults);
                 return;
@@ -267,7 +267,7 @@ export class StockCheckManager {
         link.click();
     }
 
-    
+
 }
 
 // Export alias for backward compatibility
