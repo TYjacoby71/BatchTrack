@@ -1,75 +1,57 @@
 /**
- * Universal Wall of Drawers Protocol
- * Handles ANY type of error across the entire application using modular handlers
+ * Universal Drawer Protocol
+ * Simple listener that handles ANY drawer request from ANY service
  */
-import { ConversionDrawerHandler } from './drawer-handlers/conversion-handler.js';
-import { RecipeDrawerHandler } from './drawer-handlers/recipe-handler.js';
-import { BatchDrawerHandler } from './drawer-handlers/batch-handler.js';
-import { InventoryDrawerHandler } from './drawer-handlers/inventory-handler.js';
-import { ProductDrawerHandler } from './drawer-handlers/product-handler.js';
-
 class DrawerProtocol {
     constructor() {
         this.activeDrawers = new Set();
         this.retryCallbacks = new Map();
 
-        // Initialize domain-specific handlers
-        this.handlers = {
-            conversion: new ConversionDrawerHandler(this),
-            recipe: new RecipeDrawerHandler(this),
-            batch: new BatchDrawerHandler(this),
-            inventory: new InventoryDrawerHandler(this),
-            product: new ProductDrawerHandler(this)
-        };
+        // Listen for universal drawer events
+        window.addEventListener('openDrawer', (event) => {
+            this.handleDrawerRequest(event.detail);
+        });
+
+        console.log('🔧 DRAWER PROTOCOL: Universal listener initialized');
     }
 
     /**
-     * Handle any error that needs a drawer solution
-     * @param {string} errorType - Type of error (conversion, recipe, batch, inventory, product)
-     * @param {string} errorCode - Specific error code
-     * @param {Object} errorData - Error context data
-     * @param {Function} retryCallback - Function to call after fix
+     * Handle any drawer request from any service
+     * @param {Object} drawerData - Contains all info needed to open appropriate drawer
      */
-    async handleError(errorType, errorCode, errorData, retryCallback = null) {
-        console.log(`🔧 DRAWER PROTOCOL: Handling ${errorType}.${errorCode}`, errorData);
+    async handleDrawerRequest(drawerData) {
+        console.log('🔧 DRAWER PROTOCOL: Drawer request received', drawerData);
 
-        // Only handle errors that explicitly require drawers
-        if (!errorData.requires_drawer && !this.isKnownDrawerError(errorType, errorCode)) {
-            console.log(`🔧 DRAWER PROTOCOL: Error ${errorType}.${errorCode} does not require drawer`);
+        const {
+            error_type,
+            error_code,
+            modal_url,
+            success_event,
+            retry_callback,
+            error_message
+        } = drawerData;
+
+        // Store retry callback if provided
+        if (retry_callback) {
+            const callbackKey = `${error_type}.${error_code}`;
+            this.retryCallbacks.set(callbackKey, retry_callback);
+        }
+
+        // Show user-friendly error message if no modal
+        if (!modal_url) {
+            console.warn('🔧 DRAWER PROTOCOL: No modal URL provided, showing alert');
+            alert(error_message || 'An error occurred that requires attention');
             return false;
         }
 
-        if (retryCallback) {
-            this.retryCallbacks.set(`${errorType}.${errorCode}`, retryCallback);
-        }
-
-        // Delegate to appropriate handler
-        const handler = this.handlers[errorType];
-        if (handler) {
-            return handler.handleError(errorCode, errorData);
-        } else {
-            console.error(`🚨 DRAWER PROTOCOL: Unknown error type: ${errorType}`);
-            return false;
-        }
-    }
-
-    /**
-     * Check if this is a known drawer-requiring error
-     */
-    isKnownDrawerError(errorType, errorCode) {
-        const drawerErrors = {
-            'conversion': ['MISSING_DENSITY', 'MISSING_CUSTOM_MAPPING', 'UNSUPPORTED_CONVERSION', 'UNKNOWN_SOURCE_UNIT', 'UNKNOWN_TARGET_UNIT'],
-            'recipe': ['MISSING_INGREDIENT', 'SCALING_VALIDATION', 'INVALID_YIELD'],
-            'batch': ['CONTAINER_SHORTAGE', 'STUCK_BATCH', 'VALIDATION_FAILED'],
-            'inventory': ['STOCK_SHORTAGE', 'LOW_STOCK_ALERT', 'LOT_EXPIRED', 'FIFO_CONFLICT'],
-            'product': ['SKU_CONFLICT', 'VARIANT_ERROR', 'PRICING_ERROR']
-        };
-
-        return drawerErrors[errorType]?.includes(errorCode) || false;
+        // Open the modal
+        return this.openModal(modal_url, success_event);
     }
 
     async openModal(url, successEvent) {
         try {
+            console.log(`🔧 DRAWER PROTOCOL: Opening modal from ${url}`);
+
             const response = await fetch(url);
             const data = await response.json();
 
@@ -79,6 +61,12 @@ class DrawerProtocol {
 
                 // Get modal element (assumes consistent naming)
                 const modalElement = document.body.lastElementChild.querySelector('.modal');
+
+                if (!modalElement) {
+                    console.error('🚨 DRAWER PROTOCOL: No modal element found in response');
+                    return false;
+                }
+
                 const modal = new bootstrap.Modal(modalElement);
 
                 // Track active drawer
@@ -121,35 +109,6 @@ class DrawerProtocol {
                 this.retryCallbacks.delete(key);
                 break;
             }
-        }
-    }
-
-    /**
-     * Universal retry mechanism
-     * @param {string} operationType - Type of operation to retry
-     * @param {Object} operationData - Data needed for retry
-     */
-    async retryOperation(operationType, operationData) {
-        try {
-            const response = await fetch('/api/drawer-actions/retry-operation', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                body: JSON.stringify({
-                    operation_type: operationType,
-                    operation_data: operationData
-                })
-            });
-
-            const result = await response.json();
-            console.log(`🔧 DRAWER PROTOCOL: Retry result for ${operationType}:`, result);
-            return result;
-
-        } catch (error) {
-            console.error(`🚨 DRAWER PROTOCOL: Retry failed for ${operationType}:`, error);
-            return { success: false, error: error.message };
         }
     }
 

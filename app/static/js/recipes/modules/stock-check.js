@@ -256,24 +256,66 @@ export class StockCheckManager {
         for (const item of stockResults) {
             if (item.conversion_details?.error_code && item.conversion_details?.requires_drawer) {
                 const errorCode = item.conversion_details.error_code;
-                const errorData = {
-                    ...item.conversion_details.error_data,
-                    ingredient_id: item.item_id || item.ingredient_id || item.id,
-                    ingredient_name: item.item_name || item.ingredient_name || item.name,
-                    requires_drawer: true
+                
+                console.log(`🔍 STOCK CHECK: Conversion error ${errorCode} requires drawer intervention`);
+
+                // Prepare drawer request data
+                const drawerData = {
+                    error_type: 'conversion',
+                    error_code: errorCode,
+                    error_message: item.conversion_details.error_message || 'Conversion error occurred',
+                    modal_url: this.getModalUrlForError(errorCode, item),
+                    success_event: this.getSuccessEventForError(errorCode),
+                    retry_callback: () => {
+                        console.log('🔍 RETRYING STOCK CHECK after fixing conversion error...');
+                        this.performStockCheck();
+                    }
                 };
 
-                console.log(`🔍 STOCK CHECK: Conversion error ${errorCode} requires drawer intervention`, errorData);
-
-                // Use universal drawer protocol
-                window.drawerProtocol.handleError('conversion', errorCode, errorData, () => {
-                    console.log('🔍 RETRYING STOCK CHECK after fixing conversion error...');
-                    this.performStockCheck();
-                });
+                // Send universal drawer request
+                window.dispatchEvent(new CustomEvent('openDrawer', {
+                    detail: drawerData
+                }));
             } else if (item.conversion_details?.error_code) {
                 // Log non-drawer errors for debugging
                 console.log(`🔍 STOCK CHECK: Conversion error ${item.conversion_details.error_code} - no drawer needed`);
             }
+        }
+    }
+
+    getModalUrlForError(errorCode, item) {
+        switch (errorCode) {
+            case 'MISSING_DENSITY':
+                return `/api/drawer-actions/conversion/density-modal/${item.item_id || item.ingredient_id || item.id}`;
+            
+            case 'MISSING_CUSTOM_MAPPING':
+            case 'UNSUPPORTED_CONVERSION':
+                const params = new URLSearchParams({
+                    from_unit: item.conversion_details.error_data?.from_unit || '',
+                    to_unit: item.conversion_details.error_data?.to_unit || ''
+                });
+                return `/api/drawer-actions/conversion/unit-mapping-modal?${params}`;
+            
+            case 'UNKNOWN_SOURCE_UNIT':
+            case 'UNKNOWN_TARGET_UNIT':
+                // For unknown units, we redirect to unit manager instead of modal
+                window.open('/conversion/units', '_blank');
+                return null;
+            
+            default:
+                return null;
+        }
+    }
+
+    getSuccessEventForError(errorCode) {
+        switch (errorCode) {
+            case 'MISSING_DENSITY':
+                return 'densityUpdated';
+            case 'MISSING_CUSTOM_MAPPING':
+            case 'UNSUPPORTED_CONVERSION':
+                return 'unitMappingCreated';
+            default:
+                return null;
         }
     }
 
