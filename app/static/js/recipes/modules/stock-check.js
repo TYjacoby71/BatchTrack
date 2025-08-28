@@ -277,6 +277,11 @@ export class StockCheckManager {
         }
     }
 
+    retryStockCheck() {
+        console.log('🔍 RETRY: Retrying stock check after fixing conversion error');
+        this.performStockCheck();
+    }
+
     async openDensityModal(errorDetails) {
         try {
             const response = await fetch(`/api/drawer-actions/density-modal/${errorDetails.ingredient_id}`);
@@ -294,7 +299,7 @@ export class StockCheckManager {
                 window.addEventListener('densityUpdated', (event) => {
                     console.log('🔍 DENSITY UPDATED:', event.detail);
                     // Retry stock check automatically
-                    this.retryStockCheck();
+                    this.performStockCheck();
                 }, { once: true });
 
                 // Clean up modal when closed
