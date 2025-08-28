@@ -1,4 +1,3 @@
-
 // Import required modules
 import { ContainerPlanFetcher } from './container-plan-fetcher.js';
 import { ContainerRenderer } from './container-renderer.js';
@@ -23,7 +22,7 @@ export class ContainerManager {
         this.containerPlan = null;
         this.fetchingPlan = false;
         this.lastPlanResult = null;
-        
+
         // Initialize sub-modules
         this.planFetcher = new ContainerPlanFetcher(this);
         this.renderer = new ContainerRenderer(this);
@@ -50,7 +49,7 @@ export class ContainerManager {
 
     handleModeToggle(autoFillEnabled) {
         console.log('🔍 AUTO-FILL TOGGLE:', autoFillEnabled);
-        
+
         this.toggleContainerSections(autoFillEnabled);
 
         if (autoFillEnabled && this.main.requiresContainers) {
@@ -109,5 +108,3 @@ export class ContainerManager {
         return this.planFetcher.fetchContainerPlan();
     }
 }
-
-

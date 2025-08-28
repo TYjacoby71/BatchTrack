@@ -154,38 +154,50 @@ def _create_greedy_strategy(container_options: List[Dict[str, Any]], total_yield
 
     # Calculate totals
     total_capacity = sum(c['capacity'] * c['containers_needed'] for c in selected_containers)
+    
     # Containment = Can the total capacity hold the yield? 
-    # This should max at 100% when capacity >= yield
+    # Show 100% if within 3% tolerance (97% or above)
     if total_yield > 0:
-        containment_percentage = min(100.0, (total_capacity / total_yield) * 100)
+        raw_containment = (total_capacity / total_yield) * 100
+        # If we have 97% or more capacity, show as 100% contained
+        if raw_containment >= 97.0:
+            containment_percentage = 100.0
+        else:
+            containment_percentage = raw_containment
     else:
         containment_percentage = 100.0 if total_capacity > 0 else 0.0
 
     # Create warnings - separate containment from fill efficiency
     warnings = []
+    containment_warnings = []
+    fill_efficiency_warnings = []
     
-    # Containment warnings (critical)
+    # CONTAINMENT WARNINGS (critical - can we hold the batch?)
     if remaining_yield > 0:
-        warnings.append(f"Insufficient capacity: {remaining_yield:.1f} {yield_unit} remaining")
+        containment_warnings.append(f"Insufficient capacity: {remaining_yield:.1f} {yield_unit} remaining")
     
-    # Fill efficiency warnings (optimization suggestions)
-    if selected_containers and total_capacity > 0:
-        # Calculate fill efficiency of the last (smallest) container
-        last_container = selected_containers[-1]  # Smallest container used
-        last_container_fill = (total_yield % last_container['capacity']) / last_container['capacity'] if last_container['capacity'] > 0 else 0
+    # FILL EFFICIENCY WARNINGS (optimization - how well are containers used?)
+    if selected_containers and total_capacity > 0 and remaining_yield <= 0:  # Only if contained
+        # Calculate fill efficiency of the last container
+        last_container = selected_containers[-1]
         
-        # If last container is used multiple times, check the final partial fill
-        if last_container['containers_needed'] > 1:
-            partial_fill_amount = total_yield - (sum(c['capacity'] * c['containers_needed'] for c in selected_containers[:-1]) + 
-                                               (last_container['containers_needed'] - 1) * last_container['capacity'])
-            last_container_fill = partial_fill_amount / last_container['capacity'] if last_container['capacity'] > 0 else 0
+        # Calculate how much goes into the last container
+        yield_for_previous_containers = sum(c['capacity'] * c['containers_needed'] for c in selected_containers[:-1])
+        yield_for_last_containers = (last_container['containers_needed'] - 1) * last_container['capacity']
+        remaining_for_final_container = total_yield - yield_for_previous_containers - yield_for_last_containers
         
-        # Only warn if fill efficiency is outside ±3% tolerance
-        if last_container_fill < 0.97:  # Less than 97% full
-            fill_percentage = last_container_fill * 100
-            warnings.append(f"Last container partially filled to {fill_percentage:.1f}%")
-        elif containment_percentage > 103:  # More than 103% (overfilled)
-            warnings.append(f"Containers slightly overfilled - consider larger container size")
+        last_container_fill_percentage = (remaining_for_final_container / last_container['capacity'] * 100) if last_container['capacity'] > 0 else 100
+        
+        # Apply fill efficiency rules
+        if last_container_fill_percentage < 100:
+            if last_container_fill_percentage < 75:
+                fill_efficiency_warnings.append(f"Partial fill warning: last container will be filled less than 75% - consider using other containers")
+            else:
+                fill_efficiency_warnings.append(f"Last container partially filled to {last_container_fill_percentage:.1f}%")
+    
+    # Combine all warnings
+    warnings.extend(containment_warnings)
+    warnings.extend(fill_efficiency_warnings)
 
     return {
         'success': True,
