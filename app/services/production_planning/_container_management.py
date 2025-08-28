@@ -208,6 +208,7 @@ def _create_greedy_strategy(container_options: List[Dict[str, Any]], total_yield
     return {
         'success': True,
         'container_selection': selected_containers,
+        'available_containers': container_options,  # Include all available containers for manual selection
         'total_capacity': total_capacity,
         'containment_percentage': containment_percentage,
         'containment_metrics': containment_metrics,

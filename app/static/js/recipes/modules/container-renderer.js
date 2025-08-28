@@ -2,30 +2,25 @@
 export class ContainerRenderer {
     constructor(containerManager) {
         this.container = containerManager;
+        // Ensure containerSelectionDiv is initialized, assuming it's a property of the class
+        // or will be set later. If it's meant to be a DOM element, it should be selected or created.
+        // For this fix, we assume it's a property that will be set or is available.
+        // As a placeholder, let's assume it's managed elsewhere or will be selected in a method.
+        this.containerSelectionDiv = document.getElementById('containerSelectionRows');
     }
 
     displayPlan() {
-        const containerResults = document.getElementById('containerResults');
-        const autoFillEnabled = document.getElementById('autoFillEnabled')?.checked;
+        console.log('🔍 CONTAINER RENDER: Displaying plan, auto-fill:', this.container.autoFill);
 
-        console.log('🔍 CONTAINER RENDER: Displaying plan, auto-fill:', autoFillEnabled);
-
-        if (!containerResults || !this.container.containerPlan?.success) {
-            this.clearResults();
+        if (!this.container.containerPlan) {
+            this.displayContainerError('No container plan available');
             return;
         }
 
-        const { container_selection } = this.container.containerPlan;
-
-        if (!container_selection || container_selection.length === 0) {
-            containerResults.innerHTML = '<div class="alert alert-warning"><i class="fas fa-exclamation-triangle"></i> No suitable containers found</div>';
-            return;
-        }
-
-        if (autoFillEnabled) {
-            this.renderAutoFillResults(containerResults, container_selection);
+        if (this.container.autoFill) {
+            this.renderAutoFillResults();
         } else {
-            containerResults.innerHTML = '<p class="text-muted">Switch to auto-fill mode to see container recommendations, or add containers manually below.</p>';
+            this.renderManualContainerOptions();
         }
     }
 
@@ -133,6 +128,174 @@ export class ContainerRenderer {
                             <i class="fas fa-times"></i> Disable Container Requirement
                         </button>
                     </div>
+                </div>
+            `;
+        }
+    }
+
+    // New or modified methods for manual selection
+    renderManualContainerOptions() {
+        const containerPlan = this.container.containerPlan;
+
+        console.log('🔍 CONTAINER RENDER: Rendering manual options, plan:', containerPlan);
+
+        // Clear existing content
+        if (!this.containerSelectionDiv) {
+            this.containerSelectionDiv = document.getElementById('containerSelectionRows');
+        }
+        this.containerSelectionDiv.innerHTML = '';
+
+        // Get all available containers from the backend response
+        // The backend should send all allowed containers, not just the selected ones
+        let availableContainers = [];
+
+        if (containerPlan.container_selection && containerPlan.container_selection.length > 0) {
+            // Use selected containers from auto-fill as available options
+            availableContainers = containerPlan.container_selection;
+        } else if (containerPlan.available_containers) {
+            // Use available containers list if provided
+            availableContainers = containerPlan.available_containers;
+        } else {
+            this.displayContainerError('No container options available');
+            return;
+        }
+
+        console.log('🔍 CONTAINER RENDER: Available containers:', availableContainers);
+
+        // Create a dropdown with all available containers
+        this.createManualContainerSelection(availableContainers);
+
+        this.updateContainerSummary();
+    }
+
+    createManualContainerSelection(availableContainers) {
+        const containerRow = document.createElement('div');
+        containerRow.className = 'container-selection-row mb-3';
+        containerRow.innerHTML = `
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <label class="form-label">Select Container Type:</label>
+                    <select class="form-select container-type-select" data-row="0">
+                        <option value="">Choose a container...</option>
+                        ${availableContainers.map(container => 
+                            `<option value="${container.container_id}" 
+                                data-capacity="${container.capacity}" 
+                                data-name="${container.container_name}">
+                                ${container.container_name} (${container.capacity} ${container.yield_unit})
+                            </option>`
+                        ).join('')}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Quantity:</label>
+                    <input type="number" class="form-control container-quantity" 
+                           data-row="0" min="1" value="1">
+                </div>
+                <div class="col-md-3">
+                    <button type="button" class="btn btn-outline-secondary add-container-row">
+                        <i class="fas fa-plus"></i> Add Another
+                    </button>
+                </div>
+            </div>
+        `;
+
+        this.containerSelectionDiv.appendChild(containerRow);
+
+        // Add event listeners
+        containerRow.querySelector('.container-type-select').addEventListener('change', () => {
+            this.updateContainerSummary();
+        });
+
+        containerRow.querySelector('.container-quantity').addEventListener('input', () => {
+            this.updateContainerSummary();
+        });
+
+        containerRow.querySelector('.add-container-row').addEventListener('click', () => {
+            this.addContainerRow(availableContainers);
+        });
+    }
+
+    addContainerRow(availableContainers) {
+        const existingRows = this.containerSelectionDiv.querySelectorAll('.container-selection-row');
+        const newRowIndex = existingRows.length;
+
+        const containerRow = document.createElement('div');
+        containerRow.className = 'container-selection-row mb-3';
+        containerRow.innerHTML = `
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <select class="form-select container-type-select" data-row="${newRowIndex}">
+                        <option value="">Choose a container...</option>
+                        ${availableContainers.map(container => 
+                            `<option value="${container.container_id}" 
+                                data-capacity="${container.capacity}" 
+                                data-name="${container.container_name}">
+                                ${container.container_name} (${container.capacity} ${container.yield_unit})
+                            </option>`
+                        ).join('')}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <input type="number" class="form-control container-quantity" 
+                           data-row="${newRowIndex}" min="1" value="1">
+                </div>
+                <div class="col-md-3">
+                    <button type="button" class="btn btn-outline-danger remove-container-row">
+                        <i class="fas fa-trash"></i> Remove
+                    </button>
+                </div>
+            </div>
+        `;
+
+        this.containerSelectionDiv.appendChild(containerRow);
+
+        // Add event listeners
+        containerRow.querySelector('.container-type-select').addEventListener('change', () => {
+            this.updateContainerSummary();
+        });
+
+        containerRow.querySelector('.container-quantity').addEventListener('input', () => {
+            this.updateContainerSummary();
+        });
+
+        containerRow.querySelector('.remove-container-row').addEventListener('click', () => {
+            containerRow.remove();
+            this.updateContainerSummary();
+        });
+    }
+
+    updateContainerSummary() {
+        // Calculate total capacity from manual selections
+        const rows = this.containerSelectionDiv.querySelectorAll('.container-selection-row');
+        let totalCapacity = 0;
+        let validSelections = 0;
+
+        rows.forEach(row => {
+            const select = row.querySelector('.container-type-select');
+            const quantity = row.querySelector('.container-quantity');
+
+            if (select.value && quantity.value) {
+                const selectedOption = select.options[select.selectedIndex];
+                const capacity = parseFloat(selectedOption.dataset.capacity) || 0;
+                const qty = parseInt(quantity.value) || 0;
+                totalCapacity += capacity * qty;
+                validSelections++;
+            }
+        });
+
+        // Update summary display
+        const summaryElement = document.querySelector('.container-summary');
+        if (summaryElement && this.container.containerPlan) {
+            // Assuming this.container.main.getYieldAmount() is correctly implemented and available
+            const yieldAmount = this.container.main.getYieldAmount ? this.container.main.getYieldAmount() : 0;
+            const containmentPercentage = yieldAmount > 0 ? (totalCapacity / yieldAmount) * 100 : 0;
+
+            summaryElement.innerHTML = `
+                <div class="alert ${containmentPercentage >= 100 ? 'alert-success' : 'alert-warning'}">
+                    <strong>Manual Selection:</strong> 
+                    ${containmentPercentage.toFixed(1)}% containment
+                    (${totalCapacity.toFixed(2)} capacity vs ${yieldAmount.toFixed(2)} yield)
+                    ${containmentPercentage >= 100 ? ' ✓' : ' ⚠️ Insufficient capacity'}
                 </div>
             `;
         }
