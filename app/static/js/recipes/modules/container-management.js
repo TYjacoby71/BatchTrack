@@ -204,6 +204,8 @@ export class ContainerManager {
 
         if (autoFillEnabled) {
             this.renderContainerResults(containerResults, container_selection, true);
+            // FIXED: Update progress bar immediately in auto-fill mode
+            this.updateContainerProgress();
         } else {
             // Still show available containers in manual mode, just don't auto-fill
             containerResults.innerHTML = '<p class="text-muted">Switch to auto-fill mode to see container recommendations, or add containers manually below.</p>';
@@ -493,8 +495,13 @@ export class ContainerManager {
                 }
             });
 
-            // Containment = Can the total capacity hold the yield? (not fill efficiency)
-            containment_percentage = projectedYield > 0 ? Math.min((projectedYield / totalCapacity) * 100, 100) : 0;
+            // FIXED: Containment = Can the total capacity hold the yield? 
+            // This should be (totalCapacity / projectedYield) * 100, NOT the reverse
+            if (projectedYield > 0) {
+                containment_percentage = Math.min((totalCapacity / projectedYield) * 100, 100);
+            } else {
+                containment_percentage = totalCapacity > 0 ? 100 : 0;
+            }
             console.log(`🔍 CONTAINMENT DEBUG: Yield needed: ${projectedYield}, Total capacity: ${totalCapacity}, Containment: ${containment_percentage.toFixed(1)}%`);
         } else {
             // Auto-fill should return proper containment percentage from server
@@ -509,14 +516,18 @@ export class ContainerManager {
         const percentSpan = document.getElementById('containmentPercent');
         const messageSpan = document.getElementById('liveContainmentMessage');
 
+        // Cap display percentage at 100% for progress bar visual
+        const displayPercentage = Math.min(percentage, 100);
+        const actualPercentage = percentage;
+
         if (progressBar) {
-            progressBar.style.width = `${percentage}%`;
-            progressBar.textContent = `${percentage.toFixed(1)}%`;
-            progressBar.className = `progress-bar ${percentage >= 100 ? 'bg-success' : 'bg-warning'}`;
+            progressBar.style.width = `${displayPercentage}%`;
+            progressBar.textContent = `${actualPercentage.toFixed(1)}%`;
+            progressBar.className = `progress-bar ${actualPercentage >= 100 ? 'bg-success' : 'bg-warning'}`;
         }
 
         if (percentSpan) {
-            percentSpan.textContent = `${percentage.toFixed(1)}%`;
+            percentSpan.textContent = `${actualPercentage.toFixed(1)}%`;
         }
 
         if (messageSpan) {
@@ -524,13 +535,13 @@ export class ContainerManager {
             let className = 'form-text mt-1';
 
             // Containment message (primary concern)
-            if (percentage >= 100) {
+            if (actualPercentage >= 100) {
                 message = '✅ Batch fully contained';
                 className += ' text-success';
-            } else if (percentage >= 97) {
+            } else if (actualPercentage >= 97) {
                 message = '✅ Batch contained within 3% tolerance';
                 className += ' text-success';
-            } else if (percentage > 0) {
+            } else if (actualPercentage > 0) {
                 message = '⚠️ Partial containment - add more containers';
                 className += ' text-warning';
             } else {
@@ -541,7 +552,7 @@ export class ContainerManager {
             // Add fill efficiency warnings separately (optimization suggestions only)
             const warnings = this.containerPlan?.warnings || [];
             const fillWarnings = warnings.filter(w => w.includes('partially filled') || w.includes('overfilled'));
-            if (fillWarnings.length > 0) {
+            if (fillWarnings.length > 0 && actualPercentage >= 95) {
                 message += ` • ${fillWarnings.join(' • ')}`;
             }
 

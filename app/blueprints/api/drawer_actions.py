@@ -13,13 +13,18 @@ drawer_actions_bp = Blueprint('drawer_actions', __name__, url_prefix='/api/drawe
 @require_permission('view_inventory')
 def conversion_density_modal_get(ingredient_id):
     """Get density fix modal for ingredient"""
+    print(f"🔧 DENSITY MODAL: Looking for ingredient ID {ingredient_id} for org {current_user.organization_id}")
+    
     ingredient = InventoryItem.query.filter_by(
         id=ingredient_id,
         organization_id=current_user.organization_id
     ).first()
 
     if not ingredient:
+        print(f"🔧 DENSITY MODAL: Ingredient {ingredient_id} not found for org {current_user.organization_id}")
         return jsonify({'error': 'Ingredient not found'}), 404
+    
+    print(f"🔧 DENSITY MODAL: Found ingredient: {ingredient.name}, current density: {ingredient.density}")
 
     try:
         modal_html = render_template('components/shared/density_fix_modal.html',
