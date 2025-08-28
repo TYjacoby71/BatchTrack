@@ -55,40 +55,41 @@ export class ContainerProgressBar {
     calculateLastContainerFillPercentage() {
         // Only calculate if we have container plan data and we're in manual mode
         if (!this.containerManager.containerPlan?.container_selection) return 100;
-        
+
         const containers = this.getSelectedContainersFromDOM();
         if (containers.length === 0) return 100;
 
         const projectedYield = this.containerManager.main.baseYield * this.containerManager.main.scale;
-        let remainingYield = projectedYield;
-
         console.log('🔍 FILL CALC: Starting with yield', projectedYield, 'containers:', containers.length);
 
-        // Calculate how much goes into each container except the last
-        for (let i = 0; i < containers.length - 1; i++) {
+        // Calculate how much yield goes into each container type
+        let remainingYieldToAllocate = projectedYield;
+
+        for (let i = 0; i < containers.length; i++) {
             const container = containers[i];
-            const containerCapacity = parseFloat(container.capacity_in_yield_unit || container.capacity) || 0;
-            const quantity = parseInt(container.quantity) || 1;
-            const containerTotal = containerCapacity * quantity;
-            remainingYield -= containerTotal;
-            console.log('🔍 FILL CALC: Container', i, 'uses', containerTotal, 'remaining:', remainingYield);
+
+            if (i === containers.length - 1) {
+                // Last container type - calculate partial fill
+                const fullContainersOfThisType = container.quantity - 1;
+                const yieldInFullContainers = fullContainersOfThisType * container.capacity;
+                remainingYieldToAllocate -= yieldInThisContainerType;
+
+                // The remaining yield goes into the final container
+                if (remainingYieldToAllocate > 0 && container.capacity > 0) {
+                    const lastContainerFillPercentage = (remainingYieldToAllocate / container.capacity) * 100;
+                    console.log('🔍 FILL CALC: Last container fill:', lastContainerFillPercentage.toFixed(1), '%');
+                    return Math.min(100, Math.max(0, lastContainerFillPercentage));
+                }
+                break;
+            } else {
+                // For non-last containers, all are filled completely
+                const yieldInThisContainerType = container.quantity * container.capacity;
+                remainingYieldToAllocate -= yieldInThisContainerType;
+            }
         }
 
-        // Calculate fill percentage for the last container
-        const lastContainer = containers[containers.length - 1];
-        const lastContainerCapacity = parseFloat(lastContainer.capacity_in_yield_unit || lastContainer.capacity) || 0;
-        const lastQuantity = parseInt(lastContainer.quantity) || 1;
-
-        console.log('🔍 FILL CALC: Last container capacity:', lastContainerCapacity, 'quantity:', lastQuantity);
-
-        if (lastContainerCapacity === 0) return 100;
-
-        // Calculate fill percentage for ONE unit of the last container type
-        const fillPercentage = (remainingYield / lastContainerCapacity) * 100;
-        const result = Math.min(100, Math.max(0, fillPercentage));
-
-        console.log('🔍 FILL CALC: Last container fill:', result.toFixed(1), '%');
-        return result;
+        console.log('🔍 FILL CALC: Last container fill:', '100.0', '%');
+        return 100;
     }
 
     // Local method to get containers from DOM safely
@@ -160,22 +161,45 @@ export class ContainerProgressBar {
         }
 
         // FILL EFFICIENCY MESSAGE (secondary concern - only if contained)
+        // This logic should work for BOTH auto-fill and manual modes
         let fillEfficiencyMessage = '';
         let fillEfficiencyClass = '';
 
         if (percentage >= 97) {  // Only show fill efficiency if we have containment
-            // Calculate last container fill efficiency
-            const lastContainerFill = this.calculateLastContainerFillPercentage();
+            // Check if we're in auto-fill mode and have backend warnings
+            const autoFillEnabled = document.getElementById('autoFillEnabled')?.checked;
 
-            if (lastContainerFill < 100) {
-                if (lastContainerFill < 75) {
-                    // RED - Critical fill efficiency issue
-                    fillEfficiencyMessage = ` • ⚠️ Partial fill warning: last container will be filled less than 75% - consider using other containers`;
-                    fillEfficiencyClass = 'text-danger';
-                } else {
-                    // YELLOW - Moderate fill efficiency issue  
-                    fillEfficiencyMessage = ` • ⚠️ Last container partially filled to ${lastContainerFill.toFixed(1)}%`;
-                    fillEfficiencyClass = 'text-warning';
+            if (autoFillEnabled && this.containerManager.containerPlan?.warnings) {
+                // Use backend warnings for auto-fill mode
+                const backendFillWarnings = this.containerManager.containerPlan.warnings.filter(warning => 
+                    warning.includes('partially filled') || warning.includes('Partial fill warning')
+                );
+
+                if (backendFillWarnings.length > 0) {
+                    // Use the first fill efficiency warning from backend
+                    const warning = backendFillWarnings[0];
+                    if (warning.includes('less than 75%')) {
+                        fillEfficiencyMessage = ` • ⚠️ ${warning}`;
+                        fillEfficiencyClass = 'text-danger';
+                    } else {
+                        fillEfficiencyMessage = ` • ⚠️ ${warning}`;
+                        fillEfficiencyClass = 'text-warning';
+                    }
+                }
+            } else {
+                // Calculate frontend fill efficiency for manual mode (or auto-fill fallback)
+                const lastContainerFill = this.calculateLastContainerFillPercentage();
+
+                if (lastContainerFill < 100) {
+                    if (lastContainerFill < 75) {
+                        // RED - Critical fill efficiency issue
+                        fillEfficiencyMessage = ` • ⚠️ Partial fill warning: last container will be filled less than 75% - consider using other containers`;
+                        fillEfficiencyClass = 'text-danger';
+                    } else {
+                        // YELLOW - Moderate fill efficiency issue  
+                        fillEfficiencyMessage = ` • ⚠️ Last container partially filled to ${lastContainerFill.toFixed(1)}%`;
+                        fillEfficiencyClass = 'text-warning';
+                    }
                 }
             }
         }
@@ -190,13 +214,6 @@ export class ContainerProgressBar {
             className += ' text-warning';
         } else {
             className += ' ' + containmentClass;
-        }
-
-        // Fallback for old logic compatibility
-        if (percentage >= 97) {
-            // message already set above
-        } else if (percentage >= 97) {
-            message = '✅ Batch contained within 3% tolerance';
         }
 
         return { text: message, className };
@@ -215,5 +232,59 @@ export class ContainerProgressBar {
 
         if (percentSpan) percentSpan.textContent = '0%';
         if (messageSpan) messageSpan.textContent = '';
+    }
+
+    displayWarnings(containerPlan) {
+        const warningsContainer = this.container.containerCard.querySelector('.container-warnings');
+        if (!warningsContainer) return;
+
+        const warnings = [];
+
+        // Generate containment warnings
+        if (containerPlan.containment_metrics && !containerPlan.containment_metrics.is_contained) {
+            const remaining = containerPlan.containment_metrics.remaining_yield;
+            const unit = containerPlan.containment_metrics.yield_unit;
+            warnings.push({
+                type: 'danger',
+                icon: 'fas fa-exclamation-circle',
+                message: `Insufficient capacity: ${remaining.toFixed(1)} ${unit} remaining`
+            });
+        }
+
+        // Generate fill efficiency warnings
+        if (containerPlan.last_container_fill_metrics) {
+            const fillMetrics = containerPlan.last_container_fill_metrics;
+            if (fillMetrics.is_partial) {
+                if (fillMetrics.is_low_efficiency) {
+                    warnings.push({
+                        type: 'warning',
+                        icon: 'fas fa-exclamation-triangle',
+                        message: `Partial fill warning: last ${fillMetrics.container_name} will be ${fillMetrics.fill_percentage}% filled - consider using other containers`
+                    });
+                } else {
+                    warnings.push({
+                        type: 'info',
+                        icon: 'fas fa-info-circle',
+                        message: `Last ${fillMetrics.container_name} will be ${fillMetrics.fill_percentage}% filled`
+                    });
+                }
+            }
+        }
+
+        if (warnings.length === 0) {
+            warningsContainer.innerHTML = '';
+            warningsContainer.style.display = 'none';
+            return;
+        }
+
+        const warningsHtml = warnings.map(warning => 
+            `<div class="alert alert-${warning.type} alert-sm mb-2">
+                <i class="${warning.icon} me-2"></i>
+                ${warning.message}
+            </div>`
+        ).join('');
+
+        warningsContainer.innerHTML = warningsHtml;
+        warningsContainer.style.display = 'block';
     }
 }
