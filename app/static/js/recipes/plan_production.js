@@ -1,11 +1,6 @@
 // Plan Production Main Script - Modular Version
 import { StockChecker } from './modules/stock-check.js';
 import { ContainerManager } from './modules/container-management.js';
-import { ContainerPlanFetcher } from './modules/container-plan-fetcher.js';
-import { ContainerRenderer } from './modules/container-renderer.js';
-import { ContainerProgressBar } from './modules/container-progress-bar.js';
-import { ManualContainerMode } from './modules/manual-container-mode.js';
-import { FormValidator } from './modules/validation.js';
 
 console.log('Plan production JavaScript loaded');
 
