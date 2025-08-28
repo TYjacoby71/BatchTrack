@@ -59,45 +59,33 @@ export class ContainerProgressBar {
         const projectedYield = this.containerManager.main.baseYield * this.containerManager.main.scale;
         let remainingYield = projectedYield;
 
+        console.log('🔍 FILL CALC: Starting with yield', projectedYield, 'containers:', containers.length);
+
         // Calculate how much goes into each container except the last
         for (let i = 0; i < containers.length - 1; i++) {
             const container = containers[i];
             const containerCapacity = parseFloat(container.capacity_in_yield_unit || container.capacity) || 0;
             const quantity = parseInt(container.quantity) || 1;
-            remainingYield -= (containerCapacity * quantity);
+            const containerTotal = containerCapacity * quantity;
+            remainingYield -= containerTotal;
+            console.log('🔍 FILL CALC: Container', i, 'uses', containerTotal, 'remaining:', remainingYield);
         }
 
         // Calculate fill percentage for the last container
         const lastContainer = containers[containers.length - 1];
         const lastContainerCapacity = parseFloat(lastContainer.capacity_in_yield_unit || lastContainer.capacity) || 0;
+        const lastQuantity = parseInt(lastContainer.quantity) || 1;
+
+        console.log('🔍 FILL CALC: Last container capacity:', lastContainerCapacity, 'quantity:', lastQuantity);
 
         if (lastContainerCapacity === 0) return 100;
 
+        // Calculate fill percentage for ONE unit of the last container type
         const fillPercentage = (remainingYield / lastContainerCapacity) * 100;
-        return Math.min(100, Math.max(0, fillPercentage));
-    }
-
-    // Helper method to get selected containers
-    getSelectedContainers() {
-        const containers = [];
-
-        document.querySelectorAll('[data-container-row]').forEach(row => {
-            const select = row.querySelector('.container-select');
-            const quantityInput = row.querySelector('.container-quantity');
-
-            if (select && quantityInput && select.value) {
-                const container = this.containerManager.containerPlan?.container_selection?.find(c => c.container_id == select.value);
-                if (container) {
-                    const quantity = parseInt(quantityInput.value) || 1;
-                    containers.push({
-                        ...container,
-                        quantity: quantity
-                    });
-                }
-            }
-        });
-
-        return containers;
+        const result = Math.min(100, Math.max(0, fillPercentage));
+        
+        console.log('🔍 FILL CALC: Last container fill:', result.toFixed(1), '%');
+        return result;
     }
 
     updateProgressBar(percentage) {
