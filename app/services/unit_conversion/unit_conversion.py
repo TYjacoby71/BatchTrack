@@ -298,7 +298,13 @@ class ConversionEngine:
                 'from': from_unit,
                 'to': to_unit,
                 'requires_attention': True,
-                'requires_drawer': True
+                'requires_drawer': True,
+                'drawer_payload': {
+                    'modal_url': f'/api/drawer-actions/conversion/unit-mapping-modal?from_unit={from_unit}&to_unit={to_unit}',
+                    'success_event': 'unitMappingCreated',
+                    'error_type': 'conversion',
+                    'error_code': 'MISSING_CUSTOM_MAPPING'
+                }
             }
 
         # Log it only if user is authenticated and has organization

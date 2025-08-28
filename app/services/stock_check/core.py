@@ -16,7 +16,8 @@ from flask_login import current_user
 from .types import StockCheckRequest, StockCheckResult, InventoryCategory, StockStatus
 from .handlers import IngredientHandler, ContainerHandler, ProductHandler
 from ..unit_conversion.unit_conversion import ConversionEngine
-from ..unit_conversion.drawer_errors import handle_conversion_error
+from ..unit_conversion.drawer_errors import generate_drawer_payload_for_conversion_error
+
 # FIFOService functionality moved to inventory_adjustment service
 
 logger = logging.getLogger(__name__)
@@ -91,33 +92,7 @@ class UniversalStockCheckService:
             # Handler performs category-specific stock checking
             result = handler.check_availability(request, org_id)
 
-            # Add conversion alerts if needed
-            if hasattr(result, 'conversion_details') and result.conversion_details:
-                conversion_type = result.conversion_details.get('conversion_type')
-                if conversion_type in ['custom', 'density'] and not result.conversion_details.get('requires_attention'):
-                    result.conversion_details['requires_attention'] = True
-
-                # Alert for missing custom mappings
-                if 'custom mapping' in str(result.error_message or '').lower():
-                    result.conversion_details['needs_unit_mapping'] = True
-                    result.conversion_details['unit_manager_link'] = '/conversion/units'
-                
-                # Add error code and drawer requirement for blocking errors
-                if 'missing_density' in str(result.error_message or '').lower():
-                    result.conversion_details['error_code'] = 'MISSING_DENSITY'
-                    result.conversion_details['requires_drawer'] = True
-                elif 'missing custom mapping' in str(result.error_message or '').lower():
-                    result.conversion_details['error_code'] = 'MISSING_CUSTOM_MAPPING'
-                    result.conversion_details['requires_drawer'] = True
-                elif 'unsupported conversion' in str(result.error_message or '').lower():
-                    result.conversion_details['error_code'] = 'UNSUPPORTED_CONVERSION'
-                    result.conversion_details['requires_drawer'] = True
-                elif 'unknown source unit' in str(result.error_message or '').lower():
-                    result.conversion_details['error_code'] = 'UNKNOWN_SOURCE_UNIT'
-                    result.conversion_details['requires_drawer'] = True
-                elif 'unknown target unit' in str(result.error_message or '').lower():
-                    result.conversion_details['error_code'] = 'UNKNOWN_TARGET_UNIT'
-                    result.conversion_details['requires_drawer'] = True
+            
 
 
             return result
@@ -231,48 +206,34 @@ class UniversalStockCheckService:
 
             # Check for blocking conversion errors that require drawers
             drawer_payload = None
-            all_available = not (has_insufficient or has_errors) # Consider errors as not available
+            all_available = not (has_insufficient or has_errors)
 
+            # Look for conversion errors that need drawer intervention
             for result_dict in stock_results:
                 if 'conversion_details' in result_dict and result_dict['conversion_details']:
                     conversion_details = result_dict['conversion_details']
-                    if conversion_details.get('error_code') and conversion_details.get('requires_drawer'):
-                        error_code = conversion_details['error_code']
-                        item_id = result_dict.get('item_id') # Get item_id from result_dict
-
-                        if error_code == 'MISSING_DENSITY':
-                            drawer_payload = {
-                                'modal_url': f'/api/drawer-actions/conversion/density-modal/{item_id}',
-                                'success_event': 'densityUpdated',
-                                'retry_operation': 'stock_check',
-                                'retry_data': {'recipe_id': recipe.id, 'scale': scale},
-                                'error_type': 'conversion',
-                                'error_code': error_code,
-                                'error_message': conversion_details.get('error_message', 'Conversion error occurred')
-                            }
-                        elif error_code in ['MISSING_CUSTOM_MAPPING', 'UNSUPPORTED_CONVERSION']:
-                            error_data = conversion_details.get('error_data', {})
-                            params = f"from_unit={error_data.get('from_unit', '')}&to_unit={error_data.get('to_unit', '')}"
-                            drawer_payload = {
-                                'modal_url': f'/api/drawer-actions/conversion/unit-mapping-modal?{params}',
-                                'success_event': 'unitMappingCreated',
-                                'retry_operation': 'stock_check',
-                                'retry_data': {'recipe_id': recipe.id, 'scale': scale},
-                                'error_type': 'conversion',
-                                'error_code': error_code,
-                                'error_message': conversion_details.get('error_message', 'Unit mapping required')
-                            }
-                        elif error_code in ['UNKNOWN_SOURCE_UNIT', 'UNKNOWN_TARGET_UNIT']:
-                            # For unknown units, we redirect to unit manager (no modal)
-                            drawer_payload = {
-                                'redirect_url': '/conversion/units',
-                                'error_type': 'conversion',
-                                'error_code': error_code,
-                                'error_message': f'Unknown unit requires manual setup: {conversion_details.get("error_message", "")}'
-                            }
-
+                    error_code = conversion_details.get('error_code')
+                    
+                    if error_code and conversion_details.get('requires_drawer'):
+                        # Use conversion service to generate drawer payload
+                        error_data = {
+                            'ingredient_id': result_dict.get('item_id'),
+                            'ingredient_name': result_dict.get('item_name'),
+                            'from_unit': conversion_details.get('from_unit'),
+                            'to_unit': conversion_details.get('to_unit'),
+                            'message': conversion_details.get('error_message', 'Conversion error')
+                        }
+                        
+                        drawer_payload = generate_drawer_payload_for_conversion_error(
+                            error_code=error_code,
+                            error_data=error_data,
+                            retry_operation='stock_check',
+                            retry_data={'recipe_id': recipe.id, 'scale': scale}
+                        )
+                        
                         # Only handle the first blocking error
-                        break
+                        if drawer_payload:
+                            break
 
             response = {
                 'status': overall_status,
@@ -282,7 +243,7 @@ class UniversalStockCheckService:
                 'error': None
             }
 
-            # Add drawer payload if we have a blocking error
+            # Add drawer payload if we have a blocking conversion error
             if drawer_payload:
                 response['drawer_payload'] = drawer_payload
             elif conversion_alerts:
