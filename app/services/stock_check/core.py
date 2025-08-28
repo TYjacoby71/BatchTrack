@@ -16,7 +16,6 @@ from flask_login import current_user
 from .types import StockCheckRequest, StockCheckResult, InventoryCategory, StockStatus
 from .handlers import IngredientHandler, ContainerHandler, ProductHandler
 from ..unit_conversion.unit_conversion import ConversionEngine
-from ..unit_conversion.drawer_errors import generate_drawer_payload_for_conversion_error
 
 # FIFOService functionality moved to inventory_adjustment service
 
@@ -204,49 +203,19 @@ class UniversalStockCheckService:
             else:
                 overall_status = 'ok'
 
-            # Check for blocking conversion errors that require drawers
-            drawer_payload = None
+            # Simple response - conversion errors with drawer payloads will be handled by frontend
             all_available = not (has_insufficient or has_errors)
-
-            # Look for conversion errors that need drawer intervention
-            for result_dict in stock_results:
-                if 'conversion_details' in result_dict and result_dict['conversion_details']:
-                    conversion_details = result_dict['conversion_details']
-                    error_code = conversion_details.get('error_code')
-                    
-                    if error_code and conversion_details.get('requires_drawer'):
-                        # Use conversion service to generate drawer payload
-                        error_data = {
-                            'ingredient_id': result_dict.get('item_id'),
-                            'ingredient_name': result_dict.get('item_name'),
-                            'from_unit': conversion_details.get('from_unit'),
-                            'to_unit': conversion_details.get('to_unit'),
-                            'message': conversion_details.get('error_message', 'Conversion error')
-                        }
-                        
-                        drawer_payload = generate_drawer_payload_for_conversion_error(
-                            error_code=error_code,
-                            error_data=error_data,
-                            retry_operation='stock_check',
-                            retry_data={'recipe_id': recipe.id, 'scale': scale}
-                        )
-                        
-                        # Only handle the first blocking error
-                        if drawer_payload:
-                            break
-
+            
             response = {
                 'status': overall_status,
-                'all_ok': all_available and not has_errors,
+                'all_ok': all_available,
                 'stock_check': stock_results,
                 'recipe_name': recipe.name,
                 'error': None
             }
 
-            # Add drawer payload if we have a blocking conversion error
-            if drawer_payload:
-                response['drawer_payload'] = drawer_payload
-            elif conversion_alerts:
+            # Add conversion alerts if any (but not drawer-required ones)
+            if conversion_alerts:
                 response['conversion_alerts'] = conversion_alerts
 
             return response
