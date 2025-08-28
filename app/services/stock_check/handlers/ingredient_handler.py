@@ -106,9 +106,16 @@ class IngredientHandler(BaseInventoryHandler):
                 # Stock check just reports the conversion error
                 conversion_details = {
                     'error_code': conversion_result['error_code'],
-                    'requires_drawer': conversion_result.get('requires_attention', False),
+                    'requires_attention': conversion_result.get('requires_attention', False),
                     'error_message': conversion_result.get('error_data', {}).get('message', 'Conversion failed')
                 }
+
+                # If conversion failed, we can't check stock properly
+                if not conversion_result.get('success'):
+                    conversion_details['requires_conversion_fix'] = True
+                    # Pass through drawer requirements from conversion engine
+                    if conversion_result.get('requires_drawer'):
+                        conversion_details['requires_drawer'] = True
 
                 # Return a result that shows in the table but indicates conversion error
                 return StockCheckResult(

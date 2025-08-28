@@ -50,7 +50,7 @@ class DrawerProtocol {
      */
     isKnownDrawerError(errorType, errorCode) {
         const drawerErrors = {
-            'conversion': ['MISSING_DENSITY', 'MISSING_CUSTOM_MAPPING', 'UNKNOWN_SOURCE_UNIT', 'UNKNOWN_TARGET_UNIT'],
+            'conversion': ['MISSING_DENSITY', 'MISSING_CUSTOM_MAPPING', 'UNSUPPORTED_CONVERSION', 'UNKNOWN_SOURCE_UNIT', 'UNKNOWN_TARGET_UNIT'],
             'recipe': ['MISSING_INGREDIENT', 'SCALING_VALIDATION', 'INVALID_YIELD'],
             'batch': ['CONTAINER_SHORTAGE', 'STUCK_BATCH', 'VALIDATION_FAILED'],
             'inventory': ['STOCK_SHORTAGE', 'LOW_STOCK_ALERT'],
@@ -70,6 +70,7 @@ class DrawerProtocol {
                 }
                 return this.openModal('/api/drawer-actions/conversion/density-modal/' + ingredientId, 'densityUpdated');
             case 'MISSING_CUSTOM_MAPPING':
+            case 'UNSUPPORTED_CONVERSION':
                 const params = new URLSearchParams({
                     from_unit: errorData.from_unit || '',
                     to_unit: errorData.to_unit || ''

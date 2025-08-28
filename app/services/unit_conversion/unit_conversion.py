@@ -222,13 +222,15 @@ class ConversionEngine:
                         'to_unit': to_unit, 
                         'ingredient_id': ingredient_id,
                         'ingredient_name': ingredient_name,
-                        'message': f"Missing density for conversion from {from_unit} ({from_u.unit_type}) to {to_unit} ({to_u.unit_type}). Please set ingredient density or add a custom unit mapping."
+                        'message': f"Missing density for conversion from {from_unit} ({from_u.unit_type}) to {to_unit} ({to_u.unit_type}). Please set ingredient density or add a custom unit mapping.",
+                        'requires_drawer': True
                     },
                     'conversion_type': 'density',
                     'density_used': None,
                     'from': from_unit,
                     'to': to_unit,
-                    'requires_attention': True
+                    'requires_attention': True,
+                    'requires_drawer': True
                 }
             used_density = density
 
@@ -267,24 +269,36 @@ class ConversionEngine:
                     'success': False,
                     'converted_value': None,
                     'error_code': 'MISSING_CUSTOM_MAPPING',
-                    'error_data': {'from_unit': from_unit, 'to_unit': to_unit, 'message': f"Cannot convert {from_unit} ({from_u.unit_type}) to {to_unit} ({to_u.unit_type}) without a custom mapping. Go to Unit Manager to create a mapping."},
+                    'error_data': {
+                        'from_unit': from_unit, 
+                        'to_unit': to_unit, 
+                        'message': f"Cannot convert {from_unit} ({from_u.unit_type}) to {to_unit} ({to_u.unit_type}) without a custom mapping. Go to Unit Manager to create a mapping.",
+                        'requires_drawer': True
+                    },
                     'conversion_type': 'custom',
                     'density_used': None,
                     'from': from_unit,
                     'to': to_unit,
-                    'requires_attention': True
+                    'requires_attention': True,
+                    'requires_drawer': True
                 }
         else:
             return {
                 'success': False,
                 'converted_value': None,
                 'error_code': 'UNSUPPORTED_CONVERSION',
-                'error_data': {'from_unit': from_unit, 'to_unit': to_unit, 'message': f"Cannot convert {from_unit} ({from_u.unit_type}) to {to_unit} ({to_u.unit_type}) without a custom mapping. Go to Unit Manager to create a mapping."},
+                'error_data': {
+                    'from_unit': from_unit, 
+                    'to_unit': to_unit, 
+                    'message': f"Cannot convert {from_unit} ({from_u.unit_type}) to {to_unit} ({to_u.unit_type}) without a custom mapping. Go to Unit Manager to create a mapping.",
+                    'requires_drawer': True
+                },
                 'conversion_type': 'unknown',
                 'density_used': None,
                 'from': from_unit,
                 'to': to_unit,
-                'requires_attention': True
+                'requires_attention': True,
+                'requires_drawer': True
             }
 
         # Log it only if user is authenticated and has organization
