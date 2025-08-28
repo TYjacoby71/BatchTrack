@@ -10,11 +10,11 @@ drawer_actions_bp = Blueprint('drawer_actions', __name__, url_prefix='/api/drawe
 
 @drawer_actions_bp.route('/conversion/density-modal/<int:ingredient_id>', methods=['GET'])
 @login_required
-@require_permission('view_inventory')
+@require_permission('recipe.view')
 def conversion_density_modal_get(ingredient_id):
     """Get density fix modal for ingredient"""
     print(f"🔧 DENSITY MODAL: Looking for ingredient ID {ingredient_id} for org {current_user.organization_id}")
-    
+
     ingredient = InventoryItem.query.filter_by(
         id=ingredient_id,
         organization_id=current_user.organization_id
@@ -23,7 +23,7 @@ def conversion_density_modal_get(ingredient_id):
     if not ingredient:
         print(f"🔧 DENSITY MODAL: Ingredient {ingredient_id} not found for org {current_user.organization_id}")
         return jsonify({'error': 'Ingredient not found'}), 404
-    
+
     print(f"🔧 DENSITY MODAL: Found ingredient: {ingredient.name}, current density: {ingredient.density}")
 
     try:
@@ -40,7 +40,7 @@ def conversion_density_modal_get(ingredient_id):
 
 @drawer_actions_bp.route('/conversion/density-modal/<int:ingredient_id>', methods=['POST'])
 @login_required
-@require_permission('edit_inventory')
+@require_permission('recipe.edit')
 def conversion_density_modal_post(ingredient_id):
     """Update ingredient density"""
     ingredient = InventoryItem.query.filter_by(
