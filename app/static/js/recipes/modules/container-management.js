@@ -16,7 +16,6 @@ class AutoFillContainerMode {
         this.container.planFetcher.fetchContainerPlan();
     }
 }
-
 // Container Management Main Controller
 export class ContainerManager {
     constructor(mainManager) {
@@ -99,6 +98,15 @@ export class ContainerManager {
 
     displayContainerError(message) {
         this.renderer.displayError(message);
+    }
+
+    clearContainerResults() {
+        this.containerPlan = null;
+        this.renderer.clearResults();
+    }
+
+    fetchContainerPlan() {
+        return this.planFetcher.fetchContainerPlan();
     }
 }
 

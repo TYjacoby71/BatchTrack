@@ -1,11 +1,6 @@
 // Plan Production Main Script - Modular Version
 import { StockChecker } from './modules/stock-check.js';
 import { ContainerManager } from './modules/container-management.js';
-import { ContainerPlanFetcher } from './modules/container-plan-fetcher.js';
-import { ContainerRenderer } from './modules/container-renderer.js';
-import { ContainerProgressBar } from './modules/container-progress-bar.js';
-import { ManualContainerMode } from './modules/manual-container-mode.js';
-import { FormValidator } from './modules/validation.js';
 
 console.log('Plan production JavaScript loaded');
 
@@ -22,9 +17,6 @@ class PlanProductionApp {
         // Initialize managers
         this.containerManager = new ContainerManager(this);
         this.stockChecker = new StockChecker(this);
-        this.validationManager = new FormValidator(this); // Changed to FormValidator as per the provided changes
-        // Removed BatchManager as it was not included in the provided changes.
-        // If BatchManager is still needed, it should be imported and instantiated here.
 
         this.init();
     }
@@ -33,8 +25,6 @@ class PlanProductionApp {
         console.log('🔍 INIT: Starting plan production app');
         console.log('🔍 INIT DEBUG: Container manager:', !!this.containerManager);
         console.log('🔍 INIT DEBUG: Stock checker:', !!this.stockChecker);
-        console.log('🔍 INIT DEBUG: Validation manager:', !!this.validationManager);
-        // console.log('🔍 INIT DEBUG: Batch manager:', !!this.batchManager); // Commented out as BatchManager is not used
 
         this.loadRecipeData();
         this.bindEvents();
@@ -140,8 +130,6 @@ class PlanProductionApp {
         }
 
         // Bind module events
-        // The following calls assume that the imported modules now have their own bindEvents or similar initialization methods
-        // that should be called here. If ContainerManager itself doesn't handle all sub-module binding, those would need explicit calls.
         if (this.containerManager && typeof this.containerManager.bindEvents === 'function') {
             this.containerManager.bindEvents();
         } else {
@@ -152,12 +140,6 @@ class PlanProductionApp {
         } else {
             console.warn('WARN: StockChecker.bindEvents not found or not applicable.');
         }
-        if (this.validationManager && typeof this.validationManager.bindEvents === 'function') {
-            this.validationManager.bindEvents();
-        } else {
-            console.warn('WARN: FormValidator.bindEvents not found or not applicable.');
-        }
-        // Removed call to BatchManager.bindEvents() as it's no longer imported.
     }
 
     updateProjectedYield() {
@@ -173,12 +155,15 @@ class PlanProductionApp {
     }
 
     updateValidation() {
-        // Ensure validationManager is an instance of FormValidator (or has a similar method)
-        if (this.validationManager && typeof this.validationManager.updateValidation === 'function') {
-            this.validationManager.updateValidation();
-        } else {
-            console.error('🚨 VALIDATION ERROR: Validation manager or updateValidation method not available.');
-        }
+        // Basic validation - check if batch type is selected
+        const batchTypeSelect = document.getElementById('batchType');
+        const isValid = batchTypeSelect && batchTypeSelect.value !== '';
+
+        console.log('🔍 VALIDATION: Checking form validity...');
+        console.log('🔍 VALIDATION: Valid:', isValid, 'Reasons:', isValid ? [] : ['Select batch type'], 'Warnings:', []);
+
+        // You can add more validation logic here as needed
+        return isValid;
     }
 
     handleFormSubmit(e) {
@@ -194,7 +179,7 @@ class PlanProductionApp {
             batchType: this.batchType,
             requiresContainers: this.requiresContainers
         });
-        
+
         // Additional submission logic might go here, potentially using other modules.
     }
 
