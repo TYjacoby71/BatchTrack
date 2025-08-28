@@ -71,18 +71,30 @@ class IngredientHandler(BaseInventoryHandler):
             )
 
             if conversion_result['success']:
-                # Successful conversion
-                available_converted = conversion_result['converted_value']
+                # Convert needed amount to stock units for comparison
+                needed_in_stock_units = conversion_result['converted_value']
+                
+                # Convert available stock to recipe units for display
+                stock_to_recipe_result = ConversionEngine.convert_units(
+                    amount=float(total_available),
+                    from_unit=stock_unit,
+                    to_unit=recipe_unit,
+                    ingredient_id=ingredient.id,
+                    density=ingredient.density
+                )
+                
+                available_in_recipe_units = stock_to_recipe_result['converted_value'] if stock_to_recipe_result['success'] else total_available
+                
                 conversion_details = {
                     'conversion_type': conversion_result.get('conversion_type', 'unknown'),
                     'density_used': conversion_result.get('density_used'),
                     'requires_attention': conversion_result.get('requires_attention', False)
                 }
 
-                # Check if enough stock (planned deduction check)
+                # Check if enough stock (compare in stock units)
                 status = self._determine_status_with_thresholds(
-                    available_converted, 
-                    request.quantity_needed,
+                    needed_in_stock_units, 
+                    total_available,
                     ingredient
                 )
 
@@ -92,13 +104,13 @@ class IngredientHandler(BaseInventoryHandler):
                     category=InventoryCategory.INGREDIENT,
                     needed_quantity=request.quantity_needed,
                     needed_unit=recipe_unit,
-                    available_quantity=available_converted,
+                    available_quantity=available_in_recipe_units,  # Show available in recipe units
                     available_unit=recipe_unit,
                     raw_stock=total_available,
                     stock_unit=stock_unit,
                     status=status,
                     formatted_needed=self._format_quantity_display(request.quantity_needed, recipe_unit),
-                    formatted_available=self._format_quantity_display(available_converted, recipe_unit),
+                    formatted_available=self._format_quantity_display(available_in_recipe_units, recipe_unit),
                     conversion_details=conversion_details
                 )
             else:
