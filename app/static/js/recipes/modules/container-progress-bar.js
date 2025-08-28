@@ -83,7 +83,7 @@ export class ContainerProgressBar {
         // Calculate fill percentage for ONE unit of the last container type
         const fillPercentage = (remainingYield / lastContainerCapacity) * 100;
         const result = Math.min(100, Math.max(0, fillPercentage));
-        
+
         console.log('🔍 FILL CALC: Last container fill:', result.toFixed(1), '%');
         return result;
     }
