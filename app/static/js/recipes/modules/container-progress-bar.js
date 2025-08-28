@@ -72,7 +72,7 @@ export class ContainerProgressBar {
                 // Last container type - calculate partial fill
                 const fullContainersOfThisType = container.quantity - 1;
                 const yieldInFullContainers = fullContainersOfThisType * container.capacity;
-                remainingYieldToAllocate -= yieldInFullContainers;
+                remainingYieldToAllocate -= yieldInThisContainerType;
 
                 // The remaining yield goes into the final container
                 if (remainingYieldToAllocate > 0 && container.capacity > 0) {
@@ -168,13 +168,13 @@ export class ContainerProgressBar {
         if (percentage >= 97) {  // Only show fill efficiency if we have containment
             // Check if we're in auto-fill mode and have backend warnings
             const autoFillEnabled = document.getElementById('autoFillEnabled')?.checked;
-            
+
             if (autoFillEnabled && this.containerManager.containerPlan?.warnings) {
                 // Use backend warnings for auto-fill mode
                 const backendFillWarnings = this.containerManager.containerPlan.warnings.filter(warning => 
                     warning.includes('partially filled') || warning.includes('Partial fill warning')
                 );
-                
+
                 if (backendFillWarnings.length > 0) {
                     // Use the first fill efficiency warning from backend
                     const warning = backendFillWarnings[0];
@@ -232,5 +232,59 @@ export class ContainerProgressBar {
 
         if (percentSpan) percentSpan.textContent = '0%';
         if (messageSpan) messageSpan.textContent = '';
+    }
+
+    displayWarnings(containerPlan) {
+        const warningsContainer = this.container.containerCard.querySelector('.container-warnings');
+        if (!warningsContainer) return;
+
+        const warnings = [];
+
+        // Generate containment warnings
+        if (containerPlan.containment_metrics && !containerPlan.containment_metrics.is_contained) {
+            const remaining = containerPlan.containment_metrics.remaining_yield;
+            const unit = containerPlan.containment_metrics.yield_unit;
+            warnings.push({
+                type: 'danger',
+                icon: 'fas fa-exclamation-circle',
+                message: `Insufficient capacity: ${remaining.toFixed(1)} ${unit} remaining`
+            });
+        }
+
+        // Generate fill efficiency warnings
+        if (containerPlan.last_container_fill_metrics) {
+            const fillMetrics = containerPlan.last_container_fill_metrics;
+            if (fillMetrics.is_partial) {
+                if (fillMetrics.is_low_efficiency) {
+                    warnings.push({
+                        type: 'warning',
+                        icon: 'fas fa-exclamation-triangle',
+                        message: `Partial fill warning: last ${fillMetrics.container_name} will be ${fillMetrics.fill_percentage}% filled - consider using other containers`
+                    });
+                } else {
+                    warnings.push({
+                        type: 'info',
+                        icon: 'fas fa-info-circle',
+                        message: `Last ${fillMetrics.container_name} will be ${fillMetrics.fill_percentage}% filled`
+                    });
+                }
+            }
+        }
+
+        if (warnings.length === 0) {
+            warningsContainer.innerHTML = '';
+            warningsContainer.style.display = 'none';
+            return;
+        }
+
+        const warningsHtml = warnings.map(warning => 
+            `<div class="alert alert-${warning.type} alert-sm mb-2">
+                <i class="${warning.icon} me-2"></i>
+                ${warning.message}
+            </div>`
+        ).join('');
+
+        warningsContainer.innerHTML = warningsHtml;
+        warningsContainer.style.display = 'block';
     }
 }

@@ -167,21 +167,17 @@ def _create_greedy_strategy(container_options: List[Dict[str, Any]], total_yield
     else:
         containment_percentage = 100.0 if total_capacity > 0 else 0.0
 
-    # Create warnings - separate containment from fill efficiency
-    warnings = []
-    containment_warnings = []
-    fill_efficiency_warnings = []
+    # Calculate container fill metrics for frontend
+    containment_metrics = {
+        'is_contained': remaining_yield <= 0,
+        'remaining_yield': remaining_yield if remaining_yield > 0 else 0,
+        'yield_unit': yield_unit
+    }
     
-    # CONTAINMENT WARNINGS (critical - can we hold the batch?)
-    if remaining_yield > 0:
-        containment_warnings.append(f"Insufficient capacity: {remaining_yield:.1f} {yield_unit} remaining")
-    
-    # FILL EFFICIENCY WARNINGS (optimization - how well are containers used?)
-    if selected_containers and total_capacity > 0 and remaining_yield <= 0:  # Only if contained
-        # Calculate fill efficiency of the last container
-        last_container = selected_containers[-1]
-        
-        # Calculate how much yield goes into each container type
+    # Calculate last container fill efficiency
+    last_container_fill_metrics = None
+    if selected_containers and total_capacity > 0 and remaining_yield <= 0:
+        # Calculate how much yield goes into each container type (greedy algorithm)
         remaining_yield_to_allocate = total_yield
         
         for i, container in enumerate(selected_containers):
@@ -195,32 +191,28 @@ def _create_greedy_strategy(container_options: List[Dict[str, Any]], total_yield
                 if remaining_yield_to_allocate > 0 and container['capacity'] > 0:
                     last_container_fill_percentage = (remaining_yield_to_allocate / container['capacity']) * 100
                     
-                    # Apply fill efficiency rules - THESE WARNINGS WILL BE SENT TO FRONTEND
-                    if last_container_fill_percentage < 100:
-                        if last_container_fill_percentage < 75:
-                            fill_efficiency_warnings.append(f"Partial fill warning: last container will be filled less than 75% - consider using other containers")
-                        else:
-                            fill_efficiency_warnings.append(f"Last container partially filled to {last_container_fill_percentage:.1f}%")
+                    last_container_fill_metrics = {
+                        'container_name': container['container_name'],
+                        'fill_percentage': round(last_container_fill_percentage, 1),
+                        'is_partial': last_container_fill_percentage < 100,
+                        'is_low_efficiency': last_container_fill_percentage < 75
+                    }
                 
-                logger.info(f"Backend partial fill calculation: {last_container_fill_percentage:.1f}% fill for {container['container_name']}")
+                logger.info(f"Backend calculated last container fill: {last_container_fill_percentage:.1f}% for {container['container_name']}")
                 break
             else:
                 # For non-last containers, all are filled completely
                 yield_in_this_container_type = container['containers_needed'] * container['capacity']
                 remaining_yield_to_allocate -= yield_in_this_container_type
-    
-    # Combine all warnings
-    warnings.extend(containment_warnings)
-    warnings.extend(fill_efficiency_warnings)
-
-    # Debug logging to verify warnings are being sent
-    logger.info(f"Backend sending {len(warnings)} warnings to frontend: {warnings}")
 
     return {
         'success': True,
         'container_selection': selected_containers,
         'total_capacity': total_capacity,
         'containment_percentage': containment_percentage,
-        'warnings': warnings,
-        'strategy_type': 'greedy_fill'
+        'containment_metrics': containment_metrics,
+        'last_container_fill_metrics': last_container_fill_metrics,
+        'strategy_type': 'greedy_fill',
+        'uses_greedy_algorithm': True,  # Confirms it mixes/matches containers optimally
+        'warnings': []  # Empty - frontend will generate messages from metrics
     }
