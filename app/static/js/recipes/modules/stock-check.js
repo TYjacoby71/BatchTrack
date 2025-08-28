@@ -160,6 +160,7 @@ export class StockCheckManager {
                 }
                 status = isAvailable ? 'OK' : 'NEEDED';
                 statusClass = isAvailable ? 'bg-success' : 'bg-danger';
+                displayAvailable = available.toFixed(2);
             }
 
             html += `<tr>
