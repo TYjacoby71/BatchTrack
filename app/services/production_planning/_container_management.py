@@ -181,19 +181,31 @@ def _create_greedy_strategy(container_options: List[Dict[str, Any]], total_yield
         # Calculate fill efficiency of the last container
         last_container = selected_containers[-1]
         
-        # Calculate how much goes into the last container
-        yield_for_previous_containers = sum(c['capacity'] * c['containers_needed'] for c in selected_containers[:-1])
-        yield_for_last_containers = (last_container['containers_needed'] - 1) * last_container['capacity']
-        remaining_for_final_container = total_yield - yield_for_previous_containers - yield_for_last_containers
+        # Calculate how much yield goes into each container type
+        remaining_yield_to_allocate = total_yield
         
-        last_container_fill_percentage = (remaining_for_final_container / last_container['capacity'] * 100) if last_container['capacity'] > 0 else 100
-        
-        # Apply fill efficiency rules
-        if last_container_fill_percentage < 100:
-            if last_container_fill_percentage < 75:
-                fill_efficiency_warnings.append(f"Partial fill warning: last container will be filled less than 75% - consider using other containers")
+        for i, container in enumerate(selected_containers):
+            if i == len(selected_containers) - 1:  # Last container type
+                # For the last container type, calculate partial fill
+                full_containers_of_this_type = container['containers_needed'] - 1
+                yield_in_full_containers = full_containers_of_this_type * container['capacity']
+                remaining_yield_to_allocate -= yield_in_full_containers
+                
+                # The remaining yield goes into the final container
+                if remaining_yield_to_allocate > 0 and container['capacity'] > 0:
+                    last_container_fill_percentage = (remaining_yield_to_allocate / container['capacity']) * 100
+                    
+                    # Apply fill efficiency rules
+                    if last_container_fill_percentage < 100:
+                        if last_container_fill_percentage < 75:
+                            fill_efficiency_warnings.append(f"Partial fill warning: last container will be filled {last_container_fill_percentage:.1f}% - consider using other containers")
+                        else:
+                            fill_efficiency_warnings.append(f"Last container partially filled to {last_container_fill_percentage:.1f}%")
+                break
             else:
-                fill_efficiency_warnings.append(f"Last container partially filled to {last_container_fill_percentage:.1f}%")
+                # For non-last containers, all are filled completely
+                yield_in_this_container_type = container['containers_needed'] * container['capacity']
+                remaining_yield_to_allocate -= yield_in_this_container_type
     
     # Combine all warnings
     warnings.extend(containment_warnings)

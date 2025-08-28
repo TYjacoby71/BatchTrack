@@ -55,40 +55,41 @@ export class ContainerProgressBar {
     calculateLastContainerFillPercentage() {
         // Only calculate if we have container plan data and we're in manual mode
         if (!this.containerManager.containerPlan?.container_selection) return 100;
-        
+
         const containers = this.getSelectedContainersFromDOM();
         if (containers.length === 0) return 100;
 
         const projectedYield = this.containerManager.main.baseYield * this.containerManager.main.scale;
-        let remainingYield = projectedYield;
-
         console.log('🔍 FILL CALC: Starting with yield', projectedYield, 'containers:', containers.length);
 
-        // Calculate how much goes into each container except the last
-        for (let i = 0; i < containers.length - 1; i++) {
+        // Calculate how much yield goes into each container type
+        let remainingYieldToAllocate = projectedYield;
+
+        for (let i = 0; i < containers.length; i++) {
             const container = containers[i];
-            const containerCapacity = parseFloat(container.capacity_in_yield_unit || container.capacity) || 0;
-            const quantity = parseInt(container.quantity) || 1;
-            const containerTotal = containerCapacity * quantity;
-            remainingYield -= containerTotal;
-            console.log('🔍 FILL CALC: Container', i, 'uses', containerTotal, 'remaining:', remainingYield);
+
+            if (i === containers.length - 1) {
+                // Last container type - calculate partial fill
+                const fullContainersOfThisType = container.quantity - 1;
+                const yieldInFullContainers = fullContainersOfThisType * container.capacity;
+                remainingYieldToAllocate -= yieldInFullContainers;
+
+                // The remaining yield goes into the final container
+                if (remainingYieldToAllocate > 0 && container.capacity > 0) {
+                    const lastContainerFillPercentage = (remainingYieldToAllocate / container.capacity) * 100;
+                    console.log('🔍 FILL CALC: Last container fill:', lastContainerFillPercentage.toFixed(1), '%');
+                    return Math.min(100, Math.max(0, lastContainerFillPercentage));
+                }
+                break;
+            } else {
+                // For non-last containers, all are filled completely
+                const yieldInThisContainerType = container.quantity * container.capacity;
+                remainingYieldToAllocate -= yieldInThisContainerType;
+            }
         }
 
-        // Calculate fill percentage for the last container
-        const lastContainer = containers[containers.length - 1];
-        const lastContainerCapacity = parseFloat(lastContainer.capacity_in_yield_unit || lastContainer.capacity) || 0;
-        const lastQuantity = parseInt(lastContainer.quantity) || 1;
-
-        console.log('🔍 FILL CALC: Last container capacity:', lastContainerCapacity, 'quantity:', lastQuantity);
-
-        if (lastContainerCapacity === 0) return 100;
-
-        // Calculate fill percentage for ONE unit of the last container type
-        const fillPercentage = (remainingYield / lastContainerCapacity) * 100;
-        const result = Math.min(100, Math.max(0, fillPercentage));
-
-        console.log('🔍 FILL CALC: Last container fill:', result.toFixed(1), '%');
-        return result;
+        console.log('🔍 FILL CALC: Last container fill:', '100.0', '%');
+        return 100;
     }
 
     // Local method to get containers from DOM safely
