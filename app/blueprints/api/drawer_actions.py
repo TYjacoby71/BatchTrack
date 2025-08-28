@@ -10,7 +10,7 @@ drawer_actions_bp = Blueprint('drawer_actions', __name__, url_prefix='/api/drawe
 
 @drawer_actions_bp.route('/conversion/density-modal/<int:ingredient_id>', methods=['GET'])
 @login_required
-@require_permission('recipe.view')
+@require_permission('recipes.view')
 def conversion_density_modal_get(ingredient_id):
     """Get density fix modal for ingredient"""
     print(f"🔧 DENSITY MODAL: Looking for ingredient ID {ingredient_id} for org {current_user.organization_id}")
@@ -40,7 +40,7 @@ def conversion_density_modal_get(ingredient_id):
 
 @drawer_actions_bp.route('/conversion/density-modal/<int:ingredient_id>', methods=['POST'])
 @login_required
-@require_permission('recipe.edit')
+@require_permission('recipes.edit')
 def conversion_density_modal_post(ingredient_id):
     """Update ingredient density"""
     ingredient = InventoryItem.query.filter_by(
@@ -74,7 +74,7 @@ def conversion_density_modal_post(ingredient_id):
 
 @drawer_actions_bp.route('/api/drawer-actions/conversion/unit-mapping-modal', methods=['GET'])
 @login_required
-@require_permission('view_inventory')
+@require_permission('inventory.view')
 def conversion_unit_mapping_modal_get():
     """Get unit mapping creation modal"""
     from_unit = request.args.get('from_unit', '')
@@ -95,7 +95,7 @@ def conversion_unit_mapping_modal_get():
 
 @drawer_actions_bp.route('/conversion/unit-mapping-modal', methods=['POST'])
 @login_required
-@require_permission('edit_inventory')
+@require_permission('inventory.edit')
 def unit_mapping_modal_post():
     """Create unit mapping"""
     try:
