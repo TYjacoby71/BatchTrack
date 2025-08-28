@@ -195,12 +195,14 @@ def _create_greedy_strategy(container_options: List[Dict[str, Any]], total_yield
                 if remaining_yield_to_allocate > 0 and container['capacity'] > 0:
                     last_container_fill_percentage = (remaining_yield_to_allocate / container['capacity']) * 100
                     
-                    # Apply fill efficiency rules
+                    # Apply fill efficiency rules - THESE WARNINGS WILL BE SENT TO FRONTEND
                     if last_container_fill_percentage < 100:
                         if last_container_fill_percentage < 75:
-                            fill_efficiency_warnings.append(f"Partial fill warning: last container will be filled {last_container_fill_percentage:.1f}% - consider using other containers")
+                            fill_efficiency_warnings.append(f"Partial fill warning: last container will be filled less than 75% - consider using other containers")
                         else:
                             fill_efficiency_warnings.append(f"Last container partially filled to {last_container_fill_percentage:.1f}%")
+                
+                logger.info(f"Backend partial fill calculation: {last_container_fill_percentage:.1f}% fill for {container['container_name']}")
                 break
             else:
                 # For non-last containers, all are filled completely
@@ -210,6 +212,9 @@ def _create_greedy_strategy(container_options: List[Dict[str, Any]], total_yield
     # Combine all warnings
     warnings.extend(containment_warnings)
     warnings.extend(fill_efficiency_warnings)
+
+    # Debug logging to verify warnings are being sent
+    logger.info(f"Backend sending {len(warnings)} warnings to frontend: {warnings}")
 
     return {
         'success': True,
