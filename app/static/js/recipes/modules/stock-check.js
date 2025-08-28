@@ -257,7 +257,7 @@ export class StockCheckManager {
             if (item.conversion_details?.error_code && item.conversion_details?.requires_drawer) {
                 const errorCode = item.conversion_details.error_code;
                 const errorData = {
-                    ...item.conversion_details,
+                    ...item.conversion_details.error_data,
                     ingredient_id: item.item_id || item.ingredient_id || item.id,
                     ingredient_name: item.item_name || item.ingredient_name || item.name,
                     requires_drawer: true
