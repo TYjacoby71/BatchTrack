@@ -1,60 +1,54 @@
+
 <div class="modal fade" id="densityFixModal" tabindex="-1" aria-labelledby="densityFixModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="densityFixModalLabel">
-                    <i class="fas fa-weight-hanging"></i>
-                    Set Density for {{ ingredient.name }}
+                    <i class="fas fa-balance-scale text-warning"></i>
+                    Fix Missing Density
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <div class="alert alert-info">
-                    <i class="fas fa-info-circle"></i>
-                    <strong>Density Required:</strong> To convert between weight and volume units, we need the density of {{ ingredient.name }}.
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>Density Required:</strong> To convert between volume and weight units for 
+                    <strong>{{ ingredient.name }}</strong>, we need its density value.
                 </div>
-
+                
                 <form id="densityFixForm">
                     <div class="mb-3">
                         <label for="densityInput" class="form-label">
-                            Density (g/ml or g/cm³)
+                            Density (g/ml):
+                            <small class="text-muted">How many grams per milliliter</small>
                         </label>
                         <input type="number" 
                                class="form-control" 
                                id="densityInput" 
                                step="0.001" 
-                               min="0.001"
-                               value="{{ suggested_density or ingredient.density or '' }}"
-                               placeholder="e.g., 1.0 for water">
+                               min="0.001" 
+                               max="50"
+                               placeholder="e.g., 0.96 for beeswax"
+                               required>
                         <div class="form-text">
-                            {% if suggested_density %}
-                                <i class="fas fa-lightbulb text-warning"></i>
-                                Suggested density based on category: {{ suggested_density }} g/ml
-                            {% endif %}
+                            Common densities: Water (1.0), Oil (0.91), Honey (1.42), Beeswax (0.96)
                         </div>
                     </div>
-
-                    {% if ingredient.category %}
-                    <div class="mb-3">
-                        <small class="text-muted">
-                            <i class="fas fa-tag"></i>
-                            Category: {{ ingredient.category.name }}
-                            {% if ingredient.category.default_density %}
-                                (Default: {{ ingredient.category.default_density }} g/ml)
-                            {% endif %}
-                        </small>
-                    </div>
-                    {% endif %}
                 </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    Cancel
-                </button>
-                <button type="button" class="btn btn-primary" id="saveDensityBtn">
-                    <i class="fas fa-save"></i>
-                    Save Density
-                </button>
+                
+                <div class="d-flex gap-2 justify-content-between">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                        Cancel
+                    </button>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-outline-info" onclick="openDensityReference()">
+                            <i class="fas fa-book"></i> Reference
+                        </button>
+                        <button type="button" class="btn btn-primary" id="saveDensityBtn">
+                            <i class="fas fa-save"></i> Save Density
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -66,18 +60,18 @@ document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('densityFixForm');
     const saveBtn = document.getElementById('saveDensityBtn');
     const densityInput = document.getElementById('densityInput');
-
+    
     if (saveBtn) {
         saveBtn.addEventListener('click', function() {
             const density = parseFloat(densityInput.value);
-
+            
             if (!density || density <= 0) {
                 alert('Please enter a valid density greater than 0');
                 return;
             }
-
+            
             // Save density via API
-            fetch(`/api/drawer-actions/conversion/density-modal/{{ ingredient.id }}`, {
+            fetch('/api/drawer-actions/conversion/density-modal/{{ ingredient.id }}', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -90,33 +84,33 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    // Close modal and trigger callback if provided
+                    // Close modal and trigger callback
                     const modalInstance = bootstrap.Modal.getInstance(modal);
                     modalInstance.hide();
-
-                    // Dispatch custom event for parent to handle
+                    
+                    // Dispatch custom event for parent
                     window.dispatchEvent(new CustomEvent('densityUpdated', {
                         detail: {
-                            ingredientId: {{ ingredient.id }},
-                            newDensity: density,
-                            ingredientName: '{{ ingredient.name }}'
+                            ingredient_id: {{ ingredient.id }},
+                            ingredient_name: '{{ ingredient.name }}',
+                            density: density,
+                            message: data.message
                         }
                     }));
-
-                    // Show success message
-                    if (typeof showToast === 'function') {
-                        showToast('success', data.message);
-                    }
                 } else {
                     alert('Error: ' + data.error);
                 }
             })
             .catch(error => {
-                console.error('Error updating density:', error);
-                alert('Failed to update density');
+                console.error('Error saving density:', error);
+                alert('Failed to save density. Please try again.');
             });
         });
     }
 });
+
+function openDensityReference() {
+    window.open('/conversion/units', '_blank');
+}
 </script>
 </div>
