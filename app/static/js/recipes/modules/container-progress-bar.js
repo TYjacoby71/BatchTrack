@@ -53,7 +53,7 @@ export class ContainerProgressBar {
 
     // Add method to calculate last container fill percentage
     calculateLastContainerFillPercentage() {
-        const containers = this.getSelectedContainers();
+        const containers = this.containerManager.getSelectedContainers ? this.containerManager.getSelectedContainers() : [];
         if (containers.length === 0) return 100;
 
         const projectedYield = this.containerManager.main.baseYield * this.containerManager.main.scale;
