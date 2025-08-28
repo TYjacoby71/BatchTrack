@@ -62,12 +62,30 @@ export class StockCheckManager {
             this.stockCheckResults = await response.json();
             console.log('🔍 STOCK CHECK: Results received:', this.stockCheckResults);
 
-            this.displayStockResults(this.stockCheckResults);
+            // Check for drawer payload in response (universal drawer protocol)
+            if (this.stockCheckResults.drawer_payload) {
+                console.log('🔍 STOCK CHECK: Drawer payload detected, delegating to universal protocol');
+                
+                // Set up retry callback for this specific operation
+                const retryCallback = () => {
+                    console.log('🔍 STOCK CHECK: Retrying after drawer resolution');
+                    this.performStockCheck();
+                };
 
-            // Handle any conversion errors that need drawer intervention
-            if (this.stockCheckResults.stock_check) {
-                this.handleConversionErrors(this.stockCheckResults.stock_check);
+                // Dispatch to universal drawer protocol
+                window.dispatchEvent(new CustomEvent('openDrawer', {
+                    detail: {
+                        ...this.stockCheckResults.drawer_payload,
+                        retry_callback: retryCallback
+                    }
+                }));
+                
+                // Still display the partial results we got
+                this.displayStockResults(this.stockCheckResults);
+                return;
             }
+
+            this.displayStockResults(this.stockCheckResults);
         } catch (error) {
             console.error('🚨 STOCK CHECK ERROR:', error);
 
@@ -169,9 +187,6 @@ export class StockCheckManager {
 
         stockResults.innerHTML = html;
 
-        // Check for conversion errors that need wall of drawers treatment
-        this.handleConversionErrors(this.stockCheckResults.stock_check || []);
-
         // Update the main status
         this.main.stockChecked = true;
         this.main.stockCheckPassed = allIngredientsAvailable;
@@ -252,154 +267,7 @@ export class StockCheckManager {
         link.click();
     }
 
-    handleConversionErrors(stockResults) {
-        for (const item of stockResults) {
-            if (item.conversion_details?.error_code && item.conversion_details?.requires_drawer) {
-                const errorCode = item.conversion_details.error_code;
-                
-                console.log(`🔍 STOCK CHECK: Conversion error ${errorCode} requires drawer intervention`);
-
-                // Prepare drawer request data
-                const drawerData = {
-                    error_type: 'conversion',
-                    error_code: errorCode,
-                    error_message: item.conversion_details.error_message || 'Conversion error occurred',
-                    modal_url: this.getModalUrlForError(errorCode, item),
-                    success_event: this.getSuccessEventForError(errorCode),
-                    retry_callback: () => {
-                        console.log('🔍 RETRYING STOCK CHECK after fixing conversion error...');
-                        this.performStockCheck();
-                    }
-                };
-
-                // Send universal drawer request
-                window.dispatchEvent(new CustomEvent('openDrawer', {
-                    detail: drawerData
-                }));
-            } else if (item.conversion_details?.error_code) {
-                // Log non-drawer errors for debugging
-                console.log(`🔍 STOCK CHECK: Conversion error ${item.conversion_details.error_code} - no drawer needed`);
-            }
-        }
-    }
-
-    getModalUrlForError(errorCode, item) {
-        switch (errorCode) {
-            case 'MISSING_DENSITY':
-                return `/api/drawer-actions/conversion/density-modal/${item.item_id || item.ingredient_id || item.id}`;
-            
-            case 'MISSING_CUSTOM_MAPPING':
-            case 'UNSUPPORTED_CONVERSION':
-                const params = new URLSearchParams({
-                    from_unit: item.conversion_details.error_data?.from_unit || '',
-                    to_unit: item.conversion_details.error_data?.to_unit || ''
-                });
-                return `/api/drawer-actions/conversion/unit-mapping-modal?${params}`;
-            
-            case 'UNKNOWN_SOURCE_UNIT':
-            case 'UNKNOWN_TARGET_UNIT':
-                // For unknown units, we redirect to unit manager instead of modal
-                window.open('/conversion/units', '_blank');
-                return null;
-            
-            default:
-                return null;
-        }
-    }
-
-    getSuccessEventForError(errorCode) {
-        switch (errorCode) {
-            case 'MISSING_DENSITY':
-                return 'densityUpdated';
-            case 'MISSING_CUSTOM_MAPPING':
-            case 'UNSUPPORTED_CONVERSION':
-                return 'unitMappingCreated';
-            default:
-                return null;
-        }
-    }
-
-    retryStockCheck() {
-        console.log('🔍 RETRY: Retrying stock check after fixing conversion error');
-        this.performStockCheck();
-    }
-
-    async openDensityModal(errorDetails) {
-        try {
-            const response = await fetch(`/api/drawer-actions/density-modal/${errorDetails.ingredient_id}`);
-            const data = await response.json();
-
-            if (data.success) {
-                // Inject modal HTML into page
-                document.body.insertAdjacentHTML('beforeend', data.modal_html);
-
-                // Show modal
-                const modal = new bootstrap.Modal(document.getElementById('densityFixModal'));
-                modal.show();
-
-                // Listen for density update
-                window.addEventListener('densityUpdated', (event) => {
-                    console.log('🔍 DENSITY UPDATED:', event.detail);
-                    // Retry stock check automatically
-                    this.performStockCheck();
-                }, { once: true });
-
-                // Clean up modal when closed
-                document.getElementById('densityFixModal').addEventListener('hidden.bs.modal', function() {
-                    this.remove();
-                }, { once: true });
-            }
-        } catch (error) {
-            console.error('🔍 DENSITY MODAL ERROR:', error);
-        }
-    }
-
-    async openUnitMappingModal(errorDetails) {
-        try {
-            const params = new URLSearchParams({
-                from_unit: errorDetails.from_unit,
-                to_unit: errorDetails.to_unit
-            });
-
-            const response = await fetch(`/api/drawer-actions/unit-mapping-modal?${params}`);
-            const data = await response.json();
-
-            if (data.success) {
-                // Inject modal HTML into page
-                document.body.insertAdjacentHTML('beforeend', data.modal_html);
-
-                // Show modal
-                const modal = new bootstrap.Modal(document.getElementById('unitMappingFixModal'));
-                modal.show();
-
-                // Listen for mapping creation
-                window.addEventListener('unitMappingCreated', (event) => {
-                    console.log('🔍 UNIT MAPPING CREATED:', event.detail);
-                    // Retry stock check automatically
-                    this.retryStockCheck();
-                }, { once: true });
-
-                // Clean up modal when closed
-                document.getElementById('unitMappingFixModal').addEventListener('hidden.bs.modal', function() {
-                    this.remove();
-                }, { once: true });
-            }
-        } catch (error) {
-            console.error('🔍 UNIT MAPPING MODAL ERROR:', error);
-        }
-    }
-
-    openUnitCreationModal(errorDetails) {
-        // For now, redirect to unit manager
-        // TODO: Implement inline unit creation modal
-        window.open('/conversion/units', '_blank');
-    }
-
-    retryStockCheck() {
-        console.log('🔍 RETRYING STOCK CHECK after fixing conversion error...');
-        // Trigger stock check again
-        this.performStockCheck();
-    }
+    
 }
 
 // Export alias for backward compatibility

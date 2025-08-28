@@ -20,46 +20,70 @@ def handle_conversion_error(conversion_result):
     error_data = conversion_result.get('error_data', {})
     
     if error_code == 'MISSING_DENSITY':
+        ingredient_id = error_data.get('ingredient_id')
         return {
             'requires_drawer': True,
             'drawer_type': 'conversion.density_fix',
             'drawer_action': 'open_density_modal',
             'drawer_data': {
-                'ingredient_id': error_data.get('ingredient_id'),
+                'ingredient_id': ingredient_id,
                 'ingredient_name': error_data.get('ingredient_name'),
                 'from_unit': error_data.get('from_unit'),
                 'to_unit': error_data.get('to_unit'),
-                'api_endpoint': f"/api/drawer-actions/conversion/density-modal/{error_data.get('ingredient_id')}",
+                'api_endpoint': f"/api/drawer-actions/conversion/density-modal/{ingredient_id}",
                 'help_link': '/conversion/units'
+            },
+            'drawer_payload': {
+                'modal_url': f'/api/drawer-actions/conversion/density-modal/{ingredient_id}',
+                'success_event': 'densityUpdated',
+                'error_type': 'conversion',
+                'error_code': 'MISSING_DENSITY',
+                'error_message': 'Missing density for conversion'
             },
             'suggested_density': _get_suggested_density(error_data.get('ingredient_name', '')),
             'error_message': 'Missing density for conversion'
         }
     
     elif error_code == 'MISSING_CUSTOM_MAPPING':
+        from_unit = error_data.get('from_unit')
+        to_unit = error_data.get('to_unit')
         return {
             'requires_drawer': True,
             'drawer_type': 'conversion.unit_mapping_fix',
             'drawer_action': 'open_unit_mapping_modal',
             'drawer_data': {
-                'from_unit': error_data.get('from_unit'),
-                'to_unit': error_data.get('to_unit'),
-                'api_endpoint': f"/api/drawer-actions/conversion/unit-mapping-modal?from_unit={error_data.get('from_unit')}&to_unit={error_data.get('to_unit')}",
+                'from_unit': from_unit,
+                'to_unit': to_unit,
+                'api_endpoint': f"/api/drawer-actions/conversion/unit-mapping-modal?from_unit={from_unit}&to_unit={to_unit}",
                 'unit_manager_link': '/conversion/units'
+            },
+            'drawer_payload': {
+                'modal_url': f'/api/drawer-actions/conversion/unit-mapping-modal?from_unit={from_unit}&to_unit={to_unit}',
+                'success_event': 'unitMappingCreated',
+                'error_type': 'conversion',
+                'error_code': 'MISSING_CUSTOM_MAPPING',
+                'error_message': 'Missing custom unit mapping'
             },
             'error_message': 'Missing custom unit mapping'
         }
     
     elif error_code in ['UNKNOWN_SOURCE_UNIT', 'UNKNOWN_TARGET_UNIT']:
+        unknown_unit = error_data.get('unit')
         return {
             'requires_drawer': True,
             'drawer_type': 'conversion.unit_creation',
-            'drawer_action': 'open_unit_creation_modal',
+            'drawer_action': 'redirect_unit_manager',
             'drawer_data': {
-                'unknown_unit': error_data.get('unit'),
+                'unknown_unit': unknown_unit,
                 'unit_manager_link': '/conversion/units'
             },
-            'error_message': f'Unknown unit: {error_data.get("unit")}'
+            'drawer_payload': {
+                'redirect_url': '/conversion/units',
+                'error_type': 'conversion',
+                'error_code': error_code,
+                'error_message': f'Unknown unit requires manual setup: {unknown_unit}'
+            },
+            'error_message': f'Unknown unit: {unknown_unit}'
         }
     
     elif error_code == 'SYSTEM_ERROR':
@@ -76,6 +100,47 @@ def handle_conversion_error(conversion_result):
             'error_type': 'conversion_error',
             'error_message': error_data.get('message', 'Conversion failed')
         }
+
+def generate_drawer_payload_for_conversion_error(error_code, error_data, retry_operation=None, retry_data=None):
+    """
+    Generate drawer payload for conversion errors that require UI intervention.
+    This is called by services that need to handle conversion errors with drawers.
+    """
+    if error_code == 'MISSING_DENSITY':
+        ingredient_id = error_data.get('ingredient_id')
+        payload = {
+            'modal_url': f'/api/drawer-actions/conversion/density-modal/{ingredient_id}',
+            'success_event': 'densityUpdated',
+            'error_type': 'conversion',
+            'error_code': error_code,
+            'error_message': error_data.get('message', 'Missing density for conversion')
+        }
+    elif error_code == 'MISSING_CUSTOM_MAPPING':
+        from_unit = error_data.get('from_unit')
+        to_unit = error_data.get('to_unit')
+        payload = {
+            'modal_url': f'/api/drawer-actions/conversion/unit-mapping-modal?from_unit={from_unit}&to_unit={to_unit}',
+            'success_event': 'unitMappingCreated',
+            'error_type': 'conversion',
+            'error_code': error_code,
+            'error_message': error_data.get('message', 'Missing custom unit mapping')
+        }
+    elif error_code in ['UNKNOWN_SOURCE_UNIT', 'UNKNOWN_TARGET_UNIT']:
+        payload = {
+            'redirect_url': '/conversion/units',
+            'error_type': 'conversion',
+            'error_code': error_code,
+            'error_message': error_data.get('message', f'Unknown unit requires manual setup')
+        }
+    else:
+        return None
+    
+    # Add retry information if provided
+    if retry_operation and retry_data:
+        payload['retry_operation'] = retry_operation
+        payload['retry_data'] = retry_data
+    
+    return payload
 
 def _get_suggested_density(ingredient_name):
     """Get suggested density for common ingredients"""

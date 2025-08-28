@@ -2,6 +2,7 @@
 from datetime import datetime
 from flask_login import current_user
 from ...models import db, Unit, CustomUnitMapping, InventoryItem as Ingredient, ConversionLog
+from .drawer_errors import handle_conversion_error
 
 class ConversionEngine:
     @staticmethod
@@ -78,7 +79,7 @@ class ConversionEngine:
         to_u = Unit.query.filter_by(name=to_unit).first()
 
         if not from_u:
-            return {
+            base_result = {
                 'success': False,
                 'converted_value': None,
                 'error_code': 'UNKNOWN_SOURCE_UNIT',
@@ -89,9 +90,12 @@ class ConversionEngine:
                 'to': to_unit,
                 'requires_attention': False
             }
+            drawer_info = handle_conversion_error(base_result)
+            base_result.update(drawer_info)
+            return base_result
 
         if not to_u:
-            return {
+            base_result = {
                 'success': False,
                 'converted_value': None,
                 'error_code': 'UNKNOWN_TARGET_UNIT',
@@ -102,6 +106,9 @@ class ConversionEngine:
                 'to': to_unit,
                 'requires_attention': False
             }
+            drawer_info = handle_conversion_error(base_result)
+            base_result.update(drawer_info)
+            return base_result
 
         conversion_type = 'unknown'
         used_density = None
@@ -212,8 +219,8 @@ class ConversionEngine:
                     if ingredient:
                         ingredient_name = ingredient.name
                 
-                # Improved error handling for missing density
-                return {
+                # Create base error result
+                base_result = {
                     'success': False,
                     'converted_value': None,
                     'error_code': 'MISSING_DENSITY',
@@ -222,16 +229,20 @@ class ConversionEngine:
                         'to_unit': to_unit, 
                         'ingredient_id': ingredient_id,
                         'ingredient_name': ingredient_name,
-                        'message': f"Missing density for conversion from {from_unit} ({from_u.unit_type}) to {to_unit} ({to_u.unit_type}). Please set ingredient density or add a custom unit mapping.",
-                        'requires_drawer': True
+                        'message': f"Missing density for conversion from {from_unit} ({from_u.unit_type}) to {to_unit} ({to_u.unit_type}). Please set ingredient density or add a custom unit mapping."
                     },
                     'conversion_type': 'density',
                     'density_used': None,
                     'from': from_unit,
                     'to': to_unit,
-                    'requires_attention': True,
-                    'requires_drawer': True
+                    'requires_attention': True
                 }
+                
+                # Use drawer error handler to add drawer-specific data
+                drawer_info = handle_conversion_error(base_result)
+                base_result.update(drawer_info)
+                
+                return base_result
             used_density = density
 
             try:
@@ -265,41 +276,51 @@ class ConversionEngine:
                     converted *= mapping.conversion_factor
                 conversion_type = 'custom_cross_type'
             else:
-                return {
+                # Create base error result
+                base_result = {
                     'success': False,
                     'converted_value': None,
                     'error_code': 'MISSING_CUSTOM_MAPPING',
                     'error_data': {
                         'from_unit': from_unit, 
                         'to_unit': to_unit, 
-                        'message': f"Cannot convert {from_unit} ({from_u.unit_type}) to {to_unit} ({to_u.unit_type}) without a custom mapping. Go to Unit Manager to create a mapping.",
-                        'requires_drawer': True
+                        'message': f"Cannot convert {from_unit} ({from_u.unit_type}) to {to_unit} ({to_u.unit_type}) without a custom mapping. Go to Unit Manager to create a mapping."
                     },
                     'conversion_type': 'custom',
                     'density_used': None,
                     'from': from_unit,
                     'to': to_unit,
-                    'requires_attention': True,
-                    'requires_drawer': True
+                    'requires_attention': True
                 }
+                
+                # Use drawer error handler to add drawer-specific data
+                drawer_info = handle_conversion_error(base_result)
+                base_result.update(drawer_info)
+                
+                return base_result
         else:
-            return {
+            # Create base error result
+            base_result = {
                 'success': False,
                 'converted_value': None,
                 'error_code': 'UNSUPPORTED_CONVERSION',
                 'error_data': {
                     'from_unit': from_unit, 
                     'to_unit': to_unit, 
-                    'message': f"Cannot convert {from_unit} ({from_u.unit_type}) to {to_unit} ({to_u.unit_type}) without a custom mapping. Go to Unit Manager to create a mapping.",
-                    'requires_drawer': True
+                    'message': f"Cannot convert {from_unit} ({from_u.unit_type}) to {to_unit} ({to_u.unit_type}) without a custom mapping. Go to Unit Manager to create a mapping."
                 },
                 'conversion_type': 'unknown',
                 'density_used': None,
                 'from': from_unit,
                 'to': to_unit,
-                'requires_attention': True,
-                'requires_drawer': True
+                'requires_attention': True
             }
+            
+            # Use drawer error handler to add drawer-specific data
+            drawer_info = handle_conversion_error(base_result)
+            base_result.update(drawer_info)
+            
+            return base_result
 
         # Log it only if user is authenticated and has organization
         if current_user and current_user.is_authenticated and current_user.organization_id:

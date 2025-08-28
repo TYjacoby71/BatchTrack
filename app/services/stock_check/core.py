@@ -3,7 +3,7 @@ Universal Stock Check Service (USCS)
 
 Core service for stock availability checking with three levels:
 1. Single item stock check (core function)
-2. Recipe stock check (groups single items) 
+2. Recipe stock check (groups single items)
 3. Bulk recipe check (groups multiple recipes)
 
 Integrates with FIFO operations and unit conversion engine.
@@ -16,6 +16,7 @@ from flask_login import current_user
 from .types import StockCheckRequest, StockCheckResult, InventoryCategory, StockStatus
 from .handlers import IngredientHandler, ContainerHandler, ProductHandler
 from ..unit_conversion.unit_conversion import ConversionEngine
+
 # FIFOService functionality moved to inventory_adjustment service
 
 logger = logging.getLogger(__name__)
@@ -34,7 +35,7 @@ class UniversalStockCheckService:
     def __init__(self):
         self.handlers = {
             InventoryCategory.INGREDIENT: IngredientHandler(),
-            InventoryCategory.CONTAINER: ContainerHandler(), 
+            InventoryCategory.CONTAINER: ContainerHandler(),
             InventoryCategory.PRODUCT: ProductHandler(),
         }
 
@@ -45,14 +46,14 @@ class UniversalStockCheckService:
         else:
             raise ValueError("No organization context available for stock check")
 
-    def check_single_item(self, item_id: int, quantity_needed: float, unit: str, 
+    def check_single_item(self, item_id: int, quantity_needed: float, unit: str,
                          category: InventoryCategory) -> StockCheckResult:
         """
         Core function: Check stock for a single inventory item.
 
         Process:
         1. Find the item in the requested category
-        2. Match item with inventory 
+        2. Match item with inventory
         3. Convert requested amount to inventory storage unit
         4. Process planned deduction (check if enough stock)
         5. Convert results back to recipe units
@@ -74,7 +75,7 @@ class UniversalStockCheckService:
             handler = self.handlers.get(category)
             if not handler:
                 return self._create_error_result(
-                    item_id, f"No handler for category: {category}", 
+                    item_id, f"No handler for category: {category}",
                     quantity_needed, unit
                 )
 
@@ -90,16 +91,8 @@ class UniversalStockCheckService:
             # Handler performs category-specific stock checking
             result = handler.check_availability(request, org_id)
 
-            # Add conversion alerts if needed
-            if hasattr(result, 'conversion_details') and result.conversion_details:
-                conversion_type = result.conversion_details.get('conversion_type')
-                if conversion_type in ['custom', 'density'] and not result.conversion_details.get('requires_attention'):
-                    result.conversion_details['requires_attention'] = True
+            
 
-                # Alert for missing custom mappings
-                if 'custom mapping' in str(result.error_message or '').lower():
-                    result.conversion_details['needs_unit_mapping'] = True
-                    result.conversion_details['unit_manager_link'] = '/conversion/units'
 
             return result
 
@@ -140,7 +133,7 @@ class UniversalStockCheckService:
                 logger.warning(f"USCS: Recipe {recipe_id} has no ingredients defined")
                 return {
                     'success': True,
-                    'status': 'no_ingredients', 
+                    'status': 'no_ingredients',
                     'stock_check': [],
                     'message': 'Recipe has no ingredients to check'
                 }
@@ -149,6 +142,7 @@ class UniversalStockCheckService:
             stock_results = []
             has_insufficient = False
             has_low_stock = False
+            has_errors = False # Track if any item check resulted in an error
             conversion_alerts = []
 
             for recipe_ingredient in recipe.recipe_ingredients:
@@ -178,6 +172,7 @@ class UniversalStockCheckService:
 
                 if hasattr(result, 'error_message') and result.error_message:
                     result_dict['error_message'] = result.error_message
+                    has_errors = True # Mark that an error occurred
 
                 if hasattr(result, 'conversion_details') and result.conversion_details:
                     result_dict['conversion_details'] = result.conversion_details
@@ -199,22 +194,27 @@ class UniversalStockCheckService:
                     has_low_stock = True
 
             # Determine overall recipe status
-            if has_insufficient:
+            if has_errors:
+                overall_status = 'error'
+            elif has_insufficient:
                 overall_status = 'insufficient_ingredients'
             elif has_low_stock:
                 overall_status = 'low_stock'
             else:
                 overall_status = 'ok'
 
+            # Simple response - conversion errors with drawer payloads will be handled by frontend
+            all_available = not (has_insufficient or has_errors)
+            
             response = {
-                'success': True,
                 'status': overall_status,
+                'all_ok': all_available,
                 'stock_check': stock_results,
                 'recipe_name': recipe.name,
-                'scale': scale
+                'error': None
             }
 
-            # Add conversion alerts if any
+            # Add conversion alerts if any (but not drawer-required ones)
             if conversion_alerts:
                 response['conversion_alerts'] = conversion_alerts
 
@@ -271,7 +271,7 @@ class UniversalStockCheckService:
 
 
 
-    def _create_error_result(self, item_id: int, error_message: str, 
+    def _create_error_result(self, item_id: int, error_message: str,
                            quantity_needed: float, unit: str) -> StockCheckResult:
         """Create standardized error result"""
         return StockCheckResult(
