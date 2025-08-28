@@ -161,22 +161,45 @@ export class ContainerProgressBar {
         }
 
         // FILL EFFICIENCY MESSAGE (secondary concern - only if contained)
+        // This logic should work for BOTH auto-fill and manual modes
         let fillEfficiencyMessage = '';
         let fillEfficiencyClass = '';
 
         if (percentage >= 97) {  // Only show fill efficiency if we have containment
-            // Calculate last container fill efficiency
-            const lastContainerFill = this.calculateLastContainerFillPercentage();
+            // Check if we're in auto-fill mode and have backend warnings
+            const autoFillEnabled = document.getElementById('autoFillEnabled')?.checked;
+            
+            if (autoFillEnabled && this.containerManager.containerPlan?.warnings) {
+                // Use backend warnings for auto-fill mode
+                const backendFillWarnings = this.containerManager.containerPlan.warnings.filter(warning => 
+                    warning.includes('partially filled') || warning.includes('Partial fill warning')
+                );
+                
+                if (backendFillWarnings.length > 0) {
+                    // Use the first fill efficiency warning from backend
+                    const warning = backendFillWarnings[0];
+                    if (warning.includes('less than 75%')) {
+                        fillEfficiencyMessage = ` • ⚠️ ${warning}`;
+                        fillEfficiencyClass = 'text-danger';
+                    } else {
+                        fillEfficiencyMessage = ` • ⚠️ ${warning}`;
+                        fillEfficiencyClass = 'text-warning';
+                    }
+                }
+            } else {
+                // Calculate frontend fill efficiency for manual mode (or auto-fill fallback)
+                const lastContainerFill = this.calculateLastContainerFillPercentage();
 
-            if (lastContainerFill < 100) {
-                if (lastContainerFill < 75) {
-                    // RED - Critical fill efficiency issue
-                    fillEfficiencyMessage = ` • ⚠️ Partial fill warning: last container will be filled less than 75% - consider using other containers`;
-                    fillEfficiencyClass = 'text-danger';
-                } else {
-                    // YELLOW - Moderate fill efficiency issue  
-                    fillEfficiencyMessage = ` • ⚠️ Last container partially filled to ${lastContainerFill.toFixed(1)}%`;
-                    fillEfficiencyClass = 'text-warning';
+                if (lastContainerFill < 100) {
+                    if (lastContainerFill < 75) {
+                        // RED - Critical fill efficiency issue
+                        fillEfficiencyMessage = ` • ⚠️ Partial fill warning: last container will be filled less than 75% - consider using other containers`;
+                        fillEfficiencyClass = 'text-danger';
+                    } else {
+                        // YELLOW - Moderate fill efficiency issue  
+                        fillEfficiencyMessage = ` • ⚠️ Last container partially filled to ${lastContainerFill.toFixed(1)}%`;
+                        fillEfficiencyClass = 'text-warning';
+                    }
                 }
             }
         }
@@ -191,13 +214,6 @@ export class ContainerProgressBar {
             className += ' text-warning';
         } else {
             className += ' ' + containmentClass;
-        }
-
-        // Fallback for old logic compatibility
-        if (percentage >= 97) {
-            // message already set above
-        } else if (percentage >= 97) {
-            message = '✅ Batch contained within 3% tolerance';
         }
 
         return { text: message, className };
