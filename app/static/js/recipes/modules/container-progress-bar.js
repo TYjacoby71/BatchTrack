@@ -72,7 +72,7 @@ export class ContainerProgressBar {
                 // Last container type - calculate partial fill
                 const fullContainersOfThisType = container.quantity - 1;
                 const yieldInFullContainers = fullContainersOfThisType * container.capacity;
-                remainingYieldToAllocate -= yieldInThisContainerType;
+                remainingYieldToAllocate -= yieldInFullContainers;
 
                 // The remaining yield goes into the final container
                 if (remainingYieldToAllocate > 0 && container.capacity > 0) {
