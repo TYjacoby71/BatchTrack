@@ -3,7 +3,7 @@ Universal Stock Check Service (USCS)
 
 Core service for stock availability checking with three levels:
 1. Single item stock check (core function)
-2. Recipe stock check (groups single items) 
+2. Recipe stock check (groups single items)
 3. Bulk recipe check (groups multiple recipes)
 
 Integrates with FIFO operations and unit conversion engine.
@@ -16,6 +16,7 @@ from flask_login import current_user
 from .types import StockCheckRequest, StockCheckResult, InventoryCategory, StockStatus
 from .handlers import IngredientHandler, ContainerHandler, ProductHandler
 from ..unit_conversion.unit_conversion import ConversionEngine
+from ..unit_conversion.drawer_errors import handle_conversion_error
 # FIFOService functionality moved to inventory_adjustment service
 
 logger = logging.getLogger(__name__)
@@ -34,7 +35,7 @@ class UniversalStockCheckService:
     def __init__(self):
         self.handlers = {
             InventoryCategory.INGREDIENT: IngredientHandler(),
-            InventoryCategory.CONTAINER: ContainerHandler(), 
+            InventoryCategory.CONTAINER: ContainerHandler(),
             InventoryCategory.PRODUCT: ProductHandler(),
         }
 
@@ -45,14 +46,14 @@ class UniversalStockCheckService:
         else:
             raise ValueError("No organization context available for stock check")
 
-    def check_single_item(self, item_id: int, quantity_needed: float, unit: str, 
+    def check_single_item(self, item_id: int, quantity_needed: float, unit: str,
                          category: InventoryCategory) -> StockCheckResult:
         """
         Core function: Check stock for a single inventory item.
 
         Process:
         1. Find the item in the requested category
-        2. Match item with inventory 
+        2. Match item with inventory
         3. Convert requested amount to inventory storage unit
         4. Process planned deduction (check if enough stock)
         5. Convert results back to recipe units
@@ -74,7 +75,7 @@ class UniversalStockCheckService:
             handler = self.handlers.get(category)
             if not handler:
                 return self._create_error_result(
-                    item_id, f"No handler for category: {category}", 
+                    item_id, f"No handler for category: {category}",
                     quantity_needed, unit
                 )
 
@@ -100,6 +101,24 @@ class UniversalStockCheckService:
                 if 'custom mapping' in str(result.error_message or '').lower():
                     result.conversion_details['needs_unit_mapping'] = True
                     result.conversion_details['unit_manager_link'] = '/conversion/units'
+                
+                # Add error code and drawer requirement for blocking errors
+                if 'missing_density' in str(result.error_message or '').lower():
+                    result.conversion_details['error_code'] = 'MISSING_DENSITY'
+                    result.conversion_details['requires_drawer'] = True
+                elif 'missing custom mapping' in str(result.error_message or '').lower():
+                    result.conversion_details['error_code'] = 'MISSING_CUSTOM_MAPPING'
+                    result.conversion_details['requires_drawer'] = True
+                elif 'unsupported conversion' in str(result.error_message or '').lower():
+                    result.conversion_details['error_code'] = 'UNSUPPORTED_CONVERSION'
+                    result.conversion_details['requires_drawer'] = True
+                elif 'unknown source unit' in str(result.error_message or '').lower():
+                    result.conversion_details['error_code'] = 'UNKNOWN_SOURCE_UNIT'
+                    result.conversion_details['requires_drawer'] = True
+                elif 'unknown target unit' in str(result.error_message or '').lower():
+                    result.conversion_details['error_code'] = 'UNKNOWN_TARGET_UNIT'
+                    result.conversion_details['requires_drawer'] = True
+
 
             return result
 
@@ -140,7 +159,7 @@ class UniversalStockCheckService:
                 logger.warning(f"USCS: Recipe {recipe_id} has no ingredients defined")
                 return {
                     'success': True,
-                    'status': 'no_ingredients', 
+                    'status': 'no_ingredients',
                     'stock_check': [],
                     'message': 'Recipe has no ingredients to check'
                 }
@@ -149,6 +168,7 @@ class UniversalStockCheckService:
             stock_results = []
             has_insufficient = False
             has_low_stock = False
+            has_errors = False # Track if any item check resulted in an error
             conversion_alerts = []
 
             for recipe_ingredient in recipe.recipe_ingredients:
@@ -178,6 +198,7 @@ class UniversalStockCheckService:
 
                 if hasattr(result, 'error_message') and result.error_message:
                     result_dict['error_message'] = result.error_message
+                    has_errors = True # Mark that an error occurred
 
                 if hasattr(result, 'conversion_details') and result.conversion_details:
                     result_dict['conversion_details'] = result.conversion_details
@@ -199,23 +220,72 @@ class UniversalStockCheckService:
                     has_low_stock = True
 
             # Determine overall recipe status
-            if has_insufficient:
+            if has_errors:
+                overall_status = 'error'
+            elif has_insufficient:
                 overall_status = 'insufficient_ingredients'
             elif has_low_stock:
                 overall_status = 'low_stock'
             else:
                 overall_status = 'ok'
 
+            # Check for blocking conversion errors that require drawers
+            drawer_payload = None
+            all_available = not (has_insufficient or has_errors) # Consider errors as not available
+
+            for result_dict in stock_results:
+                if 'conversion_details' in result_dict and result_dict['conversion_details']:
+                    conversion_details = result_dict['conversion_details']
+                    if conversion_details.get('error_code') and conversion_details.get('requires_drawer'):
+                        error_code = conversion_details['error_code']
+                        item_id = result_dict.get('item_id') # Get item_id from result_dict
+
+                        if error_code == 'MISSING_DENSITY':
+                            drawer_payload = {
+                                'modal_url': f'/api/drawer-actions/conversion/density-modal/{item_id}',
+                                'success_event': 'densityUpdated',
+                                'retry_operation': 'stock_check',
+                                'retry_data': {'recipe_id': recipe.id, 'scale': scale},
+                                'error_type': 'conversion',
+                                'error_code': error_code,
+                                'error_message': conversion_details.get('error_message', 'Conversion error occurred')
+                            }
+                        elif error_code in ['MISSING_CUSTOM_MAPPING', 'UNSUPPORTED_CONVERSION']:
+                            error_data = conversion_details.get('error_data', {})
+                            params = f"from_unit={error_data.get('from_unit', '')}&to_unit={error_data.get('to_unit', '')}"
+                            drawer_payload = {
+                                'modal_url': f'/api/drawer-actions/conversion/unit-mapping-modal?{params}',
+                                'success_event': 'unitMappingCreated',
+                                'retry_operation': 'stock_check',
+                                'retry_data': {'recipe_id': recipe.id, 'scale': scale},
+                                'error_type': 'conversion',
+                                'error_code': error_code,
+                                'error_message': conversion_details.get('error_message', 'Unit mapping required')
+                            }
+                        elif error_code in ['UNKNOWN_SOURCE_UNIT', 'UNKNOWN_TARGET_UNIT']:
+                            # For unknown units, we redirect to unit manager (no modal)
+                            drawer_payload = {
+                                'redirect_url': '/conversion/units',
+                                'error_type': 'conversion',
+                                'error_code': error_code,
+                                'error_message': f'Unknown unit requires manual setup: {conversion_details.get("error_message", "")}'
+                            }
+
+                        # Only handle the first blocking error
+                        break
+
             response = {
-                'success': True,
                 'status': overall_status,
+                'all_ok': all_available and not has_errors,
                 'stock_check': stock_results,
                 'recipe_name': recipe.name,
-                'scale': scale
+                'error': None
             }
 
-            # Add conversion alerts if any
-            if conversion_alerts:
+            # Add drawer payload if we have a blocking error
+            if drawer_payload:
+                response['drawer_payload'] = drawer_payload
+            elif conversion_alerts:
                 response['conversion_alerts'] = conversion_alerts
 
             return response
@@ -271,7 +341,7 @@ class UniversalStockCheckService:
 
 
 
-    def _create_error_result(self, item_id: int, error_message: str, 
+    def _create_error_result(self, item_id: int, error_message: str,
                            quantity_needed: float, unit: str) -> StockCheckResult:
         """Create standardized error result"""
         return StockCheckResult(

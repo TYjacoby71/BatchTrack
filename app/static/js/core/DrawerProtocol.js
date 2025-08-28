@@ -26,8 +26,11 @@ class DrawerProtocol {
             error_type,
             error_code,
             modal_url,
+            redirect_url,
             success_event,
             retry_callback,
+            retry_operation,
+            retry_data,
             error_message
         } = drawerData;
 
@@ -35,6 +38,19 @@ class DrawerProtocol {
         if (retry_callback) {
             const callbackKey = `${error_type}.${error_code}`;
             this.retryCallbacks.set(callbackKey, retry_callback);
+        } else if (retry_operation && retry_data) {
+            // Store structured retry data for backend-defined operations
+            const callbackKey = `${error_type}.${error_code}`;
+            this.retryCallbacks.set(callbackKey, () => {
+                this.executeRetryOperation(retry_operation, retry_data);
+            });
+        }
+
+        // Handle redirect (like unit manager)
+        if (redirect_url) {
+            console.log('🔧 DRAWER PROTOCOL: Redirecting to', redirect_url);
+            window.open(redirect_url, '_blank');
+            return true;
         }
 
         // Show user-friendly error message if no modal
@@ -46,6 +62,27 @@ class DrawerProtocol {
 
         // Open the modal
         return this.openModal(modal_url, success_event);
+    }
+
+    /**
+     * Execute retry operation based on backend-provided instructions
+     */
+    async executeRetryOperation(operation, data) {
+        console.log(`🔧 DRAWER PROTOCOL: Executing retry operation: ${operation}`, data);
+        
+        switch (operation) {
+            case 'stock_check':
+                // Trigger stock check retry
+                if (window.stockChecker && window.stockChecker.performStockCheck) {
+                    window.stockChecker.performStockCheck();
+                } else {
+                    console.warn('🔧 DRAWER PROTOCOL: Stock checker not available for retry');
+                }
+                break;
+            
+            default:
+                console.warn(`🔧 DRAWER PROTOCOL: Unknown retry operation: ${operation}`);
+        }
     }
 
     async openModal(url, successEvent) {
