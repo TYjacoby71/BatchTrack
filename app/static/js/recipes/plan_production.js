@@ -158,10 +158,10 @@ class PlanProductionApp {
         // Basic validation - check if batch type is selected
         const batchTypeSelect = document.getElementById('batchType');
         const isValid = batchTypeSelect && batchTypeSelect.value !== '';
-        
+
         console.log('🔍 VALIDATION: Checking form validity...');
         console.log('🔍 VALIDATION: Valid:', isValid, 'Reasons:', isValid ? [] : ['Select batch type'], 'Warnings:', []);
-        
+
         // You can add more validation logic here as needed
         return isValid;
     }
@@ -179,7 +179,7 @@ class PlanProductionApp {
             batchType: this.batchType,
             requiresContainers: this.requiresContainers
         });
-        
+
         // Additional submission logic might go here, potentially using other modules.
     }
 

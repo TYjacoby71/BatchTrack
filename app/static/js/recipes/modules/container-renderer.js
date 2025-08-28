@@ -1,4 +1,3 @@
-
 // Container Renderer - Handles all container display logic
 export class ContainerRenderer {
     constructor(containerManager) {
