@@ -90,10 +90,7 @@ class UniversalStockCheckService:
 
             # Handler performs category-specific stock checking
             result = handler.check_availability(request, org_id)
-
             
-
-
             return result
 
         except Exception as e:

@@ -71,11 +71,11 @@ class IngredientHandler(BaseInventoryHandler):
             )
 
             if conversion_result['success']:
-                # Successful conversion - convert needed amount to stock units for comparison
+                # Convert needed amount to stock units for comparison
                 needed_in_stock_units = conversion_result['converted_value']
                 
                 # Convert available stock to recipe units for display
-                stock_to_recipe_conversion = ConversionEngine.convert_units(
+                stock_to_recipe_result = ConversionEngine.convert_units(
                     amount=float(total_available),
                     from_unit=stock_unit,
                     to_unit=recipe_unit,
@@ -83,11 +83,7 @@ class IngredientHandler(BaseInventoryHandler):
                     density=ingredient.density
                 )
                 
-                if stock_to_recipe_conversion['success']:
-                    available_in_recipe_units = stock_to_recipe_conversion['converted_value']
-                else:
-                    # Fallback to showing raw stock amount if conversion fails
-                    available_in_recipe_units = total_available
+                available_in_recipe_units = stock_to_recipe_result['converted_value'] if stock_to_recipe_result['success'] else total_available
                 
                 conversion_details = {
                     'conversion_type': conversion_result.get('conversion_type', 'unknown'),
@@ -95,10 +91,10 @@ class IngredientHandler(BaseInventoryHandler):
                     'requires_attention': conversion_result.get('requires_attention', False)
                 }
 
-                # Check if enough stock (planned deduction check)
+                # Check if enough stock (compare in stock units)
                 status = self._determine_status_with_thresholds(
                     needed_in_stock_units, 
-                    total_available,  # Compare in stock units
+                    total_available,
                     ingredient
                 )
 
