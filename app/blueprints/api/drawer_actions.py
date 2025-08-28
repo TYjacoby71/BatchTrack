@@ -67,10 +67,10 @@ def conversion_density_modal_post(ingredient_id):
         db.session.rollback()
         return jsonify({'error': f'Failed to update density: {str(e)}'}), 500
 
-@drawer_actions_bp.route('/conversion/unit-mapping-modal', methods=['GET'])
+@drawer_actions_bp.route('/api/drawer-actions/conversion/unit-mapping-modal', methods=['GET'])
 @login_required
 @require_permission('view_inventory')
-def unit_mapping_modal():
+def conversion_unit_mapping_modal_get():
     """Get unit mapping creation modal"""
     from_unit = request.args.get('from_unit', '')
     to_unit = request.args.get('to_unit', '')
