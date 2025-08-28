@@ -61,25 +61,49 @@ class DrawerProtocol {
     }
 
     async handleConversionError(errorCode, errorData) {
-        switch (errorCode) {
-            case 'MISSING_DENSITY':
-                const ingredientId = errorData.ingredient_id;
-                if (!ingredientId) {
-                    console.error('🚨 DRAWER PROTOCOL: Missing ingredient_id for density error:', errorData);
+        try {
+            if (!errorData || typeof errorData !== 'object') {
+                console.error('🚨 DRAWER PROTOCOL: Invalid error data for conversion error:', errorData);
+                return false;
+            }
+
+            switch (errorCode) {
+                case 'MISSING_DENSITY':
+                    if (!errorData.ingredient_id) {
+                        console.error('🚨 DRAWER PROTOCOL: Missing ingredient_id for density error');
+                        return false;
+                    }
+                    console.log('🔧 DRAWER PROTOCOL: Opening density modal for ingredient', errorData.ingredient_id);
+                    return this.openModal('/api/drawer-actions/conversion/density-modal/' + errorData.ingredient_id, 'densityUpdated');
+
+                case 'MISSING_CUSTOM_MAPPING':
+                case 'UNSUPPORTED_CONVERSION':
+                    if (!errorData.from_unit || !errorData.to_unit) {
+                        console.error('🚨 DRAWER PROTOCOL: Missing unit data for mapping error:', errorData);
+                        return false;
+                    }
+                    const params = new URLSearchParams({
+                        from_unit: errorData.from_unit,
+                        to_unit: errorData.to_unit
+                    });
+                    return this.openModal('/api/drawer-actions/conversion/unit-mapping-modal?' + params, 'unitMappingCreated');
+
+                case 'UNKNOWN_SOURCE_UNIT':
+                case 'UNKNOWN_TARGET_UNIT':
+                    if (!errorData.unit) {
+                        console.error('🚨 DRAWER PROTOCOL: Missing unit for unit creation error:', errorData);
+                        return false;
+                    }
+                    window.open('/conversion/units', '_blank');
+                    return true;
+
+                default:
+                    console.warn(`🔧 DRAWER PROTOCOL: Unhandled conversion error code: ${errorCode}`);
                     return false;
-                }
-                return this.openModal('/api/drawer-actions/conversion/density-modal/' + ingredientId, 'densityUpdated');
-            case 'MISSING_CUSTOM_MAPPING':
-            case 'UNSUPPORTED_CONVERSION':
-                const params = new URLSearchParams({
-                    from_unit: errorData.from_unit || '',
-                    to_unit: errorData.to_unit || ''
-                });
-                return this.openModal('/api/drawer-actions/conversion/unit-mapping-modal?' + params, 'unitMappingCreated');
-            case 'UNKNOWN_SOURCE_UNIT':
-            case 'UNKNOWN_TARGET_UNIT':
-                window.open('/conversion/units', '_blank');
-                return true;
+            }
+        } catch (error) {
+            console.error('🚨 DRAWER PROTOCOL: Error in handleConversionError:', error);
+            return false;
         }
     }
 
