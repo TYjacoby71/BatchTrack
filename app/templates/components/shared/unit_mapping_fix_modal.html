@@ -95,7 +95,15 @@ document.addEventListener('DOMContentLoaded', function() {
                     const modalInstance = bootstrap.Modal.getInstance(modal);
                     modalInstance.hide();
                     
-                    // Dispatch custom event for parent to handle
+                    // Dispatch custom event for parent
+                    window.dispatchEvent(new CustomEvent('unitMappingCreated', {
+                        detail: {
+                            from_unit: '{{ from_unit }}',
+                            to_unit: '{{ to_unit }}',
+                            conversion_factor: factor,
+                            message: data.message
+                        }
+                    })); to handle
                     window.dispatchEvent(new CustomEvent('unitMappingCreated', {
                         detail: {
                             fromUnit: '{{ from_unit }}',

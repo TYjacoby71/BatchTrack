@@ -1,4 +1,3 @@
-
 from flask import Blueprint, request, jsonify, render_template
 from flask_login import login_required, current_user
 from app.models import db, InventoryItem
@@ -18,7 +17,7 @@ def conversion_density_modal_get(ingredient_id):
         id=ingredient_id,
         organization_id=current_user.organization_id
     ).first()
-    
+
     if not ingredient:
         return jsonify({'error': 'Ingredient not found'}), 404
 
@@ -43,25 +42,25 @@ def conversion_density_modal_post(ingredient_id):
         id=ingredient_id,
         organization_id=current_user.organization_id
     ).first()
-    
+
     if not ingredient:
         return jsonify({'error': 'Ingredient not found'}), 404
 
     try:
         data = request.get_json()
         density = float(data.get('density', 0))
-        
+
         if density <= 0:
             return jsonify({'error': 'Density must be greater than 0'}), 400
-        
+
         ingredient.density = density
         db.session.commit()
-        
+
         return jsonify({
             'success': True,
             'message': f'Density updated to {density} g/ml for {ingredient.name}'
         })
-        
+
     except ValueError:
         return jsonify({'error': 'Invalid density value'}), 400
     except Exception as e:
@@ -92,14 +91,12 @@ def unit_mapping_modal():
 @drawer_actions_bp.route('/conversion/unit-mapping-modal', methods=['POST'])
 @login_required
 @require_permission('edit_inventory')
-def create_unit_mapping():
-    """Create custom unit mapping from modal"""
-    from app.models import CustomUnitMapping
-    
+def unit_mapping_modal_post():
+    """Create unit mapping"""
     try:
         data = request.get_json()
-        from_unit = data.get('from_unit', '').strip()
-        to_unit = data.get('to_unit', '').strip()
+        from_unit = data.get('from_unit')
+        to_unit = data.get('to_unit')
         conversion_factor = float(data.get('conversion_factor', 0))
 
         if not from_unit or not to_unit:
@@ -107,6 +104,9 @@ def create_unit_mapping():
 
         if conversion_factor <= 0:
             return jsonify({'error': 'Conversion factor must be greater than 0'}), 400
+
+        # Import here to avoid circular imports
+        from app.models import CustomUnitMapping
 
         # Check if mapping already exists
         existing = CustomUnitMapping.query.filter_by(
@@ -116,29 +116,27 @@ def create_unit_mapping():
         ).first()
 
         if existing:
-            return jsonify({'error': 'Mapping already exists'}), 400
+            existing.conversion_factor = conversion_factor
+            message = f'Updated unit mapping: {from_unit} → {to_unit} (factor: {conversion_factor})'
+        else:
+            mapping = CustomUnitMapping(
+                from_unit=from_unit,
+                to_unit=to_unit,
+                conversion_factor=conversion_factor,
+                organization_id=current_user.organization_id
+            )
+            db.session.add(mapping)
+            message = f'Created unit mapping: {from_unit} → {to_unit} (factor: {conversion_factor})'
 
-        # Create new mapping
-        mapping = CustomUnitMapping(
-            from_unit=from_unit,
-            to_unit=to_unit,
-            conversion_factor=conversion_factor,
-            organization_id=current_user.organization_id
-        )
-
-        db.session.add(mapping)
         db.session.commit()
 
         return jsonify({
             'success': True,
-            'message': f'Unit mapping created: {from_unit} → {to_unit}',
-            'mapping': {
-                'from_unit': from_unit,
-                'to_unit': to_unit,
-                'conversion_factor': conversion_factor
-            }
+            'message': message
         })
 
+    except ValueError:
+        return jsonify({'error': 'Invalid conversion factor'}), 400
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': f'Failed to create mapping: {str(e)}'}), 500
