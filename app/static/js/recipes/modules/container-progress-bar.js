@@ -53,7 +53,10 @@ export class ContainerProgressBar {
 
     // Add method to calculate last container fill percentage
     calculateLastContainerFillPercentage() {
-        const containers = this.containerManager.getSelectedContainers ? this.containerManager.getSelectedContainers() : [];
+        // Only calculate if we have container plan data and we're in manual mode
+        if (!this.containerManager.containerPlan?.container_selection) return 100;
+        
+        const containers = this.getSelectedContainersFromDOM();
         if (containers.length === 0) return 100;
 
         const projectedYield = this.containerManager.main.baseYield * this.containerManager.main.scale;
@@ -86,6 +89,33 @@ export class ContainerProgressBar {
 
         console.log('🔍 FILL CALC: Last container fill:', result.toFixed(1), '%');
         return result;
+    }
+
+    // Local method to get containers from DOM safely
+    getSelectedContainersFromDOM() {
+        const containers = [];
+
+        try {
+            document.querySelectorAll('[data-container-row]').forEach(row => {
+                const select = row.querySelector('.container-select');
+                const quantityInput = row.querySelector('.container-quantity');
+
+                if (select && quantityInput && select.value) {
+                    const container = this.containerManager.containerPlan?.container_selection?.find(c => c.container_id == select.value);
+                    if (container) {
+                        const quantity = parseInt(quantityInput.value) || 1;
+                        containers.push({
+                            ...container,
+                            quantity: quantity
+                        });
+                    }
+                }
+            });
+        } catch (error) {
+            console.log('🔍 FILL CALC: Error getting containers from DOM:', error);
+        }
+
+        return containers;
     }
 
     updateProgressBar(percentage) {
