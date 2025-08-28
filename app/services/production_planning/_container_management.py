@@ -100,6 +100,9 @@ def _load_suitable_containers(recipe: Recipe, org_id: int, total_yield: float, y
             'container_id': container.id,
             'container_name': container.name,
             'capacity': converted_capacity,  # Always in recipe yield units
+            'capacity_in_yield_unit': converted_capacity,  # Explicit for frontend
+            'yield_unit': yield_unit,  # Add yield unit for frontend
+            'conversion_successful': True,  # Mark conversion as successful
             'original_capacity': storage_capacity,
             'original_unit': storage_unit,
             'available_quantity': int(container.quantity or 0),
@@ -151,8 +154,12 @@ def _create_greedy_strategy(container_options: List[Dict[str, Any]], total_yield
 
     # Calculate totals
     total_capacity = sum(c['capacity'] * c['containers_needed'] for c in selected_containers)
-    # Containment = Can the total capacity hold the yield? (not fill efficiency)
-    containment_percentage = min(100.0, (total_capacity / total_yield * 100) if total_yield > 0 else 0)
+    # Containment = Can the total capacity hold the yield? 
+    # This should max at 100% when capacity >= yield
+    if total_yield > 0:
+        containment_percentage = min(100.0, (total_capacity / total_yield) * 100)
+    else:
+        containment_percentage = 100.0 if total_capacity > 0 else 0.0
 
     # Create warnings - separate containment from fill efficiency
     warnings = []
