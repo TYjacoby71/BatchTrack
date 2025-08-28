@@ -88,13 +88,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     const modalInstance = bootstrap.Modal.getInstance(modal);
                     modalInstance.hide();
                     
-                    // Dispatch custom event for parent
+                    // Dispatch custom event for parent to retrigger conversion
                     window.dispatchEvent(new CustomEvent('densityUpdated', {
                         detail: {
                             ingredient_id: {{ ingredient.id }},
                             ingredient_name: '{{ ingredient.name }}',
                             density: density,
-                            message: data.message
+                            message: data.message,
+                            retrigger: true
                         }
                     }));
                 } else {
