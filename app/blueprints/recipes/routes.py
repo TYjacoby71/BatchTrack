@@ -86,31 +86,25 @@ def auto_fill_containers(recipe_id):
     try:
         data = request.get_json()
         scale = data.get('scale', 1.0)
-        
-        # Log the incoming data for debugging
-        logger.info(f"🏭 AUTO-FILL: Received data for recipe {recipe_id}: {data}")
 
         recipe = Recipe.query.get_or_404(recipe_id)
-        
-        # Log recipe details for debugging
-        logger.info(f"🏭 AUTO-FILL: Recipe {recipe.id} has predicted_yield={recipe.predicted_yield}, predicted_yield_unit={recipe.predicted_yield_unit}")
 
         # Use the simplified container management
         from app.services.production_planning._container_management import analyze_container_options
 
-        strategy_result = analyze_container_options(
+        strategy, container_options = analyze_container_options(
             recipe=recipe,
             scale=scale,
-            organization_id=current_user.organization_id
+            organization_id=current_user.organization_id,
+            api_format=True
         )
 
-        if strategy_result and strategy_result.get('success'):
-            return jsonify(strategy_result)
+        if strategy:
+            return jsonify(strategy)
         else:
-            error_msg = strategy_result.get('error') if strategy_result else 'No suitable container strategy found'
             return jsonify({
                 'success': False,
-                'error': error_msg
+                'error': 'No suitable container strategy found'
             }), 400
 
     except Exception as e:

@@ -95,20 +95,16 @@ export class ContainerRenderer {
     }
 
     formatCapacityDisplay(container) {
-        // Use original capacity info if available, fallback to capacity
-        const originalCapacity = container.original_capacity || container.capacity || 0;
-        const originalUnit = container.original_unit || container.unit || 'ml';
+        const capacity = container.capacity || 0;
+        const unit = container.unit || 'ml';
 
-        // Check for converted capacity (priority: capacity_in_yield_unit > capacity)
-        if (container.capacity_in_yield_unit && container.yield_unit) {
-            const conversionText = container.conversion_successful ? '' : ' (approx)';
-            return `<strong>${container.capacity_in_yield_unit} ${container.yield_unit}</strong>${conversionText} (${originalCapacity} ${originalUnit})`;
-        } else if (container.capacity && container.yield_unit) {
-            return `<strong>${container.capacity} ${container.yield_unit}</strong> (${originalCapacity} ${originalUnit})`;
+        if (container.capacity_in_yield_unit && container.yield_unit && container.conversion_successful) {
+            return `<strong>${container.capacity_in_yield_unit} ${container.yield_unit}</strong> (${capacity} ${unit})`;
+        } else if (container.capacity_in_yield_unit && container.yield_unit) {
+            return `<strong>${container.capacity_in_yield_unit} ${container.yield_unit}</strong> (${capacity} ${unit})`;
         }
 
-        // Fallback to original capacity only
-        return `${originalCapacity} ${originalUnit}`;
+        return `${capacity} ${unit}`;
     }
 
     clearResults() {
