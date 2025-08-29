@@ -86,8 +86,14 @@ def auto_fill_containers(recipe_id):
     try:
         data = request.get_json()
         scale = data.get('scale', 1.0)
+        
+        # Log the incoming data for debugging
+        logger.info(f"🏭 AUTO-FILL: Received data for recipe {recipe_id}: {data}")
 
         recipe = Recipe.query.get_or_404(recipe_id)
+        
+        # Log recipe details for debugging
+        logger.info(f"🏭 AUTO-FILL: Recipe {recipe.id} has predicted_yield={recipe.predicted_yield}, predicted_yield_unit={recipe.predicted_yield_unit}")
 
         # Use the simplified container management
         from app.services.production_planning._container_management import analyze_container_options

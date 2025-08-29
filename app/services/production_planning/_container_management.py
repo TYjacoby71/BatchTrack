@@ -36,9 +36,9 @@ def analyze_container_options(
             return "all_containers", []
 
         # Calculate total yield needed
-        base_yield = recipe.yield_amount or 0
+        base_yield = recipe.predicted_yield or 0
         total_yield_needed = base_yield * scale
-        yield_unit = recipe.yield_unit or 'ml'
+        yield_unit = recipe.predicted_yield_unit or 'ml'
 
         logger.info(f"🏭 CONTAINER ANALYSIS: Total yield needed: {total_yield_needed} {yield_unit}")
 
@@ -46,11 +46,24 @@ def analyze_container_options(
         allowed_container_ids = []
         if recipe.allowed_containers:
             try:
-                import json
-                allowed_container_ids = json.loads(recipe.allowed_containers)
+                # Handle different formats of allowed_containers
+                if isinstance(recipe.allowed_containers, str):
+                    import json
+                    allowed_container_ids = json.loads(recipe.allowed_containers)
+                elif isinstance(recipe.allowed_containers, list):
+                    allowed_container_ids = recipe.allowed_containers
+                elif hasattr(recipe.allowed_containers, '__iter__'):
+                    # Handle pickled lists or other iterables
+                    allowed_container_ids = list(recipe.allowed_containers)
+                else:
+                    logger.warning(f"🏭 CONTAINER ANALYSIS: Unknown allowed_containers type: {type(recipe.allowed_containers)}")
+                    allowed_container_ids = []
+
+                # Convert to integers and filter out any invalid IDs
+                allowed_container_ids = [int(id) for id in allowed_container_ids if str(id).isdigit()]
                 logger.info(f"🏭 CONTAINER ANALYSIS: Recipe allows containers: {allowed_container_ids}")
-            except (json.JSONDecodeError, TypeError):
-                logger.warning(f"🏭 CONTAINER ANALYSIS: Invalid allowed_containers format: {recipe.allowed_containers}")
+            except (json.JSONDecodeError, TypeError, ValueError) as e:
+                logger.warning(f"🏭 CONTAINER ANALYSIS: Invalid allowed_containers format: {recipe.allowed_containers}, error: {e}")
 
         if not allowed_container_ids:
             logger.warning("🏭 CONTAINER ANALYSIS: No allowed containers found for recipe")
@@ -130,7 +143,7 @@ def analyze_container_options(
 
         # Create greedy strategy for the best containers
         strategy_result = _create_greedy_strategy(all_container_options, total_yield_needed, yield_unit)
-        
+
         # Always return strategy object for API compatibility
         return strategy_result
 

@@ -71,6 +71,9 @@
 window.recipeData = {
     id: {{ recipe.id }},
     name: "{{ recipe.name }}",
+    predicted_yield: {{ recipe.predicted_yield or 0 }},
+    predicted_yield_unit: "{{ recipe.predicted_yield_unit or 'units' }}",
+    // Add compatibility fields
     yield_amount: {{ recipe.predicted_yield or 0 }},
     yield_unit: "{{ recipe.predicted_yield_unit or 'units' }}"
 };
