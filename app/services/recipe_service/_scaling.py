@@ -33,14 +33,14 @@ def scale_recipe(recipe_id: int, target_yield: float,
             return {'success': False, 'error': 'Recipe not found'}
 
         # Validate yield unit matches
-        if yield_unit and yield_unit != recipe.yield_unit:
+        if yield_unit and yield_unit != recipe.predicted_yield_unit:
             return {
                 'success': False, 
-                'error': f'Yield unit mismatch. Recipe yields in {recipe.yield_unit}, not {yield_unit}'
+                'error': f'Yield unit mismatch. Recipe yields in {recipe.predicted_yield_unit}, not {yield_unit}'
             }
 
         # Calculate scaling factor
-        scale_factor = target_yield / recipe.yield_amount
+        scale_factor = target_yield / recipe.predicted_yield
         
         # Validate scaling factor
         is_valid, error = validate_scaling_factor(scale_factor)

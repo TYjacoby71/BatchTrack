@@ -36,9 +36,9 @@ def analyze_container_options(
             return "all_containers", []
 
         # Calculate total yield needed
-        base_yield = recipe.yield_amount or 0
+        base_yield = recipe.predicted_yield or 0
         total_yield_needed = base_yield * scale
-        yield_unit = recipe.yield_unit or 'ml'
+        yield_unit = recipe.predicted_yield_unit or 'ml'
 
         logger.info(f"🏭 CONTAINER ANALYSIS: Total yield needed: {total_yield_needed} {yield_unit}")
 

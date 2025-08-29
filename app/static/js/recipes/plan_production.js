@@ -33,14 +33,11 @@ class PlanProductionApp {
     }
 
     loadRecipeData() {
-        // Get recipe data from template
-        const recipeData = window.recipeData;
-        if (recipeData) {
-            this.recipe = recipeData;
-            this.baseYield = parseFloat(recipeData.yield_amount) || 0;
-            this.unit = recipeData.yield_unit || '';
-            console.log('🔍 RECIPE: Loaded recipe data:', this.recipe);
-        }
+        // Extract recipe information
+        const recipeData = window.recipeData || {};
+        this.baseYield = parseFloat(recipeData.yield_amount || recipeData.predicted_yield) || 0;
+        this.unit = recipeData.yield_unit || recipeData.predicted_yield_unit || 'ml';
+        console.log('🔍 RECIPE: Loaded recipe data:', this.recipe);
     }
 
     bindEvents() {
