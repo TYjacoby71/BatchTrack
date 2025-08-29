@@ -32,7 +32,7 @@ export class ContainerPlanFetcher {
         const scale = this.container.main.scale || parseFloat(document.getElementById('scaleInput')?.value) || 1;
         const yieldAmount = (this.container.main.recipe.predicted_yield || 1) * scale;
         
-        console.log('🔍 CONTAINER PLAN: Fetching for recipe', this.container.main.recipe.id, 'scale:', scale, 'yield:', yieldAmount);
+        console.log('🔍 CONTAINER PLAN: Fetching for recipe', this.container.main.recipe.id, 'scale:', scale, 'yield:', yieldAmount), yieldAmount);
 
         try {
             const data = await this.container.main.apiCall(`/recipes/${this.container.main.recipe.id}/auto-fill-containers`, {
