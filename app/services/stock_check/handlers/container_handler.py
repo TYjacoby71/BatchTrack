@@ -17,132 +17,46 @@ class ContainerHandler(BaseInventoryHandler):
     """Handler for container stock checking with storage capacity logic"""
 
     def check_availability(self, request: StockCheckRequest, organization_id: int = None) -> StockCheckResult:
-        """Check container availability for a recipe yield"""
-        logger.info(f"CONTAINER_HANDLER: check_availability called")
-        logger.info(f"CONTAINER_HANDLER: - request.item_id: {request.item_id}")
-        logger.info(f"CONTAINER_HANDLER: - request.quantity_needed: {request.quantity_needed}")
-        logger.info(f"CONTAINER_HANDLER: - request.unit: {request.unit}")
-        logger.info(f"CONTAINER_HANDLER: - request.organization_id: {request.organization_id}")
-        logger.info(f"CONTAINER_HANDLER: - organization_id param: {organization_id}")
-
-        # For containers, we need to find containers that can hold the recipe yield
-        # request.item_id is NOT a container ID - it's the recipe or ingredient context
-        # We need to find available containers based on the yield requirements
-
+        """Check container availability for a recipe yield - delegates to production planning"""
+        logger.info(f"CONTAINER_HANDLER: Delegating to production planning for container analysis")
+        
+        # Container stock checking is handled by production planning's container management
+        # This handler just returns a basic availability check
         org_id_to_use = request.organization_id or organization_id
-        logger.info(f"CONTAINER_HANDLER: Using organization_id: {org_id_to_use}")
-
-        # Get all available containers for this organization
-        available_containers_query = InventoryItem.query.filter_by(
+        
+        # Get basic container count for this organization
+        available_count = InventoryItem.query.filter_by(
             type='container',
             organization_id=org_id_to_use
-        ).filter(InventoryItem.quantity > 0)
-
-        logger.info(f"CONTAINER_HANDLER: Query SQL would be looking for type='container', organization_id={org_id_to_use}, quantity > 0")
-
-        available_containers = available_containers_query.all()
-        logger.info(f"CONTAINER_HANDLER: Found {len(available_containers)} containers in database")
-
-        for cont in available_containers:
-            logger.info(f"CONTAINER_HANDLER: - {cont.name} (ID: {cont.id}, qty: {cont.quantity})")
-            logger.info(f"CONTAINER_HANDLER: - Storage: {getattr(cont, 'storage_amount', 'None')} {getattr(cont, 'storage_unit', 'None')}")
-
-        if not available_containers:
-            logger.warning(f"CONTAINER_HANDLER: No containers found, returning not_found_result")
-            return self._create_not_found_result(request)
-
-        # For now, return the first suitable container
-        # TODO: This should be enhanced to return the best container option
-        container = available_containers[0]
-        logger.info(f"CONTAINER_HANDLER: Using container: {container.name}")
-
-        # Containers have storage_amount and storage_unit fields
-        storage_capacity = getattr(container, 'storage_amount', 0)
-        storage_unit = getattr(container, 'storage_unit', 'ml')
-        available_quantity = container.quantity
-
-        logger.info(f"CONTAINER_HANDLER: Container {container.name}: {available_quantity} units, capacity {storage_capacity} {storage_unit}")
-
-        try:
-            # Convert container storage capacity to recipe yield unit for proper comparison
-            if request.unit != storage_unit:
-                conversion_result = ConversionEngine.convert_units(
-                    storage_capacity,
-                    storage_unit,
-                    request.unit,
-                    ingredient_id=None  # Containers don't need ingredient context for volume conversions
-                )
-
-                if isinstance(conversion_result, dict):
-                    storage_capacity_in_recipe_units = conversion_result['converted_value']
-                    conversion_details = conversion_result
-                else:
-                    storage_capacity_in_recipe_units = float(conversion_result)
-                    conversion_details = None
-            else:
-                storage_capacity_in_recipe_units = storage_capacity
-                conversion_details = None
-
-            # Calculate containers needed based on recipe yield unit
-            containers_needed = request.quantity_needed / storage_capacity_in_recipe_units if storage_capacity_in_recipe_units > 0 else 1
-            containers_needed = max(1, int(containers_needed))  # At least 1 container
-
-            # For container management, we always return OK if any containers exist
-            # The container management system will handle its own logic about quantities needed
-            if len(available_containers) > 0:
-                status = StockStatus.OK
-            else:
-                status = StockStatus.OUT_OF_STOCK
-
-            return StockCheckResult(
-                item_id=container.id,
-                item_name=container.name,
-                category=InventoryCategory.CONTAINER,
-                needed_quantity=containers_needed,
-                needed_unit="count",
-                available_quantity=len(available_containers),
-                available_unit="count",
-                raw_stock=len(available_containers),
-                stock_unit="count",
-                status=status,
-                formatted_needed=self._format_quantity_display(containers_needed, "count"),
-                formatted_available=self._format_quantity_display(len(available_containers), "count"),
-                conversion_details={
-                    **(conversion_details or {}),
-                    'storage_capacity': storage_capacity,
-                    'storage_unit': storage_unit,
-                    'storage_capacity_in_recipe_units': storage_capacity_in_recipe_units,
-                    'recipe_yield_needed': request.quantity_needed,
-                    'recipe_yield_unit': request.unit
-                }
-            )
-
-        except (ValueError, ZeroDivisionError) as e:
-            # Build the result - ensure we handle quantity properly
-            available_qty = container.quantity
-            if isinstance(available_qty, (list, tuple)):
-                available_qty = available_qty[0] if available_qty else 0
-            elif available_qty is None:
-                available_qty = 0
-
-            # Get storage capacity, fallback to capacity attribute
-            storage_capacity = getattr(container, 'storage_capacity', None)
-            if storage_capacity is None:
-                storage_capacity = getattr(container, 'capacity', None)
-
-            return StockCheckResult(
-                item_id=container.id,
-                item_name=container.name,
-                category=InventoryCategory.CONTAINER,
-                needed_quantity=1,
-                needed_unit="count",
-                available_quantity=len(available_containers),
-                available_unit="count",
-                status=StockStatus.ERROR,
-                error_message=f"Container calculation error: {str(e)}",
-                formatted_needed="1 count",
-                formatted_available=self._format_quantity_display(len(available_containers), "count")
-            )
+        ).filter(InventoryItem.quantity > 0).count()
+        
+        logger.info(f"CONTAINER_HANDLER: Found {available_count} available containers")
+        
+        if available_count > 0:
+            status = StockStatus.OK
+        else:
+            status = StockStatus.OUT_OF_STOCK
+            
+        return StockCheckResult(
+            item_id=request.item_id,
+            item_name='Containers Available',
+            category=InventoryCategory.CONTAINER,
+            needed_quantity=1,
+            needed_unit="count",
+            available_quantity=available_count,
+            available_unit="count",
+            raw_stock=available_count,
+            stock_unit="count",
+            status=status,
+            formatted_needed="1 count",
+            formatted_available=f"{available_count} count",
+            conversion_details={
+                'total_containers_available': available_count,
+                'organization_id': org_id_to_use,
+                'delegated_to_production_planning': True
+            }
+        )
+            
 
     def get_item_details(self, item_id: int, organization_id: int) -> Optional[dict]:
         """Get container details"""
