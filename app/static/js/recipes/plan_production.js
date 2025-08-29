@@ -33,8 +33,17 @@ class PlanProductionApp {
     }
 
     loadRecipeData() {
-        // Get recipe data from window.recipeData
-        if (window.recipeData) {
+        // Get recipe data from data attributes on the container
+        const container = document.querySelector('[data-recipe-id]');
+        if (container) {
+            this.recipe = {
+                id: parseInt(container.dataset.recipeId),
+                name: container.dataset.recipeName,
+                predicted_yield: parseFloat(container.dataset.baseYield) || 0,
+                predicted_yield_unit: container.dataset.yieldUnit || 'ml'
+            };
+            console.log('🔍 RECIPE: Loaded recipe data from data attributes:', this.recipe);
+        } else if (window.recipeData) {
             this.recipe = window.recipeData;
             console.log('🔍 RECIPE: Loaded recipe data from window:', this.recipe);
         } else {

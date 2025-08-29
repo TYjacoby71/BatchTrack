@@ -88,31 +88,47 @@ def analyze_container_options(
         # Return ALL allowed containers, not just greedy fill result
         all_container_options = []
         for container in available_containers:
-            # Convert container capacity to recipe yield unit
-            container_capacity_ml = container.storage_amount or 0
+            # Get container capacity and unit
+            container_capacity = container.storage_amount or 0
+            container_unit = getattr(container, 'storage_unit', 'ml') or 'ml'
 
             # Convert to recipe yield unit if needed
             from app.services.unit_conversion import ConversionEngine
             try:
-                conversion_result = ConversionEngine.convert_units(
-                    amount=container_capacity_ml,
-                    from_unit='ml',
-                    to_unit=yield_unit,
-                    ingredient_id=None
-                )
-
-                if conversion_result.get('success'):
-                    container_capacity_yield_units = conversion_result['converted_value']
+                if container_unit == yield_unit:
+                    # Same units, no conversion needed
+                    container_capacity_yield_units = container_capacity
                     conversion_successful = True
                 else:
-                    # Fallback: assume ml = ml or 1:1 conversion
-                    container_capacity_yield_units = container_capacity_ml
-                    conversion_successful = False
-                    logger.warning(f"🏭 CONTAINER ANALYSIS: Unit conversion failed for container {container.id}: {conversion_result.get('error_message', 'Unknown error')}")
+                    conversion_result = ConversionEngine.convert_units(
+                        amount=container_capacity,
+                        from_unit=container_unit,
+                        to_unit=yield_unit,
+                        ingredient_id=None
+                    )
+
+                    if conversion_result.get('success'):
+                        container_capacity_yield_units = conversion_result['converted_value']
+                        conversion_successful = True
+                    else:
+                        # Fallback: if both are volume units, try basic conversion
+                        if container_unit in ['ml', 'liter', 'l'] and yield_unit in ['ml', 'liter', 'l']:
+                            if container_unit in ['liter', 'l'] and yield_unit == 'ml':
+                                container_capacity_yield_units = container_capacity * 1000
+                            elif container_unit == 'ml' and yield_unit in ['liter', 'l']:
+                                container_capacity_yield_units = container_capacity / 1000
+                            else:
+                                container_capacity_yield_units = container_capacity
+                            conversion_successful = True
+                        else:
+                            container_capacity_yield_units = container_capacity
+                            conversion_successful = False
+
+                        logger.warning(f"🏭 CONTAINER ANALYSIS: Unit conversion failed for container {container.id}: {conversion_result.get('error_message', 'Unknown error')}")
 
             except Exception as e:
                 logger.warning(f"🏭 CONTAINER ANALYSIS: Unit conversion exception for container {container.id}: {e}")
-                container_capacity_yield_units = container_capacity_ml
+                container_capacity_yield_units = container_capacity
                 conversion_successful = False
 
             # Calculate how many containers would be needed
@@ -127,8 +143,8 @@ def analyze_container_options(
                 'total_capacity': container_capacity_yield_units * min(containers_needed, available_quantity),
                 'available_quantity': available_quantity,
                 'yield_unit': yield_unit,
-                'original_capacity': container_capacity_ml,
-                'original_unit': 'ml',
+                'original_capacity': container_capacity,
+                'original_unit': container_unit,
                 'capacity_in_yield_unit': container_capacity_yield_units,
                 'conversion_successful': conversion_successful,
                 'cost_each': container.cost_per_unit or 0.0
@@ -181,11 +197,11 @@ def _load_suitable_containers(recipe: Recipe, org_id: int, total_yield: float, y
     container_options = []
 
     for container in containers:
-        # Get container capacity
+        # Get container capacity and unit
         storage_capacity = getattr(container, 'storage_amount', None)
-        storage_unit = getattr(container, 'storage_unit', None)
+        storage_unit = getattr(container, 'storage_unit', 'ml') or 'ml'
 
-        if not storage_capacity or not storage_unit:
+        if not storage_capacity:
             logger.warning(f"Container {container.name} missing capacity data")
             continue
 
@@ -223,7 +239,15 @@ def _convert_capacity(capacity: float, from_unit: str, to_unit: str) -> float:
     try:
         from ...services.unit_conversion import ConversionEngine
         result = ConversionEngine.convert_units(capacity, from_unit, to_unit)
-        return result['converted_value'] if isinstance(result, dict) else float(result)
+        # Check if result is a dictionary with 'success' and 'converted_value' keys
+        if isinstance(result, dict) and result.get('success'):
+            return float(result['converted_value'])
+        # If result is just a number, assume it's the converted value
+        elif isinstance(result, (int, float)):
+            return float(result)
+        else:
+            logger.warning(f"Cannot convert {capacity} {from_unit} to {to_unit}: Unexpected result format: {result}")
+            return 0.0
     except Exception as e:
         logger.warning(f"Cannot convert {capacity} {from_unit} to {to_unit}: {e}")
         return 0.0
@@ -238,6 +262,10 @@ def _create_greedy_strategy(container_options: List[Dict[str, Any]], total_yield
     for container in container_options:
         if remaining_yield <= 0:
             break
+
+        # Ensure capacity is positive to avoid division by zero or infinite loops
+        if container.get('capacity', 0) <= 0:
+            continue
 
         # Calculate how many of this container we need
         containers_needed = min(
@@ -254,7 +282,7 @@ def _create_greedy_strategy(container_options: List[Dict[str, Any]], total_yield
     # Calculate totals
     total_capacity = sum(c['capacity'] * c['containers_needed'] for c in selected_containers)
 
-    # Containment = Can the total capacity hold the yield? 
+    # Containment = Can the total capacity hold the yield?
     # Show 100% if within 3% tolerance (97% or above)
     if total_yield > 0:
         raw_containment = (total_capacity / total_yield) * 100
@@ -280,6 +308,10 @@ def _create_greedy_strategy(container_options: List[Dict[str, Any]], total_yield
         remaining_yield_to_allocate = total_yield
 
         for i, container in enumerate(selected_containers):
+            # Ensure capacity is positive to avoid division by zero or infinite loops
+            if container.get('capacity', 0) <= 0:
+                continue
+
             if i == len(selected_containers) - 1:  # Last container type
                 # For the last container type, calculate partial fill
                 full_containers_of_this_type = container['containers_needed'] - 1
