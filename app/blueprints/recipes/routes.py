@@ -211,15 +211,19 @@ def plan_container_route(recipe_id):
             return jsonify({"error": "No data provided"}), 400
 
         scale = float(data.get('scale', 1.0))
+        yield_amount = float(data.get('yield_amount'))
+        yield_unit = data.get('yield_unit')
         preferred_container_id = data.get('preferred_container_id')
 
-        # Get recipe to pass to container analysis
-        recipe = Recipe.query.get_or_404(recipe_id)
+        if not scale or not yield_amount or not yield_unit:
+            return jsonify({"error": "Scale, yield amount, and yield unit are required"}), 400
 
         # Delegate to service
         container_plan = analyze_container_options(
-            recipe=recipe,
+            recipe_id=recipe_id,
             scale=scale,
+            yield_amount=yield_amount,
+            yield_unit=yield_unit,
             preferred_container_id=preferred_container_id,
             organization_id=current_user.organization_id
         )

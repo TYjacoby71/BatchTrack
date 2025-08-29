@@ -1,3 +1,4 @@
+
 from flask_login import current_user
 from ..extensions import db
 from .mixins import ScopedModelMixin
@@ -18,23 +19,6 @@ class Recipe(ScopedModelMixin, db.Model):
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     parent = db.relationship('Recipe', remote_side=[id], backref='variations')
     recipe_ingredients = db.relationship('RecipeIngredient', backref='recipe', cascade="all, delete-orphan")
-
-    def to_dict(self, include_relationships=False):
-        """Convert recipe to dictionary format"""
-        data = {
-            'id': self.id,
-            'name': self.name,
-            'instructions': self.instructions,
-            'predicted_yield': self.predicted_yield,
-            'predicted_yield_unit': self.predicted_yield_unit,
-            'yield_amount': self.predicted_yield,  # For frontend compatibility
-            'yield_unit': self.predicted_yield_unit,  # For frontend compatibility
-            'is_locked': self.is_locked,
-            'created_at': self.created_at.isoformat() if self.created_at else None,
-            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
-            'label_prefix': self.label_prefix
-        }
-        return data
 
 class RecipeIngredient(ScopedModelMixin, db.Model):
     __tablename__ = 'recipe_ingredient'

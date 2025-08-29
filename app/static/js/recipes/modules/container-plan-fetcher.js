@@ -1,3 +1,4 @@
+
 // Container Plan Fetcher - Handles API calls for container planning
 export class ContainerPlanFetcher {
     constructor(containerManager) {
@@ -29,15 +30,15 @@ export class ContainerPlanFetcher {
         }
 
         const scale = this.container.main.scale || parseFloat(document.getElementById('scaleInput')?.value) || 1;
-        const yieldAmount = (this.container.main.recipe.predicted_yield || 1) * scale; // Changed from yield_amount to predicted_yield
-
+        const yieldAmount = (this.container.main.recipe.yield_amount || 1) * scale;
+        
         console.log('🔍 CONTAINER PLAN: Fetching for recipe', this.container.main.recipe.id, 'scale:', scale, 'yield:', yieldAmount);
 
         try {
             const data = await this.container.main.apiCall(`/recipes/${this.container.main.recipe.id}/auto-fill-containers`, {
                 scale: scale,
-                predicted_yield: this.container.main.recipe.predicted_yield,
-                predicted_yield_unit: this.container.main.recipe.predicted_yield_unit
+                yield_amount: yieldAmount,
+                yield_unit: this.container.main.unit
             });
 
             this.fetchingPlan = false;
@@ -57,12 +58,12 @@ export class ContainerPlanFetcher {
         } catch (error) {
             console.error('🚨 CONTAINER PLAN: Network error:', error);
             let errorMessage = 'Network error while loading containers';
-
+            
             // Check if it's a specific API error
             if (error.message && error.message.includes('api_format')) {
                 errorMessage = 'Container system configuration error - please contact support';
             }
-
+            
             this.container.displayContainerError(errorMessage);
             this.fetchingPlan = false;
             return null;
