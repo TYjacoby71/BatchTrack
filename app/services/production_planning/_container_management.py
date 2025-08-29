@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 def analyze_container_options(
-    recipe, scale: float, preferred_container_id: int = None, organization_id: int = None, api_format: bool = False
+    recipe, scale: float, preferred_container_id: int = None, organization_id: int = None
 ):
     """
     Analyze container options for a recipe at a given scale.
@@ -131,24 +131,17 @@ def analyze_container_options(
         # Create greedy strategy for the best containers
         strategy_result = _create_greedy_strategy(all_container_options, total_yield_needed, yield_unit)
         
-        if api_format:
-            # Return strategy object for API calls
-            return strategy_result
-        else:
-            # Return tuple for internal calls
-            return strategy_result, all_container_options
+        # Always return strategy object for API compatibility
+        return strategy_result
 
     except Exception as e:
         logger.error(f"🏭 CONTAINER ANALYSIS: Error during analysis: {e}")
-        if api_format:
-            return {
-                'success': False,
-                'error': f'Container analysis failed: {str(e)}',
-                'container_selection': [],
-                'warnings': [str(e)]
-            }
-        else:
-            return "all_containers", []
+        return {
+            'success': False,
+            'error': f'Container analysis failed: {str(e)}',
+            'container_selection': [],
+            'warnings': [str(e)]
+        }
 
 
 def _load_suitable_containers(recipe: Recipe, org_id: int, total_yield: float, yield_unit: str) -> List[Dict[str, Any]]:

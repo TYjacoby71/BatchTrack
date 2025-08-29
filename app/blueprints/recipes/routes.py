@@ -95,8 +95,7 @@ def auto_fill_containers(recipe_id):
         strategy_result = analyze_container_options(
             recipe=recipe,
             scale=scale,
-            organization_id=current_user.organization_id,
-            api_format=True
+            organization_id=current_user.organization_id
         )
 
         if strategy_result and strategy_result.get('success'):

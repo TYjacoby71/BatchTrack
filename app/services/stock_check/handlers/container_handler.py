@@ -56,33 +56,7 @@ class ContainerHandler(BaseInventoryHandler):
                 'delegated_to_production_planning': True
             }
         )
-
-        except (ValueError, ZeroDivisionError) as e:
-            # Build the result - ensure we handle quantity properly
-            available_qty = container.quantity
-            if isinstance(available_qty, (list, tuple)):
-                available_qty = available_qty[0] if available_qty else 0
-            elif available_qty is None:
-                available_qty = 0
-
-            # Get storage capacity, fallback to capacity attribute
-            storage_capacity = getattr(container, 'storage_capacity', None)
-            if storage_capacity is None:
-                storage_capacity = getattr(container, 'capacity', None)
-
-            return StockCheckResult(
-                item_id=container.id,
-                item_name=container.name,
-                category=InventoryCategory.CONTAINER,
-                needed_quantity=1,
-                needed_unit="count",
-                available_quantity=len(available_containers),
-                available_unit="count",
-                status=StockStatus.ERROR,
-                error_message=f"Container calculation error: {str(e)}",
-                formatted_needed="1 count",
-                formatted_available=self._format_quantity_display(len(available_containers), "count")
-            )
+            
 
     def get_item_details(self, item_id: int, organization_id: int) -> Optional[dict]:
         """Get container details"""
