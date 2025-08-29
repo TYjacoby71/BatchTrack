@@ -33,46 +33,13 @@ class PlanProductionApp {
     }
 
     loadRecipeData() {
-        // Get recipe data from data attributes on the container
-        const container = document.querySelector('[data-recipe-id]');
-        if (container) {
-            this.recipe = {
-                id: parseInt(container.dataset.recipeId),
-                name: container.dataset.recipeName,
-                predicted_yield: parseFloat(container.dataset.baseYield) || 0,
-                predicted_yield_unit: container.dataset.yieldUnit || 'ml'
-            };
-            console.log('🔍 RECIPE: Loaded recipe data from data attributes:', this.recipe);
-        } else if (window.recipeData) {
-            this.recipe = window.recipeData;
-            console.log('🔍 RECIPE: Loaded recipe data from window:', this.recipe);
-        } else {
-            // Try to load from script tag as fallback
-            const recipeDataScript = document.getElementById('recipeData');
-            if (recipeDataScript) {
-                try {
-                    this.recipe = JSON.parse(recipeDataScript.textContent);
-                    console.log('🔍 RECIPE: Loaded recipe data from script tag:', this.recipe);
-                } catch (e) {
-                    console.error('🚨 RECIPE: Failed to parse recipe data:', e);
-                    this.recipe = null;
-                }
-            } else {
-                console.error('🚨 RECIPE: No recipe data found');
-                this.recipe = null;
-            }
-        }
-
-        if (this.recipe) {
-            // Use the correct field names from the Recipe model
-            this.baseYield = parseFloat(this.recipe.predicted_yield) || 0;
-            this.unit = this.recipe.predicted_yield_unit || 'ml';
-
-            // Add compatibility fields for any legacy code
-            this.recipe.yield_amount = this.recipe.predicted_yield;
-            this.recipe.yield_unit = this.recipe.predicted_yield_unit;
-
-            console.log('🔍 RECIPE: Base yield:', this.baseYield, 'Unit:', this.unit);
+        // Get recipe data from template
+        const recipeData = window.recipeData;
+        if (recipeData) {
+            this.recipe = recipeData;
+            this.baseYield = parseFloat(recipeData.yield_amount) || 0;
+            this.unit = recipeData.yield_unit || '';
+            console.log('🔍 RECIPE: Loaded recipe data:', this.recipe);
         }
     }
 

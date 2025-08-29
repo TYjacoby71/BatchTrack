@@ -80,52 +80,14 @@ export class ContainerManager {
         this.progressBar.update();
     }
 
-    selectRecommendedContainers() {
-        console.log('🔍 CONTAINER MANAGEMENT: Selecting all recommended containers');
-        
-        // Check all container checkboxes
-        const checkboxes = document.querySelectorAll('.container-select-checkbox');
-        checkboxes.forEach(checkbox => {
-            checkbox.checked = true;
-        });
-        
-        // Update the renderer's selection
-        this.renderer.updateContainerSelection();
-        
-        // Show success message
-        const resultsDiv = document.getElementById('autoFillResults');
-        if (resultsDiv) {
-            const successAlert = document.createElement('div');
-            successAlert.className = 'alert alert-success alert-dismissible fade show mt-2';
-            successAlert.innerHTML = `
-                <i class="fas fa-check"></i> All recommended containers selected!
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            `;
-            resultsDiv.appendChild(successAlert);
-            
-            // Auto-dismiss after 3 seconds
-            setTimeout(() => {
-                if (successAlert.parentNode) {
-                    successAlert.remove();
-                }
-            }, 3000);
-        }
-    }
-
     onContainerRequirementChange() {
         if (this.main.requiresContainers) {
             const autoFillEnabled = document.getElementById('autoFillEnabled')?.checked ?? true;
             this.toggleContainerSections(autoFillEnabled);
-            this.fetchContainerPlan();
+            this.planFetcher.fetchContainerPlan();
         } else {
             this.containerPlan = null;
             this.renderer.clearResults();
-        }
-    }
-
-    async fetchContainerPlan() {
-        console.log('🔍 CONTAINER MANAGEMENT: fetchContainerPlan called');
-        return await this.planFetcher.fetchContainerPlan();
         }
     }
 

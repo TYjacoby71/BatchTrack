@@ -30,41 +30,33 @@ export class ContainerPlanFetcher {
         }
 
         const scale = this.container.main.scale || parseFloat(document.getElementById('scaleInput')?.value) || 1;
-        const yieldAmount = (this.container.main.recipe.predicted_yield || 1) * scale;
+        const yieldAmount = (this.container.main.recipe.yield_amount || 1) * scale;
         
-        console.log('🔍 CONTAINER PLAN: Fetching for recipe', this.container.main.recipe.id, 'scale:', scale, 'yield:', yieldAmount), yieldAmount);
+        console.log('🔍 CONTAINER PLAN: Fetching for recipe', this.container.main.recipe.id, 'scale:', scale, 'yield:', yieldAmount);
 
         try {
             const data = await this.container.main.apiCall(`/recipes/${this.container.main.recipe.id}/auto-fill-containers`, {
                 scale: scale,
-                predicted_yield: this.container.main.recipe.predicted_yield,
-                predicted_yield_unit: this.container.main.recipe.predicted_yield_unit
+                yield_amount: yieldAmount,
+                yield_unit: this.container.main.unit
             });
 
             this.fetchingPlan = false;
 
-            if (data && data.success) {
+            if (data.success) {
                 console.log('🔍 CONTAINER PLAN: Plan successful');
                 this.container.containerPlan = data;
                 this.lastPlanResult = data;
                 this.container.displayContainerPlan();
                 return data;
             } else {
-                const errorMsg = data?.error || 'Container planning failed';
-                console.log('🔍 CONTAINER PLAN: Plan failed:', errorMsg);
-                this.container.displayContainerError(errorMsg);
+                console.log('🔍 CONTAINER PLAN: Plan failed:', data.error);
+                this.container.displayContainerError(data.error);
                 return null;
             }
         } catch (error) {
             console.error('🚨 CONTAINER PLAN: Network error:', error);
-            let errorMessage = 'Network error while loading containers';
-            
-            // Check if it's a specific API error
-            if (error.message && error.message.includes('api_format')) {
-                errorMessage = 'Container system configuration error - please contact support';
-            }
-            
-            this.container.displayContainerError(errorMessage);
+            this.container.displayContainerError('Network error while loading containers');
             this.fetchingPlan = false;
             return null;
         }
