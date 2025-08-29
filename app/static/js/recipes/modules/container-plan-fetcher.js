@@ -36,8 +36,8 @@ export class ContainerPlanFetcher {
         try {
             const data = await this.container.main.apiCall(`/recipes/${this.container.main.recipe.id}/auto-fill-containers`, {
                 scale: scale,
-                yield_amount: yieldAmount,
-                yield_unit: this.container.main.predicted_yield_unit // Changed from unit to predicted_yield_unit
+                predicted_yield: this.container.main.recipe.predicted_yield,
+                predicted_yield_unit: this.container.main.recipe.predicted_yield_unit
             });
 
             this.fetchingPlan = false;

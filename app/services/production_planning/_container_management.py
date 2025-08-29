@@ -46,18 +46,44 @@ def analyze_container_options(
         allowed_container_ids = []
         if recipe.allowed_containers:
             try:
-                import json
-                allowed_container_ids = json.loads(recipe.allowed_containers)
+                # Handle different formats of allowed_containers
+                if isinstance(recipe.allowed_containers, str):
+                    import json
+                    allowed_container_ids = json.loads(recipe.allowed_containers)
+                elif isinstance(recipe.allowed_containers, list):
+                    allowed_container_ids = recipe.allowed_containers
+                else:
+                    # If it's stored as a pickled object, it should be a list already
+                    allowed_container_ids = list(recipe.allowed_containers) if recipe.allowed_containers else []
+                
                 logger.info(f"🏭 CONTAINER ANALYSIS: Recipe allows containers: {allowed_container_ids}")
-            except (json.JSONDecodeError, TypeError):
-                logger.warning(f"🏭 CONTAINER ANALYSIS: Invalid allowed_containers format: {recipe.allowed_containers}")
+            except (json.JSONDecodeError, TypeError, ValueError) as e:
+                logger.warning(f"🏭 CONTAINER ANALYSIS: Invalid allowed_containers format: {recipe.allowed_containers}, error: {e}")
 
         if not allowed_container_ids:
             logger.warning("🏭 CONTAINER ANALYSIS: No allowed containers found for recipe")
-            return "all_containers", []
+            return {
+                'success': False,
+                'error': 'No containers configured for this recipe',
+                'container_selection': [],
+                'warnings': ['Recipe has no containers configured']
+            }
 
         # Get available containers from inventory
         from app.models import InventoryItem
+        
+        # First, let's check what containers exist in the organization
+        all_org_containers = InventoryItem.query.filter(
+            InventoryItem.type == 'container',
+            InventoryItem.organization_id == organization_id,
+            InventoryItem.is_archived == False
+        ).all()
+        
+        logger.info(f"🏭 CONTAINER ANALYSIS: Organization has {len(all_org_containers)} total containers")
+        for container in all_org_containers:
+            logger.info(f"🏭 CONTAINER ANALYSIS: Available container: ID={container.id}, Name={container.name}, Qty={container.quantity}")
+        
+        # Now filter for allowed containers
         available_containers = InventoryItem.query.filter(
             InventoryItem.id.in_(allowed_container_ids),
             InventoryItem.type == 'container',
@@ -66,7 +92,7 @@ def analyze_container_options(
             InventoryItem.quantity > 0
         ).all()
 
-        logger.info(f"🏭 CONTAINER ANALYSIS: Found {len(available_containers)} available containers")
+        logger.info(f"🏭 CONTAINER ANALYSIS: Found {len(available_containers)} available allowed containers")
 
         if not available_containers:
             logger.warning("🏭 CONTAINER ANALYSIS: No available containers in stock")

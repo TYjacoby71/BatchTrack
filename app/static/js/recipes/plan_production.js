@@ -33,10 +33,31 @@ class PlanProductionApp {
     }
 
     loadRecipeData() {
+        // Load recipe data from template
+        const recipeDataScript = document.getElementById('recipeData');
+        if (recipeDataScript) {
+            try {
+                this.recipe = JSON.parse(recipeDataScript.textContent);
+                console.log('🔍 RECIPE: Loaded recipe data:', this.recipe);
+
+                // Ensure recipe has required fields for compatibility
+                if (this.recipe && !this.recipe.yield_amount) {
+                    this.recipe.yield_amount = this.recipe.predicted_yield || 1;
+                }
+                if (this.recipe && !this.recipe.yield_unit) {
+                    this.recipe.yield_unit = this.recipe.predicted_yield_unit || 'ml';
+                }
+            } catch (e) {
+                console.error('🚨 RECIPE: Failed to parse recipe data:', e);
+                this.recipe = null;
+            }
+        } else {
+            console.error('🚨 RECIPE: No recipe data found in template');
+            this.recipe = null;
+        }
         // Extract recipe information
-        const recipeData = window.recipeData || {};
-        this.baseYield = parseFloat(recipeData.yield_amount || recipeData.predicted_yield) || 0;
-        this.unit = recipeData.yield_unit || recipeData.predicted_yield_unit || 'ml';
+        this.baseYield = parseFloat(this.recipe.yield_amount || this.recipe.predicted_yield) || 0;
+        this.unit = this.recipe.yield_unit || this.recipe.predicted_yield_unit || 'ml';
         console.log('🔍 RECIPE: Loaded recipe data:', this.recipe);
     }
 
