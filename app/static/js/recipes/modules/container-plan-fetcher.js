@@ -43,20 +43,28 @@ export class ContainerPlanFetcher {
 
             this.fetchingPlan = false;
 
-            if (data.success) {
+            if (data && data.success) {
                 console.log('🔍 CONTAINER PLAN: Plan successful');
                 this.container.containerPlan = data;
                 this.lastPlanResult = data;
                 this.container.displayContainerPlan();
                 return data;
             } else {
-                console.log('🔍 CONTAINER PLAN: Plan failed:', data.error);
-                this.container.displayContainerError(data.error);
+                const errorMsg = data?.error || 'Container planning failed';
+                console.log('🔍 CONTAINER PLAN: Plan failed:', errorMsg);
+                this.container.displayContainerError(errorMsg);
                 return null;
             }
         } catch (error) {
             console.error('🚨 CONTAINER PLAN: Network error:', error);
-            this.container.displayContainerError('Network error while loading containers');
+            let errorMessage = 'Network error while loading containers';
+            
+            // Check if it's a specific API error
+            if (error.message && error.message.includes('api_format')) {
+                errorMessage = 'Container system configuration error - please contact support';
+            }
+            
+            this.container.displayContainerError(errorMessage);
             this.fetchingPlan = false;
             return null;
         }

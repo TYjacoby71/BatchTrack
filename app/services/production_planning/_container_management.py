@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 def analyze_container_options(
-    recipe, scale: float, preferred_container_id: int = None, organization_id: int = None
+    recipe, scale: float, preferred_container_id: int = None, organization_id: int = None, api_format: bool = False
 ):
     """
     Analyze container options for a recipe at a given scale.
@@ -89,14 +89,18 @@ def analyze_container_options(
                 )
 
                 if conversion_result.get('success'):
-                    container_capacity_yield_units = conversion_result['converted_amount']
+                    container_capacity_yield_units = conversion_result['converted_value']
+                    conversion_successful = True
                 else:
                     # Fallback: assume ml = ml or 1:1 conversion
                     container_capacity_yield_units = container_capacity_ml
+                    conversion_successful = False
+                    logger.warning(f"🏭 CONTAINER ANALYSIS: Unit conversion failed for container {container.id}: {conversion_result.get('error_message', 'Unknown error')}")
 
             except Exception as e:
-                logger.warning(f"🏭 CONTAINER ANALYSIS: Unit conversion failed for container {container.id}: {e}")
+                logger.warning(f"🏭 CONTAINER ANALYSIS: Unit conversion exception for container {container.id}: {e}")
                 container_capacity_yield_units = container_capacity_ml
+                conversion_successful = False
 
             # Calculate how many containers would be needed
             containers_needed = math.ceil(total_yield_needed / container_capacity_yield_units) if container_capacity_yield_units > 0 else 0
@@ -109,7 +113,12 @@ def analyze_container_options(
                 'containers_needed': min(containers_needed, available_quantity),
                 'total_capacity': container_capacity_yield_units * min(containers_needed, available_quantity),
                 'available_quantity': available_quantity,
-                'yield_unit': yield_unit
+                'yield_unit': yield_unit,
+                'original_capacity': container_capacity_ml,
+                'original_unit': 'ml',
+                'capacity_in_yield_unit': container_capacity_yield_units,
+                'conversion_successful': conversion_successful,
+                'cost_each': container.cost_per_unit or 0.0
             })
 
             logger.info(f"🏭 CONTAINER ANALYSIS: Available option: {container.name} (capacity: {container_capacity_yield_units} {yield_unit}, stock: {available_quantity})")
@@ -119,11 +128,27 @@ def analyze_container_options(
 
         logger.info(f"🏭 CONTAINER ANALYSIS: Returning {len(all_container_options)} container options")
 
-        return "all_containers", all_container_options
+        # Create greedy strategy for the best containers
+        strategy_result = _create_greedy_strategy(all_container_options, total_yield_needed, yield_unit)
+        
+        if api_format:
+            # Return strategy object for API calls
+            return strategy_result
+        else:
+            # Return tuple for internal calls
+            return strategy_result, all_container_options
 
     except Exception as e:
         logger.error(f"🏭 CONTAINER ANALYSIS: Error during analysis: {e}")
-        return "all_containers", []
+        if api_format:
+            return {
+                'success': False,
+                'error': f'Container analysis failed: {str(e)}',
+                'container_selection': [],
+                'warnings': [str(e)]
+            }
+        else:
+            return "all_containers", []
 
 
 def _load_suitable_containers(recipe: Recipe, org_id: int, total_yield: float, yield_unit: str) -> List[Dict[str, Any]]:
