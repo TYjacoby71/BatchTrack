@@ -16,7 +16,8 @@ logger = logging.getLogger(__name__)
 
 @recipes_bp.route('/new', methods=['GET', 'POST'])
 @login_required
-def new_recipe():
+@require_permission('recipes.create')
+def create_recipe():
     if request.method == 'POST':
         try:
             # Extract form data and delegate to service
@@ -45,10 +46,11 @@ def new_recipe():
 
     # GET request - show form
     form_data = _get_recipe_form_data()
-    return render_template('pages/recipes/recipe_form.html', recipe=None, **form_data)
+    return render_template('pages/recipes/create_recipe.html', recipe=None, **form_data)
 
 @recipes_bp.route('/')
 @login_required
+@require_permission('recipes.view')
 def list_recipes():
     # Simple data retrieval - no business logic
     query = Recipe.query.filter_by(parent_id=None)
@@ -57,10 +59,11 @@ def list_recipes():
 
     recipes = query.all()
     inventory_units = get_global_unit_list()
-    return render_template('pages/recipes/recipe_list.html', recipes=recipes, inventory_units=inventory_units)
+    return render_template('pages/recipes/list_recipes.html', recipes=recipes, inventory_units=inventory_units)
 
-@recipes_bp.route('/<int:recipe_id>/view')
+@recipes_bp.route('/<int:recipe_id>')
 @login_required
+@require_permission('recipes.view')
 def view_recipe(recipe_id):
     try:
         recipe = get_recipe_details(recipe_id)
@@ -113,7 +116,7 @@ def create_variation(recipe_id):
         form_data = _get_recipe_form_data()
         new_variation = _create_variation_template(parent)
 
-        return render_template('pages/recipes/recipe_form.html',
+        return render_template('pages/recipes/create_recipe.html',
                              recipe=new_variation,
                              is_variation=True,
                              parent_recipe=parent,
@@ -126,6 +129,7 @@ def create_variation(recipe_id):
 
 @recipes_bp.route('/<int:recipe_id>/edit', methods=['GET', 'POST'])
 @login_required
+@require_permission('recipes.edit')
 def edit_recipe(recipe_id):
     recipe = get_recipe_details(recipe_id)
     if not recipe:
@@ -167,7 +171,7 @@ def edit_recipe(recipe_id):
     from ...models import Batch
     existing_batches = Batch.query.filter_by(recipe_id=recipe.id).count()
 
-    return render_template('pages/recipes/recipe_form.html',
+    return render_template('pages/recipes/edit_recipe.html',
                          recipe=recipe,
                          edit_mode=True,
                          existing_batches=existing_batches,
@@ -187,7 +191,7 @@ def clone_recipe(recipe_id):
             # Don't save to DB yet - let user edit first
             db.session.rollback()
 
-            return render_template('pages/recipes/recipe_form.html',
+            return render_template('pages/recipes/create_recipe.html',
                                 recipe=new_recipe,
                                 is_clone=True,
                                 ingredient_prefill=ingredients,
@@ -380,4 +384,3 @@ def _create_variation_template(parent):
         predicted_yield=parent.predicted_yield,
         predicted_yield_unit=parent.predicted_yield_unit
     )
-
