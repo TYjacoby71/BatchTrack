@@ -12,6 +12,7 @@ from app.services.recipe_service import (
 from app.services.production_planning import plan_production_comprehensive
 from app.services.production_planning._container_management import analyze_container_options
 from app.utils.unit_utils import get_global_unit_list
+from app.services.unit_conversion import ConversionEngine
 from app.models.unit import Unit
 import logging
 
