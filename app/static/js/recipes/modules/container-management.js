@@ -213,8 +213,8 @@ export class ContainerManager {
         }
     }
 
-    getScaleFactor() {
-        const scaleInput = document.getElementById('scaleFactorInput');
+    getCurrentScale() {
+        const scaleInput = document.getElementById('scaleInput') || document.getElementById('scaleFactorInput');
         return scaleInput ? parseFloat(scaleInput.value) || 1.0 : 1.0;
     }
 

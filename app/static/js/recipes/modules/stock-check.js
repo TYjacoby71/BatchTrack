@@ -150,7 +150,7 @@ export class StockCheckManager {
             });
 
             const needed = result.needed_amount || result.needed_quantity || result.quantity_needed || 0;
-            
+
             // Use raw_stock if available (actual inventory), otherwise fall back to available_quantity
             const available = result.raw_stock !== undefined ? result.raw_stock : (result.available_quantity || 0);
 
@@ -173,7 +173,7 @@ export class StockCheckManager {
                 }
                 status = isAvailable ? 'OK' : 'NEEDED';
                 statusClass = isAvailable ? 'bg-success' : 'bg-danger';
-                
+
                 // Use formatted_available if provided, otherwise format the raw value
                 displayAvailable = result.formatted_available || `${available.toFixed(2)} ${result.stock_unit || result.available_unit || ''}`;
             }
