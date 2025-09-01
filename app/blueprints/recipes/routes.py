@@ -2,7 +2,7 @@ from flask import render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
 from . import recipes_bp
 from app.extensions import db
-from app.models import Recipe, InventoryItem
+from app.models import Recipe, RecipeIngredient, InventoryItem
 from app.utils.permissions import require_permission
 
 from app.services.recipe_service import (
