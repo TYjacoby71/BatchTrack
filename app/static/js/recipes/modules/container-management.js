@@ -1,4 +1,3 @@
-
 /**
  * Container Management Module - Display Logic Only
  * 
@@ -14,13 +13,13 @@ export class ContainerManager {
         this.allContainerOptions = [];
         this.autoFillStrategy = null;
         this.currentMetrics = null;
-        
+
         this.initializeEventListeners();
     }
-    
+
     initializeEventListeners() {
         if (!this.container) return;
-        
+
         // Mode toggle
         const modeToggle = this.container.querySelector('#containerModeToggle');
         if (modeToggle) {
@@ -28,7 +27,7 @@ export class ContainerManager {
                 this.switchMode(e.target.value);
             });
         }
-        
+
         // Refresh containers button
         const refreshBtn = this.container.querySelector('#refreshContainersBtn');
         if (refreshBtn) {
@@ -37,51 +36,53 @@ export class ContainerManager {
             });
         }
     }
-    
+
     async refreshContainerOptions() {
+        if (!window.recipeData?.id) {
+            console.error('Recipe ID not available');
+            return;
+        }
+
         try {
-            const recipeData = window.recipeData;
-            const scaleFactor = this.getScaleFactor();
-            
-            const response = await fetch('/recipes/auto-fill-containers', {
+            const response = await fetch(`/production-planning/${window.recipeData.id}/auto-fill-containers`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
                 },
                 body: JSON.stringify({
-                    recipe_id: recipeData.id,
-                    scale_factor: scaleFactor
+                    recipe_id: window.recipeData.id,
+                    scale: this.getCurrentScale()
                 })
             });
-            
+
             const result = await response.json();
-            
+
             if (result.success) {
                 this.allContainerOptions = result.all_container_options;
                 this.autoFillStrategy = result.auto_fill_strategy;
-                
+
                 this.renderContainerOptions();
                 this.updateContainerProgress();
             } else {
                 this.showError(result.error || 'Failed to load container options');
             }
-            
+
         } catch (error) {
             console.error('Error refreshing container options:', error);
             this.showError('Failed to refresh container options');
         }
     }
-    
+
     switchMode(newMode) {
         this.mode = newMode;
         this.renderContainerOptions();
         this.updateContainerProgress();
-        
+
         // Show/hide relevant sections
         const autoSection = this.container.querySelector('#autoContainerSection');
         const manualSection = this.container.querySelector('#manualContainerSection');
-        
+
         if (autoSection && manualSection) {
             if (newMode === 'auto') {
                 autoSection.style.display = 'block';
@@ -92,7 +93,7 @@ export class ContainerManager {
             }
         }
     }
-    
+
     renderContainerOptions() {
         if (this.mode === 'auto') {
             this.renderAutoFillStrategy();
@@ -100,11 +101,11 @@ export class ContainerManager {
             this.renderManualSelection();
         }
     }
-    
+
     renderAutoFillStrategy() {
         const autoSection = this.container.querySelector('#autoContainerSection');
         if (!autoSection || !this.autoFillStrategy) return;
-        
+
         const containersHtml = this.autoFillStrategy.container_selection.map((container, index) => `
             <div class="container-item mb-2 p-2 border rounded">
                 <div class="d-flex justify-content-between align-items-center">
@@ -121,19 +122,19 @@ export class ContainerManager {
                 <small class="text-muted">${container.containers_needed} containers needed</small>
             </div>
         `).join('');
-        
+
         autoSection.innerHTML = `
             <h6>Recommended Container Selection:</h6>
             ${containersHtml}
         `;
-        
+
         this.currentMetrics = this.autoFillStrategy.metrics;
     }
-    
+
     renderManualSelection() {
         const manualSection = this.container.querySelector('#manualContainerSection');
         if (!manualSection || !this.allContainerOptions) return;
-        
+
         const optionsHtml = this.allContainerOptions.map(option => `
             <div class="container-option mb-2 p-2 border rounded" data-container-id="${option.container_id}">
                 <div class="d-flex justify-content-between align-items-center">
@@ -153,37 +154,37 @@ export class ContainerManager {
                 </div>
             </div>
         `).join('');
-        
+
         manualSection.innerHTML = `
             <h6>Select Containers Manually:</h6>
             ${optionsHtml}
             <div id="manualSelectionSummary" class="mt-3"></div>
         `;
     }
-    
+
     updateManualSelection() {
         const checkboxes = this.container.querySelectorAll('#manualContainerSection input[type="checkbox"]:checked');
         this.selectedContainers = Array.from(checkboxes).map(cb => {
             const containerId = parseInt(cb.value);
             return this.allContainerOptions.find(option => option.container_id === containerId);
         }).filter(Boolean);
-        
+
         // Calculate metrics for selected containers
         this.calculateManualMetrics();
         this.updateContainerProgress();
     }
-    
+
     async calculateManualMetrics() {
         if (this.selectedContainers.length === 0) {
             this.currentMetrics = null;
             return;
         }
-        
+
         try {
             const recipeData = window.recipeData;
             const scaleFactor = this.getScaleFactor();
             const totalYield = recipeData.yield_amount * scaleFactor;
-            
+
             // Use backend service to calculate metrics
             const response = await fetch('/api/calculate-container-metrics', {
                 method: 'POST',
@@ -196,27 +197,27 @@ export class ContainerManager {
                     total_yield: totalYield
                 })
             });
-            
+
             const result = await response.json();
             this.currentMetrics = result.metrics;
-            
+
         } catch (error) {
             console.error('Error calculating manual metrics:', error);
         }
     }
-    
+
     updateContainerProgress() {
         // Update progress bar component with current metrics
         if (window.containerProgressBar && this.currentMetrics) {
             window.containerProgressBar.updateProgress(this.currentMetrics);
         }
     }
-    
+
     getScaleFactor() {
         const scaleInput = document.getElementById('scaleFactorInput');
         return scaleInput ? parseFloat(scaleInput.value) || 1.0 : 1.0;
     }
-    
+
     showError(message) {
         const errorDiv = this.container.querySelector('#containerError');
         if (errorDiv) {
@@ -224,7 +225,7 @@ export class ContainerManager {
             errorDiv.style.display = 'block';
         }
     }
-    
+
     getSelectedContainers() {
         if (this.mode === 'auto' && this.autoFillStrategy) {
             return this.autoFillStrategy.containers_to_use;
