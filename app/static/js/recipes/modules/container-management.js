@@ -105,20 +105,20 @@ export class ContainerManager {
         const autoSection = this.container.querySelector('#autoContainerSection');
         if (!autoSection || !this.autoFillStrategy) return;
         
-        const containersHtml = this.autoFillStrategy.containers_to_use.map((container, index) => `
+        const containersHtml = this.autoFillStrategy.container_selection.map((container, index) => `
             <div class="container-item mb-2 p-2 border rounded">
                 <div class="d-flex justify-content-between align-items-center">
                     <span><strong>${container.container_name}</strong></span>
-                    <span class="text-muted">${container.capacity} ${container.capacity_unit}</span>
+                    <span class="text-muted">${container.capacity} units</span>
                 </div>
                 <div class="progress mt-1" style="height: 8px;">
                     <div class="progress-bar" role="progressbar" 
-                         style="width: ${container.fill_percentage}%"
-                         aria-valuenow="${container.fill_percentage}" 
+                         style="width: ${(container.containers_needed * container.capacity / this.autoFillStrategy.total_capacity * 100).toFixed(1)}%"
+                         aria-valuenow="${(container.containers_needed * container.capacity / this.autoFillStrategy.total_capacity * 100).toFixed(1)}" 
                          aria-valuemin="0" aria-valuemax="100">
                     </div>
                 </div>
-                <small class="text-muted">${container.fill_percentage.toFixed(1)}% filled</small>
+                <small class="text-muted">${container.containers_needed} containers needed</small>
             </div>
         `).join('');
         
@@ -143,12 +143,12 @@ export class ContainerManager {
                                onchange="containerManager.updateManualSelection()">
                         <strong>${option.container_name}</strong>
                     </label>
-                    <span class="text-muted">${option.capacity} ${option.capacity_unit}</span>
+                    <span class="text-muted">${option.capacity} units</span>
                 </div>
                 <div class="mt-1">
                     <small class="text-muted">
                         Needs ${option.containers_needed} container(s) | 
-                        ${option.last_container_fill_percentage.toFixed(1)}% efficiency
+                        ${option.fill_percentage ? option.fill_percentage.toFixed(1) : 100}% efficiency
                     </small>
                 </div>
             </div>
