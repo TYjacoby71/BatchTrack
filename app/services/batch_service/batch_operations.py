@@ -1,4 +1,3 @@
-
 import logging
 from datetime import datetime
 from sqlalchemy import extract
@@ -15,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 class BatchOperationsService(BaseService):
     """Service for batch lifecycle operations: start, finish, cancel"""
-    
+
     @classmethod
     def start_batch(cls, recipe_id, scale=1.0, batch_type='ingredient', notes='', containers_data=None, requires_containers=False):
         """Start a new batch with inventory deductions"""
@@ -94,7 +93,7 @@ class BatchOperationsService(BaseService):
                         try:
                             # Handle container unit
                             container_unit = 'count' if not container_item.unit or container_item.unit == '' else container_item.unit
-                            
+
                             result = process_inventory_adjustment(
                                 item_id=container_id,
                                 quantity=-quantity,
@@ -220,7 +219,7 @@ class BatchOperationsService(BaseService):
 
             # Restore all inventory
             restoration_summary = []
-            
+
             # Restore batch ingredients
             for batch_ing in batch_ingredients:
                 ingredient = batch_ing.inventory_item
@@ -299,7 +298,7 @@ class BatchOperationsService(BaseService):
         try:
             # Import here to avoid circular imports
             from app.blueprints.batches.finish_batch import _complete_batch_internal
-            
+
             batch = Batch.query.filter_by(
                 id=batch_id,
                 organization_id=current_user.organization_id,

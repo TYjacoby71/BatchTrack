@@ -20,13 +20,13 @@
           </div>
 
           <div class="mb-3">
-            <label for="containerStorageAmount" class="form-label">Storage Amount</label>
-            <input type="number" class="form-control" id="containerStorageAmount" name="storage_amount" step="0.01" required>
+            <label for="containerCapacity" class="form-label">Capacity</label>
+            <input type="number" class="form-control" id="containerCapacity" name="capacity" step="0.01" required>
           </div>
 
           <div class="mb-3">
-            <label for="containerStorageUnit" class="form-label">Storage Unit</label>
-            <select class="form-select" id="containerStorageUnit" name="storage_unit" required>
+            <label for="containerCapacityUnit" class="form-label">Capacity Unit</label>
+            <select class="form-select" id="containerCapacityUnit" name="capacity_unit" required>
               <option value="">Select unit...</option>
               {% for unit in get_global_unit_list() %}
               <option value="{{ unit.name }}">{{ unit.name }}</option>
@@ -68,15 +68,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Add to container dropdowns if they exist
         const newContainerName = formData.get('name');
-        const storageAmount = formData.get('storage_amount');
-        const storageUnit = formData.get('storage_unit');
+        const capacity = formData.get('capacity');
+        const capacityUnit = formData.get('capacity_unit');
 
         // Find container selects and add the new option
         document.querySelectorAll('select[name="allowed_containers[]"]').forEach(select => {
           if (select) {
             const option = document.createElement('option');
             option.value = 'temp-' + Date.now(); // Temporary ID until page refresh
-            option.textContent = `${newContainerName} (${storageAmount} ${storageUnit})`;
+            option.textContent = `${newContainerName} (${capacity} ${capacityUnit})`;
             select.appendChild(option);
           }
         });

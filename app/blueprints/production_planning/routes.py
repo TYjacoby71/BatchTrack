@@ -198,6 +198,38 @@ def debug_recipe_containers(recipe_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@production_planning_bp.route('/<int:recipe_id>/calculate-container-metrics', methods=['POST'])
+@login_required
+@require_permission('recipes.plan_production')
+def calculate_container_metrics(recipe_id):
+    """Calculate metrics for manually selected containers"""
+    try:
+        data = request.get_json()
+        selected_containers = data.get('selected_containers', [])
+        total_yield = data.get('total_yield', 0)
+
+        if not selected_containers:
+            return jsonify({'success': False, 'error': 'No containers selected'})
+
+        # Calculate basic metrics
+        total_capacity = sum(container.get('capacity', 0) * container.get('containers_needed', 1) 
+                           for container in selected_containers)
+        
+        efficiency = (total_yield / total_capacity * 100) if total_capacity > 0 else 0
+        
+        metrics = {
+            'total_capacity': total_capacity,
+            'efficiency_percentage': efficiency,
+            'containers_count': len(selected_containers),
+            'total_yield': total_yield
+        }
+
+        return jsonify({'success': True, 'metrics': metrics})
+
+    except Exception as e:
+        logger.error(f"Error calculating container metrics: {str(e)}")
+        return jsonify({'success': False, 'error': 'Failed to calculate container metrics'}), 500
+
 @production_planning_bp.route('/<int:recipe_id>/plan/container', methods=['POST'])
 @login_required
 @require_permission('recipes.plan_production')

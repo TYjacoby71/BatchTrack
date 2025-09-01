@@ -23,9 +23,13 @@ class InventoryItem(ScopedModelMixin, db.Model):
     is_perishable = db.Column(db.Boolean, default=False)
     shelf_life_days = db.Column(db.Integer, nullable=True)
     expiration_date = db.Column(db.Date, nullable=True)
-    # Container-specific fields
-    storage_amount = db.Column(db.Float, nullable=True)
-    storage_unit = db.Column(db.String(32), nullable=True)
+    # Container-specific fields (legacy)
+    storage_amount = db.Column(db.Float, nullable=True)  # How much this container can hold (deprecated)
+    storage_unit = db.Column(db.String(32), nullable=True)  # Unit for storage capacity (deprecated)
+
+    # Container capacity fields (standardized naming)
+    capacity = db.Column(db.Float, nullable=True)  # How much this container can hold
+    capacity_unit = db.Column(db.String(32), nullable=True)  # Unit for capacity
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
     # Density for unit conversion (g/mL)
