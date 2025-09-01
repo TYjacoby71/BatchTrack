@@ -10,7 +10,7 @@ from typing import Dict, List, Any, Optional, Tuple
 from decimal import Decimal, ROUND_UP
 import logging
 
-from app.models import Container, Recipe
+from app.models import Recipe, InventoryItem
 from app.utils.unit_utils import convert_units
 from .types import ContainerOption, ContainerStrategy
 
