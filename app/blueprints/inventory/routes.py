@@ -225,19 +225,19 @@ def add_inventory():
         # Handle container-specific fields
         if item_type == 'container':
             # Prefer new capacity fields, fallback to legacy storage fields
-            capacity = form_data.get('capacity') or form_data.get('storage_amount')
-            capacity_unit = form_data.get('capacity_unit') or form_data.get('storage_unit')
+            capacity = form_data.get('capacity') or form_data.get('capacity')
+            capacity_unit = form_data.get('capacity_unit') or form_data.get('capacity_unit')
 
             if capacity:
                 form_data['capacity'] = float(capacity)
                 # Also set legacy fields for backward compatibility if they don't exist or are different
-                if 'storage_amount' not in form_data or form_data['storage_amount'] != capacity:
-                    form_data['storage_amount'] = float(capacity)
+                if 'capacity' not in form_data or form_data['capacity'] != capacity:
+                    form_data['capacity'] = float(capacity)
             if capacity_unit:
                 form_data['capacity_unit'] = capacity_unit
                 # Also set legacy fields for backward compatibility if they don't exist or are different
-                if 'storage_unit' not in form_data or form_data['storage_unit'] != capacity_unit:
-                    form_data['storage_unit'] = capacity_unit
+                if 'capacity_unit' not in form_data or form_data['capacity_unit'] != capacity_unit:
+                    form_data['capacity_unit'] = capacity_unit
 
         success, message, item_id = create_inventory_item(
             form_data=form_data,
@@ -409,21 +409,21 @@ def edit_inventory(id):
 
         # Handle container-specific fields
         if item.type == 'container':
-            storage_amount = form_data.get('storage_amount')
-            storage_unit = form_data.get('storage_unit')
-            logger.info(f"Container update - storage_amount: {storage_amount}, storage_unit: {storage_unit}")
-            if storage_amount:
-                old_storage_amount = item.storage_amount
-                item.storage_amount = float(storage_amount)
-                logger.info(f"Updated storage_amount: {old_storage_amount} -> {item.storage_amount}")
-            if storage_unit:
-                old_storage_unit = item.storage_unit
-                item.storage_unit = storage_unit
-                logger.info(f"Updated storage_unit: {old_storage_unit} -> {item.storage_unit}")
+            capacity = form_data.get('capacity')
+            capacity_unit = form_data.get('capacity_unit')
+            logger.info(f"Container update - capacity: {capacity}, capacity_unit: {capacity_unit}")
+            if capacity:
+                old_capacity = item.capacity
+                item.capacity = float(capacity)
+                logger.info(f"Updated capacity: {old_capacity} -> {item.capacity}")
+            if capacity_unit:
+                old_capacity_unit = item.capacity_unit
+                item.capacity_unit = capacity_unit
+                logger.info(f"Updated capacity_unit: {old_capacity_unit} -> {item.capacity_unit}")
 
-            # Containers are always counted by "count" - never use storage_unit as the item unit
+            # Containers are always counted by "count" - never use capacity_unit as the item unit
             item.unit = 'count'
-            logger.info(f"Container unit set to 'count' (storage unit is {item.storage_unit})")
+            logger.info(f"Container unit set to 'count' (storage unit is {item.capacity_unit})")
 
         success, message = update_inventory_item(id, update_form_data)
         flash(message, 'success' if success else 'error')

@@ -24,15 +24,34 @@ def upgrade():
     
     # Migrate existing container data
     connection = op.get_bind()
-    connection.execute("""
+    connection.execute(sa.text("""
         UPDATE inventory_item 
-        SET capacity = storage_amount, 
-            capacity_unit = storage_unit 
+        SET capacity = capacity, 
+            capacity_unit = capacity_unit 
         WHERE type = 'container' 
-        AND storage_amount IS NOT NULL
-    """)
+        AND capacity IS NOT NULL
+    """))
+    
+    # Drop the legacy columns
+    op.drop_column('inventory_item', 'capacity')
+    op.drop_column('inventory_item', 'capacity_unit')
 
 
 def downgrade():
+    # Re-add legacy columns
+    op.add_column('inventory_item', sa.Column('capacity', sa.Float(), nullable=True))
+    op.add_column('inventory_item', sa.Column('capacity_unit', sa.String(32), nullable=True))
+    
+    # Migrate data back
+    connection = op.get_bind()
+    connection.execute(sa.text("""
+        UPDATE inventory_item 
+        SET capacity = capacity, 
+            capacity_unit = capacity_unit 
+        WHERE type = 'container' 
+        AND capacity IS NOT NULL
+    """))
+    
+    # Drop new columns
     op.drop_column('inventory_item', 'capacity_unit')
     op.drop_column('inventory_item', 'capacity')
