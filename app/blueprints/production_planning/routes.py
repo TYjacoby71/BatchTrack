@@ -1,4 +1,3 @@
-
 from flask import render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
 from . import production_planning_bp
@@ -61,17 +60,28 @@ def plan_production(recipe_id):
 @login_required
 @require_permission('recipes.plan_production')
 def auto_fill_containers(recipe_id):
-    """Auto-fill containers for production planning - thin controller"""
+    """Auto-fill containers for production planning - thin controller with comprehensive debugging"""
+    logger.info(f"AUTO_FILL_ROUTE: Starting auto-fill containers for recipe {recipe_id}")
+    
     try:
+        # Parse request data
         data = request.get_json()
         if not data:
-            return jsonify({'error': 'No data provided'}), 400
+            logger.error("AUTO_FILL_ROUTE: No JSON data provided in request")
+            return jsonify({'success': False, 'error': 'No data provided'}), 400
 
         scale = data.get('scale', 1.0)
+        logger.info(f"AUTO_FILL_ROUTE: Recipe {recipe_id}, scale {scale}, org {current_user.organization_id}")
 
-        recipe = Recipe.query.get_or_404(recipe_id)
+        # Get recipe - delegate to service layer
+        recipe = get_recipe_details(recipe_id)
+        if not recipe:
+            logger.error(f"AUTO_FILL_ROUTE: Recipe {recipe_id} not found")
+            return jsonify({'success': False, 'error': 'Recipe not found'}), 404
 
-        # Use the simplified container management
+        logger.info(f"AUTO_FILL_ROUTE: Recipe found: {recipe.name}, yield: {recipe.predicted_yield} {recipe.predicted_yield_unit}")
+
+        # Delegate to container management service - this is the proper delegation
         strategy, container_options = analyze_container_options(
             recipe=recipe,
             scale=scale,
@@ -79,19 +89,37 @@ def auto_fill_containers(recipe_id):
             api_format=True
         )
 
+        logger.info(f"AUTO_FILL_ROUTE: Service returned strategy: {strategy is not None}, options: {len(container_options) if container_options else 0}")
+
         if strategy:
-            return jsonify(strategy)
+            logger.info(f"AUTO_FILL_ROUTE: Success - returning strategy with {len(strategy.get('container_selection', []))} containers")
+            return jsonify({
+                'success': True,
+                **strategy
+            })
         else:
+            logger.warning("AUTO_FILL_ROUTE: No suitable container strategy found")
             return jsonify({
                 'success': False,
-                'error': 'No suitable container strategy found'
+                'error': 'No suitable container strategy found',
+                'debug_info': {
+                    'recipe_id': recipe_id,
+                    'scale': scale,
+                    'yield_amount': recipe.predicted_yield,
+                    'yield_unit': recipe.predicted_yield_unit,
+                    'organization_id': current_user.organization_id
+                }
             }), 400
 
     except Exception as e:
-        logger.error(f"Error in auto-fill containers: {e}")
+        logger.error(f"AUTO_FILL_ROUTE: Critical error in auto-fill containers: {e}", exc_info=True)
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': f'Server error: {str(e)}',
+            'debug_info': {
+                'recipe_id': recipe_id,
+                'user_org': current_user.organization_id
+            }
         }), 500
 
 @production_planning_bp.route('/<int:recipe_id>/stock/check', methods=['POST'])
@@ -214,9 +242,9 @@ def calculate_container_metrics(recipe_id):
         # Calculate basic metrics
         total_capacity = sum(container.get('capacity', 0) * container.get('containers_needed', 1) 
                            for container in selected_containers)
-        
+
         efficiency = (total_yield / total_capacity * 100) if total_capacity > 0 else 0
-        
+
         metrics = {
             'total_capacity': total_capacity,
             'efficiency_percentage': efficiency,

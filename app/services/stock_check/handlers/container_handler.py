@@ -56,9 +56,9 @@ class ContainerHandler(BaseInventoryHandler):
         container = available_containers[0]
         logger.info(f"CONTAINER_HANDLER: Using container: {container.name}")
 
-        # Containers have capacity and capacity_unit fields (with legacy fallback)
-        storage_capacity = getattr(container, 'capacity', None) or getattr(container, 'capacity', 0)
-        capacity_unit = getattr(container, 'capacity_unit', None) or getattr(container, 'capacity_unit', 'ml')
+        # Containers have capacity and capacity_unit fields
+        storage_capacity = getattr(container, 'capacity', 0)
+        capacity_unit = getattr(container, 'capacity_unit', 'ml')
         available_quantity = container.quantity
 
         logger.info(f"CONTAINER_HANDLER: Container {container.name}: {available_quantity} units, capacity {storage_capacity} {capacity_unit}")
