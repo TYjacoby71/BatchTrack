@@ -1,1 +1,1 @@
-const response = await fetch(`/recipes/auto-fill-containers`, {
+const response = await fetch(`/production-planning/${recipeId}/auto-fill-containers`, {

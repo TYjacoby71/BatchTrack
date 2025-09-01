@@ -119,10 +119,14 @@ document.addEventListener('DOMContentLoaded', function() {
   window.goToPlanProduction = function() {
     const selectedRecipeId = recipeSelect.value;
     if (selectedRecipeId) {
-      window.location.href = `/recipes/${selectedRecipeId}/plan`;
+      window.location.href = `/production-planning/${selectedRecipeId}/plan`;
     } else {
-      alert('Please select a recipe');
+      alert('Please select a recipe first');
     }
+  };
+  window.createRecipe = function() {
+    // This function is now obsolete with the new URL structure.
+    // The link in the HTML is updated to point to the new URL.
   };
 
   if (recipeSelect) {
