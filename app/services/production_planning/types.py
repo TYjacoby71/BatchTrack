@@ -49,7 +49,8 @@ class ContainerStrategy:
         }
 
 
-@dataclass class StockCheckResult:
+@dataclass
+class StockCheckResult:
     """Result of stock availability check"""
     ingredient_id: int
     ingredient_name: str
