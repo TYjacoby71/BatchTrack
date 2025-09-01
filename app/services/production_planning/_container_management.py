@@ -95,9 +95,9 @@ def _get_all_valid_containers(
 
         for container in containers:
             try:
-                # Get container capacity (prefer capacity fields, fallback to storage fields)
-                capacity_value = getattr(container, 'capacity', None) or getattr(container, 'capacity', None)
-                capacity_unit = getattr(container, 'capacity_unit', None) or getattr(container, 'capacity_unit', None)
+                # Get container capacity using the correct field names
+                capacity_value = getattr(container, 'capacity', None)
+                capacity_unit = getattr(container, 'capacity_unit', None)
 
                 if not capacity_value or not capacity_unit:
                     logger.warning(f"Container {container.name} missing capacity/storage amount or unit")
@@ -170,8 +170,8 @@ def _convert_container_capacities(
     for container in containers:
         try:
             # Get container capacity info
-            capacity_amount = getattr(container, 'capacity', 0) or getattr(container, 'capacity', 0)
-            capacity_unit = getattr(container, 'capacity_unit', '') or getattr(container, 'capacity_unit', '') or getattr(container, 'unit', '')
+            capacity_amount = getattr(container, 'capacity', 0)
+            capacity_unit = getattr(container, 'capacity_unit', '') or getattr(container, 'unit', '')
 
             if not capacity_amount or not capacity_unit:
                 logger.warning(f"Container {container.name} missing capacity info")

@@ -1,4 +1,3 @@
-
 from flask import render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
 from . import production_planning_bp
@@ -214,9 +213,9 @@ def calculate_container_metrics(recipe_id):
         # Calculate basic metrics
         total_capacity = sum(container.get('capacity', 0) * container.get('containers_needed', 1) 
                            for container in selected_containers)
-        
+
         efficiency = (total_yield / total_capacity * 100) if total_capacity > 0 else 0
-        
+
         metrics = {
             'total_capacity': total_capacity,
             'efficiency_percentage': efficiency,
