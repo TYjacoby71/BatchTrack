@@ -30,33 +30,57 @@ def analyze_container_options(
         - strategy: Auto-fill strategy (dict format for API compatibility)
         - options: All available container options (list of dicts)
     """
+    logger.info(f"CONTAINER_ANALYSIS: Starting analysis for recipe {recipe.id} ({recipe.name})")
+    logger.info(f"CONTAINER_ANALYSIS: Parameters - scale: {scale}, org_id: {organization_id}, preferred: {preferred_container_id}")
+    
     try:
         # Calculate target yield
         target_yield = (recipe.predicted_yield or 0) * scale
         yield_unit = recipe.predicted_yield_unit or 'count'
 
-        logger.info(f"CONTAINER_ANALYSIS: Recipe {recipe.name}, scale {scale}, target {target_yield} {yield_unit}")
+        logger.info(f"CONTAINER_ANALYSIS: Target yield calculated: {target_yield} {yield_unit}")
 
-        # Get all valid containers
-        container_options = _get_all_valid_containers(recipe, organization_id, target_yield, yield_unit)
-
-        if not container_options:
-            logger.warning(f"CONTAINER_ANALYSIS: No valid containers found for recipe {recipe.id}")
+        if target_yield <= 0:
+            logger.warning(f"CONTAINER_ANALYSIS: Invalid target yield {target_yield} - recipe yield: {recipe.predicted_yield}, scale: {scale}")
             return None, []
 
+        # Get all valid containers
+        logger.info("CONTAINER_ANALYSIS: Fetching valid containers...")
+        container_options = _get_all_valid_containers(recipe, organization_id, target_yield, yield_unit)
+
+        logger.info(f"CONTAINER_ANALYSIS: Found {len(container_options)} valid container options")
+        
+        if not container_options:
+            logger.warning(f"CONTAINER_ANALYSIS: No valid containers found for recipe {recipe.id}")
+            logger.info("CONTAINER_ANALYSIS: Debugging container search...")
+            _debug_container_search(organization_id, yield_unit)
+            return None, []
+
+        # Log container options for debugging
+        for i, opt in enumerate(container_options):
+            logger.info(f"CONTAINER_ANALYSIS: Option {i+1}: {opt.container_name} - capacity: {opt.capacity} {yield_unit}, needed: {opt.containers_needed}")
+
         # Create auto-fill strategy using greedy algorithm
+        logger.info("CONTAINER_ANALYSIS: Creating auto-fill strategy...")
         strategy = _create_auto_fill_strategy(container_options, target_yield)
+
+        if strategy:
+            logger.info(f"CONTAINER_ANALYSIS: Strategy created with {len(strategy.selected_containers)} container types")
+            logger.info(f"CONTAINER_ANALYSIS: Total capacity: {strategy.total_capacity}, containment: {strategy.containment_percentage:.1f}%")
+        else:
+            logger.warning("CONTAINER_ANALYSIS: Failed to create strategy")
 
         # Convert to API format
         if api_format:
             strategy_dict = _strategy_to_dict(strategy) if strategy else None
             options_list = [_container_option_to_dict(opt) for opt in container_options]
+            logger.info(f"CONTAINER_ANALYSIS: Returning API format - strategy: {strategy_dict is not None}, options: {len(options_list)}")
             return strategy_dict, options_list
         else:
             return strategy, container_options
 
     except Exception as e:
-        logger.error(f"Error in container analysis: {e}")
+        logger.error(f"CONTAINER_ANALYSIS: Critical error in container analysis: {e}", exc_info=True)
         return None, []
 
 
@@ -95,50 +119,72 @@ def _get_all_valid_containers(
 
         for container in containers:
             try:
+                logger.info(f"CONTAINER_VALIDATION: Processing container {container.name} (ID: {container.id})")
+                
                 # Get container capacity using the correct field names
                 capacity_value = getattr(container, 'capacity', None)
                 capacity_unit = getattr(container, 'capacity_unit', None)
+                available_quantity = getattr(container, 'quantity', 0)
+
+                logger.info(f"CONTAINER_VALIDATION: {container.name} - capacity: {capacity_value} {capacity_unit}, available: {available_quantity}")
 
                 if not capacity_value or not capacity_unit:
-                    logger.warning(f"Container {container.name} missing capacity/storage amount or unit")
+                    logger.warning(f"CONTAINER_VALIDATION: {container.name} missing capacity/storage amount or unit")
+                    continue
+
+                if available_quantity <= 0:
+                    logger.warning(f"CONTAINER_VALIDATION: {container.name} has no available quantity ({available_quantity})")
                     continue
 
                 # Convert container capacity to recipe yield unit
-                conversion_result = conversion_engine.convert_units(
-                    amount=float(capacity_value),
-                    from_unit=capacity_unit,
-                    to_unit=yield_unit
-                )
+                logger.info(f"CONTAINER_VALIDATION: Converting {capacity_value} {capacity_unit} to {yield_unit}")
+                
+                try:
+                    conversion_result = conversion_engine.convert_units(
+                        amount=float(capacity_value),
+                        from_unit=capacity_unit,
+                        to_unit=yield_unit
+                    )
+                    logger.info(f"CONTAINER_VALIDATION: Conversion result: {conversion_result}")
+                except Exception as conv_error:
+                    logger.warning(f"CONTAINER_VALIDATION: Conversion failed for {container.name}: {conv_error}")
+                    continue
 
                 # Handle conversion result - convert_units returns a float or raises exception
                 if isinstance(conversion_result, (int, float)) and conversion_result > 0:
                     converted_capacity = float(conversion_result)
+                    logger.info(f"CONTAINER_VALIDATION: {container.name} converted capacity: {converted_capacity} {yield_unit}")
                 else:
-                    logger.warning(f"Invalid conversion result for container {container.name}: {conversion_result}")
+                    logger.warning(f"CONTAINER_VALIDATION: Invalid conversion result for container {container.name}: {conversion_result}")
                     continue
 
                 # Skip if conversion failed or invalid
                 if not converted_capacity or converted_capacity <= 0:
-                    logger.warning(f"Invalid converted capacity for container {container.name}: {converted_capacity}")
+                    logger.warning(f"CONTAINER_VALIDATION: Invalid converted capacity for container {container.name}: {converted_capacity}")
                     continue
 
                 # Calculate containers needed
                 containers_needed = max(1, int((target_yield / converted_capacity) + 0.5))  # Round up
+                total_capacity = converted_capacity * containers_needed
+                fill_percentage = (target_yield / total_capacity) * 100
+
+                logger.info(f"CONTAINER_VALIDATION: {container.name} - needs {containers_needed} containers, total capacity: {total_capacity}, fill: {fill_percentage:.1f}%")
 
                 container_option = ContainerOption(
                     container_id=container.id,
                     container_name=container.name,
                     capacity=converted_capacity,
-                    capacity_unit=yield_unit,
+                    available_quantity=int(available_quantity),
                     containers_needed=containers_needed,
-                    total_capacity=converted_capacity * containers_needed,
-                    fill_percentage=(target_yield / (converted_capacity * containers_needed)) * 100
+                    cost_each=getattr(container, 'cost_per_unit', 0.0) or 0.0,
+                    fill_percentage=fill_percentage
                 )
 
                 valid_containers.append(container_option)
+                logger.info(f"CONTAINER_VALIDATION: Successfully added {container.name} to valid options")
 
             except Exception as e:
-                logger.warning(f"Failed to process container {container.name}: {e}")
+                logger.error(f"CONTAINER_VALIDATION: Failed to process container {container.name}: {e}", exc_info=True)
                 continue
 
         logger.info(f"CONTAINER_CONVERSION: Processed {len(valid_containers)} valid containers")
@@ -341,3 +387,46 @@ def _container_option_to_dict(option: ContainerOption) -> Dict[str, Any]:
         'fill_percentage': option.fill_percentage,
         'total_capacity': option.total_capacity
     }
+
+
+def _debug_container_search(organization_id: int, yield_unit: str) -> None:
+    """Debug function to help troubleshoot container search issues"""
+    try:
+        logger.info(f"CONTAINER_DEBUG: Debugging container search for org {organization_id}, yield unit {yield_unit}")
+        
+        # Check if container category exists
+        container_category = IngredientCategory.query.filter_by(
+            name='Container',
+            organization_id=organization_id
+        ).first()
+        
+        if not container_category:
+            logger.warning(f"CONTAINER_DEBUG: No 'Container' category found for organization {organization_id}")
+            
+            # Check what categories do exist
+            categories = IngredientCategory.query.filter_by(organization_id=organization_id).all()
+            logger.info(f"CONTAINER_DEBUG: Available categories: {[c.name for c in categories]}")
+            return
+        
+        logger.info(f"CONTAINER_DEBUG: Container category found: ID {container_category.id}")
+        
+        # Check containers in the category
+        containers = InventoryItem.query.filter_by(
+            organization_id=organization_id,
+            category_id=container_category.id
+        ).all()
+        
+        logger.info(f"CONTAINER_DEBUG: Found {len(containers)} containers in category")
+        
+        for container in containers:
+            capacity = getattr(container, 'capacity', None)
+            capacity_unit = getattr(container, 'capacity_unit', None)
+            quantity = getattr(container, 'quantity', 0)
+            
+            logger.info(f"CONTAINER_DEBUG: {container.name} - capacity: {capacity} {capacity_unit}, quantity: {quantity}")
+            
+            if not capacity or not capacity_unit:
+                logger.warning(f"CONTAINER_DEBUG: {container.name} missing capacity info")
+                
+    except Exception as e:
+        logger.error(f"CONTAINER_DEBUG: Error in debug function: {e}", exc_info=True)
