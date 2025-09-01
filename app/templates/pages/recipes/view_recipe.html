@@ -82,5 +82,9 @@
 
     </form>
     <a href="{{ url_for('recipes.list_recipes') }}" class="btn btn-outline-secondary">Back to List</a>
+
+    <a href="{{ url_for('production_planning.plan_production_route', recipe_id=recipe.id) }}" class="btn btn-primary">
+            <i class="fas fa-play"></i> Plan Production
+        </a>
 </div>
 {% endblock %}
