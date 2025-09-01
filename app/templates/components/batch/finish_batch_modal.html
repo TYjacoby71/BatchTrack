@@ -185,7 +185,7 @@
                           <small class="text-muted">(includes extra)</small>
                         {% endif %}
                       </td>
-                      <td>{{ data.container.storage_amount or 0 }} {{ data.container.storage_unit or 'count' }}</td>
+                      <td>{{ data.container.capacity or 0 }} {{ data.container.capacity_unit or 'count' }}</td>
                       <td>{{ data.total_used }}</td>
                       <td>
                         <input type="number"
@@ -195,7 +195,7 @@
                                min="0"
                                max="{{ data.max_available }}"
                                data-container-id="{{ container_id }}"
-                               data-container-size="{{ data.container.storage_amount or 0 }}"
+                               data-container-size="{{ data.container.capacity or 0 }}"
                                data-used-quantity="{{ data.total_used }}"
                                onchange="updateContainerSummary()">
                         <input type="hidden" name="container_type_{{ container_id }}" value="combined">
@@ -204,7 +204,7 @@
                         {% endif %}
                       </td>
                       <td class="container-capacity">
-                        {{ (data.container.storage_amount or 0) * data.total_used }} {{ data.container.storage_unit or 'count' }}
+                        {{ (data.container.capacity or 0) * data.total_used }} {{ data.container.capacity_unit or 'count' }}
                       </td>
                     </tr>
                     {% endfor %}

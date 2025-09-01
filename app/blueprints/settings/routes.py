@@ -390,8 +390,8 @@ def bulk_update_containers():
             container = InventoryItem.query.get(container_data['id'])
             if container and container.type == 'container':
                 container.name = container_data['name']
-                container.storage_amount = container_data['storage_amount']
-                container.storage_unit = container_data['storage_unit']
+                container.capacity = container_data['capacity']
+                container.capacity_unit = container_data['capacity_unit']
                 container.cost_per_unit = container_data['cost_per_unit']
                 updated_count += 1
 

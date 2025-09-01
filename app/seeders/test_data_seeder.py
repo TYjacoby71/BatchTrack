@@ -266,8 +266,8 @@ def seed_test_data(organization_id=None):
         item_data['quantity'] = 0.0
 
         # Add storage fields - set reasonable defaults based on item type
-        item_data['storage_amount'] = 1.0  # Default storage capacity
-        item_data['storage_unit'] = item_data['unit']  # Use same unit as item unit
+        item_data['capacity'] = 1.0  # Default storage capacity
+        item_data['capacity_unit'] = item_data['unit']  # Use same unit as item unit
 
         inventory_item = InventoryItem(**item_data)
         db.session.add(inventory_item)
