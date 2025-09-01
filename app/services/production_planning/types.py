@@ -8,6 +8,102 @@ from decimal import Decimal
 
 
 @dataclass
+class ProductionRequest:
+    """Request for production planning"""
+    recipe_id: int
+    scale: float = 1.0
+    organization_id: Optional[int] = None
+    preferred_container_id: Optional[int] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "recipe_id": self.recipe_id,
+            "scale": self.scale,
+            "organization_id": self.organization_id,
+            "preferred_container_id": self.preferred_container_id
+        }
+
+
+@dataclass
+class IngredientRequirement:
+    """Represents an ingredient requirement for production"""
+    ingredient_id: int
+    ingredient_name: str
+    required_quantity: float
+    unit: str
+    available_quantity: float = 0.0
+    status: str = "unknown"  # available, insufficient, unavailable
+    shortage: Optional[float] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "ingredient_id": self.ingredient_id,
+            "ingredient_name": self.ingredient_name,
+            "required_quantity": self.required_quantity,
+            "unit": self.unit,
+            "available_quantity": self.available_quantity,
+            "status": self.status,
+            "shortage": self.shortage
+        }
+
+
+@dataclass
+class CostBreakdown:
+    """Cost analysis for production"""
+    ingredient_costs: float = 0.0
+    container_costs: float = 0.0
+    total_production_cost: float = 0.0
+    cost_per_unit: float = 0.0
+    yield_amount: float = 0.0
+    yield_unit: str = "count"
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "ingredient_costs": self.ingredient_costs,
+            "container_costs": self.container_costs,
+            "total_production_cost": self.total_production_cost,
+            "cost_per_unit": self.cost_per_unit,
+            "yield_amount": self.yield_amount,
+            "yield_unit": self.yield_unit
+        }
+
+
+@dataclass
+class ProductionPlan:
+    """Complete production plan result"""
+    request: ProductionRequest
+    feasible: bool
+    ingredient_requirements: List[IngredientRequirement]
+    projected_yield: Dict[str, Any]
+    container_strategy: Optional['ContainerStrategy'] = None
+    container_options: List[ContainerOption] = None
+    cost_breakdown: Optional[CostBreakdown] = None
+    issues: List[str] = None
+    recommendations: List[str] = None
+
+    def __post_init__(self):
+        if self.container_options is None:
+            self.container_options = []
+        if self.issues is None:
+            self.issues = []
+        if self.recommendations is None:
+            self.recommendations = []
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "request": self.request.to_dict(),
+            "feasible": self.feasible,
+            "ingredient_requirements": [req.to_dict() for req in self.ingredient_requirements],
+            "projected_yield": self.projected_yield,
+            "container_strategy": self.container_strategy.to_dict() if self.container_strategy else None,
+            "container_options": [opt.to_dict() for opt in self.container_options],
+            "cost_breakdown": self.cost_breakdown.to_dict() if self.cost_breakdown else None,
+            "issues": self.issues,
+            "recommendations": self.recommendations
+        }
+
+
+@dataclass
 class ContainerOption:
     """Represents a container option for production planning"""
     container_id: int
