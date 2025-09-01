@@ -1,0 +1,1 @@
+const response = await fetch(`/recipes/auto-fill-containers`, {

@@ -1,193 +1,303 @@
 
 """
-Container Management Service for Production Planning
+Container Management for Production Planning
 
-This service handles container selection and optimization for batch production.
-All business logic for container calculations resides here.
+Handles container selection, capacity analysis, and optimal fill strategies.
+Uses proper greedy algorithms for multi-container optimization.
 """
 
-from typing import Dict, List, Any, Optional, Tuple
-from decimal import Decimal, ROUND_UP
 import logging
+from decimal import Decimal, ROUND_UP
+from typing import List, Tuple, Optional, Dict, Any
 
-from app.models import Container, Recipe
-from app.utils.unit_utils import convert_units
+from app.models import Recipe, InventoryItem, IngredientCategory
+from app.services.unit_conversion import ConversionEngine
 from .types import ContainerOption, ContainerStrategy
 
 logger = logging.getLogger(__name__)
 
 
-class ContainerManagementService:
-    """Service for managing container selection and optimization"""
+def analyze_container_options(
+    recipe: Recipe,
+    scale: float,
+    organization_id: int,
+    preferred_container_id: Optional[int] = None,
+    api_format: bool = True
+) -> Tuple[Optional[Dict[str, Any]], List[Dict[str, Any]]]:
+    """
+    Main entry point for container analysis.
     
-    @staticmethod
-    def analyze_container_options(recipe: Recipe, scale_factor: float = 1.0) -> Dict[str, Any]:
-        """
-        Analyze container options for a recipe at given scale.
+    Returns:
+        - strategy: Auto-fill strategy (dict format for API compatibility)
+        - options: All available container options (list of dicts)
+    """
+    try:
+        # Calculate target yield
+        target_yield = (recipe.predicted_yield or 0) * scale
+        yield_unit = recipe.predicted_yield_unit or 'count'
         
-        Returns structured data with all valid containers and auto-fill recommendation.
-        """
+        logger.info(f"CONTAINER_ANALYSIS: Recipe {recipe.name}, scale {scale}, target {target_yield} {yield_unit}")
+        
+        # Get all valid containers
+        container_options = _get_all_valid_containers(recipe, organization_id, target_yield, yield_unit)
+        
+        if not container_options:
+            logger.warning(f"CONTAINER_ANALYSIS: No valid containers found for recipe {recipe.id}")
+            return None, []
+        
+        # Create auto-fill strategy using greedy algorithm
+        strategy = _create_auto_fill_strategy(container_options, target_yield)
+        
+        # Convert to API format
+        if api_format:
+            strategy_dict = _strategy_to_dict(strategy) if strategy else None
+            options_list = [_container_option_to_dict(opt) for opt in container_options]
+            return strategy_dict, options_list
+        else:
+            return strategy, container_options
+            
+    except Exception as e:
+        logger.error(f"Error in container analysis: {e}")
+        return None, []
+
+
+def _get_all_valid_containers(
+    recipe: Recipe, 
+    organization_id: int, 
+    target_yield: float, 
+    yield_unit: str
+) -> List[ContainerOption]:
+    """
+    Efficiently fetch and process valid containers for the recipe.
+    """
+    try:
+        # Get container category
+        container_category = IngredientCategory.query.filter_by(
+            name='Container',
+            organization_id=organization_id
+        ).first()
+        
+        if not container_category:
+            logger.warning(f"No Container category found for organization {organization_id}")
+            return []
+        
+        # Build efficient query
+        containers_query = InventoryItem.query.filter_by(
+            organization_id=organization_id,
+            category_id=container_category.id
+        ).filter(
+            InventoryItem.quantity > 0  # Only containers in stock
+        )
+        
+        # Filter by recipe's allowed containers if specified
+        if hasattr(recipe, 'allowed_containers') and recipe.allowed_containers:
+            containers_query = containers_query.filter(
+                InventoryItem.id.in_(recipe.allowed_containers)
+            )
+        
+        containers = containers_query.all()
+        
+        if not containers:
+            logger.info(f"No containers in stock for recipe {recipe.id}")
+            return []
+        
+        # Convert to ContainerOption objects
+        return _convert_container_capacities(containers, target_yield, yield_unit)
+        
+    except Exception as e:
+        logger.error(f"Error fetching containers: {e}")
+        return []
+
+
+def _convert_container_capacities(
+    containers: List[InventoryItem],
+    target_yield: float,
+    yield_unit: str
+) -> List[ContainerOption]:
+    """
+    Convert container capacities to recipe yield units and create ContainerOption objects.
+    """
+    conversion_engine = ConversionEngine()
+    valid_options = []
+    
+    for container in containers:
         try:
-            # Calculate total yield needed
-            base_yield = float(recipe.predicted_yield or 0)
-            total_yield = base_yield * scale_factor
-            yield_unit = recipe.predicted_yield_unit or 'units'
+            # Get container capacity info
+            capacity_amount = getattr(container, 'capacity', 0) or getattr(container, 'storage_amount', 0)
+            capacity_unit = getattr(container, 'capacity_unit', '') or getattr(container, 'storage_unit', '') or getattr(container, 'unit', '')
             
-            if total_yield <= 0:
-                return {
-                    "success": False,
-                    "error": "Invalid recipe yield or scale factor",
-                    "all_container_options": [],
-                    "auto_fill_strategy": None
-                }
+            if not capacity_amount or not capacity_unit:
+                logger.warning(f"Container {container.name} missing capacity info")
+                continue
             
-            logger.info(f"Analyzing containers for {total_yield} {yield_unit}")
-            
-            # Get all valid containers
-            all_container_options = ContainerManagementService._get_all_valid_containers(
-                total_yield, yield_unit
+            # Convert capacity to recipe yield units
+            converted_capacity = conversion_engine.convert_units(
+                amount=float(capacity_amount),
+                from_unit=capacity_unit,
+                to_unit=yield_unit
             )
             
-            if not all_container_options:
-                return {
-                    "success": False,
-                    "error": "No suitable containers found",
-                    "all_container_options": [],
-                    "auto_fill_strategy": None
-                }
+            if converted_capacity <= 0:
+                continue
             
-            # Create auto-fill strategy using greedy algorithm
-            auto_fill_strategy = ContainerManagementService._create_auto_fill_strategy(
-                all_container_options, total_yield
+            # Calculate how many containers needed
+            containers_needed = max(1, int(Decimal(str(target_yield / converted_capacity)).quantize(
+                Decimal('1'), rounding=ROUND_UP
+            )))
+            
+            # Calculate fill percentage of last container
+            if containers_needed == 1:
+                fill_percentage = min(100.0, (target_yield / converted_capacity) * 100)
+            else:
+                last_container_fill = target_yield - (converted_capacity * (containers_needed - 1))
+                fill_percentage = (last_container_fill / converted_capacity) * 100
+            
+            # Create ContainerOption
+            option = ContainerOption(
+                container_id=container.id,
+                container_name=container.name,
+                capacity=converted_capacity,
+                available_quantity=int(container.quantity),
+                containers_needed=containers_needed,
+                cost_each=getattr(container, 'cost_per_unit', 0.0) or 0.0,
+                fill_percentage=fill_percentage
             )
             
-            return {
-                "success": True,
-                "all_container_options": [opt.to_dict() for opt in all_container_options],
-                "auto_fill_strategy": auto_fill_strategy
-            }
+            valid_options.append(option)
             
         except Exception as e:
-            logger.error(f"Error analyzing container options: {e}")
-            return {
-                "success": False,
-                "error": str(e),
-                "all_container_options": [],
-                "auto_fill_strategy": None
-            }
+            logger.warning(f"Failed to process container {container.name}: {e}")
+            continue
     
-    @staticmethod
-    def _get_all_valid_containers(total_yield: float, yield_unit: str) -> List[ContainerOption]:
-        """Get all containers that could potentially be used for this yield"""
-        containers = Container.query.filter_by(is_active=True).all()
-        valid_options = []
-        
-        for container in containers:
-            try:
-                # Convert container capacity to yield units
-                capacity_in_yield_units = convert_units(
-                    container.capacity,
-                    container.capacity_unit,
-                    yield_unit
-                )
-                
-                if capacity_in_yield_units and capacity_in_yield_units > 0:
-                    # Calculate how many containers would be needed
-                    containers_needed = int((total_yield / capacity_in_yield_units) + 0.999)  # Ceiling
-                    
-                    # Calculate total capacity if using this container type
-                    total_capacity = capacity_in_yield_units * containers_needed
-                    containment_percentage = (total_capacity / total_yield) * 100
-                    
-                    # Calculate fill efficiency of last container
-                    if containers_needed == 1:
-                        last_container_fill = (total_yield / capacity_in_yield_units) * 100
-                    else:
-                        remaining_after_full_containers = total_yield - (capacity_in_yield_units * (containers_needed - 1))
-                        last_container_fill = (remaining_after_full_containers / capacity_in_yield_units) * 100
-                    
-                    valid_options.append(ContainerOption(
-                        container_id=container.id,
-                        container_name=container.name,
-                        capacity=capacity_in_yield_units,
-                        capacity_unit=yield_unit,
-                        containers_needed=containers_needed,
-                        total_capacity=total_capacity,
-                        containment_percentage=containment_percentage,
-                        last_container_fill_percentage=last_container_fill
-                    ))
-                    
-            except Exception as e:
-                logger.warning(f"Error processing container {container.name}: {e}")
-                continue
-        
-        # Sort by efficiency (prefer higher fill percentages and fewer containers)
-        valid_options.sort(key=lambda x: (-x.last_container_fill_percentage, x.containers_needed))
-        
-        return valid_options
+    # Sort by capacity (largest first) for greedy algorithm
+    valid_options.sort(key=lambda x: x.capacity, reverse=True)
     
-    @staticmethod
-    def _create_auto_fill_strategy(container_options: List[ContainerOption], total_yield: float) -> Optional[Dict[str, Any]]:
-        """
-        Create auto-fill strategy using greedy algorithm to find most efficient combination
-        """
-        if not container_options:
-            return None
-        
-        # For now, use the most efficient single container type
-        # TODO: Implement true greedy algorithm for mixed container types
-        best_option = container_options[0]  # Already sorted by efficiency
-        
-        containers_to_use = []
-        for i in range(best_option.containers_needed):
-            containers_to_use.append({
-                "container_id": best_option.container_id,
-                "container_name": best_option.container_name,
-                "capacity": best_option.capacity,
-                "capacity_unit": best_option.capacity_unit,
-                "fill_percentage": 100.0 if i < best_option.containers_needed - 1 else best_option.last_container_fill_percentage
-            })
-        
-        return {
-            "containers_to_use": containers_to_use,
-            "metrics": {
-                "containment_percentage": best_option.containment_percentage,
-                "last_container_fill_percentage": best_option.last_container_fill_percentage,
-                "total_containers": best_option.containers_needed,
-                "total_capacity": best_option.total_capacity
-            }
-        }
+    logger.info(f"CONTAINER_CONVERSION: Processed {len(valid_options)} valid containers")
+    return valid_options
+
+
+def _create_auto_fill_strategy(
+    container_options: List[ContainerOption],
+    target_yield: float
+) -> Optional[ContainerStrategy]:
+    """
+    Implement true greedy algorithm for optimal container selection.
+    Uses "making change" approach with largest containers first.
+    """
+    if not container_options:
+        return None
     
-    @staticmethod
-    def calculate_container_metrics(selected_containers: List[Dict], total_yield: float) -> Dict[str, Any]:
-        """
-        Calculate metrics for manually selected containers
-        """
-        if not selected_containers:
-            return {
-                "containment_percentage": 0,
-                "last_container_fill_percentage": 0,
-                "total_containers": 0,
-                "total_capacity": 0
+    remaining_yield = target_yield
+    selected_containers = []
+    warnings = []
+    
+    # Greedy algorithm: use largest containers first
+    for container in container_options:
+        if remaining_yield <= 0:
+            break
+        
+        if container.available_quantity <= 0:
+            continue
+        
+        # Calculate how many of this container we can use
+        containers_that_fit = int(remaining_yield / container.capacity)
+        containers_available = container.available_quantity
+        containers_to_use = min(containers_that_fit, containers_available)
+        
+        if containers_to_use > 0:
+            # Create a copy with the quantity we're actually using
+            selected_container = ContainerOption(
+                container_id=container.container_id,
+                container_name=container.container_name,
+                capacity=container.capacity,
+                available_quantity=container.available_quantity,
+                containers_needed=containers_to_use,
+                cost_each=container.cost_each
+            )
+            
+            selected_containers.append(selected_container)
+            remaining_yield -= containers_to_use * container.capacity
+            
+            logger.info(f"GREEDY_FILL: Selected {containers_to_use}x {container.container_name} "
+                       f"({containers_to_use * container.capacity} units), remaining: {remaining_yield}")
+    
+    # Check if we need one more container for remaining yield
+    if remaining_yield > 0 and container_options:
+        # Find smallest container that can hold the remainder
+        for container in sorted(container_options, key=lambda x: x.capacity):
+            if container.capacity >= remaining_yield and container.available_quantity > 0:
+                # Check if we already selected this container type
+                existing = next((c for c in selected_containers if c.container_id == container.container_id), None)
+                if existing and existing.containers_needed < container.available_quantity:
+                    # Add one more of this container
+                    existing.containers_needed += 1
+                    remaining_yield = 0
+                    warnings.append(f"Added partial fill container: {container.container_name}")
+                elif not existing:
+                    # Add new container for partial fill
+                    partial_container = ContainerOption(
+                        container_id=container.container_id,
+                        container_name=container.container_name,
+                        capacity=container.capacity,
+                        available_quantity=container.available_quantity,
+                        containers_needed=1,
+                        cost_each=container.cost_each
+                    )
+                    selected_containers.append(partial_container)
+                    remaining_yield = 0
+                    warnings.append(f"Added partial fill container: {container.container_name}")
+                break
+    
+    # Calculate strategy metrics
+    total_capacity = sum(c.capacity * c.containers_needed for c in selected_containers)
+    containment_percentage = min(100.0, (total_capacity / target_yield) * 100) if target_yield > 0 else 0
+    
+    if remaining_yield > 0:
+        warnings.append(f"Unable to fully contain batch: {remaining_yield:.2f} units remaining")
+    
+    strategy = ContainerStrategy(
+        selected_containers=selected_containers,
+        total_capacity=total_capacity,
+        containment_percentage=containment_percentage,
+        warnings=warnings
+    )
+    
+    logger.info(f"GREEDY_STRATEGY: {len(selected_containers)} container types selected, "
+               f"{containment_percentage:.1f}% containment")
+    
+    return strategy
+
+
+def _strategy_to_dict(strategy: ContainerStrategy) -> Dict[str, Any]:
+    """Convert ContainerStrategy to dictionary for API response"""
+    return {
+        'container_selection': [
+            {
+                'container_id': c.container_id,
+                'container_name': c.container_name,
+                'capacity': c.capacity,
+                'available_quantity': c.available_quantity,
+                'containers_needed': c.containers_needed,
+                'cost_each': c.cost_each
             }
-        
-        total_capacity = sum(float(c.get('capacity', 0)) for c in selected_containers)
-        containment_percentage = (total_capacity / total_yield) * 100 if total_yield > 0 else 0
-        
-        # Calculate last container fill
-        if len(selected_containers) == 1:
-            last_container_fill = (total_yield / total_capacity) * 100 if total_capacity > 0 else 0
-        else:
-            # Assume containers are filled in order
-            last_container = selected_containers[-1]
-            last_capacity = float(last_container.get('capacity', 0))
-            previous_capacity = sum(float(c.get('capacity', 0)) for c in selected_containers[:-1])
-            remaining_yield = max(0, total_yield - previous_capacity)
-            last_container_fill = (remaining_yield / last_capacity) * 100 if last_capacity > 0 else 0
-        
-        return {
-            "containment_percentage": containment_percentage,
-            "last_container_fill_percentage": min(100, last_container_fill),
-            "total_containers": len(selected_containers),
-            "total_capacity": total_capacity
-        }
+            for c in strategy.selected_containers
+        ],
+        'total_capacity': strategy.total_capacity,
+        'containment_percentage': strategy.containment_percentage,
+        'is_complete': strategy.is_complete,
+        'warnings': strategy.warnings
+    }
+
+
+def _container_option_to_dict(option: ContainerOption) -> Dict[str, Any]:
+    """Convert ContainerOption to dictionary for API response"""
+    return {
+        'container_id': option.container_id,
+        'container_name': option.container_name,
+        'capacity': option.capacity,
+        'available_quantity': option.available_quantity,
+        'containers_needed': option.containers_needed,
+        'cost_each': option.cost_each,
+        'fill_percentage': option.fill_percentage,
+        'total_capacity': option.total_capacity
+    }

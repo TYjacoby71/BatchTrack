@@ -1,76 +1,195 @@
+
 """
-Type definitions for production planning services
+Production Planning Types
+
+Core data structures for the production planning service package.
+Provides typed interfaces for all production planning operations.
 """
 
-from dataclasses import dataclass
-from typing import Dict, List, Any, Optional
+from dataclasses import dataclass, field
+from typing import Dict, Any, List, Optional, Union
 from decimal import Decimal
+from enum import Enum
+
+
+class ProductionStatus(Enum):
+    """Status of production planning analysis"""
+    FEASIBLE = "feasible"
+    INSUFFICIENT_STOCK = "insufficient_stock" 
+    NO_CONTAINERS = "no_containers"
+    ERROR = "error"
+
+
+@dataclass
+class ProductionRequest:
+    """Request for production planning analysis"""
+    recipe_id: int
+    scale: float = 1.0
+    organization_id: Optional[int] = None
+    preferred_container_id: Optional[int] = None
+    max_cost_per_unit: Optional[float] = None
+    
+    def __post_init__(self):
+        if self.scale <= 0:
+            raise ValueError("Scale must be positive")
+
+
+@dataclass
+class IngredientRequirement:
+    """Requirement for a single ingredient in production"""
+    ingredient_id: int
+    ingredient_name: str
+    required_quantity: float
+    required_unit: str
+    available_quantity: float
+    available_unit: str
+    status: str  # 'available', 'insufficient', 'unavailable'
+    shortage: float = 0.0
+    cost_per_unit: float = 0.0
+    total_cost: float = 0.0
+    
+    @property
+    def is_available(self) -> bool:
+        return self.status == 'available'
 
 
 @dataclass
 class ContainerOption:
-    """Represents a container option for production planning"""
+    """A single container option with calculated metrics"""
     container_id: int
     container_name: str
-    capacity: float
-    capacity_unit: str
-    containers_needed: int
-    total_capacity: float
-    containment_percentage: float
-    last_container_fill_percentage: float
+    capacity: float  # Storage capacity in recipe yield units
+    available_quantity: int  # How many are in stock
+    containers_needed: int  # How many needed for this recipe
+    cost_each: float = 0.0
+    fill_percentage: float = 0.0  # How full the last container will be
+    total_capacity: float = 0.0  # Total capacity if using all needed containers
+    
+    def __post_init__(self):
+        if self.containers_needed > 0:
+            self.total_capacity = self.capacity * self.containers_needed
+            
 
+@dataclass
+class ContainerStrategy:
+    """Complete container strategy for production"""
+    selected_containers: List[ContainerOption]
+    total_capacity: float
+    containment_percentage: float  # % of yield that can be contained
+    is_complete: bool = False  # True if 100% containment achieved
+    warnings: List[str] = field(default_factory=list)
+    
+    def __post_init__(self):
+        self.is_complete = self.containment_percentage >= 100.0
+
+
+@dataclass
+class CostBreakdown:
+    """Detailed cost analysis for production"""
+    ingredient_costs: float = 0.0
+    container_costs: float = 0.0
+    total_cost: float = 0.0
+    cost_per_unit: float = 0.0
+    yield_amount: float = 0.0
+    yield_unit: str = "units"
+    
+    def __post_init__(self):
+        self.total_cost = self.ingredient_costs + self.container_costs
+        if self.yield_amount > 0:
+            self.cost_per_unit = self.total_cost / self.yield_amount
+    
     def to_dict(self) -> Dict[str, Any]:
-        """Convert to dictionary for JSON serialization"""
         return {
-            "container_id": self.container_id,
-            "container_name": self.container_name,
-            "capacity": self.capacity,
-            "capacity_unit": self.capacity_unit,
-            "containers_needed": self.containers_needed,
-            "total_capacity": self.total_capacity,
-            "containment_percentage": round(self.containment_percentage, 2),
-            "last_container_fill_percentage": round(self.last_container_fill_percentage, 2)
+            'ingredient_costs': float(self.ingredient_costs),
+            'container_costs': float(self.container_costs), 
+            'total_cost': float(self.total_cost),
+            'cost_per_unit': float(self.cost_per_unit),
+            'yield_amount': float(self.yield_amount),
+            'yield_unit': self.yield_unit
         }
 
 
 @dataclass
-class ContainerStrategy:
-    """Represents a container usage strategy"""
-    containers_to_use: List[Dict[str, Any]]
-    total_yield_covered: float
-    efficiency_score: float
-
+class ProductionPlan:
+    """Complete production plan with all analysis results"""
+    request: ProductionRequest
+    feasible: bool
+    ingredient_requirements: List[IngredientRequirement]
+    projected_yield: Dict[str, Union[float, str]]
+    container_strategy: Optional[ContainerStrategy] = None
+    container_options: List[ContainerOption] = field(default_factory=list)
+    cost_breakdown: Optional[CostBreakdown] = None
+    issues: List[str] = field(default_factory=list)
+    status: ProductionStatus = ProductionStatus.FEASIBLE
+    
     def to_dict(self) -> Dict[str, Any]:
-        """Convert to dictionary for JSON serialization"""
+        """Convert to dictionary for API responses"""
         return {
-            "containers_to_use": self.containers_to_use,
-            "total_yield_covered": self.total_yield_covered,
-            "efficiency_score": self.efficiency_score
-        }
-
-
-@dataclass class StockCheckResult:
-    """Result of stock availability check"""
-    ingredient_id: int
-    ingredient_name: str
-    required_amount: float
-    required_unit: str
-    available_amount: float
-    available_unit: str
-    is_sufficient: bool
-    shortage_amount: Optional[float] = None
-    shortage_unit: Optional[str] = None
-
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert to dictionary for JSON serialization"""
-        return {
-            "ingredient_id": self.ingredient_id,
-            "ingredient_name": self.ingredient_name,
-            "required_amount": self.required_amount,
-            "required_unit": self.required_unit,
-            "available_amount": self.available_amount,
-            "available_unit": self.available_unit,
-            "is_sufficient": self.is_sufficient,
-            "shortage_amount": self.shortage_amount,
-            "shortage_unit": self.shortage_unit
+            'success': self.feasible,
+            'feasible': self.feasible,
+            'recipe_id': self.request.recipe_id,
+            'scale': self.request.scale,
+            'projected_yield': self.projected_yield,
+            'ingredient_requirements': [
+                {
+                    'ingredient_id': req.ingredient_id,
+                    'ingredient_name': req.ingredient_name,
+                    'required_quantity': req.required_quantity,
+                    'required_unit': req.required_unit,
+                    'available_quantity': req.available_quantity,
+                    'available_unit': req.available_unit,
+                    'status': req.status,
+                    'shortage': req.shortage,
+                    'cost_per_unit': req.cost_per_unit,
+                    'total_cost': req.total_cost,
+                    'is_available': req.is_available
+                }
+                for req in self.ingredient_requirements
+            ],
+            'stock_results': [
+                {
+                    'ingredient_id': req.ingredient_id,
+                    'ingredient_name': req.ingredient_name,
+                    'needed_amount': req.required_quantity,
+                    'unit': req.required_unit,
+                    'available': req.is_available,
+                    'available_quantity': req.available_quantity,
+                    'shortage': req.shortage
+                }
+                for req in self.ingredient_requirements
+            ],
+            'all_available': all(req.is_available for req in self.ingredient_requirements),
+            'container_strategy': {
+                'selected_containers': [
+                    {
+                        'container_id': opt.container_id,
+                        'container_name': opt.container_name,
+                        'capacity': opt.capacity,
+                        'available_quantity': opt.available_quantity,
+                        'containers_needed': opt.containers_needed,
+                        'cost_each': opt.cost_each
+                    }
+                    for opt in self.container_strategy.selected_containers
+                ] if self.container_strategy else [],
+                'total_capacity': self.container_strategy.total_capacity if self.container_strategy else 0,
+                'containment_percentage': self.container_strategy.containment_percentage if self.container_strategy else 0,
+                'is_complete': self.container_strategy.is_complete if self.container_strategy else False,
+                'warnings': self.container_strategy.warnings if self.container_strategy else []
+            } if self.container_strategy else None,
+            'all_container_options': [
+                {
+                    'container_id': opt.container_id,
+                    'container_name': opt.container_name,
+                    'capacity': opt.capacity,
+                    'available_quantity': opt.available_quantity,
+                    'containers_needed': opt.containers_needed,
+                    'cost_each': opt.cost_each,
+                    'fill_percentage': opt.fill_percentage,
+                    'total_capacity': opt.total_capacity
+                }
+                for opt in self.container_options
+            ],
+            'cost_breakdown': self.cost_breakdown.to_dict() if self.cost_breakdown else None,
+            'issues': self.issues,
+            'status': self.status.value
         }

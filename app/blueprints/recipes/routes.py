@@ -3,14 +3,9 @@ from flask_login import login_required, current_user
 from . import recipes_bp
 from app.extensions import db
 from app.models import Recipe, InventoryItem
-from app.utils.permissions import require_permission
-
-from app.services.recipe_service import (
-    create_recipe, update_recipe, delete_recipe, get_recipe_details,
-    duplicate_recipe
-)
 from app.services.production_planning import plan_production_comprehensive
 from app.services.production_planning._container_management import analyze_container_options
+from app.services.stock_check import UniversalStockCheckService
 from app.utils.unit_utils import get_global_unit_list
 from app.models.unit import Unit
 import logging
