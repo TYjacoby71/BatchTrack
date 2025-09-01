@@ -95,12 +95,12 @@ def _get_all_valid_containers(
 
         for container in containers:
             try:
-                # Get container capacity
-                capacity_value = getattr(container, 'capacity', None)
-                capacity_unit = getattr(container, 'capacity_unit', None)
+                # Get container capacity (prefer capacity fields, fallback to storage fields)
+                capacity_value = getattr(container, 'capacity', None) or getattr(container, 'storage_amount', None)
+                capacity_unit = getattr(container, 'capacity_unit', None) or getattr(container, 'storage_unit', None)
 
                 if not capacity_value or not capacity_unit:
-                    logger.warning(f"Container {container.name} missing capacity or unit")
+                    logger.warning(f"Container {container.name} missing capacity/storage amount or unit")
                     continue
 
                 # Convert container capacity to recipe yield unit

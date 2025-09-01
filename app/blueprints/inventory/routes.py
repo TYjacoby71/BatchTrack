@@ -116,7 +116,7 @@ def view_inventory(id):
     if current_user.organization_id:
         query = query.filter_by(organization_id=current_user.organization_id)
     item = query.filter_by(id=id).first()
-    
+
     if not item:
         flash('Inventory item not found or access denied.', 'error')
         return redirect(url_for('inventory.list_inventory'))
@@ -218,8 +218,29 @@ def add_inventory():
     try:
         logger.info(f"CREATE NEW INVENTORY ITEM - User: {current_user.id}, Org: {current_user.organization_id}")
 
+        # Directly access form data for creation
+        form_data = request.form.to_dict()
+        item_type = form_data.get('type')
+
+        # Handle container-specific fields
+        if item_type == 'container':
+            # Prefer new capacity fields, fallback to legacy storage fields
+            capacity = form_data.get('capacity') or form_data.get('storage_amount')
+            capacity_unit = form_data.get('capacity_unit') or form_data.get('storage_unit')
+
+            if capacity:
+                form_data['capacity'] = float(capacity)
+                # Also set legacy fields for backward compatibility if they don't exist or are different
+                if 'storage_amount' not in form_data or form_data['storage_amount'] != capacity:
+                    form_data['storage_amount'] = float(capacity)
+            if capacity_unit:
+                form_data['capacity_unit'] = capacity_unit
+                # Also set legacy fields for backward compatibility if they don't exist or are different
+                if 'storage_unit' not in form_data or form_data['storage_unit'] != capacity_unit:
+                    form_data['storage_unit'] = capacity_unit
+
         success, message, item_id = create_inventory_item(
-            form_data=request.form.to_dict(),
+            form_data=form_data,
             organization_id=current_user.organization_id,
             created_by=current_user.id
         )

@@ -56,9 +56,9 @@ class ContainerHandler(BaseInventoryHandler):
         container = available_containers[0]
         logger.info(f"CONTAINER_HANDLER: Using container: {container.name}")
 
-        # Containers have storage_amount and storage_unit fields
-        storage_capacity = getattr(container, 'storage_amount', 0)
-        storage_unit = getattr(container, 'storage_unit', 'ml')
+        # Containers have capacity and capacity_unit fields (with legacy fallback)
+        storage_capacity = getattr(container, 'capacity', None) or getattr(container, 'storage_amount', 0)
+        storage_unit = getattr(container, 'capacity_unit', None) or getattr(container, 'storage_unit', 'ml')
         available_quantity = container.quantity
 
         logger.info(f"CONTAINER_HANDLER: Container {container.name}: {available_quantity} units, capacity {storage_capacity} {storage_unit}")
@@ -158,8 +158,8 @@ class ContainerHandler(BaseInventoryHandler):
             'name': container.name,
             'unit': container.unit,
             'quantity': container.quantity,
-            'storage_amount': getattr(container, 'storage_amount', 0),
-            'storage_unit': getattr(container, 'storage_unit', 'ml'),
+            'capacity': getattr(container, 'capacity', None) or getattr(container, 'storage_amount', 0),
+            'capacity_unit': getattr(container, 'capacity_unit', None) or getattr(container, 'storage_unit', 'ml'),
             'cost_per_unit': container.cost_per_unit,
             'type': container.type
         }
