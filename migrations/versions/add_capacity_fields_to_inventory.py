@@ -2,7 +2,7 @@
 """Add capacity fields to inventory items and migrate container data
 
 Revision ID: add_capacity_fields
-Revises: [current_head]
+Revises: add_comprehensive_stats
 Create Date: 2025-09-01 23:00:00.000000
 
 """
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = 'add_capacity_fields'
-down_revision = None  # Set this to current head
+down_revision = 'add_comprehensive_stats'
 branch_labels = None
 depends_on = None
 
