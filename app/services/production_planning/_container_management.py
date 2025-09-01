@@ -104,21 +104,14 @@ def _get_all_valid_containers(
                     continue
 
                 # Convert container capacity to recipe yield unit
-                conversion_result = conversion_engine.convert(
+                conversion_result = conversion_engine.convert_units(
                     amount=float(capacity_value),
                     from_unit=capacity_unit,
-                    to_unit=yield_unit,
-                    organization_id=organization_id
+                    to_unit=yield_unit
                 )
 
-                # Handle conversion result properly - it might be a dict with error info
-                if isinstance(conversion_result, dict):
-                    if conversion_result.get('success') and 'converted_amount' in conversion_result:
-                        converted_capacity = float(conversion_result['converted_amount'])
-                    else:
-                        logger.warning(f"Conversion failed for container {container.name}: {conversion_result.get('error', 'Unknown error')}")
-                        continue
-                elif isinstance(conversion_result, (int, float)):
+                # Handle conversion result - convert_units returns a float or raises exception
+                if isinstance(conversion_result, (int, float)) and conversion_result > 0:
                     converted_capacity = float(conversion_result)
                 else:
                     logger.warning(f"Invalid conversion result for container {container.name}: {conversion_result}")
