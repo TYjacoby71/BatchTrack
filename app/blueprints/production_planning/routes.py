@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 @production_planning_bp.route('/<int:recipe_id>/plan', methods=['GET', 'POST'])
 @login_required
 @require_permission('recipes.plan_production')
-def plan_production_route(recipe_id):
+def plan_production(recipe_id):
     """Production planning page and API - thin controller"""
     recipe = get_recipe_details(recipe_id)
     if not recipe:
@@ -158,7 +158,7 @@ def check_stock(recipe_id):
         logger.error(f"Error in recipe stock check: {e}")
         return jsonify({"error": str(e)}), 500
 
-@production_planning_bp.route('/<int:recipe_id>/debug/containers')
+@production_planning_bp.route('/recipe/<int:recipe_id>/debug/containers')
 @login_required
 @require_permission('recipes.plan_production')
 def debug_recipe_containers(recipe_id):
