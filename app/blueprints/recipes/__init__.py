@@ -8,4 +8,8 @@ recipes_bp = Blueprint('recipes', __name__,
                       url_prefix='/recipes')
 
 # Import routes after blueprint creation to avoid circular imports
-from . import routes
+def register_routes():
+    from . import routes
+
+# Register routes when blueprint is created
+register_routes()

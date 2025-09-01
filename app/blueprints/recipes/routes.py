@@ -9,10 +9,8 @@ from app.services.recipe_service import (
     create_recipe, update_recipe, delete_recipe, get_recipe_details,
     duplicate_recipe
 )
-from app.services.production_planning import (
-    plan_production_comprehensive,
-    analyze_container_options
-)
+from app.services.production_planning import plan_production_comprehensive
+from app.services.production_planning._container_management import analyze_container_options
 from app.utils.unit_utils import get_global_unit_list
 from app.models.unit import Unit
 import logging
@@ -92,23 +90,25 @@ def auto_fill_containers(recipe_id):
             return jsonify({'error': 'No data provided'}), 400
 
         scale = data.get('scale', 1.0)
+
         recipe = Recipe.query.get_or_404(recipe_id)
 
-        # Use the production planning service
-        from app.services.production_planning._container_management import ContainerManagementService
-        
-        result = ContainerManagementService.analyze_container_options(recipe, scale)
+        # Use the simplified container management
+        from app.services.production_planning._container_management import analyze_container_options
 
-        if result.get('success'):
-            return jsonify({
-                'success': True,
-                'strategy': result.get('auto_fill_strategy'),
-                'all_options': result.get('all_container_options', [])
-            })
+        strategy, container_options = analyze_container_options(
+            recipe=recipe,
+            scale=scale,
+            organization_id=current_user.organization_id,
+            api_format=True
+        )
+
+        if strategy:
+            return jsonify(strategy)
         else:
             return jsonify({
                 'success': False,
-                'error': result.get('error', 'No suitable container strategy found')
+                'error': 'No suitable container strategy found'
             }), 400
 
     except Exception as e:
@@ -215,24 +215,24 @@ def plan_container_route(recipe_id):
             return jsonify({"error": "No data provided"}), 400
 
         scale = float(data.get('scale', 1.0))
-        recipe = Recipe.query.get_or_404(recipe_id)
+        yield_amount = float(data.get('yield_amount'))
+        yield_unit = data.get('yield_unit')
+        preferred_container_id = data.get('preferred_container_id')
 
-        # Use the production planning service
-        from app.services.production_planning._container_management import ContainerManagementService
-        
-        result = ContainerManagementService.analyze_container_options(recipe, scale)
+        if not scale or not yield_amount or not yield_unit:
+            return jsonify({"error": "Scale, yield amount, and yield unit are required"}), 400
 
-        if result.get('success'):
-            return jsonify({
-                "success": True,
-                "container_options": result.get('all_container_options', []),
-                "auto_fill_strategy": result.get('auto_fill_strategy')
-            })
-        else:
-            return jsonify({
-                "success": False,
-                "error": result.get('error', 'Container analysis failed')
-            }), 400
+        # Delegate to service
+        container_plan = analyze_container_options(
+            recipe_id=recipe_id,
+            scale=scale,
+            yield_amount=yield_amount,
+            yield_unit=yield_unit,
+            preferred_container_id=preferred_container_id,
+            organization_id=current_user.organization_id
+        )
+
+        return jsonify(container_plan)
 
     except Exception as e:
         logger.error(f"Error in container planning API: {e}")

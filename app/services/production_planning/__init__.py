@@ -16,13 +16,8 @@ from ._core import (
     plan_production_comprehensive
 )
 from ._container_management import (
-    ContainerManagementService
+    analyze_container_options
 )
-
-# Convenience function for backwards compatibility
-def analyze_container_options(recipe, scale=1.0, **kwargs):
-    """Backwards compatible wrapper for container analysis"""
-    return ContainerManagementService.analyze_container_options(recipe, scale)
 from ._cost_calculation import (
     calculate_production_costs,
     analyze_cost_breakdown
