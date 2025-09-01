@@ -2,7 +2,7 @@ from flask import render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
 from . import recipes_bp
 from app.extensions import db
-from app.models import Recipe, RecipeIngredient, InventoryItem
+from app.models import Recipe, InventoryItem
 from app.utils.permissions import require_permission
 
 from app.services.recipe_service import (
@@ -12,7 +12,6 @@ from app.services.recipe_service import (
 from app.services.production_planning import plan_production_comprehensive
 from app.services.production_planning._container_management import analyze_container_options
 from app.utils.unit_utils import get_global_unit_list
-from app.services.unit_conversion import ConversionEngine
 from app.models.unit import Unit
 import logging
 
