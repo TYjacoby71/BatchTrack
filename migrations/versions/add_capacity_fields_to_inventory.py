@@ -26,10 +26,10 @@ def upgrade():
     connection = op.get_bind()
     connection.execute(sa.text("""
         UPDATE inventory_item 
-        SET capacity = capacity, 
-            capacity_unit = capacity_unit 
+        SET capacity = storage_amount, 
+            capacity_unit = storage_unit 
         WHERE type = 'container' 
-        AND capacity IS NOT NULL
+        AND storage_amount IS NOT NULL
     """))
     
     # Drop the legacy columns
@@ -46,8 +46,8 @@ def downgrade():
     connection = op.get_bind()
     connection.execute(sa.text("""
         UPDATE inventory_item 
-        SET capacity = capacity, 
-            capacity_unit = capacity_unit 
+        SET storage_amount = capacity, 
+            storage_unit = capacity_unit 
         WHERE type = 'container' 
         AND capacity IS NOT NULL
     """))
