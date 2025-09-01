@@ -33,14 +33,14 @@ def upgrade():
     """))
     
     # Drop the legacy columns
-    op.drop_column('inventory_item', 'capacity')
-    op.drop_column('inventory_item', 'capacity_unit')
+    op.drop_column('inventory_item', 'storage_amount')
+    op.drop_column('inventory_item', 'storage_unit')
 
 
 def downgrade():
     # Re-add legacy columns
-    op.add_column('inventory_item', sa.Column('capacity', sa.Float(), nullable=True))
-    op.add_column('inventory_item', sa.Column('capacity_unit', sa.String(32), nullable=True))
+    op.add_column('inventory_item', sa.Column('storage_amount', sa.Float(), nullable=True))
+    op.add_column('inventory_item', sa.Column('storage_unit', sa.String(32), nullable=True))
     
     # Migrate data back
     connection = op.get_bind()
