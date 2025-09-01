@@ -123,7 +123,7 @@
                         <a href="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}" class="btn btn-outline-secondary btn-sm">
                             <i class="fas fa-edit"></i> Edit
                         </a>
-                        <a href="{{ url_for('recipes.plan_production_route', recipe_id=recipe.id) }}" class="btn btn-primary btn-sm">
+                        <a href="{{ url_for('production_planning.plan_production', recipe_id=recipe.id) }}" class="btn btn-primary btn-sm">
                             <i class="fas fa-play"></i> Plan
                         </a>
                     </div>
@@ -221,7 +221,7 @@
                         </td>
                         <td>
                             <div class="btn-group" role="group">
-                                <a href="{{ url_for('production_planning.plan_production_route', recipe_id=recipe.id) }}" class="btn btn-primary btn-sm">
+                                <a href="{{ url_for('production_planning.plan_production', recipe_id=recipe.id) }}" class="btn btn-primary btn-sm">
                                     <i class="fas fa-play"></i> Plan
                                 </a>
                                 <div class="btn-group" role="group">
