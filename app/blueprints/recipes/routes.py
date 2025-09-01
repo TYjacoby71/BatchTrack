@@ -81,10 +81,14 @@ def view_recipe(recipe_id):
 
 @recipes_bp.route('/<int:recipe_id>/auto-fill-containers', methods=['POST'])
 @login_required
+@require_permission('app.recipes.plan_production')
 def auto_fill_containers(recipe_id):
-    """Auto-fill containers for recipe production planning"""
+    """Auto-fill containers for production planning - thin controller"""
     try:
         data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+
         scale = data.get('scale', 1.0)
 
         recipe = Recipe.query.get_or_404(recipe_id)
