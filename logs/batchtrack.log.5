@@ -1,79 +1,93 @@
-2025-08-29 00:22:35,964 INFO: STOCK_CHECK: Recipe 5 has 4 ingredients [in /home/runner/workspace/app/blueprints/recipes/routes.py:572]
-2025-08-29 00:22:35,965 INFO: STOCK_CHECK: - Ingredient Olive Oil (ID: 6), qty: 250.0, unit: ml [in /home/runner/workspace/app/blueprints/recipes/routes.py:574]
-2025-08-29 00:22:35,965 INFO: STOCK_CHECK: - Ingredient Apple Cider Vinegar (ID: 5), qty: 0.5, unit: liter [in /home/runner/workspace/app/blueprints/recipes/routes.py:574]
-2025-08-29 00:22:35,965 INFO: STOCK_CHECK: - Ingredient Beeswax (ID: 7), qty: 2.0, unit: cup [in /home/runner/workspace/app/blueprints/recipes/routes.py:574]
-2025-08-29 00:22:35,965 INFO: STOCK_CHECK: - Ingredient Sea Salt (ID: 10), qty: 5.0, unit: gram [in /home/runner/workspace/app/blueprints/recipes/routes.py:574]
-2025-08-29 00:23:06,352 INFO: 🏭 AUTO-FILL: Received data for recipe 5: {'scale': 1, 'predicted_yield': 1, 'predicted_yield_unit': 'liter'} [in /home/runner/workspace/app/blueprints/recipes/routes.py:91]
-2025-08-29 00:23:06,356 INFO: 🏭 AUTO-FILL: Recipe 5 has predicted_yield=1.0, predicted_yield_unit=liter [in /home/runner/workspace/app/blueprints/recipes/routes.py:96]
-2025-08-29 00:23:06,357 INFO: 🏭 CONTAINER ANALYSIS: Starting analysis for recipe 5, scale 1 [in /home/runner/workspace/app/services/production_planning/_container_management.py:24]
-2025-08-29 00:23:06,359 INFO: 🏭 CONTAINER ANALYSIS: Total yield needed: 1.0 liter [in /home/runner/workspace/app/services/production_planning/_container_management.py:43]
-2025-08-29 00:23:06,360 INFO: 🏭 CONTAINER ANALYSIS: Recipe allows containers: [12, 11] [in /home/runner/workspace/app/services/production_planning/_container_management.py:64]
-2025-08-29 00:23:06,363 INFO: 🏭 CONTAINER ANALYSIS: Found 2 available containers [in /home/runner/workspace/app/services/production_planning/_container_management.py:82]
-2025-08-29 00:23:06,381 INFO: 🏭 CONTAINER ANALYSIS: Available option: Glass 4oz Jars (capacity: 0.004 liter, stock: 100.0) [in /home/runner/workspace/app/services/production_planning/_container_management.py:137]
-2025-08-29 00:23:06,401 INFO: 🏭 CONTAINER ANALYSIS: Available option: Glass 10oz Jars (capacity: 0.01 liter, stock: 60.0) [in /home/runner/workspace/app/services/production_planning/_container_management.py:137]
-2025-08-29 00:23:06,402 INFO: 🏭 CONTAINER ANALYSIS: Returning 2 container options [in /home/runner/workspace/app/services/production_planning/_container_management.py:142]
-2025-08-29 00:23:06,402 INFO: Backend calculated last container fill: 100.0% for Glass 4oz Jars [in /home/runner/workspace/app/services/production_planning/_container_management.py:300]
-2025-08-29 00:25:08,817 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
-2025-08-29 00:25:12,374 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
-2025-08-29 00:25:14,098 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
-2025-08-29 00:25:14,489 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
-2025-08-29 00:25:35,254 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
-2025-08-29 00:25:37,112 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
-2025-08-29 00:25:37,583 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
-2025-08-29 00:33:48,802 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
-2025-08-29 00:34:13,611 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
-2025-08-29 00:34:15,993 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
-2025-08-29 00:34:16,482 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
-2025-08-29 00:34:28,490 INFO: Recipe 5 container debug: [in /home/runner/workspace/app/services/production_planning/_container_management.py:68]
-2025-08-29 00:34:28,490 INFO:   - allowed_containers: [12, 11] [in /home/runner/workspace/app/services/production_planning/_container_management.py:69]
-2025-08-29 00:34:28,491 INFO:   - Recipe has allowed_containers field: True [in /home/runner/workspace/app/services/production_planning/_container_management.py:70]
-2025-08-29 00:37:04,213 INFO: STOCK_CHECK: Recipe 5 has 4 ingredients [in /home/runner/workspace/app/blueprints/recipes/routes.py:566]
-2025-08-29 00:37:04,213 INFO: STOCK_CHECK: - Ingredient Olive Oil (ID: 6), qty: 250.0, unit: ml [in /home/runner/workspace/app/blueprints/recipes/routes.py:568]
-2025-08-29 00:37:04,213 INFO: STOCK_CHECK: - Ingredient Apple Cider Vinegar (ID: 5), qty: 0.5, unit: liter [in /home/runner/workspace/app/blueprints/recipes/routes.py:568]
-2025-08-29 00:37:04,213 INFO: STOCK_CHECK: - Ingredient Beeswax (ID: 7), qty: 2.0, unit: cup [in /home/runner/workspace/app/blueprints/recipes/routes.py:568]
-2025-08-29 00:37:04,213 INFO: STOCK_CHECK: - Ingredient Sea Salt (ID: 10), qty: 5.0, unit: gram [in /home/runner/workspace/app/blueprints/recipes/routes.py:568]
-2025-08-29 00:49:34,967 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
-2025-08-29 00:49:36,922 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
-2025-08-29 00:49:40,345 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
-2025-08-29 00:50:04,815 INFO: Recipe 5 container debug: [in /home/runner/workspace/app/services/production_planning/_container_management.py:68]
-2025-08-29 00:50:04,815 INFO:   - allowed_containers: [12, 11] [in /home/runner/workspace/app/services/production_planning/_container_management.py:69]
-2025-08-29 00:50:04,816 INFO:   - Recipe has allowed_containers field: True [in /home/runner/workspace/app/services/production_planning/_container_management.py:70]
-2025-08-29 00:50:11,967 INFO: STOCK_CHECK: Recipe 5 has 4 ingredients [in /home/runner/workspace/app/blueprints/recipes/routes.py:566]
-2025-08-29 00:50:11,967 INFO: STOCK_CHECK: - Ingredient Olive Oil (ID: 6), qty: 250.0, unit: ml [in /home/runner/workspace/app/blueprints/recipes/routes.py:568]
-2025-08-29 00:50:11,968 INFO: STOCK_CHECK: - Ingredient Apple Cider Vinegar (ID: 5), qty: 0.5, unit: liter [in /home/runner/workspace/app/blueprints/recipes/routes.py:568]
-2025-08-29 00:50:11,968 INFO: STOCK_CHECK: - Ingredient Beeswax (ID: 7), qty: 2.0, unit: cup [in /home/runner/workspace/app/blueprints/recipes/routes.py:568]
-2025-08-29 00:50:11,968 INFO: STOCK_CHECK: - Ingredient Sea Salt (ID: 10), qty: 5.0, unit: gram [in /home/runner/workspace/app/blueprints/recipes/routes.py:568]
-2025-09-01 20:45:43,746 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
-2025-09-01 20:45:45,965 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
-2025-09-01 20:45:48,774 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
-2025-09-01 20:48:29,576 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
-2025-09-01 20:48:31,760 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
-2025-09-01 20:48:32,456 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
-2025-09-01 20:55:51,697 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
-2025-09-01 20:55:54,252 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
-2025-09-01 20:55:56,154 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
-2025-09-01 20:55:56,567 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
-2025-09-01 20:57:37,584 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
-2025-09-01 20:57:40,045 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
-2025-09-01 20:57:40,710 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
-2025-09-01 20:58:25,752 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
-2025-09-01 21:04:33,493 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
-2025-09-01 21:04:38,073 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
-2025-09-01 21:04:39,961 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
-2025-09-01 21:04:40,449 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
-2025-09-01 21:07:19,689 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
-2025-09-01 21:07:21,683 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
-2025-09-01 21:07:22,148 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
-2025-09-01 21:10:37,939 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
-2025-09-01 21:10:41,483 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
-2025-09-01 21:10:43,454 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
-2025-09-01 21:10:44,073 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
-2025-09-01 21:12:11,393 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
-2025-09-01 21:12:13,260 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
-2025-09-01 21:12:13,690 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
-2025-09-01 21:36:04,868 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
-2025-09-01 21:43:09,010 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
-2025-09-01 21:43:14,121 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
-2025-09-01 21:43:16,106 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
-2025-09-01 21:43:16,567 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
-2025-09-01 21:49:02,531 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-09-01 23:49:46,298 WARNING: Invalid conversion result for container Paper Plates (5-pack): {'success': False, 'converted_value': None, 'error_code': 'UNSUPPORTED_CONVERSION', 'error_data': {'from_unit': 'count', 'to_unit': 'liter', 'message': 'Cannot convert count (count) to liter (volume) without a custom mapping. Go to Unit Manager to create a mapping.'}, 'conversion_type': 'unknown', 'density_used': None, 'from': 'count', 'to': 'liter', 'requires_attention': True, 'requires_drawer': False, 'error_type': 'conversion_error', 'error_message': 'Cannot convert count (count) to liter (volume) without a custom mapping. Go to Unit Manager to create a mapping.'} [in /home/runner/workspace/app/services/production_planning/_container_management.py:117]
+2025-09-01 23:49:46,301 INFO: CONTAINER_CONVERSION: Processed 0 valid containers [in /home/runner/workspace/app/services/production_planning/_container_management.py:144]
+2025-09-01 23:49:46,302 WARNING: CONTAINER_ANALYSIS: No valid containers found for recipe 5 [in /home/runner/workspace/app/services/production_planning/_container_management.py:44]
+2025-09-01 23:49:52,891 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-09-01 23:50:24,260 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-09-01 23:50:33,349 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-09-01 23:50:35,599 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-09-01 23:50:36,135 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-09-01 23:50:43,883 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-09-01 23:51:53,087 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-09-01 23:51:55,184 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-09-01 23:51:55,681 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-09-02 00:12:30,530 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-09-02 00:12:39,784 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-09-02 00:14:42,706 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-09-02 00:14:46,545 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-09-02 00:17:11,076 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-09-02 00:17:15,561 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-09-02 00:17:15,591 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-09-02 00:17:20,117 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-09-02 00:17:22,309 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-09-02 00:17:22,794 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-09-02 00:17:27,650 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-09-02 00:17:29,276 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-09-02 00:17:29,458 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-09-02 00:17:29,471 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-09-02 00:17:55,584 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-09-02 00:17:57,558 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-09-02 00:18:01,427 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-09-02 00:18:03,764 INFO: Created recipe 9: Milk and Honey Mixture (Copy) [in /home/runner/workspace/app/services/recipe_service/_core.py:80]
+2025-09-02 00:18:03,775 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-09-02 00:18:03,779 ERROR: Error cloning recipe: pages/recipes/create_recipe.html [in /home/runner/workspace/app/blueprints/recipes/routes.py:204]
+Traceback (most recent call last):
+  File "/home/runner/workspace/app/blueprints/recipes/routes.py", line 194, in clone_recipe
+    return render_template('pages/recipes/create_recipe.html',
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 149, in render_template
+    template = app.jinja_env.get_or_select_template(template_name_or_list)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 1087, in get_or_select_template
+    return self.get_template(template_name_or_list, parent, globals)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 1016, in get_template
+    return self._load_template(name, globals)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 975, in _load_template
+    template = self.loader.load(self, name, self.make_globals(globals))
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/loaders.py", line 126, in load
+    source, filename, uptodate = self.get_source(environment, name)
+                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 65, in get_source
+    return self._get_source_fast(environment, template)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 99, in _get_source_fast
+    raise TemplateNotFound(template)
+jinja2.exceptions.TemplateNotFound: pages/recipes/create_recipe.html
+2025-09-02 00:18:03,872 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-09-02 00:18:05,409 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-09-02 00:18:06,892 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-09-02 00:18:09,937 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-09-02 00:18:11,096 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-09-02 00:18:11,098 ERROR: Error creating variation: pages/recipes/create_recipe.html [in /home/runner/workspace/app/blueprints/recipes/routes.py:127]
+Traceback (most recent call last):
+  File "/home/runner/workspace/app/blueprints/recipes/routes.py", line 119, in create_variation
+    return render_template('pages/recipes/create_recipe.html',
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 149, in render_template
+    template = app.jinja_env.get_or_select_template(template_name_or_list)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 1087, in get_or_select_template
+    return self.get_template(template_name_or_list, parent, globals)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 1016, in get_template
+    return self._load_template(name, globals)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 975, in _load_template
+    template = self.loader.load(self, name, self.make_globals(globals))
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/loaders.py", line 126, in load
+    source, filename, uptodate = self.get_source(environment, name)
+                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 65, in get_source
+    return self._get_source_fast(environment, template)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 99, in _get_source_fast
+    raise TemplateNotFound(template)
+jinja2.exceptions.TemplateNotFound: pages/recipes/create_recipe.html
+2025-09-02 00:18:11,181 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-09-02 00:23:21,896 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-09-02 00:23:30,429 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-09-02 00:23:36,416 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-09-02 00:23:43,393 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
