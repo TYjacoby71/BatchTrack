@@ -54,9 +54,9 @@ export class ContainerRenderer {
     }
 
     renderContainerCard(container, index, isAutoFill = false) {
-        const stockQuantity = container.stock_qty || container.available_quantity || container.quantity || 0;
-        const containerName = container.container_name || 'Unknown Container';
-        const quantityNeeded = container.quantity || container.containers_needed || 0;
+        const stockQuantity = parseInt(container.stock_qty || container.available_quantity || container.quantity || 0);
+        const containerName = (container.container_name || 'Unknown Container').toString();
+        const quantityNeeded = parseInt(container.quantity || container.containers_needed || 0);
 
         const capacityDisplay = this.formatCapacityDisplay(container);
         const stockBadgeClass = stockQuantity >= quantityNeeded ? 'bg-success' : 'bg-warning';
@@ -96,13 +96,13 @@ export class ContainerRenderer {
     }
 
     formatCapacityDisplay(container) {
-        const capacity = container.capacity || 0;
-        const unit = container.unit || 'ml';
+        const capacity = parseFloat(container.capacity || 0);
+        const unit = (container.unit || container.capacity_unit || 'ml').toString();
 
         if (container.capacity_in_yield_unit && container.yield_unit && container.conversion_successful) {
-            return `<strong>${container.capacity_in_yield_unit} ${container.yield_unit}</strong> (${capacity} ${unit})`;
+            return `<strong>${parseFloat(container.capacity_in_yield_unit)} ${container.yield_unit}</strong> (${capacity} ${unit})`;
         } else if (container.capacity_in_yield_unit && container.yield_unit) {
-            return `<strong>${container.capacity_in_yield_unit} ${container.yield_unit}</strong> (${capacity} ${unit})`;
+            return `<strong>${parseFloat(container.capacity_in_yield_unit)} ${container.yield_unit}</strong> (${capacity} ${unit})`;
         }
 
         return `${capacity} ${unit}`;
@@ -121,27 +121,36 @@ export class ContainerRenderer {
             return;
         }
 
-        const optionsHtml = allContainerOptions.map(option => `
-            <div class="container-option mb-2 p-2 border rounded" data-container-id="${option.container_id}">
-                <div class="d-flex justify-content-between align-items-center">
-                    <label class="form-check-label">
-                        <input type="checkbox" class="form-check-input me-2" 
-                               value="${option.container_id}"
-                               data-container-name="${option.container_name}"
-                               data-capacity="${option.capacity}"
-                               data-capacity-unit="${option.capacity_unit || 'units'}">
-                        <strong>${option.container_name}</strong>
-                    </label>
-                    <span class="text-muted">${option.capacity} ${option.capacity_unit || 'units'}</span>
+        const optionsHtml = allContainerOptions.map(option => {
+            const containerId = parseInt(option.container_id || 0);
+            const containerName = (option.container_name || 'Unknown Container').toString();
+            const capacity = parseFloat(option.capacity || 0);
+            const capacityUnit = (option.capacity_unit || 'units').toString();
+            const containersNeeded = parseInt(option.containers_needed || 1);
+            const fillPercentage = parseFloat(option.fill_percentage || 100);
+            
+            return `
+                <div class="container-option mb-2 p-2 border rounded" data-container-id="${containerId}">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <label class="form-check-label">
+                            <input type="checkbox" class="form-check-input me-2" 
+                                   value="${containerId}"
+                                   data-container-name="${containerName}"
+                                   data-capacity="${capacity}"
+                                   data-capacity-unit="${capacityUnit}">
+                            <strong>${containerName}</strong>
+                        </label>
+                        <span class="text-muted">${capacity} ${capacityUnit}</span>
+                    </div>
+                    <div class="mt-1">
+                        <small class="text-muted">
+                            Needs ${containersNeeded} container(s) | 
+                            ${fillPercentage.toFixed(1)}% efficiency
+                        </small>
+                    </div>
                 </div>
-                <div class="mt-1">
-                    <small class="text-muted">
-                        Needs ${option.containers_needed} container(s) | 
-                        ${option.fill_percentage ? option.fill_percentage.toFixed(1) : 100}% efficiency
-                    </small>
-                </div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
 
         manualSection.innerHTML = `
             <h6>Select Containers Manually:</h6>
@@ -174,9 +183,9 @@ export class ContainerRenderer {
 
         let totalCapacity = 0;
         const summaryHtml = selected.map(checkbox => {
-            const capacity = parseFloat(checkbox.dataset.capacity) || 0;
-            const containerName = checkbox.dataset.containerName || 'Unknown';
-            const unit = checkbox.dataset.capacityUnit || 'units';
+            const capacity = parseFloat(checkbox.dataset.capacity || '0') || 0;
+            const containerName = (checkbox.dataset.containerName || 'Unknown').toString();
+            const unit = (checkbox.dataset.capacityUnit || 'units').toString();
             
             totalCapacity += capacity;
             
@@ -188,7 +197,7 @@ export class ContainerRenderer {
             `;
         }).join('');
 
-        const yieldAmount = window.recipeData?.yield_amount || 0;
+        const yieldAmount = parseFloat(window.recipeData?.yield_amount || 0);
         const fillPercentage = yieldAmount > 0 ? (yieldAmount / totalCapacity) * 100 : 0;
         const fillClass = fillPercentage > 100 ? 'text-danger' : fillPercentage > 90 ? 'text-warning' : 'text-success';
 
