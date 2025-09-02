@@ -153,34 +153,16 @@ export class StockCheckManager {
                 // Debug: log the full result structure for conversion errors
                 console.log('🔧 STOCK CHECK DEBUG: Full conversion error result:', JSON.stringify(result, null, 2));
 
-                // Check for drawer payload in conversion_details (this is where it actually is)
+                // Note: Drawer opening is handled globally by DrawerInterceptor
+                // The response already contains drawer_payload at the top level which triggers the global handler
+                // No need to manually dispatch drawer events here to avoid duplicates
                 if (result.conversion_details?.drawer_payload) {
-                    console.log('🔧 STOCK CHECK: Found drawer_payload in conversion_details:', result.conversion_details.drawer_payload);
-                    const drawerEvent = new CustomEvent('openDrawer', {
-                        detail: result.conversion_details.drawer_payload
-                    });
-                    console.log('🔧 STOCK CHECK: Dispatching drawer event from conversion_details');
-                    window.dispatchEvent(drawerEvent);
-                }
-                // Also check for drawer payload at the ingredient result level (fallback)
-                else if (result.drawer_payload) {
-                    console.log('🔧 STOCK CHECK: Found drawer_payload at result level:', result.drawer_payload);
-                    const drawerEvent = new CustomEvent('openDrawer', {
-                        detail: result.drawer_payload
-                    });
-                    console.log('🔧 STOCK CHECK: Dispatching drawer event from result level');
-                    window.dispatchEvent(drawerEvent);
-                }
-                // Also check if conversion_result has drawer payload (fallback)
-                else if (result.conversion_result?.drawer_payload) {
-                    console.log('🔧 STOCK CHECK: Found drawer_payload in conversion_result:', result.conversion_result.drawer_payload);
-                    const drawerEvent = new CustomEvent('openDrawer', {
-                        detail: result.conversion_result.drawer_payload
-                    });
-                    console.log('🔧 STOCK CHECK: Dispatching drawer event from conversion_result');
-                    window.dispatchEvent(drawerEvent);
-                }
-                else {
+                    console.log('🔧 STOCK CHECK: Drawer payload found in conversion_details (handled by global interceptor)');
+                } else if (result.drawer_payload) {
+                    console.log('🔧 STOCK CHECK: Drawer payload found at result level (handled by global interceptor)');
+                } else if (result.conversion_result?.drawer_payload) {
+                    console.log('🔧 STOCK CHECK: Drawer payload found in conversion_result (handled by global interceptor)');
+                } else {
                     console.log('🔧 STOCK CHECK DEBUG: No drawer_payload found in any expected location for conversion error');
                 }
             } else {
