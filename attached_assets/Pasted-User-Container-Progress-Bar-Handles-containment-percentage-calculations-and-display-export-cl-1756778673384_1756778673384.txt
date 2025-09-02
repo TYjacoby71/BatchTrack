@@ -1,0 +1,1066 @@
+User
+// Container Progress Bar - Handles containment percentage calculations and display
+export class ContainerProgressBar {
+constructor(containerManager) {
+this.containerManager = containerManager; // Renamed from 'container' to 'containerManager' for clarity
+}
+code
+Code
+update() {
+    if (!this.containerManager.containerPlan?.success) {
+        this.clear();
+        return;
+    }
+
+    const autoFillEnabled = document.getElementById('autoFillEnabled')?.checked;
+    let containment_percentage;
+
+    if (autoFillEnabled) {
+        containment_percentage = this.containerManager.containerPlan.containment_percentage || 0;
+    } else {
+        containment_percentage = this.calculateManualContainment();
+    }
+
+    this.updateProgressBar(containment_percentage);
+}
+
+calculateManualContainment() {
+    const projectedYield = this.containerManager.main.baseYield * this.containerManager.main.scale;
+    let totalCapacity = 0;
+
+    console.log('🔍 CONTAINMENT: Calculating for yield', projectedYield);
+
+    document.querySelectorAll('[data-container-row]').forEach(row => {
+        const select = row.querySelector('.container-select');
+        const quantityInput = row.querySelector('.container-quantity');
+
+        if (select && quantityInput && select.value) {
+            const container = this.containerManager.containerPlan?.container_selection?.find(c => c.container_id == select.value);
+            if (container) {
+                const quantity = parseInt(quantityInput.value) || 0;
+                const capacityToUse = container.capacity_in_yield_unit || container.capacity;
+                const containerTotal = capacityToUse * quantity;
+                totalCapacity += containerTotal;
+
+                console.log('🔍 CONTAINMENT: Container', container.container_name, 'x', quantity, '=', containerTotal);
+            }
+        }
+    });
+
+    const containmentPercent = projectedYield > 0 ? (totalCapacity / projectedYield) * 100 : (totalCapacity > 0 ? 100 : 0);
+    console.log('🔍 CONTAINMENT: Total capacity', totalCapacity, 'vs yield', projectedYield, '=', containmentPercent.toFixed(1), '%');
+
+    return Math.min(containmentPercent, 100);
+}
+
+// Add method to calculate last container fill percentage
+calculateLastContainerFillPercentage() {
+    // Only calculate if we have container plan data and we're in manual mode
+    if (!this.containerManager.containerPlan?.container_selection) return 100;
+
+    const containers = this.getSelectedContainersFromDOM();
+    if (containers.length === 0) return 100;
+
+    const projectedYield = this.containerManager.main.baseYield * this.containerManager.main.scale;
+    console.log('🔍 FILL CALC: Starting with yield', projectedYield, 'containers:', containers.length);
+
+    // Calculate how much yield goes into each container type
+    let remainingYieldToAllocate = projectedYield;
+
+    for (let i = 0; i < containers.length; i++) {
+        const container = containers[i];
+
+        if (i === containers.length - 1) {
+            // Last container type - calculate partial fill
+            const fullContainersOfThisType = container.quantity - 1;
+            const yieldInFullContainers = fullContainersOfThisType * container.capacity;
+            remainingYieldToAllocate -= yieldInFullContainers;
+
+            // The remaining yield goes into the final container
+            if (remainingYieldToAllocate > 0 && container.capacity > 0) {
+                const lastContainerFillPercentage = (remainingYieldToAllocate / container.capacity) * 100;
+                console.log('🔍 FILL CALC: Last container fill:', lastContainerFillPercentage.toFixed(1), '%');
+                return Math.min(100, Math.max(0, lastContainerFillPercentage));
+            }
+            break;
+        } else {
+            // For non-last containers, all are filled completely
+            const yieldInThisContainerType = container.quantity * container.capacity;
+            remainingYieldToAllocate -= yieldInThisContainerType;
+        }
+    }
+
+    console.log('🔍 FILL CALC: Last container fill:', '100.0', '%');
+    return 100;
+}
+
+// Local method to get containers from DOM safely
+getSelectedContainersFromDOM() {
+    const containers = [];
+
+    try {
+        document.querySelectorAll('[data-container-row]').forEach(row => {
+            const select = row.querySelector('.container-select');
+            const quantityInput = row.querySelector('.container-quantity');
+
+            if (select && quantityInput && select.value) {
+                const container = this.containerManager.containerPlan?.container_selection?.find(c => c.container_id == select.value);
+                if (container) {
+                    const quantity = parseInt(quantityInput.value) || 1;
+                    containers.push({
+                        ...container,
+                        quantity: quantity
+                    });
+                }
+            }
+        });
+    } catch (error) {
+        console.log('🔍 FILL CALC: Error getting containers from DOM:', error);
+    }
+
+    return containers;
+}
+
+updateProgressBar(percentage) {
+    const progressBar = document.getElementById('containmentProgressBar');
+    const percentSpan = document.getElementById('containmentPercent');
+    const messageSpan = document.getElementById('liveContainmentMessage');
+
+    const displayPercentage = Math.min(percentage, 100);
+    const actualPercentage = percentage;
+
+    if (progressBar) {
+        progressBar.style.width = `${displayPercentage}%`;
+        progressBar.textContent = `${actualPercentage.toFixed(1)}%`;
+        progressBar.className = `progress-bar ${actualPercentage >= 100 ? 'bg-success' : 'bg-warning'}`;
+    }
+
+    if (percentSpan) {
+        percentSpan.textContent = `${actualPercentage.toFixed(1)}%`;
+    }
+
+    if (messageSpan) {
+        const message = this.getContainmentMessage(actualPercentage);
+        messageSpan.textContent = message.text;
+        messageSpan.className = message.className;
+    }
+}
+
+getContainmentMessage(percentage) {
+    let message = '';
+    let className = 'form-text mt-1';
+
+    // CONTAINMENT MESSAGE (primary concern)
+    let containmentMessage = '';
+    let containmentClass = '';
+
+    if (percentage >= 97) {  // Within 3% tolerance = 100% containment
+        containmentMessage = '✅ Batch fully contained';
+        containmentClass = 'text-success';
+    } else {
+        containmentMessage = '⚠️ Partial containment - add more containers';
+        containmentClass = 'text-danger';
+    }
+
+    // FILL EFFICIENCY MESSAGE (secondary concern - only if contained)
+    // This logic should work for BOTH auto-fill and manual modes
+    let fillEfficiencyMessage = '';
+    let fillEfficiencyClass = '';
+
+    if (percentage >= 97) {  // Only show fill efficiency if we have containment
+        // Check if we're in auto-fill mode and have backend warnings
+        const autoFillEnabled = document.getElementById('autoFillEnabled')?.checked;
+
+        if (autoFillEnabled && this.containerManager.containerPlan?.warnings) {
+            // Use backend warnings for auto-fill mode
+            const backendFillWarnings = this.containerManager.containerPlan.warnings.filter(warning => 
+                warning.includes('partially filled') || warning.includes('Partial fill warning')
+            );
+
+            if (backendFillWarnings.length > 0) {
+                // Use the first fill efficiency warning from backend
+                const warning = backendFillWarnings[0];
+                if (warning.includes('less than 75%')) {
+                    fillEfficiencyMessage = ` • ⚠️ ${warning}`;
+                    fillEfficiencyClass = 'text-danger';
+                } else {
+                    fillEfficiencyMessage = ` • ⚠️ ${warning}`;
+                    fillEfficiencyClass = 'text-warning';
+                }
+            }
+        } else {
+            // Calculate frontend fill efficiency for manual mode (or auto-fill fallback)
+            const lastContainerFill = this.calculateLastContainerFillPercentage();
+
+            if (lastContainerFill < 100) {
+                if (lastContainerFill < 75) {
+                    // RED - Critical fill efficiency issue
+                    fillEfficiencyMessage = ` • ⚠️ Partial fill warning: last container will be filled less than 75% - consider using other containers`;
+                    fillEfficiencyClass = 'text-danger';
+                } else {
+                    // YELLOW - Moderate fill efficiency issue  
+                    fillEfficiencyMessage = ` • ⚠️ Last container partially filled to ${lastContainerFill.toFixed(1)}%`;
+                    fillEfficiencyClass = 'text-warning';
+                }
+            }
+        }
+    }
+
+    // Combine messages
+    message = containmentMessage + fillEfficiencyMessage;
+
+    // Set class priority: danger > warning > success
+    if (containmentClass === 'text-danger' || fillEfficiencyClass === 'text-danger') {
+        className += ' text-danger';
+    } else if (fillEfficiencyClass === 'text-warning') {
+        className += ' text-warning';
+    } else {
+        className += ' ' + containmentClass;
+    }
+
+    return { text: message, className };
+}
+
+clear() {
+    const progressBar = document.getElementById('containmentProgressBar');
+    const percentSpan = document.getElementById('containmentPercent');
+    const messageSpan = document.getElementById('liveContainmentMessage');
+
+    if (progressBar) {
+        progressBar.style.width = '0%';
+        progressBar.textContent = '0%';
+        progressBar.className = 'progress-bar bg-warning';
+    }
+
+    if (percentSpan) percentSpan.textContent = '0%';
+    if (messageSpan) messageSpan.textContent = '';
+}
+
+displayWarnings(containerPlan) {
+    const warningsContainer = this.container.containerCard.querySelector('.container-warnings');
+    if (!warningsContainer) return;
+
+    const warnings = [];
+
+    // Generate containment warnings
+    if (containerPlan.containment_metrics && !containerPlan.containment_metrics.is_contained) {
+        const remaining = containerPlan.containment_metrics.remaining_yield;
+        const unit = containerPlan.containment_metrics.yield_unit;
+        warnings.push({
+            type: 'danger',
+            icon: 'fas fa-exclamation-circle',
+            message: `Insufficient capacity: ${remaining.toFixed(1)} ${unit} remaining`
+        });
+    }
+
+    // Generate fill efficiency warnings
+    if (containerPlan.last_container_fill_metrics) {
+        const fillMetrics = containerPlan.last_container_fill_metrics;
+        if (fillMetrics.is_partial) {
+            if (fillMetrics.is_low_efficiency) {
+                warnings.push({
+                    type: 'warning',
+                    icon: 'fas fa-exclamation-triangle',
+                    message: `Partial fill warning: last ${fillMetrics.container_name} will be ${fillMetrics.fill_percentage}% filled - consider using other containers`
+                });
+            } else {
+                warnings.push({
+                    type: 'info',
+                    icon: 'fas fa-info-circle',
+                    message: `Last ${fillMetrics.container_name} will be ${fillMetrics.fill_percentage}% filled`
+                });
+            }
+        }
+    }
+
+    if (warnings.length === 0) {
+        warningsContainer.innerHTML = '';
+        warningsContainer.style.display = 'none';
+        return;
+    }
+
+    const warningsHtml = warnings.map(warning => 
+        `<div class="alert alert-${warning.type} alert-sm mb-2">
+            <i class="${warning.icon} me-2"></i>
+            ${warning.message}
+        </div>`
+    ).join('');
+
+    warningsContainer.innerHTML = warningsHtml;
+    warningsContainer.style.display = 'block';
+}
+}
+container management py example
+"""
+Container Management for Production Planning
+Single purpose: Find suitable containers, convert capacities, and provide greedy fill strategy.
+"""
+import logging
+import math
+from typing import List, Optional, Dict, Any, Tuple
+from flask_login import current_user
+from ...models import Recipe, InventoryItem
+logger = logging.getLogger(name)
+def analyze_container_options(
+recipe: Recipe,
+scale: float,
+preferred_container_id: Optional[int] = None,
+organization_id: Optional[int] = None,
+api_format: bool = True
+) -> Tuple[Optional[Dict[str, Any]], List[Dict[str, Any]]]:
+"""
+Single entry point for container analysis.
+code
+Code
+Returns:
+    - Container strategy (greedy fill selection) 
+    - All available container options
+"""
+try:
+    org_id = organization_id or (current_user.organization_id if current_user.is_authenticated else None)
+    if not org_id:
+        raise ValueError("Organization ID required")
+
+    # Get recipe requirements
+    total_yield = (recipe.predicted_yield or 0) * scale
+    yield_unit = recipe.predicted_yield_unit or 'ml'
+    
+    if total_yield <= 0:
+        raise ValueError(f"Recipe '{recipe.name}' has no predicted yield configured")
+
+    # Load and filter containers
+    container_options = _load_suitable_containers(recipe, org_id, total_yield, yield_unit)
+    
+    if not container_options:
+        raise ValueError("No suitable containers found for this recipe")
+
+    # Create greedy fill strategy
+    strategy = _create_greedy_strategy(container_options, total_yield, yield_unit)
+    
+    return strategy, container_options
+
+except Exception as e:
+    logger.error(f"Container analysis failed for recipe {recipe.id}: {e}")
+    if api_format:
+        return None, []
+    raise
+def _load_suitable_containers(recipe: Recipe, org_id: int, total_yield: float, yield_unit: str) -> List[Dict[str, Any]]:
+"""Load containers allowed for this recipe and convert capacities"""
+code
+Code
+# Get recipe's allowed containers - Recipe model uses 'allowed_containers' field
+allowed_container_ids = getattr(recipe, 'allowed_containers', [])
+
+# Debug logging to understand what's available
+logger.info(f"Recipe {recipe.id} container debug:")
+logger.info(f"  - allowed_containers: {allowed_container_ids}")
+logger.info(f"  - Recipe has allowed_containers field: {hasattr(recipe, 'allowed_containers')}")
+
+if not allowed_container_ids:
+    raise ValueError(f"Recipe '{recipe.name}' has no containers configured")
+
+# Load containers from database in one query (avoid N+1)
+containers = InventoryItem.query.filter(
+    InventoryItem.id.in_(allowed_container_ids),
+    InventoryItem.organization_id == org_id,
+    InventoryItem.quantity > 0
+).all()
+
+container_options = []
+
+for container in containers:
+    # Get container capacity
+    storage_capacity = getattr(container, 'storage_amount', None)
+    storage_unit = getattr(container, 'storage_unit', None)
+
+    if not storage_capacity or not storage_unit:
+        logger.warning(f"Container {container.name} missing capacity data")
+        continue
+
+    # Convert capacity to recipe yield units
+    converted_capacity = _convert_capacity(storage_capacity, storage_unit, yield_unit)
+    if converted_capacity <= 0:
+        logger.warning(f"Container {container.name} capacity conversion failed")
+        continue
+
+    container_options.append({
+        'container_id': container.id,
+        'container_name': container.name,
+        'capacity': converted_capacity,  # Always in recipe yield units
+        'capacity_in_yield_unit': converted_capacity,  # Explicit for frontend
+        'yield_unit': yield_unit,  # Add yield unit for frontend
+        'conversion_successful': True,  # Mark conversion as successful
+        'original_capacity': storage_capacity,
+        'original_unit': storage_unit,
+        'available_quantity': int(container.quantity or 0),
+        'containers_needed': 0,  # Will be set by strategy
+        'cost_each': 0.0
+    })
+
+# Sort by capacity (largest first for greedy algorithm)
+container_options.sort(key=lambda x: x['capacity'], reverse=True)
+
+return container_options
+def _convert_capacity(capacity: float, from_unit: str, to_unit: str) -> float:
+"""Convert container capacity to recipe yield units"""
+if from_unit == to_unit:
+return capacity
+code
+Code
+try:
+    from ...services.unit_conversion import ConversionEngine
+    result = ConversionEngine.convert_units(capacity, from_unit, to_unit)
+    return result['converted_value'] if isinstance(result, dict) else float(result)
+except Exception as e:
+    logger.warning(f"Cannot convert {capacity} {from_unit} to {to_unit}: {e}")
+    return 0.0
+def _create_greedy_strategy(container_options: List[Dict[str, Any]], total_yield: float, yield_unit: str) -> Dict[str, Any]:
+"""Create greedy fill strategy - largest containers first"""
+code
+Code
+selected_containers = []
+remaining_yield = total_yield
+
+for container in container_options:
+    if remaining_yield <= 0:
+        break
+
+    # Calculate how many of this container we need
+    containers_needed = min(
+        container['available_quantity'],
+        math.ceil(remaining_yield / container['capacity'])
+    )
+
+    if containers_needed > 0:
+        # Update the container option with selection
+        container['containers_needed'] = containers_needed
+        selected_containers.append(container.copy())
+        remaining_yield -= containers_needed * container['capacity']
+
+# Calculate totals
+total_capacity = sum(c['capacity'] * c['containers_needed'] for c in selected_containers)
+# Containment = Can the total capacity hold the yield? 
+# This should max at 100% when capacity >= yield
+if total_yield > 0:
+    containment_percentage = min(100.0, (total_capacity / total_yield) * 100)
+else:
+    containment_percentage = 100.0 if total_capacity > 0 else 0.0
+
+# Create warnings - separate containment from fill efficiency
+warnings = []
+
+# Containment warnings (critical)
+if remaining_yield > 0:
+    warnings.append(f"Insufficient capacity: {remaining_yield:.1f} {yield_unit} remaining")
+
+# Fill efficiency warnings (optimization suggestions)
+if selected_containers and total_capacity > 0:
+    # Calculate fill efficiency of the last (smallest) container
+    last_container = selected_containers[-1]  # Smallest container used
+    last_container_fill = (total_yield % last_container['capacity']) / last_container['capacity'] if last_container['capacity'] > 0 else 0
+    
+    # If last container is used multiple times, check the final partial fill
+    if last_container['containers_needed'] > 1:
+        partial_fill_amount = total_yield - (sum(c['capacity'] * c['containers_needed'] for c in selected_containers[:-1]) + 
+                                           (last_container['containers_needed'] - 1) * last_container['capacity'])
+        last_container_fill = partial_fill_amount / last_container['capacity'] if last_container['capacity'] > 0 else 0
+    
+    # Only warn if fill efficiency is outside ±3% tolerance
+    if last_container_fill < 0.97:  # Less than 97% full
+        fill_percentage = last_container_fill * 100
+        warnings.append(f"Last container partially filled to {fill_percentage:.1f}%")
+    elif containment_percentage > 103:  # More than 103% (overfilled)
+        warnings.append(f"Containers slightly overfilled - consider larger container size")
+
+return {
+    'success': True,
+    'container_selection': selected_containers,
+    'total_capacity': total_capacity,
+    'containment_percentage': containment_percentage,
+    'warnings': warnings,
+    'strategy_type': 'greedy_fill'
+}
+container management js from when the display was right
+// Import required modules
+import { ContainerPlanFetcher } from './container-plan-fetcher.js';
+import { ContainerRenderer } from './container-renderer.js';
+import { ContainerProgressBar } from './container-progress-bar.js';
+import { ManualContainerMode } from './manual-container-mode.js';
+// Auto-Fill Container Mode Module
+class AutoFillContainerMode {
+constructor(containerManager) {
+this.container = containerManager;
+}
+code
+Code
+activate() {
+    console.log('🔍 AUTO-FILL MODE: Activating auto-fill container selection');
+    this.container.planFetcher.fetchContainerPlan();
+}
+}
+// Container Management Main Controller
+export class ContainerManager {
+constructor(mainManager) {
+this.main = mainManager;
+this.containerPlan = null;
+this.fetchingPlan = false;
+this.lastPlanResult = null;
+code
+Code
+// Initialize sub-modules
+    this.planFetcher = new ContainerPlanFetcher(this);
+    this.renderer = new ContainerRenderer(this);
+    this.progressBar = new ContainerProgressBar(this);
+    this.manualMode = new ManualContainerMode(this);
+    this.autoFillMode = new AutoFillContainerMode(this);
+}
+
+bindEvents() {
+    console.log('🔍 CONTAINER MANAGER DEBUG: Binding events');
+
+    // Add container button
+    const addContainerBtn = document.getElementById('addContainerBtn');
+    if (addContainerBtn) {
+        addContainerBtn.addEventListener('click', () => this.manualMode.addContainerRow());
+    }
+
+    // Auto-fill toggle
+    const autoFillToggle = document.getElementById('autoFillEnabled');
+    if (autoFillToggle) {
+        autoFillToggle.addEventListener('change', (e) => this.handleModeToggle(e.target.checked));
+    }
+}
+
+handleModeToggle(autoFillEnabled) {
+    console.log('🔍 AUTO-FILL TOGGLE:', autoFillEnabled);
+    
+    this.toggleContainerSections(autoFillEnabled);
+
+    if (autoFillEnabled && this.main.requiresContainers) {
+        this.autoFillMode.activate();
+    } else if (!autoFillEnabled) {
+        this.manualMode.activate();
+    }
+}
+
+toggleContainerSections(autoFillEnabled) {
+    const autoFillResults = document.getElementById('autoFillResults');
+    const manualSection = document.getElementById('manualContainerSection');
+
+    if (autoFillResults) {
+        autoFillResults.style.display = autoFillEnabled ? 'block' : 'none';
+    }
+
+    if (manualSection) {
+        manualSection.style.display = autoFillEnabled ? 'none' : 'block';
+    }
+
+    // When switching to manual mode, populate manual rows from auto-fill results
+    if (!autoFillEnabled && this.containerPlan?.success && this.containerPlan.container_selection) {
+        this.manualMode.populateFromAutoFill();
+    }
+
+    this.progressBar.update();
+}
+
+onContainerRequirementChange() {
+    if (this.main.requiresContainers) {
+        const autoFillEnabled = document.getElementById('autoFillEnabled')?.checked ?? true;
+        this.toggleContainerSections(autoFillEnabled);
+        this.planFetcher.fetchContainerPlan();
+    } else {
+        this.containerPlan = null;
+        this.renderer.clearResults();
+    }
+}
+
+displayContainerPlan() {
+    this.renderer.displayPlan();
+    this.progressBar.update();
+}
+
+displayContainerError(message) {
+    this.renderer.displayError(message);
+}
+
+clearContainerResults() {
+    this.containerPlan = null;
+    this.renderer.clearResults();
+}
+
+fetchContainerPlan() {
+    return this.planFetcher.fetchContainerPlan();
+}
+
+// Helper method to get selected containers for progress bar calculations
+getSelectedContainers() {
+    const containers = [];
+
+    document.querySelectorAll('[data-container-row]').forEach(row => {
+        const select = row.querySelector('.container-select');
+        const quantityInput = row.querySelector('.container-quantity');
+
+        if (select && quantityInput && select.value) {
+            const container = this.containerPlan?.container_selection?.find(c => c.container_id == select.value);
+            if (container) {
+                const quantity = parseInt(quantityInput.value) || 1;
+                containers.push({
+                    ...container,
+                    quantity: quantity
+                });
+            }
+        }
+    });
+
+    return containers;
+}
+}
+// Import required modules
+import { ContainerPlanFetcher } from './container-plan-fetcher.js';
+import { ContainerRenderer } from './container-renderer.js';
+import { ContainerProgressBar } from './container-progress-bar.js';
+import { ManualContainerMode } from './manual-container-mode.js';
+// Auto-Fill Container Mode Module
+class AutoFillContainerMode {
+constructor(containerManager) {
+this.container = containerManager;
+}
+code
+Code
+activate() {
+    console.log('🔍 AUTO-FILL MODE: Activating auto-fill container selection');
+    this.container.planFetcher.fetchContainerPlan();
+}
+}
+// Container Management Main Controller
+export class ContainerManager {
+constructor(mainManager) {
+this.main = mainManager;
+this.containerPlan = null;
+this.fetchingPlan = false;
+this.lastPlanResult = null;
+code
+Code
+// Initialize sub-modules
+    this.planFetcher = new ContainerPlanFetcher(this);
+    this.renderer = new ContainerRenderer(this);
+    this.progressBar = new ContainerProgressBar(this);
+    this.manualMode = new ManualContainerMode(this);
+    this.autoFillMode = new AutoFillContainerMode(this);
+}
+
+bindEvents() {
+    console.log('🔍 CONTAINER MANAGER DEBUG: Binding events');
+
+    // Add container button
+    const addContainerBtn = document.getElementById('addContainerBtn');
+    if (addContainerBtn) {
+        addContainerBtn.addEventListener('click', () => this.manualMode.addContainerRow());
+    }
+
+    // Auto-fill toggle
+    const autoFillToggle = document.getElementById('autoFillEnabled');
+    if (autoFillToggle) {
+        autoFillToggle.addEventListener('change', (e) => this.handleModeToggle(e.target.checked));
+    }
+}
+
+handleModeToggle(autoFillEnabled) {
+    console.log('🔍 AUTO-FILL TOGGLE:', autoFillEnabled);
+    
+    this.toggleContainerSections(autoFillEnabled);
+
+    if (autoFillEnabled && this.main.requiresContainers) {
+        this.autoFillMode.activate();
+    } else if (!autoFillEnabled) {
+        this.manualMode.activate();
+    }
+}
+
+toggleContainerSections(autoFillEnabled) {
+    const autoFillResults = document.getElementById('autoFillResults');
+    const manualSection = document.getElementById('manualContainerSection');
+
+    if (autoFillResults) {
+        autoFillResults.style.display = autoFillEnabled ? 'block' : 'none';
+    }
+
+    if (manualSection) {
+        manualSection.style.display = autoFillEnabled ? 'none' : 'block';
+    }
+
+    // When switching to manual mode, populate manual rows from auto-fill results
+    if (!autoFillEnabled && this.containerPlan?.success && this.containerPlan.container_selection) {
+        this.manualMode.populateFromAutoFill();
+    }
+
+    this.progressBar.update();
+}
+
+onContainerRequirementChange() {
+    if (this.main.requiresContainers) {
+        const autoFillEnabled = document.getElementById('autoFillEnabled')?.checked ?? true;
+        this.toggleContainerSections(autoFillEnabled);
+        this.planFetcher.fetchContainerPlan();
+    } else {
+        this.containerPlan = null;
+        this.renderer.clearResults();
+    }
+}
+
+displayContainerPlan() {
+    this.renderer.displayPlan();
+    this.progressBar.update();
+}
+
+displayContainerError(message) {
+    this.renderer.displayError(message);
+}
+
+clearContainerResults() {
+    this.containerPlan = null;
+    this.renderer.clearResults();
+}
+
+fetchContainerPlan() {
+    return this.planFetcher.fetchContainerPlan();
+}
+}
+// Container Progress Bar - Handles containment percentage calculations and display
+export class ContainerProgressBar {
+constructor(containerManager) {
+this.container = containerManager;
+}
+code
+Code
+update() {
+    if (!this.container.containerPlan?.success) {
+        this.clear();
+        return;
+    }
+
+    const autoFillEnabled = document.getElementById('autoFillEnabled')?.checked;
+    let containment_percentage;
+
+    if (autoFillEnabled) {
+        containment_percentage = this.container.containerPlan.containment_percentage || 0;
+    } else {
+        containment_percentage = this.calculateManualContainment();
+    }
+
+    this.updateProgressBar(containment_percentage);
+}
+
+calculateManualContainment() {
+    const projectedYield = this.container.main.baseYield * this.container.main.scale;
+    let totalCapacity = 0;
+
+    console.log('🔍 CONTAINMENT: Calculating for yield', projectedYield);
+
+    document.querySelectorAll('[data-container-row]').forEach(row => {
+        const select = row.querySelector('.container-select');
+        const quantityInput = row.querySelector('.container-quantity');
+
+        if (select && quantityInput && select.value) {
+            const container = this.container.containerPlan?.container_selection?.find(c => c.container_id == select.value);
+            if (container) {
+                const quantity = parseInt(quantityInput.value) || 0;
+                const capacityToUse = container.capacity_in_yield_unit || container.capacity;
+                const containerTotal = capacityToUse * quantity;
+                totalCapacity += containerTotal;
+
+                console.log('🔍 CONTAINMENT: Container', container.container_name, 'x', quantity, '=', containerTotal);
+            }
+        }
+    });
+
+    const containmentPercent = projectedYield > 0 ? (totalCapacity / projectedYield) * 100 : (totalCapacity > 0 ? 100 : 0);
+    console.log('🔍 CONTAINMENT: Total capacity', totalCapacity, 'vs yield', projectedYield, '=', containmentPercent.toFixed(1), '%');
+
+    return Math.min(containmentPercent, 100);
+}
+
+updateProgressBar(percentage) {
+    const progressBar = document.getElementById('containmentProgressBar');
+    const percentSpan = document.getElementById('containmentPercent');
+    const messageSpan = document.getElementById('liveContainmentMessage');
+
+    const displayPercentage = Math.min(percentage, 100);
+    const actualPercentage = percentage;
+
+    if (progressBar) {
+        progressBar.style.width = `${displayPercentage}%`;
+        progressBar.textContent = `${actualPercentage.toFixed(1)}%`;
+        progressBar.className = `progress-bar ${actualPercentage >= 100 ? 'bg-success' : 'bg-warning'}`;
+    }
+
+    if (percentSpan) {
+        percentSpan.textContent = `${actualPercentage.toFixed(1)}%`;
+    }
+
+    if (messageSpan) {
+        const message = this.getContainmentMessage(actualPercentage);
+        messageSpan.textContent = message.text;
+        messageSpan.className = message.className;
+    }
+}
+
+getContainmentMessage(percentage) {
+    let message = '';
+    let className = 'form-text mt-1';
+
+    if (percentage >= 100) {
+        message = '✅ Batch fully contained';
+        className += ' text-success';
+    } else if (percentage >= 97) {
+        message = '✅ Batch contained within 3% tolerance';
+        className += ' text-success';
+    } else if (percentage > 0) {
+        message = '⚠️ Partial containment - add more containers';
+        className += ' text-warning';
+    } else {
+        message = '❌ No containment - add containers to proceed';
+        className += ' text-danger';
+    }
+
+    // Add efficiency warnings if available
+    const warnings = this.container.containerPlan?.warnings || [];
+    const fillWarnings = warnings.filter(w => w.includes('partially filled') || w.includes('overfilled'));
+    if (fillWarnings.length > 0 && percentage >= 95) {
+        message += ` • ${fillWarnings.join(' • ')}`;
+    }
+
+    return { text: message, className };
+}
+
+clear() {
+    const progressBar = document.getElementById('containmentProgressBar');
+    const percentSpan = document.getElementById('containmentPercent');
+    const messageSpan = document.getElementById('liveContainmentMessage');
+
+    if (progressBar) {
+        progressBar.style.width = '0%';
+        progressBar.textContent = '0%';
+        progressBar.className = 'progress-bar bg-warning';
+    }
+
+    if (percentSpan) percentSpan.textContent = '0%';
+    if (messageSpan) messageSpan.textContent = '';
+}
+}
+// Plan Production Main Script - Modular Version
+import { StockChecker } from './modules/stock-check.js';
+import { ContainerManager } from './modules/container-management.js';
+console.log('Plan production JavaScript loaded');
+class PlanProductionApp {
+constructor() {
+this.recipe = null;
+this.scale = 1.0;
+this.baseYield = 0;
+this.unit = '';
+this.batchType = '';
+this.requiresContainers = false;
+this.stockCheckResults = null;
+code
+Code
+// Initialize managers
+    this.containerManager = new ContainerManager(this);
+    this.stockChecker = new StockChecker(this);
+
+    this.init();
+}
+
+init() {
+    console.log('🔍 INIT: Starting plan production app');
+    console.log('🔍 INIT DEBUG: Container manager:', !!this.containerManager);
+    console.log('🔍 INIT DEBUG: Stock checker:', !!this.stockChecker);
+
+    this.loadRecipeData();
+    this.bindEvents();
+    this.updateProjectedYield(); // Initialize projected yield display
+    this.updateValidation();
+}
+
+loadRecipeData() {
+    // Get recipe data from template
+    const recipeData = window.recipeData;
+    if (recipeData) {
+        this.recipe = recipeData;
+        this.baseYield = parseFloat(recipeData.yield_amount) || 0;
+        this.unit = recipeData.yield_unit || '';
+        console.log('🔍 RECIPE: Loaded recipe data:', this.recipe);
+    }
+}
+
+bindEvents() {
+    // Scale input
+    const scaleInput = document.getElementById('batchScale');
+    if (scaleInput) {
+        scaleInput.addEventListener('input', () => {
+            const newScale = parseFloat(scaleInput.value) || 1.0;
+            console.log('🔍 SCALE DEBUG: Scale changed from', this.scale, 'to', newScale);
+            this.scale = newScale;
+            this.updateProjectedYield();
+
+            // Update container plan if containers are required
+            if (this.requiresContainers) {
+                console.log('🔍 SCALE DEBUG: Updating container plan for new scale');
+                // Assuming ContainerManager now delegates to ContainerPlanFetcher
+                if (this.containerManager && typeof this.containerManager.fetchContainerPlan === 'function') {
+                    this.containerManager.fetchContainerPlan();
+                } else {
+                    console.error('🚨 SCALE DEBUG ERROR: Container manager or fetchContainerPlan not available');
+                }
+            }
+        });
+    }
+
+    // Batch type select
+    const batchTypeSelect = document.getElementById('batchType');
+    if (batchTypeSelect) {
+        batchTypeSelect.addEventListener('change', () => {
+            this.batchType = batchTypeSelect.value;
+            this.updateValidation();
+        });
+    }
+
+    // Container requirement toggle
+    const containerToggle = document.getElementById('requiresContainers');
+    console.log('🔍 CONTAINER TOGGLE DEBUG: Element found:', !!containerToggle);
+
+    if (containerToggle) {
+        console.log('🔍 CONTAINER TOGGLE DEBUG: Adding event listener');
+        containerToggle.addEventListener('change', () => {
+            this.requiresContainers = containerToggle.checked;
+            console.log('🔍 CONTAINER TOGGLE: Requirements changed to:', this.requiresContainers);
+
+            const containerCard = document.getElementById('containerManagementCard');
+            console.log('🔍 CONTAINER TOGGLE DEBUG: Container card found:', !!containerCard);
+
+            if (containerCard) {
+                containerCard.style.display = this.requiresContainers ? 'block' : 'none';
+                console.log('🔍 CONTAINER TOGGLE: Card display set to:', containerCard.style.display);
+                console.log('🔍 CONTAINER TOGGLE DEBUG: Card visibility classes:', containerCard.className);
+            }
+
+            if (this.requiresContainers) {
+                console.log('🔍 CONTAINER TOGGLE: Fetching container plan...');
+                console.log('🔍 CONTAINER TOGGLE DEBUG: Container manager available:', !!this.containerManager);
+                if (this.containerManager && typeof this.containerManager.fetchContainerPlan === 'function') {
+                    this.containerManager.fetchContainerPlan();
+                } else {
+                    console.error('🚨 CONTAINER TOGGLE ERROR: Container manager or fetchContainerPlan not available');
+                }
+            } else {
+                console.log('🔍 CONTAINER TOGGLE: Clearing container results...');
+                if (this.containerManager && typeof this.containerManager.clearContainerResults === 'function') {
+                    this.containerManager.clearContainerResults();
+                } else {
+                    console.error('🚨 CONTAINER TOGGLE ERROR: Container manager or clearContainerResults not available');
+                }
+            }
+
+            this.updateValidation();
+        });
+    } else {
+        console.error('🚨 CONTAINER TOGGLE ERROR: requiresContainers element not found');
+        // Try to find elements with similar IDs for debugging
+        const allInputs = document.querySelectorAll('input[type="checkbox"]');
+        console.log('🔍 CONTAINER TOGGLE DEBUG: All checkboxes found:', allInputs.length);
+        allInputs.forEach((input, index) => {
+            console.log(`🔍 CONTAINER TOGGLE DEBUG: Checkbox ${index}: id="${input.id}", name="${input.name}"`);
+        });
+    }
+
+    // Form submission
+    const form = document.getElementById('planProductionForm');
+    if (form) {
+        form.addEventListener('submit', (e) => this.handleFormSubmit(e));
+    }
+
+    // Bind module events
+    if (this.containerManager && typeof this.containerManager.bindEvents === 'function') {
+        this.containerManager.bindEvents();
+    } else {
+        console.warn('WARN: ContainerManager.bindEvents not found or not applicable.');
+    }
+    if (this.stockChecker && typeof this.stockChecker.bindEvents === 'function') {
+        this.stockChecker.bindEvents();
+    } else {
+        console.warn('WARN: StockChecker.bindEvents not found or not applicable.');
+    }
+}
+
+updateProjectedYield() {
+    const projectedYieldElement = document.getElementById('projectedYield');
+    console.log('🔍 PROJECTED YIELD DEBUG: Element found:', !!projectedYieldElement);
+    console.log('🔍 PROJECTED YIELD DEBUG: Base yield:', this.baseYield, 'Scale:', this.scale, 'Unit:', this.unit);
+
+    if (projectedYieldElement) {
+        const projectedValue = (this.baseYield * this.scale).toFixed(2);
+        projectedYieldElement.textContent = `${projectedValue} ${this.unit}`;
+        console.log('🔍 PROJECTED YIELD DEBUG: Updated to:', `${projectedValue} ${this.unit}`);
+    }
+}
+
+updateValidation() {
+    // Basic validation - check if batch type is selected
+    const batchTypeSelect = document.getElementById('batchType');
+    const isValid = batchTypeSelect && batchTypeSelect.value !== '';
+
+    console.log('🔍 VALIDATION: Checking form validity...');
+    console.log('🔍 VALIDATION: Valid:', isValid, 'Reasons:', isValid ? [] : ['Select batch type'], 'Warnings:', []);
+
+    // You can add more validation logic here as needed
+    return isValid;
+}
+
+handleFormSubmit(e) {
+    e.preventDefault();
+
+    if (!this.batchType) {
+        alert('Please select a batch type');
+        return;
+    }
+
+    console.log('Form submitted with data:', {
+        scale: this.scale,
+        batchType: this.batchType,
+        requiresContainers: this.requiresContainers
+    });
+
+    // Additional submission logic might go here, potentially using other modules.
+}
+
+// Utility method for API calls
+async apiCall(url, data = null) {
+    const options = {
+        method: data ? 'POST' : 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': this.getCSRFToken()
+        }
+    };
+
+    if (data) {
+        options.body = JSON.stringify(data);
+    }
+
+    try {
+        const response = await fetch(url, options);
+        if (!response.ok) {
+            const errorData = await response.json();
+            console.error(`API Error (${response.status}):`, errorData);
+            throw new Error(`API request failed: ${response.statusText}`);
+        }
+        return await response.json();
+    } catch (error) {
+        console.error('API Call Exception:', error);
+        throw error; // Re-throw the error to be handled by the caller
+    }
+}
+
+getCSRFToken() {
+    return document.querySelector('meta[name="csrf-token"]')?.content ||
+           document.querySelector('input[name="csrf_token"]')?.value;
+}
