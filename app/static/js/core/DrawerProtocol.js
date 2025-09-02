@@ -148,22 +148,28 @@ class DrawerProtocol {
         // Find and execute retry callback
         // Prefer exact key match using the event name first
         const exactKeyPrefix = `${successEvent}.`;
-        if (this.retryCallbacks.has(exactKey)) {
-            const cb = this.retryCallbacks.get(exactKey);
-            console.log(`🔧 DRAWER PROTOCOL: Executing retry for ${exactKey}`);
-            cb(eventDetail);
-            this.retryCallbacks.delete(exactKey);
-            return;
-        }
 
-        // Fallback: search by prefix of the event or error_type
+        // Attempt exact match by scanning keys for the event-specific prefix and correlation suffix
+        let executed = false;
         for (const [key, callback] of this.retryCallbacks.entries()) {
             if (key.startsWith(exactKeyPrefix) || key.includes(successEvent)) {
                 console.log(`🔧 DRAWER PROTOCOL: Executing retry for ${key}`);
                 callback(eventDetail);
                 this.retryCallbacks.delete(key);
+                executed = true;
                 break;
             }
+        }
+
+        if (executed) return;
+
+        // Fallback: if nothing matched, execute any remaining callback once
+        const iterator = this.retryCallbacks.entries().next();
+        if (!iterator.done) {
+            const [key, callback] = iterator.value;
+            console.log(`🔧 DRAWER PROTOCOL: Fallback executing retry for ${key}`);
+            callback(eventDetail);
+            this.retryCallbacks.delete(key);
         }
     }
 

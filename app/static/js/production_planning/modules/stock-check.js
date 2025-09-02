@@ -70,28 +70,8 @@ export class StockCheckManager {
             const data = await response.json();
             this.stockCheckResults = data;
 
-            // Check for drawer payload in response (universal drawer protocol)
-            if (this.stockCheckResults.drawer_payload) {
-                logger.debug('Drawer payload detected, delegating to universal protocol');
-
-                // Set up retry callback for this specific operation
-                const retryCallback = () => {
-                    logger.debug('Retrying after drawer resolution');
-                    this.performStockCheck();
-                };
-
-                // Dispatch to universal drawer protocol
-                window.dispatchEvent(new CustomEvent('openDrawer', {
-                    detail: {
-                        ...this.stockCheckResults.drawer_payload,
-                        retry_callback: retryCallback
-                    }
-                }));
-
-                // Still display the partial results we got
-                this.displayStockResults(this.stockCheckResults);
-                return;
-            }
+            // Drawer opening is now handled globally by DrawerInterceptor.
+            // We still display the partial results as usual.
 
             this.displayStockResults(this.stockCheckResults);
             logger.debug(`Stock check completed - status: ${response.status}, all_ok: ${data.all_ok}`);
