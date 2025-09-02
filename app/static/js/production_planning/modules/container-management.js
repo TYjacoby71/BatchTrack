@@ -11,7 +11,7 @@ class AutoFillContainerMode {
     }
 
     activate() {
-        console.log('🔍 AUTO-FILL MODE: Activating auto-fill container selection');
+        console.log('AUTO-FILL MODE: Activating auto-fill container selection');
         this.container.planFetcher.fetchContainerPlan();
     }
 }
@@ -32,7 +32,7 @@ export class ContainerManager {
     }
 
     bindEvents() {
-        console.log('🔍 CONTAINER MANAGER DEBUG: Binding events');
+        console.log('CONTAINER MANAGER DEBUG: Binding events');
 
         // Add container button
         const addContainerBtn = document.getElementById('addContainerBtn');
@@ -48,7 +48,7 @@ export class ContainerManager {
     }
 
     handleModeToggle(autoFillEnabled) {
-        console.log('🔍 AUTO-FILL TOGGLE:', autoFillEnabled);
+        console.log('AUTO-FILL TOGGLE:', autoFillEnabled);
 
         this.toggleContainerSections(autoFillEnabled);
 
