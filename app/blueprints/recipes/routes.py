@@ -171,7 +171,7 @@ def edit_recipe(recipe_id):
     from ...models import Batch
     existing_batches = Batch.query.filter_by(recipe_id=recipe.id).count()
 
-    return render_template('pages/recipes/edit_recipe.html',
+    return render_template('pages/recipes/recipe_form.html',
                          recipe=recipe,
                          edit_mode=True,
                          existing_batches=existing_batches,
