@@ -55,14 +55,20 @@ export class ContainerPlanFetcher {
                 throw new Error(result.error || 'Failed to fetch container options');
             }
 
+            console.log('🔧 CONTAINER_FETCHER: Received data:', result);
             this.lastPlanResult = result;
             return result;
 
         } catch (error) {
-            console.error('🔧 CONTAINER_MANAGEMENT: Network/parsing error:', error);
+            console.error('🔧 CONTAINER_FETCHER: Network/parsing error:', error);
             throw error;
         } finally {
             this.fetchingPlan = false;
         }
+    }
+
+    getCurrentScale() {
+        const scaleInput = document.getElementById('scaleInput') || document.getElementById('scaleFactorInput');
+        return scaleInput ? parseFloat(scaleInput.value) || 1.0 : 1.0;
     }
 }

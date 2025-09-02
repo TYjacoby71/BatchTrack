@@ -24,6 +24,7 @@ export class ContainerRenderer {
 
         // Check if we have valid data from backend
         if (!this.containerManager.containerPlan?.success) {
+            console.warn('🔍 CONTAINER RENDER: No successful container plan data');
             this.showNoData();
             return;
         }
@@ -40,12 +41,14 @@ export class ContainerRenderer {
         const strategy = this.containerManager.containerPlan?.auto_fill_strategy;
 
         console.log('🔍 CONTAINER RENDER: Auto-fill strategy:', strategy);
+        console.log('🔍 CONTAINER RENDER: Full container plan:', this.containerManager.containerPlan);
 
         if (!strategy || !strategy.container_selection || strategy.container_selection.length === 0) {
             containerResults.innerHTML = `
                 <div class="alert alert-info">
                     <i class="fas fa-info-circle"></i> 
                     No auto-fill strategy available. Try refreshing container options.
+                    <br><small class="text-muted">Debug: Strategy exists: ${!!strategy}, Container selection: ${strategy?.container_selection?.length || 0}</small>
                 </div>
             `;
             return;
