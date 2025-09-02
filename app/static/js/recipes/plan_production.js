@@ -67,11 +67,25 @@ class PlanProductionApp {
                 this.startBatch();
             });
         }
+
+        // Require containers toggle
+        const requiresContainersToggle = document.getElementById('requiresContainers');
+        if (requiresContainersToggle) {
+            requiresContainersToggle.addEventListener('change', () => {
+                this.handleContainerToggle();
+            });
+        }
     }
 
     async loadInitialData() {
+        // Check initial container toggle state
+        const requiresContainersToggle = document.getElementById('requiresContainers');
+        if (requiresContainersToggle && requiresContainersToggle.checked) {
+            await this.handleContainerToggle();
+        }
+        
         // Load initial container data if needed
-        if (this.containerManager && window.recipeData?.id) {
+        if (this.containerManager && window.recipeData?.id && requiresContainersToggle?.checked) {
             await this.containerManager.refreshContainerOptions();
         }
     }
@@ -197,6 +211,26 @@ class PlanProductionApp {
         // Refresh container analysis when scale changes
         if (this.containerManager) {
             await this.containerManager.refreshContainerOptions();
+        }
+    }
+
+    async handleContainerToggle() {
+        const requiresContainersToggle = document.getElementById('requiresContainers');
+        const containerManagementCard = document.getElementById('containerManagementCard');
+        
+        if (!requiresContainersToggle || !containerManagementCard) return;
+
+        if (requiresContainersToggle.checked) {
+            // Show container management card
+            containerManagementCard.style.display = 'block';
+            
+            // Refresh container options
+            if (this.containerManager) {
+                await this.containerManager.refreshContainerOptions();
+            }
+        } else {
+            // Hide container management card
+            containerManagementCard.style.display = 'none';
         }
     }
 

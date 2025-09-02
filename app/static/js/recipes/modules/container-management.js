@@ -20,6 +20,14 @@ export class ContainerManager {
     initializeEventListeners() {
         if (!this.container) return;
 
+        // Auto-fill toggle
+        const autoFillToggle = this.container.querySelector('#autoFillEnabled');
+        if (autoFillToggle) {
+            autoFillToggle.addEventListener('change', (e) => {
+                this.handleAutoFillToggle(e.target.checked);
+            });
+        }
+
         // Mode toggle
         const modeToggle = this.container.querySelector('#containerModeToggle');
         if (modeToggle) {
@@ -96,6 +104,26 @@ export class ContainerManager {
             }
             
             this.showError(errorMessage);
+        }
+    }
+
+    handleAutoFillToggle(isEnabled) {
+        const autoFillResults = this.container.querySelector('#autoFillResults');
+        const manualContainerSection = this.container.querySelector('#manualContainerSection');
+
+        if (autoFillResults && manualContainerSection) {
+            if (isEnabled) {
+                autoFillResults.style.display = 'block';
+                manualContainerSection.style.display = 'none';
+                this.mode = 'auto';
+                // Refresh container options when auto-fill is enabled
+                this.refreshContainerOptions();
+            } else {
+                autoFillResults.style.display = 'none';
+                manualContainerSection.style.display = 'block';
+                this.mode = 'manual';
+                this.renderManualSelection();
+            }
         }
     }
 
