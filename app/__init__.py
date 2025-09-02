@@ -80,9 +80,6 @@ def create_app(config=None):
     # Configure logging
     configure_logging(app)
 
-    # Register blueprints
-    register_blueprints(app)
-
     # Register CLI commands
     from .management import register_commands
     register_commands(app)
