@@ -227,6 +227,11 @@ export class ContainerManager {
         }, 10000);
     }
 
+    getCurrentScale() {
+        const scaleInput = document.getElementById('scaleInput') || document.getElementById('scaleFactorInput');
+        return scaleInput ? parseFloat(scaleInput.value) || 1.0 : 1.0;
+    }
+
     getSelectedContainers() {
         if (this.mode === 'auto' && this.autoFillStrategy?.container_selection) {
             return this.autoFillStrategy.container_selection;
