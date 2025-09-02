@@ -143,6 +143,9 @@ export class StockCheckManager {
 
             let status, statusClass, displayAvailable, displayNeeded;
 
+            // Always set displayNeeded first
+            displayNeeded = result.formatted_needed || `${needed.toFixed(2)} ${result.needed_unit || result.unit || ''}`;
+
             // Check for conversion errors first
             if (result.conversion_details?.error_code) {
                 status = 'CONVERSION ERROR';
