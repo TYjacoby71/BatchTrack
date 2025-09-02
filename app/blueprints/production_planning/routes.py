@@ -58,13 +58,13 @@ def plan_production(recipe_id):
 
 @production_planning_bp.route('/<int:recipe_id>/auto-fill-containers', methods=['POST'])
 @login_required
-@require_permission('app.recipes.plan_production')
+@require_permission('recipes.plan_production')
 def auto_fill_containers(recipe_id):
     """Auto-fill container analysis endpoint"""
     try:
         # Check permission and return JSON error instead of redirecting
-        if not current_user.has_permission('app.recipes.plan_production'):
-            return jsonify({'error': 'Permission denied: app.recipes.plan_production required'}), 403
+        if not current_user.has_permission('recipes.plan_production'):
+            return jsonify({'error': 'Permission denied: recipes.plan_production required'}), 403
 
         data = request.get_json()
         if not data:

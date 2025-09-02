@@ -50,7 +50,8 @@ export class ContainerManager {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRFToken': document.querySelector('meta[name=csrf-token]')?.getAttribute('content') || ''
+                    'X-CSRFToken': document.querySelector('input[name="csrf_token"]')?.value || 
+                                   document.querySelector('meta[name=csrf-token]')?.getAttribute('content') || ''
                 },
                 body: JSON.stringify({
                     recipe_id: recipeId,
@@ -83,7 +84,18 @@ export class ContainerManager {
 
         } catch (error) {
             console.error('🔧 CONTAINER_MANAGEMENT: Network/parsing error:', error);
-            this.showError(`Failed to load container options: ${error.message}`);
+            
+            // More specific error handling
+            let errorMessage = 'Failed to load container options';
+            if (error.message.includes('Permission denied')) {
+                errorMessage = 'You do not have permission to access container options';
+            } else if (error.message.includes('redirect')) {
+                errorMessage = 'Authentication required - please refresh the page';
+            } else if (error.message.includes('JSON')) {
+                errorMessage = 'Server returned invalid response - please try again';
+            }
+            
+            this.showError(errorMessage);
         }
     }
 

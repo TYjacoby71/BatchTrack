@@ -83,14 +83,22 @@ class PlanProductionApp {
         }
 
         try {
-            const scaleInput = document.getElementById('scaleInput');
+            const stockCheckBtn = document.getElementById('stockCheckBtn');
+            const stockCheckResults = document.getElementById('stockCheckResults');
+
+            if (stockCheckBtn) {
+                stockCheckBtn.disabled = true;
+                stockCheckBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking...';
+            }
+
+            const scaleInput = document.getElementById('scaleInput') || document.getElementById('scaleFactorInput');
             const scale = scaleInput ? parseFloat(scaleInput.value) || 1.0 : 1.0;
 
-            const response = await fetch(`/production-planning/${window.recipeData.id}/plan`, {
+            const response = await fetch(`/production-planning/${window.recipeData.id}/stock/check`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
+                    'X-CSRFToken': document.querySelector('input[name="csrf_token"]')?.value || ''
                 },
                 body: JSON.stringify({
                     recipe_id: window.recipeData.id,
@@ -100,16 +108,26 @@ class PlanProductionApp {
 
             const result = await response.json();
 
-            if (result.success) {
-                this.displayStockResults(result.stock_results || []);
-            } else {
-                console.error('Stock check failed:', result.error);
-                this.showStockError(result.error);
+            if (stockCheckResults) {
+                if (result.success !== false) {
+                    this.displayStockResults(result.stock_check || []);
+                } else {
+                    stockCheckResults.innerHTML = `<div class="alert alert-danger">${result.error || 'Stock check failed'}</div>`;
+                }
             }
 
         } catch (error) {
             console.error('Error performing stock check:', error);
-            this.showStockError('Failed to perform stock check');
+            const stockCheckResults = document.getElementById('stockCheckResults');
+            if (stockCheckResults) {
+                stockCheckResults.innerHTML = '<div class="alert alert-danger">Failed to check stock availability</div>';
+            }
+        } finally {
+            const stockCheckBtn = document.getElementById('stockCheckBtn');
+            if (stockCheckBtn) {
+                stockCheckBtn.disabled = false;
+                stockCheckBtn.innerHTML = '<i class="fas fa-search"></i> Check Stock Availability';
+            }
         }
     }
 
@@ -117,12 +135,15 @@ class PlanProductionApp {
         const resultsContainer = document.getElementById('stockCheckResults');
         if (!resultsContainer) return;
 
-        if (stockResults.length === 0) {
+        if (!stockResults || stockResults.length === 0) {
             resultsContainer.innerHTML = '<div class="alert alert-info">No ingredients to check for this recipe.</div>';
             return;
         }
 
-        const allOk = stockResults.every(result => result.status === 'OK');
+        // Handle both formats - new stock check format and legacy format
+        const allOk = stockResults.every(result => 
+            result.status === 'OK' || result.status === 'good' || result.is_sufficient === true
+        );
         const alertClass = allOk ? 'alert-success' : 'alert-warning';
 
         let html = `<div class="alert ${alertClass}">
@@ -140,14 +161,24 @@ class PlanProductionApp {
             <tbody>`;
 
         stockResults.forEach(result => {
-            const statusClass = result.status === 'OK' ? 'text-success' : 
-                               result.status === 'LOW' ? 'text-warning' : 'text-danger';
+            // Handle different status formats
+            let status = result.status || (result.is_sufficient ? 'OK' : 'INSUFFICIENT');
+            const statusClass = status === 'OK' || status === 'good' || result.is_sufficient ? 'text-success' : 
+                               status === 'LOW' || status === 'low' ? 'text-warning' : 'text-danger';
+            
+            // Handle different naming formats
+            const name = result.ingredient_name || result.item_name || result.name || 'Unknown';
+            const required = result.formatted_needed || 
+                           `${result.needed_amount || result.needed || 0} ${result.needed_unit || result.unit || ''}`;
+            const available = result.formatted_available || 
+                            `${result.available_quantity || result.available || 0} ${result.available_unit || result.unit || ''}`;
+            
             html += `
                 <tr>
-                    <td>${result.name || result.item_name}</td>
-                    <td>${result.formatted_needed || `${result.needed} ${result.needed_unit}`}</td>
-                    <td>${result.formatted_available || `${result.available} ${result.available_unit}`}</td>
-                    <td><span class="${statusClass}">${result.status}</span></td>
+                    <td>${name}</td>
+                    <td>${required}</td>
+                    <td>${available}</td>
+                    <td><span class="${statusClass}">${status}</span></td>
                 </tr>`;
         });
 
@@ -169,55 +200,7 @@ class PlanProductionApp {
         }
     }
 
-    async performStockCheck() {
-        try {
-            const stockCheckBtn = document.getElementById('stockCheckBtn');
-            const stockCheckResults = document.getElementById('stockCheckResults');
-
-            if (stockCheckBtn) {
-                stockCheckBtn.disabled = true;
-                stockCheckBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking...';
-            }
-
-            const recipeData = window.recipeData;
-            const scaleFactor = this.getScaleFactor();
-
-            const response = await fetch('/api/check-stock-availability', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
-                },
-                body: JSON.stringify({
-                    recipe_id: recipeData.id,
-                    scale_factor: scaleFactor
-                })
-            });
-
-            const result = await response.json();
-
-            if (stockCheckResults) {
-                if (result.success) {
-                    this.renderStockCheckResults(result);
-                } else {
-                    stockCheckResults.innerHTML = `<div class="alert alert-danger">${result.error}</div>`;
-                }
-            }
-
-        } catch (error) {
-            console.error('Error performing stock check:', error);
-            const stockCheckResults = document.getElementById('stockCheckResults');
-            if (stockCheckResults) {
-                stockCheckResults.innerHTML = '<div class="alert alert-danger">Failed to check stock availability</div>';
-            }
-        } finally {
-            const stockCheckBtn = document.getElementById('stockCheckBtn');
-            if (stockCheckBtn) {
-                stockCheckBtn.disabled = false;
-                stockCheckBtn.innerHTML = '<i class="fas fa-search"></i> Check Stock Availability';
-            }
-        }
-    }
+    
 
     renderStockCheckResults(result) {
         const stockCheckResults = document.getElementById('stockCheckResults');

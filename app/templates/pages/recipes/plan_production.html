@@ -74,6 +74,9 @@ window.recipeData = {
     yield_amount: {{ recipe.predicted_yield or 0 }},
     yield_unit: "{{ recipe.predicted_yield_unit or 'units' }}"
 };
+
+// Debug logging for development
+console.log('🔧 RECIPE_DATA: Initialized with:', window.recipeData);
 </script>
 <script type="module" src="{{ url_for('static', filename='js/recipes/plan_production.js') }}"></script>
 {% endblock %}
