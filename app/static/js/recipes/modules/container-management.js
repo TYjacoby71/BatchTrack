@@ -1,8 +1,9 @@
 
 /**
- * Container Management Module - Coordinator Only
+ * Container Management Module - Coordination Only
  * 
- * This module coordinates between specialized container modules.
+ * Pure coordination between display modules and data fetching.
+ * No business logic calculations - just orchestration.
  */
 
 import { ContainerPlanFetcher } from './container-plan-fetcher.js';
@@ -13,18 +14,16 @@ export class ContainerManager {
     constructor(containerId = 'containerManagementCard') {
         this.container = document.getElementById(containerId);
         this.mode = 'auto'; // 'auto' or 'manual'
-        this.selectedContainers = [];
         
         // Initialize specialized modules
         this.fetcher = new ContainerPlanFetcher(this);
         this.renderer = new ContainerRenderer(this);
         this.progressBar = new ContainerProgressBar();
         
-        // Current data - restored properties
+        // Data storage - populated by fetcher
+        this.containerPlan = null;
         this.allContainerOptions = [];
         this.autoFillStrategy = null;
-        this.currentMetrics = null;
-        this.containerPlan = null; // Restored for compatibility
 
         this.initializeEventListeners();
     }
@@ -48,7 +47,7 @@ export class ContainerManager {
             });
         }
 
-        // Add container button
+        // Add container button for manual mode
         const addContainerBtn = this.container.querySelector('#addContainerRow');
         if (addContainerBtn) {
             addContainerBtn.addEventListener('click', () => {
@@ -72,20 +71,20 @@ export class ContainerManager {
             const result = await this.fetcher.fetchContainerPlan();
             
             if (result && result.success) {
-                // Store the full response for compatibility
+                // Store the data
                 this.containerPlan = result;
                 this.allContainerOptions = result.all_container_options || [];
                 this.autoFillStrategy = result.auto_fill_strategy;
                 
-                console.log('🔧 CONTAINER_MANAGEMENT: Data received:', {
-                    strategy: !!this.autoFillStrategy,
+                console.log('🔧 CONTAINER_MANAGEMENT: Data stored:', {
+                    plan: !!this.containerPlan,
                     options: this.allContainerOptions.length,
-                    plan: !!this.containerPlan
+                    strategy: !!this.autoFillStrategy
                 });
                 
                 // Update displays
                 this.renderer.displayPlan();
-                this.updateContainerProgress();
+                this.updateProgressDisplay();
             } else {
                 console.error('🔧 CONTAINER_MANAGEMENT: No valid response received');
                 this.renderer.displayError('Failed to load container options');
@@ -133,7 +132,7 @@ export class ContainerManager {
         newRow.style.display = 'block';
         newRow.id = '';
         
-        // Populate select options
+        // Populate select options with available containers
         const select = newRow.querySelector('.container-select');
         if (select && this.allContainerOptions) {
             this.allContainerOptions.forEach(option => {
@@ -195,125 +194,20 @@ export class ContainerManager {
     }
 
     updateManualSummary() {
-        const rows = document.querySelectorAll('#containerSelectionRows [data-container-row]');
-        const summary = document.getElementById('manualSelectionSummary');
-        
-        if (!summary) return;
-        
-        let totalCapacity = 0;
-        let validSelections = 0;
-        
-        rows.forEach(row => {
-            const select = row.querySelector('.container-select');
-            const quantity = row.querySelector('.container-quantity');
-            
-            if (select && quantity && select.value) {
-                const selectedOption = select.options[select.selectedIndex];
-                const capacity = parseFloat(selectedOption.dataset.capacity || 0);
-                const qty = parseInt(quantity.value || 0);
-                
-                if (capacity > 0 && qty > 0) {
-                    totalCapacity += capacity * qty;
-                    validSelections++;
-                }
-            }
-        });
-        
-        if (validSelections === 0) {
-            summary.innerHTML = '<p class="text-muted">No containers selected</p>';
-            return;
-        }
-        
-        const recipeData = window.recipeData;
-        const scale = this.getCurrentScale();
-        const targetYield = (recipeData?.yield_amount || 0) * scale;
-        const fillPercentage = targetYield > 0 ? (targetYield / totalCapacity) * 100 : 0;
-        
-        const fillClass = fillPercentage > 100 ? 'text-danger' : fillPercentage > 90 ? 'text-warning' : 'text-success';
-        
-        summary.innerHTML = `
-            <div class="card">
-                <div class="card-body">
-                    <h6>Manual Selection Summary:</h6>
-                    <div class="d-flex justify-content-between">
-                        <strong>Containers Selected:</strong>
-                        <span>${validSelections}</span>
-                    </div>
-                    <div class="d-flex justify-content-between">
-                        <strong>Total Capacity:</strong>
-                        <span>${totalCapacity} ${recipeData?.yield_unit || 'units'}</span>
-                    </div>
-                    <div class="d-flex justify-content-between">
-                        <strong>Target Yield:</strong>
-                        <span>${targetYield} ${recipeData?.yield_unit || 'units'}</span>
-                    </div>
-                    <div class="d-flex justify-content-between">
-                        <strong>Fill Percentage:</strong>
-                        <span class="${fillClass}">${fillPercentage.toFixed(1)}%</span>
-                    </div>
-                </div>
-            </div>
-        `;
+        // Delegate to renderer
+        this.renderer.updateManualSelectionSummary();
     }
 
-    updateContainerProgress() {
+    updateProgressDisplay() {
         if (this.mode === 'auto' && this.autoFillStrategy) {
             const metrics = {
                 containment_percentage: this.autoFillStrategy.containment_percentage || 0,
                 total_capacity: this.autoFillStrategy.total_capacity || 0,
                 total_containers: this.autoFillStrategy.container_selection?.length || 0,
-                last_container_fill_percentage: 100 // Default for single container
+                warnings: this.autoFillStrategy.warnings || []
             };
             this.progressBar.updateProgress(metrics);
-        } else if (this.mode === 'manual') {
-            // Calculate manual metrics
-            this.calculateManualMetrics();
         }
-    }
-
-    async calculateManualMetrics() {
-        const rows = document.querySelectorAll('#containerSelectionRows [data-container-row]');
-        let totalCapacity = 0;
-        let containerCount = 0;
-        
-        rows.forEach(row => {
-            const select = row.querySelector('.container-select');
-            const quantity = row.querySelector('.container-quantity');
-            
-            if (select && quantity && select.value) {
-                const selectedOption = select.options[select.selectedIndex];
-                const capacity = parseFloat(selectedOption.dataset.capacity || 0);
-                const qty = parseInt(quantity.value || 0);
-                
-                if (capacity > 0 && qty > 0) {
-                    totalCapacity += capacity * qty;
-                    containerCount += qty;
-                }
-            }
-        });
-        
-        if (containerCount > 0) {
-            const recipeData = window.recipeData;
-            const scale = this.getCurrentScale();
-            const targetYield = (recipeData?.yield_amount || 0) * scale;
-            const containmentPercentage = targetYield > 0 ? Math.min(100, (totalCapacity / targetYield) * 100) : 0;
-            
-            const metrics = {
-                containment_percentage: containmentPercentage,
-                total_capacity: totalCapacity,
-                total_containers: containerCount,
-                last_container_fill_percentage: 100 // Simplified for manual mode
-            };
-            
-            this.progressBar.updateProgress(metrics);
-        } else {
-            this.progressBar.clear();
-        }
-    }
-
-    getCurrentScale() {
-        const scaleInput = document.getElementById('scaleInput') || document.getElementById('scaleFactorInput');
-        return scaleInput ? parseFloat(scaleInput.value) || 1.0 : 1.0;
     }
 
     showError(message) {
@@ -331,6 +225,11 @@ export class ContainerManager {
         setTimeout(() => {
             if (errorDiv) errorDiv.style.display = 'none';
         }, 10000);
+    }
+
+    getCurrentScale() {
+        const scaleInput = document.getElementById('scaleInput') || document.getElementById('scaleFactorInput');
+        return scaleInput ? parseFloat(scaleInput.value) || 1.0 : 1.0;
     }
 
     getSelectedContainers() {
