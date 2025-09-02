@@ -51,6 +51,7 @@ class DashboardAlertService:
         # Debug logging
         logging.info(f"Expiration data: expired_total={expiration_data.get('expired_total', 'MISSING')}, expiring_soon_total={expiration_data.get('expiring_soon_total', 'MISSING')}")
         logging.info(f"User preferences: show_expiration={show_expiration if user_prefs else 'NO_PREFS'}")
+        logging.info(f"Dismissed alerts received: {dismissed_alerts}")
         if show_expiration and expiration_data['expired_total'] > 0:
             alerts.append({
                 'priority': 'CRITICAL',

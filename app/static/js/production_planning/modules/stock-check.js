@@ -1,3 +1,7 @@
+import { Logger } from '../../utils/logger.js';
+
+const logger = new Logger('STOCK');
+
 // Stock Check Management Module
 export class StockCheckManager {
     constructor(mainManager) {
@@ -7,31 +11,31 @@ export class StockCheckManager {
     }
 
     bindEvents() {
-        console.log('🔍 STOCK CHECK DEBUG: Binding events...');
+        logger.debug('Binding events...');
         const stockCheckBtn = document.getElementById('stockCheckBtn');
-        console.log('🔍 STOCK CHECK DEBUG: Stock check button found:', !!stockCheckBtn);
+        logger.debug('Stock check button found:', !!stockCheckBtn);
 
         if (stockCheckBtn) {
             stockCheckBtn.addEventListener('click', () => {
-                console.log('🔍 STOCK CHECK DEBUG: Button clicked!');
+                logger.debug('Button clicked!');
                 this.performStockCheck();
             });
-            console.log('🔍 STOCK CHECK DEBUG: Event listener added successfully');
+            logger.debug('Event listener added successfully');
         } else {
-            console.error('🚨 STOCK CHECK ERROR: Stock check button not found in DOM');
+            logger.error('Stock check button not found in DOM');
         }
     }
 
     async performStockCheck() {
-        console.log('🔍 STOCK CHECK DEBUG: performStockCheck called');
+        const recipeId = this.main.recipe ? this.main.recipe.id : 'N/A';
+        const scale = this.main.scale || 'N/A';
+        logger.debug(`Performing stock check: recipe=${recipeId}, scale=${scale}`);
 
         if (!this.main.recipe) {
-            console.warn('🔍 STOCK CHECK: No recipe available');
+            logger.warn('No recipe available');
             alert('No recipe loaded');
             return;
         }
-
-        console.log('🔍 STOCK CHECK: Starting stock check for recipe', this.main.recipe.id, 'scale:', this.main.scale);
 
         // Show loading state
         const stockCheckBtn = document.getElementById('stockCheckBtn');
@@ -53,22 +57,22 @@ export class StockCheckManager {
                 })
             });
 
-            console.log('🔍 STOCK CHECK: Response status:', response.status);
+            logger.debug(`Stock check response status: ${response.status}`);
 
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
 
-            this.stockCheckResults = await response.json();
-            console.log('🔍 STOCK CHECK: Results received:', this.stockCheckResults);
+            const data = await response.json();
+            this.stockCheckResults = data;
 
             // Check for drawer payload in response (universal drawer protocol)
             if (this.stockCheckResults.drawer_payload) {
-                console.log('🔍 STOCK CHECK: Drawer payload detected, delegating to universal protocol');
+                logger.debug('Drawer payload detected, delegating to universal protocol');
 
                 // Set up retry callback for this specific operation
                 const retryCallback = () => {
-                    console.log('🔍 STOCK CHECK: Retrying after drawer resolution');
+                    logger.debug('Retrying after drawer resolution');
                     this.performStockCheck();
                 };
 
@@ -86,8 +90,10 @@ export class StockCheckManager {
             }
 
             this.displayStockResults(this.stockCheckResults);
+            logger.debug(`Stock check completed - status: ${response.status}, all_ok: ${data.all_ok}`);
+
         } catch (error) {
-            console.error('🚨 STOCK CHECK ERROR:', error);
+            logger.error('Stock check failed:', error);
 
             // More specific error handling
             let errorMessage = 'Stock check failed';
@@ -108,24 +114,21 @@ export class StockCheckManager {
     }
 
     displayStockResults() {
-        console.log('🔍 STOCK CHECK: Displaying results');
+        logger.debug('Displaying results');
         const stockResults = document.getElementById('stockCheckResults');
         if (!stockResults) {
-            console.warn('🔍 STOCK CHECK: No results element found');
+            logger.warn('No results element found');
             return;
         }
 
-        console.log('🔍 STOCK CHECK: Full results object:', this.stockCheckResults);
+        logger.debug('Full results object:', this.stockCheckResults);
 
         // Handle the USCS response structure
-        const stockData = this.stockCheckResults.stock_check || [];
-        const allAvailable = this.stockCheckResults.status === 'ok';
+        const ingredientData = this.stockCheckResults.stock_check || [];
+        const allAvailable = this.stockCheckResults.status === 'ok'; // Assuming 'ok' means all available
 
-        console.log('🔍 STOCK CHECK: Stock data:', stockData);
-        console.log('🔍 STOCK CHECK: All available:', allAvailable);
-
-        // All items from USCS are ingredients by default
-        const ingredientData = stockData;
+        logger.debug('Stock data:', ingredientData);
+        logger.debug('All available:', allAvailable);
 
         if (!ingredientData || ingredientData.length === 0) {
             stockResults.innerHTML = '<div class="alert alert-warning"><i class="fas fa-exclamation-triangle"></i> There are no ingredients selected in this recipe. Please edit your recipe and add ingredients.</div>';
@@ -141,7 +144,7 @@ export class StockCheckManager {
         let allIngredientsAvailable = true;
 
         ingredientData.forEach(result => {
-            console.log('🔍 STOCK CHECK ITEM:', result.ingredient_name || result.item_name, {
+            logger.debug('Stock check item:', result.ingredient_name || result.item_name, {
                 needed_quantity: result.needed_quantity,
                 available_quantity: result.available_quantity,
                 raw_stock: result.raw_stock,
@@ -150,7 +153,7 @@ export class StockCheckManager {
             });
 
             const needed = result.needed_amount || result.needed_quantity || result.quantity_needed || 0;
-            
+
             // Use raw_stock if available (actual inventory), otherwise fall back to available_quantity
             const available = result.raw_stock !== undefined ? result.raw_stock : (result.available_quantity || 0);
 
@@ -173,7 +176,7 @@ export class StockCheckManager {
                 }
                 status = isAvailable ? 'OK' : 'NEEDED';
                 statusClass = isAvailable ? 'bg-success' : 'bg-danger';
-                
+
                 // Use formatted_available if provided, otherwise format the raw value
                 displayAvailable = result.formatted_available || `${available.toFixed(2)} ${result.stock_unit || result.available_unit || ''}`;
             }
@@ -221,17 +224,17 @@ export class StockCheckManager {
     }
 
     displayStockError(message) {
-        console.error('🚨 STOCK CHECK ERROR: Displaying error:', message);
+        logger.error('Displaying error:', message);
 
         const stockResults = document.getElementById('stockCheckResults');
         if (!stockResults) {
-            console.error('🚨 STOCK CHECK ERROR: stockCheckResults element not found');
+            logger.error('stockCheckResults element not found');
             return;
         }
 
         const statusElement = document.getElementById('stockCheckStatus');
         if (!statusElement) {
-            console.error('🚨 STOCK CHECK ERROR: stockCheckStatus element not found');
+            logger.error('stockCheckStatus element not found');
             return;
         }
 
