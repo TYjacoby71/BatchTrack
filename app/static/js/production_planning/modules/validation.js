@@ -28,7 +28,7 @@ export class ValidationManager {
         }
 
         const isValid = issues.length === 0;
-        
+
         this.updateValidationUI(isValid, issues, warnings);
         return isValid;
     }
@@ -58,3 +58,7 @@ export class ValidationManager {
         }
     }
 }
+
+// Export the class
+export { FormValidator };
+export default FormValidator;
