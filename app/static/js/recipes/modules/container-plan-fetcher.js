@@ -1,4 +1,3 @@
-
 // Container Plan Fetcher - Handles API calls for container planning
 export class ContainerPlanFetcher {
     constructor(containerManager) {
@@ -31,11 +30,11 @@ export class ContainerPlanFetcher {
 
         const scale = this.container.main.scale || parseFloat(document.getElementById('scaleInput')?.value) || 1;
         const yieldAmount = (this.container.main.recipe.yield_amount || 1) * scale;
-        
+
         console.log('🔍 CONTAINER PLAN: Fetching for recipe', this.container.main.recipe.id, 'scale:', scale, 'yield:', yieldAmount);
 
         try {
-            const data = await this.container.main.apiCall(`/recipes/${this.container.main.recipe.id}/auto-fill-containers`, {
+            const data = await this.container.main.apiCall(`/production-planning/recipe/${this.container.main.recipe.id}/auto-fill-containers`, {
                 scale: scale,
                 yield_amount: yieldAmount,
                 yield_unit: this.container.main.unit

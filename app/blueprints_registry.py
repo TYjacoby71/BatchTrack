@@ -76,6 +76,10 @@ def register_blueprints(app):
     for import_path, bp_name, url_prefix, description in route_modules:
         safe_register_blueprint(import_path, bp_name, url_prefix, description)
 
+    # Register production planning blueprint
+    safe_register_blueprint('app.blueprints.production_planning.production_planning_bp', 'production_planning_bp', '/production-planning', 'Production Planning')
+
+
     # Print summary
     print(f"\n=== Blueprint Registration Summary ===")
     print(f"✅ Successful: {len(successful_registrations)}")
