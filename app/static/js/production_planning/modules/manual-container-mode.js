@@ -47,17 +47,19 @@ export class ManualContainerMode {
 
         if (newRow) {
             containerRows.appendChild(newRow);
-            this.bindContainerRowEvents(index);
-
-            // Pre-fill the data
+            
+            // Pre-fill the data first
             const select = newRow.querySelector('.container-select');
             const quantityInput = newRow.querySelector('.container-quantity');
 
             if (select && quantityInput) {
                 select.value = containerData.container_id;
                 quantityInput.value = containerData.quantity || containerData.containers_needed || 1;
-                this.updateContainerRow(index);
             }
+            
+            // Then bind events (including remove button)
+            this.bindContainerRowEvents(index);
+            this.updateContainerRow(index);
         }
     }
 
@@ -103,8 +105,8 @@ export class ManualContainerMode {
         });
 
         return `
-            <div class="row align-items-center mb-3 p-3 border rounded bg-light" data-container-row="${index}">
-                <div class="col-md-4">
+            <div class="row align-items-center mb-3 p-3 border rounded bg-light container-row-wrapper" data-container-row="${index}">
+                <div class="col-md-3">
                     <label class="form-label small">Container Type</label>
                     <select class="form-select form-select-sm container-select" data-row="${index}">
                         ${optionsHTML}
@@ -115,7 +117,7 @@ export class ManualContainerMode {
                     <input type="number" min="1" class="form-control form-control-sm container-quantity" 
                            data-row="${index}" value="1">
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <label class="form-label small">Capacity Each</label>
                     <div class="form-control form-control-sm bg-light border-0 container-capacity" data-row="${index}">-</div>
                 </div>
@@ -123,12 +125,11 @@ export class ManualContainerMode {
                     <label class="form-label small">Available Stock</label>
                     <div class="badge bg-info fs-6 available-stock" data-row="${index}">-</div>
                 </div>
-            </div>
-            <div class="row">
-                <div class="col-12 text-end">
-                    <button type="button" class="btn btn-danger btn-sm remove-container-btn" 
-                            data-row="${index}">
-                        <i class="fas fa-times"></i> Remove
+                <div class="col-md-2">
+                    <label class="form-label small text-white">Remove</label>
+                    <button type="button" class="btn btn-danger btn-sm w-100 remove-container-btn" 
+                            data-row="${index}" title="Remove this container">
+                        <i class="fas fa-times"></i>
                     </button>
                 </div>
             </div>
@@ -137,7 +138,10 @@ export class ManualContainerMode {
 
     bindContainerRowEvents(rowIndex) {
         const row = document.querySelector(`[data-container-row="${rowIndex}"]`);
-        if (!row) return;
+        if (!row) {
+            console.warn('🔍 MANUAL MODE: Row not found for binding events:', rowIndex);
+            return;
+        }
 
         const select = row.querySelector('.container-select');
         const quantityInput = row.querySelector('.container-quantity');
@@ -152,7 +156,14 @@ export class ManualContainerMode {
         }
 
         if (removeBtn) {
-            removeBtn.addEventListener('click', () => this.removeContainerRow(rowIndex));
+            console.log('🔍 MANUAL MODE: Binding remove button for row', rowIndex);
+            removeBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.removeContainerRow(rowIndex);
+            });
+        } else {
+            console.warn('🔍 MANUAL MODE: Remove button not found for row', rowIndex);
         }
 
         this.updateContainerRow(rowIndex);
@@ -203,10 +214,20 @@ export class ManualContainerMode {
     }
 
     removeContainerRow(rowIndex) {
+        console.log('🔍 MANUAL MODE: Removing row', rowIndex);
         const row = document.querySelector(`[data-container-row="${rowIndex}"]`);
         if (row) {
-            row.remove();
-            this.container.progressBar.update();
+            // Add fade out animation
+            row.style.transition = 'opacity 0.3s ease';
+            row.style.opacity = '0';
+            
+            setTimeout(() => {
+                row.remove();
+                this.container.progressBar.update();
+                console.log('🔍 MANUAL MODE: Row', rowIndex, 'removed');
+            }, 300);
+        } else {
+            console.warn('🔍 MANUAL MODE: Row', rowIndex, 'not found for removal');
         }
     }
 }
