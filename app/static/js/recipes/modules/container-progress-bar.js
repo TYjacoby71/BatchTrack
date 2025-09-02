@@ -1,124 +1,185 @@
 
-/**
- * Container Progress Bar Module - Display Logic Only
- * 
- * Displays containment and efficiency metrics from backend data.
- * No business logic calculations performed here.
- */
-
+// Container Progress Bar - Handles containment percentage calculations and display
 export class ContainerProgressBar {
-    constructor(containerId = 'containerProgressBar') {
-        this.container = document.getElementById(containerId);
-        this.progressBar = null;
-        this.messageArea = null;
-        
-        this.initializeElements();
+    constructor() {
+        this.progressElement = null;
+        this.findProgressElement();
     }
-    
-    initializeElements() {
-        if (!this.container) return;
-        
-        this.progressBar = this.container.querySelector('.progress-bar');
-        this.messageArea = this.container.querySelector('#containerMessages');
-        
-        if (!this.progressBar || !this.messageArea) {
-            console.warn('Progress bar elements not found');
+
+    findProgressElement() {
+        this.progressElement = document.querySelector('#containerProgress, .container-progress, [data-container-progress]');
+        if (!this.progressElement) {
+            console.warn('🔧 PROGRESS_BAR: Progress element not found');
         }
     }
-    
-    updateProgress(metrics) {
-        if (!metrics || !this.progressBar || !this.messageArea) return;
-        
-        const {
-            containment_percentage,
-            last_container_fill_percentage,
-            total_containers,
-            total_capacity
-        } = metrics;
-        
-        // Update progress bar (containment percentage)
-        const displayPercentage = Math.min(100, containment_percentage);
-        this.progressBar.style.width = `${displayPercentage}%`;
-        this.progressBar.setAttribute('aria-valuenow', displayPercentage);
-        
-        // Update progress bar color based on containment
-        this.progressBar.className = 'progress-bar';
-        if (containment_percentage >= 100) {
-            this.progressBar.classList.add('bg-success');
-        } else if (containment_percentage >= 80) {
-            this.progressBar.classList.add('bg-warning');
-        } else {
-            this.progressBar.classList.add('bg-danger');
+
+    update() {
+        if (!this.progressElement) {
+            this.findProgressElement();
         }
-        
-        // Generate messages based on metrics
-        this.updateMessages(metrics);
-    }
-    
-    updateMessages(metrics) {
-        const {
-            containment_percentage,
-            last_container_fill_percentage,
-            total_containers,
-            total_capacity
-        } = metrics;
-        
-        let messages = [];
-        let alertClass = 'alert-info';
-        
-        // Containment status
-        if (containment_percentage >= 100) {
-            messages.push(`✅ <strong>Sufficient Capacity:</strong> ${containment_percentage.toFixed(1)}% containment`);
-            alertClass = 'alert-success';
-        } else {
-            messages.push(`❌ <strong>Insufficient Capacity:</strong> ${containment_percentage.toFixed(1)}% containment`);
-            alertClass = 'alert-danger';
-        }
-        
-        // Efficiency warnings
-        if (last_container_fill_percentage < 75 && containment_percentage >= 100) {
-            messages.push(`⚠️ <strong>Low Efficiency:</strong> Last container only ${last_container_fill_percentage.toFixed(1)}% filled`);
-            if (alertClass === 'alert-success') {
-                alertClass = 'alert-warning';
+
+        try {
+            const autoFillEnabled = document.getElementById('autoFillEnabled')?.checked;
+            let containmentData;
+
+            if (autoFillEnabled) {
+                containmentData = this.getAutoFillContainment();
+            } else {
+                containmentData = this.calculateManualContainment();
             }
-        } else if (last_container_fill_percentage >= 90) {
-            messages.push(`🎯 <strong>High Efficiency:</strong> Optimal container utilization`);
+
+            this.updateProgressBar(containmentData);
+            
+        } catch (error) {
+            console.error('🔧 PROGRESS_BAR: Error updating progress bar:', error);
+            this.clear();
         }
-        
-        // Container count summary
-        if (total_containers > 1) {
-            messages.push(`📦 Using ${total_containers} containers with total capacity of ${total_capacity.toFixed(2)} units`);
-        }
-        
-        // Render messages
-        this.messageArea.innerHTML = `
-            <div class="alert ${alertClass} mb-0">
-                ${messages.join('<br>')}
-            </div>
-        `;
     }
-    
+
+    getAutoFillContainment() {
+        const containerManager = window.containerManager;
+        if (!containerManager?.containerPlan?.success) {
+            return { percentage: 0, message: 'Auto-fill not available' };
+        }
+
+        const plan = containerManager.containerPlan;
+        return {
+            percentage: plan.containment_percentage || 0,
+            message: plan.containment_percentage >= 100 
+                ? 'Fully contained' 
+                : `${plan.containment_percentage?.toFixed(1)}% contained`
+        };
+    }
+
+    calculateManualContainment() {
+        try {
+            const targetYield = this.getTargetYield();
+            if (targetYield <= 0) {
+                return { percentage: 0, message: 'No yield to contain' };
+            }
+
+            let totalCapacity = 0;
+            let hasSelections = false;
+
+            // Sum up all manual container selections
+            document.querySelectorAll('[data-container-row]').forEach(row => {
+                const select = row.querySelector('.container-select');
+                const quantityInput = row.querySelector('.container-quantity');
+
+                if (select?.value && quantityInput?.value) {
+                    const containerId = parseInt(select.value);
+                    const quantity = parseInt(quantityInput.value) || 0;
+
+                    if (quantity > 0) {
+                        const containerOption = this.findContainerOption(containerId);
+                        if (containerOption) {
+                            totalCapacity += containerOption.capacity * quantity;
+                            hasSelections = true;
+                        }
+                    }
+                }
+            });
+
+            if (!hasSelections) {
+                return { percentage: 0, message: 'No containers selected' };
+            }
+
+            const percentage = Math.min(100, (totalCapacity / targetYield) * 100);
+            const message = percentage >= 100 
+                ? 'Fully contained' 
+                : `${percentage.toFixed(1)}% contained`;
+
+            return { percentage, message };
+
+        } catch (error) {
+            console.error('🔧 PROGRESS_BAR: Error calculating manual containment:', error);
+            return { percentage: 0, message: 'Calculation error' };
+        }
+    }
+
+    findContainerOption(containerId) {
+        const containerManager = window.containerManager;
+        if (!containerManager?.containerOptions) return null;
+
+        return containerManager.containerOptions.find(opt => opt.container_id === containerId);
+    }
+
+    updateProgressBar(containmentData) {
+        if (!this.progressElement) return;
+
+        const { percentage, message } = containmentData;
+        
+        // Update progress bar
+        const progressBar = this.progressElement.querySelector('.progress-bar');
+        if (progressBar) {
+            progressBar.style.width = `${Math.min(100, percentage)}%`;
+            progressBar.textContent = `${percentage.toFixed(1)}%`;
+            
+            // Update color based on percentage
+            progressBar.className = `progress-bar ${this.getProgressBarClass(percentage)}`;
+        }
+
+        // Update message
+        const messageElement = this.progressElement.querySelector('.progress-message, .containment-message');
+        if (messageElement) {
+            messageElement.textContent = message;
+        }
+
+        console.log(`🔧 PROGRESS_BAR: Updated to ${percentage.toFixed(1)}% - ${message}`);
+    }
+
+    getProgressBarClass(percentage) {
+        if (percentage >= 100) return 'bg-success';
+        if (percentage >= 90) return 'bg-warning';
+        if (percentage >= 50) return 'bg-info';
+        return 'bg-secondary';
+    }
+
+    getTargetYield() {
+        try {
+            const baseYield = window.recipeData?.yield_amount || 0;
+            const scale = this.getScaleFactor();
+            return baseYield * scale;
+        } catch (error) {
+            console.error('🔧 PROGRESS_BAR: Error getting target yield:', error);
+            return 0;
+        }
+    }
+
+    getScaleFactor() {
+        const scaleInput = document.getElementById('scaleFactorInput');
+        return scaleInput ? parseFloat(scaleInput.value) || 1.0 : 1.0;
+    }
+
     clear() {
-        if (this.progressBar) {
-            this.progressBar.style.width = '0%';
-            this.progressBar.className = 'progress-bar';
+        if (!this.progressElement) return;
+
+        const progressBar = this.progressElement.querySelector('.progress-bar');
+        if (progressBar) {
+            progressBar.style.width = '0%';
+            progressBar.textContent = '0%';
+            progressBar.className = 'progress-bar bg-secondary';
         }
-        
-        if (this.messageArea) {
-            this.messageArea.innerHTML = '<div class="alert alert-secondary mb-0">No containers selected</div>';
+
+        const messageElement = this.progressElement.querySelector('.progress-message, .containment-message');
+        if (messageElement) {
+            messageElement.textContent = 'No containers configured';
         }
     }
-    
-    showError(message) {
-        if (this.messageArea) {
-            this.messageArea.innerHTML = `<div class="alert alert-danger mb-0">${message}</div>`;
+
+    // Method to be called when container plan is updated
+    onContainerPlanUpdated(containerPlan) {
+        if (document.getElementById('autoFillEnabled')?.checked) {
+            // Auto-fill mode - trigger update
+            this.update();
+        }
+    }
+
+    // Method to be called when manual selections change
+    onManualSelectionsChanged() {
+        if (!document.getElementById('autoFillEnabled')?.checked) {
+            // Manual mode - trigger update
+            this.update();
         }
     }
 }
-
-// Initialize global progress bar
-let containerProgressBar;
-document.addEventListener('DOMContentLoaded', () => {
-    containerProgressBar = new ContainerProgressBar();
-    window.containerProgressBar = containerProgressBar;
-});

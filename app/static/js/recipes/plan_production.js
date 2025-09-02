@@ -20,13 +20,23 @@ class PlanProductionApp {
         if (this.isInitialized) return;
 
         try {
+            // Import modules
+            const { ContainerManager } = await import('./modules/container-management.js');
+            const { ContainerRenderer } = await import('./modules/container-renderer.js');
+            const { ContainerProgressBar } = await import('./modules/container-progress-bar.js');
+            const { StockCheck } = await import('./modules/stock-check.js');
+
             // Initialize modules
             this.containerManager = new ContainerManager();
             this.containerProgressBar = new ContainerProgressBar();
+            this.containerRenderer = new ContainerRenderer(this.containerManager);
+            this.stockCheck = new StockCheck();
 
             // Make globally available
             window.containerManager = this.containerManager;
             window.containerProgressBar = this.containerProgressBar;
+            window.containerRenderer = this.containerRenderer;
+            window.stockCheck = this.stockCheck;
 
             // Initialize event listeners
             this.initializeEventListeners();
@@ -51,6 +61,71 @@ class PlanProductionApp {
                 this.handleScaleChange();
             });
         }
+
+        // Stock check button
+        const stockCheckBtn = document.getElementById('stockCheckBtn');
+        if (stockCheckBtn) {
+            stockCheckBtn.addEventListener('click', () => {
+                this.handleStockCheck();
+            });
+        }
+
+        // Requires containers toggle
+        const requiresContainersToggle = document.getElementById('requiresContainers');
+        if (requiresContainersToggle) {
+            requiresContainersToggle.addEventListener('change', (event) => {
+                this.handleContainerRequirementChange(event.target.checked);
+            });
+        }
+    }
+
+    async handleScaleChange() {
+        console.log('🔧 PLAN_PRODUCTION: Scale changed, updating components...');
+        
+        try {
+            // Update container plan
+            if (this.containerManager) {
+                await this.containerManager.refreshContainerPlan();
+            }
+
+            // Update progress bar
+            if (this.containerProgressBar) {
+                this.containerProgressBar.update();
+            }
+
+        } catch (error) {
+            console.error('Error handling scale change:', error);
+        }
+    }
+
+    async handleStockCheck() {
+        console.log('🔧 PLAN_PRODUCTION: Running stock check...');
+        
+        try {
+            if (this.stockCheck) {
+                await this.stockCheck.runStockCheck();
+            }
+        } catch (error) {
+            console.error('Error running stock check:', error);
+        }
+    }
+
+    handleContainerRequirementChange(required) {
+        console.log(`🔧 PLAN_PRODUCTION: Container requirement changed: ${required}`);
+        
+        const containerCard = document.getElementById('containerManagementCard');
+        if (containerCard) {
+            if (required) {
+                containerCard.style.display = 'block';
+                // Load container data if needed
+                if (this.containerManager) {
+                    this.containerManager.refreshContainerPlan();
+                }
+            } else {
+                containerCard.style.display = 'none';
+            }
+        }
+    }
 
         // Stock check button
         const stockCheckBtn = document.getElementById('stockCheckBtn');
