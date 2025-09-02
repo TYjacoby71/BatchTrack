@@ -59,6 +59,7 @@ def plan_production_route(recipe_id):
 
 @production_planning_bp.route('/recipe/<int:recipe_id>/auto-fill-containers', methods=['POST'])
 @login_required
+@require_permission('recipes.plan_production')
 def auto_fill_containers(recipe_id):
     """Auto-fill containers for recipe production planning"""
     try:
