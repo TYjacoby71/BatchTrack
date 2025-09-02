@@ -1,6 +1,12 @@
 import { Logger } from '../../utils/logger.js';
 
-const logger = new Logger('STOCK');
+// Use the imported logger instance with context
+const logger = {
+    debug: (msg, ...args) => Logger.debug(`STOCK_CHECK: ${msg}`, ...args),
+    info: (msg, ...args) => Logger.info(`STOCK_CHECK: ${msg}`, ...args),
+    warn: (msg, ...args) => Logger.warn(`STOCK_CHECK: ${msg}`, ...args),
+    error: (msg, ...args) => Logger.error(`STOCK_CHECK: ${msg}`, ...args)
+};
 
 // Stock Check Management Module
 export class StockCheckManager {
