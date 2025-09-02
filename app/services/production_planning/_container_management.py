@@ -153,16 +153,18 @@ def _get_all_valid_containers(
                     logger.warning(f"CONTAINER_VALIDATION: Conversion failed for {container.name}: {conv_error}")
                     continue
 
-                # Handle conversion result - convert_units returns a float or raises exception
-                if isinstance(conversion_result, (int, float)) and conversion_result > 0:
-                    converted_capacity = float(conversion_result)
-                    logger.info(f"CONTAINER_VALIDATION: {container.name} converted capacity: {converted_capacity} {yield_unit}")
-                else:
-                    logger.warning(f"CONTAINER_VALIDATION: Invalid conversion result for container {container.name}: {conversion_result}")
+                # Validate conversion result structure
+                if not isinstance(conversion_result, dict):
+                    logger.warning(f"CONTAINER_VALIDATION: Invalid conversion result structure for container {container.name}: {conversion_result}")
                     continue
 
-                # Skip if conversion failed or invalid
-                if not converted_capacity or converted_capacity <= 0:
+                if not conversion_result.get('success'):
+                    logger.warning(f"CONTAINER_VALIDATION: Conversion failed for container {container.name}: {conversion_result.get('error_message', 'Unknown error')}")
+                    continue
+
+                # Extract converted capacity value correctly
+                converted_capacity = conversion_result.get('converted_value')
+                if converted_capacity is None or converted_capacity <= 0:
                     logger.warning(f"CONTAINER_VALIDATION: Invalid converted capacity for container {container.name}: {converted_capacity}")
                     continue
 

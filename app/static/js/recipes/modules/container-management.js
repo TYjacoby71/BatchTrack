@@ -47,13 +47,7 @@ export class ContainerManager {
             });
         }
 
-        // Refresh containers button
-        const refreshBtn = this.container.querySelector('#refreshContainersBtn');
-        if (refreshBtn) {
-            refreshBtn.addEventListener('click', () => {
-                this.refreshContainerOptions();
-            });
-        }
+        
     }
 
     async refreshContainerOptions() {
