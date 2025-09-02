@@ -153,12 +153,8 @@ def _get_all_valid_containers(
                     logger.warning(f"CONTAINER_VALIDATION: Conversion failed for {container.name}: {conv_error}")
                     continue
 
-                # Handle conversion result - ConversionEngine now returns structured dict
-                if isinstance(conversion_result, dict) and conversion_result.get('success'):
-                    converted_capacity = float(conversion_result['converted_value'])
-                    logger.info(f"CONTAINER_VALIDATION: {container.name} converted capacity: {converted_capacity} {yield_unit}")
-                elif isinstance(conversion_result, (int, float)) and conversion_result > 0:
-                    # Fallback for direct numeric results (legacy)
+                # Handle conversion result - convert_units returns a float or raises exception
+                if isinstance(conversion_result, (int, float)) and conversion_result > 0:
                     converted_capacity = float(conversion_result)
                     logger.info(f"CONTAINER_VALIDATION: {container.name} converted capacity: {converted_capacity} {yield_unit}")
                 else:
