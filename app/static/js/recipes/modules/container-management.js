@@ -221,12 +221,17 @@ export class ContainerManager {
     }
 
     showError(message) {
+        if (!this.container) return;
+        
         let errorDiv = this.container.querySelector('#containerError');
         if (!errorDiv) {
             errorDiv = document.createElement('div');
             errorDiv.id = 'containerError';
             errorDiv.className = 'mt-3';
-            this.container.querySelector('.card-body').appendChild(errorDiv);
+            const cardBody = this.container.querySelector('.card-body');
+            if (cardBody) {
+                cardBody.appendChild(errorDiv);
+            }
         }
 
         errorDiv.innerHTML = `<div class="alert alert-danger">${message}</div>`;
@@ -235,6 +240,36 @@ export class ContainerManager {
         setTimeout(() => {
             if (errorDiv) errorDiv.style.display = 'none';
         }, 10000);
+    }
+
+    showLoadingState() {
+        // Show loading state for container refresh
+        const refreshBtn = this.container?.querySelector('#refreshContainerOptions');
+        if (refreshBtn) {
+            refreshBtn.disabled = true;
+            refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
+        }
+    }
+
+    hideLoadingState() {
+        // Hide loading state
+        const refreshBtn = this.container?.querySelector('#refreshContainerOptions');
+        if (refreshBtn) {
+            refreshBtn.disabled = false;
+            refreshBtn.innerHTML = '<i class="fas fa-sync"></i> Refresh Options';
+        }
+    }
+
+    showNoOptionsState() {
+        if (this.renderer) {
+            this.renderer.showNoData();
+        }
+    }
+
+    showErrorState(message) {
+        if (this.renderer) {
+            this.renderer.displayError(message);
+        }
     }
 
     getCurrentScale() {

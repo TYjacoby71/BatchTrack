@@ -6,21 +6,23 @@
 
 import { ContainerManager } from './modules/container-management.js';
 import { ContainerProgressBar } from './modules/container-progress-bar.js';
-// Assuming StockCheckManager is defined in './modules/stock-check-manager.js'
-// and ContainerManagement is a more specific class name for the container manager.
-// Based on the changes, it seems the original code might have been using a more generic name
-// or the provided 'changes' snippet is introducing a more specific structure.
-// For the purpose of this edit, we'll assume these imports are correct as per the intent.
 import { StockCheckManager } from './modules/stock-check-manager.js';
-import { ContainerManagement } from './modules/container-management.js';
 
 
 class PlanProductionApp {
     constructor() {
         this.containerManager = null;
         this.containerProgressBar = null;
-        this.stockChecker = null; // Added stockChecker property
+        this.stockChecker = null;
         this.isInitialized = false;
+        
+        // Initialize recipe data from global window object
+        this.recipe = window.recipeData || null;
+        this.scale = 1.0;
+        
+        // Add validation state
+        this.stockChecked = false;
+        this.stockCheckPassed = false;
 
         this.init();
     }
@@ -37,9 +39,8 @@ class PlanProductionApp {
             this.stockChecker.bindEvents();
 
             // Initialize container manager separately
-            this.containerManager = new ContainerManagement();
+            this.containerManager = new ContainerManager();
             console.log('🔍 PLAN_PRODUCTION: Initializing container manager...');
-            await this.containerManager.initialize();
 
             // Ensure both systems are independent
             console.log('🔍 PLAN_PRODUCTION: Both stock check and container management initialized independently');
@@ -85,13 +86,7 @@ class PlanProductionApp {
             });
         }
 
-        // Stock check button
-        const stockCheckBtn = document.getElementById('stockCheckBtn');
-        if (stockCheckBtn) {
-            stockCheckBtn.addEventListener('click', () => {
-                this.handleStockCheck();
-            });
-        }
+        // Stock check is handled by StockCheckManager
     }
 
     async loadInitialData() {
@@ -105,111 +100,12 @@ class PlanProductionApp {
         }
     }
 
-    async handleStockCheck() {
-        const stockCheckBtn = document.getElementById('stockCheckBtn');
-        const stockCheckResults = document.getElementById('stockCheckResults');
-        const stockCheckStatus = document.getElementById('stockCheckStatus');
-
-        if (!window.recipeData?.id) {
-            this.showStockError('Recipe data not available');
-            return;
-        }
-
-        const scale = this.getCurrentScale();
-        const recipeId = window.recipeData.id;
-
-        try {
-            // Update button state
-            stockCheckBtn.disabled = true;
-            stockCheckBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking...';
-
-            if (stockCheckStatus) {
-                stockCheckStatus.innerHTML = '<div class="alert alert-info">Checking stock availability...</div>';
-            }
-
-            const response = await fetch(`/production-planning/${recipeId}/stock-check`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': document.querySelector('input[name="csrf_token"]')?.value || ''
-                },
-                body: JSON.stringify({
-                    recipe_id: recipeId,
-                    scale: scale
-                })
-            });
-
-            const result = await response.json();
-
-            if (!response.ok) {
-                throw new Error(result.error || 'Stock check failed');
-            }
-
-            this.renderStockCheckResults(result);
-
-        } catch (error) {
-            console.error('🔧 STOCK_CHECK: Error:', error);
-            this.showStockError(error.message);
-        } finally {
-            // Reset button state
-            stockCheckBtn.disabled = false;
-            stockCheckBtn.innerHTML = '<i class="fas fa-search"></i> Check Stock Availability';
-
-            if (stockCheckStatus) {
-                stockCheckStatus.innerHTML = '';
-            }
-        }
-    }
-
-    renderStockCheckResults(result) {
-        const stockCheckResults = document.getElementById('stockCheckResults');
-        if (!stockCheckResults) return;
-
-        const { ingredients, overall_sufficient } = result;
-
-        let html = `
-            <div class="alert ${overall_sufficient ? 'alert-success' : 'alert-warning'}">
-                <i class="fas ${overall_sufficient ? 'fa-check-circle' : 'fa-exclamation-triangle'}"></i>
-                <strong>${overall_sufficient ? 'Stock Available' : 'Stock Issues Found'}</strong>
-            </div>
-        `;
-
-        if (ingredients && ingredients.length > 0) {
-            html += '<div class="table-responsive"><table class="table table-sm">';
-            html += '<thead><tr><th>Ingredient</th><th>Required</th><th>Available</th><th>Status</th></tr></thead><tbody>';
-
-            ingredients.forEach(ingredient => {
-                const statusClass = ingredient.sufficient ? 'text-success' : 'text-danger';
-                const statusIcon = ingredient.sufficient ? 'fa-check' : 'fa-times';
-
-                html += `
-                    <tr>
-                        <td>${ingredient.name}</td>
-                        <td>${ingredient.required_amount} ${ingredient.unit}</td>
-                        <td>${ingredient.available_amount} ${ingredient.unit}</td>
-                        <td class="${statusClass}">
-                            <i class="fas ${statusIcon}"></i>
-                            ${ingredient.sufficient ? 'Available' : 'Insufficient'}
-                        </td>
-                    </tr>
-                `;
-            });
-
-            html += '</tbody></table></div>';
-        }
-
-        stockCheckResults.innerHTML = html;
-    }
-
-    showStockError(message) {
-        const resultsContainer = document.getElementById('stockCheckResults');
-        if (resultsContainer) {
-            resultsContainer.innerHTML = `<div class="alert alert-danger">Error: ${message}</div>`;
-        }
-    }
+    
 
     async handleScaleChange() {
-        console.log('🔧 PLAN_PRODUCTION: Scale changed, refreshing container options...');
+        // Update scale from input
+        this.scale = this.getCurrentScale();
+        console.log('🔧 PLAN_PRODUCTION: Scale changed to:', this.scale);
 
         // Refresh container analysis when scale changes
         if (this.containerManager) {
@@ -247,6 +143,15 @@ class PlanProductionApp {
     getCurrentScale() {
         const scaleInput = document.getElementById('scaleFactorInput') || document.getElementById('scaleInput');
         return scaleInput ? parseFloat(scaleInput.value) || 1.0 : 1.0;
+    }
+
+    getCSRFToken() {
+        return document.querySelector('input[name="csrf_token"]')?.value || '';
+    }
+
+    updateValidation() {
+        // Update UI based on validation state
+        console.log('🔧 PLAN_PRODUCTION: Validation state updated - stockChecked:', this.stockChecked, 'stockCheckPassed:', this.stockCheckPassed);
     }
 
     showError(message) {
