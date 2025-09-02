@@ -58,7 +58,6 @@ export class ValidationManager {
         }
     }
 }
-
-// Export the class
-export { FormValidator };
-export default FormValidator;
+// Simple alias for legacy usage
+export const FormValidator = ValidationManager;
+export default ValidationManager;

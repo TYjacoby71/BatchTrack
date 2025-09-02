@@ -154,6 +154,82 @@ def _create_greedy_strategy(container_options: List[Dict[str, Any]], total_yield
     # Calculate totals
     total_capacity = sum(c['capacity'] * c['containers_needed'] for c in selected_containers)
 
+    # Local optimization around greedy solution to reduce overfill and improve containment
+    def _optimize_selection(options: List[Dict[str, Any]], base_selection: List[Dict[str, Any]], target_yield: float) -> List[Dict[str, Any]]:
+        # Consider only top K options for tractability
+        top_options = options[:min(3, len(options))]
+        # Build base counts map
+        base_counts = {c['container_id']: c['containers_needed'] for c in base_selection}
+
+        # Build search ranges near base counts
+        ranges = []
+        for opt in top_options:
+            base = base_counts.get(opt['container_id'], 0)
+            lo = max(0, base - 2)
+            hi = min(opt['available_quantity'], base + 2)
+            ranges.append((opt, range(lo, hi + 1)))
+
+        best_combo = None
+        best_capacity = 0.0
+        target_min = target_yield * 0.97  # within 3% tolerance counts as contained
+
+        # Nested loops up to 5^3 = 125 combos
+        def _search(idx: int, current_counts: Dict[int, int]):
+            nonlocal best_combo, best_capacity
+            if idx == len(ranges):
+                # Compute capacity of considered set; include counts of non-top options from base
+                capacity = 0.0
+                # top options
+                for opt, _ in ranges:
+                    capacity += current_counts.get(opt['container_id'], 0) * opt['capacity']
+                # other options from base selection unchanged
+                for c in base_selection:
+                    if c['container_id'] not in current_counts:
+                        capacity += c['containers_needed'] * c['capacity']
+
+                # Feasibility preference: prefer >= target_min and minimize overfill; otherwise maximize capacity
+                if capacity >= target_min:
+                    if best_combo is None or (best_capacity < target_min) or (capacity < best_capacity):
+                        best_combo = current_counts.copy()
+                        best_capacity = capacity
+                else:
+                    if best_combo is None or best_capacity < target_min or capacity > best_capacity:
+                        best_combo = current_counts.copy()
+                        best_capacity = capacity
+                return
+
+            opt, rng = ranges[idx]
+            for cnt in rng:
+                current_counts[opt['container_id']] = cnt
+                _search(idx + 1, current_counts)
+            # cleanup
+            current_counts.pop(opt['container_id'], None)
+
+        _search(0, {})
+
+        # Build new selection list
+        new_selection_map = {c['container_id']: c.copy() for c in base_selection}
+        # update counts for top options
+        for opt, _ in ranges:
+            cnt = best_combo.get(opt['container_id'], 0) if best_combo else base_counts.get(opt['container_id'], 0)
+            if opt['container_id'] in new_selection_map:
+                new_selection_map[opt['container_id']]['containers_needed'] = cnt
+            else:
+                if cnt > 0:
+                    new_selection_map[opt['container_id']] = {
+                        **opt,
+                        'containers_needed': cnt
+                    }
+        # remove zero-count entries
+        new_selection = [c for c in new_selection_map.values() if c['containers_needed'] > 0]
+        return new_selection
+
+    if selected_containers:
+        optimized = _optimize_selection(container_options, selected_containers, total_yield)
+        # Recompute totals
+        total_capacity = sum(c['capacity'] * c['containers_needed'] for c in optimized)
+        selected_containers = optimized
+
     # Containment = Can the total capacity hold the yield? 
     # Show 100% if within 3% tolerance (97% or above)
     if total_yield > 0:
@@ -216,5 +292,5 @@ def _create_greedy_strategy(container_options: List[Dict[str, Any]], total_yield
         'total_capacity': total_capacity,
         'containment_percentage': containment_percentage,
         'warnings': warnings,
-        'strategy_type': 'greedy_fill'
+        'strategy_type': 'greedy_fill_optimized'
     }

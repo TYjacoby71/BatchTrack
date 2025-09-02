@@ -77,11 +77,16 @@ def auto_fill_containers(recipe_id):
         )
 
         if strategy:
+            # Include container_options and yield metadata for FE manual mode
+            strategy['container_options'] = container_options
+            strategy['yield_amount'] = (recipe.predicted_yield or 0) * float(scale)
+            strategy['yield_unit'] = recipe.predicted_yield_unit or 'units'
             return jsonify(strategy)
         else:
             return jsonify({
                 'success': False,
-                'error': 'No suitable container strategy found'
+                'error': 'No suitable container strategy found',
+                'container_options': container_options
             }), 400
 
     except Exception as e:
