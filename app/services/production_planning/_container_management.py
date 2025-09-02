@@ -13,6 +13,9 @@ from app.models import Recipe, InventoryItem, IngredientCategory
 from app.services.unit_conversion import ConversionEngine
 from .types import ContainerOption, ContainerStrategy
 
+# Import and clauses for filtering
+from sqlalchemy import and_
+
 logger = logging.getLogger(__name__)
 
 
@@ -32,7 +35,7 @@ def analyze_container_options(
     """
     logger.info(f"CONTAINER_ANALYSIS: Starting analysis for recipe {recipe.id} ({recipe.name})")
     logger.info(f"CONTAINER_ANALYSIS: Parameters - scale: {scale}, org_id: {organization_id}, preferred: {preferred_container_id}")
-    
+
     try:
         # Calculate target yield
         target_yield = (recipe.predicted_yield or 0) * scale
@@ -49,7 +52,7 @@ def analyze_container_options(
         container_options = _get_all_valid_containers(recipe, organization_id, target_yield, yield_unit)
 
         logger.info(f"CONTAINER_ANALYSIS: Found {len(container_options)} valid container options")
-        
+
         if not container_options:
             logger.warning(f"CONTAINER_ANALYSIS: No valid containers found for recipe {recipe.id}")
             logger.info("CONTAINER_ANALYSIS: Debugging container search...")
@@ -120,7 +123,7 @@ def _get_all_valid_containers(
         for container in containers:
             try:
                 logger.info(f"CONTAINER_VALIDATION: Processing container {container.name} (ID: {container.id})")
-                
+
                 # Get container capacity using the correct field names
                 capacity_value = getattr(container, 'capacity', None)
                 capacity_unit = getattr(container, 'capacity_unit', None)
@@ -138,7 +141,7 @@ def _get_all_valid_containers(
 
                 # Convert container capacity to recipe yield unit
                 logger.info(f"CONTAINER_VALIDATION: Converting {capacity_value} {capacity_unit} to {yield_unit}")
-                
+
                 try:
                     conversion_result = conversion_engine.convert_units(
                         amount=float(capacity_value),
@@ -393,40 +396,40 @@ def _debug_container_search(organization_id: int, yield_unit: str) -> None:
     """Debug function to help troubleshoot container search issues"""
     try:
         logger.info(f"CONTAINER_DEBUG: Debugging container search for org {organization_id}, yield unit {yield_unit}")
-        
+
         # Check if container category exists
         container_category = IngredientCategory.query.filter_by(
             name='Container',
             organization_id=organization_id
         ).first()
-        
+
         if not container_category:
             logger.warning(f"CONTAINER_DEBUG: No 'Container' category found for organization {organization_id}")
-            
+
             # Check what categories do exist
             categories = IngredientCategory.query.filter_by(organization_id=organization_id).all()
             logger.info(f"CONTAINER_DEBUG: Available categories: {[c.name for c in categories]}")
             return
-        
+
         logger.info(f"CONTAINER_DEBUG: Container category found: ID {container_category.id}")
-        
+
         # Check containers in the category
         containers = InventoryItem.query.filter_by(
             organization_id=organization_id,
             category_id=container_category.id
         ).all()
-        
+
         logger.info(f"CONTAINER_DEBUG: Found {len(containers)} containers in category")
-        
+
         for container in containers:
             capacity = getattr(container, 'capacity', None)
             capacity_unit = getattr(container, 'capacity_unit', None)
             quantity = getattr(container, 'quantity', 0)
-            
+
             logger.info(f"CONTAINER_DEBUG: {container.name} - capacity: {capacity} {capacity_unit}, quantity: {quantity}")
-            
+
             if not capacity or not capacity_unit:
                 logger.warning(f"CONTAINER_DEBUG: {container.name} missing capacity info")
-                
+
     except Exception as e:
         logger.error(f"CONTAINER_DEBUG: Error in debug function: {e}", exc_info=True)

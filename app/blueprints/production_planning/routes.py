@@ -58,68 +58,49 @@ def plan_production(recipe_id):
 
 @production_planning_bp.route('/<int:recipe_id>/auto-fill-containers', methods=['POST'])
 @login_required
-@require_permission('recipes.plan_production')
+@require_permission('app.recipes.plan_production')
 def auto_fill_containers(recipe_id):
-    """Auto-fill containers for production planning - thin controller with comprehensive debugging"""
-    logger.info(f"AUTO_FILL_ROUTE: Starting auto-fill containers for recipe {recipe_id}")
-    
+    """Auto-fill container suggestions for production planning"""
     try:
-        # Parse request data
+        logger.info(f"🔧 AUTO-FILL: Starting auto-fill containers for recipe {recipe_id}")
+
         data = request.get_json()
         if not data:
-            logger.error("AUTO_FILL_ROUTE: No JSON data provided in request")
+            logger.error("🔧 AUTO-FILL: No data provided in request")
             return jsonify({'success': False, 'error': 'No data provided'}), 400
 
         scale = data.get('scale', 1.0)
-        logger.info(f"AUTO_FILL_ROUTE: Recipe {recipe_id}, scale {scale}, org {current_user.organization_id}")
+        organization_id = get_effective_org_id()
 
-        # Get recipe - delegate to service layer
-        recipe = get_recipe_details(recipe_id)
-        if not recipe:
-            logger.error(f"AUTO_FILL_ROUTE: Recipe {recipe_id} not found")
-            return jsonify({'success': False, 'error': 'Recipe not found'}), 404
+        logger.info(f"🔧 AUTO-FILL: Recipe {recipe_id}, Scale {scale}, Org {organization_id}")
 
-        logger.info(f"AUTO_FILL_ROUTE: Recipe found: {recipe.name}, yield: {recipe.predicted_yield} {recipe.predicted_yield_unit}")
+        # Use the production planning service
+        from app.services.production_planning import ProductionPlanningService
 
-        # Delegate to container management service - this is the proper delegation
-        strategy, container_options = analyze_container_options(
-            recipe=recipe,
+        logger.info("🔧 AUTO-FILL: Calling ProductionPlanningService.auto_fill_containers")
+
+        result = ProductionPlanningService.auto_fill_containers(
+            recipe_id=recipe_id,
             scale=scale,
-            organization_id=current_user.organization_id,
-            api_format=True
+            organization_id=organization_id
         )
 
-        logger.info(f"AUTO_FILL_ROUTE: Service returned strategy: {strategy is not None}, options: {len(container_options) if container_options else 0}")
+        logger.info(f"🔧 AUTO-FILL: Service returned: {result}")
 
-        if strategy:
-            logger.info(f"AUTO_FILL_ROUTE: Success - returning strategy with {len(strategy.get('container_selection', []))} containers")
-            return jsonify({
-                'success': True,
-                **strategy
-            })
+        if result.get('success'):
+            logger.info("🔧 AUTO-FILL: Success - returning result")
+            return jsonify(result)
         else:
-            logger.warning("AUTO_FILL_ROUTE: No suitable container strategy found")
-            return jsonify({
-                'success': False,
-                'error': 'No suitable container strategy found',
-                'debug_info': {
-                    'recipe_id': recipe_id,
-                    'scale': scale,
-                    'yield_amount': recipe.predicted_yield,
-                    'yield_unit': recipe.predicted_yield_unit,
-                    'organization_id': current_user.organization_id
-                }
-            }), 400
+            logger.error(f"🔧 AUTO-FILL: Service failed: {result}")
+            return jsonify(result), 400
 
     except Exception as e:
-        logger.error(f"AUTO_FILL_ROUTE: Critical error in auto-fill containers: {e}", exc_info=True)
+        logger.error(f"🔧 AUTO-FILL: Exception in auto_fill_containers: {e}")
+        import traceback
+        logger.error(f"🔧 AUTO-FILL: Traceback: {traceback.format_exc()}")
         return jsonify({
-            'success': False,
-            'error': f'Server error: {str(e)}',
-            'debug_info': {
-                'recipe_id': recipe_id,
-                'user_org': current_user.organization_id
-            }
+            'success': False, 
+            'error': f'Internal server error: {str(e)}'
         }), 500
 
 @production_planning_bp.route('/<int:recipe_id>/stock/check', methods=['POST'])
