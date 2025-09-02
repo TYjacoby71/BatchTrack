@@ -74,7 +74,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     instance.hide();
 
                     // Notify global listener to retry container auto-fill
-                    window.dispatchEvent(new CustomEvent('productDensityUpdated', {
+                    window.dispatchEvent(new CustomEvent('containers.product_density.updated', {
                         detail: {
                             recipe_id: {{ recipe.id }},
                             density: density,

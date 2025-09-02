@@ -23,24 +23,31 @@ class DrawerProtocol {
         console.log('🔧 DRAWER PROTOCOL: Drawer request received', drawerData);
 
         const {
+            version,
             error_type,
             error_code,
             modal_url,
             redirect_url,
             success_event,
             retry_callback,
+            retry,
             retry_operation,
             retry_data,
-            error_message
+            error_message,
+            correlation_id
         } = drawerData;
 
         // Store retry callback if provided
         if (retry_callback) {
-            const callbackKey = `${success_event || error_type}.${error_code || 'generic'}`;
+            const callbackKey = `${success_event || error_type}.${error_code || 'generic'}.${correlation_id || 'na'}`;
             this.retryCallbacks.set(callbackKey, retry_callback);
+        } else if (retry && retry.operation && retry.data) {
+            const callbackKey = `${success_event || error_type}.${error_code || 'generic'}.${correlation_id || 'na'}`;
+            this.retryCallbacks.set(callbackKey, () => {
+                this.executeRetryOperation(retry.operation, retry.data);
+            });
         } else if (retry_operation && retry_data) {
-            // Store structured retry data for backend-defined operations
-            const callbackKey = `${success_event || error_type}.${error_code || 'generic'}`;
+            const callbackKey = `${success_event || error_type}.${error_code || 'generic'}.${correlation_id || 'na'}`;
             this.retryCallbacks.set(callbackKey, () => {
                 this.executeRetryOperation(retry_operation, retry_data);
             });
@@ -140,7 +147,7 @@ class DrawerProtocol {
     handleSuccess(successEvent, eventDetail) {
         // Find and execute retry callback
         // Prefer exact key match using the event name first
-        const exactKey = `${successEvent}.generic`;
+        const exactKeyPrefix = `${successEvent}.`;
         if (this.retryCallbacks.has(exactKey)) {
             const cb = this.retryCallbacks.get(exactKey);
             console.log(`🔧 DRAWER PROTOCOL: Executing retry for ${exactKey}`);
@@ -151,7 +158,7 @@ class DrawerProtocol {
 
         // Fallback: search by prefix of the event or error_type
         for (const [key, callback] of this.retryCallbacks.entries()) {
-            if (key.startsWith(successEvent) || key.includes(successEvent)) {
+            if (key.startsWith(exactKeyPrefix) || key.includes(successEvent)) {
                 console.log(`🔧 DRAWER PROTOCOL: Executing retry for ${key}`);
                 callback(eventDetail);
                 this.retryCallbacks.delete(key);

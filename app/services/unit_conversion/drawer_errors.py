@@ -6,6 +6,9 @@ Owns all decisions about when conversion errors require drawers and what type.
 This is the single source of truth for conversion error UX decisions.
 """
 
+import uuid
+
+
 def handle_conversion_error(conversion_result):
     """
     Convert a ConversionEngine error result into a standardized drawer response.
@@ -21,6 +24,7 @@ def handle_conversion_error(conversion_result):
     
     if error_code == 'MISSING_DENSITY':
         ingredient_id = error_data.get('ingredient_id')
+        correlation_id = str(uuid.uuid4())
         return {
             'requires_drawer': True,
             'drawer_type': 'conversion.density_fix',
@@ -34,11 +38,13 @@ def handle_conversion_error(conversion_result):
                 'help_link': '/conversion/units'
             },
             'drawer_payload': {
-                'modal_url': f'/api/drawer-actions/conversion/density-modal/{ingredient_id}',
-                'success_event': 'densityUpdated',
+                'version': '1.0',
+                'modal_url': f"/api/drawer-actions/conversion/density-modal/{ingredient_id}",
+                'success_event': 'conversion.density.updated',
                 'error_type': 'conversion',
                 'error_code': 'MISSING_DENSITY',
-                'error_message': 'Missing density for conversion'
+                'error_message': 'Missing density for conversion',
+                'correlation_id': correlation_id
             },
             'suggested_density': _get_suggested_density(error_data.get('ingredient_name', '')),
             'error_message': 'Missing density for conversion'
@@ -47,6 +53,7 @@ def handle_conversion_error(conversion_result):
     elif error_code == 'MISSING_CUSTOM_MAPPING':
         from_unit = error_data.get('from_unit')
         to_unit = error_data.get('to_unit')
+        correlation_id = str(uuid.uuid4())
         return {
             'requires_drawer': True,
             'drawer_type': 'conversion.unit_mapping_fix',
@@ -58,17 +65,20 @@ def handle_conversion_error(conversion_result):
                 'unit_manager_link': '/conversion/units'
             },
             'drawer_payload': {
-                'modal_url': f'/api/drawer-actions/conversion/unit-mapping-modal?from_unit={from_unit}&to_unit={to_unit}',
-                'success_event': 'unitMappingCreated',
+                'version': '1.0',
+                'modal_url': f"/api/drawer-actions/conversion/unit-mapping-modal?from_unit={from_unit}&to_unit={to_unit}",
+                'success_event': 'conversion.unit_mapping.created',
                 'error_type': 'conversion',
                 'error_code': 'MISSING_CUSTOM_MAPPING',
-                'error_message': 'Missing custom unit mapping'
+                'error_message': 'Missing custom unit mapping',
+                'correlation_id': correlation_id
             },
             'error_message': 'Missing custom unit mapping'
         }
     
     elif error_code in ['UNKNOWN_SOURCE_UNIT', 'UNKNOWN_TARGET_UNIT']:
         unknown_unit = error_data.get('unit')
+        correlation_id = str(uuid.uuid4())
         return {
             'requires_drawer': True,
             'drawer_type': 'conversion.unit_creation',
@@ -78,10 +88,12 @@ def handle_conversion_error(conversion_result):
                 'unit_manager_link': '/conversion/units'
             },
             'drawer_payload': {
+                'version': '1.0',
                 'redirect_url': '/conversion/units',
                 'error_type': 'conversion',
                 'error_code': error_code,
-                'error_message': f'Unknown unit requires manual setup: {unknown_unit}'
+                'error_message': f'Unknown unit requires manual setup: {unknown_unit}',
+                'correlation_id': correlation_id
             },
             'error_message': f'Unknown unit: {unknown_unit}'
         }
@@ -106,39 +118,49 @@ def generate_drawer_payload_for_conversion_error(error_code, error_data, retry_o
     Generate drawer payload for conversion errors that require UI intervention.
     This is called by services that need to handle conversion errors with drawers.
     """
+    correlation_id = str(uuid.uuid4())
     if error_code == 'MISSING_DENSITY':
         ingredient_id = error_data.get('ingredient_id')
         payload = {
-            'modal_url': f'/api/drawer-actions/conversion/density-modal/{ingredient_id}',
-            'success_event': 'densityUpdated',
+            'version': '1.0',
+            'modal_url': f"/api/drawer-actions/conversion/density-modal/{ingredient_id}",
+            'success_event': 'conversion.density.updated',
             'error_type': 'conversion',
             'error_code': error_code,
-            'error_message': error_data.get('message', 'Missing density for conversion')
+            'error_message': error_data.get('message', 'Missing density for conversion'),
+            'correlation_id': correlation_id
         }
     elif error_code == 'MISSING_CUSTOM_MAPPING':
         from_unit = error_data.get('from_unit')
         to_unit = error_data.get('to_unit')
         payload = {
-            'modal_url': f'/api/drawer-actions/conversion/unit-mapping-modal?from_unit={from_unit}&to_unit={to_unit}',
-            'success_event': 'unitMappingCreated',
+            'version': '1.0',
+            'modal_url': f"/api/drawer-actions/conversion/unit-mapping-modal?from_unit={from_unit}&to_unit={to_unit}",
+            'success_event': 'conversion.unit_mapping.created',
             'error_type': 'conversion',
             'error_code': error_code,
-            'error_message': error_data.get('message', 'Missing custom unit mapping')
+            'error_message': error_data.get('message', 'Missing custom unit mapping'),
+            'correlation_id': correlation_id
         }
     elif error_code in ['UNKNOWN_SOURCE_UNIT', 'UNKNOWN_TARGET_UNIT']:
         payload = {
+            'version': '1.0',
             'redirect_url': '/conversion/units',
             'error_type': 'conversion',
             'error_code': error_code,
-            'error_message': error_data.get('message', f'Unknown unit requires manual setup')
+            'error_message': error_data.get('message', f'Unknown unit requires manual setup'),
+            'correlation_id': correlation_id
         }
     else:
         return None
     
     # Add retry information if provided
     if retry_operation and retry_data:
-        payload['retry_operation'] = retry_operation
-        payload['retry_data'] = retry_data
+        payload['retry'] = {
+            'mode': 'frontend_callback',
+            'operation': retry_operation,
+            'data': retry_data
+        }
     
     return payload
 
