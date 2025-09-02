@@ -43,48 +43,47 @@ export class ContainerManager {
             return;
         }
 
+        const recipeId = window.recipeData.id;
+
         try {
-            const requestData = {
-                recipe_id: window.recipeData.id,
-                scale: this.getCurrentScale()
-            };
-
-            console.log('🔧 CONTAINER_MANAGEMENT: Sending request:', requestData);
-
-            const response = await fetch(`/production-planning/${window.recipeData.id}/auto-fill-containers`, {
+            const response = await fetch(`/production-planning/${recipeId}/auto-fill-containers`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
+                    'X-CSRFToken': document.querySelector('meta[name=csrf-token]')?.getAttribute('content') || ''
                 },
-                body: JSON.stringify(requestData)
+                body: JSON.stringify({
+                    recipe_id: recipeId,
+                    scale: this.getCurrentScale()
+                })
             });
 
             console.log('🔧 CONTAINER_MANAGEMENT: Response status:', response.status);
 
-            const result = await response.json();
-            console.log('🔧 CONTAINER_MANAGEMENT: Response data:', result);
-
-            if (result.success) {
-                console.log('🔧 CONTAINER_MANAGEMENT: Success! Processing results...');
-
-                this.allContainerOptions = result.all_container_options || [];
-                this.autoFillStrategy = result;  // The entire result is the strategy
-
-                console.log('🔧 CONTAINER_MANAGEMENT: Container options count:', this.allContainerOptions.length);
-                console.log('🔧 CONTAINER_MANAGEMENT: Strategy:', this.autoFillStrategy);
-
-                this.renderContainerOptions();
-                this.updateContainerProgress();
-            } else {
-                console.error('🔧 CONTAINER_MANAGEMENT: Request failed:', result.error);
-                console.log('🔧 CONTAINER_MANAGEMENT: Debug info:', result.debug_info);
-                this.showError(result.error || 'Failed to load container options');
+            // Check if response is JSON
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                throw new Error(`Expected JSON response, got ${contentType}. Response may be a redirect or HTML page.`);
             }
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                if (result.error && result.error.includes('Permission denied')) {
+                    throw new Error('You do not have permission to plan production for this recipe.');
+                }
+                throw new Error(result.error || 'Failed to fetch container options');
+            }
+
+            this.allContainerOptions = result.options || [];
+            this.autoFillStrategy = result.strategy;
+
+            this.renderContainerOptions();
+            this.calculateMetrics();
 
         } catch (error) {
             console.error('🔧 CONTAINER_MANAGEMENT: Network/parsing error:', error);
-            this.showError('Failed to refresh container options: ' + error.message);
+            this.showError(`Failed to load container options: ${error.message}`);
         }
     }
 
