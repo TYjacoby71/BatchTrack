@@ -141,6 +141,7 @@ class UniversalStockCheckService:
             has_low_stock = False
             has_errors = False # Track if any item check resulted in an error
             conversion_alerts = []
+            bubbled_drawer_payload = None
 
             for recipe_ingredient in recipe.recipe_ingredients:
                 # Scale the quantity needed
@@ -182,6 +183,10 @@ class UniversalStockCheckService:
                             'unit_manager_link': result.conversion_details.get('unit_manager_link')
                         })
 
+                    # Bubble up drawer payload to top-level if present
+                    if not bubbled_drawer_payload and result.conversion_details.get('drawer_payload'):
+                        bubbled_drawer_payload = result.conversion_details.get('drawer_payload')
+
                 stock_results.append(result_dict)
 
                 # Track overall status
@@ -214,6 +219,10 @@ class UniversalStockCheckService:
             # Add conversion alerts if any (but not drawer-required ones)
             if conversion_alerts:
                 response['conversion_alerts'] = conversion_alerts
+
+            # Include drawer payload if we have one
+            if bubbled_drawer_payload:
+                response['drawer_payload'] = bubbled_drawer_payload
 
             return response
 

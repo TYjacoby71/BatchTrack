@@ -14,11 +14,12 @@ logger = logging.getLogger(__name__)
 
 
 def analyze_container_options(
-    recipe: Recipe, 
-    scale: float, 
-    preferred_container_id: Optional[int] = None, 
+    recipe: Recipe,
+    scale: float,
+    preferred_container_id: Optional[int] = None,
     organization_id: Optional[int] = None,
-    api_format: bool = True
+    api_format: bool = True,
+    product_density: Optional[float] = None
 ) -> Tuple[Optional[Dict[str, Any]], List[Dict[str, Any]]]:
     """
     Single entry point for container analysis.
@@ -40,7 +41,7 @@ def analyze_container_options(
             raise ValueError(f"Recipe '{recipe.name}' has no predicted yield configured")
 
         # Load and filter containers
-        container_options = _load_suitable_containers(recipe, org_id, total_yield, yield_unit)
+        container_options = _load_suitable_containers(recipe, org_id, total_yield, yield_unit, product_density)
 
         if not container_options:
             raise ValueError(f"No containers with valid capacity data found for recipe '{recipe.name}'. Check that containers have capacity and capacity_unit values, and are convertible to {yield_unit}.")
@@ -50,6 +51,32 @@ def analyze_container_options(
 
         return strategy, container_options
 
+    except MissingProductDensityError as e:
+        # Structured drawer response for missing product density
+        logger.warning(f"Container analysis requires product density for recipe {recipe.id}: {e}")
+        if api_format:
+            # Return a strategy payload that instructs FE to open a drawer
+            from .drawer_errors import generate_drawer_payload_for_container_error
+            drawer_payload = generate_drawer_payload_for_container_error(
+                error_code='MISSING_PRODUCT_DENSITY',
+                recipe=recipe,
+                from_unit=e.from_unit,
+                to_unit=e.to_unit
+            )
+
+            strategy = {
+                'success': False,
+                'requires_drawer': True,
+                'drawer_payload': drawer_payload,
+                'error': 'Product density required to convert between units',
+                'status': 'error',
+                'yield_amount': total_yield,
+                'yield_unit': yield_unit,
+                'container_options': []
+            }
+
+            return strategy, []
+        raise
     except Exception as e:
         logger.error(f"Container analysis failed for recipe {recipe.id}: {e}")
         if api_format:
@@ -57,7 +84,7 @@ def analyze_container_options(
         raise
 
 
-def _load_suitable_containers(recipe: Recipe, org_id: int, total_yield: float, yield_unit: str) -> List[Dict[str, Any]]:
+def _load_suitable_containers(recipe: Recipe, org_id: int, total_yield: float, yield_unit: str, product_density: Optional[float]) -> List[Dict[str, Any]]:
     """Load containers allowed for this recipe and convert capacities"""
 
     # Get recipe's allowed containers - Recipe model uses 'allowed_containers' field
@@ -85,7 +112,7 @@ def _load_suitable_containers(recipe: Recipe, org_id: int, total_yield: float, y
             continue
 
         # Convert capacity to recipe yield units
-        converted_capacity = _convert_capacity(storage_capacity, storage_unit, yield_unit)
+        converted_capacity = _convert_capacity(storage_capacity, storage_unit, yield_unit, product_density, recipe)
         if converted_capacity <= 0:
             logger.warning(f"Container {container.name} capacity conversion failed - skipping")
             continue
@@ -115,18 +142,45 @@ def _load_suitable_containers(recipe: Recipe, org_id: int, total_yield: float, y
     return container_options
 
 
-def _convert_capacity(capacity: float, from_unit: str, to_unit: str) -> float:
-    """Convert container capacity to recipe yield units"""
+def _convert_capacity(capacity: float, from_unit: str, to_unit: str, product_density: Optional[float], recipe: Recipe) -> float:
+    """Convert container capacity to recipe yield units.
+
+    If a cross-type conversion (volume ↔ weight) is required and no product_density
+    is provided, raise a MissingProductDensityError to trigger the drawer protocol.
+    """
     if from_unit == to_unit:
         return capacity
 
     try:
         from ...services.unit_conversion import ConversionEngine
-        result = ConversionEngine.convert_units(capacity, from_unit, to_unit)
-        return result['converted_value'] if isinstance(result, dict) else float(result)
+        # Attempt conversion with provided product density if any
+        result = ConversionEngine.convert_units(capacity, from_unit, to_unit, density=product_density)
+
+        if isinstance(result, dict):
+            if result.get('success'):
+                return float(result.get('converted_value', 0.0))
+            # Detect missing density from conversion engine
+            if result.get('error_code') == 'MISSING_DENSITY':
+                raise MissingProductDensityError(from_unit=from_unit, to_unit=to_unit)
+            # Other structured failures
+            logger.warning(f"Capacity conversion failed {from_unit}->{to_unit}: {result}")
+            return 0.0
+
+        # Primitive return
+        return float(result)
+    except MissingProductDensityError:
+        # Bubble up for the caller to construct a drawer payload
+        raise
     except Exception as e:
         logger.warning(f"Cannot convert {capacity} {from_unit} to {to_unit}: {e}")
         return 0.0
+
+
+class MissingProductDensityError(Exception):
+    def __init__(self, from_unit: str, to_unit: str):
+        super().__init__(f"Missing product density for conversion {from_unit} -> {to_unit}")
+        self.from_unit = from_unit
+        self.to_unit = to_unit
 
 
 def _create_greedy_strategy(container_options: List[Dict[str, Any]], total_yield: float, yield_unit: str) -> Dict[str, Any]:
@@ -153,6 +207,82 @@ def _create_greedy_strategy(container_options: List[Dict[str, Any]], total_yield
 
     # Calculate totals
     total_capacity = sum(c['capacity'] * c['containers_needed'] for c in selected_containers)
+
+    # Local optimization around greedy solution to reduce overfill and improve containment
+    def _optimize_selection(options: List[Dict[str, Any]], base_selection: List[Dict[str, Any]], target_yield: float) -> List[Dict[str, Any]]:
+        # Consider only top K options for tractability
+        top_options = options[:min(3, len(options))]
+        # Build base counts map
+        base_counts = {c['container_id']: c['containers_needed'] for c in base_selection}
+
+        # Build search ranges near base counts
+        ranges = []
+        for opt in top_options:
+            base = base_counts.get(opt['container_id'], 0)
+            lo = max(0, base - 2)
+            hi = min(opt['available_quantity'], base + 2)
+            ranges.append((opt, range(lo, hi + 1)))
+
+        best_combo = None
+        best_capacity = 0.0
+        target_min = target_yield * 0.97  # within 3% tolerance counts as contained
+
+        # Nested loops up to 5^3 = 125 combos
+        def _search(idx: int, current_counts: Dict[int, int]):
+            nonlocal best_combo, best_capacity
+            if idx == len(ranges):
+                # Compute capacity of considered set; include counts of non-top options from base
+                capacity = 0.0
+                # top options
+                for opt, _ in ranges:
+                    capacity += current_counts.get(opt['container_id'], 0) * opt['capacity']
+                # other options from base selection unchanged
+                for c in base_selection:
+                    if c['container_id'] not in current_counts:
+                        capacity += c['containers_needed'] * c['capacity']
+
+                # Feasibility preference: prefer >= target_min and minimize overfill; otherwise maximize capacity
+                if capacity >= target_min:
+                    if best_combo is None or (best_capacity < target_min) or (capacity < best_capacity):
+                        best_combo = current_counts.copy()
+                        best_capacity = capacity
+                else:
+                    if best_combo is None or best_capacity < target_min or capacity > best_capacity:
+                        best_combo = current_counts.copy()
+                        best_capacity = capacity
+                return
+
+            opt, rng = ranges[idx]
+            for cnt in rng:
+                current_counts[opt['container_id']] = cnt
+                _search(idx + 1, current_counts)
+            # cleanup
+            current_counts.pop(opt['container_id'], None)
+
+        _search(0, {})
+
+        # Build new selection list
+        new_selection_map = {c['container_id']: c.copy() for c in base_selection}
+        # update counts for top options
+        for opt, _ in ranges:
+            cnt = best_combo.get(opt['container_id'], 0) if best_combo else base_counts.get(opt['container_id'], 0)
+            if opt['container_id'] in new_selection_map:
+                new_selection_map[opt['container_id']]['containers_needed'] = cnt
+            else:
+                if cnt > 0:
+                    new_selection_map[opt['container_id']] = {
+                        **opt,
+                        'containers_needed': cnt
+                    }
+        # remove zero-count entries
+        new_selection = [c for c in new_selection_map.values() if c['containers_needed'] > 0]
+        return new_selection
+
+    if selected_containers:
+        optimized = _optimize_selection(container_options, selected_containers, total_yield)
+        # Recompute totals
+        total_capacity = sum(c['capacity'] * c['containers_needed'] for c in optimized)
+        selected_containers = optimized
 
     # Containment = Can the total capacity hold the yield? 
     # Show 100% if within 3% tolerance (97% or above)
@@ -216,5 +346,5 @@ def _create_greedy_strategy(container_options: List[Dict[str, Any]], total_yield
         'total_capacity': total_capacity,
         'containment_percentage': containment_percentage,
         'warnings': warnings,
-        'strategy_type': 'greedy_fill'
+        'strategy_type': 'greedy_fill_optimized'
     }

@@ -89,7 +89,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     modalInstance.hide();
                     
                     // Dispatch custom event for parent to retrigger conversion
-                    window.dispatchEvent(new CustomEvent('densityUpdated', {
+                    window.dispatchEvent(new CustomEvent('conversion.density.updated', {
                         detail: {
                             ingredient_id: {{ ingredient.id }},
                             ingredient_name: '{{ ingredient.name }}',

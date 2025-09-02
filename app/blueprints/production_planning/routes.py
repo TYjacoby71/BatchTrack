@@ -69,19 +69,32 @@ def auto_fill_containers(recipe_id):
         recipe = Recipe.query.get_or_404(recipe_id)
 
         # Use the simplified container management
+        # Allow optional product_density to be passed for cross-type conversions
+        product_density = data.get('product_density')
+        try:
+            product_density = float(product_density) if product_density is not None else None
+        except (TypeError, ValueError):
+            product_density = None
+
         strategy, container_options = analyze_container_options(
             recipe=recipe,
             scale=scale,
             organization_id=current_user.organization_id,
-            api_format=True
+            api_format=True,
+            product_density=product_density
         )
 
         if strategy:
+            # Include container_options and yield metadata for FE manual mode
+            strategy['container_options'] = container_options
+            strategy['yield_amount'] = (recipe.predicted_yield or 0) * float(scale)
+            strategy['yield_unit'] = recipe.predicted_yield_unit or 'units'
             return jsonify(strategy)
         else:
             return jsonify({
                 'success': False,
-                'error': 'No suitable container strategy found'
+                'error': 'No suitable container strategy found',
+                'container_options': container_options
             }), 400
 
     except Exception as e:

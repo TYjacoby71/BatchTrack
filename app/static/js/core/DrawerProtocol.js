@@ -21,29 +21,43 @@ class DrawerProtocol {
      */
     async handleDrawerRequest(drawerData) {
         console.log('🔧 DRAWER PROTOCOL: Drawer request received', drawerData);
+        console.log('🔧 DRAWER PROTOCOL: Current active drawers:', this.activeDrawers.size);
+        console.log('🔧 DRAWER PROTOCOL: Stored retry callbacks:', this.retryCallbacks.size);
 
         const {
+            version,
             error_type,
             error_code,
             modal_url,
             redirect_url,
             success_event,
             retry_callback,
+            retry,
             retry_operation,
             retry_data,
-            error_message
+            error_message,
+            correlation_id
         } = drawerData;
 
         // Store retry callback if provided
         if (retry_callback) {
-            const callbackKey = `${error_type}.${error_code}`;
+            const callbackKey = `${success_event || error_type}.${error_code || 'generic'}.${correlation_id || 'na'}`;
+            console.log('🔧 DRAWER PROTOCOL: Storing retry callback with key:', callbackKey);
             this.retryCallbacks.set(callbackKey, retry_callback);
+        } else if (retry && retry.operation && retry.data) {
+            const callbackKey = `${success_event || error_type}.${error_code || 'generic'}.${correlation_id || 'na'}`;
+            console.log('🔧 DRAWER PROTOCOL: Storing retry operation with key:', callbackKey, 'operation:', retry.operation);
+            this.retryCallbacks.set(callbackKey, () => {
+                this.executeRetryOperation(retry.operation, retry.data);
+            });
         } else if (retry_operation && retry_data) {
-            // Store structured retry data for backend-defined operations
-            const callbackKey = `${error_type}.${error_code}`;
+            const callbackKey = `${success_event || error_type}.${error_code || 'generic'}.${correlation_id || 'na'}`;
+            console.log('🔧 DRAWER PROTOCOL: Storing legacy retry operation with key:', callbackKey, 'operation:', retry_operation);
             this.retryCallbacks.set(callbackKey, () => {
                 this.executeRetryOperation(retry_operation, retry_data);
             });
+        } else {
+            console.log('🔧 DRAWER PROTOCOL: No retry mechanism provided in drawer data');
         }
 
         // Handle redirect (like unit manager)
@@ -61,6 +75,7 @@ class DrawerProtocol {
         }
 
         // Open the modal
+        console.log('🔧 DRAWER PROTOCOL: Attempting to open modal with URL:', modal_url, 'success_event:', success_event);
         return this.openModal(modal_url, success_event);
     }
 
@@ -139,13 +154,30 @@ class DrawerProtocol {
 
     handleSuccess(successEvent, eventDetail) {
         // Find and execute retry callback
+        // Prefer exact key match using the event name first
+        const exactKeyPrefix = `${successEvent}.`;
+
+        // Attempt exact match by scanning keys for the event-specific prefix and correlation suffix
+        let executed = false;
         for (const [key, callback] of this.retryCallbacks.entries()) {
-            if (key.includes(successEvent.replace(/([A-Z])/g, '_$1').toLowerCase())) {
+            if (key.startsWith(exactKeyPrefix) || key.includes(successEvent)) {
                 console.log(`🔧 DRAWER PROTOCOL: Executing retry for ${key}`);
                 callback(eventDetail);
                 this.retryCallbacks.delete(key);
+                executed = true;
                 break;
             }
+        }
+
+        if (executed) return;
+
+        // Fallback: if nothing matched, execute any remaining callback once
+        const iterator = this.retryCallbacks.entries().next();
+        if (!iterator.done) {
+            const [key, callback] = iterator.value;
+            console.log(`🔧 DRAWER PROTOCOL: Fallback executing retry for ${key}`);
+            callback(eventDetail);
+            this.retryCallbacks.delete(key);
         }
     }
 

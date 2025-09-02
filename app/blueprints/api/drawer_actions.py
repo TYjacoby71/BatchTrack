@@ -3,6 +3,7 @@ from flask_login import login_required, current_user
 from app.models import db, InventoryItem
 from app.services.unit_conversion import ConversionEngine
 from app.utils.permissions import require_permission
+from app.models.recipe import Recipe
 
 drawer_actions_bp = Blueprint('drawer_actions', __name__, url_prefix='/api/drawer-actions')
 
@@ -179,3 +180,56 @@ def retry_conversion_operation(data):
         ingredient_id=data.get('ingredient_id')
     )
     return jsonify(result)
+
+
+# ==================== CONTAINER PLANNING ERRORS ====================
+
+@drawer_actions_bp.route('/containers/product-density-modal/<int:recipe_id>', methods=['GET'])
+@login_required
+@require_permission('recipes.plan_production')
+def container_product_density_modal_get(recipe_id):
+    """Render modal to capture product density for a recipe's container planning."""
+    try:
+        recipe = Recipe.query.filter_by(id=recipe_id, organization_id=current_user.organization_id).first()
+        if not recipe:
+            return jsonify({'error': 'Recipe not found'}), 404
+
+        # Reuse density modal with recipe context; template reads generically based on provided object
+        modal_html = render_template('components/shared/product_density_fix_modal.html', recipe=recipe)
+
+        return jsonify({
+            'success': True,
+            'modal_html': modal_html
+        })
+    except Exception as e:
+        return jsonify({'error': f'Failed to load modal: {str(e)}'}), 500
+
+
+@drawer_actions_bp.route('/containers/product-density-modal/<int:recipe_id>', methods=['POST'])
+@login_required
+@require_permission('recipes.plan_production')
+def container_product_density_modal_post(recipe_id):
+    """Accept product density input (session-scoped) and notify FE to retry auto-fill.
+
+    We do not persist density on recipe; we simply echo back and FE will retry with provided value.
+    """
+    try:
+        recipe = Recipe.query.filter_by(id=recipe_id, organization_id=current_user.organization_id).first()
+        if not recipe:
+            return jsonify({'error': 'Recipe not found'}), 404
+
+        data = request.get_json() or {}
+        density = float(data.get('density', 0))
+        if density <= 0:
+            return jsonify({'error': 'Density must be greater than 0'}), 400
+
+        # Return success; FE will dispatch productDensityUpdated and retry auto-fill
+        return jsonify({
+            'success': True,
+            'message': f'Using product density {density} g/ml for {recipe.name}',
+            'density': density
+        })
+    except ValueError:
+        return jsonify({'error': 'Invalid density value'}), 400
+    except Exception as e:
+        return jsonify({'error': f'Failed to accept density: {str(e)}'}), 500

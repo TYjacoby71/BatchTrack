@@ -119,9 +119,9 @@ document.addEventListener('DOMContentLoaded', function() {
   window.goToPlanProduction = function() {
     const selectedRecipeId = recipeSelect.value;
     if (selectedRecipeId) {
-      window.location.href = `/recipes/${selectedRecipeId}/plan`;
+      window.location.href = `/production-planning/recipe/${selectedRecipeId}/plan`;
     } else {
-      alert('Please select a recipe');
+      alert('Please select a recipe first.');
     }
   };
 

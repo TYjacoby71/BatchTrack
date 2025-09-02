@@ -1,0 +1,45 @@
+"""
+Production Planning Drawer Error Handler
+
+Owns container-planning specific drawer payloads (e.g., missing product density).
+"""
+
+from typing import Dict
+import uuid
+
+
+def generate_drawer_payload_for_container_error(error_code: str, recipe, from_unit: str, to_unit: str) -> Dict:
+    """
+    Build a self-describing drawer_payload for container planning errors that
+    are user-fixable via a drawer.
+    """
+    if error_code == 'MISSING_PRODUCT_DENSITY':
+        correlation_id = str(uuid.uuid4())
+        # We will prompt for product density at the recipe level and fire an event
+        # that allows the auto-fill to retry with the provided density in-session.
+        return {
+            'version': '1.0',
+            'modal_url': f"/api/drawer-actions/containers/product-density-modal/{recipe.id}",
+            'success_event': 'containers.product_density.updated',
+            'error_type': 'container_planning',
+            'error_code': error_code,
+            'error_message': 'Missing product density to convert between volume and weight units for container planning',
+            'correlation_id': correlation_id,
+            'retry': {
+                'mode': 'frontend_callback',
+                'operation': 'container_auto_fill',
+                'data': {
+                    'recipe_id': recipe.id,
+                    'from_unit': from_unit,
+                    'to_unit': to_unit
+                }
+            }
+        }
+
+    # Unknown/unsupported error code: return minimal info (no drawer)
+    return {
+        'error_type': 'container_planning',
+        'error_code': error_code,
+        'error_message': 'Unsupported container planning error'
+    }
+
