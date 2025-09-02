@@ -80,7 +80,7 @@ export class ContainerManager {
             this.autoFillStrategy = result.strategy;
 
             this.renderContainerOptions();
-            this.calculateMetrics();
+            this.updateContainerProgress();
 
         } catch (error) {
             console.error('🔧 CONTAINER_MANAGEMENT: Network/parsing error:', error);
@@ -199,6 +199,15 @@ export class ContainerManager {
         this.updateContainerProgress();
     }
 
+    calculateMetrics() {
+        // General metrics calculation for both auto and manual modes
+        if (this.mode === 'auto' && this.autoFillStrategy) {
+            this.currentMetrics = this.autoFillStrategy.metrics;
+        } else if (this.mode === 'manual') {
+            this.calculateManualMetrics();
+        }
+    }
+
     async calculateManualMetrics() {
         if (this.selectedContainers.length === 0) {
             this.currentMetrics = null;
@@ -211,7 +220,7 @@ export class ContainerManager {
             const totalYield = recipeData.yield_amount * scaleFactor;
 
             // Use backend service to calculate metrics
-            const response = await fetch('/api/calculate-container-metrics', {
+            const response = await fetch(`/production-planning/${recipeData.id}/calculate-container-metrics`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -224,7 +233,9 @@ export class ContainerManager {
             });
 
             const result = await response.json();
-            this.currentMetrics = result.metrics;
+            if (result.success) {
+                this.currentMetrics = result.metrics;
+            }
 
         } catch (error) {
             console.error('Error calculating manual metrics:', error);
@@ -241,6 +252,10 @@ export class ContainerManager {
     getCurrentScale() {
         const scaleInput = document.getElementById('scaleInput') || document.getElementById('scaleFactorInput');
         return scaleInput ? parseFloat(scaleInput.value) || 1.0 : 1.0;
+    }
+
+    getScaleFactor() {
+        return this.getCurrentScale();
     }
 
     showError(message) {
