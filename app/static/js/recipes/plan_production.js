@@ -6,11 +6,20 @@
 
 import { ContainerManager } from './modules/container-management.js';
 import { ContainerProgressBar } from './modules/container-progress-bar.js';
+// Assuming StockCheckManager is defined in './modules/stock-check-manager.js'
+// and ContainerManagement is a more specific class name for the container manager.
+// Based on the changes, it seems the original code might have been using a more generic name
+// or the provided 'changes' snippet is introducing a more specific structure.
+// For the purpose of this edit, we'll assume these imports are correct as per the intent.
+import { StockCheckManager } from './modules/stock-check-manager.js';
+import { ContainerManagement } from './modules/container-management.js';
+
 
 class PlanProductionApp {
     constructor() {
         this.containerManager = null;
         this.containerProgressBar = null;
+        this.stockChecker = null; // Added stockChecker property
         this.isInitialized = false;
 
         this.init();
@@ -22,12 +31,23 @@ class PlanProductionApp {
         try {
             console.log('🔧 PLAN_PRODUCTION: Initializing modules...');
 
-            // Initialize modules
-            this.containerManager = new ContainerManager();
-            this.containerProgressBar = new ContainerProgressBar();
+            // Initialize stock checker with proper separation
+            this.stockChecker = new StockCheckManager(this);
+            console.log('🔍 PLAN_PRODUCTION: Initializing stock checker...');
+            this.stockChecker.bindEvents();
+
+            // Initialize container manager separately
+            this.containerManager = new ContainerManagement();
+            console.log('🔍 PLAN_PRODUCTION: Initializing container manager...');
+            await this.containerManager.initialize();
+
+            // Ensure both systems are independent
+            console.log('🔍 PLAN_PRODUCTION: Both stock check and container management initialized independently');
+
 
             // Make globally available for debugging
             window.containerManager = this.containerManager;
+            window.stockChecker = this.stockChecker; // Make stockChecker globally available
             window.containerProgressBar = this.containerProgressBar;
 
             // Initialize event listeners

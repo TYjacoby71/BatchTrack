@@ -1,4 +1,3 @@
-
 /**
  * Container Management Module - Coordination Only
  * 
@@ -14,12 +13,12 @@ export class ContainerManager {
     constructor(containerId = 'containerManagementCard') {
         this.container = document.getElementById(containerId);
         this.mode = 'auto'; // 'auto' or 'manual'
-        
+
         // Initialize specialized modules
         this.fetcher = new ContainerPlanFetcher(this);
         this.renderer = new ContainerRenderer(this);
         this.progressBar = new ContainerProgressBar();
-        
+
         // Data storage - populated by fetcher
         this.containerPlan = null;
         this.allContainerOptions = [];
@@ -65,33 +64,41 @@ export class ContainerManager {
     }
 
     async refreshContainerOptions() {
+        console.log('🔍 CONTAINER MANAGEMENT: refreshContainerOptions called');
+
         try {
-            console.log('🔧 CONTAINER_MANAGEMENT: Refreshing container options...');
-            
-            const result = await this.fetcher.fetchContainerPlan();
-            
-            if (result && result.success) {
-                // Store the data
-                this.containerPlan = result;
-                this.allContainerOptions = result.all_container_options || [];
-                this.autoFillStrategy = result.auto_fill_strategy;
-                
-                console.log('🔧 CONTAINER_MANAGEMENT: Data stored:', {
-                    plan: !!this.containerPlan,
-                    options: this.allContainerOptions.length,
-                    strategy: !!this.autoFillStrategy
-                });
-                
-                // Update displays
-                this.renderer.displayPlan();
-                this.updateProgressDisplay();
+            this.showLoadingState();
+
+            const planResult = await this.fetcher.fetchContainerPlan();
+            console.log('🔍 CONTAINER MANAGEMENT: Raw plan result:', planResult);
+
+            if (planResult) {
+                // Ensure we have the expected structure
+                const processedResult = {
+                    container_options: planResult.container_options || planResult.options || [],
+                    auto_fill_strategy: planResult.auto_fill_strategy || planResult.strategy,
+                    success: planResult.success !== false,
+                    error: planResult.error
+                };
+
+                console.log('🔍 CONTAINER MANAGEMENT: Processed result:', processedResult);
+
+                if (processedResult.container_options.length > 0) {
+                    this.renderer.displayContainerOptions(processedResult);
+                    this.updateProgressBar(processedResult);
+                } else {
+                    console.warn('🔍 CONTAINER MANAGEMENT: No container options in result');
+                    this.showNoOptionsState();
+                }
             } else {
-                console.error('🔧 CONTAINER_MANAGEMENT: No valid response received');
-                this.renderer.displayError('Failed to load container options');
+                console.warn('🔍 CONTAINER MANAGEMENT: No plan result received');
+                this.showNoOptionsState();
             }
         } catch (error) {
-            console.error('🔧 CONTAINER_MANAGEMENT: Error refreshing options:', error);
-            this.showError('Failed to refresh container options');
+            console.error('🚨 CONTAINER MANAGEMENT: Error refreshing options:', error);
+            this.showErrorState(error.message);
+        } finally {
+            this.hideLoadingState();
         }
     }
 
@@ -116,7 +123,7 @@ export class ContainerManager {
                 // Render manual options
                 this.renderer.renderManualContainerOptions(manualSection, this.allContainerOptions);
             }
-            
+
             // Update displays
             this.renderer.displayPlan();
         }
@@ -125,13 +132,13 @@ export class ContainerManager {
     addContainerRow() {
         const template = document.getElementById('containerRowTemplate');
         const container = document.getElementById('containerSelectionRows');
-        
+
         if (!template || !container) return;
-        
+
         const newRow = template.cloneNode(true);
         newRow.style.display = 'block';
         newRow.id = '';
-        
+
         // Populate select options with available containers
         const select = newRow.querySelector('.container-select');
         if (select && this.allContainerOptions) {
@@ -144,10 +151,10 @@ export class ContainerManager {
                 select.appendChild(optionEl);
             });
         }
-        
+
         // Add event listeners for the new row
         this.attachRowEventListeners(newRow);
-        
+
         container.appendChild(newRow);
     }
 
@@ -155,21 +162,21 @@ export class ContainerManager {
         const removeBtn = row.querySelector('.remove-container-btn');
         const select = row.querySelector('.container-select');
         const quantity = row.querySelector('.container-quantity');
-        
+
         if (removeBtn) {
             removeBtn.addEventListener('click', () => {
                 row.remove();
                 this.updateManualSummary();
             });
         }
-        
+
         if (select) {
             select.addEventListener('change', () => {
                 this.updateRowAvailability(row);
                 this.updateManualSummary();
             });
         }
-        
+
         if (quantity) {
             quantity.addEventListener('input', () => {
                 this.updateManualSummary();
@@ -180,7 +187,7 @@ export class ContainerManager {
     updateRowAvailability(row) {
         const select = row.querySelector('.container-select');
         const availableStock = row.querySelector('.available-stock');
-        
+
         if (select && availableStock) {
             const selectedOption = select.options[select.selectedIndex];
             if (selectedOption && selectedOption.dataset.available) {
@@ -221,10 +228,10 @@ export class ContainerManager {
             errorDiv.className = 'mt-3';
             this.container.querySelector('.card-body').appendChild(errorDiv);
         }
-        
+
         errorDiv.innerHTML = `<div class="alert alert-danger">${message}</div>`;
         errorDiv.style.display = 'block';
-        
+
         setTimeout(() => {
             if (errorDiv) errorDiv.style.display = 'none';
         }, 10000);
@@ -242,11 +249,11 @@ export class ContainerManager {
             // Get manually selected containers
             const rows = document.querySelectorAll('#containerSelectionRows [data-container-row]');
             const selected = [];
-            
+
             rows.forEach(row => {
                 const select = row.querySelector('.container-select');
                 const quantity = row.querySelector('.container-quantity');
-                
+
                 if (select && quantity && select.value) {
                     const qty = parseInt(quantity.value || 0);
                     if (qty > 0) {
@@ -258,7 +265,7 @@ export class ContainerManager {
                     }
                 }
             });
-            
+
             return selected;
         }
     }

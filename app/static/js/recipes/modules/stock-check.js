@@ -8,18 +8,33 @@ export class StockCheckManager {
 
     bindEvents() {
         console.log('🔍 STOCK CHECK DEBUG: Binding events...');
-        const stockCheckBtn = document.getElementById('stockCheckBtn');
-        console.log('🔍 STOCK CHECK DEBUG: Stock check button found:', !!stockCheckBtn);
+        
+        // Wait for DOM to be ready
+        const bindStockCheckButton = () => {
+            const stockCheckBtn = document.getElementById('stockCheckBtn');
+            console.log('🔍 STOCK CHECK DEBUG: Stock check button found:', !!stockCheckBtn);
 
-        if (stockCheckBtn) {
-            stockCheckBtn.addEventListener('click', () => {
-                console.log('🔍 STOCK CHECK DEBUG: Button clicked!');
-                this.performStockCheck();
-            });
-            console.log('🔍 STOCK CHECK DEBUG: Event listener added successfully');
-        } else {
-            console.error('🚨 STOCK CHECK ERROR: Stock check button not found in DOM');
-        }
+            if (stockCheckBtn) {
+                // Remove any existing listeners
+                stockCheckBtn.removeEventListener('click', this.handleStockCheckClick);
+                
+                // Bind the click handler
+                this.handleStockCheckClick = () => {
+                    console.log('🔍 STOCK CHECK DEBUG: Button clicked!');
+                    this.performStockCheck();
+                };
+                
+                stockCheckBtn.addEventListener('click', this.handleStockCheckClick);
+                console.log('🔍 STOCK CHECK DEBUG: Event listener added successfully');
+            } else {
+                console.error('🚨 STOCK CHECK ERROR: Stock check button not found in DOM');
+                // Retry after a short delay
+                setTimeout(bindStockCheckButton, 100);
+            }
+        };
+
+        // Try to bind immediately and retry if needed
+        bindStockCheckButton();
     }
 
     async performStockCheck() {

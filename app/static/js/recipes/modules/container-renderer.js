@@ -1,7 +1,6 @@
-
 /**
  * Container Renderer - Pure Display Logic Only
- * 
+ *
  * Handles only the visual rendering of container data received from backend.
  * No business logic calculations - just display what the backend provides.
  */
@@ -46,7 +45,7 @@ export class ContainerRenderer {
         if (!strategy || !strategy.container_selection || strategy.container_selection.length === 0) {
             containerResults.innerHTML = `
                 <div class="alert alert-info">
-                    <i class="fas fa-info-circle"></i> 
+                    <i class="fas fa-info-circle"></i>
                     No auto-fill strategy available. Try refreshing container options.
                     <br><small class="text-muted">Debug: Strategy exists: ${!!strategy}, Container selection: ${strategy?.container_selection?.length || 0}</small>
                 </div>
@@ -60,8 +59,8 @@ export class ContainerRenderer {
         if (strategy.container_selection.length > 1) {
             html += `
                 <div class="alert alert-info mb-3">
-                    <i class="fas fa-puzzle-piece"></i> 
-                    <strong>Multi-Container Optimization:</strong> 
+                    <i class="fas fa-puzzle-piece"></i>
+                    <strong>Multi-Container Optimization:</strong>
                     Using ${strategy.container_selection.length} container types for optimal efficiency
                 </div>
             `;
@@ -161,12 +160,12 @@ export class ContainerRenderer {
             const capacityUnit = option.capacity_unit || 'units';
             const containersNeeded = option.containers_needed || 1;
             const fillPercentage = option.fill_percentage || 100;
-            
+
             return `
                 <div class="container-option mb-2 p-2 border rounded" data-container-id="${containerId}">
                     <div class="d-flex justify-content-between align-items-center">
                         <label class="form-check-label">
-                            <input type="checkbox" class="form-check-input me-2" 
+                            <input type="checkbox" class="form-check-input me-2"
                                    value="${containerId}"
                                    data-container-name="${containerName}"
                                    data-capacity="${capacity}"
@@ -177,7 +176,7 @@ export class ContainerRenderer {
                     </div>
                     <div class="mt-1">
                         <small class="text-muted">
-                            Needs ${containersNeeded} container(s) | 
+                            Needs ${containersNeeded} container(s) |
                             ${fillPercentage.toFixed(1)}% efficiency
                         </small>
                     </div>
@@ -219,9 +218,9 @@ export class ContainerRenderer {
             const capacity = parseFloat(checkbox.dataset.capacity || '0') || 0;
             const containerName = checkbox.dataset.containerName || 'Unknown';
             const unit = checkbox.dataset.capacityUnit || 'units';
-            
+
             totalCapacity += capacity;
-            
+
             return `
                 <div class="d-flex justify-content-between align-items-center py-1">
                     <span>${containerName}</span>
