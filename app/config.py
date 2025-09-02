@@ -60,5 +60,8 @@ class Config:
     GOOGLE_OAUTH_CLIENT_ID = os.environ.get('GOOGLE_OAUTH_CLIENT_ID')
     GOOGLE_OAUTH_CLIENT_SECRET = os.environ.get('GOOGLE_OAUTH_CLIENT_SECRET')
     
+    # Logging Configuration
+    LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO' if os.environ.get('REPLIT_DEPLOYMENT') == 'true' else 'DEBUG').upper()
+    
     # Debug - disable in production
     DEBUG = os.environ.get('FLASK_DEBUG', 'false').lower() == 'true' and os.environ.get('FLASK_ENV') != 'production'

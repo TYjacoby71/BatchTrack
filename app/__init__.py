@@ -12,6 +12,7 @@ from .middleware import register_middleware
 from .template_context import register_template_context
 from .blueprints_registry import register_blueprints
 from .utils.template_filters import register_template_filters
+from .logging_config import configure_logging
 
 logger = logging.getLogger(__name__)
 
@@ -75,6 +76,12 @@ def create_app(config=None):
 
     # Setup logging
     _setup_logging(app)
+
+    # Configure logging
+    configure_logging(app)
+
+    # Register blueprints
+    register_blueprints(app)
 
     # Register CLI commands
     from .management import register_commands

@@ -1,4 +1,3 @@
-
 """
 Container Management for Production Planning
 
@@ -23,7 +22,7 @@ def analyze_container_options(
 ) -> Tuple[Optional[Dict[str, Any]], List[Dict[str, Any]]]:
     """
     Single entry point for container analysis.
-    
+
     Returns:
         - Container strategy (greedy fill selection) 
         - All available container options
@@ -36,19 +35,19 @@ def analyze_container_options(
         # Get recipe requirements
         total_yield = (recipe.predicted_yield or 0) * scale
         yield_unit = recipe.predicted_yield_unit or 'ml'
-        
+
         if total_yield <= 0:
             raise ValueError(f"Recipe '{recipe.name}' has no predicted yield configured")
 
         # Load and filter containers
         container_options = _load_suitable_containers(recipe, org_id, total_yield, yield_unit)
-        
+
         if not container_options:
             raise ValueError(f"No containers with valid capacity data found for recipe '{recipe.name}'. Check that containers have capacity and capacity_unit values, and are convertible to {yield_unit}.")
 
         # Create greedy fill strategy
         strategy = _create_greedy_strategy(container_options, total_yield, yield_unit)
-        
+
         return strategy, container_options
 
     except Exception as e:
@@ -60,14 +59,14 @@ def analyze_container_options(
 
 def _load_suitable_containers(recipe: Recipe, org_id: int, total_yield: float, yield_unit: str) -> List[Dict[str, Any]]:
     """Load containers allowed for this recipe and convert capacities"""
-    
+
     # Get recipe's allowed containers - Recipe model uses 'allowed_containers' field
     allowed_container_ids = getattr(recipe, 'allowed_containers', [])
-    
+
     # Only log if there's an issue to debug
     if not allowed_container_ids:
-        logger.warning(f"Recipe {recipe.id} has no allowed_containers configured")
-    
+        logger.debug(f"Recipe {recipe.id} has no allowed_containers configured")
+
     if not allowed_container_ids:
         raise ValueError(f"Recipe '{recipe.name}' has no containers configured")
 
@@ -79,7 +78,7 @@ def _load_suitable_containers(recipe: Recipe, org_id: int, total_yield: float, y
     ).all()
 
     container_options = []
-    
+
     for container in containers:
         # Get container capacity
         storage_capacity = getattr(container, 'capacity', None)
@@ -111,12 +110,12 @@ def _load_suitable_containers(recipe: Recipe, org_id: int, total_yield: float, y
 
     # Sort by capacity (largest first for greedy algorithm)
     container_options.sort(key=lambda x: x['capacity'], reverse=True)
-    
+
     # Check if we have any valid containers after filtering
     if not container_options:
         logger.warning(f"Recipe '{recipe.name}' has {len(containers)} containers configured, but none have valid capacity data or are convertible to {yield_unit}")
         # Return empty list instead of raising error - let caller handle
-    
+
     return container_options
 
 
@@ -136,7 +135,7 @@ def _convert_capacity(capacity: float, from_unit: str, to_unit: str) -> float:
 
 def _create_greedy_strategy(container_options: List[Dict[str, Any]], total_yield: float, yield_unit: str) -> Dict[str, Any]:
     """Create greedy fill strategy - largest containers first"""
-    
+
     selected_containers = []
     remaining_yield = total_yield
 
@@ -158,7 +157,7 @@ def _create_greedy_strategy(container_options: List[Dict[str, Any]], total_yield
 
     # Calculate totals
     total_capacity = sum(c['capacity'] * c['containers_needed'] for c in selected_containers)
-    
+
     # Containment = Can the total capacity hold the yield? 
     # Show 100% if within 3% tolerance (97% or above)
     if total_yield > 0:
@@ -175,30 +174,30 @@ def _create_greedy_strategy(container_options: List[Dict[str, Any]], total_yield
     warnings = []
     containment_warnings = []
     fill_efficiency_warnings = []
-    
+
     # CONTAINMENT WARNINGS (critical - can we hold the batch?)
     if remaining_yield > 0:
         containment_warnings.append(f"Insufficient capacity: {remaining_yield:.1f} {yield_unit} remaining")
-    
+
     # FILL EFFICIENCY WARNINGS (optimization - how well are containers used?)
     if selected_containers and total_capacity > 0 and remaining_yield <= 0:  # Only if contained
         # Calculate fill efficiency of the last container
         last_container = selected_containers[-1]
-        
+
         # Calculate how much yield goes into each container type
         remaining_yield_to_allocate = total_yield
-        
+
         for i, container in enumerate(selected_containers):
             if i == len(selected_containers) - 1:  # Last container type
                 # For the last container type, calculate partial fill
                 full_containers_of_this_type = container['containers_needed'] - 1
                 yield_in_full_containers = full_containers_of_this_type * container['capacity']
                 remaining_yield_to_allocate -= yield_in_full_containers
-                
+
                 # The remaining yield goes into the final container
                 if remaining_yield_to_allocate > 0 and container['capacity'] > 0:
                     last_container_fill_percentage = (remaining_yield_to_allocate / container['capacity']) * 100
-                    
+
                     # Apply fill efficiency rules
                     if last_container_fill_percentage < 100:
                         if last_container_fill_percentage < 75:
@@ -210,7 +209,7 @@ def _create_greedy_strategy(container_options: List[Dict[str, Any]], total_yield
                 # For non-last containers, all are filled completely
                 yield_in_this_container_type = container['containers_needed'] * container['capacity']
                 remaining_yield_to_allocate -= yield_in_this_container_type
-    
+
     # Combine all warnings
     warnings.extend(containment_warnings)
     warnings.extend(fill_efficiency_warnings)

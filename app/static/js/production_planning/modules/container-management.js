@@ -3,6 +3,7 @@ import { ContainerPlanFetcher } from './container-plan-fetcher.js';
 import { ContainerRenderer } from './container-renderer.js';
 import { ContainerProgressBar } from './container-progress-bar.js';
 import { ManualContainerMode } from './manual-container-mode.js';
+import { logger } from '../../utils/logger.js';
 
 // Auto-Fill Container Mode Module
 class AutoFillContainerMode {
@@ -11,7 +12,7 @@ class AutoFillContainerMode {
     }
 
     activate() {
-        console.log('AUTO-FILL MODE: Activating auto-fill container selection');
+        logger.debug('AUTO-FILL MODE: Activating auto-fill container selection');
         this.container.planFetcher.fetchContainerPlan();
     }
 }
@@ -32,7 +33,7 @@ export class ContainerManager {
     }
 
     bindEvents() {
-        console.log('CONTAINER MANAGER DEBUG: Binding events');
+        logger.debug('CONTAINER MANAGER DEBUG: Binding events');
 
         // Add container button
         const addContainerBtn = document.getElementById('addContainerBtn');
@@ -48,7 +49,7 @@ export class ContainerManager {
     }
 
     handleModeToggle(autoFillEnabled) {
-        console.log('AUTO-FILL TOGGLE:', autoFillEnabled);
+        logger.debug('AUTO-FILL TOGGLE:', autoFillEnabled);
 
         this.toggleContainerSections(autoFillEnabled);
 
