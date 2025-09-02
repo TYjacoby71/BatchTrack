@@ -29,14 +29,9 @@ class DashboardAlertService:
             user_prefs = UserPreferences.get_for_user(current_user.id)
             if user_prefs and max_alerts is None:
                 max_alerts = user_prefs.max_dashboard_alerts
-            logging.info(f"User preferences found: {user_prefs is not None}")
 
         if max_alerts is None:
             max_alerts = 3  # Default fallback
-
-        logging.info(f"Getting dashboard alerts with max_alerts={max_alerts}")
-
-        alerts = []
 
         # Get expiration data from combined service
         from ..utils.settings import get_setting
@@ -48,124 +43,141 @@ class DashboardAlertService:
         # CRITICAL: Expired items with remaining quantity - only if enabled (default to True if no prefs)
         show_expiration = (user_prefs.show_expiration_alerts if user_prefs else True)
 
-        # Debug logging
-        logging.info(f"Expiration data: expired_total={expiration_data.get('expired_total', 'MISSING')}, expiring_soon_total={expiration_data.get('expiring_soon_total', 'MISSING')}")
-        logging.info(f"User preferences: show_expiration={show_expiration if user_prefs else 'NO_PREFS'}")
-        logging.info(f"Dismissed alerts received: {dismissed_alerts}")
-        if show_expiration and expiration_data['expired_total'] > 0:
+        # Get stuck batches and faults
+        stuck_batches_count = len(DashboardAlertService._get_stuck_batches())
+        recent_faults = DashboardAlertService._get_recent_faults()
+
+        # Get stock summary
+        stock_summary = CombinedInventoryAlertService.get_unified_stock_summary()
+        low_stock_ingredients_count = stock_summary.get('low_stock_ingredients_count', 0)
+        low_stock_count = stock_summary.get('low_stock_count', 0)
+        out_of_stock_count = stock_summary.get('out_of_stock_count', 0)
+
+        # Get timer alerts
+        timer_alerts = DashboardAlertService._get_timer_alerts()
+
+        # Get incomplete batches
+        incomplete_batches_count = DashboardAlertService._get_incomplete_batches()
+
+        # Initialize alert counts
+        expired_total = expiration_data.get('expired_total', 0)
+        expiring_soon_total = expiration_data.get('expiring_soon_total', 0)
+
+        # Define alert preference flags
+        show_batch_alerts = (user_prefs.show_batch_alerts if user_prefs else True)
+        show_fault_alerts = (user_prefs.show_fault_alerts if user_prefs else True)
+        show_low_stock = (user_prefs.show_low_stock_alerts if user_prefs else True)
+        show_timer_alerts = (user_prefs.show_timer_alerts if user_prefs else True)
+
+
+        if not show_expiration:
+            expired_total = 0
+            expiring_soon_total = 0
+
+        # Build final alerts list
+        alerts = []
+
+        # 1. Expired inventory alert (if enabled and not dismissed)
+        if expired_total > 0 and 'expired_inventory' not in dismissed_alerts:
             alerts.append({
                 'priority': 'CRITICAL',
                 'type': 'expired_inventory',
                 'title': 'Expired Inventory',
-                'message': f"{expiration_data['expired_total']} items have expired and need attention",
+                'message': f"{expired_total} items have expired and need attention",
                 'action_url': '/expiration/alerts',
                 'action_text': 'Review Expired Items',
                 'dismissible': True
             })
 
         # CRITICAL: Stuck batches (in progress > 24 hours) - only if enabled in user preferences (default to True)
-        show_batch_alerts = (user_prefs.show_batch_alerts if user_prefs else True)
-        if show_batch_alerts:
-            stuck_batches = DashboardAlertService._get_stuck_batches()
-            logging.info(f"Stuck batches found: {len(stuck_batches)}")
-            if stuck_batches:
-                alerts.append({
-                    'priority': 'CRITICAL',
-                    'type': 'stuck_batches',
-                    'title': 'Stuck Batches',
-                    'message': f"{len(stuck_batches)} batches may be stuck",
-                    'action_url': '/batches/',
-                    'action_text': 'Review Batches',
-                    'dismissible': True
-                })
+        if show_batch_alerts and stuck_batches_count > 0:
+            alerts.append({
+                'priority': 'CRITICAL',
+                'type': 'stuck_batches',
+                'title': 'Stuck Batches',
+                'message': f"{stuck_batches_count} batches may be stuck",
+                'action_url': '/batches/',
+                'action_text': 'Review Batches',
+                'dismissible': True
+            })
 
         # CRITICAL: Recent fault log errors - only if enabled (default to True)
-        show_fault_alerts = (user_prefs.show_fault_alerts if user_prefs else True)
-        if show_fault_alerts:
-            recent_faults = DashboardAlertService._get_recent_faults()
-            if recent_faults > 0:
-                alerts.append({
-                    'priority': 'CRITICAL',
-                    'type': 'fault_errors',
-                    'title': 'System Faults',
-                    'message': f"{recent_faults} critical faults in last 24 hours",
-                    'action_url': '/faults/view_fault_log',
-                    'action_text': 'View Faults',
-                    'dismissible': True
-                })
+        if show_fault_alerts and recent_faults > 0:
+            alerts.append({
+                'priority': 'CRITICAL',
+                'type': 'fault_errors',
+                'title': 'System Faults',
+                'message': f"{recent_faults} critical faults in last 24 hours",
+                'action_url': '/faults/view_fault_log',
+                'action_text': 'View Faults',
+                'dismissible': True
+            })
 
         # HIGH: Items expiring soon (within expiration_warning_days) - only if enabled (default to True)
-        if show_expiration and expiration_data['expiring_soon_total'] > 0:
+        if show_expiration and expiring_soon_total > 0:
             alerts.append({
                 'priority': 'HIGH',
                 'type': 'expiring_soon',
                 'title': 'Expiring Soon',
-                'message': f"{expiration_data['expiring_soon_total']} items expire within {expiration_days} days",
+                'message': f"{expiring_soon_total} items expire within {expiration_days} days",
                 'action_url': '/expiration/alerts',
                 'action_text': 'Plan Usage',
                 'dismissible': True
             })
 
         # HIGH: Low stock items - only if enabled (default to True)
-        show_low_stock = (user_prefs.show_low_stock_alerts if user_prefs else True)
         if show_low_stock:
-            stock_summary = CombinedInventoryAlertService.get_unified_stock_summary()
-            logging.info(f"Stock summary: low_stock_ingredients_count={stock_summary.get('low_stock_ingredients_count', 'MISSING')}, low_stock_count={stock_summary.get('low_stock_count', 'MISSING')}, out_of_stock_count={stock_summary.get('out_of_stock_count', 'MISSING')}")
-
-            if stock_summary['low_stock_ingredients_count'] > 0:
+            if low_stock_ingredients_count > 0:
                 alerts.append({
                     'priority': 'HIGH',
                     'type': 'low_stock_ingredients',
                     'title': 'Low Stock Ingredients',
-                    'message': f"{stock_summary['low_stock_ingredients_count']} ingredients are running low",
+                    'message': f"{low_stock_ingredients_count} ingredients are running low",
                     'action_url': '/inventory/',
                     'action_text': 'View Inventory',
                     'dismissible': True
                 })
 
-            if stock_summary['low_stock_count'] > 0:
+            if low_stock_count > 0:
                 alerts.append({
                     'priority': 'HIGH',
                     'type': 'low_stock_products',
                     'title': 'Low Stock Products',
-                    'message': f"{stock_summary['affected_products_count']} products have low stock SKUs",
+                    'message': f"{stock_summary.get('affected_products_count', 0)} products have low stock SKUs",
                     'action_url': '/products/',
                     'action_text': 'View Products',
                     'dismissible': True
                 })
 
-            if stock_summary['out_of_stock_count'] > 0:
+            if out_of_stock_count > 0:
                 alerts.append({
                     'priority': 'CRITICAL',
                     'type': 'out_of_stock_products',
                     'title': 'Out of Stock Products',
-                    'message': f"{stock_summary['out_of_stock_count']} product SKUs are out of stock",
+                    'message': f"{out_of_stock_count} product SKUs are out of stock",
                     'action_url': '/products/',
                     'action_text': 'View Products',
                     'dismissible': True
                 })
 
         # HIGH: Expired timers - only if enabled (default to True)
-        show_timer_alerts = (user_prefs.show_timer_alerts if user_prefs else True)
-        if show_timer_alerts:
-            timer_alerts = DashboardAlertService._get_timer_alerts()
-            if timer_alerts['expired_count'] > 0:
-                # Get the first expired timer's batch for redirection
-                batch_url = '/batches/'
-                if timer_alerts['expired_timers']:
-                    first_timer = timer_alerts['expired_timers'][0]
-                    if hasattr(first_timer, 'batch_id') and first_timer.batch_id:
-                        batch_url = f'/batches/in-progress/{first_timer.batch_id}'
+        if show_timer_alerts and timer_alerts['expired_count'] > 0:
+            # Get the first expired timer's batch for redirection
+            batch_url = '/batches/'
+            if timer_alerts['expired_timers']:
+                first_timer = timer_alerts['expired_timers'][0]
+                if hasattr(first_timer, 'batch_id') and first_timer.batch_id:
+                    batch_url = f'/batches/in-progress/{first_timer.batch_id}'
 
-                alerts.append({
-                    'priority': 'HIGH',
-                    'type': 'expired_timers',
-                    'title': 'Timer Alert',
-                    'message': f"{timer_alerts['expired_count']} timers have expired",
-                    'action_url': batch_url,
-                    'action_text': 'View Batch',
-                    'dismissible': True
-                })
+            alerts.append({
+                'priority': 'HIGH',
+                'type': 'expired_timers',
+                'title': 'Timer Alert',
+                'message': f"{timer_alerts['expired_count']} timers have expired",
+                'action_url': batch_url,
+                'action_text': 'View Batch',
+                'dismissible': True
+            })
 
         # MEDIUM: Active batches needing attention - only if enabled (already set above)
         if show_batch_alerts:
@@ -189,30 +201,24 @@ class DashboardAlertService:
                 })
 
         # MEDIUM: Incomplete batches
-        incomplete_batches = DashboardAlertService._get_incomplete_batches()
-        if incomplete_batches:
+        if incomplete_batches_count > 0:
             alerts.append({
                 'priority': 'MEDIUM',
                 'type': 'incomplete_batches',
                 'title': 'Incomplete Batches',
-                'message': f"{incomplete_batches} batches need completion",
+                'message': f"{incomplete_batches_count} batches need completion",
                 'action_url': '/batches/',
                 'action_text': 'Complete Batches',
                 'dismissible': True
             })
 
-        # Debug total alerts before filtering
-        logging.info(f"Total alerts before filtering: {len(alerts)}")
 
         # Filter out dismissed alerts from this session
         if dismissed_alerts:
-            logging.info(f"Dismissed alerts: {dismissed_alerts}")
             alerts = [alert for alert in alerts if alert['type'] not in dismissed_alerts]
-            logging.info(f"Alerts after dismissal filtering: {len(alerts)}")
 
         # Sort by priority and limit
         alerts.sort(key=lambda x: DashboardAlertService.PRIORITY_LEVELS[x['priority']])
-        logging.info(f"Final alerts to return: {len(alerts[:max_alerts])}")
         return {
             'alerts': alerts[:max_alerts],
             'total_alerts': len(alerts),
@@ -235,11 +241,11 @@ class DashboardAlertService:
         recent_faults = DashboardAlertService._get_recent_faults()
         timer_alerts = DashboardAlertService._get_timer_alerts()
 
-        critical_count = (expiration_data['expired_total'] + stuck_batches + 
-                         (1 if recent_faults > 0 else 0) + 
+        critical_count = (expiration_data['expired_total'] + stuck_batches +
+                         (1 if recent_faults > 0 else 0) +
                          stock_summary['out_of_stock_count'])
-        high_count = (expiration_data['expiring_soon_total'] + stock_summary['low_stock_ingredients_count'] + 
-                     timer_alerts['expired_count'] + 
+        high_count = (expiration_data['expiring_soon_total'] + stock_summary['low_stock_ingredients_count'] +
+                     timer_alerts['expired_count'] +
                      stock_summary['low_stock_count'])
 
         return {
@@ -281,7 +287,7 @@ class DashboardAlertService:
 
             for fault in faults:
                 fault_time = datetime.fromisoformat(fault.get('timestamp', ''))
-                if (fault_time > cutoff_time and 
+                if (fault_time > cutoff_time and
                     fault.get('severity', '').lower() in ['critical', 'error']):
                     recent_critical += 1
 
