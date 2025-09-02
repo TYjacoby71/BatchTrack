@@ -31,7 +31,7 @@
 </div>
 {% endif %}
 
-<form method="post" action="{% if is_clone %}{{ url_for('recipes.create_recipe') }}{% elif is_variation %}{{ url_for('recipes.create_variation', recipe_id=recipe.parent_id) }}{% elif recipe and edit_mode %}{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}{% else %}{{ url_for('recipes.create_recipe') }}{% endif %}" id="recipeForm">
+<form method="post" action="{% if is_clone %}{{ url_for('recipes.new_recipe') }}{% elif is_variation %}{{ url_for('recipes.create_variation', recipe_id=recipe.parent_id) }}{% elif recipe and edit_mode %}{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}{% else %}{{ url_for('recipes.new_recipe') }}{% endif %}" id="recipeForm">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     {% if is_clone %}<input type="hidden" name="is_clone" value="true">{% endif %}
 
@@ -131,7 +131,7 @@
                 <select id="allowed_containers" name="allowed_containers[]" class="form-select container-select" multiple>
                     {% for container in all_ingredients if container.type == 'container' %}
                     <option value="{{ container.id }}" {% if recipe and recipe.allowed_containers and container.id in recipe.allowed_containers %}selected{% endif %}>
-                        {{ container.name }} ({{ container.capacity }} {{ container.capacity_unit }})
+                        {{ container.name }} ({{ container.storage_amount }} {{ container.storage_unit }})
                     </option>
                     {% endfor %}
                 </select>

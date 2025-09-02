@@ -1,177 +1,229 @@
-/**
- * Plan Production Main Script
- * 
- * Coordinates the production planning interface using the simplified module architecture.
- */
-
+// Plan Production Main Script - Modular Version
+import { StockChecker } from './modules/stock-check.js';
 import { ContainerManager } from './modules/container-management.js';
-import { ContainerProgressBar } from './modules/container-progress-bar.js';
-import { StockCheckManager } from './modules/stock-check-manager.js';
 
+console.log('Plan production JavaScript loaded');
 
 class PlanProductionApp {
     constructor() {
-        this.containerManager = null;
-        this.containerProgressBar = null;
-        this.stockChecker = null;
-        this.isInitialized = false;
-        
-        // Initialize recipe data from global window object
-        this.recipe = window.recipeData || null;
+        this.recipe = null;
         this.scale = 1.0;
-        
-        // Add validation state
-        this.stockChecked = false;
-        this.stockCheckPassed = false;
+        this.baseYield = 0;
+        this.unit = '';
+        this.batchType = '';
+        this.requiresContainers = false;
+        this.stockCheckResults = null;
+
+        // Initialize managers
+        this.containerManager = new ContainerManager(this);
+        this.stockChecker = new StockChecker(this);
 
         this.init();
     }
 
-    async init() {
-        if (this.isInitialized) return;
+    init() {
+        console.log('🔍 INIT: Starting plan production app');
+        console.log('🔍 INIT DEBUG: Container manager:', !!this.containerManager);
+        console.log('🔍 INIT DEBUG: Stock checker:', !!this.stockChecker);
 
-        try {
-            console.log('🔧 PLAN_PRODUCTION: Initializing modules...');
+        this.loadRecipeData();
+        this.bindEvents();
+        this.updateProjectedYield(); // Initialize projected yield display
+        this.updateValidation();
+    }
 
-            // Initialize stock checker with proper separation
-            this.stockChecker = new StockCheckManager(this);
-            console.log('🔍 PLAN_PRODUCTION: Initializing stock checker...');
-            this.stockChecker.bindEvents();
-
-            // Initialize container manager separately
-            this.containerManager = new ContainerManager();
-            console.log('🔍 PLAN_PRODUCTION: Initializing container manager...');
-
-            // Ensure both systems are independent
-            console.log('🔍 PLAN_PRODUCTION: Both stock check and container management initialized independently');
-
-
-            // Make globally available for debugging
-            window.containerManager = this.containerManager;
-            window.stockChecker = this.stockChecker; // Make stockChecker globally available
-            window.containerProgressBar = this.containerProgressBar;
-
-            // Initialize event listeners
-            this.initializeEventListeners();
-
-            // Load initial data if container management is enabled
-            const requiresContainers = document.getElementById('requiresContainers');
-            if (requiresContainers && requiresContainers.checked) {
-                await this.loadInitialData();
-            }
-
-            this.isInitialized = true;
-            console.log('Plan Production App initialized successfully');
-
-        } catch (error) {
-            console.error('Error initializing Plan Production App:', error);
-            this.showError('Failed to initialize production planning interface');
+    loadRecipeData() {
+        // Get recipe data from template
+        const recipeData = window.recipeData;
+        if (recipeData) {
+            this.recipe = recipeData;
+            this.baseYield = parseFloat(recipeData.yield_amount) || 0;
+            this.unit = recipeData.yield_unit || '';
+            console.log('🔍 RECIPE: Loaded recipe data:', this.recipe);
         }
     }
 
-    initializeEventListeners() {
-        // Scale factor changes
-        const scaleInput = document.getElementById('scaleFactorInput');
+    bindEvents() {
+        // Scale input
+        const scaleInput = document.getElementById('batchScale');
         if (scaleInput) {
             scaleInput.addEventListener('input', () => {
-                this.handleScaleChange();
+                const newScale = parseFloat(scaleInput.value) || 1.0;
+                console.log('🔍 SCALE DEBUG: Scale changed from', this.scale, 'to', newScale);
+                this.scale = newScale;
+                this.updateProjectedYield();
+
+                // Update container plan if containers are required
+                if (this.requiresContainers) {
+                    console.log('🔍 SCALE DEBUG: Updating container plan for new scale');
+                    // Assuming ContainerManager now delegates to ContainerPlanFetcher
+                    if (this.containerManager && typeof this.containerManager.fetchContainerPlan === 'function') {
+                        this.containerManager.fetchContainerPlan();
+                    } else {
+                        console.error('🚨 SCALE DEBUG ERROR: Container manager or fetchContainerPlan not available');
+                    }
+                }
+            });
+        }
+
+        // Batch type select
+        const batchTypeSelect = document.getElementById('batchType');
+        if (batchTypeSelect) {
+            batchTypeSelect.addEventListener('change', () => {
+                this.batchType = batchTypeSelect.value;
+                this.updateValidation();
             });
         }
 
         // Container requirement toggle
-        const requiresContainers = document.getElementById('requiresContainers');
-        if (requiresContainers) {
-            requiresContainers.addEventListener('change', () => {
-                this.handleContainerToggle();
+        const containerToggle = document.getElementById('requiresContainers');
+        console.log('🔍 CONTAINER TOGGLE DEBUG: Element found:', !!containerToggle);
+
+        if (containerToggle) {
+            console.log('🔍 CONTAINER TOGGLE DEBUG: Adding event listener');
+            containerToggle.addEventListener('change', () => {
+                this.requiresContainers = containerToggle.checked;
+                console.log('🔍 CONTAINER TOGGLE: Requirements changed to:', this.requiresContainers);
+
+                const containerCard = document.getElementById('containerManagementCard');
+                console.log('🔍 CONTAINER TOGGLE DEBUG: Container card found:', !!containerCard);
+
+                if (containerCard) {
+                    containerCard.style.display = this.requiresContainers ? 'block' : 'none';
+                    console.log('🔍 CONTAINER TOGGLE: Card display set to:', containerCard.style.display);
+                    console.log('🔍 CONTAINER TOGGLE DEBUG: Card visibility classes:', containerCard.className);
+                }
+
+                if (this.requiresContainers) {
+                    console.log('🔍 CONTAINER TOGGLE: Fetching container plan...');
+                    console.log('🔍 CONTAINER TOGGLE DEBUG: Container manager available:', !!this.containerManager);
+                    if (this.containerManager && typeof this.containerManager.fetchContainerPlan === 'function') {
+                        this.containerManager.fetchContainerPlan();
+                    } else {
+                        console.error('🚨 CONTAINER TOGGLE ERROR: Container manager or fetchContainerPlan not available');
+                    }
+                } else {
+                    console.log('🔍 CONTAINER TOGGLE: Clearing container results...');
+                    if (this.containerManager && typeof this.containerManager.clearContainerResults === 'function') {
+                        this.containerManager.clearContainerResults();
+                    } else {
+                        console.error('🚨 CONTAINER TOGGLE ERROR: Container manager or clearContainerResults not available');
+                    }
+                }
+
+                this.updateValidation();
+            });
+        } else {
+            console.error('🚨 CONTAINER TOGGLE ERROR: requiresContainers element not found');
+            // Try to find elements with similar IDs for debugging
+            const allInputs = document.querySelectorAll('input[type="checkbox"]');
+            console.log('🔍 CONTAINER TOGGLE DEBUG: All checkboxes found:', allInputs.length);
+            allInputs.forEach((input, index) => {
+                console.log(`🔍 CONTAINER TOGGLE DEBUG: Checkbox ${index}: id="${input.id}", name="${input.name}"`);
             });
         }
 
-        // Stock check is handled by StockCheckManager
-    }
-
-    async loadInitialData() {
-        try {
-            console.log('🔧 PLAN_PRODUCTION: Loading initial container data...');
-            if (this.containerManager) {
-                await this.containerManager.refreshContainerOptions();
-            }
-        } catch (error) {
-            console.error('🔧 PLAN_PRODUCTION: Error loading initial data:', error);
+        // Form submission
+        const form = document.getElementById('planProductionForm');
+        if (form) {
+            form.addEventListener('submit', (e) => this.handleFormSubmit(e));
         }
-    }
 
-    
-
-    async handleScaleChange() {
-        // Update scale from input
-        this.scale = this.getCurrentScale();
-        console.log('🔧 PLAN_PRODUCTION: Scale changed to:', this.scale);
-
-        // Refresh container analysis when scale changes
-        if (this.containerManager) {
-            await this.containerManager.refreshContainerOptions();
-        }
-    }
-
-    async handleContainerToggle() {
-        const requiresContainersToggle = document.getElementById('requiresContainers');
-        const containerManagementCard = document.getElementById('containerManagementCard');
-
-        if (!requiresContainersToggle || !containerManagementCard) return;
-
-        console.log('🔧 PLAN_PRODUCTION: Container toggle changed:', requiresContainersToggle.checked);
-
-        if (requiresContainersToggle.checked) {
-            // Show container management card
-            containerManagementCard.style.display = 'block';
-
-            // Refresh container options
-            if (this.containerManager) {
-                await this.containerManager.refreshContainerOptions();
-            }
+        // Bind module events
+        if (this.containerManager && typeof this.containerManager.bindEvents === 'function') {
+            this.containerManager.bindEvents();
         } else {
-            // Hide container management card
-            containerManagementCard.style.display = 'none';
-
-            // Clear container results
-            if (this.containerManager && this.containerManager.renderer) {
-                this.containerManager.renderer.clearResults();
-            }
+            console.warn('WARN: ContainerManager.bindEvents not found or not applicable.');
+        }
+        if (this.stockChecker && typeof this.stockChecker.bindEvents === 'function') {
+            this.stockChecker.bindEvents();
+        } else {
+            console.warn('WARN: StockChecker.bindEvents not found or not applicable.');
         }
     }
 
-    getCurrentScale() {
-        const scaleInput = document.getElementById('scaleFactorInput') || document.getElementById('scaleInput');
-        return scaleInput ? parseFloat(scaleInput.value) || 1.0 : 1.0;
-    }
+    updateProjectedYield() {
+        const projectedYieldElement = document.getElementById('projectedYield');
+        console.log('🔍 PROJECTED YIELD DEBUG: Element found:', !!projectedYieldElement);
+        console.log('🔍 PROJECTED YIELD DEBUG: Base yield:', this.baseYield, 'Scale:', this.scale, 'Unit:', this.unit);
 
-    getCSRFToken() {
-        return document.querySelector('input[name="csrf_token"]')?.value || '';
+        if (projectedYieldElement) {
+            const projectedValue = (this.baseYield * this.scale).toFixed(2);
+            projectedYieldElement.textContent = `${projectedValue} ${this.unit}`;
+            console.log('🔍 PROJECTED YIELD DEBUG: Updated to:', `${projectedValue} ${this.unit}`);
+        }
     }
 
     updateValidation() {
-        // Update UI based on validation state
-        console.log('🔧 PLAN_PRODUCTION: Validation state updated - stockChecked:', this.stockChecked, 'stockCheckPassed:', this.stockCheckPassed);
+        // Basic validation - check if batch type is selected
+        const batchTypeSelect = document.getElementById('batchType');
+        const isValid = batchTypeSelect && batchTypeSelect.value !== '';
+
+        console.log('🔍 VALIDATION: Checking form validity...');
+        console.log('🔍 VALIDATION: Valid:', isValid, 'Reasons:', isValid ? [] : ['Select batch type'], 'Warnings:', []);
+
+        // You can add more validation logic here as needed
+        return isValid;
     }
 
-    showError(message) {
-        console.error('🔧 PLAN_PRODUCTION: Error:', message);
+    handleFormSubmit(e) {
+        e.preventDefault();
 
-        // Show error in container management if available
-        if (this.containerManager) {
-            this.containerManager.showError(message);
+        if (!this.batchType) {
+            alert('Please select a batch type');
+            return;
         }
 
-        // Also show in stock check area
-        const stockCheckResults = document.getElementById('stockCheckResults');
-        if (stockCheckResults) {
-            stockCheckResults.innerHTML = `<div class="alert alert-danger">Error: ${message}</div>`;
+        console.log('Form submitted with data:', {
+            scale: this.scale,
+            batchType: this.batchType,
+            requiresContainers: this.requiresContainers
+        });
+
+        // Additional submission logic might go here, potentially using other modules.
+    }
+
+    // Utility method for API calls
+    async apiCall(url, data = null) {
+        const options = {
+            method: data ? 'POST' : 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': this.getCSRFToken()
+            }
+        };
+
+        if (data) {
+            options.body = JSON.stringify(data);
         }
+
+        try {
+            const response = await fetch(url, options);
+            if (!response.ok) {
+                const errorData = await response.json();
+                console.error(`API Error (${response.status}):`, errorData);
+                throw new Error(`API request failed: ${response.statusText}`);
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('API Call Exception:', error);
+            throw error; // Re-throw the error to be handled by the caller
+        }
+    }
+
+    getCSRFToken() {
+        return document.querySelector('meta[name="csrf-token"]')?.content ||
+               document.querySelector('input[name="csrf_token"]')?.value;
     }
 }
 
-// Initialize the app when DOM is ready
-document.addEventListener('DOMContentLoaded', () => {
-    console.log('🔧 PLAN_PRODUCTION: DOM loaded, initializing app...');
-    new PlanProductionApp();
+// Initialize when DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+    // Check if recipeData is available before initializing
+    if (window.recipeData) {
+        window.planProductionApp = new PlanProductionApp();
+    } else {
+        console.error('🚨 DOMContentLoaded Error: window.recipeData not found. Cannot initialize PlanProductionApp.');
+        // Optionally, provide a fallback or disable functionality if recipeData is essential.
+    }
 });

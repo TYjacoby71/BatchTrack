@@ -1,1 +1,0 @@
-const response = await fetch(`/production-planning/${recipeId}/stock/check`, {

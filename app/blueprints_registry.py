@@ -31,7 +31,6 @@ def register_blueprints(app):
     safe_register_blueprint('app.blueprints.admin.admin_bp', 'admin_bp', '/admin', 'Admin')
     safe_register_blueprint('app.blueprints.developer.developer_bp', 'developer_bp', '/developer', 'Developer')
     safe_register_blueprint('app.blueprints.inventory.inventory_bp', 'inventory_bp', '/inventory', 'Inventory')
-    # Assuming recipe blueprint routes are now strictly for recipes
     safe_register_blueprint('app.blueprints.recipes.recipes_bp', 'recipes_bp', '/recipes', 'Recipes')
     safe_register_blueprint('app.blueprints.batches.batches_bp', 'batches_bp', '/batches', 'Batches')
     safe_register_blueprint('app.blueprints.organization.routes.organization_bp', 'organization_bp', '/organization', 'Organization')
@@ -56,9 +55,6 @@ def register_blueprints(app):
     safe_register_blueprint('app.blueprints.products.sku.sku_bp', 'sku_bp', '/products/sku', 'SKU Management')
     safe_register_blueprint('app.blueprints.products.product_variants.product_variants_bp', 'product_variants_bp', '/product-variants', 'Product Variants')
     safe_register_blueprint('app.blueprints.products.product_alerts_bp.product_alerts_bp', 'product_alerts_bp', '/product-alerts', 'Product Alerts')
-
-    # Register the new production planning blueprint
-    safe_register_blueprint('app.blueprints.production_planning.production_planning_bp', 'production_planning_bp', '/production-planning', 'Production Planning')
 
     # API blueprints - these are often problematic
     safe_register_blueprint('app.blueprints.api.public.public_api_bp', 'public_api_bp', '/api/public', 'Public API')

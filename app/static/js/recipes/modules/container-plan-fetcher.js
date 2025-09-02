@@ -1,10 +1,8 @@
 
-/**
- * Container Plan Fetcher - Handles API calls for container planning
- */
+// Container Plan Fetcher - Handles API calls for container planning
 export class ContainerPlanFetcher {
     constructor(containerManager) {
-        this.containerManager = containerManager;
+        this.container = containerManager;
         this.fetchingPlan = false;
         this.lastPlanResult = null;
     }
@@ -19,56 +17,53 @@ export class ContainerPlanFetcher {
 
         this.fetchingPlan = true;
 
-        if (!window.recipeData?.id) {
+        if (!this.container.main.recipe || !this.container.main.recipe.id) {
             console.error('🚨 CONTAINER PLAN: Recipe data not available');
             this.fetchingPlan = false;
             return null;
         }
 
-        const scale = this.containerManager.getCurrentScale();
-        const recipeId = window.recipeData.id;
+        if (!this.container.main.requiresContainers) {
+            console.log('🔍 CONTAINER PLAN: Recipe does not require containers');
+            this.fetchingPlan = false;
+            return null;
+        }
+
+        const scale = this.container.main.scale || parseFloat(document.getElementById('scaleInput')?.value) || 1;
+        const yieldAmount = (this.container.main.recipe.yield_amount || 1) * scale;
+        
+        console.log('🔍 CONTAINER PLAN: Fetching for recipe', this.container.main.recipe.id, 'scale:', scale, 'yield:', yieldAmount);
 
         try {
-            const response = await fetch(`/production-planning/${recipeId}/auto-fill-containers`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': document.querySelector('input[name="csrf_token"]')?.value || 
-                                   document.querySelector('meta[name=csrf-token]')?.getAttribute('content') || ''
-                },
-                body: JSON.stringify({
-                    recipe_id: recipeId,
-                    scale: scale
-                })
+            const data = await this.container.main.apiCall(`/recipes/${this.container.main.recipe.id}/auto-fill-containers`, {
+                scale: scale,
+                yield_amount: yieldAmount,
+                yield_unit: this.container.main.unit
             });
 
-            console.log('🔧 CONTAINER_MANAGEMENT: Response status:', response.status);
-
-            const contentType = response.headers.get('content-type');
-            if (!contentType || !contentType.includes('application/json')) {
-                throw new Error(`Expected JSON response, got ${contentType}`);
-            }
-
-            const result = await response.json();
-
-            if (!response.ok) {
-                throw new Error(result.error || 'Failed to fetch container options');
-            }
-
-            console.log('🔧 CONTAINER_FETCHER: Received data:', result);
-            this.lastPlanResult = result;
-            return result;
-
-        } catch (error) {
-            console.error('🔧 CONTAINER_FETCHER: Network/parsing error:', error);
-            throw error;
-        } finally {
             this.fetchingPlan = false;
+
+            if (data.success) {
+                console.log('🔍 CONTAINER PLAN: Plan successful');
+                this.container.containerPlan = data;
+                this.lastPlanResult = data;
+                this.container.displayContainerPlan();
+                return data;
+            } else {
+                console.log('🔍 CONTAINER PLAN: Plan failed:', data.error);
+                this.container.displayContainerError(data.error);
+                return null;
+            }
+        } catch (error) {
+            console.error('🚨 CONTAINER PLAN: Network error:', error);
+            this.container.displayContainerError('Network error while loading containers');
+            this.fetchingPlan = false;
+            return null;
         }
     }
 
-    getCurrentScale() {
-        const scaleInput = document.getElementById('scaleInput') || document.getElementById('scaleFactorInput');
-        return scaleInput ? parseFloat(scaleInput.value) || 1.0 : 1.0;
+    clearCache() {
+        this.lastPlanResult = null;
+        this.fetchingPlan = false;
     }
 }
