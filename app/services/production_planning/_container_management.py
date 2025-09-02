@@ -44,7 +44,7 @@ def analyze_container_options(
         container_options = _load_suitable_containers(recipe, org_id, total_yield, yield_unit)
         
         if not container_options:
-            raise ValueError("No suitable containers found for this recipe")
+            raise ValueError(f"No containers with valid capacity data found for recipe '{recipe.name}'. Check that containers have capacity and capacity_unit values, and are convertible to {yield_unit}.")
 
         # Create greedy fill strategy
         strategy = _create_greedy_strategy(container_options, total_yield, yield_unit)
@@ -87,13 +87,13 @@ def _load_suitable_containers(recipe: Recipe, org_id: int, total_yield: float, y
         storage_unit = getattr(container, 'capacity_unit', None)
 
         if not storage_capacity or not storage_unit:
-            logger.warning(f"Container {container.name} missing capacity data")
+            logger.warning(f"Container {container.name} missing capacity data - skipping")
             continue
 
         # Convert capacity to recipe yield units
         converted_capacity = _convert_capacity(storage_capacity, storage_unit, yield_unit)
         if converted_capacity <= 0:
-            logger.warning(f"Container {container.name} capacity conversion failed")
+            logger.warning(f"Container {container.name} capacity conversion failed - skipping")
             continue
 
         container_options.append({
@@ -112,6 +112,11 @@ def _load_suitable_containers(recipe: Recipe, org_id: int, total_yield: float, y
 
     # Sort by capacity (largest first for greedy algorithm)
     container_options.sort(key=lambda x: x['capacity'], reverse=True)
+    
+    # Check if we have any valid containers after filtering
+    if not container_options:
+        logger.warning(f"Recipe '{recipe.name}' has {len(containers)} containers configured, but none have valid capacity data or are convertible to {yield_unit}")
+        # Return empty list instead of raising error - let caller handle
     
     return container_options
 
