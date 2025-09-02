@@ -10,7 +10,7 @@ from alembic import op
 import sqlalchemy as sa
 
 # revision identifiers
-revision = 'add_container_capacity'
+revision = 'add_capacity_fields'
 down_revision = 'add_comprehensive_stats'
 branch_labels = None
 depends_on = None
