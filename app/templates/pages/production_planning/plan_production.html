@@ -3,6 +3,7 @@
 {% block title %}Plan Production - {{ recipe.name }}{% endblock %}
 
 {% block content %}
+<!-- Template Debug: plan_production.html loaded successfully -->
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 <div class="container-fluid mt-4" data-recipe-id="{{ recipe.id }}" data-recipe-name="{{ recipe.name }}" data-base-yield="{{ recipe.predicted_yield }}" data-yield-unit="{{ recipe.predicted_yield_unit }}">
     <!-- Page Header -->
