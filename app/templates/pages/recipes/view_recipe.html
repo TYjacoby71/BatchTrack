@@ -75,6 +75,7 @@
 </div>
 
 <div class="actions">
+    <a href="{{ url_for('production_planning.plan_production_route', recipe_id=recipe.id) }}" class="btn btn-primary">Plan Production</a>
     <form method="get" action="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}" style="display: inline;">
         <button type="submit" 
                 class="btn btn-primary" 

@@ -1,0 +1,80 @@
+
+{% extends "layout.html" %}
+{% block title %}Plan Production - {{ recipe.name }}{% endblock %}
+
+{% block content %}
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<div class="container-fluid mt-4" data-recipe-id="{{ recipe.id }}" data-recipe-name="{{ recipe.name }}" data-base-yield="{{ recipe.predicted_yield }}" data-yield-unit="{{ recipe.predicted_yield_unit }}">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="fas fa-cogs me-2"></i>Plan Production: {{ recipe.name }}</h2>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('app_routes.dashboard') }}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('recipes.list_recipes') }}">Recipes</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('recipes.view_recipe', recipe_id=recipe.id) }}">{{ recipe.name }}</a></li>
+                    <li class="breadcrumb-item active">Plan Production</li>
+                </ol>
+            </nav>
+        </div>
+        <div>
+            <a href="{{ url_for('recipes.view_recipe', recipe_id=recipe.id) }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Recipe
+            </a>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="row g-4">
+        <!-- Left Column (now part of single column layout) -->
+        <div class="col-12">
+            <!-- Batch Configuration Card -->
+            {% include 'components/production/batch_config_card.html' %}
+
+            <!-- Container Management Card - Hidden by default, shown when requiresContainers is true -->
+            {% include 'components/production/container_management_card.html' %}
+
+            <!-- Stock Check Card -->
+                    <div class="card mb-4" id="stockCheckCard">
+                        <div class="card-header">
+                            <h5 class="mb-0">
+                                <i class="fas fa-clipboard-check"></i> Stock Availability Check
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted">Check if you have enough ingredients in stock for this recipe at the current scale.</p>
+
+                            <button type="button" class="btn btn-primary" id="stockCheckBtn">
+                                <i class="fas fa-search"></i> Check Stock Availability
+                            </button>
+
+                            <div id="stockCheckResults" class="mt-3">
+                                <!-- Results will be populated here -->
+                            </div>
+
+                            <div id="stockCheckStatus" class="mt-3">
+                                <!-- Status will be shown here -->
+                            </div>
+                        </div>
+                    </div>
+
+            <!-- Batch Actions -->
+            {% include 'components/production/batch_actions.html' %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Set up recipe data for the module
+window.recipeData = {
+    id: {{ recipe.id }},
+    name: "{{ recipe.name }}",
+    yield_amount: {{ recipe.predicted_yield or 0 }},
+    yield_unit: "{{ recipe.predicted_yield_unit or 'units' }}"
+};
+</script>
+<script type="module" src="{{ url_for('static', filename='js/production_planning/plan_production.js') }}"></script>
+{% endblock %}
