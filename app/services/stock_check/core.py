@@ -209,6 +209,7 @@ class UniversalStockCheckService:
             all_available = not (has_insufficient or has_errors)
             
             response = {
+                'success': True,
                 'status': overall_status,
                 'all_ok': all_available,
                 'stock_check': stock_results,
