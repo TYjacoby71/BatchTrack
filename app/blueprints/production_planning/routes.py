@@ -60,48 +60,48 @@ def plan_production(recipe_id):
 @login_required
 @require_permission('app.recipes.plan_production')
 def auto_fill_containers(recipe_id):
-    """Auto-fill container suggestions for production planning"""
+    """Auto-fill container analysis endpoint"""
     try:
-        logger.info(f"🔧 AUTO-FILL: Starting auto-fill containers for recipe {recipe_id}")
+        # Check permission and return JSON error instead of redirecting
+        if not current_user.has_permission('app.recipes.plan_production'):
+            return jsonify({'error': 'Permission denied: app.recipes.plan_production required'}), 403
 
         data = request.get_json()
         if not data:
-            logger.error("🔧 AUTO-FILL: No data provided in request")
-            return jsonify({'success': False, 'error': 'No data provided'}), 400
+            return jsonify({'error': 'No data provided'}), 400
 
         scale = data.get('scale', 1.0)
-        organization_id = get_effective_org_id()
+        preferred_container_id = data.get('preferred_container_id')
 
-        logger.info(f"🔧 AUTO-FILL: Recipe {recipe_id}, Scale {scale}, Org {organization_id}")
+        # Get the recipe
+        recipe = Recipe.query.filter_by(
+            id=recipe_id,
+            organization_id=current_user.organization_id
+        ).first()
 
-        # Use the production planning service
-        from app.services.production_planning import ProductionPlanningService
+        if not recipe:
+            return jsonify({'error': 'Recipe not found'}), 404
 
-        logger.info("🔧 AUTO-FILL: Calling ProductionPlanningService.auto_fill_containers")
+        # Use the container management service
+        from app.services.production_planning._container_management import analyze_container_options
 
-        result = ProductionPlanningService.auto_fill_containers(
-            recipe_id=recipe_id,
+        strategy, options = analyze_container_options(
+            recipe=recipe,
             scale=scale,
-            organization_id=organization_id
+            organization_id=current_user.organization_id,
+            preferred_container_id=preferred_container_id,
+            api_format=True
         )
 
-        logger.info(f"🔧 AUTO-FILL: Service returned: {result}")
-
-        if result.get('success'):
-            logger.info("🔧 AUTO-FILL: Success - returning result")
-            return jsonify(result)
-        else:
-            logger.error(f"🔧 AUTO-FILL: Service failed: {result}")
-            return jsonify(result), 400
+        return jsonify({
+            'success': True,
+            'strategy': strategy,
+            'options': options
+        })
 
     except Exception as e:
-        logger.error(f"🔧 AUTO-FILL: Exception in auto_fill_containers: {e}")
-        import traceback
-        logger.error(f"🔧 AUTO-FILL: Traceback: {traceback.format_exc()}")
-        return jsonify({
-            'success': False, 
-            'error': f'Internal server error: {str(e)}'
-        }), 500
+        logger.error(f"Error in auto_fill_containers: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
 
 @production_planning_bp.route('/<int:recipe_id>/stock/check', methods=['POST'])
 @login_required

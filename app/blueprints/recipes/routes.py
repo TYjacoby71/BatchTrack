@@ -46,7 +46,7 @@ def create_recipe():
 
     # GET request - show form
     form_data = _get_recipe_form_data()
-    return render_template('pages/recipes/create_recipe.html', recipe=None, **form_data)
+    return render_template('pages/recipes/recipe_form.html', recipe=None, **form_data)
 
 @recipes_bp.route('/')
 @login_required
@@ -116,7 +116,7 @@ def create_variation(recipe_id):
         form_data = _get_recipe_form_data()
         new_variation = _create_variation_template(parent)
 
-        return render_template('pages/recipes/create_recipe.html',
+        return render_template('pages/recipes/recipe_form.html',
                              recipe=new_variation,
                              is_variation=True,
                              parent_recipe=parent,
@@ -191,7 +191,7 @@ def clone_recipe(recipe_id):
             # Don't save to DB yet - let user edit first
             db.session.rollback()
 
-            return render_template('pages/recipes/create_recipe.html',
+            return render_template('pages/recipes/recipe_form.html',
                                 recipe=new_recipe,
                                 is_clone=True,
                                 ingredient_prefill=ingredients,
