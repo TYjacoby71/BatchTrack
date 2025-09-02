@@ -157,13 +157,23 @@ export class ContainerManager {
 
     renderAutoFillStrategy() {
         const autoSection = this.container.querySelector('#autoContainerSection');
-        if (!autoSection || !this.autoFillStrategy) return;
+        if (!autoSection) return;
+
+        if (!this.autoFillStrategy || !this.autoFillStrategy.container_selection) {
+            autoSection.innerHTML = `
+                <div class="text-center text-muted py-3">
+                    <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+                    <p>No container options available. Check your container inventory.</p>
+                </div>
+            `;
+            return;
+        }
 
         const containersHtml = this.autoFillStrategy.container_selection.map((container, index) => `
             <div class="container-item mb-2 p-2 border rounded">
                 <div class="d-flex justify-content-between align-items-center">
                     <span><strong>${container.container_name}</strong></span>
-                    <span class="text-muted">${container.capacity} units</span>
+                    <span class="text-muted">${container.capacity} ${container.capacity_unit || 'units'}</span>
                 </div>
                 <div class="progress mt-1" style="height: 8px;">
                     <div class="progress-bar" role="progressbar" 
@@ -186,7 +196,17 @@ export class ContainerManager {
 
     renderManualSelection() {
         const manualSection = this.container.querySelector('#manualContainerSection');
-        if (!manualSection || !this.allContainerOptions) return;
+        if (!manualSection) return;
+
+        if (!this.allContainerOptions || this.allContainerOptions.length === 0) {
+            manualSection.innerHTML = `
+                <div class="text-center text-muted py-3">
+                    <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+                    <p>No container options available. Check your container inventory.</p>
+                </div>
+            `;
+            return;
+        }
 
         const optionsHtml = this.allContainerOptions.map(option => `
             <div class="container-option mb-2 p-2 border rounded" data-container-id="${option.container_id}">
@@ -194,10 +214,12 @@ export class ContainerManager {
                     <label class="form-check-label">
                         <input type="checkbox" class="form-check-input me-2" 
                                value="${option.container_id}"
-                               onchange="containerManager.updateManualSelection()">
+                               data-container-name="${option.container_name}"
+                               data-capacity="${option.capacity}"
+                               data-capacity-unit="${option.capacity_unit || 'units'}">
                         <strong>${option.container_name}</strong>
                     </label>
-                    <span class="text-muted">${option.capacity} units</span>
+                    <span class="text-muted">${option.capacity} ${option.capacity_unit || 'units'}</span>
                 </div>
                 <div class="mt-1">
                     <small class="text-muted">
@@ -213,14 +235,50 @@ export class ContainerManager {
             ${optionsHtml}
             <div id="manualSelectionSummary" class="mt-3"></div>
         `;
+
+        // Add event listeners for manual checkboxes
+        const checkboxes = manualSection.querySelectorAll('input[type="checkbox"]');
+        checkboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', () => {
+                this.updateManualSelection();
+            });
+        });
     }
 
     updateManualSelection() {
         const checkboxes = this.container.querySelectorAll('#manualContainerSection input[type="checkbox"]:checked');
         this.selectedContainers = Array.from(checkboxes).map(cb => {
             const containerId = parseInt(cb.value);
-            return this.allContainerOptions.find(option => option.container_id === containerId);
+            const containerName = cb.dataset.containerName;
+            const capacity = parseFloat(cb.dataset.capacity);
+            const capacityUnit = cb.dataset.capacityUnit;
+            
+            // Find full option or create minimal one
+            const fullOption = this.allContainerOptions.find(option => option.container_id === containerId);
+            
+            return fullOption || {
+                container_id: containerId,
+                container_name: containerName,
+                capacity: capacity,
+                capacity_unit: capacityUnit
+            };
         }).filter(Boolean);
+
+        // Update summary
+        const summaryDiv = this.container.querySelector('#manualSelectionSummary');
+        if (summaryDiv) {
+            if (this.selectedContainers.length > 0) {
+                const totalCapacity = this.selectedContainers.reduce((sum, container) => sum + container.capacity, 0);
+                summaryDiv.innerHTML = `
+                    <div class="alert alert-info">
+                        <strong>Selected:</strong> ${this.selectedContainers.length} container type(s)<br>
+                        <strong>Total Capacity:</strong> ${totalCapacity.toFixed(2)} ${this.selectedContainers[0]?.capacity_unit || 'units'}
+                    </div>
+                `;
+            } else {
+                summaryDiv.innerHTML = '';
+            }
+        }
 
         // Calculate metrics for selected containers
         this.calculateManualMetrics();
@@ -287,11 +345,24 @@ export class ContainerManager {
     }
 
     showError(message) {
-        const errorDiv = this.container.querySelector('#containerError');
-        if (errorDiv) {
-            errorDiv.innerHTML = `<div class="alert alert-danger">${message}</div>`;
-            errorDiv.style.display = 'block';
+        let errorDiv = this.container.querySelector('#containerError');
+        if (!errorDiv) {
+            // Create error div if it doesn't exist
+            errorDiv = document.createElement('div');
+            errorDiv.id = 'containerError';
+            errorDiv.className = 'mt-3';
+            this.container.querySelector('.card-body').appendChild(errorDiv);
         }
+        
+        errorDiv.innerHTML = `<div class="alert alert-danger">${message}</div>`;
+        errorDiv.style.display = 'block';
+        
+        // Auto-hide after 10 seconds
+        setTimeout(() => {
+            if (errorDiv) {
+                errorDiv.style.display = 'none';
+            }
+        }, 10000);
     }
 
     getSelectedContainers() {
