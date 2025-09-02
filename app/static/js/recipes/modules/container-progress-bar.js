@@ -1,124 +1,133 @@
 
 /**
- * Container Progress Bar Module - Display Logic Only
+ * Container Progress Bar Module - Pure Display Logic Only
  * 
  * Displays containment and efficiency metrics from backend data.
- * No business logic calculations performed here.
+ * No calculations performed here - just visual display.
  */
-
 export class ContainerProgressBar {
-    constructor(containerId = 'containerProgressBar') {
-        this.container = document.getElementById(containerId);
-        this.progressBar = null;
-        this.messageArea = null;
-        
-        this.initializeElements();
+    constructor() {
+        this.progressBar = document.getElementById('containmentProgressBar');
+        this.percentageLabel = document.getElementById('containmentPercent');
+        this.messageElement = document.getElementById('liveContainmentMessage');
+        this.warningElement = document.getElementById('containmentIssue');
+        this.warningText = document.getElementById('containmentIssueText');
     }
-    
-    initializeElements() {
-        if (!this.container) return;
-        
-        this.progressBar = this.container.querySelector('.progress-bar');
-        this.messageArea = this.container.querySelector('#containerMessages');
-        
-        if (!this.progressBar || !this.messageArea) {
-            console.warn('Progress bar elements not found');
-        }
-    }
-    
+
     updateProgress(metrics) {
-        if (!metrics || !this.progressBar || !this.messageArea) return;
+        console.log('🔧 PROGRESS_BAR: Updating with metrics:', metrics);
+
+        if (!this.progressBar || !this.percentageLabel) {
+            console.warn('🔧 PROGRESS_BAR: Required elements not found');
+            return;
+        }
+
+        const containmentPercentage = Math.min(100, Math.max(0, metrics.containment_percentage || 0));
+        const totalCapacity = metrics.total_capacity || 0;
+        const totalContainers = metrics.total_containers || 0;
+        const warnings = metrics.warnings || [];
+
+        // Update progress bar
+        this.progressBar.style.width = `${containmentPercentage}%`;
+        this.progressBar.textContent = `${containmentPercentage.toFixed(1)}%`;
         
-        const {
-            containment_percentage,
-            last_container_fill_percentage,
-            total_containers,
-            total_capacity
-        } = metrics;
+        // Update percentage label
+        this.percentageLabel.textContent = `${containmentPercentage.toFixed(1)}%`;
+
+        // Set progress bar color based on percentage
+        this.updateProgressBarColor(containmentPercentage);
+
+        // Update containment message
+        this.updateContainmentMessage(containmentPercentage, totalCapacity, totalContainers);
+
+        // Show warnings if any
+        this.displayWarnings(warnings, containmentPercentage);
+    }
+
+    updateProgressBarColor(percentage) {
+        // Remove existing color classes
+        this.progressBar.classList.remove('bg-success', 'bg-warning', 'bg-danger', 'bg-info');
         
-        // Update progress bar (containment percentage)
-        const displayPercentage = Math.min(100, containment_percentage);
-        this.progressBar.style.width = `${displayPercentage}%`;
-        this.progressBar.setAttribute('aria-valuenow', displayPercentage);
-        
-        // Update progress bar color based on containment
-        this.progressBar.className = 'progress-bar';
-        if (containment_percentage >= 100) {
+        if (percentage >= 100) {
             this.progressBar.classList.add('bg-success');
-        } else if (containment_percentage >= 80) {
+        } else if (percentage >= 90) {
             this.progressBar.classList.add('bg-warning');
+        } else if (percentage >= 50) {
+            this.progressBar.classList.add('bg-info');
         } else {
             this.progressBar.classList.add('bg-danger');
         }
-        
-        // Generate messages based on metrics
-        this.updateMessages(metrics);
     }
-    
-    updateMessages(metrics) {
-        const {
-            containment_percentage,
-            last_container_fill_percentage,
-            total_containers,
-            total_capacity
-        } = metrics;
+
+    updateContainmentMessage(percentage, totalCapacity, totalContainers) {
+        if (!this.messageElement) return;
+
+        let message = '';
         
-        let messages = [];
-        let alertClass = 'alert-info';
-        
-        // Containment status
-        if (containment_percentage >= 100) {
-            messages.push(`✅ <strong>Sufficient Capacity:</strong> ${containment_percentage.toFixed(1)}% containment`);
-            alertClass = 'alert-success';
+        if (percentage >= 100) {
+            message = `✅ Perfect containment with ${totalContainers} container(s) providing ${totalCapacity} total capacity`;
+        } else if (percentage >= 90) {
+            message = `⚠️ Good containment (${percentage.toFixed(1)}%) with ${totalContainers} container(s)`;
+        } else if (percentage >= 50) {
+            message = `⚠️ Partial containment (${percentage.toFixed(1)}%) - consider additional containers`;
         } else {
-            messages.push(`❌ <strong>Insufficient Capacity:</strong> ${containment_percentage.toFixed(1)}% containment`);
-            alertClass = 'alert-danger';
+            message = `❌ Insufficient containment (${percentage.toFixed(1)}%) - more containers needed`;
         }
-        
-        // Efficiency warnings
-        if (last_container_fill_percentage < 75 && containment_percentage >= 100) {
-            messages.push(`⚠️ <strong>Low Efficiency:</strong> Last container only ${last_container_fill_percentage.toFixed(1)}% filled`);
-            if (alertClass === 'alert-success') {
-                alertClass = 'alert-warning';
-            }
-        } else if (last_container_fill_percentage >= 90) {
-            messages.push(`🎯 <strong>High Efficiency:</strong> Optimal container utilization`);
-        }
-        
-        // Container count summary
-        if (total_containers > 1) {
-            messages.push(`📦 Using ${total_containers} containers with total capacity of ${total_capacity.toFixed(2)} units`);
-        }
-        
-        // Render messages
-        this.messageArea.innerHTML = `
-            <div class="alert ${alertClass} mb-0">
-                ${messages.join('<br>')}
-            </div>
-        `;
+
+        this.messageElement.textContent = message;
     }
-    
+
+    displayWarnings(warnings, percentage) {
+        if (!this.warningElement || !this.warningText) return;
+
+        if (warnings.length > 0 || percentage < 100) {
+            let warningMessage = '';
+            
+            if (warnings.length > 0) {
+                warningMessage = warnings.join('; ');
+            } else if (percentage < 100) {
+                warningMessage = `Only ${percentage.toFixed(1)}% of batch can be contained with current selection`;
+            }
+            
+            this.warningText.textContent = warningMessage;
+            this.warningElement.style.display = 'block';
+        } else {
+            this.warningElement.style.display = 'none';
+        }
+    }
+
     clear() {
         if (this.progressBar) {
             this.progressBar.style.width = '0%';
-            this.progressBar.className = 'progress-bar';
+            this.progressBar.textContent = '0%';
+            this.progressBar.classList.remove('bg-success', 'bg-warning', 'bg-danger', 'bg-info');
+            this.progressBar.classList.add('bg-secondary');
         }
         
-        if (this.messageArea) {
-            this.messageArea.innerHTML = '<div class="alert alert-secondary mb-0">No containers selected</div>';
+        if (this.percentageLabel) {
+            this.percentageLabel.textContent = '0%';
+        }
+        
+        if (this.messageElement) {
+            this.messageElement.textContent = 'No containers selected';
+        }
+        
+        if (this.warningElement) {
+            this.warningElement.style.display = 'none';
         }
     }
-    
-    showError(message) {
-        if (this.messageArea) {
-            this.messageArea.innerHTML = `<div class="alert alert-danger mb-0">${message}</div>`;
+
+    hide() {
+        const progressContainer = document.getElementById('containerProgress');
+        if (progressContainer) {
+            progressContainer.style.display = 'none';
+        }
+    }
+
+    show() {
+        const progressContainer = document.getElementById('containerProgress');
+        if (progressContainer) {
+            progressContainer.style.display = 'block';
         }
     }
 }
-
-// Initialize global progress bar
-let containerProgressBar;
-document.addEventListener('DOMContentLoaded', () => {
-    containerProgressBar = new ContainerProgressBar();
-    window.containerProgressBar = containerProgressBar;
-});
