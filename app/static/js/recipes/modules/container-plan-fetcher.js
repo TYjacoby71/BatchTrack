@@ -1,8 +1,10 @@
 
-// Container Plan Fetcher - Handles API calls for container planning
+/**
+ * Container Plan Fetcher - Handles API calls for container planning
+ */
 export class ContainerPlanFetcher {
     constructor(containerManager) {
-        this.container = containerManager;
+        this.containerManager = containerManager;
         this.fetchingPlan = false;
         this.lastPlanResult = null;
     }
@@ -17,53 +19,50 @@ export class ContainerPlanFetcher {
 
         this.fetchingPlan = true;
 
-        if (!this.container.main.recipe || !this.container.main.recipe.id) {
+        if (!window.recipeData?.id) {
             console.error('🚨 CONTAINER PLAN: Recipe data not available');
             this.fetchingPlan = false;
             return null;
         }
 
-        if (!this.container.main.requiresContainers) {
-            console.log('🔍 CONTAINER PLAN: Recipe does not require containers');
-            this.fetchingPlan = false;
-            return null;
-        }
-
-        const scale = this.container.main.scale || parseFloat(document.getElementById('scaleInput')?.value) || 1;
-        const yieldAmount = (this.container.main.recipe.yield_amount || 1) * scale;
-        
-        console.log('🔍 CONTAINER PLAN: Fetching for recipe', this.container.main.recipe.id, 'scale:', scale, 'yield:', yieldAmount);
+        const scale = this.containerManager.getCurrentScale();
+        const recipeId = window.recipeData.id;
 
         try {
-            const data = await this.container.main.apiCall(`/recipes/${this.container.main.recipe.id}/auto-fill-containers`, {
-                scale: scale,
-                yield_amount: yieldAmount,
-                yield_unit: this.container.main.unit
+            const response = await fetch(`/production-planning/${recipeId}/auto-fill-containers`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('input[name="csrf_token"]')?.value || 
+                                   document.querySelector('meta[name=csrf-token]')?.getAttribute('content') || ''
+                },
+                body: JSON.stringify({
+                    recipe_id: recipeId,
+                    scale: scale
+                })
             });
 
-            this.fetchingPlan = false;
+            console.log('🔧 CONTAINER_MANAGEMENT: Response status:', response.status);
 
-            if (data.success) {
-                console.log('🔍 CONTAINER PLAN: Plan successful');
-                this.container.containerPlan = data;
-                this.lastPlanResult = data;
-                this.container.displayContainerPlan();
-                return data;
-            } else {
-                console.log('🔍 CONTAINER PLAN: Plan failed:', data.error);
-                this.container.displayContainerError(data.error);
-                return null;
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                throw new Error(`Expected JSON response, got ${contentType}`);
             }
-        } catch (error) {
-            console.error('🚨 CONTAINER PLAN: Network error:', error);
-            this.container.displayContainerError('Network error while loading containers');
-            this.fetchingPlan = false;
-            return null;
-        }
-    }
 
-    clearCache() {
-        this.lastPlanResult = null;
-        this.fetchingPlan = false;
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || 'Failed to fetch container options');
+            }
+
+            this.lastPlanResult = result;
+            return result;
+
+        } catch (error) {
+            console.error('🔧 CONTAINER_MANAGEMENT: Network/parsing error:', error);
+            throw error;
+        } finally {
+            this.fetchingPlan = false;
+        }
     }
 }
