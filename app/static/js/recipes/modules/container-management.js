@@ -1,3 +1,4 @@
+
 /**
  * Container Management Module - Coordinator Only
  * 
@@ -13,12 +14,12 @@ export class ContainerManager {
         this.container = document.getElementById(containerId);
         this.mode = 'auto'; // 'auto' or 'manual'
         this.selectedContainers = [];
-
+        
         // Initialize specialized modules
         this.fetcher = new ContainerPlanFetcher(this);
         this.renderer = new ContainerRenderer(this);
         this.progressBar = new ContainerProgressBar();
-
+        
         // Current data
         this.allContainerOptions = [];
         this.autoFillStrategy = null;
@@ -46,13 +47,13 @@ export class ContainerManager {
             });
         }
 
-
+        
     }
 
     async refreshContainerOptions() {
         try {
             const result = await this.fetcher.fetchContainerPlan();
-
+            
             if (result) {
                 this.allContainerOptions = result.options || [];
                 this.autoFillStrategy = result.strategy;
@@ -159,10 +160,10 @@ export class ContainerManager {
             errorDiv.className = 'mt-3';
             this.container.querySelector('.card-body').appendChild(errorDiv);
         }
-
+        
         errorDiv.innerHTML = `<div class="alert alert-danger">${message}</div>`;
         errorDiv.style.display = 'block';
-
+        
         setTimeout(() => {
             if (errorDiv) errorDiv.style.display = 'none';
         }, 10000);
@@ -173,93 +174,6 @@ export class ContainerManager {
             return this.autoFillStrategy.containers_to_use;
         } else {
             return this.selectedContainers;
-        }
-    }
-
-    // Helper to get recipe ID from window object
-    getRecipeId() {
-        return window.recipeData?.id;
-    }
-
-    // Helper to get scale factor from input element
-    getScaleFactor() {
-        const scaleInput = document.getElementById('scaleInput') || document.getElementById('scaleFactorInput');
-        return scaleInput ? parseFloat(scaleInput.value) || 1.0 : 1.0;
-    }
-
-    async refreshContainerPlan() {
-        console.log('🔧 CONTAINER_MANAGEMENT: Refreshing container plan...');
-
-        try {
-            const recipeId = this.getRecipeId();
-            const scale = this.getScaleFactor();
-
-            if (!recipeId) {
-                console.error('Recipe ID not found');
-                return;
-            }
-
-            const requestData = {
-                recipe_id: recipeId,
-                scale: scale
-            };
-
-            console.log('🔧 CONTAINER_MANAGEMENT: Sending request:', requestData);
-
-            const response = await fetch(`/production-planning/${recipeId}/auto-fill-containers`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(requestData)
-            });
-
-            console.log('🔧 CONTAINER_MANAGEMENT: Response status:', response.status);
-
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-
-            const data = await response.json();
-
-            if (data.success) {
-                this.containerPlan = data.auto_fill_strategy;
-                this.containerOptions = data.container_options;
-
-                console.log('🔧 CONTAINER_MANAGEMENT: Container plan updated successfully');
-                console.log('🔧 CONTAINER_MANAGEMENT: Auto-fill strategy:', this.containerPlan);
-                console.log('🔧 CONTAINER_MANAGEMENT: Container options:', this.containerOptions);
-
-                // Notify other components
-                this.notifyComponents();
-
-            } else {
-                console.error('Container plan request failed:', data.error);
-                this.containerPlan = null;
-                this.containerOptions = [];
-            }
-
-        } catch (error) {
-            console.error('🔧 CONTAINER_MANAGEMENT: Error refreshing container plan:', error);
-            this.containerPlan = null;
-            this.containerOptions = [];
-        }
-    }
-
-    notifyComponents() {
-        // Notify renderer
-        if (window.containerRenderer) {
-            const autoFillEnabled = document.getElementById('autoFillEnabled')?.checked;
-            if (autoFillEnabled) {
-                window.containerRenderer.renderAutoFillMode();
-            } else {
-                window.containerRenderer.renderManualMode();
-            }
-        }
-
-        // Notify progress bar
-        if (window.containerProgressBar) {
-            window.containerProgressBar.onContainerPlanUpdated(this.containerPlan);
         }
     }
 }
