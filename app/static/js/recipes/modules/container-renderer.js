@@ -10,21 +10,27 @@ export class ContainerRenderer {
         const autoFillEnabled = document.getElementById('autoFillEnabled')?.checked;
 
         console.log('🔍 CONTAINER RENDER: Displaying plan, auto-fill:', autoFillEnabled);
+        console.log('🔍 CONTAINER RENDER: Container plan:', this.container.containerPlan);
+        console.log('🔍 CONTAINER RENDER: Auto fill strategy:', this.container.autoFillStrategy);
 
-        if (!containerResults || !this.container.containerPlan?.success) {
+        if (!containerResults) {
+            console.warn('🔍 CONTAINER RENDER: containerResults element not found');
+            return;
+        }
+
+        // Check if we have container plan data
+        if (!this.container.containerPlan?.success) {
             this.clearResults();
             return;
         }
 
-        const { container_selection } = this.container.containerPlan;
-
-        if (!container_selection || container_selection.length === 0) {
-            containerResults.innerHTML = '<div class="alert alert-warning"><i class="fas fa-exclamation-triangle"></i> No suitable containers found</div>';
-            return;
-        }
-
         if (autoFillEnabled) {
-            this.renderAutoFillResults(containerResults, container_selection);
+            // Use auto-fill strategy if available
+            if (this.container.autoFillStrategy?.container_selection) {
+                this.renderAutoFillResults(containerResults, this.container.autoFillStrategy.container_selection);
+            } else {
+                containerResults.innerHTML = '<div class="alert alert-info"><i class="fas fa-info-circle"></i> No auto-fill strategy available. Try refreshing container options.</div>';
+            }
         } else {
             containerResults.innerHTML = '<p class="text-muted">Switch to auto-fill mode to see container recommendations, or add containers manually below.</p>';
         }

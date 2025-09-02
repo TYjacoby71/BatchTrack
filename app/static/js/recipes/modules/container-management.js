@@ -20,10 +20,11 @@ export class ContainerManager {
         this.renderer = new ContainerRenderer(this);
         this.progressBar = new ContainerProgressBar();
         
-        // Current data
+        // Current data - restored properties
         this.allContainerOptions = [];
         this.autoFillStrategy = null;
         this.currentMetrics = null;
+        this.containerPlan = null; // Restored for compatibility
 
         this.initializeEventListeners();
     }
@@ -39,26 +40,55 @@ export class ContainerManager {
             });
         }
 
-        // Mode toggle
-        const modeToggle = this.container.querySelector('#containerModeToggle');
-        if (modeToggle) {
-            modeToggle.addEventListener('change', (e) => {
-                this.switchMode(e.target.value);
+        // Refresh options button
+        const refreshBtn = this.container.querySelector('#refreshContainerOptions');
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', () => {
+                this.refreshContainerOptions();
             });
         }
 
-        
+        // Add container button
+        const addContainerBtn = this.container.querySelector('#addContainerRow');
+        if (addContainerBtn) {
+            addContainerBtn.addEventListener('click', () => {
+                this.addContainerRow();
+            });
+        }
+
+        // Scale change listener
+        const scaleInput = document.getElementById('scaleInput') || document.getElementById('scaleFactorInput');
+        if (scaleInput) {
+            scaleInput.addEventListener('input', () => {
+                this.handleScaleChange();
+            });
+        }
     }
 
     async refreshContainerOptions() {
         try {
+            console.log('🔧 CONTAINER_MANAGEMENT: Refreshing container options...');
+            
             const result = await this.fetcher.fetchContainerPlan();
             
-            if (result) {
-                this.allContainerOptions = result.options || [];
-                this.autoFillStrategy = result.strategy;
-                this.renderContainerOptions();
+            if (result && result.success) {
+                // Store the full response for compatibility
+                this.containerPlan = result;
+                this.allContainerOptions = result.all_container_options || [];
+                this.autoFillStrategy = result.auto_fill_strategy;
+                
+                console.log('🔧 CONTAINER_MANAGEMENT: Data received:', {
+                    strategy: !!this.autoFillStrategy,
+                    options: this.allContainerOptions.length,
+                    plan: !!this.containerPlan
+                });
+                
+                // Update displays
+                this.renderer.displayPlan();
                 this.updateContainerProgress();
+            } else {
+                console.error('🔧 CONTAINER_MANAGEMENT: No valid response received');
+                this.renderer.displayError('Failed to load container options');
             }
         } catch (error) {
             console.error('🔧 CONTAINER_MANAGEMENT: Error refreshing options:', error);
@@ -66,84 +96,218 @@ export class ContainerManager {
         }
     }
 
-    handleAutoFillToggle(isEnabled) {
-        const autoFillResults = this.container.querySelector('#autoFillResults');
-        const manualContainerSection = this.container.querySelector('#manualContainerSection');
+    async handleScaleChange() {
+        // Auto-refresh when scale changes
+        await this.refreshContainerOptions();
+    }
 
-        if (autoFillResults && manualContainerSection) {
+    handleAutoFillToggle(isEnabled) {
+        const autoSection = this.container.querySelector('#autoContainerSection');
+        const manualSection = this.container.querySelector('#manualContainerSection');
+
+        if (autoSection && manualSection) {
             if (isEnabled) {
-                autoFillResults.style.display = 'block';
-                manualContainerSection.style.display = 'none';
+                autoSection.style.display = 'block';
+                manualSection.style.display = 'none';
                 this.mode = 'auto';
-                this.refreshContainerOptions();
             } else {
-                autoFillResults.style.display = 'none';
-                manualContainerSection.style.display = 'block';
+                autoSection.style.display = 'none';
+                manualSection.style.display = 'block';
                 this.mode = 'manual';
-                this.renderContainerOptions();
+                // Render manual options
+                this.renderer.renderManualContainerOptions(manualSection, this.allContainerOptions);
+            }
+            
+            // Update displays
+            this.renderer.displayPlan();
+        }
+    }
+
+    addContainerRow() {
+        const template = document.getElementById('containerRowTemplate');
+        const container = document.getElementById('containerSelectionRows');
+        
+        if (!template || !container) return;
+        
+        const newRow = template.cloneNode(true);
+        newRow.style.display = 'block';
+        newRow.id = '';
+        
+        // Populate select options
+        const select = newRow.querySelector('.container-select');
+        if (select && this.allContainerOptions) {
+            this.allContainerOptions.forEach(option => {
+                const optionEl = document.createElement('option');
+                optionEl.value = option.container_id;
+                optionEl.textContent = option.container_name;
+                optionEl.dataset.capacity = option.capacity;
+                optionEl.dataset.available = option.available_quantity;
+                select.appendChild(optionEl);
+            });
+        }
+        
+        // Add event listeners for the new row
+        this.attachRowEventListeners(newRow);
+        
+        container.appendChild(newRow);
+    }
+
+    attachRowEventListeners(row) {
+        const removeBtn = row.querySelector('.remove-container-btn');
+        const select = row.querySelector('.container-select');
+        const quantity = row.querySelector('.container-quantity');
+        
+        if (removeBtn) {
+            removeBtn.addEventListener('click', () => {
+                row.remove();
+                this.updateManualSummary();
+            });
+        }
+        
+        if (select) {
+            select.addEventListener('change', () => {
+                this.updateRowAvailability(row);
+                this.updateManualSummary();
+            });
+        }
+        
+        if (quantity) {
+            quantity.addEventListener('input', () => {
+                this.updateManualSummary();
+            });
+        }
+    }
+
+    updateRowAvailability(row) {
+        const select = row.querySelector('.container-select');
+        const availableStock = row.querySelector('.available-stock');
+        
+        if (select && availableStock) {
+            const selectedOption = select.options[select.selectedIndex];
+            if (selectedOption && selectedOption.dataset.available) {
+                availableStock.textContent = selectedOption.dataset.available;
+                availableStock.className = 'badge bg-info fs-6 available-stock';
+            } else {
+                availableStock.textContent = '-';
+                availableStock.className = 'badge bg-secondary fs-6 available-stock';
             }
         }
     }
 
-    switchMode(newMode) {
-        this.mode = newMode;
-        this.renderContainerOptions();
-        this.updateContainerProgress();
-    }
-
-    renderContainerOptions() {
-        if (this.mode === 'auto') {
-            this.renderer.renderAutoFillStrategy(this.autoFillStrategy);
-        } else {
-            this.renderer.renderManualSelection(this.allContainerOptions, (selected) => {
-                this.selectedContainers = selected;
-                this.updateContainerProgress();
-            });
+    updateManualSummary() {
+        const rows = document.querySelectorAll('#containerSelectionRows [data-container-row]');
+        const summary = document.getElementById('manualSelectionSummary');
+        
+        if (!summary) return;
+        
+        let totalCapacity = 0;
+        let validSelections = 0;
+        
+        rows.forEach(row => {
+            const select = row.querySelector('.container-select');
+            const quantity = row.querySelector('.container-quantity');
+            
+            if (select && quantity && select.value) {
+                const selectedOption = select.options[select.selectedIndex];
+                const capacity = parseFloat(selectedOption.dataset.capacity || 0);
+                const qty = parseInt(quantity.value || 0);
+                
+                if (capacity > 0 && qty > 0) {
+                    totalCapacity += capacity * qty;
+                    validSelections++;
+                }
+            }
+        });
+        
+        if (validSelections === 0) {
+            summary.innerHTML = '<p class="text-muted">No containers selected</p>';
+            return;
         }
+        
+        const recipeData = window.recipeData;
+        const scale = this.getCurrentScale();
+        const targetYield = (recipeData?.yield_amount || 0) * scale;
+        const fillPercentage = targetYield > 0 ? (targetYield / totalCapacity) * 100 : 0;
+        
+        const fillClass = fillPercentage > 100 ? 'text-danger' : fillPercentage > 90 ? 'text-warning' : 'text-success';
+        
+        summary.innerHTML = `
+            <div class="card">
+                <div class="card-body">
+                    <h6>Manual Selection Summary:</h6>
+                    <div class="d-flex justify-content-between">
+                        <strong>Containers Selected:</strong>
+                        <span>${validSelections}</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <strong>Total Capacity:</strong>
+                        <span>${totalCapacity} ${recipeData?.yield_unit || 'units'}</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <strong>Target Yield:</strong>
+                        <span>${targetYield} ${recipeData?.yield_unit || 'units'}</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <strong>Fill Percentage:</strong>
+                        <span class="${fillClass}">${fillPercentage.toFixed(1)}%</span>
+                    </div>
+                </div>
+            </div>
+        `;
     }
 
     updateContainerProgress() {
         if (this.mode === 'auto' && this.autoFillStrategy) {
-            this.currentMetrics = this.autoFillStrategy.metrics;
+            const metrics = {
+                containment_percentage: this.autoFillStrategy.containment_percentage || 0,
+                total_capacity: this.autoFillStrategy.total_capacity || 0,
+                total_containers: this.autoFillStrategy.container_selection?.length || 0,
+                last_container_fill_percentage: 100 // Default for single container
+            };
+            this.progressBar.updateProgress(metrics);
         } else if (this.mode === 'manual') {
+            // Calculate manual metrics
             this.calculateManualMetrics();
-        }
-
-        if (this.currentMetrics) {
-            this.progressBar.updateProgress(this.currentMetrics);
         }
     }
 
     async calculateManualMetrics() {
-        if (this.selectedContainers.length === 0) {
-            this.currentMetrics = null;
-            return;
-        }
-
-        try {
-            const recipeData = window.recipeData;
-            const scaleFactor = this.getCurrentScale();
-            const totalYield = recipeData.yield_amount * scaleFactor;
-
-            const response = await fetch(`/production-planning/${recipeData.id}/calculate-container-metrics`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
-                },
-                body: JSON.stringify({
-                    selected_containers: this.selectedContainers,
-                    total_yield: totalYield
-                })
-            });
-
-            const result = await response.json();
-            if (result.success) {
-                this.currentMetrics = result.metrics;
+        const rows = document.querySelectorAll('#containerSelectionRows [data-container-row]');
+        let totalCapacity = 0;
+        let containerCount = 0;
+        
+        rows.forEach(row => {
+            const select = row.querySelector('.container-select');
+            const quantity = row.querySelector('.container-quantity');
+            
+            if (select && quantity && select.value) {
+                const selectedOption = select.options[select.selectedIndex];
+                const capacity = parseFloat(selectedOption.dataset.capacity || 0);
+                const qty = parseInt(quantity.value || 0);
+                
+                if (capacity > 0 && qty > 0) {
+                    totalCapacity += capacity * qty;
+                    containerCount += qty;
+                }
             }
-
-        } catch (error) {
-            console.error('Error calculating manual metrics:', error);
+        });
+        
+        if (containerCount > 0) {
+            const recipeData = window.recipeData;
+            const scale = this.getCurrentScale();
+            const targetYield = (recipeData?.yield_amount || 0) * scale;
+            const containmentPercentage = targetYield > 0 ? Math.min(100, (totalCapacity / targetYield) * 100) : 0;
+            
+            const metrics = {
+                containment_percentage: containmentPercentage,
+                total_capacity: totalCapacity,
+                total_containers: containerCount,
+                last_container_fill_percentage: 100 // Simplified for manual mode
+            };
+            
+            this.progressBar.updateProgress(metrics);
+        } else {
+            this.progressBar.clear();
         }
     }
 
@@ -170,10 +334,30 @@ export class ContainerManager {
     }
 
     getSelectedContainers() {
-        if (this.mode === 'auto' && this.autoFillStrategy) {
-            return this.autoFillStrategy.containers_to_use;
+        if (this.mode === 'auto' && this.autoFillStrategy?.container_selection) {
+            return this.autoFillStrategy.container_selection;
         } else {
-            return this.selectedContainers;
+            // Get manually selected containers
+            const rows = document.querySelectorAll('#containerSelectionRows [data-container-row]');
+            const selected = [];
+            
+            rows.forEach(row => {
+                const select = row.querySelector('.container-select');
+                const quantity = row.querySelector('.container-quantity');
+                
+                if (select && quantity && select.value) {
+                    const qty = parseInt(quantity.value || 0);
+                    if (qty > 0) {
+                        selected.push({
+                            container_id: parseInt(select.value),
+                            container_name: select.options[select.selectedIndex].textContent,
+                            quantity: qty
+                        });
+                    }
+                }
+            });
+            
+            return selected;
         }
     }
 }
