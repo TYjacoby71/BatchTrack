@@ -8,7 +8,7 @@ export class ContainerRenderer {
         const containerResults = document.getElementById('containerResults');
         const autoFillEnabled = document.getElementById('autoFillEnabled')?.checked;
 
-        console.log('🔍 CONTAINER RENDER: Displaying plan, auto-fill:', autoFillEnabled);
+        // Rendering container plan
 
         if (!containerResults || !this.container.containerPlan?.success) {
             this.clearResults();
@@ -30,7 +30,7 @@ export class ContainerRenderer {
     }
 
     renderAutoFillResults(containerResults, containers) {
-        console.log('🔍 CONTAINER RENDER: Rendering auto-fill results for', containers.length, 'containers');
+        // Rendering container plan
 
         let html = '<div class="auto-fill-results">';
 

@@ -7,6 +7,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const stockChecker = new StockChecker(containerManager);
     const formValidator = new FormValidator();
 
+    // Initializing plan production app
+
     document.getElementById('plan-production-form').addEventListener('submit', (event) => {
         event.preventDefault();
 

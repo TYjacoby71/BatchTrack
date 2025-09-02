@@ -9,7 +9,7 @@ export class ValidationManager {
     }
 
     updateValidation() {
-        console.log('🔍 VALIDATION: Checking form validity...');
+        // Form validation check
 
         const issues = [];
         const warnings = [];
@@ -28,8 +28,7 @@ export class ValidationManager {
         }
 
         const isValid = issues.length === 0;
-        console.log('🔍 VALIDATION: Valid:', isValid, 'Reasons:', issues, 'Warnings:', warnings);
-
+        
         this.updateValidationUI(isValid, issues, warnings);
         return isValid;
     }
