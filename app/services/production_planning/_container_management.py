@@ -64,10 +64,9 @@ def _load_suitable_containers(recipe: Recipe, org_id: int, total_yield: float, y
     # Get recipe's allowed containers - Recipe model uses 'allowed_containers' field
     allowed_container_ids = getattr(recipe, 'allowed_containers', [])
     
-    # Debug logging to understand what's available
-    logger.info(f"Recipe {recipe.id} container debug:")
-    logger.info(f"  - allowed_containers: {allowed_container_ids}")
-    logger.info(f"  - Recipe has allowed_containers field: {hasattr(recipe, 'allowed_containers')}")
+    # Only log if there's an issue to debug
+    if not allowed_container_ids:
+        logger.warning(f"Recipe {recipe.id} has no allowed_containers configured")
     
     if not allowed_container_ids:
         raise ValueError(f"Recipe '{recipe.name}' has no containers configured")
