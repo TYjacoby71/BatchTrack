@@ -1,0 +1,91 @@
+
+from flask import Blueprint, jsonify, render_template_string
+from flask_login import login_required
+import json
+import os
+
+density_reference_bp = Blueprint('density_reference', __name__)
+
+@density_reference_bp.route('/api/density-reference')
+@login_required 
+def get_density_reference():
+    """Serve density reference data as a formatted page"""
+    try:
+        # Load density reference data
+        density_file_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'data', 'density_reference.json')
+        
+        with open(density_file_path, 'r') as f:
+            density_data = json.load(f)
+        
+        # Create a simple HTML page for the density reference
+        html_template = """
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Ingredient Density Reference</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body { padding: 20px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        .category-section { margin-bottom: 2rem; }
+        .density-item { padding: 0.5rem 0; border-bottom: 1px solid #eee; }
+        .density-value { font-weight: bold; color: #0d6efd; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2><i class="fas fa-balance-scale text-primary"></i> Ingredient Density Reference</h2>
+            <small class="text-muted">Densities in grams per milliliter (g/ml)</small>
+        </div>
+        
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle"></i>
+            <strong>How to use:</strong> Find your ingredient below and use the density value in your conversion.
+            If your ingredient isn't listed, search online for "[ingredient name] density" or use a similar ingredient from the same category.
+        </div>
+
+        {% for category_name, items in categories.items() %}
+        <div class="category-section">
+            <h4 class="border-bottom pb-2 mb-3">{{ category_name }}</h4>
+            <div class="row">
+                {% for item in items %}
+                <div class="col-md-6 col-lg-4">
+                    <div class="density-item">
+                        <div class="d-flex justify-content-between">
+                            <span>{{ item.name }}</span>
+                            <span class="density-value">{{ item.density_g_per_ml }}</span>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+        
+        <div class="mt-4 text-center">
+            <button class="btn btn-secondary" onclick="window.close()">
+                <i class="fas fa-times"></i> Close
+            </button>
+        </div>
+    </div>
+</body>
+</html>
+        """
+        
+        # Group densities by category
+        categories = {}
+        for item in density_data.get('common_densities', []):
+            category = item.get('category', 'Other')
+            if category not in categories:
+                categories[category] = []
+            categories[category].append(item)
+        
+        # Sort categories and items within each category
+        for category in categories:
+            categories[category].sort(key=lambda x: x['name'])
+        
+        return render_template_string(html_template, categories=categories)
+        
+    except Exception as e:
+        return jsonify({'error': f'Failed to load density reference: {str(e)}'}), 500
