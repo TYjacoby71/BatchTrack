@@ -16,7 +16,7 @@ export class ContainerPlanFetcher {
         this.lastPlanResult = null;
     }
 
-    async fetchContainerPlan() {
+    async fetchContainerPlan(extra = {}) {
         containerLogger.debug('fetchContainerPlan called');
 
         if (this.fetchingPlan) {
@@ -44,11 +44,13 @@ export class ContainerPlanFetcher {
         containerLogger.debug('Fetching for recipe', this.container.main.recipe.id, 'scale:', scale, 'yield:', yieldAmount);
 
         try {
-            const data = await this.container.main.apiCall(`/production-planning/recipe/${this.container.main.recipe.id}/auto-fill-containers`, {
+            const payload = {
                 scale: scale,
                 yield_amount: yieldAmount,
-                yield_unit: this.container.main.unit
-            });
+                yield_unit: this.container.main.unit,
+                ...(extra || {})
+            };
+            const data = await this.container.main.apiCall(`/production-planning/recipe/${this.container.main.recipe.id}/auto-fill-containers`, payload);
 
             this.fetchingPlan = false;
 
@@ -60,6 +62,21 @@ export class ContainerPlanFetcher {
                 this.container.displayContainerPlan();
                 return data;
             } else {
+                // Check for universal drawer payload
+                if (data.drawer_payload) {
+                    containerLogger.debug('Drawer payload detected from container plan, opening drawer');
+                    const retryCallback = (evtDetail) => {
+                        const density = evtDetail?.density;
+                        containerLogger.debug('Retrying auto-fill with product density', density);
+                        return this.fetchContainerPlan({ product_density: density });
+                    };
+                    window.dispatchEvent(new CustomEvent('openDrawer', {
+                        detail: {
+                            ...data.drawer_payload,
+                            retry_callback: retryCallback
+                        }
+                    }));
+                }
                 containerLogger.error('Container plan failed:', data.error);
                 this.container.displayContainerError(data.error);
                 return null;
