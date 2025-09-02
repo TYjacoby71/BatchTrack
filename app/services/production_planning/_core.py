@@ -67,8 +67,6 @@ def execute_production_planning(request: ProductionRequest, include_containers: 
     if not recipe:
         raise ValueError(f"Recipe {request.recipe_id} not found")
 
-    logger.info(f"PRODUCTION_PLANNING: Starting analysis for recipe {recipe.name} at scale {request.scale}")
-
     # 2. Validate ingredients using stock validation service
     ingredient_requirements = validate_ingredients_with_uscs(
         recipe, request.scale, request.organization_id or (current_user.organization_id if current_user.is_authenticated else None)
@@ -171,5 +169,4 @@ def execute_production_planning(request: ProductionRequest, include_containers: 
         except Exception as e:
             logger.warning(f"Could not record planned efficiency statistics: {e}")
 
-    logger.info(f"PRODUCTION_PLANNING: Analysis complete - Feasible: {plan.feasible}")
     return plan
