@@ -209,6 +209,7 @@ class UniversalStockCheckService:
             all_available = not (has_insufficient or has_errors)
             
             response = {
+                'success': True,
                 'status': overall_status,
                 'all_ok': all_available,
                 'stock_check': stock_results,
@@ -220,8 +221,18 @@ class UniversalStockCheckService:
             if conversion_alerts:
                 response['conversion_alerts'] = conversion_alerts
 
-            # Include drawer payload if we have one
+            # Include drawer payload if we have one and ensure retry is configured
             if bubbled_drawer_payload:
+                # Ensure a retry operation is provided for the universal handler
+                if not (bubbled_drawer_payload.get('retry') or bubbled_drawer_payload.get('retry_operation')):
+                    bubbled_drawer_payload['retry'] = {
+                        'mode': 'frontend_callback',
+                        'operation': 'stock_check',
+                        'data': {
+                            'recipe_id': recipe.id,
+                            'scale': scale
+                        }
+                    }
                 response['drawer_payload'] = bubbled_drawer_payload
 
             return response

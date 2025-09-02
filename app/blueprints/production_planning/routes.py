@@ -238,7 +238,9 @@ def check_stock():
             "all_ok": all_ok,
             "recipe_name": recipe.name,
             "success": result.get('success', False),
-            "error": result.get('error')
+            "error": result.get('error'),
+            # Bubble any drawer instructions to the frontend for DrawerProtocol
+            "drawer_payload": result.get('drawer_payload')
         }), 200
     except Exception as e:
         logger.error(f"Error in recipe stock check: {e}")
