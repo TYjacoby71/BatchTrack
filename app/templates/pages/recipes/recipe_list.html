@@ -155,7 +155,7 @@
                             <div class="btn-group" role="group">
                                 <a href="{{ url_for('recipes.view_recipe', recipe_id=variation.id) }}" class="btn btn-outline-primary btn-xs">View</a>
                                 <a href="{{ url_for('recipes.edit_recipe', recipe_id=variation.id) }}" class="btn btn-outline-secondary btn-xs">Edit</a>
-                                <a href="{{ url_for('recipes.plan_production_route', recipe_id=variation.id) }}" class="btn btn-primary btn-xs">Plan</a>
+                                <a href="{{ url_for('production_planning.plan_production_route', recipe_id=variation.id) }}" class="btn btn-primary btn-xs">Plan</a>
                             </div>
                         </div>
                         {% endfor %}
@@ -262,7 +262,7 @@
                                         <div class="btn-group" role="group">
                                             <a href="{{ url_for('recipes.view_recipe', recipe_id=variation.id) }}" class="btn btn-outline-primary btn-xs">View</a>
                                             <a href="{{ url_for('recipes.edit_recipe', recipe_id=variation.id) }}" class="btn btn-outline-secondary btn-xs">Edit</a>
-                                            <a href="{{ url_for('recipes.plan_production_route', recipe_id=variation.id) }}" class="btn btn-primary btn-xs">Plan</a>
+                                            <a href="{{ url_for('production_planning.plan_production_route', recipe_id=variation.id) }}" class="btn btn-primary btn-xs">Plan</a>
                                         </div>
                                     </div>
                                     {% endfor %}

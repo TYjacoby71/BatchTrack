@@ -53,7 +53,11 @@ class Logger {
 }
 
 // Create default logger instance
-export const logger = new Logger('APP');
+const logger = new Logger('APP');
+
+// Named exports for dev tools and other modules
+export { logger };
+export { Logger };
 
 // Legacy support - export individual functions for backwards compatibility
 export const debug = (...args) => logger.debug(...args);
@@ -61,6 +65,9 @@ export const info = (...args) => logger.info(...args);
 export const warn = (...args) => logger.warn(...args);
 export const error = (...args) => logger.error(...args);
 export const perf = (message, startTime) => logger.perf(message, startTime);
+
+// Default export for backwards compatibility
+export default logger;
 
 // Show debug status only if debugging is enabled
 if (logger.debugEnabled) {
