@@ -94,7 +94,7 @@ export class ManualContainerMode {
     }
 
     createContainerRowHTML(index) {
-        const availableContainers = this.container.containerPlan?.container_selection || [];
+        const availableContainers = this.container.containerPlan?.container_options || this.container.containerPlan?.container_selection || [];
 
         let optionsHTML = '<option value="">Select Container</option>';
         availableContainers.forEach(container => {
