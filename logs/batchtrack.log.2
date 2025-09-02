@@ -1,51 +1,112 @@
-2025-09-02 00:45:20,854 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
-2025-09-02 00:45:22,886 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
-2025-09-02 00:45:23,298 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
-2025-09-02 00:49:48,543 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
-2025-09-02 01:01:19,875 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
-2025-09-02 01:01:30,060 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
-2025-09-02 01:01:32,233 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
-2025-09-02 01:01:32,732 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
-2025-09-02 01:01:37,820 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
-2025-09-02 01:01:42,130 INFO: CONTAINER_ANALYSIS: Starting analysis for recipe 3 (Simple Applesauce) [in /home/runner/workspace/app/services/production_planning/_container_management.py:36]
-2025-09-02 01:01:42,132 INFO: CONTAINER_ANALYSIS: Parameters - scale: 1, org_id: 1, preferred: None [in /home/runner/workspace/app/services/production_planning/_container_management.py:37]
-2025-09-02 01:01:42,134 INFO: CONTAINER_ANALYSIS: Target yield calculated: 4.0 floz [in /home/runner/workspace/app/services/production_planning/_container_management.py:44]
-2025-09-02 01:01:42,139 INFO: CONTAINER_ANALYSIS: Fetching valid containers... [in /home/runner/workspace/app/services/production_planning/_container_management.py:51]
-2025-09-02 01:01:42,145 INFO: CONTAINER_CONVERSION: Found 3 containers to process [in /home/runner/workspace/app/services/production_planning/_container_management.py:118]
-2025-09-02 01:01:42,146 INFO: CONTAINER_VALIDATION: Processing container Glass 4oz Jars (ID: 11) [in /home/runner/workspace/app/services/production_planning/_container_management.py:125]
-2025-09-02 01:01:42,146 INFO: CONTAINER_VALIDATION: Glass 4oz Jars - capacity: 4.0 floz, available: 100.0 [in /home/runner/workspace/app/services/production_planning/_container_management.py:132]
-2025-09-02 01:01:42,146 INFO: CONTAINER_VALIDATION: Converting 4.0 floz to floz [in /home/runner/workspace/app/services/production_planning/_container_management.py:143]
-2025-09-02 01:01:42,182 INFO: CONTAINER_VALIDATION: Conversion result: {'success': True, 'converted_value': 4.0, 'conversion_type': 'direct', 'density_used': None, 'from': 'floz', 'to': 'floz', 'requires_attention': False} [in /home/runner/workspace/app/services/production_planning/_container_management.py:151]
-2025-09-02 01:01:42,186 WARNING: CONTAINER_VALIDATION: Invalid conversion result for container Glass 4oz Jars: {'success': True, 'converted_value': 4.0, 'conversion_type': 'direct', 'density_used': None, 'from': 'floz', 'to': 'floz', 'requires_attention': False} [in /home/runner/workspace/app/services/production_planning/_container_management.py:161]
-2025-09-02 01:01:42,187 INFO: CONTAINER_VALIDATION: Processing container Glass 10oz Jars (ID: 12) [in /home/runner/workspace/app/services/production_planning/_container_management.py:125]
-2025-09-02 01:01:42,188 INFO: CONTAINER_VALIDATION: Glass 10oz Jars - capacity: 10.0 floz, available: 60.0 [in /home/runner/workspace/app/services/production_planning/_container_management.py:132]
-2025-09-02 01:01:42,188 INFO: CONTAINER_VALIDATION: Converting 10.0 floz to floz [in /home/runner/workspace/app/services/production_planning/_container_management.py:143]
-2025-09-02 01:01:42,204 INFO: CONTAINER_VALIDATION: Conversion result: {'success': True, 'converted_value': 10.0, 'conversion_type': 'direct', 'density_used': None, 'from': 'floz', 'to': 'floz', 'requires_attention': False} [in /home/runner/workspace/app/services/production_planning/_container_management.py:151]
-2025-09-02 01:01:42,211 WARNING: CONTAINER_VALIDATION: Invalid conversion result for container Glass 10oz Jars: {'success': True, 'converted_value': 10.0, 'conversion_type': 'direct', 'density_used': None, 'from': 'floz', 'to': 'floz', 'requires_attention': False} [in /home/runner/workspace/app/services/production_planning/_container_management.py:161]
-2025-09-02 01:01:42,212 INFO: CONTAINER_VALIDATION: Processing container Paper Plates (5-pack) (ID: 13) [in /home/runner/workspace/app/services/production_planning/_container_management.py:125]
-2025-09-02 01:01:42,213 INFO: CONTAINER_VALIDATION: Paper Plates (5-pack) - capacity: 5.0 count, available: 20.0 [in /home/runner/workspace/app/services/production_planning/_container_management.py:132]
-2025-09-02 01:01:42,213 INFO: CONTAINER_VALIDATION: Converting 5.0 count to floz [in /home/runner/workspace/app/services/production_planning/_container_management.py:143]
-2025-09-02 01:01:42,220 INFO: CONTAINER_VALIDATION: Conversion result: {'success': False, 'converted_value': None, 'error_code': 'UNSUPPORTED_CONVERSION', 'error_data': {'from_unit': 'count', 'to_unit': 'floz', 'message': 'Cannot convert count (count) to floz (volume) without a custom mapping. Go to Unit Manager to create a mapping.'}, 'conversion_type': 'unknown', 'density_used': None, 'from': 'count', 'to': 'floz', 'requires_attention': True, 'requires_drawer': False, 'error_type': 'conversion_error', 'error_message': 'Cannot convert count (count) to floz (volume) without a custom mapping. Go to Unit Manager to create a mapping.'} [in /home/runner/workspace/app/services/production_planning/_container_management.py:151]
-2025-09-02 01:01:42,220 WARNING: CONTAINER_VALIDATION: Invalid conversion result for container Paper Plates (5-pack): {'success': False, 'converted_value': None, 'error_code': 'UNSUPPORTED_CONVERSION', 'error_data': {'from_unit': 'count', 'to_unit': 'floz', 'message': 'Cannot convert count (count) to floz (volume) without a custom mapping. Go to Unit Manager to create a mapping.'}, 'conversion_type': 'unknown', 'density_used': None, 'from': 'count', 'to': 'floz', 'requires_attention': True, 'requires_drawer': False, 'error_type': 'conversion_error', 'error_message': 'Cannot convert count (count) to floz (volume) without a custom mapping. Go to Unit Manager to create a mapping.'} [in /home/runner/workspace/app/services/production_planning/_container_management.py:161]
-2025-09-02 01:01:42,221 INFO: CONTAINER_CONVERSION: Processed 0 valid containers [in /home/runner/workspace/app/services/production_planning/_container_management.py:193]
-2025-09-02 01:01:42,221 INFO: CONTAINER_ANALYSIS: Found 0 valid container options [in /home/runner/workspace/app/services/production_planning/_container_management.py:54]
-2025-09-02 01:01:42,226 WARNING: CONTAINER_ANALYSIS: No valid containers found for recipe 3 [in /home/runner/workspace/app/services/production_planning/_container_management.py:57]
-2025-09-02 01:01:42,226 INFO: CONTAINER_ANALYSIS: Debugging container search... [in /home/runner/workspace/app/services/production_planning/_container_management.py:58]
-2025-09-02 01:01:42,226 INFO: CONTAINER_DEBUG: Debugging container search for org 1, yield unit floz [in /home/runner/workspace/app/services/production_planning/_container_management.py:398]
-2025-09-02 01:01:42,228 INFO: CONTAINER_DEBUG: Container category found: ID 14 [in /home/runner/workspace/app/services/production_planning/_container_management.py:414]
-2025-09-02 01:01:42,229 INFO: CONTAINER_DEBUG: Found 3 containers in category [in /home/runner/workspace/app/services/production_planning/_container_management.py:422]
-2025-09-02 01:01:42,230 INFO: CONTAINER_DEBUG: Glass 4oz Jars - capacity: 4.0 floz, quantity: 100.0 [in /home/runner/workspace/app/services/production_planning/_container_management.py:429]
-2025-09-02 01:01:42,230 INFO: CONTAINER_DEBUG: Glass 10oz Jars - capacity: 10.0 floz, quantity: 60.0 [in /home/runner/workspace/app/services/production_planning/_container_management.py:429]
-2025-09-02 01:01:42,230 INFO: CONTAINER_DEBUG: Paper Plates (5-pack) - capacity: 5.0 count, quantity: 20.0 [in /home/runner/workspace/app/services/production_planning/_container_management.py:429]
-2025-09-02 01:03:06,273 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
-2025-09-02 01:03:08,599 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
-2025-09-02 01:03:09,354 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
-2025-09-02 01:03:30,129 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
-2025-09-02 01:03:32,901 INFO: CONTAINER_ANALYSIS: Starting analysis for recipe 3 (Simple Applesauce) [in /home/runner/workspace/app/services/production_planning/_container_management.py:36]
-2025-09-02 01:03:32,901 INFO: CONTAINER_ANALYSIS: Parameters - scale: 1, org_id: 1, preferred: None [in /home/runner/workspace/app/services/production_planning/_container_management.py:37]
-2025-09-02 01:03:32,901 INFO: CONTAINER_ANALYSIS: Target yield calculated: 4.0 floz [in /home/runner/workspace/app/services/production_planning/_container_management.py:44]
-2025-09-02 01:03:32,901 INFO: CONTAINER_ANALYSIS: Fetching valid containers... [in /home/runner/workspace/app/services/production_planning/_container_management.py:51]
-2025-09-02 01:03:32,908 INFO: CONTAINER_CONVERSION: Found 3 containers to process [in /home/runner/workspace/app/services/production_planning/_container_management.py:118]
-2025-09-02 01:03:32,908 INFO: CONTAINER_VALIDATION: Processing container Glass 4oz Jars (ID: 11) [in /home/runner/workspace/app/services/production_planning/_container_management.py:125]
-2025-09-02 01:03:32,908 INFO: CONTAINER_VALIDATION: Glass 4oz Jars - capacity: 4.0 floz, available: 100.0 [in /home/runner/workspace/app/services/production_planning/_container_management.py:132]
-2025-09-02 01:03:32,909 INFO: CONTAINER_VALIDATION: Converting 4.0 floz to floz [in /home/runner/workspace/app/services/production_planning/_container_management.py:143]
+2025-09-02 00:23:43,395 ERROR: Error creating variation: pages/recipes/create_recipe.html [in /home/runner/workspace/app/blueprints/recipes/routes.py:127]
+Traceback (most recent call last):
+  File "/home/runner/workspace/app/blueprints/recipes/routes.py", line 119, in create_variation
+    return render_template('pages/recipes/create_recipe.html',
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 149, in render_template
+    template = app.jinja_env.get_or_select_template(template_name_or_list)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 1087, in get_or_select_template
+    return self.get_template(template_name_or_list, parent, globals)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 1016, in get_template
+    return self._load_template(name, globals)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 975, in _load_template
+    template = self.loader.load(self, name, self.make_globals(globals))
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/loaders.py", line 126, in load
+    source, filename, uptodate = self.get_source(environment, name)
+                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 65, in get_source
+    return self._get_source_fast(environment, template)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 99, in _get_source_fast
+    raise TemplateNotFound(template)
+jinja2.exceptions.TemplateNotFound: pages/recipes/create_recipe.html
+2025-09-02 00:23:43,481 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-09-02 00:24:09,259 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-09-02 00:24:12,081 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-09-02 00:24:12,083 ERROR: Error creating variation: pages/recipes/create_recipe.html [in /home/runner/workspace/app/blueprints/recipes/routes.py:127]
+Traceback (most recent call last):
+  File "/home/runner/workspace/app/blueprints/recipes/routes.py", line 119, in create_variation
+    return render_template('pages/recipes/create_recipe.html',
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 149, in render_template
+    template = app.jinja_env.get_or_select_template(template_name_or_list)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 1087, in get_or_select_template
+    return self.get_template(template_name_or_list, parent, globals)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 1016, in get_template
+    return self._load_template(name, globals)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 975, in _load_template
+    template = self.loader.load(self, name, self.make_globals(globals))
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/loaders.py", line 126, in load
+    source, filename, uptodate = self.get_source(environment, name)
+                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 65, in get_source
+    return self._get_source_fast(environment, template)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 99, in _get_source_fast
+    raise TemplateNotFound(template)
+jinja2.exceptions.TemplateNotFound: pages/recipes/create_recipe.html
+2025-09-02 00:24:12,164 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-09-02 00:28:52,247 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-09-02 00:28:56,927 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-09-02 00:28:56,963 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-09-02 00:29:02,215 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-09-02 00:29:04,485 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-09-02 00:29:05,125 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-09-02 00:29:09,059 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-09-02 00:29:11,450 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-09-02 00:29:11,456 ERROR: Error creating variation: pages/recipes/create_recipe.html [in /home/runner/workspace/app/blueprints/recipes/routes.py:127]
+Traceback (most recent call last):
+  File "/home/runner/workspace/app/blueprints/recipes/routes.py", line 119, in create_variation
+    return render_template('pages/recipes/create_recipe.html',
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 149, in render_template
+    template = app.jinja_env.get_or_select_template(template_name_or_list)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 1087, in get_or_select_template
+    return self.get_template(template_name_or_list, parent, globals)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 1016, in get_template
+    return self._load_template(name, globals)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 975, in _load_template
+    template = self.loader.load(self, name, self.make_globals(globals))
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/loaders.py", line 126, in load
+    source, filename, uptodate = self.get_source(environment, name)
+                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 65, in get_source
+    return self._get_source_fast(environment, template)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 99, in _get_source_fast
+    raise TemplateNotFound(template)
+jinja2.exceptions.TemplateNotFound: pages/recipes/create_recipe.html
+2025-09-02 00:29:11,537 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-09-02 00:29:16,717 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-09-02 00:39:00,509 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-09-02 00:39:09,401 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-09-02 00:39:11,725 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]
+2025-09-02 00:39:12,405 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-09-02 00:39:16,200 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-09-02 00:39:17,785 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-09-02 00:39:17,866 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-09-02 00:39:17,874 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-09-02 00:39:25,580 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-09-02 00:39:29,053 INFO: Created recipe 10: Simple Applesauce (Copy) [in /home/runner/workspace/app/services/recipe_service/_core.py:80]
+2025-09-02 00:39:29,060 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-09-02 00:39:29,157 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-09-02 00:39:29,161 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-09-02 00:39:32,582 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-09-02 00:39:39,859 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-09-02 00:39:39,920 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-09-02 00:39:39,922 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-09-02 00:39:43,007 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-09-02 00:40:18,693 INFO: Getting global unit list [in /home/runner/workspace/app/utils/unit_utils.py:32]
+2025-09-02 00:45:12,274 INFO: BatchTrack startup [in /home/runner/workspace/app/utils/unit_utils.py:28]

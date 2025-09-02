@@ -15,47 +15,9 @@ export class ContainerManager {
         this.currentMetrics = null;
 
         this.initializeEventListeners();
-        this.init(); // Initialize the module
     }
 
-    init() {
-        try {
-            // Initialize DOM elements
-            this.initializeDOMElements();
-
-            // Show the container card immediately
-            this.showContainerCard();
-
-            // Set up event listeners
-            this.setupEventListeners();
-
-            // Load initial container data
-            this.refreshContainerOptions();
-
-            console.log('🔧 CONTAINER_MANAGEMENT: Module initialized successfully');
-
-        } catch (error) {
-            console.error('🔧 CONTAINER_MANAGEMENT: Initialization error:', error);
-            // Still show the card even if there's an error
-            this.showContainerCard();
-            this.showError('Failed to initialize container management');
-        }
-    }
-
-    showContainerCard() {
-        const containerCard = document.getElementById('containerManagementCard');
-        if (containerCard) {
-            containerCard.style.display = 'block';
-            console.log('🔧 CONTAINER_MANAGEMENT: Container card displayed');
-        }
-    }
-
-    initializeDOMElements() {
-        // Placeholder for any specific element initializations if needed
-        // For example, if you need to pre-render templates or set initial states
-    }
-
-    setupEventListeners() {
+    initializeEventListeners() {
         if (!this.container) return;
 
         // Mode toggle
@@ -77,38 +39,27 @@ export class ContainerManager {
 
     async refreshContainerOptions() {
         if (!window.recipeData?.id) {
-            console.warn('🔧 CONTAINER_MANAGEMENT: No recipe data available');
-            this.showContainerCard(); // Still show the card
-            this.showMessage('No recipe data available for container analysis');
+            console.error('Recipe ID not available');
             return;
         }
 
+        const recipeId = window.recipeData.id;
+
         try {
-            const scaleInput = document.getElementById('scaleInput') || document.getElementById('scaleFactorInput');
-            const scale = scaleInput ? parseFloat(scaleInput.value) || 1.0 : 1.0;
-
-            console.log('🔧 CONTAINER_MANAGEMENT: Sending request:', {
-                recipe_id: window.recipeData.id,
-                scale: scale
-            });
-
-            const response = await fetch(`/production-planning/${window.recipeData.id}/auto-fill-containers`, {
+            const response = await fetch(`/production-planning/${recipeId}/auto-fill-containers`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRFToken': document.querySelector('input[name="csrf_token"]')?.value || ''
+                    'X-CSRFToken': document.querySelector('input[name="csrf_token"]')?.value || 
+                                   document.querySelector('meta[name=csrf-token]')?.getAttribute('content') || ''
                 },
                 body: JSON.stringify({
-                    recipe_id: window.recipeData.id,
-                    scale: scale
+                    recipe_id: recipeId,
+                    scale: this.getCurrentScale()
                 })
             });
 
             console.log('🔧 CONTAINER_MANAGEMENT: Response status:', response.status);
-
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
 
             // Check if response is JSON
             const contentType = response.headers.get('content-type');
@@ -118,17 +69,22 @@ export class ContainerManager {
 
             const result = await response.json();
 
-            if (result.success) {
-                this.autoFillStrategy = result.strategy;
-                this.allContainerOptions = result.options || [];
-                this.displayContainerResults();
-            } else {
-                this.showError(result.error || 'Failed to analyze containers');
+            if (!response.ok) {
+                if (result.error && result.error.includes('Permission denied')) {
+                    throw new Error('You do not have permission to plan production for this recipe.');
+                }
+                throw new Error(result.error || 'Failed to fetch container options');
             }
+
+            this.allContainerOptions = result.options || [];
+            this.autoFillStrategy = result.strategy;
+
+            this.renderContainerOptions();
+            this.updateContainerProgress();
 
         } catch (error) {
             console.error('🔧 CONTAINER_MANAGEMENT: Network/parsing error:', error);
-
+            
             // More specific error handling
             let errorMessage = 'Failed to load container options';
             if (error.message.includes('Permission denied')) {
@@ -137,10 +93,8 @@ export class ContainerManager {
                 errorMessage = 'Authentication required - please refresh the page';
             } else if (error.message.includes('JSON')) {
                 errorMessage = 'Server returned invalid response - please try again';
-            } else if (error.message.startsWith('HTTP')) {
-                errorMessage = error.message.replace('HTTP ', 'Error ');
             }
-
+            
             this.showError(errorMessage);
         }
     }
@@ -304,37 +258,13 @@ export class ContainerManager {
         return this.getCurrentScale();
     }
 
-    showMessage(message, type = 'info') {
-        const containerResults = document.getElementById('containerResults');
-        if (containerResults) {
-            const alertClass = type === 'error' ? 'alert-danger' : 
-                             type === 'warning' ? 'alert-warning' : 'alert-info';
-            const icon = type === 'error' ? 'fas fa-exclamation-circle' : 
-                        type === 'warning' ? 'fas fa-exclamation-triangle' : 'fas fa-info-circle';
-
-            containerResults.innerHTML = `
-                <div class="alert ${alertClass}">
-                    <i class="${icon}"></i> ${message}
-                </div>
-            `;
+    showError(message) {
+        const errorDiv = this.container.querySelector('#containerError');
+        if (errorDiv) {
+            errorDiv.innerHTML = `<div class="alert alert-danger">${message}</div>`;
+            errorDiv.style.display = 'block';
         }
     }
-
-    showError(message) {
-        this.showMessage(message, 'error');
-    }
-
-    displayContainerResults() {
-        // This method is called when fetchContainerOptions is successful
-        // and should render the results or update the UI accordingly.
-        // For now, it just calls renderContainerOptions and updateContainerProgress.
-        this.renderContainerOptions();
-        this.updateContainerProgress();
-
-        // Ensure the card is visible after data is loaded
-        this.showContainerCard();
-    }
-
 
     getSelectedContainers() {
         if (this.mode === 'auto' && this.autoFillStrategy) {
