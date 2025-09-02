@@ -206,7 +206,10 @@ export class ContainerManager {
                 total_containers: this.autoFillStrategy.container_selection?.length || 0,
                 warnings: this.autoFillStrategy.warnings || []
             };
+            this.progressBar.show();
             this.progressBar.updateProgress(metrics);
+        } else {
+            this.progressBar.hide();
         }
     }
 
