@@ -376,10 +376,39 @@ def _format_stock_results(ingredients):
 
 def _create_variation_template(parent):
     """Create a template variation object for the form"""
+    from app.models import Recipe
+    
+    # Generate unique variation name with iterative numbering
+    base_name = parent.name
+    variation_number = 1
+    new_name = f"{base_name} Variation"
+    
+    # Check for existing variations and increment number
+    while Recipe.query.filter_by(
+        name=new_name,
+        parent_id=parent.id,
+        organization_id=current_user.organization_id
+    ).first():
+        variation_number += 1
+        new_name = f"{base_name} Variation {variation_number}"
+    
+    # Generate unique label prefix for variation
+    base_prefix = parent.label_prefix or "BTH"
+    new_prefix = f"{base_prefix}V"
+    prefix_number = 1
+    
+    # Check for existing prefixes and increment number
+    while Recipe.query.filter_by(
+        label_prefix=new_prefix,
+        organization_id=current_user.organization_id
+    ).first():
+        prefix_number += 1
+        new_prefix = f"{base_prefix}V{prefix_number}"
+    
     return Recipe(
-        name=f"{parent.name} Variation",
+        name=new_name,
         instructions=parent.instructions,
-        label_prefix=parent.label_prefix,
+        label_prefix=new_prefix,
         parent_id=parent.id,
         predicted_yield=parent.predicted_yield,
         predicted_yield_unit=parent.predicted_yield_unit
