@@ -65,10 +65,10 @@ class ContainerHandler(BaseInventoryHandler):
 
         try:
             # Convert container storage capacity to recipe yield unit for proper comparison
-            if request.unit != storage_unit:
+            if request.unit != capacity_unit:
                 conversion_result = ConversionEngine.convert_units(
-                    storage_capacity,
-                    storage_unit,
+                    capacity,
+                    capacity_unit,
                     request.unit,
                     ingredient_id=None  # Containers don't need ingredient context for volume conversions
                 )

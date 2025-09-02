@@ -83,8 +83,8 @@ def _load_suitable_containers(recipe: Recipe, org_id: int, total_yield: float, y
     
     for container in containers:
         # Get container capacity
-        storage_capacity = getattr(container, 'storage_amount', None)
-        storage_unit = getattr(container, 'storage_unit', None)
+        storage_capacity = getattr(container, 'capacity', None)
+        storage_unit = getattr(container, 'capacity_unit', None)
 
         if not storage_capacity or not storage_unit:
             logger.warning(f"Container {container.name} missing capacity data")
