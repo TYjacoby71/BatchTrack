@@ -4,7 +4,7 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2>Recipes</h2>
     <div class="d-flex gap-2">
-        <a href="{{ url_for('recipes.create_recipe') }}" class="btn btn-primary">
+        <a href="{{ url_for('recipes.new_recipe') }}" class="btn btn-primary">
             <i class="fas fa-plus"></i> New Recipe
         </a>
         {% if recipes %}
@@ -28,7 +28,7 @@
             <h4 class="text-muted mb-3">No Recipes Yet</h4>
             <p class="text-muted mb-4">Create your first recipe to start tracking batches and managing production!</p>
             <div class="d-flex gap-3 justify-content-center">
-                <a href="{{ url_for('recipes.create_recipe') }}" class="btn btn-primary btn-lg">
+                <a href="{{ url_for('recipes.new_recipe') }}" class="btn btn-primary btn-lg">
                     <i class="fas fa-plus"></i> Create Your First Recipe
                 </a>
                 <a href="{{ url_for('inventory.list_inventory') }}" class="btn btn-outline-primary">
@@ -123,7 +123,7 @@
                         <a href="{{ url_for('recipes.edit_recipe', recipe_id=recipe.id) }}" class="btn btn-outline-secondary btn-sm">
                             <i class="fas fa-edit"></i> Edit
                         </a>
-                        <a href="{{ url_for('production_planning.plan_production', recipe_id=recipe.id) }}" class="btn btn-primary btn-sm">
+                        <a href="{{ url_for('recipes.plan_production_route', recipe_id=recipe.id) }}" class="btn btn-primary btn-sm">
                             <i class="fas fa-play"></i> Plan
                         </a>
                     </div>
@@ -155,7 +155,7 @@
                             <div class="btn-group" role="group">
                                 <a href="{{ url_for('recipes.view_recipe', recipe_id=variation.id) }}" class="btn btn-outline-primary btn-xs">View</a>
                                 <a href="{{ url_for('recipes.edit_recipe', recipe_id=variation.id) }}" class="btn btn-outline-secondary btn-xs">Edit</a>
-                                <a href="{{ url_for('production_planning.plan_production', recipe_id=variation.id) }}" class="btn btn-primary btn-xs">Plan</a>
+                                <a href="{{ url_for('recipes.plan_production_route', recipe_id=variation.id) }}" class="btn btn-primary btn-xs">Plan</a>
                             </div>
                         </div>
                         {% endfor %}
@@ -221,7 +221,7 @@
                         </td>
                         <td>
                             <div class="btn-group" role="group">
-                                <a href="{{ url_for('production_planning.plan_production', recipe_id=recipe.id) }}" class="btn btn-primary btn-sm">
+                                <a href="{{ url_for('recipes.plan_production_route', recipe_id=recipe.id) }}" class="btn btn-primary btn-sm">
                                     <i class="fas fa-play"></i> Plan
                                 </a>
                                 <div class="btn-group" role="group">
@@ -262,7 +262,7 @@
                                         <div class="btn-group" role="group">
                                             <a href="{{ url_for('recipes.view_recipe', recipe_id=variation.id) }}" class="btn btn-outline-primary btn-xs">View</a>
                                             <a href="{{ url_for('recipes.edit_recipe', recipe_id=variation.id) }}" class="btn btn-outline-secondary btn-xs">Edit</a>
-                                            <a href="{{ url_for('production_planning.plan_production', recipe_id=variation.id) }}" class="btn btn-primary btn-xs">Plan</a>
+                                            <a href="{{ url_for('recipes.plan_production_route', recipe_id=variation.id) }}" class="btn btn-primary btn-xs">Plan</a>
                                         </div>
                                     </div>
                                     {% endfor %}

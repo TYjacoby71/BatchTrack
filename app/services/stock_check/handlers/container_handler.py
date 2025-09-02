@@ -45,7 +45,7 @@ class ContainerHandler(BaseInventoryHandler):
 
         for cont in available_containers:
             logger.info(f"CONTAINER_HANDLER: - {cont.name} (ID: {cont.id}, qty: {cont.quantity})")
-            logger.info(f"CONTAINER_HANDLER: - Storage: {getattr(cont, 'capacity', 'None')} {getattr(cont, 'capacity_unit', 'None')}")
+            logger.info(f"CONTAINER_HANDLER: - Storage: {getattr(cont, 'storage_amount', 'None')} {getattr(cont, 'storage_unit', 'None')}")
 
         if not available_containers:
             logger.warning(f"CONTAINER_HANDLER: No containers found, returning not_found_result")
@@ -56,18 +56,18 @@ class ContainerHandler(BaseInventoryHandler):
         container = available_containers[0]
         logger.info(f"CONTAINER_HANDLER: Using container: {container.name}")
 
-        # Containers have capacity and capacity_unit fields
-        storage_capacity = getattr(container, 'capacity', 0)
-        capacity_unit = getattr(container, 'capacity_unit', 'ml')
+        # Containers have storage_amount and storage_unit fields
+        storage_capacity = getattr(container, 'storage_amount', 0)
+        storage_unit = getattr(container, 'storage_unit', 'ml')
         available_quantity = container.quantity
 
-        logger.info(f"CONTAINER_HANDLER: Container {container.name}: {available_quantity} units, capacity {storage_capacity} {capacity_unit}")
+        logger.info(f"CONTAINER_HANDLER: Container {container.name}: {available_quantity} units, capacity {storage_capacity} {storage_unit}")
 
         try:
             # Convert container storage capacity to recipe yield unit for proper comparison
             if request.unit != capacity_unit:
                 conversion_result = ConversionEngine.convert_units(
-                    storage_capacity,
+                    capacity,
                     capacity_unit,
                     request.unit,
                     ingredient_id=None  # Containers don't need ingredient context for volume conversions
@@ -110,7 +110,7 @@ class ContainerHandler(BaseInventoryHandler):
                 conversion_details={
                     **(conversion_details or {}),
                     'storage_capacity': storage_capacity,
-                    'capacity_unit': capacity_unit,
+                    'storage_unit': storage_unit,
                     'storage_capacity_in_recipe_units': storage_capacity_in_recipe_units,
                     'recipe_yield_needed': request.quantity_needed,
                     'recipe_yield_unit': request.unit
@@ -158,8 +158,8 @@ class ContainerHandler(BaseInventoryHandler):
             'name': container.name,
             'unit': container.unit,
             'quantity': container.quantity,
-            'capacity': getattr(container, 'capacity', None) or getattr(container, 'capacity', 0),
-            'capacity_unit': getattr(container, 'capacity_unit', None) or getattr(container, 'capacity_unit', 'ml'),
+            'storage_amount': getattr(container, 'storage_amount', 0),
+            'storage_unit': getattr(container, 'storage_unit', 'ml'),
             'cost_per_unit': container.cost_per_unit,
             'type': container.type
         }
@@ -228,8 +228,8 @@ class ContainerHandler(BaseInventoryHandler):
                 status=status,
                 category=InventoryCategory.CONTAINER,
                 conversion_details={
-                    'storage_capacity': getattr(container, 'capacity', 0),
-                    'capacity_unit': getattr(container, 'capacity_unit', 'ml'),
+                    'storage_capacity': getattr(container, 'storage_amount', 0),
+                    'storage_unit': getattr(container, 'storage_unit', 'ml'),
                     'item_id': container.id,
                     'item_name': container.name,
                     'stock_qty': available_quantity

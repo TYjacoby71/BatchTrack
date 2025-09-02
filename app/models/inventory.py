@@ -15,7 +15,8 @@ class InventoryItem(ScopedModelMixin, db.Model):
     unit = db.Column(db.String(32), nullable=False)
     cost_per_unit = db.Column(db.Float, default=0.0)
     low_stock_threshold = db.Column(db.Float, default=0.0)
-    density = db.Column(db.Float, nullable=True)  # g/ml for volume-weight conversions
+    # Density for unit conversion (g/ml for volume-weight conversions)
+    density = db.Column(db.Float, nullable=True)
     type = db.Column(db.String(32), nullable=False, default='ingredient')  # 'ingredient', 'container', 'product', or 'product-reserved'
     is_active = db.Column(db.Boolean, default=True)
     is_archived = db.Column(db.Boolean, default=False)
@@ -23,9 +24,9 @@ class InventoryItem(ScopedModelMixin, db.Model):
     is_perishable = db.Column(db.Boolean, default=False)
     shelf_life_days = db.Column(db.Integer, nullable=True)
     expiration_date = db.Column(db.Date, nullable=True)
-    # Container capacity fields (standardized naming)
+    # Container-specific fields (for items that can hold other items)
     capacity = db.Column(db.Float, nullable=True)  # How much this container can hold
-    capacity_unit = db.Column(db.String(32), nullable=True)  # Unit for capacity
+    capacity_unit = db.Column(db.String(32), nullable=True)  # Unit for storage capacity
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
     # Density for unit conversion (g/mL)

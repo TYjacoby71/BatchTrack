@@ -215,7 +215,7 @@ def _create_product_output(batch, product_id, variant_id, final_quantity, output
         # Calculate total product volume used in containers
         total_container_volume = 0
         for sku_info in container_skus:
-            # Each container holds capacity * number of containers
+            # Each container holds storage_amount * number of containers
             container_capacity = sku_info.get('container_capacity', 1)
             container_count = sku_info.get('quantity', 0)
             total_container_volume += container_capacity * container_count
@@ -305,7 +305,7 @@ def _process_container_allocations(batch, product, variant, form_data, expiratio
                 container_skus.append({
                     'sku': container_sku,
                     'quantity': final_quantity,  # Number of containers
-                    'container_capacity': container_item.capacity or 1  # Volume per container
+                    'container_capacity': container_item.storage_amount or 1  # Volume per container
                 })
 
                 logger.info(f"Created container SKU for {final_quantity} x {container_item.name} containers")
@@ -324,16 +324,16 @@ def _create_container_sku(product, variant, container_item, quantity, batch, exp
     try:
         logger.info(f"Creating container SKU with container: {container_item.name}, quantity: {quantity}")
 
-        # Create size label format: "[capacity] [capacity_unit] [container_name]"
+        # Create size label format: "[storage_amount] [storage_unit] [container_name]"
         # Example: "4 floz Admin 4oz Glass Jars"
-        if container_item.capacity and container_item.capacity_unit:
-            size_label = f"{container_item.capacity} {container_item.capacity_unit} {container_item.name}"
+        if container_item.storage_amount and container_item.storage_unit:
+            size_label = f"{container_item.storage_amount} {container_item.storage_unit} {container_item.name}"
         else:
             size_label = f"1 unit {container_item.name}"
 
         # Calculate total cost per container unit
         # Cost = (ingredient cost per unit × container capacity) + adjusted container cost
-        container_capacity = container_item.capacity or 1
+        container_capacity = container_item.storage_amount or 1
         ingredient_cost_per_container = ingredient_unit_cost * container_capacity
         total_cost_per_container = ingredient_cost_per_container + adjusted_container_cost
 

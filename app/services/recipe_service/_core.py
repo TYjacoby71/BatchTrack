@@ -254,38 +254,9 @@ def duplicate_recipe(recipe_id: int) -> Tuple[bool, Any]:
         Tuple of (success: bool, recipe_or_error: Recipe|str)
     """
     try:
-        from flask_login import current_user
-        from app.models import Recipe
-        
         original = get_recipe_details(recipe_id)
         if not original:
             return False, "Original recipe not found"
-
-        # Generate unique name with iterative numbering
-        base_name = original.name
-        copy_number = 1
-        new_name = f"{base_name} (Copy)"
-        
-        # Check for existing copies and increment number
-        while Recipe.query.filter_by(
-            name=new_name, 
-            organization_id=current_user.organization_id
-        ).first():
-            copy_number += 1
-            new_name = f"{base_name} (Copy {copy_number})"
-
-        # Generate unique label prefix with iterative numbering
-        base_prefix = getattr(original, 'label_prefix', "")
-        new_prefix = f"{base_prefix}C"
-        prefix_number = 1
-        
-        # Check for existing prefixes and increment number
-        while Recipe.query.filter_by(
-            label_prefix=new_prefix,
-            organization_id=current_user.organization_id
-        ).first():
-            prefix_number += 1
-            new_prefix = f"{base_prefix}C{prefix_number}"
 
         # Extract ingredient data
         ingredients = [
@@ -299,14 +270,14 @@ def duplicate_recipe(recipe_id: int) -> Tuple[bool, Any]:
 
         # Create new recipe
         return create_recipe(
-            name=new_name,
+            name=f"{original.name} (Copy)",
             description=original.instructions,
             instructions=original.instructions,
             yield_amount=original.predicted_yield or 0.0,
             yield_unit=original.predicted_yield_unit or "",
             ingredients=ingredients,
             allowed_containers=getattr(original, 'allowed_containers', []),
-            label_prefix=new_prefix
+            label_prefix=getattr(original, 'label_prefix', "")
         )
 
     except Exception as e:
