@@ -128,6 +128,9 @@ class IngredientHandler(BaseInventoryHandler):
                     # Pass through drawer requirements from conversion engine
                     if conversion_result.get('requires_drawer'):
                         conversion_details['requires_drawer'] = True
+                    # Pass through drawer payload for universal drawer protocol
+                    if conversion_result.get('drawer_payload'):
+                        conversion_details['drawer_payload'] = conversion_result.get('drawer_payload')
 
                 # Return a result that shows in the table but indicates conversion error
                 return StockCheckResult(
