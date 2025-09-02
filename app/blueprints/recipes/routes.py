@@ -388,4 +388,3 @@ def _create_variation_template(parent):
         predicted_yield=parent.predicted_yield,
         predicted_yield_unit=parent.predicted_yield_unit
     )
-
