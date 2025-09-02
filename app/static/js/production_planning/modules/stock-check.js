@@ -153,19 +153,26 @@ export class StockCheckManager {
                 // Debug: log the full result structure for conversion errors
                 console.log('🔧 STOCK CHECK DEBUG: Full conversion error result:', JSON.stringify(result, null, 2));
 
-                // Check for drawer payload at the ingredient result level
-                if (result.drawer_payload) {
+                // Check for drawer payload in conversion_details (this is where it actually is)
+                if (result.conversion_details?.drawer_payload) {
+                    console.log('🔧 STOCK CHECK: Found drawer_payload in conversion_details:', result.conversion_details.drawer_payload);
+                    const drawerEvent = new CustomEvent('openDrawer', {
+                        detail: result.conversion_details.drawer_payload
+                    });
+                    console.log('🔧 STOCK CHECK: Dispatching drawer event from conversion_details');
+                    window.dispatchEvent(drawerEvent);
+                }
+                // Also check for drawer payload at the ingredient result level (fallback)
+                else if (result.drawer_payload) {
                     console.log('🔧 STOCK CHECK: Found drawer_payload at result level:', result.drawer_payload);
-                    // Trigger drawer event
                     const drawerEvent = new CustomEvent('openDrawer', {
                         detail: result.drawer_payload
                     });
-                    console.log('🔧 STOCK CHECK: Dispatching drawer event');
+                    console.log('🔧 STOCK CHECK: Dispatching drawer event from result level');
                     window.dispatchEvent(drawerEvent);
                 }
-
-                // Also check if conversion_result has drawer payload
-                if (result.conversion_result?.drawer_payload) {
+                // Also check if conversion_result has drawer payload (fallback)
+                else if (result.conversion_result?.drawer_payload) {
                     console.log('🔧 STOCK CHECK: Found drawer_payload in conversion_result:', result.conversion_result.drawer_payload);
                     const drawerEvent = new CustomEvent('openDrawer', {
                         detail: result.conversion_result.drawer_payload
@@ -173,10 +180,8 @@ export class StockCheckManager {
                     console.log('🔧 STOCK CHECK: Dispatching drawer event from conversion_result');
                     window.dispatchEvent(drawerEvent);
                 }
-
-                // Debug: Check if no drawer payload was found despite conversion error
-                if (!result.drawer_payload && !result.conversion_result?.drawer_payload) {
-                    console.log('🔧 STOCK CHECK DEBUG: Conversion error detected but no drawer_payload found in result structure');
+                else {
+                    console.log('🔧 STOCK CHECK DEBUG: No drawer_payload found in any expected location for conversion error');
                 }
             } else {
                 // Normal stock check logic
