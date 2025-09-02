@@ -2,7 +2,7 @@
 """Add container capacity columns
 
 Revision ID: add_container_capacity
-Revises: edb302e17958
+Revises: add_comprehensive_stats
 Create Date: 2025-09-02 18:40:00.000000
 
 """
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers
 revision = 'add_container_capacity'
-down_revision = 'edb302e17958'
+down_revision = 'add_comprehensive_stats'
 branch_labels = None
 depends_on = None
 
