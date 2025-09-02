@@ -1,6 +1,4 @@
 // Container Plan Fetcher - Handles API calls for container planning
-import { logger } from '../../utils/logger.js';
-
 export class ContainerPlanFetcher {
     constructor(containerManager) {
         this.container = containerManager;
