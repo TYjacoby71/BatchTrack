@@ -2,346 +2,252 @@
 // Container Renderer - Handles all container display logic
 export class ContainerRenderer {
     constructor(containerManager) {
-        this.containerManager = containerManager;
-        this.listeners = new Map(); // Track event listeners for cleanup
-        this.scaleMultiplier = 1.0; // Track current scale multiplier
-        this.isAutoResetEnabled = true; // Auto-reset when scale changes
-        
-        this.initializeListeners();
+        this.container = containerManager;
     }
 
-    initializeListeners() {
-        // Scale factor change listener
-        const scaleInput = document.getElementById('scaleFactorInput');
-        if (scaleInput) {
-            const scaleListener = (event) => {
-                const newScale = parseFloat(event.target.value) || 1.0;
-                this.handleScaleChange(newScale);
-            };
-            
-            scaleInput.addEventListener('input', scaleListener);
-            this.listeners.set('scaleInput', { element: scaleInput, event: 'input', handler: scaleListener });
-        }
-
-        // Auto-fill toggle listener
-        const autoFillToggle = document.getElementById('autoFillEnabled');
-        if (autoFillToggle) {
-            const autoFillListener = (event) => {
-                this.handleAutoFillToggle(event.target.checked);
-            };
-            
-            autoFillToggle.addEventListener('change', autoFillListener);
-            this.listeners.set('autoFillToggle', { element: autoFillToggle, event: 'change', handler: autoFillListener });
-        }
-
-        // Container row change listeners (delegated)
-        const containerRows = document.getElementById('containerRows');
-        if (containerRows) {
-            const containerChangeListener = (event) => {
-                if (event.target.matches('.container-select, .container-quantity')) {
-                    this.handleContainerRowChange(event);
-                }
-            };
-            
-            containerRows.addEventListener('change', containerChangeListener);
-            this.listeners.set('containerRows', { element: containerRows, event: 'change', handler: containerChangeListener });
-        }
-
-        console.log('🔧 CONTAINER_RENDERER: Event listeners initialized');
-    }
-
-    handleScaleChange(newScale) {
-        console.log(`🔧 CONTAINER_RENDERER: Scale changed from ${this.scaleMultiplier} to ${newScale}`);
-        
-        const previousScale = this.scaleMultiplier;
-        this.scaleMultiplier = newScale;
-
-        // Auto-reset containers when scale changes (if enabled)
-        if (this.isAutoResetEnabled && previousScale !== newScale) {
-            this.autoResetContainers();
-        }
-
-        // Update progress bar
-        if (window.containerProgressBar) {
-            window.containerProgressBar.update();
-        }
-
-        // Trigger container plan refresh
-        if (this.containerManager) {
-            this.containerManager.refreshContainerPlan();
-        }
-    }
-
-    handleAutoFillToggle(isEnabled) {
-        console.log(`🔧 CONTAINER_RENDERER: Auto-fill toggled: ${isEnabled}`);
-        
-        if (isEnabled) {
-            // Switch to auto-fill mode
-            this.renderAutoFillMode();
-        } else {
-            // Switch to manual mode
-            this.renderManualMode();
-        }
-
-        // Update progress bar
-        if (window.containerProgressBar) {
-            window.containerProgressBar.update();
-        }
-    }
-
-    handleContainerRowChange(event) {
-        console.log('🔧 CONTAINER_RENDERER: Container row changed', event.target);
-        
-        // Update progress bar when manual selections change
-        if (window.containerProgressBar) {
-            window.containerProgressBar.update();
-        }
-    }
-
-    autoResetContainers() {
-        console.log('🔧 CONTAINER_RENDERER: Auto-resetting containers due to scale change');
-        
-        // Clear manual selections
-        document.querySelectorAll('[data-container-row]').forEach(row => {
-            const select = row.querySelector('.container-select');
-            const quantityInput = row.querySelector('.container-quantity');
-            
-            if (select) select.value = '';
-            if (quantityInput) quantityInput.value = '';
-        });
-
-        // If auto-fill is enabled, refresh the auto-fill
+    displayPlan() {
+        const containerResults = document.getElementById('containerResults');
         const autoFillEnabled = document.getElementById('autoFillEnabled')?.checked;
-        if (autoFillEnabled && this.containerManager) {
-            this.containerManager.refreshContainerPlan();
+
+        console.log('🔍 CONTAINER RENDER: Displaying plan, auto-fill:', autoFillEnabled);
+
+        if (!containerResults || !this.container.containerPlan?.success) {
+            this.clearResults();
+            return;
+        }
+
+        const { container_selection } = this.container.containerPlan;
+
+        if (!container_selection || container_selection.length === 0) {
+            containerResults.innerHTML = '<div class="alert alert-warning"><i class="fas fa-exclamation-triangle"></i> No suitable containers found</div>';
+            return;
+        }
+
+        if (autoFillEnabled) {
+            this.renderAutoFillResults(containerResults, container_selection);
+        } else {
+            containerResults.innerHTML = '<p class="text-muted">Switch to auto-fill mode to see container recommendations, or add containers manually below.</p>';
         }
     }
 
-    renderAutoFillMode() {
-        console.log('🔧 CONTAINER_RENDERER: Rendering auto-fill mode');
-        
-        const containerPlan = this.containerManager?.containerPlan;
-        if (!containerPlan?.success) {
-            this.renderEmptyState('Auto-fill not available');
-            return;
-        }
+    renderAutoFillResults(containerResults, containers) {
+        console.log('🔍 CONTAINER RENDER: Rendering auto-fill results for', containers.length, 'containers');
 
-        const containerRows = document.getElementById('containerRows');
-        if (!containerRows) {
-            console.error('Container rows element not found');
-            return;
-        }
+        let html = '<div class="auto-fill-results">';
 
-        const autoFillSelections = containerPlan.container_selection || [];
-        let html = '';
-
-        autoFillSelections.forEach((selection, index) => {
-            const fillPercentage = this.calculateFillPercentage(selection, index, autoFillSelections);
-            
+        if (containers.length > 1) {
             html += `
-                <div class="row mb-2 align-items-center" data-container-row data-auto-fill="true">
-                    <div class="col-md-5">
-                        <select class="form-select container-select" disabled>
-                            <option value="${selection.container_id}" selected>
-                                ${this.escapeHtml(selection.container_name)} (${selection.capacity} ${this.getYieldUnit()})
-                            </option>
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <input type="number" 
-                               class="form-control container-quantity" 
-                               value="${selection.containers_needed}"
-                               min="1"
-                               disabled>
-                    </div>
-                    <div class="col-md-5">
-                        <div class="d-flex align-items-center">
-                            <div class="progress flex-grow-1 me-2" style="height: 20px;">
-                                <div class="progress-bar ${this.getProgressBarClass(fillPercentage)}" 
-                                     style="width: ${Math.min(100, fillPercentage)}%">
-                                    ${fillPercentage.toFixed(1)}%
-                                </div>
-                            </div>
-                            <small class="text-muted">${(selection.capacity * selection.containers_needed).toFixed(2)} ${this.getYieldUnit()}</small>
-                        </div>
-                    </div>
+                <div class="alert alert-info mb-3">
+                    <i class="fas fa-puzzle-piece"></i> 
+                    <strong>Multi-Container Optimization:</strong> 
+                    Using ${containers.length} container types for optimal efficiency
                 </div>
             `;
+        }
+
+        containers.forEach((container, index) => {
+            html += this.renderContainerCard(container, index, true);
         });
 
-        containerRows.innerHTML = html;
-        console.log(`🔧 CONTAINER_RENDERER: Rendered ${autoFillSelections.length} auto-fill rows`);
+        html += '</div>';
+        containerResults.innerHTML = html;
     }
 
-    renderManualMode() {
-        console.log('🔧 CONTAINER_RENDERER: Rendering manual mode');
-        
-        const containerRows = document.getElementById('containerRows');
-        if (!containerRows) {
-            console.error('Container rows element not found');
-            return;
-        }
+    renderContainerCard(container, index, isAutoFill = false) {
+        const stockQuantity = parseInt(container.stock_qty || container.available_quantity || container.quantity || 0);
+        const containerName = (container.container_name || 'Unknown Container').toString();
+        const quantityNeeded = parseInt(container.quantity || container.containers_needed || 0);
 
-        // Get available container options
-        const containerOptions = this.containerManager?.containerOptions || [];
-        if (containerOptions.length === 0) {
-            this.renderEmptyState('No containers available');
-            return;
-        }
-
-        // Create manual selection rows
-        let html = '';
-        for (let i = 0; i < 3; i++) { // Default 3 rows for manual mode
-            html += this.createManualRow(containerOptions, i);
-        }
-
-        containerRows.innerHTML = html;
-        console.log('🔧 CONTAINER_RENDERER: Rendered manual mode with 3 rows');
-    }
-
-    createManualRow(containerOptions, index) {
-        const optionsHtml = containerOptions.map(option => 
-            `<option value="${option.container_id}">${this.escapeHtml(option.container_name)} (${option.capacity} ${this.getYieldUnit()})</option>`
-        ).join('');
+        const capacityDisplay = this.formatCapacityDisplay(container);
+        const stockBadgeClass = stockQuantity >= quantityNeeded ? 'bg-success' : 'bg-warning';
+        const containerClass = isAutoFill ? 'bg-success bg-opacity-10' : 'bg-light';
 
         return `
-            <div class="row mb-2 align-items-center" data-container-row data-manual="true">
-                <div class="col-md-5">
-                    <select class="form-select container-select">
-                        <option value="">Select container...</option>
-                        ${optionsHtml}
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <input type="number" 
-                           class="form-control container-quantity" 
-                           placeholder="Qty"
-                           min="1">
-                </div>
-                <div class="col-md-4">
-                    <div class="container-capacity-display text-muted">
-                        <small>Select container to see capacity</small>
+            <div class="row align-items-center mb-3 p-3 border rounded ${containerClass}" data-container-card="${index}">
+                <div class="col-md-3">
+                    <label class="form-label small">Container Type</label>
+                    <div class="form-control form-control-sm bg-light border-0">
+                        <strong>${containerName}</strong>
                     </div>
                 </div>
+                <div class="col-md-2">
+                    <label class="form-label small">Quantity Needed</label>
+                    <div class="form-control form-control-sm bg-light border-0">
+                        <strong>${quantityNeeded}</strong>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small">Capacity Each</label>
+                    <div class="form-control form-control-sm bg-light border-0">
+                        ${capacityDisplay}
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small">Available Stock</label>
+                    <div class="badge ${stockBadgeClass} fs-6">${stockQuantity}</div>
+                </div>
                 <div class="col-md-1">
-                    ${index > 0 ? `<button type="button" class="btn btn-sm btn-outline-danger remove-row" title="Remove row">×</button>` : ''}
+                    <div class="text-center">
+                        <i class="fas fa-check-circle text-success" title="Optimal selection"></i>
+                    </div>
                 </div>
             </div>
         `;
     }
 
-    calculateFillPercentage(selection, index, allSelections) {
-        try {
-            const targetYield = this.getTargetYield();
-            const totalUsedYield = allSelections.slice(0, index).reduce((sum, s) => 
-                sum + (s.capacity * s.containers_needed), 0
-            );
-            const remainingYield = targetYield - totalUsedYield;
-            const thisContainerCapacity = selection.capacity * selection.containers_needed;
+    formatCapacityDisplay(container) {
+        const capacity = parseFloat(container.capacity || 0);
+        const unit = (container.unit || container.capacity_unit || 'ml').toString();
+
+        if (container.capacity_in_yield_unit && container.yield_unit && container.conversion_successful) {
+            return `<strong>${parseFloat(container.capacity_in_yield_unit)} ${container.yield_unit}</strong> (${capacity} ${unit})`;
+        } else if (container.capacity_in_yield_unit && container.yield_unit) {
+            return `<strong>${parseFloat(container.capacity_in_yield_unit)} ${container.yield_unit}</strong> (${capacity} ${unit})`;
+        }
+
+        return `${capacity} ${unit}`;
+    }
+
+    renderManualContainerOptions(manualSection, allContainerOptions) {
+        console.log('🔍 MANUAL RENDER: Rendering manual options for', allContainerOptions?.length || 0, 'containers');
+
+        if (!allContainerOptions || allContainerOptions.length === 0) {
+            manualSection.innerHTML = `
+                <div class="text-center text-muted py-3">
+                    <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+                    <p>No container options available. Check your container inventory.</p>
+                </div>
+            `;
+            return;
+        }
+
+        const optionsHtml = allContainerOptions.map(option => {
+            const containerId = parseInt(option.container_id || 0);
+            const containerName = (option.container_name || 'Unknown Container').toString();
+            const capacity = parseFloat(option.capacity || 0);
+            const capacityUnit = (option.capacity_unit || 'units').toString();
+            const containersNeeded = parseInt(option.containers_needed || 1);
+            const fillPercentage = parseFloat(option.fill_percentage || 100);
             
-            if (remainingYield <= 0) return 0;
+            return `
+                <div class="container-option mb-2 p-2 border rounded" data-container-id="${containerId}">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <label class="form-check-label">
+                            <input type="checkbox" class="form-check-input me-2" 
+                                   value="${containerId}"
+                                   data-container-name="${containerName}"
+                                   data-capacity="${capacity}"
+                                   data-capacity-unit="${capacityUnit}">
+                            <strong>${containerName}</strong>
+                        </label>
+                        <span class="text-muted">${capacity} ${capacityUnit}</span>
+                    </div>
+                    <div class="mt-1">
+                        <small class="text-muted">
+                            Needs ${containersNeeded} container(s) | 
+                            ${fillPercentage.toFixed(1)}% efficiency
+                        </small>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        manualSection.innerHTML = `
+            <h6>Select Containers Manually:</h6>
+            ${optionsHtml}
+            <div id="manualSelectionSummary" class="mt-3"></div>
+        `;
+
+        this.attachManualSelectionListeners();
+    }
+
+    attachManualSelectionListeners() {
+        const checkboxes = document.querySelectorAll('.container-option input[type="checkbox"]');
+        checkboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', () => {
+                this.updateManualSelection();
+            });
+        });
+    }
+
+    updateManualSelection() {
+        const selected = Array.from(document.querySelectorAll('.container-option input[type="checkbox"]:checked'));
+        const summary = document.getElementById('manualSelectionSummary');
+
+        if (!summary) return;
+
+        if (selected.length === 0) {
+            summary.innerHTML = '<p class="text-muted">No containers selected</p>';
+            return;
+        }
+
+        let totalCapacity = 0;
+        const summaryHtml = selected.map(checkbox => {
+            const capacity = parseFloat(checkbox.dataset.capacity || '0') || 0;
+            const containerName = (checkbox.dataset.containerName || 'Unknown').toString();
+            const unit = (checkbox.dataset.capacityUnit || 'units').toString();
             
-            const fillAmount = Math.min(remainingYield, thisContainerCapacity);
-            return (fillAmount / thisContainerCapacity) * 100;
+            totalCapacity += capacity;
             
-        } catch (error) {
-            console.error('Error calculating fill percentage:', error);
-            return 0;
+            return `
+                <div class="d-flex justify-content-between align-items-center py-1">
+                    <span>${containerName}</span>
+                    <span class="text-muted">${capacity} ${unit}</span>
+                </div>
+            `;
+        }).join('');
+
+        const yieldAmount = parseFloat(window.recipeData?.yield_amount || 0);
+        const fillPercentage = yieldAmount > 0 ? (yieldAmount / totalCapacity) * 100 : 0;
+        const fillClass = fillPercentage > 100 ? 'text-danger' : fillPercentage > 90 ? 'text-warning' : 'text-success';
+
+        summary.innerHTML = `
+            <div class="card">
+                <div class="card-body">
+                    <h6>Manual Selection Summary:</h6>
+                    ${summaryHtml}
+                    <hr>
+                    <div class="d-flex justify-content-between">
+                        <strong>Total Capacity:</strong>
+                        <span>${totalCapacity} ${window.recipeData?.yield_unit || 'units'}</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <strong>Fill Percentage:</strong>
+                        <span class="${fillClass}">${fillPercentage.toFixed(1)}%</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    clearResults() {
+        const containerResults = document.getElementById('containerResults');
+        const containerRows = document.getElementById('containerSelectionRows');
+
+        if (containerResults) {
+            containerResults.innerHTML = '<p class="text-muted">Container management disabled</p>';
+        }
+
+        if (containerRows) {
+            containerRows.innerHTML = '';
         }
     }
 
-    getProgressBarClass(percentage) {
-        if (percentage >= 90) return 'bg-success';
-        if (percentage >= 70) return 'bg-warning';
-        return 'bg-info';
-    }
-
-    renderEmptyState(message) {
-        const containerRows = document.getElementById('containerRows');
-        if (containerRows) {
-            containerRows.innerHTML = `
-                <div class="text-center text-muted py-4">
-                    <i class="fas fa-box-open fa-2x mb-2"></i>
-                    <p>${this.escapeHtml(message)}</p>
+    displayError(message) {
+        const containerResults = document.getElementById('containerResults');
+        if (containerResults) {
+            containerResults.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-circle"></i> ${message}
+                    <hr>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <small class="text-muted">Cannot find suitable containers for this recipe</small>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('requiresContainers').click()">
+                            <i class="fas fa-times"></i> Disable Container Requirement
+                        </button>
+                    </div>
                 </div>
             `;
         }
-    }
-
-    // Utility methods
-    getTargetYield() {
-        try {
-            const baseYield = window.recipeData?.yield_amount || 0;
-            return baseYield * this.scaleMultiplier;
-        } catch (error) {
-            console.error('Error getting target yield:', error);
-            return 0;
-        }
-    }
-
-    getYieldUnit() {
-        return window.recipeData?.yield_unit || 'units';
-    }
-
-    escapeHtml(text) {
-        if (typeof text !== 'string') return String(text || '');
-        
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-    }
-
-    // Stock check integration
-    updateContainerStockStatus(stockResults) {
-        if (!stockResults?.containers) return;
-
-        document.querySelectorAll('[data-container-row]').forEach(row => {
-            const select = row.querySelector('.container-select');
-            if (!select?.value) return;
-
-            const containerId = parseInt(select.value);
-            const containerStock = stockResults.containers.find(c => c.id === containerId);
-            
-            if (containerStock) {
-                this.updateRowStockIndicator(row, containerStock);
-            }
-        });
-    }
-
-    updateRowStockIndicator(row, stockInfo) {
-        // Remove existing stock indicators
-        const existingIndicator = row.querySelector('.stock-indicator');
-        if (existingIndicator) {
-            existingIndicator.remove();
-        }
-
-        // Add new stock indicator
-        const quantityCol = row.querySelector('.col-md-2');
-        if (quantityCol) {
-            const indicator = document.createElement('div');
-            indicator.className = 'stock-indicator mt-1';
-            
-            if (stockInfo.available >= stockInfo.needed) {
-                indicator.innerHTML = `<small class="text-success">✓ ${stockInfo.available} available</small>`;
-            } else {
-                indicator.innerHTML = `<small class="text-danger">⚠ Only ${stockInfo.available} available</small>`;
-            }
-            
-            quantityCol.appendChild(indicator);
-        }
-    }
-
-    // Cleanup method
-    destroy() {
-        console.log('🔧 CONTAINER_RENDERER: Cleaning up listeners');
-        
-        this.listeners.forEach((listenerInfo, key) => {
-            const { element, event, handler } = listenerInfo;
-            if (element && handler) {
-                element.removeEventListener(event, handler);
-            }
-        });
-        
-        this.listeners.clear();
     }
 }
