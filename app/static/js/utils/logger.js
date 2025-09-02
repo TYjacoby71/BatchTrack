@@ -35,24 +35,34 @@ class Logger {
 
     info(...args) {
         console.info('ℹ️', ...args);
-    },
+    }
 
     warn(...args) {
         console.warn('⚠️', ...args);
-    },
+    }
 
     error(...args) {
         console.error('❌', ...args);
-    },
+    }
 
     // Special method for performance monitoring (always show)
-    perf: (message, startTime) => {
+    perf(message, startTime) {
         const duration = performance.now() - startTime;
         console.log(`⏱️ ${message}: ${duration.toFixed(2)}ms`);
     }
-};
+}
 
-// Add debug mode indicator
-if (DEBUG_MODE) {
+// Create default logger instance
+export const logger = new Logger('APP');
+
+// Legacy support - export individual functions for backwards compatibility
+export const debug = (...args) => logger.debug(...args);
+export const info = (...args) => logger.info(...args);
+export const warn = (...args) => logger.warn(...args);
+export const error = (...args) => logger.error(...args);
+export const perf = (message, startTime) => logger.perf(message, startTime);
+
+// Show debug status only if debugging is enabled
+if (logger.debugEnabled) {
     console.log('🔧 DEBUG MODE: Frontend debugging enabled');
 }
