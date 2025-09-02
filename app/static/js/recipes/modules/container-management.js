@@ -1,15 +1,26 @@
+
 /**
- * Container Management Module - Display Logic Only
+ * Container Management Module - Coordinator Only
  * 
- * This module handles container selection UI and fetches data from backend.
- * All business logic resides in the backend service.
+ * This module coordinates between specialized container modules.
  */
+
+import { ContainerPlanFetcher } from './container-plan-fetcher.js';
+import { ContainerRenderer } from './container-renderer.js';
+import { ContainerProgressBar } from './container-progress-bar.js';
 
 export class ContainerManager {
     constructor(containerId = 'containerManagementCard') {
         this.container = document.getElementById(containerId);
         this.mode = 'auto'; // 'auto' or 'manual'
         this.selectedContainers = [];
+        
+        // Initialize specialized modules
+        this.fetcher = new ContainerPlanFetcher(this);
+        this.renderer = new ContainerRenderer(this);
+        this.progressBar = new ContainerProgressBar();
+        
+        // Current data
         this.allContainerOptions = [];
         this.autoFillStrategy = null;
         this.currentMetrics = null;
@@ -46,64 +57,18 @@ export class ContainerManager {
     }
 
     async refreshContainerOptions() {
-        if (!window.recipeData?.id) {
-            console.error('Recipe ID not available');
-            return;
-        }
-
-        const recipeId = window.recipeData.id;
-
         try {
-            const response = await fetch(`/production-planning/${recipeId}/auto-fill-containers`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': document.querySelector('input[name="csrf_token"]')?.value || 
-                                   document.querySelector('meta[name=csrf-token]')?.getAttribute('content') || ''
-                },
-                body: JSON.stringify({
-                    recipe_id: recipeId,
-                    scale: this.getCurrentScale()
-                })
-            });
-
-            console.log('🔧 CONTAINER_MANAGEMENT: Response status:', response.status);
-
-            // Check if response is JSON
-            const contentType = response.headers.get('content-type');
-            if (!contentType || !contentType.includes('application/json')) {
-                throw new Error(`Expected JSON response, got ${contentType}. Response may be a redirect or HTML page.`);
+            const result = await this.fetcher.fetchContainerPlan();
+            
+            if (result) {
+                this.allContainerOptions = result.options || [];
+                this.autoFillStrategy = result.strategy;
+                this.renderContainerOptions();
+                this.updateContainerProgress();
             }
-
-            const result = await response.json();
-
-            if (!response.ok) {
-                if (result.error && result.error.includes('Permission denied')) {
-                    throw new Error('You do not have permission to plan production for this recipe.');
-                }
-                throw new Error(result.error || 'Failed to fetch container options');
-            }
-
-            this.allContainerOptions = result.options || [];
-            this.autoFillStrategy = result.strategy;
-
-            this.renderContainerOptions();
-            this.updateContainerProgress();
-
         } catch (error) {
-            console.error('🔧 CONTAINER_MANAGEMENT: Network/parsing error:', error);
-            
-            // More specific error handling
-            let errorMessage = 'Failed to load container options';
-            if (error.message.includes('Permission denied')) {
-                errorMessage = 'You do not have permission to access container options';
-            } else if (error.message.includes('redirect')) {
-                errorMessage = 'Authentication required - please refresh the page';
-            } else if (error.message.includes('JSON')) {
-                errorMessage = 'Server returned invalid response - please try again';
-            }
-            
-            this.showError(errorMessage);
+            console.error('🔧 CONTAINER_MANAGEMENT: Error refreshing options:', error);
+            this.showError('Failed to refresh container options');
         }
     }
 
@@ -116,13 +81,12 @@ export class ContainerManager {
                 autoFillResults.style.display = 'block';
                 manualContainerSection.style.display = 'none';
                 this.mode = 'auto';
-                // Refresh container options when auto-fill is enabled
                 this.refreshContainerOptions();
             } else {
                 autoFillResults.style.display = 'none';
                 manualContainerSection.style.display = 'block';
                 this.mode = 'manual';
-                this.renderManualSelection();
+                this.renderContainerOptions();
             }
         }
     }
@@ -131,166 +95,28 @@ export class ContainerManager {
         this.mode = newMode;
         this.renderContainerOptions();
         this.updateContainerProgress();
-
-        // Show/hide relevant sections
-        const autoSection = this.container.querySelector('#autoContainerSection');
-        const manualSection = this.container.querySelector('#manualContainerSection');
-
-        if (autoSection && manualSection) {
-            if (newMode === 'auto') {
-                autoSection.style.display = 'block';
-                manualSection.style.display = 'none';
-            } else {
-                autoSection.style.display = 'none';
-                manualSection.style.display = 'block';
-            }
-        }
     }
 
     renderContainerOptions() {
         if (this.mode === 'auto') {
-            this.renderAutoFillStrategy();
+            this.renderer.renderAutoFillStrategy(this.autoFillStrategy);
         } else {
-            this.renderManualSelection();
-        }
-    }
-
-    renderAutoFillStrategy() {
-        const autoSection = this.container.querySelector('#autoContainerSection');
-        if (!autoSection) return;
-
-        if (!this.autoFillStrategy || !this.autoFillStrategy.container_selection) {
-            autoSection.innerHTML = `
-                <div class="text-center text-muted py-3">
-                    <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
-                    <p>No container options available. Check your container inventory.</p>
-                </div>
-            `;
-            return;
-        }
-
-        const containersHtml = this.autoFillStrategy.container_selection.map((container, index) => `
-            <div class="container-item mb-2 p-2 border rounded">
-                <div class="d-flex justify-content-between align-items-center">
-                    <span><strong>${container.container_name}</strong></span>
-                    <span class="text-muted">${container.capacity} ${container.capacity_unit || 'units'}</span>
-                </div>
-                <div class="progress mt-1" style="height: 8px;">
-                    <div class="progress-bar" role="progressbar" 
-                         style="width: ${(container.containers_needed * container.capacity / this.autoFillStrategy.total_capacity * 100).toFixed(1)}%"
-                         aria-valuenow="${(container.containers_needed * container.capacity / this.autoFillStrategy.total_capacity * 100).toFixed(1)}" 
-                         aria-valuemin="0" aria-valuemax="100">
-                    </div>
-                </div>
-                <small class="text-muted">${container.containers_needed} containers needed</small>
-            </div>
-        `).join('');
-
-        autoSection.innerHTML = `
-            <h6>Recommended Container Selection:</h6>
-            ${containersHtml}
-        `;
-
-        this.currentMetrics = this.autoFillStrategy.metrics;
-    }
-
-    renderManualSelection() {
-        const manualSection = this.container.querySelector('#manualContainerSection');
-        if (!manualSection) return;
-
-        if (!this.allContainerOptions || this.allContainerOptions.length === 0) {
-            manualSection.innerHTML = `
-                <div class="text-center text-muted py-3">
-                    <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
-                    <p>No container options available. Check your container inventory.</p>
-                </div>
-            `;
-            return;
-        }
-
-        const optionsHtml = this.allContainerOptions.map(option => `
-            <div class="container-option mb-2 p-2 border rounded" data-container-id="${option.container_id}">
-                <div class="d-flex justify-content-between align-items-center">
-                    <label class="form-check-label">
-                        <input type="checkbox" class="form-check-input me-2" 
-                               value="${option.container_id}"
-                               data-container-name="${option.container_name}"
-                               data-capacity="${option.capacity}"
-                               data-capacity-unit="${option.capacity_unit || 'units'}">
-                        <strong>${option.container_name}</strong>
-                    </label>
-                    <span class="text-muted">${option.capacity} ${option.capacity_unit || 'units'}</span>
-                </div>
-                <div class="mt-1">
-                    <small class="text-muted">
-                        Needs ${option.containers_needed} container(s) | 
-                        ${option.fill_percentage ? option.fill_percentage.toFixed(1) : 100}% efficiency
-                    </small>
-                </div>
-            </div>
-        `).join('');
-
-        manualSection.innerHTML = `
-            <h6>Select Containers Manually:</h6>
-            ${optionsHtml}
-            <div id="manualSelectionSummary" class="mt-3"></div>
-        `;
-
-        // Add event listeners for manual checkboxes
-        const checkboxes = manualSection.querySelectorAll('input[type="checkbox"]');
-        checkboxes.forEach(checkbox => {
-            checkbox.addEventListener('change', () => {
-                this.updateManualSelection();
+            this.renderer.renderManualSelection(this.allContainerOptions, (selected) => {
+                this.selectedContainers = selected;
+                this.updateContainerProgress();
             });
-        });
-    }
-
-    updateManualSelection() {
-        const checkboxes = this.container.querySelectorAll('#manualContainerSection input[type="checkbox"]:checked');
-        this.selectedContainers = Array.from(checkboxes).map(cb => {
-            const containerId = parseInt(cb.value);
-            const containerName = cb.dataset.containerName;
-            const capacity = parseFloat(cb.dataset.capacity);
-            const capacityUnit = cb.dataset.capacityUnit;
-            
-            // Find full option or create minimal one
-            const fullOption = this.allContainerOptions.find(option => option.container_id === containerId);
-            
-            return fullOption || {
-                container_id: containerId,
-                container_name: containerName,
-                capacity: capacity,
-                capacity_unit: capacityUnit
-            };
-        }).filter(Boolean);
-
-        // Update summary
-        const summaryDiv = this.container.querySelector('#manualSelectionSummary');
-        if (summaryDiv) {
-            if (this.selectedContainers.length > 0) {
-                const totalCapacity = this.selectedContainers.reduce((sum, container) => sum + container.capacity, 0);
-                summaryDiv.innerHTML = `
-                    <div class="alert alert-info">
-                        <strong>Selected:</strong> ${this.selectedContainers.length} container type(s)<br>
-                        <strong>Total Capacity:</strong> ${totalCapacity.toFixed(2)} ${this.selectedContainers[0]?.capacity_unit || 'units'}
-                    </div>
-                `;
-            } else {
-                summaryDiv.innerHTML = '';
-            }
         }
-
-        // Calculate metrics for selected containers
-        this.calculateManualMetrics();
-        this.updateContainerProgress();
     }
 
-    calculateMetrics() {
-        // General metrics calculation for both auto and manual modes
+    updateContainerProgress() {
         if (this.mode === 'auto' && this.autoFillStrategy) {
             this.currentMetrics = this.autoFillStrategy.metrics;
         } else if (this.mode === 'manual') {
             this.calculateManualMetrics();
+        }
+
+        if (this.currentMetrics) {
+            this.progressBar.updateProgress(this.currentMetrics);
         }
     }
 
@@ -302,10 +128,9 @@ export class ContainerManager {
 
         try {
             const recipeData = window.recipeData;
-            const scaleFactor = this.getScaleFactor();
+            const scaleFactor = this.getCurrentScale();
             const totalYield = recipeData.yield_amount * scaleFactor;
 
-            // Use backend service to calculate metrics
             const response = await fetch(`/production-planning/${recipeData.id}/calculate-container-metrics`, {
                 method: 'POST',
                 headers: {
@@ -328,26 +153,14 @@ export class ContainerManager {
         }
     }
 
-    updateContainerProgress() {
-        // Update progress bar component with current metrics
-        if (window.containerProgressBar && this.currentMetrics) {
-            window.containerProgressBar.updateProgress(this.currentMetrics);
-        }
-    }
-
     getCurrentScale() {
         const scaleInput = document.getElementById('scaleInput') || document.getElementById('scaleFactorInput');
         return scaleInput ? parseFloat(scaleInput.value) || 1.0 : 1.0;
     }
 
-    getScaleFactor() {
-        return this.getCurrentScale();
-    }
-
     showError(message) {
         let errorDiv = this.container.querySelector('#containerError');
         if (!errorDiv) {
-            // Create error div if it doesn't exist
             errorDiv = document.createElement('div');
             errorDiv.id = 'containerError';
             errorDiv.className = 'mt-3';
@@ -357,11 +170,8 @@ export class ContainerManager {
         errorDiv.innerHTML = `<div class="alert alert-danger">${message}</div>`;
         errorDiv.style.display = 'block';
         
-        // Auto-hide after 10 seconds
         setTimeout(() => {
-            if (errorDiv) {
-                errorDiv.style.display = 'none';
-            }
+            if (errorDiv) errorDiv.style.display = 'none';
         }, 10000);
     }
 
@@ -373,10 +183,3 @@ export class ContainerManager {
         }
     }
 }
-
-// Initialize global container manager
-let containerManager;
-document.addEventListener('DOMContentLoaded', () => {
-    containerManager = new ContainerManager();
-    window.containerManager = containerManager;
-});
