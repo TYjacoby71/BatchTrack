@@ -93,39 +93,48 @@ document.addEventListener('DOMContentLoaded', function() {
             const apiUrl = `/inventory/edit/${ingredientId}`;
             console.log('🔧 DENSITY MODAL: Posting to inventory edit route:', apiUrl);
 
+            // Get CSRF token from meta tag or form
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || 
+                             document.querySelector('input[name="csrf_token"]')?.value;
+
             // Prepare form data like the regular inventory form
             const formData = new FormData();
             formData.append('density', density);
-            formData.append('action', 'update_density');
-            formData.append('csrf_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
+            formData.append('csrf_token', csrfToken);
 
             fetch(apiUrl, {
                 method: 'POST',
-                body: formData
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'  // Mark as AJAX request
+                }
             })
             .then(response => {
-                if (!response.ok) {
+                console.log('🔧 DENSITY MODAL: Response status:', response.status);
+                
+                // For inventory edit route, a redirect (3xx) or success (2xx) means it worked
+                if (response.ok || (response.status >= 300 && response.status < 400)) {
+                    console.log('🔧 DENSITY MODAL: Density updated successfully');
+
+                    // Close modal
+                    const modalInstance = bootstrap.Modal.getInstance(modal);
+                    modalInstance.hide();
+
+                    // Dispatch success event for retry mechanism
+                    window.dispatchEvent(new CustomEvent('conversion.density.updated', {
+                        detail: {
+                            ingredient_id: ingredientId,
+                            ingredient_name: ingredientName,
+                            density: density,
+                            message: `Density updated to ${density} g/ml for ${ingredientName}`,
+                            retrigger: true
+                        }
+                    }));
+                    
+                    return;
+                } else {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
-                return response.text(); // Inventory routes return redirects, not JSON
-            })
-            .then(data => {
-                console.log('🔧 DENSITY MODAL: Density updated successfully');
-
-                // Close modal
-                const modalInstance = bootstrap.Modal.getInstance(modal);
-                modalInstance.hide();
-
-                // Dispatch success event for retry mechanism
-                window.dispatchEvent(new CustomEvent('conversion.density.updated', {
-                    detail: {
-                        ingredient_id: ingredientId,
-                        ingredient_name: ingredientName,
-                        density: density,
-                        message: `Density updated to ${density} g/ml for ${ingredientName}`,
-                        retrigger: true
-                    }
-                }));
             })
             .catch(error => {
                 console.error('🔧 DENSITY MODAL: Error saving density:', error);
