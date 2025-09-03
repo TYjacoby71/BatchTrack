@@ -18,6 +18,19 @@
                 <form id="densityFixForm">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="mb-3">
+                        <label for="drawerCategorySelect" class="form-label">Ingredient Category</label>
+                        <select class="form-select" id="drawerCategorySelect" name="category_id">
+                            <option value="" {% if not ingredient.category_id %}selected{% endif %}>-- Custom Category --</option>
+                            {% for category in categories %}
+                            <option value="{{ category.id }}" {% if ingredient.category_id == category.id %}selected{% endif %}
+                                    data-density="{{ category.default_density }}">
+                                {{ category.name }}{% if category.default_density is not none %} (Density: {{ category.default_density }} g/ml){% endif %}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">Select a category to auto-fill density. Choose Custom to enter your own.</div>
+                    </div>
+                    <div class="mb-3">
                         <label for="densityInput" class="form-label">
                             Density (g/ml):
                             <small class="text-muted">How many grams per milliliter</small>
@@ -30,7 +43,8 @@
                                min="0.001" 
                                max="50"
                                placeholder="e.g., 0.96 for beeswax"
-                               required>
+                               value="{% if ingredient.density %}{{ '%.3f'|format(ingredient.density) }}{% elif ingredient.category and ingredient.category.default_density %}{{ '%.3f'|format(ingredient.category.default_density) }}{% else %}{% endif %}"
+                               {% if ingredient.category_id and (not ingredient.density) %}disabled{% endif %}>
                         <div class="form-text">
                             Common densities: Water (1.0), Oil (0.91), Honey (1.42), Beeswax (0.96)
                         </div>
@@ -67,6 +81,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('densityFixForm');
     const saveBtn = document.getElementById('saveDensityBtn');
     const densityInput = document.getElementById('densityInput');
+    const categorySelect = document.getElementById('drawerCategorySelect');
 
     console.log('🔧 DENSITY MODAL: Elements found:', {
         modal: !!modal,
@@ -94,6 +109,25 @@ document.addEventListener('DOMContentLoaded', function() {
     if (saveBtn) {
         console.log('🔧 DENSITY MODAL: Save button found and attaching listener');
 
+        // Handle category change: auto-fill and lock density unless custom
+        if (categorySelect) {
+            categorySelect.addEventListener('change', function() {
+                const selectedValue = this.value;
+                if (selectedValue === '') {
+                    densityInput.disabled = false;
+                    densityInput.value = densityInput.value || '';
+                } else {
+                    const selectedOption = this.options[this.selectedIndex];
+                    const defaultDensity = selectedOption.dataset.density;
+                    densityInput.value = defaultDensity || '';
+                    densityInput.disabled = true;
+                }
+            });
+
+            // Trigger once on load to set initial state
+            categorySelect.dispatchEvent(new Event('change'));
+        }
+
         saveBtn.addEventListener('click', function(e) {
             e.preventDefault();
             console.log('🔧 DENSITY MODAL: Save button clicked for ingredient:', ingredientId, ingredientName);
@@ -101,14 +135,19 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('🔧 DENSITY MODAL: Input element:', densityInput);
             console.log('🔧 DENSITY MODAL: Modal element:', modal);
 
-            const density = parseFloat(densityInput.value);
+            const selectedCategoryId = categorySelect ? categorySelect.value : '';
+            const isCustomCategory = !selectedCategoryId;
+            const density = isCustomCategory ? parseFloat(densityInput.value) : parseFloat(densityInput.value || '0');
             console.log('🔧 DENSITY MODAL: Raw input value:', densityInput.value);
             console.log('🔧 DENSITY MODAL: Parsed density value:', density);
 
-            if (!density || density <= 0) {
-                console.error('🔧 DENSITY MODAL: Invalid density value');
-                alert('Please enter a valid density greater than 0');
-                return;
+            // Validate only when custom category
+            if (isCustomCategory) {
+                if (!density || density <= 0) {
+                    console.error('🔧 DENSITY MODAL: Invalid density value');
+                    alert('Please enter a valid density greater than 0');
+                    return;
+                }
             }
 
             console.log('🔧 DENSITY MODAL: Starting save process...');
@@ -120,7 +159,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Build form data for inventory edit route
             const formData = new FormData(form);
-            formData.set('density', String(density));
+            if (selectedCategoryId) {
+                formData.set('category_id', selectedCategoryId);
+                // Ensure backend uses category default; do not send density override
+                formData.delete('density');
+            } else {
+                formData.set('density', String(density));
+            }
 
             // Submit to existing inventory edit route
             const url = `/inventory/edit/${ingredientId}`;

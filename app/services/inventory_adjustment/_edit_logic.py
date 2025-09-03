@@ -91,11 +91,19 @@ def update_inventory_item(item_id: int, form_data: dict) -> tuple[bool, str]:
             except (ValueError, TypeError):
                 return False, "Invalid cost per unit value"
 
-        if 'category_id' in form_data and form_data['category_id']:
-            try:
-                item.category_id = int(form_data['category_id'])
-            except (ValueError, TypeError):
-                return False, "Invalid category ID"
+        # Handle category selection and clearing
+        if 'category_id' in form_data:
+            raw_category = form_data.get('category_id')
+            if raw_category in [None, '', 'null']:
+                # Custom category selected: clear category and allow manual density
+                item.category_id = None
+            else:
+                try:
+                    item.category_id = int(raw_category)
+                    # When a category is selected, always clear manual density to use category default
+                    item.density = None
+                except (ValueError, TypeError):
+                    return False, "Invalid category ID"
 
         if 'low_stock_threshold' in form_data:
             try:
