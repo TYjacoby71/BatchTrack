@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, render_template
+from flask import Blueprint, request, jsonify, render_template, redirect, url_for
 from flask_login import login_required, current_user
 from app.models import db, InventoryItem
 from app.services.unit_conversion import ConversionEngine
@@ -56,8 +56,100 @@ def conversion_density_modal_get(ingredient_id):
     except Exception as e:
         return jsonify({'error': f'Failed to load modal: {str(e)}'}), 500
 
-# POST endpoint removed - using inventory edit route directly
-# All density updates now go through the inventory edit route
+@drawer_actions_bp.route('/conversion/density-modal/<int:ingredient_id>', methods=['POST'])
+@login_required
+@require_permission('inventory.update')
+def conversion_density_modal_post(ingredient_id):
+    """Accept density input, update ingredient density, and adjust category if needed."""
+    try:
+        print(f"🔧 DENSITY MODAL POST: Starting request for ingredient {ingredient_id}")
+        print(f"🔧 DENSITY MODAL POST: Request method: {request.method}")
+        print(f"🔧 DENSITY MODAL POST: Request headers: {dict(request.headers)}")
+        print(f"🔧 DENSITY MODAL POST: Form data: {dict(request.form)}")
+
+        ingredient = InventoryItem.query.filter_by(
+            id=ingredient_id, 
+            organization_id=current_user.organization_id
+        ).first()
+
+        if not ingredient:
+            print(f"🔧 DENSITY MODAL POST: Ingredient {ingredient_id} not found")
+            return jsonify({'error': 'Ingredient not found'}), 404
+
+        print(f"🔧 DENSITY MODAL POST: Found ingredient: {ingredient.name}, current density: {ingredient.density}")
+
+        # Check if we're updating category or custom density
+        category_id = request.form.get('category_id')
+        custom_density = request.form.get('density')
+
+        print(f"🔧 DENSITY MODAL POST: Category ID from form: {category_id}")
+        print(f"🔧 DENSITY MODAL POST: Custom density from form: {custom_density}")
+
+        if category_id:
+            # User selected a category - use its default density
+            from app.models.category import IngredientCategory
+            category = IngredientCategory.query.filter_by(
+                id=category_id,
+                organization_id=current_user.organization_id,
+                is_active=True
+            ).first()
+
+            if not category:
+                print(f"🔧 DENSITY MODAL POST: Category {category_id} not found")
+                return jsonify({'error': 'Category not found'}), 404
+
+            print(f"🔧 DENSITY MODAL POST: Setting category to {category.name} with default density {category.default_density}")
+
+            ingredient.category_id = category.id
+            ingredient.density = category.default_density
+
+        elif custom_density:
+            # User provided custom density
+            try:
+                density_value = float(custom_density)
+                if density_value <= 0:
+                    print(f"🔧 DENSITY MODAL POST: Density must be positive: {density_value}")
+                    return jsonify({'error': 'Density must be greater than 0'}), 400
+
+                print(f"🔧 DENSITY MODAL POST: Setting custom density: {density_value}")
+                ingredient.density = density_value
+                # Don't change category for custom density
+
+            except ValueError:
+                print(f"🔧 DENSITY MODAL POST: Invalid density value: {custom_density}")
+                return jsonify({'error': 'Invalid density value'}), 400
+        else:
+            print(f"🔧 DENSITY MODAL POST: No density or category provided")
+            return jsonify({'error': 'Either density or category must be provided'}), 400
+
+        # Save to database
+        try:
+            print(f"🔧 DENSITY MODAL POST: Attempting to save to database...")
+            db.session.commit()
+            print(f"🔧 DENSITY MODAL POST: Successfully saved! New density: {ingredient.density}")
+
+            # Return JSON success for AJAX request
+            return jsonify({
+                'success': True,
+                'message': 'Density saved successfully',
+                'ingredient_id': ingredient_id,
+                'density': ingredient.density,
+                'category_name': ingredient.category.name if ingredient.category else None
+            })
+
+        except Exception as commit_error:
+            db.session.rollback()
+            print(f"🔧 DENSITY MODAL POST: Database commit failed: {commit_error}")
+            import traceback
+            traceback.print_exc()
+            return jsonify({'error': 'Failed to save density to database'}), 500
+
+    except Exception as e:
+        print(f"🔧 DENSITY MODAL POST: Unexpected error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': f'Failed to save density: {str(e)}'}), 500
+
 
 @drawer_actions_bp.route('/api/drawer-actions/conversion/unit-mapping-modal', methods=['GET'])
 @login_required

@@ -135,11 +135,15 @@
             console.log('🔧 DENSITY MODAL: Button element:', saveBtn);
             console.log('🔧 DENSITY MODAL: Input element:', densityInput);
             console.log('🔧 DENSITY MODAL: Modal element:', modal);
+            console.log('🔧 DENSITY MODAL: Category select element:', categorySelect);
 
             const selectedCategoryId = categorySelect ? categorySelect.value : '';
             const isCustomCategory = !selectedCategoryId;
             const density = isCustomCategory ? parseFloat(densityInput.value) : parseFloat(densityInput.value || '0');
+            
             console.log('🔧 DENSITY MODAL: Raw input value:', densityInput.value);
+            console.log('🔧 DENSITY MODAL: Selected category ID:', selectedCategoryId);
+            console.log('🔧 DENSITY MODAL: Is custom category:', isCustomCategory);
             console.log('🔧 DENSITY MODAL: Parsed density value:', density);
 
             // Validate only when custom category
@@ -158,62 +162,88 @@
             saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
             console.log('🔧 DENSITY MODAL: Button disabled and showing spinner');
 
-            // Build form data for inventory edit route
-            const formData = new FormData(form);
+            // Build form data for the new dedicated density endpoint
+            const formData = new FormData();
+            formData.append('csrf_token', form.querySelector('input[name="csrf_token"]').value);
+            
             if (selectedCategoryId) {
-                formData.set('category_id', selectedCategoryId);
-                // Ensure backend uses category default; do not send density override
-                formData.delete('density');
+                formData.append('category_id', selectedCategoryId);
+                console.log('🔧 DENSITY MODAL: Submitting category change to:', selectedCategoryId);
             } else {
-                formData.set('density', String(density));
+                formData.append('density', String(density));
+                console.log('🔧 DENSITY MODAL: Submitting custom density:', density);
             }
 
-            // Submit to existing inventory edit route
-            const url = `/inventory/edit/${ingredientId}`;
-            console.log('🔧 DENSITY MODAL: Submitting to', url);
+            // Log all form data being sent
+            console.log('🔧 DENSITY MODAL: Form data being sent:');
+            for (const [key, value] of formData.entries()) {
+                console.log(`  ${key}: ${value}`);
+            }
+
+            // Submit to dedicated density endpoint
+            const url = `/api/drawer-actions/conversion/density-modal/${ingredientId}`;
+            console.log('🔧 DENSITY MODAL: Submitting to dedicated endpoint:', url);
 
             fetch(url, {
                 method: 'POST',
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest'
                 },
-                body: formData,
-                redirect: 'follow'
+                body: formData
             })
             .then(async (response) => {
-                console.log('🔧 DENSITY MODAL: Response received', response.status, response.ok);
+                console.log('🔧 DENSITY MODAL: Response received');
+                console.log('🔧 DENSITY MODAL: Status:', response.status);
+                console.log('🔧 DENSITY MODAL: Status OK:', response.ok);
+                console.log('🔧 DENSITY MODAL: Response headers:', Object.fromEntries(response.headers.entries()));
+                
+                const responseText = await response.text();
+                console.log('🔧 DENSITY MODAL: Response text:', responseText);
+
                 if (!response.ok) {
-                    throw new Error(`Request failed with status ${response.status}`);
+                    console.error('🔧 DENSITY MODAL: Request failed with status', response.status);
+                    throw new Error(`Request failed with status ${response.status}: ${responseText}`);
                 }
 
-                // Consider any 2xx/redirect-followed 200 as success
-                try {
-                    // Try to parse JSON if available (not required)
-                    const contentType = response.headers.get('content-type') || '';
-                    if (contentType.includes('application/json')) {
-                        const data = await response.json();
-                        console.log('🔧 DENSITY MODAL: JSON response', data);
+                // Check if it's a redirect response
+                if (response.status >= 300 && response.status < 400) {
+                    console.log('🔧 DENSITY MODAL: Redirect response detected');
+                }
+
+                // Try to parse as JSON if it looks like JSON
+                let data = null;
+                if (responseText.trim().startsWith('{') || responseText.trim().startsWith('[')) {
+                    try {
+                        data = JSON.parse(responseText);
+                        console.log('🔧 DENSITY MODAL: Parsed JSON response:', data);
+                    } catch (parseError) {
+                        console.log('🔧 DENSITY MODAL: Failed to parse JSON, treating as HTML redirect');
                     }
-                } catch (err) {
-                    console.log('🔧 DENSITY MODAL: Non-JSON response (expected on redirect)');
                 }
 
                 // Close modal
                 const instance = bootstrap.Modal.getInstance(modal);
-                if (instance) instance.hide();
+                if (instance) {
+                    console.log('🔧 DENSITY MODAL: Closing modal instance');
+                    instance.hide();
+                } else {
+                    console.log('🔧 DENSITY MODAL: No modal instance found');
+                }
 
                 // Dispatch success event for DrawerProtocol retry
                 const eventDetail = { ingredient_id: ingredientId, density };
-                console.log('🔧 DENSITY MODAL: Dispatching success event conversion.density.updated with detail', eventDetail);
+                console.log('🔧 DENSITY MODAL: Dispatching success event conversion.density.updated with detail:', eventDetail);
                 window.dispatchEvent(new CustomEvent('conversion.density.updated', { detail: eventDetail }));
 
                 // Reset button
                 saveBtn.disabled = false;
                 saveBtn.innerHTML = '<i class="fas fa-save"></i> Save Density';
+                console.log('🔧 DENSITY MODAL: Save process completed successfully');
             })
             .catch((error) => {
-                console.error('🚨 DENSITY MODAL: Save failed', error);
-                alert('Failed to save density. Please try again.');
+                console.error('🚨 DENSITY MODAL: Save failed with error:', error);
+                console.error('🚨 DENSITY MODAL: Error stack:', error.stack);
+                alert('Failed to save density: ' + error.message);
                 saveBtn.disabled = false;
                 saveBtn.innerHTML = '<i class="fas fa-save"></i> Save Density';
             });
