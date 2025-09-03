@@ -108,21 +108,41 @@ class DrawerProtocol {
             const data = await response.json();
 
             if (data.success) {
-                // Inject modal HTML
-                document.body.insertAdjacentHTML('beforeend', data.modal_html);
+                // Create a wrapper so we can reliably find elements and execute scripts
+                const wrapper = document.createElement('div');
+                wrapper.className = 'drawer-wrapper';
+                wrapper.innerHTML = data.modal_html;
+                document.body.appendChild(wrapper);
 
-                // Get modal element (assumes consistent naming)
-                const modalElement = document.body.lastElementChild.querySelector('.modal');
+                // Execute any inline scripts contained within the modal HTML
+                const scripts = wrapper.querySelectorAll('script');
+                scripts.forEach((oldScript) => {
+                    const newScript = document.createElement('script');
+                    // Copy attributes like type if present
+                    for (const { name, value } of Array.from(oldScript.attributes)) {
+                        newScript.setAttribute(name, value);
+                    }
+                    newScript.textContent = oldScript.textContent;
+                    oldScript.replaceWith(newScript);
+                });
+
+                // Locate the modal element (handle cases where script is the last child)
+                const modals = wrapper.querySelectorAll('.modal');
+                const modalElement = modals.length ? modals[modals.length - 1] : null;
 
                 if (!modalElement) {
                     console.error('🚨 DRAWER PROTOCOL: No modal element found in response');
+                    // Clean wrapper to avoid orphaned nodes
+                    wrapper.remove();
                     return false;
                 }
 
                 const modal = new bootstrap.Modal(modalElement);
 
                 // Track active drawer
-                this.activeDrawers.add(modalElement.id);
+                if (modalElement.id) {
+                    this.activeDrawers.add(modalElement.id);
+                }
 
                 // Show modal
                 modal.show();
@@ -137,8 +157,11 @@ class DrawerProtocol {
 
                 // Clean up on close
                 modalElement.addEventListener('hidden.bs.modal', () => {
-                    this.activeDrawers.delete(modalElement.id);
-                    modalElement.remove();
+                    if (modalElement.id) {
+                        this.activeDrawers.delete(modalElement.id);
+                    }
+                    // Remove entire wrapper to clean scripts and markup
+                    wrapper.remove();
                 }, { once: true });
 
                 return true;

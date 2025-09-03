@@ -2,6 +2,7 @@
 <div class="modal fade" id="densityFixModal" tabindex="-1" aria-labelledby="densityFixModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
+            <meta name="csrf-token" content="{{ csrf_token }}">
             <div class="modal-header">
                 <h5 class="modal-title" id="densityFixModalLabel">
                     <i class="fas fa-balance-scale text-warning"></i>
@@ -61,57 +62,98 @@ document.addEventListener('DOMContentLoaded', function() {
     const saveBtn = document.getElementById('saveDensityBtn');
     const densityInput = document.getElementById('densityInput');
     
+    // Get ingredient ID from the modal data or URL
+    const ingredientId = {{ ingredient.id }};
+    const ingredientName = '{{ ingredient.name }}';
+    
+    console.log('🔧 DENSITY MODAL: DOM loaded, elements found:', {
+        modal: !!modal,
+        form: !!form,
+        saveBtn: !!saveBtn,
+        densityInput: !!densityInput,
+        ingredientId: ingredientId,
+        ingredientName: ingredientName
+    });
+    
     if (saveBtn) {
-        saveBtn.addEventListener('click', function() {
+        saveBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            console.log('🔧 DENSITY MODAL: Save button clicked');
+            
             const density = parseFloat(densityInput.value);
+            console.log('🔧 DENSITY MODAL: Density value:', density);
             
             if (!density || density <= 0) {
                 alert('Please enter a valid density greater than 0');
                 return;
             }
             
+            // Disable button during save
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+            
+            const apiUrl = `/api/drawer-actions/conversion/density-modal/${ingredientId}`;
+            console.log('🔧 DENSITY MODAL: Sending POST to:', apiUrl);
+            
             // Save density via API
-            fetch('/api/drawer-actions/conversion/density-modal/{{ ingredient.id }}', {
+            fetch(apiUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest'
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
                 },
                 body: JSON.stringify({
                     density: density
                 })
             })
-            .then(response => response.json())
+            .then(response => {
+                console.log('🔧 DENSITY MODAL: Response status:', response.status);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                return response.json();
+            })
             .then(data => {
+                console.log('🔧 DENSITY MODAL: Response data:', data);
+                
                 if (data.success) {
                     // Close modal and trigger callback
                     const modalInstance = bootstrap.Modal.getInstance(modal);
-                    modalInstance.hide();
+                    if (modalInstance) {
+                        modalInstance.hide();
+                    }
                     
                     // Dispatch custom event for parent to retrigger conversion
+                    console.log('🔧 DENSITY MODAL: Dispatching conversion.density.updated event');
                     window.dispatchEvent(new CustomEvent('conversion.density.updated', {
                         detail: {
-                            ingredient_id: {{ ingredient.id }},
-                            ingredient_name: '{{ ingredient.name }}',
+                            ingredient_id: ingredientId,
+                            ingredient_name: ingredientName,
                             density: density,
                             message: data.message,
                             retrigger: true
                         }
                     }));
                 } else {
-                    alert('Error: ' + data.error);
+                    alert('Error: ' + (data.error || 'Failed to save density'));
                 }
             })
             .catch(error => {
-                console.error('Error saving density:', error);
-                alert('Failed to save density. Please try again.');
+                console.error('🔧 DENSITY MODAL: Error saving density:', error);
+                alert('Failed to save density: ' + error.message);
+            })
+            .finally(() => {
+                // Re-enable button
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<i class="fas fa-save"></i> Save Density';
             });
         });
     }
 });
 
 function openDensityReference() {
-    window.open('/conversion/units', '_blank');
+    // Open the density reference data instead of unit manager
+    window.open('/api/density-reference', '_blank');
 }
 </script>
-</div>
