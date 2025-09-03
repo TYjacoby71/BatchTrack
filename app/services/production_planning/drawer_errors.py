@@ -17,23 +17,14 @@ def generate_drawer_payload_for_container_error(error_code: str, recipe, from_un
         correlation_id = str(uuid.uuid4())
         # We will prompt for product density at the recipe level and fire an event
         # that allows the auto-fill to retry with the provided density in-session.
+        # Redirect the user to the unit manager for now; no separate product density modal
         return {
             'version': '1.0',
-            'modal_url': f"/api/drawer-actions/containers/product-density-modal/{recipe.id}",
-            'success_event': 'containers.product_density.updated',
+            'redirect_url': '/conversion/units',
             'error_type': 'container_planning',
             'error_code': error_code,
             'error_message': 'Missing product density to convert between volume and weight units for container planning',
-            'correlation_id': correlation_id,
-            'retry': {
-                'mode': 'frontend_callback',
-                'operation': 'container_auto_fill',
-                'data': {
-                    'recipe_id': recipe.id,
-                    'from_unit': from_unit,
-                    'to_unit': to_unit
-                }
-            }
+            'correlation_id': correlation_id
         }
 
     # Unknown/unsupported error code: return minimal info (no drawer)
