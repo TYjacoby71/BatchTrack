@@ -70,8 +70,9 @@
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('🔧 DENSITY MODAL: DOM loaded, checking for conflicts...');
+(function() {
+    const init = function() {
+    console.log('🔧 DENSITY MODAL: Initializing density modal (DOM ready or injected)...');
 
     // Check for modal conflicts
     const allDensityModals = document.querySelectorAll('[id*="density"], [id*="Density"]');
@@ -222,7 +223,13 @@ document.addEventListener('DOMContentLoaded', function() {
     } else {
         console.error('🔧 DENSITY MODAL: Save button not found during initialization');
     }
-});
+    };
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init, { once: true });
+    } else {
+        init();
+    }
+})();
 
 function openDensityReference() {
     // Open the density reference data instead of unit manager
