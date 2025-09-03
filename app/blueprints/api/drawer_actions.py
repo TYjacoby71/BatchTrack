@@ -32,7 +32,7 @@ def conversion_density_modal_get(ingredient_id):
         from flask_wtf.csrf import generate_csrf
         csrf_token = generate_csrf()
         
-        modal_html = render_template('components/shared/density_fix_modal.html',
+        modal_html = render_template('components/drawer/density_fix_modal.html',
                                    ingredient=ingredient)
 
         return jsonify({
