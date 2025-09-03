@@ -219,8 +219,10 @@ class DrawerProtocol {
     }
 }
 
-// Global instance
-window.drawerProtocol = new DrawerProtocol();
+// Global instance - singleton pattern to prevent multiple initializations
+if (!window.drawerProtocol) {
+    window.drawerProtocol = new DrawerProtocol();
+}
 
 // Export for modules
 export { DrawerProtocol };
