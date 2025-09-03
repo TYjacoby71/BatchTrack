@@ -138,7 +138,9 @@
 
             const selectedCategoryId = categorySelect ? categorySelect.value : '';
             const isCustomCategory = !selectedCategoryId;
-            const density = isCustomCategory ? parseFloat(densityInput.value) : parseFloat(densityInput.value || '0');
+            const selectedOption = categorySelect ? categorySelect.options[categorySelect.selectedIndex] : null;
+            const defaultDensity = selectedOption ? parseFloat(selectedOption.dataset.density || '0') : 0;
+            const density = isCustomCategory ? parseFloat(densityInput.value) : defaultDensity;
             console.log('🔧 DENSITY MODAL: Raw input value:', densityInput.value);
             console.log('🔧 DENSITY MODAL: Parsed density value:', density);
 
@@ -162,8 +164,12 @@
             const formData = new FormData(form);
             if (selectedCategoryId) {
                 formData.set('category_id', selectedCategoryId);
-                // Ensure backend uses category default; do not send density override
-                formData.delete('density');
+                // Persist category's default density to resolve zero/None edge cases
+                if (defaultDensity && defaultDensity > 0) {
+                    formData.set('density', String(defaultDensity));
+                } else {
+                    formData.delete('density');
+                }
             } else {
                 formData.set('density', String(density));
             }
