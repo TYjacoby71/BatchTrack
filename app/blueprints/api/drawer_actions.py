@@ -32,7 +32,7 @@ def conversion_density_modal_get(ingredient_id):
         from flask_wtf.csrf import generate_csrf
         csrf_token = generate_csrf()
         
-        modal_html = render_template(f'components/drawer/density_fix_modal_{ingredient_id}.html',
+        modal_html = render_template('components/drawer/density_fix_modal_7.html',
                                    ingredient=ingredient, 
                                    csrf_token=csrf_token)
 
@@ -45,6 +45,7 @@ def conversion_density_modal_get(ingredient_id):
         return jsonify({'error': f'Failed to load modal: {str(e)}'}), 500
 
 # POST endpoint removed - using inventory edit route directly
+# All density updates now go through the inventory edit route
 
 @drawer_actions_bp.route('/api/drawer-actions/conversion/unit-mapping-modal', methods=['GET'])
 @login_required

@@ -1,4 +1,3 @@
-
 <div class="modal fade" id="densityFixModal" tabindex="-1" aria-labelledby="densityFixModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -86,45 +85,42 @@ document.addEventListener('DOMContentLoaded', function() {
             saveBtn.disabled = true;
             saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
 
-            // Use the existing inventory edit route
-            const formData = new FormData(form);
-            formData.append('action', 'update_density');
+            const apiUrl = `/inventory/edit/${ingredientId}`;
+            console.log('🔧 DENSITY MODAL: Posting to inventory edit route:', apiUrl);
 
-            fetch(`/inventory/edit/${ingredientId}`, {
+            // Prepare form data like the regular inventory form
+            const formData = new FormData();
+            formData.append('density', density);
+            formData.append('action', 'update_density');
+            formData.append('csrf_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
+
+            fetch(apiUrl, {
                 method: 'POST',
                 body: formData
             })
             .then(response => {
-                if (response.redirected) {
-                    console.log('🔧 DENSITY MODAL: Density updated successfully (redirected)');
-                    
-                    // Close modal
-                    const modalInstance = bootstrap.Modal.getInstance(modal);
-                    modalInstance.hide();
-
-                    // Dispatch success event for retry mechanism
-                    window.dispatchEvent(new CustomEvent('conversion.density.updated', {
-                        detail: {
-                            ingredient_id: ingredientId,
-                            ingredient_name: ingredientName,
-                            density: density,
-                            message: `Density updated to ${density} g/ml for ${ingredientName}`,
-                            retrigger: true
-                        }
-                    }));
-                    return;
-                }
-                
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
-                
-                return response.text();
+                return response.text(); // Inventory routes return redirects, not JSON
             })
             .then(data => {
-                if (data) {
-                    console.log('🔧 DENSITY MODAL: Response received:', data);
-                }
+                console.log('🔧 DENSITY MODAL: Density updated successfully');
+
+                // Close modal
+                const modalInstance = bootstrap.Modal.getInstance(modal);
+                modalInstance.hide();
+
+                // Dispatch success event for retry mechanism
+                window.dispatchEvent(new CustomEvent('conversion.density.updated', {
+                    detail: {
+                        ingredient_id: ingredientId,
+                        ingredient_name: ingredientName,
+                        density: density,
+                        message: `Density updated to ${density} g/ml for ${ingredientName}`,
+                        retrigger: true
+                    }
+                }));
             })
             .catch(error => {
                 console.error('🔧 DENSITY MODAL: Error saving density:', error);
@@ -140,6 +136,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function openDensityReference() {
+    // Open the density reference data instead of unit manager
     window.open('/api/density-reference', '_blank');
 }
 </script>
