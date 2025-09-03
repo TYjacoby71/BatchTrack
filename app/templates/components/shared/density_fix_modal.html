@@ -2,7 +2,6 @@
 <div class="modal fade" id="densityFixModal" tabindex="-1" aria-labelledby="densityFixModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
-            <meta name="csrf-token" content="{{ csrf_token }}">
             <div class="modal-header">
                 <h5 class="modal-title" id="densityFixModalLabel">
                     <i class="fas fa-balance-scale text-warning"></i>
@@ -16,8 +15,9 @@
                     <strong>Density Required:</strong> To convert between volume and weight units for 
                     <strong>{{ ingredient.name }}</strong>, we need its density value.
                 </div>
-                
+
                 <form id="densityFixForm">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="mb-3">
                         <label for="densityInput" class="form-label">
                             Density (g/ml):
@@ -26,6 +26,7 @@
                         <input type="number" 
                                class="form-control" 
                                id="densityInput" 
+                               name="density"
                                step="0.001" 
                                min="0.001" 
                                max="50"
@@ -36,7 +37,7 @@
                         </div>
                     </div>
                 </form>
-                
+
                 <div class="d-flex gap-2 justify-content-between">
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
                         Cancel
@@ -61,83 +62,66 @@ document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('densityFixForm');
     const saveBtn = document.getElementById('saveDensityBtn');
     const densityInput = document.getElementById('densityInput');
-    
-    // Get ingredient ID from the modal data or URL
+
+    // Get ingredient ID from the modal data
     const ingredientId = {{ ingredient.id }};
     const ingredientName = '{{ ingredient.name }}';
-    
-    console.log('🔧 DENSITY MODAL: DOM loaded, elements found:', {
-        modal: !!modal,
-        form: !!form,
-        saveBtn: !!saveBtn,
-        densityInput: !!densityInput,
-        ingredientId: ingredientId,
-        ingredientName: ingredientName
-    });
-    
+
+    console.log('🔧 DENSITY MODAL: DOM loaded for ingredient:', ingredientId, ingredientName);
+
     if (saveBtn) {
         saveBtn.addEventListener('click', function(e) {
             e.preventDefault();
             console.log('🔧 DENSITY MODAL: Save button clicked');
-            
+
             const density = parseFloat(densityInput.value);
             console.log('🔧 DENSITY MODAL: Density value:', density);
-            
+
             if (!density || density <= 0) {
                 alert('Please enter a valid density greater than 0');
                 return;
             }
-            
+
             // Disable button during save
             saveBtn.disabled = true;
             saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
-            
-            const apiUrl = `/api/drawer-actions/conversion/density-modal/${ingredientId}`;
-            console.log('🔧 DENSITY MODAL: Sending POST to:', apiUrl);
-            
-            // Save density via API
+
+            const apiUrl = `/inventory/edit/${ingredientId}`;
+            console.log('🔧 DENSITY MODAL: Posting to inventory edit route:', apiUrl);
+
+            // Prepare form data like the regular inventory form
+            const formData = new FormData();
+            formData.append('density', density);
+            formData.append('action', 'update_density');
+            formData.append('csrf_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
+
             fetch(apiUrl, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
-                },
-                body: JSON.stringify({
-                    density: density
-                })
+                body: formData
             })
             .then(response => {
-                console.log('🔧 DENSITY MODAL: Response status:', response.status);
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
-                return response.json();
+                return response.text(); // Inventory routes return redirects, not JSON
             })
             .then(data => {
-                console.log('🔧 DENSITY MODAL: Response data:', data);
-                
-                if (data.success) {
-                    // Close modal and trigger callback
-                    const modalInstance = bootstrap.Modal.getInstance(modal);
-                    if (modalInstance) {
-                        modalInstance.hide();
+                console.log('🔧 DENSITY MODAL: Density updated successfully');
+
+                // Close modal
+                const modalInstance = bootstrap.Modal.getInstance(modal);
+                modalInstance.hide();
+
+                // Dispatch success event for retry mechanism
+                window.dispatchEvent(new CustomEvent('conversion.density.updated', {
+                    detail: {
+                        ingredient_id: ingredientId,
+                        ingredient_name: ingredientName,
+                        density: density,
+                        message: `Density updated to ${density} g/ml for ${ingredientName}`,
+                        retrigger: true
                     }
-                    
-                    // Dispatch custom event for parent to retrigger conversion
-                    console.log('🔧 DENSITY MODAL: Dispatching conversion.density.updated event');
-                    window.dispatchEvent(new CustomEvent('conversion.density.updated', {
-                        detail: {
-                            ingredient_id: ingredientId,
-                            ingredient_name: ingredientName,
-                            density: density,
-                            message: data.message,
-                            retrigger: true
-                        }
-                    }));
-                } else {
-                    alert('Error: ' + (data.error || 'Failed to save density'));
-                }
+                }));
             })
             .catch(error => {
                 console.error('🔧 DENSITY MODAL: Error saving density:', error);

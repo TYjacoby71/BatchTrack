@@ -1,4 +1,3 @@
-
 """
 Conversion Service Drawer Error Handler
 
@@ -12,16 +11,16 @@ import uuid
 def handle_conversion_error(conversion_result):
     """
     Convert a ConversionEngine error result into a standardized drawer response.
-    
+
     This is the ONLY place where conversion error -> drawer decisions are made.
     Any service that uses ConversionEngine should call this function.
     """
     if conversion_result.get('success'):
         return {'requires_drawer': False}
-    
+
     error_code = conversion_result.get('error_code')
     error_data = conversion_result.get('error_data', {})
-    
+
     if error_code == 'MISSING_DENSITY':
         ingredient_id = error_data.get('ingredient_id')
         correlation_id = str(uuid.uuid4())
@@ -49,7 +48,7 @@ def handle_conversion_error(conversion_result):
             'suggested_density': _get_suggested_density(error_data.get('ingredient_name', '')),
             'error_message': 'Missing density for conversion'
         }
-    
+
     elif error_code == 'MISSING_CUSTOM_MAPPING':
         from_unit = error_data.get('from_unit')
         to_unit = error_data.get('to_unit')
@@ -75,7 +74,7 @@ def handle_conversion_error(conversion_result):
             },
             'error_message': 'Missing custom unit mapping'
         }
-    
+
     elif error_code in ['UNKNOWN_SOURCE_UNIT', 'UNKNOWN_TARGET_UNIT']:
         unknown_unit = error_data.get('unit')
         correlation_id = str(uuid.uuid4())
@@ -97,14 +96,14 @@ def handle_conversion_error(conversion_result):
             },
             'error_message': f'Unknown unit: {unknown_unit}'
         }
-    
+
     elif error_code == 'SYSTEM_ERROR':
         return {
             'requires_drawer': False,
             'error_type': 'system_error',
             'error_message': 'Unit conversion is not available at the moment, please try again'
         }
-    
+
     else:
         # For all other conversion errors, don't show a drawer
         return {
@@ -153,7 +152,7 @@ def generate_drawer_payload_for_conversion_error(error_code, error_data, retry_o
         }
     else:
         return None
-    
+
     # Add retry information if provided
     if retry_operation and retry_data:
         payload['retry'] = {
@@ -161,14 +160,14 @@ def generate_drawer_payload_for_conversion_error(error_code, error_data, retry_o
             'operation': retry_operation,
             'data': retry_data
         }
-    
+
     return payload
 
 def _get_suggested_density(ingredient_name):
     """Get suggested density for common ingredients"""
     if not ingredient_name:
         return None
-        
+
     density_suggestions = {
         'beeswax': 0.96,
         'wax': 0.93,
@@ -180,7 +179,7 @@ def _get_suggested_density(ingredient_name):
         'cream': 0.994,
         'syrup': 1.37
     }
-    
+
     ingredient_lower = ingredient_name.lower()
     for key, density in density_suggestions.items():
         if key in ingredient_lower:
@@ -194,7 +193,7 @@ def prepare_density_error_context(ingredient, error_data=None):
         suggested_density = ingredient.category.default_density
     else:
         suggested_density = _get_suggested_density(ingredient.name)
-    
+
     return {
         'ingredient': ingredient,
         'suggested_density': suggested_density,
