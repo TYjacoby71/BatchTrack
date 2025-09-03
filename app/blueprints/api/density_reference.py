@@ -1,4 +1,3 @@
-
 from flask import Blueprint, jsonify, render_template_string
 from flask_login import login_required
 import json
@@ -6,7 +5,7 @@ import os
 
 density_reference_bp = Blueprint('density_reference', __name__)
 
-@density_reference_bp.route('/api/density-reference')
+@density_reference_bp.route('/')
 @login_required
 def get_density_reference():
     """Serve density reference data as a formatted page"""
@@ -55,7 +54,7 @@ def get_density_reference():
             <h2><i class="fas fa-balance-scale text-primary"></i> Ingredient Density Reference</h2>
             <small class="text-muted">Densities in grams per milliliter (g/ml)</small>
         </div>
-        
+
         <div class="alert alert-info">
             <i class="fas fa-info-circle"></i>
             <strong>How to use:</strong> Find your ingredient below and use the density value in your conversion.
@@ -79,7 +78,7 @@ def get_density_reference():
             </div>
         </div>
         {% endfor %}
-        
+
         <div class="mt-4 text-center">
             <button class="btn btn-secondary" onclick="window.close()">
                 <i class="fas fa-times"></i> Close
@@ -89,7 +88,7 @@ def get_density_reference():
 </body>
 </html>
         """
-        
+
         # Group densities by category
         categories = {}
         for item in density_data.get('common_densities', []):
@@ -97,12 +96,12 @@ def get_density_reference():
             if category not in categories:
                 categories[category] = []
             categories[category].append(item)
-        
+
         # Sort categories and items within each category
         for category in categories:
             categories[category].sort(key=lambda x: x['name'])
-        
+
         return render_template_string(html_template, categories=categories)
-        
+
     except Exception as e:
         return jsonify({'error': f'Failed to load density reference: {str(e)}'}), 500
