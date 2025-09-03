@@ -31,3 +31,192 @@
     {"name": "Tea Tree Essential Oil", "density_g_per_ml": 0.89, "category": "Fragrance"}
   ]
 }
+{
+  "common_densities": [
+    {
+      "name": "Water",
+      "density_g_per_ml": 1.0,
+      "category": "Liquids"
+    },
+    {
+      "name": "Olive Oil",
+      "density_g_per_ml": 0.92,
+      "category": "Oils"
+    },
+    {
+      "name": "Vegetable Oil",
+      "density_g_per_ml": 0.92,
+      "category": "Oils"
+    },
+    {
+      "name": "Coconut Oil",
+      "density_g_per_ml": 0.92,
+      "category": "Oils"
+    },
+    {
+      "name": "All-Purpose Flour",
+      "density_g_per_ml": 0.6,
+      "category": "Powders"
+    },
+    {
+      "name": "Bread Flour",
+      "density_g_per_ml": 0.65,
+      "category": "Powders"
+    },
+    {
+      "name": "White Sugar",
+      "density_g_per_ml": 0.85,
+      "category": "Solids"
+    },
+    {
+      "name": "Brown Sugar",
+      "density_g_per_ml": 0.9,
+      "category": "Solids"
+    },
+    {
+      "name": "Powdered Sugar",
+      "density_g_per_ml": 0.56,
+      "category": "Powders"
+    },
+    {
+      "name": "Table Salt",
+      "density_g_per_ml": 2.16,
+      "category": "Solids"
+    },
+    {
+      "name": "Sea Salt",
+      "density_g_per_ml": 2.16,
+      "category": "Solids"
+    },
+    {
+      "name": "Baking Soda",
+      "density_g_per_ml": 2.2,
+      "category": "Powders"
+    },
+    {
+      "name": "Baking Powder",
+      "density_g_per_ml": 1.3,
+      "category": "Powders"
+    },
+    {
+      "name": "Honey",
+      "density_g_per_ml": 1.4,
+      "category": "Liquids"
+    },
+    {
+      "name": "Maple Syrup",
+      "density_g_per_ml": 1.37,
+      "category": "Liquids"
+    },
+    {
+      "name": "Corn Syrup",
+      "density_g_per_ml": 1.48,
+      "category": "Liquids"
+    },
+    {
+      "name": "Butter",
+      "density_g_per_ml": 0.91,
+      "category": "Fats"
+    },
+    {
+      "name": "Margarine",
+      "density_g_per_ml": 0.91,
+      "category": "Fats"
+    },
+    {
+      "name": "Whole Milk",
+      "density_g_per_ml": 1.03,
+      "category": "Liquids"
+    },
+    {
+      "name": "Heavy Cream",
+      "density_g_per_ml": 0.99,
+      "category": "Liquids"
+    },
+    {
+      "name": "Sour Cream",
+      "density_g_per_ml": 0.96,
+      "category": "Liquids"
+    },
+    {
+      "name": "Yogurt",
+      "density_g_per_ml": 1.05,
+      "category": "Liquids"
+    },
+    {
+      "name": "Vanilla Extract",
+      "density_g_per_ml": 0.87,
+      "category": "Extracts"
+    },
+    {
+      "name": "Lemon Juice",
+      "density_g_per_ml": 1.03,
+      "category": "Liquids"
+    },
+    {
+      "name": "Vinegar",
+      "density_g_per_ml": 1.05,
+      "category": "Liquids"
+    },
+    {
+      "name": "Apple Cider Vinegar",
+      "density_g_per_ml": 1.01,
+      "category": "Liquids"
+    },
+    {
+      "name": "Cocoa Powder",
+      "density_g_per_ml": 0.64,
+      "category": "Powders"
+    },
+    {
+      "name": "Ground Cinnamon",
+      "density_g_per_ml": 0.56,
+      "category": "Spices"
+    },
+    {
+      "name": "Ground Pepper",
+      "density_g_per_ml": 0.64,
+      "category": "Spices"
+    },
+    {
+      "name": "Dried Herbs (general)",
+      "density_g_per_ml": 0.3,
+      "category": "Spices"
+    },
+    {
+      "name": "Oats (rolled)",
+      "density_g_per_ml": 0.41,
+      "category": "Grains"
+    },
+    {
+      "name": "Rice (uncooked)",
+      "density_g_per_ml": 0.75,
+      "category": "Grains"
+    },
+    {
+      "name": "Quinoa (uncooked)",
+      "density_g_per_ml": 0.85,
+      "category": "Grains"
+    },
+    {
+      "name": "Almonds (whole)",
+      "density_g_per_ml": 0.54,
+      "category": "Nuts"
+    },
+    {
+      "name": "Walnuts (pieces)",
+      "density_g_per_ml": 0.4,
+      "category": "Nuts"
+    },
+    {
+      "name": "Chocolate Chips",
+      "density_g_per_ml": 0.75,
+      "category": "Solids"
+    },
+    {
+      "name": "Raisins",
+      "density_g_per_ml": 0.67,
+      "category": "Dried Fruits"
+    }
+  ]
+}
