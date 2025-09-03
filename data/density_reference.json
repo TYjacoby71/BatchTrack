@@ -1,222 +1,959 @@
 
 {
   "common_densities": [
-    {"name": "Water", "density_g_per_ml": 1.0, "category": "Liquid"},
-    {"name": "Milk", "density_g_per_ml": 1.03, "category": "Dairy"},
-    {"name": "Heavy Cream", "density_g_per_ml": 0.994, "category": "Dairy"},
-    {"name": "Yogurt", "density_g_per_ml": 1.03, "category": "Dairy"},
-    
-    {"name": "Olive Oil", "density_g_per_ml": 0.91, "category": "Oil"},
-    {"name": "Coconut Oil", "density_g_per_ml": 0.924, "category": "Oil"},
-    {"name": "Castor Oil", "density_g_per_ml": 0.96, "category": "Oil"},
-    {"name": "Almond Oil", "density_g_per_ml": 0.91, "category": "Oil"},
-    
-    {"name": "Honey", "density_g_per_ml": 1.42, "category": "Syrup"},
-    {"name": "Maple Syrup", "density_g_per_ml": 1.37, "category": "Syrup"},
-    {"name": "Agave", "density_g_per_ml": 1.4, "category": "Syrup"},
-    
-    {"name": "Beeswax", "density_g_per_ml": 0.96, "category": "Wax"},
-    {"name": "Soy Wax", "density_g_per_ml": 0.93, "category": "Wax"},
-    {"name": "Paraffin Wax", "density_g_per_ml": 0.9, "category": "Wax"},
-    
-    {"name": "Shea Butter", "density_g_per_ml": 0.92, "category": "Solid"},
-    {"name": "Cocoa Butter", "density_g_per_ml": 0.89, "category": "Solid"},
-    {"name": "Mango Butter", "density_g_per_ml": 0.91, "category": "Solid"},
-    
-    {"name": "Bentonite Clay", "density_g_per_ml": 2.35, "category": "Clay"},
-    {"name": "Kaolin Clay", "density_g_per_ml": 2.6, "category": "Clay"},
-    
-    {"name": "Lavender Essential Oil", "density_g_per_ml": 0.885, "category": "Fragrance"},
-    {"name": "Peppermint Essential Oil", "density_g_per_ml": 0.9, "category": "Fragrance"},
-    {"name": "Tea Tree Essential Oil", "density_g_per_ml": 0.89, "category": "Fragrance"}
-  ]
-}
-{
-  "common_densities": [
     {
       "name": "Water",
       "density_g_per_ml": 1.0,
-      "category": "Liquids"
-    },
-    {
-      "name": "Olive Oil",
-      "density_g_per_ml": 0.92,
-      "category": "Oils"
-    },
-    {
-      "name": "Vegetable Oil",
-      "density_g_per_ml": 0.92,
-      "category": "Oils"
-    },
-    {
-      "name": "Coconut Oil",
-      "density_g_per_ml": 0.92,
-      "category": "Oils"
-    },
-    {
-      "name": "All-Purpose Flour",
-      "density_g_per_ml": 0.6,
-      "category": "Powders"
-    },
-    {
-      "name": "Bread Flour",
-      "density_g_per_ml": 0.65,
-      "category": "Powders"
-    },
-    {
-      "name": "White Sugar",
-      "density_g_per_ml": 0.85,
-      "category": "Solids"
-    },
-    {
-      "name": "Brown Sugar",
-      "density_g_per_ml": 0.9,
-      "category": "Solids"
-    },
-    {
-      "name": "Powdered Sugar",
-      "density_g_per_ml": 0.56,
-      "category": "Powders"
-    },
-    {
-      "name": "Table Salt",
-      "density_g_per_ml": 2.16,
-      "category": "Solids"
-    },
-    {
-      "name": "Sea Salt",
-      "density_g_per_ml": 2.16,
-      "category": "Solids"
-    },
-    {
-      "name": "Baking Soda",
-      "density_g_per_ml": 2.2,
-      "category": "Powders"
-    },
-    {
-      "name": "Baking Powder",
-      "density_g_per_ml": 1.3,
-      "category": "Powders"
-    },
-    {
-      "name": "Honey",
-      "density_g_per_ml": 1.4,
-      "category": "Liquids"
-    },
-    {
-      "name": "Maple Syrup",
-      "density_g_per_ml": 1.37,
-      "category": "Liquids"
-    },
-    {
-      "name": "Corn Syrup",
-      "density_g_per_ml": 1.48,
-      "category": "Liquids"
-    },
-    {
-      "name": "Butter",
-      "density_g_per_ml": 0.91,
-      "category": "Fats"
-    },
-    {
-      "name": "Margarine",
-      "density_g_per_ml": 0.91,
-      "category": "Fats"
+      "category": "Liquids",
+      "aliases": ["distilled water", "pure water", "H2O"]
     },
     {
       "name": "Whole Milk",
       "density_g_per_ml": 1.03,
-      "category": "Liquids"
+      "category": "Dairy",
+      "aliases": ["milk", "cow milk", "dairy milk"]
+    },
+    {
+      "name": "2% Milk",
+      "density_g_per_ml": 1.02,
+      "category": "Dairy",
+      "aliases": ["reduced fat milk", "low fat milk"]
+    },
+    {
+      "name": "Skim Milk",
+      "density_g_per_ml": 1.035,
+      "category": "Dairy",
+      "aliases": ["fat free milk", "nonfat milk"]
     },
     {
       "name": "Heavy Cream",
-      "density_g_per_ml": 0.99,
-      "category": "Liquids"
+      "density_g_per_ml": 0.994,
+      "category": "Dairy",
+      "aliases": ["heavy whipping cream", "double cream"]
+    },
+    {
+      "name": "Light Cream",
+      "density_g_per_ml": 1.012,
+      "category": "Dairy",
+      "aliases": ["coffee cream", "table cream"]
+    },
+    {
+      "name": "Half and Half",
+      "density_g_per_ml": 1.025,
+      "category": "Dairy",
+      "aliases": ["half & half", "cream"]
     },
     {
       "name": "Sour Cream",
       "density_g_per_ml": 0.96,
-      "category": "Liquids"
+      "category": "Dairy",
+      "aliases": ["cultured sour cream"]
     },
     {
-      "name": "Yogurt",
+      "name": "Greek Yogurt",
       "density_g_per_ml": 1.05,
-      "category": "Liquids"
+      "category": "Dairy",
+      "aliases": ["strained yogurt", "thick yogurt"]
     },
     {
-      "name": "Vanilla Extract",
-      "density_g_per_ml": 0.87,
-      "category": "Extracts"
-    },
-    {
-      "name": "Lemon Juice",
+      "name": "Regular Yogurt",
       "density_g_per_ml": 1.03,
-      "category": "Liquids"
+      "category": "Dairy",
+      "aliases": ["yogurt", "plain yogurt"]
     },
     {
-      "name": "Vinegar",
-      "density_g_per_ml": 1.05,
-      "category": "Liquids"
+      "name": "Buttermilk",
+      "density_g_per_ml": 1.03,
+      "category": "Dairy",
+      "aliases": ["cultured buttermilk"]
     },
     {
-      "name": "Apple Cider Vinegar",
-      "density_g_per_ml": 1.01,
-      "category": "Liquids"
+      "name": "Cottage Cheese",
+      "density_g_per_ml": 1.02,
+      "category": "Dairy",
+      "aliases": ["curd cheese"]
+    },
+    {
+      "name": "Cream Cheese",
+      "density_g_per_ml": 1.04,
+      "category": "Dairy",
+      "aliases": ["soft cheese"]
+    },
+    {
+      "name": "Ricotta Cheese",
+      "density_g_per_ml": 1.02,
+      "category": "Dairy",
+      "aliases": ["ricotta"]
+    },
+    {
+      "name": "Olive Oil",
+      "density_g_per_ml": 0.91,
+      "category": "Oils",
+      "aliases": ["extra virgin olive oil", "EVOO"]
+    },
+    {
+      "name": "Vegetable Oil",
+      "density_g_per_ml": 0.92,
+      "category": "Oils",
+      "aliases": ["canola oil", "soybean oil"]
+    },
+    {
+      "name": "Coconut Oil",
+      "density_g_per_ml": 0.924,
+      "category": "Oils",
+      "aliases": ["virgin coconut oil", "refined coconut oil"]
+    },
+    {
+      "name": "Avocado Oil",
+      "density_g_per_ml": 0.915,
+      "category": "Oils",
+      "aliases": ["cold pressed avocado oil"]
+    },
+    {
+      "name": "Sunflower Oil",
+      "density_g_per_ml": 0.92,
+      "category": "Oils",
+      "aliases": ["sunflower seed oil"]
+    },
+    {
+      "name": "Sesame Oil",
+      "density_g_per_ml": 0.92,
+      "category": "Oils",
+      "aliases": ["toasted sesame oil"]
+    },
+    {
+      "name": "Peanut Oil",
+      "density_g_per_ml": 0.914,
+      "category": "Oils",
+      "aliases": ["groundnut oil"]
+    },
+    {
+      "name": "Corn Oil",
+      "density_g_per_ml": 0.923,
+      "category": "Oils",
+      "aliases": ["maize oil"]
+    },
+    {
+      "name": "Safflower Oil",
+      "density_g_per_ml": 0.924,
+      "category": "Oils",
+      "aliases": ["high oleic safflower oil"]
+    },
+    {
+      "name": "Grapeseed Oil",
+      "density_g_per_ml": 0.923,
+      "category": "Oils",
+      "aliases": ["grape seed oil"]
+    },
+    {
+      "name": "Walnut Oil",
+      "density_g_per_ml": 0.925,
+      "category": "Oils",
+      "aliases": ["cold pressed walnut oil"]
+    },
+    {
+      "name": "Almond Oil",
+      "density_g_per_ml": 0.91,
+      "category": "Oils",
+      "aliases": ["sweet almond oil"]
+    },
+    {
+      "name": "Jojoba Oil",
+      "density_g_per_ml": 0.864,
+      "category": "Oils",
+      "aliases": ["jojoba wax", "golden jojoba"]
+    },
+    {
+      "name": "Castor Oil",
+      "density_g_per_ml": 0.96,
+      "category": "Oils",
+      "aliases": ["ricinus oil"]
+    },
+    {
+      "name": "Butter",
+      "density_g_per_ml": 0.91,
+      "category": "Fats",
+      "aliases": ["unsalted butter", "salted butter"]
+    },
+    {
+      "name": "Margarine",
+      "density_g_per_ml": 0.91,
+      "category": "Fats",
+      "aliases": ["vegan butter", "plant butter"]
+    },
+    {
+      "name": "Ghee",
+      "density_g_per_ml": 0.9,
+      "category": "Fats",
+      "aliases": ["clarified butter"]
+    },
+    {
+      "name": "Coconut Butter",
+      "density_g_per_ml": 0.92,
+      "category": "Fats",
+      "aliases": ["coconut manna"]
+    },
+    {
+      "name": "Cocoa Butter",
+      "density_g_per_ml": 0.89,
+      "category": "Fats",
+      "aliases": ["theobroma oil"]
+    },
+    {
+      "name": "Shea Butter",
+      "density_g_per_ml": 0.92,
+      "category": "Fats",
+      "aliases": ["african shea butter"]
+    },
+    {
+      "name": "Mango Butter",
+      "density_g_per_ml": 0.91,
+      "category": "Fats",
+      "aliases": ["mango kernel butter"]
+    },
+    {
+      "name": "Honey",
+      "density_g_per_ml": 1.42,
+      "category": "Syrups",
+      "aliases": ["raw honey", "clover honey", "wildflower honey"]
+    },
+    {
+      "name": "Maple Syrup",
+      "density_g_per_ml": 1.37,
+      "category": "Syrups",
+      "aliases": ["pure maple syrup", "grade A maple syrup"]
+    },
+    {
+      "name": "Corn Syrup",
+      "density_g_per_ml": 1.48,
+      "category": "Syrups",
+      "aliases": ["light corn syrup", "karo syrup"]
+    },
+    {
+      "name": "Agave Nectar",
+      "density_g_per_ml": 1.4,
+      "category": "Syrups",
+      "aliases": ["agave syrup", "blue agave"]
+    },
+    {
+      "name": "Molasses",
+      "density_g_per_ml": 1.4,
+      "category": "Syrups",
+      "aliases": ["blackstrap molasses", "unsulphured molasses"]
+    },
+    {
+      "name": "Golden Syrup",
+      "density_g_per_ml": 1.45,
+      "category": "Syrups",
+      "aliases": ["treacle", "light treacle"]
+    },
+    {
+      "name": "Rice Syrup",
+      "density_g_per_ml": 1.52,
+      "category": "Syrups",
+      "aliases": ["brown rice syrup", "rice malt syrup"]
+    },
+    {
+      "name": "All-Purpose Flour",
+      "density_g_per_ml": 0.6,
+      "category": "Flours",
+      "aliases": ["AP flour", "white flour", "wheat flour"]
+    },
+    {
+      "name": "Bread Flour",
+      "density_g_per_ml": 0.65,
+      "category": "Flours",
+      "aliases": ["high gluten flour", "strong flour"]
+    },
+    {
+      "name": "Cake Flour",
+      "density_g_per_ml": 0.56,
+      "category": "Flours",
+      "aliases": ["pastry flour", "soft flour"]
+    },
+    {
+      "name": "Self-Rising Flour",
+      "density_g_per_ml": 0.6,
+      "category": "Flours",
+      "aliases": ["self raising flour"]
+    },
+    {
+      "name": "Whole Wheat Flour",
+      "density_g_per_ml": 0.65,
+      "category": "Flours",
+      "aliases": ["wholemeal flour", "graham flour"]
+    },
+    {
+      "name": "Almond Flour",
+      "density_g_per_ml": 0.56,
+      "category": "Flours",
+      "aliases": ["almond meal", "ground almonds"]
+    },
+    {
+      "name": "Coconut Flour",
+      "density_g_per_ml": 0.48,
+      "category": "Flours",
+      "aliases": ["ground coconut"]
+    },
+    {
+      "name": "Rice Flour",
+      "density_g_per_ml": 0.58,
+      "category": "Flours",
+      "aliases": ["brown rice flour", "white rice flour"]
+    },
+    {
+      "name": "Cornstarch",
+      "density_g_per_ml": 0.64,
+      "category": "Starches",
+      "aliases": ["corn flour", "maize starch"]
+    },
+    {
+      "name": "Tapioca Starch",
+      "density_g_per_ml": 0.62,
+      "category": "Starches",
+      "aliases": ["tapioca flour", "cassava starch"]
+    },
+    {
+      "name": "Potato Starch",
+      "density_g_per_ml": 0.67,
+      "category": "Starches",
+      "aliases": ["potato flour"]
+    },
+    {
+      "name": "Arrowroot Powder",
+      "density_g_per_ml": 0.52,
+      "category": "Starches",
+      "aliases": ["arrowroot starch"]
+    },
+    {
+      "name": "White Sugar",
+      "density_g_per_ml": 0.85,
+      "category": "Sugars",
+      "aliases": ["granulated sugar", "caster sugar", "superfine sugar"]
+    },
+    {
+      "name": "Brown Sugar",
+      "density_g_per_ml": 0.9,
+      "category": "Sugars",
+      "aliases": ["light brown sugar", "dark brown sugar", "packed brown sugar"]
+    },
+    {
+      "name": "Powdered Sugar",
+      "density_g_per_ml": 0.56,
+      "category": "Sugars",
+      "aliases": ["confectioner's sugar", "icing sugar", "10x sugar"]
+    },
+    {
+      "name": "Raw Sugar",
+      "density_g_per_ml": 0.88,
+      "category": "Sugars",
+      "aliases": ["turbinado sugar", "demerara sugar"]
+    },
+    {
+      "name": "Coconut Sugar",
+      "density_g_per_ml": 0.82,
+      "category": "Sugars",
+      "aliases": ["palm sugar", "coconut palm sugar"]
+    },
+    {
+      "name": "Stevia Powder",
+      "density_g_per_ml": 0.45,
+      "category": "Sweeteners",
+      "aliases": ["stevia extract"]
+    },
+    {
+      "name": "Erythritol",
+      "density_g_per_ml": 0.72,
+      "category": "Sweeteners",
+      "aliases": ["sugar alcohol"]
+    },
+    {
+      "name": "Xylitol",
+      "density_g_per_ml": 0.84,
+      "category": "Sweeteners",
+      "aliases": ["birch sugar"]
+    },
+    {
+      "name": "Table Salt",
+      "density_g_per_ml": 2.16,
+      "category": "Salts",
+      "aliases": ["sodium chloride", "iodized salt", "fine salt"]
+    },
+    {
+      "name": "Sea Salt",
+      "density_g_per_ml": 2.16,
+      "category": "Salts",
+      "aliases": ["coarse sea salt", "fine sea salt"]
+    },
+    {
+      "name": "Kosher Salt",
+      "density_g_per_ml": 1.28,
+      "category": "Salts",
+      "aliases": ["coarse salt", "flaked salt"]
+    },
+    {
+      "name": "Himalayan Pink Salt",
+      "density_g_per_ml": 2.16,
+      "category": "Salts",
+      "aliases": ["pink salt", "rock salt"]
+    },
+    {
+      "name": "Epsom Salt",
+      "density_g_per_ml": 2.66,
+      "category": "Salts",
+      "aliases": ["magnesium sulfate"]
+    },
+    {
+      "name": "Baking Soda",
+      "density_g_per_ml": 2.2,
+      "category": "Leavening",
+      "aliases": ["sodium bicarbonate", "bicarbonate of soda"]
+    },
+    {
+      "name": "Baking Powder",
+      "density_g_per_ml": 1.3,
+      "category": "Leavening",
+      "aliases": ["double acting baking powder"]
+    },
+    {
+      "name": "Cream of Tartar",
+      "density_g_per_ml": 1.78,
+      "category": "Leavening",
+      "aliases": ["potassium bitartrate"]
+    },
+    {
+      "name": "Active Dry Yeast",
+      "density_g_per_ml": 0.8,
+      "category": "Leavening",
+      "aliases": ["bread yeast", "baker's yeast"]
+    },
+    {
+      "name": "Instant Yeast",
+      "density_g_per_ml": 0.75,
+      "category": "Leavening",
+      "aliases": ["rapid rise yeast", "bread machine yeast"]
     },
     {
       "name": "Cocoa Powder",
       "density_g_per_ml": 0.64,
-      "category": "Powders"
+      "category": "Chocolate",
+      "aliases": ["unsweetened cocoa", "dutch processed cocoa"]
+    },
+    {
+      "name": "Dark Chocolate Chips",
+      "density_g_per_ml": 0.75,
+      "category": "Chocolate",
+      "aliases": ["semi-sweet chocolate chips", "chocolate morsels"]
+    },
+    {
+      "name": "Milk Chocolate Chips",
+      "density_g_per_ml": 0.73,
+      "category": "Chocolate",
+      "aliases": ["milk chocolate morsels"]
+    },
+    {
+      "name": "White Chocolate Chips",
+      "density_g_per_ml": 0.7,
+      "category": "Chocolate",
+      "aliases": ["white chocolate morsels"]
     },
     {
       "name": "Ground Cinnamon",
       "density_g_per_ml": 0.56,
-      "category": "Spices"
+      "category": "Spices",
+      "aliases": ["cinnamon powder"]
     },
     {
-      "name": "Ground Pepper",
+      "name": "Ground Black Pepper",
       "density_g_per_ml": 0.64,
-      "category": "Spices"
+      "category": "Spices",
+      "aliases": ["black pepper", "ground pepper"]
     },
     {
-      "name": "Dried Herbs (general)",
-      "density_g_per_ml": 0.3,
-      "category": "Spices"
+      "name": "Paprika",
+      "density_g_per_ml": 0.55,
+      "category": "Spices",
+      "aliases": ["sweet paprika", "smoked paprika"]
     },
     {
-      "name": "Oats (rolled)",
-      "density_g_per_ml": 0.41,
-      "category": "Grains"
+      "name": "Chili Powder",
+      "density_g_per_ml": 0.58,
+      "category": "Spices",
+      "aliases": ["ground chili"]
     },
     {
-      "name": "Rice (uncooked)",
-      "density_g_per_ml": 0.75,
-      "category": "Grains"
+      "name": "Cumin",
+      "density_g_per_ml": 0.52,
+      "category": "Spices",
+      "aliases": ["ground cumin"]
     },
     {
-      "name": "Quinoa (uncooked)",
-      "density_g_per_ml": 0.85,
-      "category": "Grains"
+      "name": "Turmeric",
+      "density_g_per_ml": 0.6,
+      "category": "Spices",
+      "aliases": ["ground turmeric"]
     },
     {
-      "name": "Almonds (whole)",
+      "name": "Ginger Powder",
       "density_g_per_ml": 0.54,
-      "category": "Nuts"
+      "category": "Spices",
+      "aliases": ["ground ginger"]
     },
     {
-      "name": "Walnuts (pieces)",
-      "density_g_per_ml": 0.4,
-      "category": "Nuts"
+      "name": "Garlic Powder",
+      "density_g_per_ml": 0.55,
+      "category": "Spices",
+      "aliases": ["granulated garlic"]
     },
     {
-      "name": "Chocolate Chips",
+      "name": "Onion Powder",
+      "density_g_per_ml": 0.42,
+      "category": "Spices",
+      "aliases": ["granulated onion"]
+    },
+    {
+      "name": "Dried Oregano",
+      "density_g_per_ml": 0.3,
+      "category": "Herbs",
+      "aliases": ["oregano leaves"]
+    },
+    {
+      "name": "Dried Basil",
+      "density_g_per_ml": 0.32,
+      "category": "Herbs",
+      "aliases": ["basil leaves"]
+    },
+    {
+      "name": "Dried Thyme",
+      "density_g_per_ml": 0.35,
+      "category": "Herbs",
+      "aliases": ["thyme leaves"]
+    },
+    {
+      "name": "Dried Rosemary",
+      "density_g_per_ml": 0.38,
+      "category": "Herbs",
+      "aliases": ["rosemary leaves"]
+    },
+    {
+      "name": "Bay Leaves",
+      "density_g_per_ml": 0.25,
+      "category": "Herbs",
+      "aliases": ["dried bay leaves"]
+    },
+    {
+      "name": "Vanilla Extract",
+      "density_g_per_ml": 0.87,
+      "category": "Extracts",
+      "aliases": ["pure vanilla extract"]
+    },
+    {
+      "name": "Almond Extract",
+      "density_g_per_ml": 0.85,
+      "category": "Extracts",
+      "aliases": ["pure almond extract"]
+    },
+    {
+      "name": "Lemon Extract",
+      "density_g_per_ml": 0.88,
+      "category": "Extracts",
+      "aliases": ["pure lemon extract"]
+    },
+    {
+      "name": "Orange Extract",
+      "density_g_per_ml": 0.85,
+      "category": "Extracts",
+      "aliases": ["pure orange extract"]
+    },
+    {
+      "name": "Lemon Juice",
+      "density_g_per_ml": 1.03,
+      "category": "Acids",
+      "aliases": ["fresh lemon juice", "bottled lemon juice"]
+    },
+    {
+      "name": "Lime Juice",
+      "density_g_per_ml": 1.02,
+      "category": "Acids",
+      "aliases": ["fresh lime juice", "bottled lime juice"]
+    },
+    {
+      "name": "White Vinegar",
+      "density_g_per_ml": 1.05,
+      "category": "Acids",
+      "aliases": ["distilled white vinegar", "cleaning vinegar"]
+    },
+    {
+      "name": "Apple Cider Vinegar",
+      "density_g_per_ml": 1.01,
+      "category": "Acids",
+      "aliases": ["ACV", "raw apple cider vinegar"]
+    },
+    {
+      "name": "Balsamic Vinegar",
+      "density_g_per_ml": 1.06,
+      "category": "Acids",
+      "aliases": ["aged balsamic", "balsamic reduction"]
+    },
+    {
+      "name": "Red Wine Vinegar",
+      "density_g_per_ml": 1.01,
+      "category": "Acids",
+      "aliases": ["wine vinegar"]
+    },
+    {
+      "name": "Rice Vinegar",
+      "density_g_per_ml": 1.02,
+      "category": "Acids",
+      "aliases": ["rice wine vinegar"]
+    },
+    {
+      "name": "Rolled Oats",
+      "density_g_per_ml": 0.41,
+      "category": "Grains",
+      "aliases": ["old fashioned oats", "oatmeal"]
+    },
+    {
+      "name": "Quick Oats",
+      "density_g_per_ml": 0.38,
+      "category": "Grains",
+      "aliases": ["instant oats"]
+    },
+    {
+      "name": "Steel Cut Oats",
+      "density_g_per_ml": 0.78,
+      "category": "Grains",
+      "aliases": ["Irish oats", "pinhead oats"]
+    },
+    {
+      "name": "White Rice",
       "density_g_per_ml": 0.75,
-      "category": "Solids"
+      "category": "Grains",
+      "aliases": ["long grain rice", "jasmine rice", "basmati rice"]
+    },
+    {
+      "name": "Brown Rice",
+      "density_g_per_ml": 0.78,
+      "category": "Grains",
+      "aliases": ["whole grain rice"]
+    },
+    {
+      "name": "Wild Rice",
+      "density_g_per_ml": 0.68,
+      "category": "Grains",
+      "aliases": ["black rice"]
+    },
+    {
+      "name": "Quinoa",
+      "density_g_per_ml": 0.85,
+      "category": "Grains",
+      "aliases": ["white quinoa", "red quinoa", "tri-color quinoa"]
+    },
+    {
+      "name": "Barley",
+      "density_g_per_ml": 0.69,
+      "category": "Grains",
+      "aliases": ["pearl barley", "hulled barley"]
+    },
+    {
+      "name": "Bulgur",
+      "density_g_per_ml": 0.72,
+      "category": "Grains",
+      "aliases": ["cracked wheat"]
+    },
+    {
+      "name": "Couscous",
+      "density_g_per_ml": 0.73,
+      "category": "Grains",
+      "aliases": ["moroccan couscous"]
+    },
+    {
+      "name": "Whole Almonds",
+      "density_g_per_ml": 0.54,
+      "category": "Nuts",
+      "aliases": ["raw almonds", "blanched almonds"]
+    },
+    {
+      "name": "Sliced Almonds",
+      "density_g_per_ml": 0.37,
+      "category": "Nuts",
+      "aliases": ["slivered almonds"]
+    },
+    {
+      "name": "Walnut Halves",
+      "density_g_per_ml": 0.4,
+      "category": "Nuts",
+      "aliases": ["walnut pieces"]
+    },
+    {
+      "name": "Pecans",
+      "density_g_per_ml": 0.42,
+      "category": "Nuts",
+      "aliases": ["pecan halves", "pecan pieces"]
+    },
+    {
+      "name": "Cashews",
+      "density_g_per_ml": 0.59,
+      "category": "Nuts",
+      "aliases": ["raw cashews", "roasted cashews"]
+    },
+    {
+      "name": "Pine Nuts",
+      "density_g_per_ml": 0.68,
+      "category": "Nuts",
+      "aliases": ["pignoli", "pinoli"]
+    },
+    {
+      "name": "Pistachios",
+      "density_g_per_ml": 0.75,
+      "category": "Nuts",
+      "aliases": ["shelled pistachios"]
+    },
+    {
+      "name": "Brazil Nuts",
+      "density_g_per_ml": 0.66,
+      "category": "Nuts",
+      "aliases": ["whole brazil nuts"]
+    },
+    {
+      "name": "Macadamia Nuts",
+      "density_g_per_ml": 0.64,
+      "category": "Nuts",
+      "aliases": ["whole macadamias"]
+    },
+    {
+      "name": "Sunflower Seeds",
+      "density_g_per_ml": 0.56,
+      "category": "Seeds",
+      "aliases": ["hulled sunflower seeds"]
+    },
+    {
+      "name": "Pumpkin Seeds",
+      "density_g_per_ml": 0.54,
+      "category": "Seeds",
+      "aliases": ["pepitas"]
+    },
+    {
+      "name": "Sesame Seeds",
+      "density_g_per_ml": 0.58,
+      "category": "Seeds",
+      "aliases": ["white sesame seeds", "black sesame seeds"]
+    },
+    {
+      "name": "Chia Seeds",
+      "density_g_per_ml": 0.68,
+      "category": "Seeds",
+      "aliases": ["whole chia seeds"]
+    },
+    {
+      "name": "Flax Seeds",
+      "density_g_per_ml": 0.75,
+      "category": "Seeds",
+      "aliases": ["linseed", "whole flax seeds"]
+    },
+    {
+      "name": "Hemp Seeds",
+      "density_g_per_ml": 0.58,
+      "category": "Seeds",
+      "aliases": ["hemp hearts", "hulled hemp seeds"]
     },
     {
       "name": "Raisins",
       "density_g_per_ml": 0.67,
-      "category": "Dried Fruits"
+      "category": "Dried Fruits",
+      "aliases": ["sultanas", "golden raisins"]
+    },
+    {
+      "name": "Dried Cranberries",
+      "density_g_per_ml": 0.64,
+      "category": "Dried Fruits",
+      "aliases": ["craisins"]
+    },
+    {
+      "name": "Dried Apricots",
+      "density_g_per_ml": 0.58,
+      "category": "Dried Fruits",
+      "aliases": ["turkish apricots"]
+    },
+    {
+      "name": "Dates",
+      "density_g_per_ml": 0.85,
+      "category": "Dried Fruits",
+      "aliases": ["medjool dates", "deglet noor dates", "pitted dates"]
+    },
+    {
+      "name": "Dried Figs",
+      "density_g_per_ml": 0.72,
+      "category": "Dried Fruits",
+      "aliases": ["black mission figs"]
+    },
+    {
+      "name": "Prunes",
+      "density_g_per_ml": 0.78,
+      "category": "Dried Fruits",
+      "aliases": ["dried plums", "pitted prunes"]
+    },
+    {
+      "name": "Beeswax",
+      "density_g_per_ml": 0.96,
+      "category": "Waxes",
+      "aliases": ["white beeswax", "yellow beeswax"]
+    },
+    {
+      "name": "Soy Wax",
+      "density_g_per_ml": 0.93,
+      "category": "Waxes",
+      "aliases": ["soy candle wax"]
+    },
+    {
+      "name": "Paraffin Wax",
+      "density_g_per_ml": 0.9,
+      "category": "Waxes",
+      "aliases": ["candle wax"]
+    },
+    {
+      "name": "Carnauba Wax",
+      "density_g_per_ml": 0.999,
+      "category": "Waxes",
+      "aliases": ["brazil wax"]
+    },
+    {
+      "name": "Bentonite Clay",
+      "density_g_per_ml": 2.35,
+      "category": "Clays",
+      "aliases": ["sodium bentonite", "calcium bentonite"]
+    },
+    {
+      "name": "Kaolin Clay",
+      "density_g_per_ml": 2.6,
+      "category": "Clays",
+      "aliases": ["white clay", "china clay"]
+    },
+    {
+      "name": "French Green Clay",
+      "density_g_per_ml": 2.4,
+      "category": "Clays",
+      "aliases": ["montmorillonite clay"]
+    },
+    {
+      "name": "Rhassoul Clay",
+      "density_g_per_ml": 2.3,
+      "category": "Clays",
+      "aliases": ["red clay", "moroccan clay"]
+    },
+    {
+      "name": "Lavender Essential Oil",
+      "density_g_per_ml": 0.885,
+      "category": "Essential Oils",
+      "aliases": ["lavandula angustifolia"]
+    },
+    {
+      "name": "Tea Tree Essential Oil",
+      "density_g_per_ml": 0.89,
+      "category": "Essential Oils",
+      "aliases": ["melaleuca oil"]
+    },
+    {
+      "name": "Peppermint Essential Oil",
+      "density_g_per_ml": 0.9,
+      "category": "Essential Oils",
+      "aliases": ["mentha piperita"]
+    },
+    {
+      "name": "Eucalyptus Essential Oil",
+      "density_g_per_ml": 0.92,
+      "category": "Essential Oils",
+      "aliases": ["eucalyptus globulus"]
+    },
+    {
+      "name": "Lemon Essential Oil",
+      "density_g_per_ml": 0.85,
+      "category": "Essential Oils",
+      "aliases": ["citrus limon"]
+    },
+    {
+      "name": "Orange Essential Oil",
+      "density_g_per_ml": 0.842,
+      "category": "Essential Oils",
+      "aliases": ["sweet orange oil", "citrus sinensis"]
+    },
+    {
+      "name": "Rosemary Essential Oil",
+      "density_g_per_ml": 0.908,
+      "category": "Essential Oils",
+      "aliases": ["rosmarinus officinalis"]
+    },
+    {
+      "name": "Frankincense Essential Oil",
+      "density_g_per_ml": 0.87,
+      "category": "Essential Oils",
+      "aliases": ["boswellia oil"]
+    },
+    {
+      "name": "Glycerin",
+      "density_g_per_ml": 1.26,
+      "category": "Cosmetic Ingredients",
+      "aliases": ["vegetable glycerin", "glycerol"]
+    },
+    {
+      "name": "Propylene Glycol",
+      "density_g_per_ml": 1.036,
+      "category": "Cosmetic Ingredients",
+      "aliases": ["PG"]
+    },
+    {
+      "name": "Witch Hazel",
+      "density_g_per_ml": 0.98,
+      "category": "Cosmetic Ingredients",
+      "aliases": ["hamamelis water"]
+    },
+    {
+      "name": "Rose Water",
+      "density_g_per_ml": 1.0,
+      "category": "Cosmetic Ingredients",
+      "aliases": ["rose hydrosol"]
+    },
+    {
+      "name": "Aloe Vera Gel",
+      "density_g_per_ml": 1.02,
+      "category": "Cosmetic Ingredients",
+      "aliases": ["aloe gel"]
+    },
+    {
+      "name": "Vitamin E Oil",
+      "density_g_per_ml": 0.95,
+      "category": "Cosmetic Ingredients",
+      "aliases": ["tocopherol"]
+    },
+    {
+      "name": "Ethanol",
+      "density_g_per_ml": 0.789,
+      "category": "Alcohols",
+      "aliases": ["ethyl alcohol", "grain alcohol"]
+    },
+    {
+      "name": "Isopropyl Alcohol",
+      "density_g_per_ml": 0.786,
+      "category": "Alcohols",
+      "aliases": ["rubbing alcohol", "IPA"]
+    },
+    {
+      "name": "Rum",
+      "density_g_per_ml": 0.94,
+      "category": "Alcohols",
+      "aliases": ["dark rum", "white rum"]
+    },
+    {
+      "name": "Vodka",
+      "density_g_per_ml": 0.94,
+      "category": "Alcohols",
+      "aliases": ["grain vodka"]
+    },
+    {
+      "name": "Brandy",
+      "density_g_per_ml": 0.95,
+      "category": "Alcohols",
+      "aliases": ["cognac"]
     }
   ]
 }
