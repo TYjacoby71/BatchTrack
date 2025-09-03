@@ -38,7 +38,7 @@ def handle_conversion_error(conversion_result):
             },
             'drawer_payload': {
                 'version': '1.0',
-                'modal_url': f"/api/drawer-actions/conversion/density-modal/7",
+                'modal_url': f"/api/drawer-actions/conversion/density-modal/{ingredient_id}",
                 'success_event': 'conversion.density.updated',
                 'error_type': 'conversion',
                 'error_code': 'MISSING_DENSITY',

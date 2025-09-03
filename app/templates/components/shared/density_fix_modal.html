@@ -1,2 +1,143 @@
 
-<!-- This file is no longer used - density modals are now drawer-specific -->
+<div class="modal fade" id="densityFixModal" tabindex="-1" aria-labelledby="densityFixModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="densityFixModalLabel">
+                    <i class="fas fa-balance-scale text-warning"></i>
+                    Fix Missing Density
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>Density Required:</strong> To convert between volume and weight units for 
+                    <strong>{{ ingredient.name }}</strong>, we need its density value.
+                </div>
+
+                <form id="densityFixForm">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="mb-3">
+                        <label for="densityInput" class="form-label">
+                            Density (g/ml):
+                            <small class="text-muted">How many grams per milliliter</small>
+                        </label>
+                        <input type="number" 
+                               class="form-control" 
+                               id="densityInput" 
+                               name="density"
+                               step="0.001" 
+                               min="0.001" 
+                               max="50"
+                               placeholder="e.g., 0.96 for beeswax"
+                               required>
+                        <div class="form-text">
+                            Common densities: Water (1.0), Oil (0.91), Honey (1.42), Beeswax (0.96)
+                        </div>
+                    </div>
+                </form>
+
+                <div class="d-flex gap-2 justify-content-between">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                        Cancel
+                    </button>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-outline-info" onclick="openDensityReference()">
+                            <i class="fas fa-book"></i> Reference
+                        </button>
+                        <button type="button" class="btn btn-primary" id="saveDensityBtn">
+                            <i class="fas fa-save"></i> Save Density
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('densityFixModal');
+    const form = document.getElementById('densityFixForm');
+    const saveBtn = document.getElementById('saveDensityBtn');
+    const densityInput = document.getElementById('densityInput');
+
+    // Get ingredient ID from the modal data
+    const ingredientId = {{ ingredient.id }};
+    const ingredientName = '{{ ingredient.name }}';
+
+    console.log('🔧 DENSITY MODAL: DOM loaded for ingredient:', ingredientId, ingredientName);
+
+    if (saveBtn) {
+        saveBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            console.log('🔧 DENSITY MODAL: Save button clicked');
+
+            const density = parseFloat(densityInput.value);
+            console.log('🔧 DENSITY MODAL: Density value:', density);
+
+            if (!density || density <= 0) {
+                alert('Please enter a valid density greater than 0');
+                return;
+            }
+
+            // Disable button during save
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+
+            const apiUrl = `/inventory/edit/${ingredientId}`;
+            console.log('🔧 DENSITY MODAL: Posting to inventory edit route:', apiUrl);
+
+            // Prepare form data like the regular inventory form
+            const formData = new FormData();
+            formData.append('density', density);
+            formData.append('action', 'update_density');
+            formData.append('csrf_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
+
+            fetch(apiUrl, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                return response.text(); // Inventory routes return redirects, not JSON
+            })
+            .then(data => {
+                console.log('🔧 DENSITY MODAL: Density updated successfully');
+
+                // Close modal
+                const modalInstance = bootstrap.Modal.getInstance(modal);
+                modalInstance.hide();
+
+                // Dispatch success event for retry mechanism
+                window.dispatchEvent(new CustomEvent('conversion.density.updated', {
+                    detail: {
+                        ingredient_id: ingredientId,
+                        ingredient_name: ingredientName,
+                        density: density,
+                        message: `Density updated to ${density} g/ml for ${ingredientName}`,
+                        retrigger: true
+                    }
+                }));
+            })
+            .catch(error => {
+                console.error('🔧 DENSITY MODAL: Error saving density:', error);
+                alert('Failed to save density: ' + error.message);
+            })
+            .finally(() => {
+                // Re-enable button
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<i class="fas fa-save"></i> Save Density';
+            });
+        });
+    }
+});
+
+function openDensityReference() {
+    // Open the density reference data instead of unit manager
+    window.open('/api/density-reference', '_blank');
+}
+</script>
