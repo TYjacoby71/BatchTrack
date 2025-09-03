@@ -58,6 +58,13 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Prevent duplicate modals
+    const existingModal = document.querySelector('#densityFixModal');
+    if (existingModal && bootstrap.Modal.getInstance(existingModal)) {
+        console.log('🔧 DENSITY MODAL: Modal already exists, skipping initialization');
+        return;
+    }
+
     const modal = document.getElementById('densityFixModal');
     const form = document.getElementById('densityFixForm');
     const saveBtn = document.getElementById('saveDensityBtn');
@@ -72,36 +79,61 @@ document.addEventListener('DOMContentLoaded', function() {
     const ingredientName = modal.getAttribute('data-ingredient-name');
 
     console.log('🔧 DENSITY MODAL: DOM loaded for ingredient:', ingredientId, ingredientName);
+    console.log('🔧 DENSITY MODAL: Modal element:', modal);
+    console.log('🔧 DENSITY MODAL: Save button:', saveBtn);
+    console.log('🔧 DENSITY MODAL: Density input:', densityInput);
 
     if (saveBtn) {
+        console.log('🔧 DENSITY MODAL: Adding click listener to save button');
+        
         saveBtn.addEventListener('click', function(e) {
             e.preventDefault();
-            console.log('🔧 DENSITY MODAL: Save button clicked');
+            console.log('🔧 DENSITY MODAL: ==================== SAVE BUTTON CLICKED ====================');
+            console.log('🔧 DENSITY MODAL: Event object:', e);
+            console.log('🔧 DENSITY MODAL: Target button:', e.target);
+            console.log('🔧 DENSITY MODAL: Button disabled state:', saveBtn.disabled);
 
             const density = parseFloat(densityInput.value);
-            console.log('🔧 DENSITY MODAL: Density value:', density);
+            console.log('🔧 DENSITY MODAL: Raw input value:', densityInput.value);
+            console.log('🔧 DENSITY MODAL: Parsed density value:', density);
+            console.log('🔧 DENSITY MODAL: Density validation - isNaN:', isNaN(density), 'density <= 0:', density <= 0);
 
-            if (!density || density <= 0) {
+            if (!density || density <= 0 || isNaN(density)) {
+                console.error('🔧 DENSITY MODAL: Invalid density value provided');
                 alert('Please enter a valid density greater than 0');
                 return;
             }
 
             // Disable button during save
+            console.log('🔧 DENSITY MODAL: Disabling save button and showing spinner');
             saveBtn.disabled = true;
             saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
 
             const apiUrl = `/inventory/edit/${ingredientId}`;
-            console.log('🔧 DENSITY MODAL: Posting to inventory edit route:', apiUrl);
+            console.log('🔧 DENSITY MODAL: Target API URL:', apiUrl);
+            console.log('🔧 DENSITY MODAL: Ingredient ID:', ingredientId, 'Name:', ingredientName);
 
             // Get CSRF token from meta tag or form
-            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || 
-                             document.querySelector('input[name="csrf_token"]')?.value;
+            const csrfTokenMeta = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+            const csrfTokenForm = document.querySelector('input[name="csrf_token"]')?.value;
+            const csrfToken = csrfTokenMeta || csrfTokenForm;
+            
+            console.log('🔧 DENSITY MODAL: CSRF token from meta:', csrfTokenMeta);
+            console.log('🔧 DENSITY MODAL: CSRF token from form:', csrfTokenForm);
+            console.log('🔧 DENSITY MODAL: Final CSRF token:', csrfToken);
 
             // Prepare form data like the regular inventory form
             const formData = new FormData();
             formData.append('density', density);
             formData.append('csrf_token', csrfToken);
+            
+            console.log('🔧 DENSITY MODAL: FormData prepared:');
+            for (let [key, value] of formData.entries()) {
+                console.log('🔧 DENSITY MODAL: FormData -', key + ':', value);
+            }
 
+            console.log('🔧 DENSITY MODAL: Starting fetch request...');
+            
             fetch(apiUrl, {
                 method: 'POST',
                 body: formData,
@@ -110,26 +142,53 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             })
             .then(response => {
+                console.log('🔧 DENSITY MODAL: ==================== FETCH RESPONSE ====================');
                 console.log('🔧 DENSITY MODAL: Response status:', response.status);
+                console.log('🔧 DENSITY MODAL: Response statusText:', response.statusText);
+                console.log('🔧 DENSITY MODAL: Response headers:', Object.fromEntries(response.headers.entries()));
+                console.log('🔧 DENSITY MODAL: Response ok:', response.ok);
+                console.log('🔧 DENSITY MODAL: Response redirected:', response.redirected);
+                console.log('🔧 DENSITY MODAL: Response URL:', response.url);
                 
                 // For inventory edit route, a redirect (3xx) or success (2xx) means it worked
                 if (response.ok || (response.status >= 300 && response.status < 400)) {
+                    console.log('🔧 DENSITY MODAL: ==================== SUCCESS RESPONSE ====================');
                     console.log('🔧 DENSITY MODAL: Density updated successfully');
+                    console.log('🔧 DENSITY MODAL: Attempting to close modal...');
 
                     // Close modal
                     const modalInstance = bootstrap.Modal.getInstance(modal);
-                    modalInstance.hide();
+                    console.log('🔧 DENSITY MODAL: Modal instance:', modalInstance);
+                    
+                    if (modalInstance) {
+                        modalInstance.hide();
+                        console.log('🔧 DENSITY MODAL: Modal hide() called');
+                    } else {
+                        console.warn('🔧 DENSITY MODAL: No modal instance found, trying alternative close');
+                        modal.style.display = 'none';
+                        modal.classList.remove('show');
+                    }
 
                     // Dispatch success event for retry mechanism
-                    window.dispatchEvent(new CustomEvent('conversion.density.updated', {
-                        detail: {
-                            ingredient_id: ingredientId,
-                            ingredient_name: ingredientName,
-                            density: density,
-                            message: `Density updated to ${density} g/ml for ${ingredientName}`,
-                            retrigger: true
-                        }
-                    }));
+                    const eventDetail = {
+                        ingredient_id: ingredientId,
+                        ingredient_name: ingredientName,
+                        density: density,
+                        message: `Density updated to ${density} g/ml for ${ingredientName}`,
+                        retrigger: true
+                    };
+                    
+                    console.log('🔧 DENSITY MODAL: ==================== DISPATCHING SUCCESS EVENT ====================');
+                    console.log('🔧 DENSITY MODAL: Event detail:', eventDetail);
+                    console.log('🔧 DENSITY MODAL: Event name: conversion.density.updated');
+                    
+                    const customEvent = new CustomEvent('conversion.density.updated', {
+                        detail: eventDetail
+                    });
+                    
+                    console.log('🔧 DENSITY MODAL: Custom event created:', customEvent);
+                    window.dispatchEvent(customEvent);
+                    console.log('🔧 DENSITY MODAL: Success event dispatched to window');
                     
                     return;
                 } else {
@@ -137,15 +196,27 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             })
             .catch(error => {
-                console.error('🔧 DENSITY MODAL: Error saving density:', error);
+                console.error('🔧 DENSITY MODAL: ==================== ERROR OCCURRED ====================');
+                console.error('🔧 DENSITY MODAL: Error object:', error);
+                console.error('🔧 DENSITY MODAL: Error message:', error.message);
+                console.error('🔧 DENSITY MODAL: Error stack:', error.stack);
                 alert('Failed to save density: ' + error.message);
             })
             .finally(() => {
+                console.log('🔧 DENSITY MODAL: ==================== CLEANUP ====================');
+                console.log('🔧 DENSITY MODAL: Re-enabling save button');
+                
                 // Re-enable button
                 saveBtn.disabled = false;
                 saveBtn.innerHTML = '<i class="fas fa-save"></i> Save Density';
+                
+                console.log('🔧 DENSITY MODAL: Save button re-enabled');
             });
         });
+        
+        console.log('🔧 DENSITY MODAL: Click listener added to save button');
+    } else {
+        console.error('🔧 DENSITY MODAL: Save button not found during initialization');
     }
 });
 
