@@ -7,16 +7,33 @@ import os
 density_reference_bp = Blueprint('density_reference', __name__)
 
 @density_reference_bp.route('/api/density-reference')
-@login_required 
+@login_required
 def get_density_reference():
     """Serve density reference data as a formatted page"""
     try:
         # Load density reference data
         density_file_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'data', 'density_reference.json')
-        
-        with open(density_file_path, 'r') as f:
-            density_data = json.load(f)
-        
+        print(f"🔧 DENSITY REFERENCE: Looking for density file at: {density_file_path}")
+        print(f"🔧 DENSITY REFERENCE: File exists: {os.path.exists(density_file_path)}")
+
+        if not os.path.exists(density_file_path):
+            print(f"🔧 DENSITY REFERENCE: Density file not found, creating minimal data")
+            density_data = {
+                'common_densities': [
+                    {'name': 'Water', 'density_g_per_ml': 1.0, 'category': 'Liquids'},
+                    {'name': 'Olive Oil', 'density_g_per_ml': 0.92, 'category': 'Oils'},
+                    {'name': 'Flour', 'density_g_per_ml': 0.6, 'category': 'Powders'},
+                    {'name': 'Sugar', 'density_g_per_ml': 0.85, 'category': 'Solids'},
+                    {'name': 'Salt', 'density_g_per_ml': 2.16, 'category': 'Solids'},
+                    {'name': 'Honey', 'density_g_per_ml': 1.4, 'category': 'Liquids'},
+                    {'name': 'Butter', 'density_g_per_ml': 0.91, 'category': 'Fats'},
+                    {'name': 'Milk', 'density_g_per_ml': 1.03, 'category': 'Liquids'},
+                ]
+            }
+        else:
+            with open(density_file_path, 'r') as f:
+                density_data = json.load(f)
+
         # Create a simple HTML page for the density reference
         html_template = """
 <!DOCTYPE html>

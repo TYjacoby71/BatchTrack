@@ -103,9 +103,26 @@ class DrawerProtocol {
     async openModal(url, successEvent) {
         try {
             console.log(`🔧 DRAWER PROTOCOL: Opening modal from ${url}`);
+            
+            // Check for existing modal with same ID to prevent duplicates
+            const existingModal = document.querySelector('#densityFixModal');
+            if (existingModal) {
+                console.log('🔧 DRAWER PROTOCOL: Existing density modal found, removing it first');
+                const existingInstance = bootstrap.Modal.getInstance(existingModal);
+                if (existingInstance) {
+                    existingInstance.hide();
+                }
+                // Remove the wrapper containing the modal
+                const existingWrapper = existingModal.closest('.drawer-wrapper');
+                if (existingWrapper) {
+                    existingWrapper.remove();
+                }
+            }
 
             const response = await fetch(url);
             const data = await response.json();
+            
+            console.log('🔧 DRAWER PROTOCOL: Modal fetch response:', data);
 
             if (data.success) {
                 // Create a wrapper so we can reliably find elements and execute scripts
@@ -149,10 +166,16 @@ class DrawerProtocol {
 
                 // Set up success listener
                 if (successEvent) {
+                    console.log(`🔧 DRAWER PROTOCOL: Setting up success listener for event: ${successEvent}`);
                     window.addEventListener(successEvent, (event) => {
-                        console.log(`🔧 DRAWER PROTOCOL: ${successEvent} triggered`, event.detail);
+                        console.log(`🔧 DRAWER PROTOCOL: ==================== SUCCESS EVENT TRIGGERED ====================`);
+                        console.log(`🔧 DRAWER PROTOCOL: Event name: ${successEvent}`);
+                        console.log(`🔧 DRAWER PROTOCOL: Event detail:`, event.detail);
+                        console.log(`🔧 DRAWER PROTOCOL: Current active drawers:`, this.activeDrawers.size);
+                        console.log(`🔧 DRAWER PROTOCOL: Current retry callbacks:`, this.retryCallbacks.size);
                         this.handleSuccess(successEvent, event.detail);
                     }, { once: true });
+                    console.log(`🔧 DRAWER PROTOCOL: Success listener registered for: ${successEvent}`);
                 }
 
                 // Clean up on close
@@ -176,6 +199,14 @@ class DrawerProtocol {
     }
 
     handleSuccess(successEvent, eventDetail) {
+        console.log('🔧 DRAWER PROTOCOL: ==================== HANDLING SUCCESS ====================');
+        console.log('🔧 DRAWER PROTOCOL: Success event:', successEvent);
+        console.log('🔧 DRAWER PROTOCOL: Event detail:', eventDetail);
+        console.log('🔧 DRAWER PROTOCOL: Available retry callbacks:');
+        for (const [key, callback] of this.retryCallbacks.entries()) {
+            console.log('🔧 DRAWER PROTOCOL: - Callback key:', key);
+        }
+
         // Find and execute retry callback
         // Prefer exact key match using the event name first
         const exactKeyPrefix = `${successEvent}.`;
@@ -184,23 +215,49 @@ class DrawerProtocol {
         let executed = false;
         for (const [key, callback] of this.retryCallbacks.entries()) {
             if (key.startsWith(exactKeyPrefix) || key.includes(successEvent)) {
-                console.log(`🔧 DRAWER PROTOCOL: Executing retry for ${key}`);
-                callback(eventDetail);
+                console.log(`🔧 DRAWER PROTOCOL: ==================== EXECUTING RETRY ====================`);
+                console.log(`🔧 DRAWER PROTOCOL: Matched key: ${key}`);
+                console.log(`🔧 DRAWER PROTOCOL: Callback function:`, callback);
+                
+                try {
+                    callback(eventDetail);
+                    console.log(`🔧 DRAWER PROTOCOL: Retry callback executed successfully for ${key}`);
+                } catch (callbackError) {
+                    console.error(`🔧 DRAWER PROTOCOL: Error in retry callback:`, callbackError);
+                }
+                
                 this.retryCallbacks.delete(key);
+                console.log(`🔧 DRAWER PROTOCOL: Callback ${key} removed from retry callbacks`);
                 executed = true;
                 break;
             }
         }
 
-        if (executed) return;
+        if (executed) {
+            console.log('🔧 DRAWER PROTOCOL: Success handled with matching callback');
+            return;
+        }
 
+        console.log('🔧 DRAWER PROTOCOL: No exact match found, trying fallback...');
+        
         // Fallback: if nothing matched, execute any remaining callback once
         const iterator = this.retryCallbacks.entries().next();
         if (!iterator.done) {
             const [key, callback] = iterator.value;
+            console.log(`🔧 DRAWER PROTOCOL: ==================== FALLBACK RETRY ====================`);
             console.log(`🔧 DRAWER PROTOCOL: Fallback executing retry for ${key}`);
-            callback(eventDetail);
+            
+            try {
+                callback(eventDetail);
+                console.log(`🔧 DRAWER PROTOCOL: Fallback retry callback executed successfully for ${key}`);
+            } catch (callbackError) {
+                console.error(`🔧 DRAWER PROTOCOL: Error in fallback retry callback:`, callbackError);
+            }
+            
             this.retryCallbacks.delete(key);
+            console.log(`🔧 DRAWER PROTOCOL: Fallback callback ${key} removed from retry callbacks`);
+        } else {
+            console.warn('🔧 DRAWER PROTOCOL: No retry callbacks available for success event:', successEvent);
         }
     }
 

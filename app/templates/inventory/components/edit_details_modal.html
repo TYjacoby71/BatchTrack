@@ -81,7 +81,13 @@
           </div>
 
           <div class="mb-3">
-            <label for="density">Density (g/ml):</label>
+            <label for="density">
+              Density (g/ml):
+              <button type="button" class="btn btn-link btn-sm p-0 ms-1" onclick="openDensityReference()" 
+                      title="Open density reference guide" data-bs-toggle="tooltip">
+                <i class="fas fa-book text-info"></i>
+              </button>
+            </label>
             <div class="input-group">
               <input type="number" step="0.001" name="density" id="density" 
                      class="form-control" value="{{ item.density or 0.0 }}"
@@ -134,7 +140,18 @@
 </div>
 
 <script>
+// Function to open density reference in new window
+function openDensityReference() {
+    window.open('/api/density-reference', '_blank', 'width=800,height=600,scrollbars=yes,resizable=yes');
+}
+
 document.addEventListener('DOMContentLoaded', function() {
+    // Initialize Bootstrap tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+
     const unitSelect = document.getElementById('unitSelect');
     const unitChangeWarning = document.getElementById('unitChangeWarning');
     const confirmUnitChange = document.getElementById('confirmUnitChange');
