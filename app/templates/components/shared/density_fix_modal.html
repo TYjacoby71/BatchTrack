@@ -62,11 +62,17 @@ document.addEventListener('DOMContentLoaded', function() {
     const saveBtn = document.getElementById('saveDensityBtn');
     const densityInput = document.getElementById('densityInput');
     
+    // Get ingredient ID from the modal data or URL
+    const ingredientId = {{ ingredient.id }};
+    const ingredientName = '{{ ingredient.name }}';
+    
     console.log('🔧 DENSITY MODAL: DOM loaded, elements found:', {
         modal: !!modal,
         form: !!form,
         saveBtn: !!saveBtn,
-        densityInput: !!densityInput
+        densityInput: !!densityInput,
+        ingredientId: ingredientId,
+        ingredientName: ingredientName
     });
     
     if (saveBtn) {
@@ -86,10 +92,11 @@ document.addEventListener('DOMContentLoaded', function() {
             saveBtn.disabled = true;
             saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
             
-            console.log('🔧 DENSITY MODAL: Sending POST to /api/drawer-actions/conversion/density-modal/{{ ingredient.id }}');
+            const apiUrl = `/api/drawer-actions/conversion/density-modal/${ingredientId}`;
+            console.log('🔧 DENSITY MODAL: Sending POST to:', apiUrl);
             
             // Save density via API
-            fetch('/api/drawer-actions/conversion/density-modal/{{ ingredient.id }}', {
+            fetch(apiUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -102,6 +109,9 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .then(response => {
                 console.log('🔧 DENSITY MODAL: Response status:', response.status);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
                 return response.json();
             })
             .then(data => {
@@ -118,8 +128,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     console.log('🔧 DENSITY MODAL: Dispatching conversion.density.updated event');
                     window.dispatchEvent(new CustomEvent('conversion.density.updated', {
                         detail: {
-                            ingredient_id: {{ ingredient.id }},
-                            ingredient_name: '{{ ingredient.name }}',
+                            ingredient_id: ingredientId,
+                            ingredient_name: ingredientName,
                             density: density,
                             message: data.message,
                             retrigger: true
@@ -131,7 +141,7 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .catch(error => {
                 console.error('🔧 DENSITY MODAL: Error saving density:', error);
-                alert('Failed to save density. Please try again.');
+                alert('Failed to save density: ' + error.message);
             })
             .finally(() => {
                 // Re-enable button

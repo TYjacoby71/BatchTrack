@@ -46,7 +46,7 @@ def conversion_density_modal_get(ingredient_id):
 
 @drawer_actions_bp.route('/conversion/density-modal/<int:ingredient_id>', methods=['POST'])
 @login_required
-@require_permission('inventory.edit')
+@require_permission('inventory.edit')ry.edit')
 def conversion_density_modal_post(ingredient_id):
     """Update ingredient density"""
     ingredient = InventoryItem.query.filter_by(
