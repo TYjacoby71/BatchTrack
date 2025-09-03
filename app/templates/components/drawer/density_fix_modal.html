@@ -63,9 +63,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const saveBtn = document.getElementById('saveDensityBtn');
     const densityInput = document.getElementById('densityInput');
 
-    // Get ingredient ID from the modal data
-    const ingredientId = {{ ingredient.id }};
-    const ingredientName = '{{ ingredient.name }}';
+    // Store ingredient data as data attributes on the modal
+    modal.setAttribute('data-ingredient-id', '{{ ingredient.id }}');
+    modal.setAttribute('data-ingredient-name', '{{ ingredient.name }}');
+
+    // Get ingredient data from modal attributes
+    const ingredientId = parseInt(modal.getAttribute('data-ingredient-id'));
+    const ingredientName = modal.getAttribute('data-ingredient-name');
 
     console.log('🔧 DENSITY MODAL: DOM loaded for ingredient:', ingredientId, ingredientName);
 
