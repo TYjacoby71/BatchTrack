@@ -116,6 +116,15 @@ def update_inventory_item(item_id: int, form_data: dict) -> tuple[bool, str]:
             except (ValueError, TypeError):
                 return False, "Invalid shelf life days"
 
+        # Handle density updates for ingredients and any item supporting density
+        # Accept keys: 'density' or 'item_density' from forms
+        if 'density' in form_data or 'item_density' in form_data:
+            density_value = form_data.get('density', form_data.get('item_density'))
+            try:
+                item.density = float(density_value) if density_value not in [None, "", "null"] else None
+            except (ValueError, TypeError):
+                return False, "Invalid density value; please provide a numeric g/mL value"
+
         db.session.commit()
         return True, f"Updated {item.name} successfully"
 

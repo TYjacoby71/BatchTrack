@@ -117,6 +117,60 @@ document.addEventListener('DOMContentLoaded', function() {
             saveBtn.disabled = true;
             saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
             console.log('🔧 DENSITY MODAL: Button disabled and showing spinner');
+
+            // Build form data for inventory edit route
+            const formData = new FormData(form);
+            formData.set('density', String(density));
+
+            // Submit to existing inventory edit route
+            const url = `/inventory/edit/${ingredientId}`;
+            console.log('🔧 DENSITY MODAL: Submitting to', url);
+
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: formData,
+                redirect: 'follow'
+            })
+            .then(async (response) => {
+                console.log('🔧 DENSITY MODAL: Response received', response.status, response.ok);
+                if (!response.ok) {
+                    throw new Error(`Request failed with status ${response.status}`);
+                }
+
+                // Consider any 2xx/redirect-followed 200 as success
+                try {
+                    // Try to parse JSON if available (not required)
+                    const contentType = response.headers.get('content-type') || '';
+                    if (contentType.includes('application/json')) {
+                        const data = await response.json();
+                        console.log('🔧 DENSITY MODAL: JSON response', data);
+                    }
+                } catch (err) {
+                    console.log('🔧 DENSITY MODAL: Non-JSON response (expected on redirect)');
+                }
+
+                // Close modal
+                const instance = bootstrap.Modal.getInstance(modal);
+                if (instance) instance.hide();
+
+                // Dispatch success event for DrawerProtocol retry
+                const eventDetail = { ingredient_id: ingredientId, density };
+                console.log('🔧 DENSITY MODAL: Dispatching success event conversion.density.updated with detail', eventDetail);
+                window.dispatchEvent(new CustomEvent('conversion.density.updated', { detail: eventDetail }));
+
+                // Reset button
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<i class="fas fa-save"></i> Save Density';
+            })
+            .catch((error) => {
+                console.error('🚨 DENSITY MODAL: Save failed', error);
+                alert('Failed to save density. Please try again.');
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<i class="fas fa-save"></i> Save Density';
+            });
         });
 
         console.log('🔧 DENSITY MODAL: Click listener added to save button');
