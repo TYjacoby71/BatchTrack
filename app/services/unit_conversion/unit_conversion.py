@@ -4,6 +4,15 @@ from ...models import db, Unit, CustomUnitMapping, InventoryItem as Ingredient, 
 from .drawer_errors import handle_conversion_error
 
 class ConversionEngine:
+    """
+    Enhanced Unit Conversion Engine
+    Handles direct conversions, density-based conversions, and custom mappings
+    """
+
+    # Simple in-memory cache for conversion results
+    _conversion_cache = {}
+    _cache_max_size = 100
+
     @staticmethod
     def round_value(value, decimals=3):
         """Round value with protection against floating point precision issues"""
@@ -16,7 +25,7 @@ class ConversionEngine:
         return float(rounded_decimal)
 
     @staticmethod
-    def convert_units(amount, from_unit, to_unit, ingredient_id=None, density=None):
+    def convert_units(amount, from_unit, to_unit, ingredient_id=None, density=None, organization_id=None):
         """
         Convert units with structured error handling for wall of drawers protocol
 
@@ -33,6 +42,22 @@ class ConversionEngine:
             'requires_attention': bool
         }
         """
+
+        # Create cache key
+        cache_key = f"{amount}:{from_unit}:{to_unit}:{ingredient_id}:{density}"
+
+        # Check cache first
+        if cache_key in ConversionEngine._conversion_cache:
+            cached_result = ConversionEngine._conversion_cache[cache_key]
+            if cached_result.get('success'):
+                return cached_result
+
+        # Clean cache if it gets too large
+        if len(ConversionEngine._conversion_cache) > ConversionEngine._cache_max_size:
+            # Remove oldest 20% of entries
+            keys_to_remove = list(ConversionEngine._conversion_cache.keys())[:20]
+            for key in keys_to_remove:
+                del ConversionEngine._conversion_cache[key]
 
         # Input validation
         if not isinstance(amount, (int, float)) or amount < 0:
@@ -356,8 +381,8 @@ class ConversionEngine:
                 # Decide if this should be a user-facing error or logged internally
                 # For now, we'll just print and continue if logging fails.
 
-        # Return structured metadata with consistent rounding
-        return {
+        # Return success result with all metadata
+        result = {
             'success': True,
             'converted_value': ConversionEngine.round_value(converted, 3),
             'conversion_type': conversion_type,
@@ -366,3 +391,7 @@ class ConversionEngine:
             'to': to_unit,
             'requires_attention': conversion_type in ['custom', 'density'] # Adjust this based on desired attention flags
         }
+
+        # Cache successful result
+        ConversionEngine._conversion_cache[cache_key] = result
+        return result

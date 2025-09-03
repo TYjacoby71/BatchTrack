@@ -12,6 +12,7 @@ export class StockCheckManager {
         this.main = mainManager;
         this.stockCheckResults = null;
         this.processedResults = null; // Added to store processed data for downloads
+        this.stockCheckTimeout = null; // For debouncing
     }
 
     bindEvents() {
