@@ -32,7 +32,7 @@ def conversion_density_modal_get(ingredient_id):
         from flask_wtf.csrf import generate_csrf
         csrf_token = generate_csrf()
         
-        modal_html = render_template('components/shared/density_fix_modal.html',
+        modal_html = render_template(f'components/drawer/density_fix_modal_{ingredient_id}.html',
                                    ingredient=ingredient, 
                                    csrf_token=csrf_token)
 
@@ -44,39 +44,7 @@ def conversion_density_modal_get(ingredient_id):
     except Exception as e:
         return jsonify({'error': f'Failed to load modal: {str(e)}'}), 500
 
-@drawer_actions_bp.route('/conversion/density-modal/<int:ingredient_id>', methods=['POST'])
-@login_required
-@require_permission('inventory.edit')
-def conversion_density_modal_post(ingredient_id):
-    """Update ingredient density"""
-    ingredient = InventoryItem.query.filter_by(
-        id=ingredient_id,
-        organization_id=current_user.organization_id
-    ).first()
-
-    if not ingredient:
-        return jsonify({'error': 'Ingredient not found'}), 404
-
-    try:
-        data = request.get_json()
-        density = float(data.get('density', 0))
-
-        if density <= 0:
-            return jsonify({'error': 'Density must be greater than 0'}), 400
-
-        ingredient.density = density
-        db.session.commit()
-
-        return jsonify({
-            'success': True,
-            'message': f'Density updated to {density} g/ml for {ingredient.name}'
-        })
-
-    except ValueError:
-        return jsonify({'error': 'Invalid density value'}), 400
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': f'Failed to update density: {str(e)}'}), 500
+# POST endpoint removed - using inventory edit route directly
 
 @drawer_actions_bp.route('/api/drawer-actions/conversion/unit-mapping-modal', methods=['GET'])
 @login_required
