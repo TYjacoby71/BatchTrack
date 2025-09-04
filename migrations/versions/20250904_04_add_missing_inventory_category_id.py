@@ -35,7 +35,7 @@ def upgrade():
         try:
             op.add_column('inventory_item', 
                 sa.Column('inventory_category_id', sa.Integer(), 
-                         db.ForeignKey('inventory_category.id'), nullable=True))
+                         sa.ForeignKey('inventory_category.id'), nullable=True))
             print("   ✅ Added inventory_category_id column")
         except Exception as e:
             print(f"   ⚠️  Error adding column: {e}")
