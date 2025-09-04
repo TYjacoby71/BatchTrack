@@ -17,7 +17,7 @@ def get_density_options():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@density_reference_bp.route('/density-reference')
+@density_reference_bp.route('/api/density-reference')
 def get_density_reference():
     """Serve density reference data as a formatted page"""
     try:
