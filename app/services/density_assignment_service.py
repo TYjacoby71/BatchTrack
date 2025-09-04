@@ -4,27 +4,28 @@ import os
 from typing import Optional, Dict, List, Tuple
 from difflib import SequenceMatcher
 from flask import current_app
-from ..models import InventoryItem, IngredientCategory
+from ..models import InventoryItem, IngredientCategory, GlobalItem
 from ..extensions import db
 
 class DensityAssignmentService:
     """Service for automatically assigning densities based on reference guide"""
     
     @staticmethod
-    def _load_reference_data() -> Dict:
-        """Load density reference data from JSON file"""
+    def _load_reference_data_from_db() -> Dict:
+        """Load density reference data from database (GlobalItem)"""
         try:
-            project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-            density_file_path = os.path.join(project_root, 'data', 'density_reference.json')
-            
-            if not os.path.exists(density_file_path):
-                current_app.logger.warning(f"Density reference file not found at {density_file_path}")
-                return {'common_densities': []}
-                
-            with open(density_file_path, 'r') as f:
-                return json.load(f)
+            items = GlobalItem.query.filter_by(item_type='ingredient').all()
+            payload_items = []
+            for gi in items:
+                payload_items.append({
+                    'name': gi.name,
+                    'density_g_per_ml': gi.density,
+                    'aliases': gi.aka_names or [],
+                    'category': gi.reference_category or 'Other'
+                })
+            return {'common_densities': payload_items}
         except Exception as e:
-            current_app.logger.error(f"Failed to load density reference: {str(e)}")
+            current_app.logger.error(f"Failed to load density reference from DB: {str(e)}")
             return {'common_densities': []}
     
     @staticmethod
@@ -41,7 +42,7 @@ class DensityAssignmentService:
         if not ingredient_name:
             return None, None
             
-        reference_data = DensityAssignmentService._load_reference_data()
+        reference_data = DensityAssignmentService._load_reference_data_from_db()
         items = reference_data.get('common_densities', [])
         
         ingredient_lower = ingredient_name.lower().strip()
@@ -83,7 +84,7 @@ class DensityAssignmentService:
     @staticmethod
     def get_category_options(organization_id: int) -> List[Dict]:
         """Get all available density options grouped by category"""
-        reference_data = DensityAssignmentService._load_reference_data()
+        reference_data = DensityAssignmentService._load_reference_data_from_db()
         items = reference_data.get('common_densities', [])
         
         # Group reference items by category
@@ -119,7 +120,7 @@ class DensityAssignmentService:
         try:
             if reference_item_name:
                 # Find specific reference item
-                reference_data = DensityAssignmentService._load_reference_data()
+                reference_data = DensityAssignmentService._load_reference_data_from_db()
                 items = reference_data.get('common_densities', [])
                 
                 for item in items:

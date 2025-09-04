@@ -197,6 +197,62 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
+  // Add Container name field - Select2 with AJAX global search and tags for custom entries
+  const $containerNameSelect = $('#addContainerNameSelect');
+  if ($containerNameSelect.length) {
+    $containerNameSelect.select2({
+      ...select2Config,
+      placeholder: 'Type container name...',
+      tags: true,
+      ajax: {
+        url: '/api/ingredients/global-items/search',
+        dataType: 'json',
+        delay: 150,
+        data: function (params) {
+          return { q: params.term, type: 'container' };
+        },
+        processResults: function (data) {
+          return data;
+        },
+        cache: true
+      },
+      minimumInputLength: 1,
+      createTag: function (params) {
+        const term = $.trim(params.term);
+        if (term === '') { return null; }
+        return { id: term, text: term, newTag: true };
+      }
+    });
+
+    // Hidden FK for containers as well
+    let hiddenGlobalIdContainer = document.getElementById('global_item_id_container');
+    if (!hiddenGlobalIdContainer) {
+      hiddenGlobalIdContainer = document.createElement('input');
+      hiddenGlobalIdContainer.type = 'hidden';
+      hiddenGlobalIdContainer.name = 'global_item_id';
+      hiddenGlobalIdContainer.id = 'global_item_id_container';
+      document.getElementById('addContainerForm')?.appendChild(hiddenGlobalIdContainer);
+    }
+
+    $containerNameSelect.on('select2:select', function (e) {
+      const data = e.params.data || {};
+      if (data.id && !isNaN(Number(data.id))) {
+        hiddenGlobalIdContainer.value = data.id;
+        const option = new Option(data.text, data.text, true, true);
+        $containerNameSelect.append(option).trigger('change');
+      } else {
+        hiddenGlobalIdContainer.value = '';
+      }
+    });
+
+    $containerNameSelect.on('change', function () {
+      const val = $(this).val();
+      if (!val || (typeof val === 'string' && val.trim().length > 0)) {
+        hiddenGlobalIdContainer.value = '';
+      }
+    });
+  }
+
   // Bootstrap tooltips
   $('[data-bs-toggle="tooltip"]').tooltip();
 

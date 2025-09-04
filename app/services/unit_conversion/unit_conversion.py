@@ -238,9 +238,10 @@ class ConversionEngine:
             # Only use ingredient-level density
             if density is None and ingredient_id:
                 ingredient = Ingredient.query.get(ingredient_id)
-                if ingredient and ingredient.density:
+                if ingredient and ingredient.density and ingredient.density > 0:
                     density = ingredient.density
-            if density is None:
+            # Hard guard: density must be > 0
+            if density is None or (isinstance(density, (int, float)) and density <= 0):
                 # Get ingredient name for better error context
                 ingredient_name = None
                 if ingredient_id:

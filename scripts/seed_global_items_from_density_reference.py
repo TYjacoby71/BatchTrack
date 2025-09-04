@@ -26,11 +26,13 @@ def seed():
 			if not name:
 				continue
 			density = item.get('density_g_per_ml')
+			reference_category = item.get('category') or None
 			aka = item.get('aka') or []
 			# Upsert by (name, item_type='ingredient')
 			existing = GlobalItem.query.filter_by(name=name, item_type='ingredient').first()
 			if existing:
 				existing.density = density
+				existing.reference_category = reference_category
 				existing.aka_names = aka
 			else:
 				gi = GlobalItem(
@@ -38,6 +40,7 @@ def seed():
 					item_type='ingredient',
 					default_unit=item.get('default_unit') or None,
 					density=density,
+					reference_category=reference_category,
 					suggested_inventory_category_id=None,
 					aka_names=aka,
 				)
