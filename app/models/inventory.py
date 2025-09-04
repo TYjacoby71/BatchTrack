@@ -38,11 +38,15 @@ class InventoryItem(ScopedModelMixin, db.Model):
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=TimezoneUtils.utc_now)
 
+    # Reference guide integration
+    reference_item_name = db.Column(db.String(128), nullable=True)  # Exact match from density_reference.json
+    density_source = db.Column(db.String(32), default='manual')  # 'manual', 'reference_item', 'category_default', 'auto_assigned'
+
     # Intermediate ingredient flag
     intermediate = db.Column(db.Boolean, default=False)
 
     # Global library linkage (nullable)
-    global_item_id = db.Column(db.Integer, db.ForeignKey('global_item.id'), nullable=True, index=True)
+    global_item_id = db.Column(db.Integer, db.ForeignKey('global_item.id', ondelete='SET NULL'), nullable=True, index=True)
 
     # Organization relationship
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True, index=True)
