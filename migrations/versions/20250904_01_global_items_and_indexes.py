@@ -29,7 +29,6 @@ def upgrade():
         sa.Column('capacity_unit', sa.String(length=32), nullable=True),
         sa.Column('suggested_inventory_category_id', sa.Integer(), nullable=True),
         sa.Column('metadata_json', sa.JSON(), nullable=True),
-        sa.ForeignKeyConstraint(['suggested_inventory_category_id'], ['inventory_category.id']),
         sa.UniqueConstraint('name', 'item_type', name='_global_item_name_type_uc')
     )
     op.create_index('ix_global_item_name', 'global_item', ['name'])
