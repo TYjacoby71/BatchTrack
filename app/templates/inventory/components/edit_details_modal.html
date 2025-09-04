@@ -20,13 +20,8 @@
           </div>
 
           <div class="mb-3">
-            <label for="type">Inventory Type:</label>
-            <select name="type" class="form-select" required>
-              <option value="ingredient" {% if item.type == 'ingredient' %}selected{% endif %}>Ingredient</option>
-              <option value="container" {% if item.type == 'container' %}selected{% endif %}>Container</option>
-              <option value="packaging" {% if item.type == 'packaging' %}selected{% endif %}>Packaging</option>
-              <option value="consumable" {% if item.type == 'consumable' %}selected{% endif %}>Consumable</option>
-            </select>
+            <label>Inventory Type:</label>
+            <div class="form-control bg-light" readonly>{{ item.type|title }}</div>
           </div>
 
           <div class="mb-3" id="perishableSection" {% if item.type == 'container' %}style="display: none;"{% endif %}>
@@ -161,22 +156,19 @@ function openDensityReference() {
 async function loadReferenceCategories() {
     try {
         const response = await fetch('/api/density-reference/options');
-        const data = await response.json();
-        
-        if (data.success) {
-            const referenceGroup = document.getElementById('referenceCategories');
-            if (referenceGroup) {
-                referenceGroup.innerHTML = '';
-                
-                data.categories.forEach(category => {
-                    const option = document.createElement('option');
-                    option.value = `ref_${category.name}`;
-                    option.textContent = `${category.name} (${category.items.length} items)`;
-                    option.setAttribute('data-density', category.default_density || '1.0');
-                    option.setAttribute('data-reference-category', 'true');
-                    referenceGroup.appendChild(option);
-                });
-            }
+        const categories = await response.json();
+
+        const referenceGroup = document.getElementById('referenceCategories');
+        if (referenceGroup && Array.isArray(categories)) {
+            referenceGroup.innerHTML = '';
+            categories.forEach(category => {
+                const option = document.createElement('option');
+                option.value = `ref_${category.name}`;
+                option.textContent = `${category.name} (${(category.items || []).length} items)`;
+                option.setAttribute('data-density', category.default_density || '1.0');
+                option.setAttribute('data-reference-category', 'true');
+                referenceGroup.appendChild(option);
+            });
         }
     } catch (error) {
         console.error('Failed to load reference categories:', error);

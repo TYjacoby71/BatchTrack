@@ -129,7 +129,13 @@ def update_inventory_item(item_id: int, form_data: dict) -> tuple[bool, str]:
         if 'density' in form_data or 'item_density' in form_data:
             density_value = form_data.get('density', form_data.get('item_density'))
             try:
-                item.density = float(density_value) if density_value not in [None, "", "null"] else None
+                if density_value in [None, "", "null"]:
+                    item.density = None
+                else:
+                    parsed = float(density_value)
+                    if parsed <= 0:
+                        return False, "Density must be greater than 0 g/mL"
+                    item.density = parsed
             except (ValueError, TypeError):
                 return False, "Invalid density value; please provide a numeric g/mL value"
 

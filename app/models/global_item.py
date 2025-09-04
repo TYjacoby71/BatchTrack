@@ -9,6 +9,8 @@ class GlobalItem(db.Model):
 	default_unit = db.Column(db.String(32), nullable=True)
 	# Ingredient-specific
 	density = db.Column(db.Float, nullable=True)  # g/ml
+	# Reference grouping for density categories (e.g., Oils, Waxes)
+	reference_category = db.Column(db.String(64), nullable=True)
 	# Container/packaging defaults (nullable for packaging per requirement)
 	capacity = db.Column(db.Float, nullable=True)
 	capacity_unit = db.Column(db.String(32), nullable=True)
