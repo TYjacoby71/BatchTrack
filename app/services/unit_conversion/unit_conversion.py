@@ -1,4 +1,5 @@
 from datetime import datetime
+import logging
 from flask_login import current_user
 from ...models import db, Unit, CustomUnitMapping, InventoryItem as Ingredient, ConversionLog
 from .drawer_errors import handle_conversion_error
@@ -259,7 +260,10 @@ class ConversionEngine:
 
                 # If this error requires a drawer, dispatch it
                 if drawer_info.get('requires_drawer') and drawer_info.get('drawer_payload'):
-                    print(f"🔧 CONVERSION ENGINE: Dispatching drawer for {base_result['error_code']}")
+                    logging.getLogger(__name__).info(
+                        "CONVERSION ENGINE: Dispatching drawer for %s",
+                        base_result['error_code']
+                    )
                     # The frontend will pick up this drawer_payload and trigger the drawer
 
                 return base_result
@@ -319,7 +323,10 @@ class ConversionEngine:
 
                 # If this error requires a drawer, dispatch it
                 if drawer_info.get('requires_drawer') and drawer_info.get('drawer_payload'):
-                    print(f"🔧 CONVERSION ENGINE: Dispatching drawer for {base_result['error_code']}")
+                    logging.getLogger(__name__).info(
+                        "CONVERSION ENGINE: Dispatching drawer for %s",
+                        base_result['error_code']
+                    )
                     # The frontend will pick up this drawer_payload and trigger the drawer
 
                 return base_result
@@ -347,7 +354,10 @@ class ConversionEngine:
 
             # If this error requires a drawer, dispatch it
             if drawer_info.get('requires_drawer') and drawer_info.get('drawer_payload'):
-                print(f"🔧 CONVERSION ENGINE: Dispatching drawer for {base_result['error_code']}")
+                logging.getLogger(__name__).info(
+                    "CONVERSION ENGINE: Dispatching drawer for %s",
+                    base_result['error_code']
+                )
                 # The frontend will pick up this drawer_payload and trigger the drawer
 
             return base_result
@@ -367,7 +377,7 @@ class ConversionEngine:
             try:
                 db.session.commit()
             except Exception as e:
-                print(f"Error logging conversion: {e}")
+                logging.getLogger(__name__).exception("Error logging conversion: %s", e)
                 db.session.rollback()
                 # Decide if this should be a user-facing error or logged internally
                 # For now, we'll just print and continue if logging fails.
