@@ -1,5 +1,6 @@
 // Container Plan Fetcher - Handles API calls for container planning
 import { logger } from '../../utils/logger.js';
+import { appCache } from '../../core/CacheManager.js';
 
 // Use the imported logger instance with context
 const containerLogger = {
@@ -13,15 +14,29 @@ export class ContainerPlanFetcher {
     constructor(containerManager) {
         this.container = containerManager;
         this.fetchingPlan = false;
-        this.lastPlanResult = null;
+        this.inflightKey = null;
     }
 
     async fetchContainerPlan(extra = {}) {
         containerLogger.debug('fetchContainerPlan called');
 
-        if (this.fetchingPlan) {
-            containerLogger.debug('Fetch already in progress, returning cached result');
-            return this.lastPlanResult;
+        const recipeId = this.container.main?.recipe?.id;
+        const scale = this.container.main?.scale || parseFloat(document.getElementById('scaleInput')?.value) || 1;
+        const yieldAmount = (this.container.main?.recipe?.yield_amount || 1) * scale;
+        const baseKey = `containerPlan:${recipeId}:${yieldAmount}:${this.container.main?.unit}`;
+
+        // Serve from cache if available
+        const cached = appCache.get(baseKey);
+        if (cached) {
+            containerLogger.debug('Returning cached container plan');
+            this.container.containerPlan = cached;
+            this.container.displayContainerPlan();
+            return cached;
+        }
+
+        if (this.fetchingPlan && this.inflightKey === baseKey) {
+            containerLogger.debug('Fetch already in progress for same key, returning early');
+            return null;
         }
 
         this.fetchingPlan = true;
@@ -38,10 +53,8 @@ export class ContainerPlanFetcher {
             return null;
         }
 
-        const scale = this.container.main.scale || parseFloat(document.getElementById('scaleInput')?.value) || 1;
-        const yieldAmount = (this.container.main.recipe.yield_amount || 1) * scale;
-
         containerLogger.debug('Fetching for recipe', this.container.main.recipe.id, 'scale:', scale, 'yield:', yieldAmount);
+        this.inflightKey = baseKey;
 
         try {
             const payload = {
@@ -58,7 +71,8 @@ export class ContainerPlanFetcher {
                 containerLogger.debug('Plan successful');
                 containerLogger.debug('Container data received:', data);
                 this.container.containerPlan = data;
-                this.lastPlanResult = data;
+                // Cache result for 60 seconds to reduce server load
+                appCache.set(baseKey, data, 60000);
                 this.container.displayContainerPlan();
                 return data;
             } else {
@@ -90,7 +104,8 @@ export class ContainerPlanFetcher {
     }
 
     clearCache() {
-        this.lastPlanResult = null;
         this.fetchingPlan = false;
+        this.inflightKey = null;
+        appCache.clearPrefix('containerPlan:');
     }
 }

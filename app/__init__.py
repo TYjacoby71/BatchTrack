@@ -74,10 +74,7 @@ def create_app(config=None):
     # Add core routes
     _add_core_routes(app)
 
-    # Setup logging
-    _setup_logging(app)
-
-    # Configure logging
+    # Configure centralized logging
     configure_logging(app)
 
     # Register CLI commands
@@ -126,16 +123,5 @@ def _add_core_routes(app):
         return render_template("homepage.html")
 
 def _setup_logging(app):
-    """Setup application logging"""
-    from .utils.unit_utils import setup_logging
-    setup_logging(app)
-
-    if not app.debug and not logger.handlers:
-        logging.basicConfig(
-            level=logging.INFO,
-            format="%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]"
-        )
-
-    if app.debug:
-        app.logger.setLevel(logging.DEBUG)
-        logging.getLogger('werkzeug').setLevel(logging.DEBUG)
+    """Retained for backward compatibility; logging is configured via logging_config."""
+    pass

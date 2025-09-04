@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional, List
 from flask import current_app
 import logging
+from app.utils.cache_manager import app_cache
 
 class BaseService(ABC):
     """Base service class providing common functionality"""
@@ -42,26 +43,21 @@ class CacheableService(BaseService):
     
     def __init__(self):
         super().__init__()
-        self._cache = {}
     
     def get_cached(self, key: str, fetch_func, ttl: int = 300):
-        """Simple in-memory caching with TTL"""
-        import time
-        
-        if key in self._cache:
-            cached_time, value = self._cache[key]
-            if time.time() - cached_time < ttl:
-                return value
-        
+        """Centralized in-memory caching with TTL using app_cache."""
+        namespaced_key = f"{self.__class__.__name__}:{key}"
+        cached = app_cache.get(namespaced_key)
+        if cached is not None:
+            return cached
         value = fetch_func()
-        self._cache[key] = (time.time(), value)
+        app_cache.set(namespaced_key, value, ttl=ttl)
         return value
     
     def clear_cache(self, pattern: Optional[str] = None):
-        """Clear cache entries"""
+        """Clear cache entries for this service from centralized cache."""
+        prefix = f"{self.__class__.__name__}:"
         if pattern:
-            keys_to_remove = [k for k in self._cache.keys() if pattern in k]
-            for key in keys_to_remove:
-                del self._cache[key]
+            app_cache.clear_prefix(prefix + pattern)
         else:
-            self._cache.clear()
+            app_cache.clear_prefix(prefix)

@@ -4,6 +4,7 @@ from flask_wtf.csrf import generate_csrf
 from .utils.permissions import has_permission
 from .utils.timezone_utils import TimezoneUtils
 from app.utils.unit_utils import get_global_unit_list
+from app.utils.cache_manager import app_cache
 
 
 def register_template_context(app):
@@ -22,18 +23,40 @@ def register_template_context(app):
         from .utils.unit_utils import get_global_unit_list
         from .models import IngredientCategory
 
-        if not hasattr(current_app, "_cached_units"):
+        # Determine effective organization for scoping units (categories are global)
+        try:
+            if current_user and current_user.is_authenticated:
+                if getattr(current_user, 'user_type', None) == 'developer':
+                    effective_org_id = session.get('dev_selected_org_id')
+                else:
+                    effective_org_id = current_user.organization_id
+            else:
+                effective_org_id = None
+        except Exception:
+            effective_org_id = None
+
+        units_cache_key = f"template:units:{effective_org_id or 'public'}"
+        units = app_cache.get(units_cache_key)
+        categories = app_cache.get("template:ingredient_categories")
+
+        if units is None:
             try:
-                current_app._cached_units = get_global_unit_list()
-                current_app._cached_categories = IngredientCategory.query.order_by(IngredientCategory.name).all()
+                units = get_global_unit_list()
+                app_cache.set(units_cache_key, units, ttl=3600)
             except Exception:
-                current_app._cached_units = []
-                current_app._cached_categories = []
+                units = []
+
+        if categories is None:
+            try:
+                categories = IngredientCategory.query.order_by(IngredientCategory.name).all()
+                app_cache.set("template:ingredient_categories", categories, ttl=3600)
+            except Exception:
+                categories = []
 
         return dict(
-            units=current_app._cached_units,
-            categories=current_app._cached_categories,
-            global_units=current_app._cached_units,
+            units=units,
+            categories=categories,
+            global_units=units,
         )
 
     @app.context_processor
@@ -49,16 +72,29 @@ def register_template_context(app):
             if not inventory_item_id:
                 return {'available': 0.0, 'reserved': 0.0, 'total': 0.0, 'reservations': []}
 
-            cache_key = f'reservation_summary_{inventory_item_id}'
-            if hasattr(g, cache_key):
-                return getattr(g, cache_key)
+            # Scope by organization to avoid cross-tenant leakage
+            try:
+                if current_user and current_user.is_authenticated:
+                    if getattr(current_user, 'user_type', None) == 'developer':
+                        effective_org_id = session.get('dev_selected_org_id')
+                    else:
+                        effective_org_id = current_user.organization_id
+                else:
+                    effective_org_id = None
+            except Exception:
+                effective_org_id = None
+
+            cache_key = f'template:reservation_summary:{effective_org_id or "public"}:{inventory_item_id}'
+            cached = app_cache.get(cache_key)
+            if cached is not None:
+                return cached
 
             sku = ProductSKU.query.filter_by(inventory_item_id=inventory_item_id).first()
             result = ReservationService.get_reservation_summary_for_sku(sku) if sku else {
                 'available': 0.0, 'reserved': 0.0, 'total': 0.0, 'reservations': []
             }
 
-            setattr(g, cache_key, result)
+            app_cache.set(cache_key, result, ttl=60)
             return result
 
         return dict(

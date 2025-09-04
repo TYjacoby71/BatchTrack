@@ -1,7 +1,10 @@
 from datetime import datetime
+import logging
+from flask import session
 from flask_login import current_user
 from ...models import db, Unit, CustomUnitMapping, InventoryItem as Ingredient, ConversionLog
 from .drawer_errors import handle_conversion_error
+from ...utils.cache_manager import conversion_cache
 
 class ConversionEngine:
     """
@@ -9,9 +12,7 @@ class ConversionEngine:
     Handles direct conversions, density-based conversions, and custom mappings
     """
 
-    # Simple in-memory cache for conversion results
-    _conversion_cache = {}
-    _cache_max_size = 100
+    # ConversionEngine uses centralized app cache in cache_manager
 
     @staticmethod
     def round_value(value, decimals=3):
@@ -43,21 +44,25 @@ class ConversionEngine:
         }
         """
 
-        # Create cache key
-        cache_key = f"{amount}:{from_unit}:{to_unit}:{ingredient_id}:{density}"
+        # Determine effective organization for scoping (developer view respected)
+        effective_org_id = organization_id
+        try:
+            if effective_org_id is None and current_user and current_user.is_authenticated:
+                if getattr(current_user, 'user_type', None) == 'developer':
+                    effective_org_id = session.get('dev_selected_org_id')
+                else:
+                    effective_org_id = current_user.organization_id
+        except Exception:
+            # Fallback to provided organization_id only
+            pass
 
-        # Check cache first
-        if cache_key in ConversionEngine._conversion_cache:
-            cached_result = ConversionEngine._conversion_cache[cache_key]
-            if cached_result.get('success'):
-                return cached_result
+        # Create cache key (org-scoped)
+        cache_key = f"org:{effective_org_id or 'public'}:{amount}:{from_unit}:{to_unit}:{ingredient_id}:{density}"
 
-        # Clean cache if it gets too large
-        if len(ConversionEngine._conversion_cache) > ConversionEngine._cache_max_size:
-            # Remove oldest 20% of entries
-            keys_to_remove = list(ConversionEngine._conversion_cache.keys())[:20]
-            for key in keys_to_remove:
-                del ConversionEngine._conversion_cache[key]
+        # Check centralized cache first
+        cached_result = conversion_cache.get(cache_key)
+        if cached_result and cached_result.get('success'):
+            return cached_result
 
         # Input validation
         if not isinstance(amount, (int, float)) or amount < 0:
@@ -268,7 +273,10 @@ class ConversionEngine:
 
                 # If this error requires a drawer, dispatch it
                 if drawer_info.get('requires_drawer') and drawer_info.get('drawer_payload'):
-                    print(f"🔧 CONVERSION ENGINE: Dispatching drawer for {base_result['error_code']}")
+                    logging.getLogger(__name__).info(
+                        "CONVERSION ENGINE: Dispatching drawer for %s",
+                        base_result['error_code']
+                    )
                     # The frontend will pick up this drawer_payload and trigger the drawer
 
                 return base_result
@@ -328,7 +336,10 @@ class ConversionEngine:
 
                 # If this error requires a drawer, dispatch it
                 if drawer_info.get('requires_drawer') and drawer_info.get('drawer_payload'):
-                    print(f"🔧 CONVERSION ENGINE: Dispatching drawer for {base_result['error_code']}")
+                    logging.getLogger(__name__).info(
+                        "CONVERSION ENGINE: Dispatching drawer for %s",
+                        base_result['error_code']
+                    )
                     # The frontend will pick up this drawer_payload and trigger the drawer
 
                 return base_result
@@ -356,7 +367,10 @@ class ConversionEngine:
 
             # If this error requires a drawer, dispatch it
             if drawer_info.get('requires_drawer') and drawer_info.get('drawer_payload'):
-                print(f"🔧 CONVERSION ENGINE: Dispatching drawer for {base_result['error_code']}")
+                logging.getLogger(__name__).info(
+                    "CONVERSION ENGINE: Dispatching drawer for %s",
+                    base_result['error_code']
+                )
                 # The frontend will pick up this drawer_payload and trigger the drawer
 
             return base_result
@@ -376,7 +390,7 @@ class ConversionEngine:
             try:
                 db.session.commit()
             except Exception as e:
-                print(f"Error logging conversion: {e}")
+                logging.getLogger(__name__).exception("Error logging conversion: %s", e)
                 db.session.rollback()
                 # Decide if this should be a user-facing error or logged internally
                 # For now, we'll just print and continue if logging fails.
@@ -392,6 +406,6 @@ class ConversionEngine:
             'requires_attention': conversion_type in ['custom', 'density'] # Adjust this based on desired attention flags
         }
 
-        # Cache successful result
-        ConversionEngine._conversion_cache[cache_key] = result
+        # Cache successful result (1 hour TTL by default via conversion_cache)
+        conversion_cache.set(cache_key, result)
         return result
