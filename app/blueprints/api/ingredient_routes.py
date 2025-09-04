@@ -3,6 +3,7 @@ from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
 from sqlalchemy import or_, func
 from ...models import IngredientCategory, InventoryItem, GlobalItem, db
+from ...services.statistics.global_item_stats import GlobalItemStatsService
 
 ingredient_api_bp = Blueprint('ingredient_api', __name__)
 
@@ -101,3 +102,12 @@ def search_global_items():
         })
 
     return jsonify({'results': results})
+
+@ingredient_api_bp.route('/global-items/<int:global_item_id>/stats', methods=['GET'])
+@login_required
+def get_global_item_stats(global_item_id):
+    try:
+        rollup = GlobalItemStatsService.get_rollup(global_item_id)
+        return jsonify({'success': True, 'stats': rollup})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
