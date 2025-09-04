@@ -52,7 +52,9 @@ _export([
     ("unit", "CustomUnitMapping", None),
     ("unit", "ConversionLog", None),
     ("category", "IngredientCategory", None),
+    ("category", "InventoryCategory", None),
     ("category", "Tag", None),
+    ("global_item", "GlobalItem", None),
 ])
 
 # Build __all__ from whatever successfully imported

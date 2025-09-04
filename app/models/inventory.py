@@ -9,8 +9,11 @@ class InventoryItem(ScopedModelMixin, db.Model):
     """Ingredients and raw materials"""
     __tablename__ = 'inventory_item'
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(128), unique=True, nullable=False)
+    name = db.Column(db.String(128), nullable=False, index=True)
+    # Ingredient-specific category (for density defaults, etc.)
     category_id = db.Column(db.Integer, db.ForeignKey('ingredient_category.id'))
+    # Inventory category (separate taxonomy aligned to item type)
+    inventory_category_id = db.Column(db.Integer, db.ForeignKey('inventory_category.id'), nullable=True)
     quantity = db.Column(db.Float, default=0.0)
     unit = db.Column(db.String(32), nullable=False)
     cost_per_unit = db.Column(db.Float, default=0.0)
@@ -20,6 +23,11 @@ class InventoryItem(ScopedModelMixin, db.Model):
     type = db.Column(db.String(32), nullable=False, default='ingredient')  # 'ingredient', 'container', 'product', or 'product-reserved'
     is_active = db.Column(db.Boolean, default=True)
     is_archived = db.Column(db.Boolean, default=False)
+    __table_args__ = (
+        db.UniqueConstraint('organization_id', 'name', name='_org_name_uc'),
+        db.Index('ix_inventory_item_type', 'type'),
+        db.Index('ix_inventory_item_is_archived', 'is_archived'),
+    )
     # Perishable tracking fields
     is_perishable = db.Column(db.Boolean, default=False)
     shelf_life_days = db.Column(db.Integer, nullable=True)
@@ -37,11 +45,33 @@ class InventoryItem(ScopedModelMixin, db.Model):
     # Intermediate ingredient flag
     intermediate = db.Column(db.Boolean, default=False)
 
+    # Global library linkage (nullable)
+    global_item_id = db.Column(db.Integer, db.ForeignKey('global_item.id', ondelete='SET NULL'), nullable=True, index=True)
+
     # Organization relationship
-    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True)
+    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=True, index=True)
     organization = db.relationship('Organization', backref='inventory_items')
 
     category = db.relationship('IngredientCategory', backref='inventory_items')
+    inventory_category = db.relationship('InventoryCategory', backref='inventory_items')
+    global_item = db.relationship('GlobalItem')
+
+    # Aliases for legacy fields used by routes/templates
+    @property
+    def storage_amount(self):
+        return self.capacity
+
+    @storage_amount.setter
+    def storage_amount(self, value):
+        self.capacity = value
+
+    @property
+    def storage_unit(self):
+        return self.capacity_unit
+
+    @storage_unit.setter
+    def storage_unit(self, value):
+        self.capacity_unit = value
 
     def belongs_to_user(self):
         """Check if this record belongs to the current user's organization"""

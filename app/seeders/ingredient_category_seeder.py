@@ -12,23 +12,34 @@ def seed_categories(organization_id=None):
         raise ValueError("Organization ID required for seeding categories")
     
     categories = [
-        # Core Categories
-        {"name": "Liquid", "organization_id": organization_id, "default_density": 1.0},             # Water, vinegar, juices
-        {"name": "Oil", "organization_id": organization_id, "default_density": 0.92},               # Olive, coconut, canola
-        {"name": "Solid", "organization_id": organization_id, "default_density": 0.91},              # Soap base, butter blocks
-        {"name": "Powder", "organization_id": organization_id, "default_density": 2.5},             # Flour, clay powder, mica
-        {"name": "Dairy", "organization_id": organization_id, "default_density": 1.03},             # Milk, cream, yogurt
-        {"name": "Syrup", "organization_id": organization_id, "default_density": 1.4},             # Honey, agave, glucose
-
-        # Specialty Categories
-        {"name": "Alcohol", "organization_id": organization_id, "default_density": 0.8},          # Ethanol, isopropyl, tinctures
-        {"name": "Fragrance", "organization_id": organization_id, "default_density": 0.89},         # Essential oils, perfume
-        {"name": "Gel", "organization_id": organization_id, "default_density": 1.02},               # Aloe gel, cosmetic bases
-        {"name": "Wax", "organization_id": organization_id, "default_density": 0.93},                # Beeswax, soy wax, paraffin
-        {"name": "Extract", "organization_id": organization_id, "default_density": 0.85},            # Vanilla, herbal extracts
-        {"name": "Clay", "organization_id": organization_id, "default_density": 2.5},               # Bentonite, kaolin
-        {"name": "Other", "organization_id": organization_id, "default_density": 1.0},              # Catch-all or uncategorized
-        {"name": "Container", "organization_id": organization_id, "default_density": None}           # Added Container Category
+        # Match density_reference.json categories exactly
+        {"name": "Liquids", "organization_id": organization_id, "default_density": 1.0},
+        {"name": "Dairy", "organization_id": organization_id, "default_density": 1.02},
+        {"name": "Oils", "organization_id": organization_id, "default_density": 0.92},
+        {"name": "Fats", "organization_id": organization_id, "default_density": 0.91},
+        {"name": "Syrups", "organization_id": organization_id, "default_density": 1.4},
+        {"name": "Flours", "organization_id": organization_id, "default_density": 0.6},
+        {"name": "Starches", "organization_id": organization_id, "default_density": 0.63},
+        {"name": "Sugars", "organization_id": organization_id, "default_density": 0.85},
+        {"name": "Sweeteners", "organization_id": organization_id, "default_density": 0.67},
+        {"name": "Salts", "organization_id": organization_id, "default_density": 2.16},
+        {"name": "Leavening", "organization_id": organization_id, "default_density": 1.56},
+        {"name": "Chocolate", "organization_id": organization_id, "default_density": 0.71},
+        {"name": "Spices", "organization_id": organization_id, "default_density": 0.57},
+        {"name": "Herbs", "organization_id": organization_id, "default_density": 0.32},
+        {"name": "Extracts", "organization_id": organization_id, "default_density": 0.86},
+        {"name": "Acids", "organization_id": organization_id, "default_density": 1.03},
+        {"name": "Grains", "organization_id": organization_id, "default_density": 0.72},
+        {"name": "Nuts", "organization_id": organization_id, "default_density": 0.55},
+        {"name": "Seeds", "organization_id": organization_id, "default_density": 0.61},
+        {"name": "Dried Fruits", "organization_id": organization_id, "default_density": 0.69},
+        {"name": "Waxes", "organization_id": organization_id, "default_density": 0.93},
+        {"name": "Clays", "organization_id": organization_id, "default_density": 2.45},
+        {"name": "Essential Oils", "organization_id": organization_id, "default_density": 0.89},
+        {"name": "Cosmetic Ingredients", "organization_id": organization_id, "default_density": 1.08},
+        {"name": "Alcohols", "organization_id": organization_id, "default_density": 0.85},
+        {"name": "Container", "organization_id": organization_id, "default_density": None},  # Special category for containers
+        {"name": "Other", "organization_id": organization_id, "default_density": 1.0}        # Catch-all category
     ]
 
     for category in categories:

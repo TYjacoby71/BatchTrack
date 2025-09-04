@@ -184,7 +184,8 @@
       <div class="row g-3 align-items-end">
         <div class="col-md-3">
           <label class="form-label">Name</label>
-          <input type="text" name="name" class="form-control" required>
+          <select name="name" class="form-select" id="addIngredientNameSelect" required></select>
+          <small class="text-muted">Type to search, or enter a custom name and press Enter</small>
         </div>
         <div class="col-md-2">
           <label class="form-label">Quantity</label>
@@ -417,12 +418,12 @@
           <input type="text" name="name" class="form-control" required>
         </div>
         <div class="col">
-          <label class="form-label">Storage Amount</label>
-          <input type="number" step="0.01" name="storage_amount" class="form-control" required>
+          <label class="form-label">Capacity</label>
+          <input type="number" step="0.01" name="capacity" class="form-control" required>
         </div>
         <div class="col">
-          <label class="form-label">Storage Unit</label>
-          <select name="storage_unit" class="form-select select2" required>
+          <label class="form-label">Capacity Unit</label>
+          <select name="capacity_unit" class="form-select select2" required>
             {% for unit in get_global_unit_list() %}
             <option value="{{ unit.name }}">{{ unit.name }}</option>
             {% endfor %}
