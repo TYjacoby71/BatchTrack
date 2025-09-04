@@ -32,20 +32,9 @@ def conversion_density_modal_get(ingredient_id):
         from flask_wtf.csrf import generate_csrf
         csrf_token = generate_csrf()
 
-        # Load categories for current organization to populate the selector
-        try:
-            from app.models.category import IngredientCategory
-            categories = IngredientCategory.query
-            if current_user.organization_id:
-                categories = categories.filter_by(organization_id=current_user.organization_id)
-            categories = categories.order_by(IngredientCategory.name).all()
-        except Exception:
-            categories = []
-
         modal_html = render_template(
             'components/drawer/density_fix_modal.html',
-            ingredient=ingredient,
-            categories=categories
+            ingredient=ingredient
         )
 
         return jsonify({
