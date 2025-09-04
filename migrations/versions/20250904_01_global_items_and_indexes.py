@@ -2,7 +2,7 @@
 Global items table, link to inventory_item, and performance indexes
 
 Revision ID: 20250904_01
-Revises: 
+Revises: add_reference_guide_integration
 Create Date: 2025-09-04
 """
 
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = '20250904_01'
-down_revision = None
+down_revision = 'add_reference_guide_integration'
 branch_labels = None
 depends_on = None
 
