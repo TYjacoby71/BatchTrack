@@ -186,6 +186,15 @@ document.addEventListener('DOMContentLoaded', function() {
         hiddenGlobalId.value = '';
       }
     });
+
+    // If user clears or changes to a custom name, drop the global link to avoid stale linkage
+    $nameSelect.on('change', function () {
+      const val = $(this).val();
+      // If value is empty or not matching a numeric id selection flow, clear FK
+      if (!val || (typeof val === 'string' && val.trim().length > 0)) {
+        hiddenGlobalId.value = '';
+      }
+    });
   }
 
   // Bootstrap tooltips
