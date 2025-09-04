@@ -60,7 +60,7 @@ def register_blueprints(app):
     safe_register_blueprint('app.blueprints.api.public.public_api_bp', 'public_api_bp', '/api/public', 'Public API')
     safe_register_blueprint('app.blueprints.api.routes.api_bp', 'api_bp', '/api', 'Main API')
     safe_register_blueprint('app.blueprints.api.drawer_actions.drawer_actions_bp', 'drawer_actions_bp', None, 'Drawer Actions')
-    safe_register_blueprint('app.blueprints.api.density_reference.density_reference_bp', 'density_reference_bp', '/api/density-reference', 'Density Reference')
+    safe_register_blueprint('app.blueprints.api.density_reference.density_reference_bp', 'density_reference_bp', '/api', 'Density Reference')
 
     # Note: FIFO blueprint removed - functionality moved to inventory_adjustment service
 
